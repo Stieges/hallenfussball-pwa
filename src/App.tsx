@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTournaments } from './hooks/useTournaments';
+import { TournamentCreationScreen } from './screens/TournamentCreationScreen';
 import { theme } from './styles/theme';
 
 function App() {
@@ -125,39 +126,7 @@ function App() {
         </div>
       )}
 
-      {screen === 'create' && (
-        <div style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto' }}>
-          <button
-            onClick={() => setScreen('list')}
-            style={{
-              marginBottom: '24px',
-              padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-              background: 'transparent',
-              border: 'none',
-              color: theme.colors.text.secondary,
-              fontSize: theme.fontSizes.md,
-              cursor: 'pointer',
-            }}
-          >
-            ← Zurück
-          </button>
-          <h2 style={{ fontSize: theme.fontSizes.xxl, marginBottom: '24px' }}>
-            Turnier-Erstellung (In Entwicklung)
-          </h2>
-          <div
-            style={{
-              padding: '32px',
-              background: theme.colors.surface,
-              borderRadius: theme.borderRadius.lg,
-              border: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <p style={{ color: theme.colors.text.secondary }}>
-              Die einzelnen Steps werden hier eingebunden.
-            </p>
-          </div>
-        </div>
-      )}
+      {screen === 'create' && <TournamentCreationScreen onBack={() => setScreen('list')} />}
     </div>
   );
 }
