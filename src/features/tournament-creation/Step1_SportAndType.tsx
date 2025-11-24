@@ -1,6 +1,6 @@
-import React, { CSSProperties } from 'react';
+import { CSSProperties } from 'react';
 import { Card } from '../../components/ui';
-import { Sport, TournamentType, Tournament } from '../../types/tournament';
+import { TournamentType, Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 
 interface Step1Props {

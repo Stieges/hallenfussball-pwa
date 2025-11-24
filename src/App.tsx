@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Tournament } from './types/tournament';
+import { useState } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { theme } from './styles/theme';
 
 function App() {
-  const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
+  const { tournaments, loading } = useTournaments();
   const [screen, setScreen] = useState<'list' | 'create'>('list');
 
   if (loading) {

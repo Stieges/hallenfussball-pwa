@@ -1,4 +1,4 @@
-import { Tournament, Match, Team } from '../types/tournament';
+import { Tournament, Match } from '../types/tournament';
 
 /**
  * Generate matches based on tournament configuration
@@ -36,7 +36,6 @@ const generateRoundRobinMatches = (tournament: Tournament): Match[] => {
   const teams = tournament.teams;
   let matchId = 1;
   let round = 1;
-  let field = 1;
 
   for (let i = 0; i < teams.length; i++) {
     for (let j = i + 1; j < teams.length; j++) {
