@@ -8,13 +8,12 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { Tournament, PlayoffConfig } from '../../types/tournament';
+import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { Button, Card } from '../../components/ui';
 import { theme } from '../../styles/theme';
 import { exportScheduleAsPDF } from '../../lib/pdfExporter';
-import { PlayoffParallelConfigurator } from '../../components/PlayoffParallelConfigurator';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -34,11 +33,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
 
-  const handlePlayoffConfigChange = (config: PlayoffConfig) => {
-    const updatedTournament = { ...currentTournament, playoffConfig: config };
+  const handleFinalsConfigChange = (config: FinalsConfig) => {
+    const updatedTournament = { ...currentTournament, finalsConfig: config };
     setCurrentTournament(updatedTournament);
 
-    // Regenerate schedule with new playoff config
+    // Regenerate schedule with new finals config
     const newSchedule = generateFullSchedule(updatedTournament);
     setSchedule(newSchedule);
 
@@ -192,17 +191,63 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </p>
         </div>
 
-        {/* Playoff Configuration (if applicable) */}
+        {/* Finals Configuration (if applicable) */}
         {currentTournament.groupSystem === 'groupsAndFinals' &&
-         Object.values(currentTournament.finals).some(Boolean) && (
-          <div style={{ marginBottom: '24px' }}>
-            <PlayoffParallelConfigurator
-              numberOfFields={currentTournament.numberOfFields}
-              numberOfGroups={currentTournament.numberOfGroups || 2}
-              finals={currentTournament.finals}
-              playoffConfig={currentTournament.playoffConfig}
-              onUpdate={handlePlayoffConfigChange}
-            />
+         currentTournament.finalsConfig?.preset &&
+         currentTournament.finalsConfig.preset !== 'none' && (
+          <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
+            <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
+              🏆 Finalrunden-Einstellungen
+            </h3>
+            <p style={{ fontSize: '13px', color: theme.colors.text.secondary, margin: '0 0 12px 0' }}>
+              Preset: <strong>{
+                currentTournament.finalsConfig.preset === 'final-only' ? 'Nur Finale' :
+                currentTournament.finalsConfig.preset === 'top-4' ? 'Top 4 (Halbfinale + Finale)' :
+                currentTournament.finalsConfig.preset === 'top-8' ? 'Top 8 (mit Viertelfinale)' :
+                currentTournament.finalsConfig.preset === 'all-places' ? 'Alle Plätze' :
+                currentTournament.finalsConfig.preset
+              }</strong>
+            </p>
+
+            {['top-4', 'top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={currentTournament.finalsConfig?.parallelSemifinals ?? true}
+                    onChange={(e) => {
+                      handleFinalsConfigChange({
+                        ...currentTournament.finalsConfig!,
+                        parallelSemifinals: e.target.checked,
+                      });
+                    }}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                  />
+                  <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                    Halbfinale gleichzeitig austragen
+                  </span>
+                </label>
+
+                {['top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={currentTournament.finalsConfig?.parallelQuarterfinals ?? true}
+                      onChange={(e) => {
+                        handleFinalsConfigChange({
+                          ...currentTournament.finalsConfig!,
+                          parallelQuarterfinals: e.target.checked,
+                        });
+                      }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                    />
+                    <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                      Viertelfinale gleichzeitig austragen
+                    </span>
+                  </label>
+                )}
+              </div>
+            )}
           </div>
         )}
 

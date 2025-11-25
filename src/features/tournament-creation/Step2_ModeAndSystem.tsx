@@ -1,11 +1,9 @@
 import { CSSProperties, useState } from 'react';
 import { Card, Select, Input, Icons } from '../../components/ui';
-import { Tournament, GroupSystem, PlacementCriterion, PlayoffConfig } from '../../types/tournament';
+import { Tournament, GroupSystem, PlacementCriterion, FinalsPreset } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { DFB_ROUND_ROBIN_PATTERNS } from '../../constants/dfbMatchPatterns';
-import { FinalRoundConfigurator } from '../../components/FinalRoundConfigurator';
-import { PlayoffParallelConfigurator } from '../../components/PlayoffParallelConfigurator';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -316,23 +314,116 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           </div>
 
           {/* Finalrunden-Konfiguration */}
-          {canUseGroups && formData.finals && (
-            <>
-              <FinalRoundConfigurator
-                numberOfGroups={formData.numberOfGroups || 2}
-                finals={formData.finals}
-                onUpdate={(finals) => onUpdate('finals', finals)}
-              />
+          {canUseGroups && (
+            <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${theme.colors.border}` }}>
+              <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 16px 0' }}>
+                🏆 Finalrunde
+              </h3>
 
-              {/* Playoff Parallelisierungs-Konfiguration */}
-              <PlayoffParallelConfigurator
-                numberOfFields={formData.numberOfFields || 1}
-                numberOfGroups={formData.numberOfGroups || 2}
-                finals={formData.finals}
-                playoffConfig={formData.playoffConfig}
-                onUpdate={(config: PlayoffConfig) => onUpdate('playoffConfig', config)}
-              />
-            </>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Preset Radio Buttons */}
+                {[
+                  { value: 'none', label: 'Keine Finalrunde', description: 'Nur Gruppenphase' },
+                  { value: 'final-only', label: 'Nur Finale', description: 'Direkt ohne Halbfinale' },
+                  { value: 'top-4', label: 'Top 4', description: 'Halbfinale + Finale + Platz 3' },
+                  { value: 'top-8', label: 'Top 8', description: 'Viertelfinale + Platzierungen 5-8' },
+                  { value: 'all-places', label: 'Alle Plätze', description: 'Alle Platzierungen ausspielen' },
+                ].map((preset) => (
+                  <label
+                    key={preset.value}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '14px 16px',
+                      background: (formData.finalsConfig?.preset || 'none') === preset.value
+                        ? 'rgba(255,215,0,0.15)'
+                        : 'rgba(0,0,0,0.2)',
+                      border: (formData.finalsConfig?.preset || 'none') === preset.value
+                        ? `2px solid ${theme.colors.accent}`
+                        : '2px solid transparent',
+                      borderRadius: theme.borderRadius.md,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="finalsPreset"
+                      value={preset.value}
+                      checked={(formData.finalsConfig?.preset || 'none') === preset.value}
+                      onChange={(e) => {
+                        onUpdate('finalsConfig', {
+                          preset: e.target.value as FinalsPreset,
+                          parallelSemifinals: formData.finalsConfig?.parallelSemifinals,
+                          parallelQuarterfinals: formData.finalsConfig?.parallelQuarterfinals,
+                        });
+                      }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium }}>
+                        {preset.label}
+                      </div>
+                      <div style={{ color: theme.colors.text.secondary, fontSize: '12px', marginTop: '2px' }}>
+                        {preset.description}
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+
+              {/* Parallelisierungs-Optionen */}
+              {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
+                <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
+                  <h4 style={{ color: theme.colors.accent, fontSize: '13px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
+                    ⚡ Parallelisierung
+                  </h4>
+
+                  {['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.finalsConfig?.parallelSemifinals ?? true}
+                        onChange={(e) => {
+                          onUpdate('finalsConfig', {
+                            ...formData.finalsConfig!,
+                            parallelSemifinals: e.target.checked,
+                          });
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                      />
+                      <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                        Halbfinale gleichzeitig austragen
+                      </span>
+                    </label>
+                  )}
+
+                  {['top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.finalsConfig?.parallelQuarterfinals ?? true}
+                        onChange={(e) => {
+                          onUpdate('finalsConfig', {
+                            ...formData.finalsConfig!,
+                            parallelQuarterfinals: e.target.checked,
+                          });
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                      />
+                      <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                        Viertelfinale gleichzeitig austragen
+                      </span>
+                    </label>
+                  )}
+
+                  <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '12px', lineHeight: '1.4' }}>
+                    💡 Bei mehreren Feldern können Spiele gleichzeitig stattfinden
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Point System */}
