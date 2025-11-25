@@ -374,7 +374,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               </div>
 
               {/* Parallelisierungs-Optionen */}
-              {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
+              {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (formData.numberOfFields || 1) > 1 && (
                 <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
                   <h4 style={{ color: theme.colors.accent, fontSize: '13px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
                     ⚡ Parallelisierung

@@ -209,7 +209,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               }</strong>
             </p>
 
-            {['top-4', 'top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && (
+            {['top-4', 'top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && currentTournament.numberOfFields > 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                   <input

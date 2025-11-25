@@ -151,7 +151,12 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
   }
 
   // 2. Generiere Playoffs
-  if (tournament.groupSystem === 'groupsAndFinals' && Object.values(tournament.finals).some(Boolean)) {
+  const shouldGeneratePlayoffs = tournament.groupSystem === 'groupsAndFinals' && (
+    (tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
+    (tournament.finals && Object.values(tournament.finals).some(Boolean))
+  );
+
+  if (shouldGeneratePlayoffs) {
     const numberOfGroups = tournament.numberOfGroups || 2;
 
     // Use new FinalsConfig if available, otherwise migrate from legacy
