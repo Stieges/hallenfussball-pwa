@@ -186,39 +186,48 @@ function calculateFairnessScore(
   }
 
   // PRIORITY 1: Minimize global variance (maxAvgRest - minAvgRest)
-  // Calculate new average rest for these teams AFTER this assignment
-  const newAvgRestA = stateA.matchSlots.length > 0
-    ? [...stateA.matchSlots, slot].slice(1).reduce((sum, s, i, arr) => sum + (s - arr[i]), 0) / stateA.matchSlots.length
-    : 0;
-  const newAvgRestB = stateB.matchSlots.length > 0
-    ? [...stateB.matchSlots, slot].slice(1).reduce((sum, s, i, arr) => sum + (s - arr[i]), 0) / stateB.matchSlots.length
-    : 0;
+  // Calculate what average rest would be for teams AFTER this assignment
 
-  // Calculate global min/max average rest across ALL teams
-  let globalMinAvg = Infinity;
-  let globalMaxAvg = -Infinity;
+  // Calculate current average rest for all teams (including projected values for A & B)
+  const avgRestByTeam = new Map<string, number>();
 
   teamStates.forEach((state, teamId) => {
-    if (state.matchSlots.length === 0) return; // Skip teams without matches yet
-
-    let avgRest: number;
-    if (teamId === teamAId) {
-      avgRest = newAvgRestA;
-    } else if (teamId === teamBId) {
-      avgRest = newAvgRestB;
+    if (teamId === teamAId || teamId === teamBId) {
+      // Project what the average would be after adding this match
+      const projectedSlots = [...state.matchSlots, slot].sort((a, b) => a - b);
+      if (projectedSlots.length < 2) {
+        avgRestByTeam.set(teamId, 0);
+      } else {
+        const rests: number[] = [];
+        for (let i = 1; i < projectedSlots.length; i++) {
+          rests.push(projectedSlots[i] - projectedSlots[i - 1]);
+        }
+        const avgRest = rests.reduce((sum, r) => sum + r, 0) / rests.length;
+        avgRestByTeam.set(teamId, avgRest);
+      }
+    } else if (state.matchSlots.length >= 2) {
+      // Calculate current average for teams not in this match
+      const sortedSlots = [...state.matchSlots].sort((a, b) => a - b);
+      const rests: number[] = [];
+      for (let i = 1; i < sortedSlots.length; i++) {
+        rests.push(sortedSlots[i] - sortedSlots[i - 1]);
+      }
+      const avgRest = rests.reduce((sum, r) => sum + r, 0) / rests.length;
+      avgRestByTeam.set(teamId, avgRest);
     } else {
-      avgRest = state.matchSlots.length > 1
-        ? state.matchSlots.slice(1).reduce((sum, s, i) => sum + (s - state.matchSlots[i]), 0) / (state.matchSlots.length - 1)
-        : 0;
+      avgRestByTeam.set(teamId, 0);
     }
-
-    globalMinAvg = Math.min(globalMinAvg, avgRest);
-    globalMaxAvg = Math.max(globalMaxAvg, avgRest);
   });
 
-  // Penalize assignments that increase the global variance
-  const globalVariance = globalMaxAvg - globalMinAvg;
-  score += globalVariance * 100; // High weight for global fairness
+  // Calculate global min/max average rest
+  const avgRests = Array.from(avgRestByTeam.values()).filter(avg => avg > 0);
+
+  if (avgRests.length > 0) {
+    const globalMinAvg = Math.min(...avgRests);
+    const globalMaxAvg = Math.max(...avgRests);
+    const globalVariance = globalMaxAvg - globalMinAvg;
+    score += globalVariance * 100; // High weight for global fairness
+  }
 
   // Favor fair field distribution
   const fieldCountA = stateA.fieldCounts.get(field) || 0;
@@ -294,6 +303,12 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   // Schedule matches using greedy algorithm with fairness heuristic
   const remainingPairings = [...allPairings];
 
+  console.log('[FairScheduler] Starting scheduling:', {
+    totalPairings: allPairings.length,
+    numberOfFields,
+    minRestSlotsPerTeam
+  });
+
   while (remainingPairings.length > 0) {
     // Find slot with available fields
     if (timeSlots.length === currentSlotIndex) {
@@ -335,6 +350,9 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       // Schedule best pairing if found
       if (bestPairingIndex >= 0 && bestScore < Infinity) {
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
+
+        console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}`);
+
         const match: Match = {
           id: `match-${Date.now()}-${matches.length}`,
           round: currentSlotIndex + 1,
