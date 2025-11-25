@@ -8,7 +8,7 @@
  * - Maintains playoff tree structure
  */
 
-import { Match, PlayoffConfig, Team } from '../types/tournament';
+import { Match, PlayoffConfig } from '../types/tournament';
 
 /**
  * Playoff match definition before scheduling
@@ -36,15 +36,6 @@ export interface PlayoffScheduleOptions {
   startTime?: Date;
   groupPhaseEndTime?: Date;
   breakBetweenPhases?: number; // Minutes
-}
-
-/**
- * Team participation tracker for playoffs
- */
-interface TeamPlayoffState {
-  teamId: string;
-  lastSlot: number;
-  matchIds: string[];
 }
 
 /**
@@ -216,7 +207,6 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
     numberOfFields,
     slotDurationMinutes,
     breakBetweenSlotsMinutes,
-    minRestSlotsPerTeam,
     startSlot,
     startTime,
   } = options;
@@ -227,7 +217,6 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
 
   const matches: Match[] = [];
   const scheduledMatches: ScheduledPlayoffMatch[] = [];
-  const teamStates = new Map<string, TeamPlayoffState>();
 
   // Track which matches have been scheduled
   const completedMatchIds = new Set<string>();
@@ -285,7 +274,6 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
 
     // Schedule parallel matches (multiple per slot if fields available)
     if (parallelMatches.length > 0) {
-      const slotStart = currentSlot;
       let field = 1;
 
       for (const def of parallelMatches) {
