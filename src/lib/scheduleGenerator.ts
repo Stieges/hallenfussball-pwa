@@ -10,7 +10,7 @@
 
 import { Tournament, Match, Team, Standing } from '../types/tournament';
 import { generateGroupPhaseSchedule } from '../utils/fairScheduler';
-import { generatePlayoffSchedule, generatePlayoffDefinitions } from '../utils/playoffScheduler';
+import { generatePlayoffSchedule, generatePlayoffDefinitions, generatePlayoffDefinitionsLegacy } from '../utils/playoffScheduler';
 import { getUniqueGroups } from '../utils/groupHelpers';
 
 // ============================================================================
@@ -153,11 +153,11 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
   // 2. Generiere Playoffs
   if (tournament.groupSystem === 'groupsAndFinals' && Object.values(tournament.finals).some(Boolean)) {
     const numberOfGroups = tournament.numberOfGroups || 2;
-    const playoffDefinitions = generatePlayoffDefinitions(
-      numberOfGroups,
-      tournament.finals,
-      tournament.playoffConfig
-    );
+
+    // Use new FinalsConfig if available, otherwise migrate from legacy
+    const playoffDefinitions = tournament.finalsConfig
+      ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig)
+      : generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals);
 
     // Berechne Startslot für Playoffs
     const lastGroupSlot = groupStageMatches.length > 0

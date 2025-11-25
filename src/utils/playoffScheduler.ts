@@ -8,7 +8,8 @@
  * - Maintains playoff tree structure
  */
 
-import { Match, PlayoffConfig } from '../types/tournament';
+import { Match, FinalsConfig } from '../types/tournament';
+import { generatePlayoffMatches as generatePlayoffMatchesFromPreset } from '../lib/playoffGenerator';
 
 /**
  * Playoff match definition before scheduling
@@ -49,153 +50,82 @@ interface ScheduledPlayoffMatch {
 }
 
 /**
- * Generate default playoff definitions based on enabled finals
+ * Generate playoff definitions based on FinalsConfig preset
+ * NEW: Uses preset-based system from playoffGenerator
  */
 export function generatePlayoffDefinitions(
+  numberOfGroups: number,
+  finalsConfig: FinalsConfig
+): PlayoffMatchDefinition[] {
+  // Get playoff matches from the new preset-based generator
+  const playoffMatches = generatePlayoffMatchesFromPreset(numberOfGroups, finalsConfig);
+
+  // Convert to PlayoffMatchDefinition format
+  const definitions: PlayoffMatchDefinition[] = playoffMatches.map(match => {
+    // Determine parallel mode
+    const isQuarterfinal = match.id.startsWith('qf');
+    const isSemifinal = match.id.startsWith('semi');
+    const isFinal = match.id === 'final';
+
+    let parallelMode: 'sequentialOnly' | 'parallelAllowed' = 'parallelAllowed';
+
+    if (isFinal) {
+      parallelMode = 'sequentialOnly';
+    } else if (isSemifinal && finalsConfig.parallelSemifinals === false) {
+      parallelMode = 'sequentialOnly';
+    } else if (isQuarterfinal && finalsConfig.parallelQuarterfinals === false) {
+      parallelMode = 'sequentialOnly';
+    }
+
+    // Determine finalType
+    let finalType: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth' | undefined;
+    if (match.id === 'final') finalType = 'final';
+    else if (match.id === 'third-place') finalType = 'thirdPlace';
+    else if (match.id.includes('place56') || match.id === 'place56-direct') finalType = 'fifthSixth';
+    else if (match.id.includes('place78') || match.id === 'place78-direct') finalType = 'seventhEighth';
+
+    return {
+      id: match.id,
+      label: match.label,
+      teamASource: match.home,
+      teamBSource: match.away,
+      finalType,
+      parallelMode,
+      dependencies: match.dependsOn || [],
+    };
+  });
+
+  return definitions;
+}
+
+/**
+ * @deprecated Legacy function - use generatePlayoffDefinitions with FinalsConfig instead
+ */
+export function generatePlayoffDefinitionsLegacy(
   numberOfGroups: number,
   finals: {
     final: boolean;
     thirdPlace: boolean;
     fifthSixth: boolean;
     seventhEighth: boolean;
-  },
-  playoffConfig?: PlayoffConfig
+  }
 ): PlayoffMatchDefinition[] {
-  const definitions: PlayoffMatchDefinition[] = [];
+  // Migrate old finals structure to new preset
+  let preset: FinalsConfig['preset'] = 'none';
 
-  // For 2 groups: semifinals first (cross-pairing), then finals
-  if (numberOfGroups === 2) {
-    // Generate SEMIFINALS first (MeinTurnierplan style)
-    const semi1Config = playoffConfig?.matches.find(m => m.id === 'semi1');
-    const semi2Config = playoffConfig?.matches.find(m => m.id === 'semi2');
-
-    definitions.push({
-      id: 'semi1',
-      label: '2. Halbfinale',
-      teamASource: 'group-a-1st',
-      teamBSource: 'group-b-2nd',
-      parallelMode: semi1Config?.parallelMode || 'parallelAllowed',
-      dependencies: [],
-    });
-
-    definitions.push({
-      id: 'semi2',
-      label: '1. Halbfinale',
-      teamASource: 'group-a-2nd',
-      teamBSource: 'group-b-1st',
-      parallelMode: semi2Config?.parallelMode || 'parallelAllowed',
-      dependencies: [],
-    });
-
-    // Placement games (independent of semifinals)
-    if (finals.seventhEighth) {
-      const config = playoffConfig?.matches.find(m => m.id === 'seventhEighth');
-      definitions.push({
-        id: 'seventhEighth',
-        label: 'Spiel um Platz 7',
-        teamASource: 'group-a-4th',
-        teamBSource: 'group-b-4th',
-        finalType: 'seventhEighth',
-        parallelMode: config?.parallelMode || 'parallelAllowed',
-        dependencies: [],
-      });
-    }
-
-    if (finals.fifthSixth) {
-      const config = playoffConfig?.matches.find(m => m.id === 'fifthSixth');
-      definitions.push({
-        id: 'fifthSixth',
-        label: 'Spiel um Platz 5',
-        teamASource: 'group-a-3rd',
-        teamBSource: 'group-b-3rd',
-        finalType: 'fifthSixth',
-        parallelMode: config?.parallelMode || 'parallelAllowed',
-        dependencies: [],
-      });
-    }
-
-    // Finals (depend on semifinals)
+  if (finals.final) {
     if (finals.thirdPlace) {
-      const config = playoffConfig?.matches.find(m => m.id === 'thirdPlace');
-      definitions.push({
-        id: 'thirdPlace',
-        label: 'Spiel um Platz 3',
-        teamASource: 'semi1-loser',
-        teamBSource: 'semi2-loser',
-        finalType: 'thirdPlace',
-        parallelMode: config?.parallelMode || 'parallelAllowed',
-        dependencies: ['semi1', 'semi2'],
-      });
-    }
-
-    if (finals.final) {
-      const config = playoffConfig?.matches.find(m => m.id === 'final');
-      definitions.push({
-        id: 'final',
-        label: 'Finale',
-        teamASource: 'semi1-winner',
-        teamBSource: 'semi2-winner',
-        finalType: 'final',
-        parallelMode: config?.parallelMode || 'sequentialOnly',
-        dependencies: ['semi1', 'semi2'],
-      });
+      if (finals.fifthSixth || finals.seventhEighth) {
+        preset = 'all-places';
+      } else {
+        preset = 'top-4';
+      }
+    } else {
+      preset = 'final-only';
     }
   }
 
-  // For 4 groups: semifinals then finals
-  else if (numberOfGroups === 4) {
-    // Semifinals
-    const semi1Config = playoffConfig?.matches.find(m => m.id === 'semi1');
-    const semi2Config = playoffConfig?.matches.find(m => m.id === 'semi2');
-
-    definitions.push({
-      id: 'semi1',
-      label: 'Halbfinale 1',
-      teamASource: 'group-a-1st',
-      teamBSource: 'group-b-1st',
-      parallelMode: semi1Config?.parallelMode || 'parallelAllowed',
-      dependencies: [],
-    });
-
-    definitions.push({
-      id: 'semi2',
-      label: 'Halbfinale 2',
-      teamASource: 'group-c-1st',
-      teamBSource: 'group-d-1st',
-      parallelMode: semi2Config?.parallelMode || 'parallelAllowed',
-      dependencies: [],
-    });
-
-    // Final
-    if (finals.final) {
-      const finalConfig = playoffConfig?.matches.find(m => m.id === 'final');
-      definitions.push({
-        id: 'final',
-        label: 'Finale',
-        teamASource: 'semi1-winner',
-        teamBSource: 'semi2-winner',
-        finalType: 'final',
-        parallelMode: finalConfig?.parallelMode || 'sequentialOnly',
-        dependencies: ['semi1', 'semi2'],
-      });
-    }
-
-    // Third place
-    if (finals.thirdPlace) {
-      const thirdConfig = playoffConfig?.matches.find(m => m.id === 'thirdPlace');
-      definitions.push({
-        id: 'thirdPlace',
-        label: 'Spiel um Platz 3',
-        teamASource: 'semi1-loser',
-        teamBSource: 'semi2-loser',
-        finalType: 'thirdPlace',
-        parallelMode: thirdConfig?.parallelMode || 'parallelAllowed',
-        dependencies: ['semi1', 'semi2'],
-      });
-    }
-  }
-
-  return definitions;
+  return generatePlayoffDefinitions(numberOfGroups, { preset });
 }
 
 /**

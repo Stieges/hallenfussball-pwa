@@ -25,6 +25,31 @@ export interface PointSystem {
   loss: number;
 }
 
+/**
+ * Finals Preset Types
+ * Defines the structure of the playoff/finals phase
+ */
+export type FinalsPreset =
+  | 'none'           // Keine Finalrunde (nur Gruppenphase)
+  | 'final-only'     // Nur Finale (direkt, ohne Halbfinale)
+  | 'top-4'          // Halbfinale + Finale + Platz 3
+  | 'top-8'          // Viertelfinale + alles darüber + Platzierungen 5-8
+  | 'all-places';    // Alle Plätze ausspielen
+
+/**
+ * Finals Configuration
+ * Replaces the old Finals boolean structure with preset-based system
+ */
+export interface FinalsConfig {
+  preset: FinalsPreset;
+  parallelSemifinals?: boolean;      // Halbfinale gleichzeitig?
+  parallelQuarterfinals?: boolean;   // Viertelfinale gleichzeitig?
+}
+
+/**
+ * @deprecated Legacy Finals structure - will be migrated to FinalsConfig
+ * Kept for backwards compatibility
+ */
 export interface Finals {
   final: boolean;
   thirdPlace: boolean;
@@ -33,13 +58,12 @@ export interface Finals {
 }
 
 /**
- * Playoff Match Configuration
- * Defines whether a specific playoff match can run in parallel with others
+ * @deprecated Legacy Playoff Config - replaced by FinalsConfig
  */
 export type PlayoffParallelMode = 'sequentialOnly' | 'parallelAllowed';
 
 export interface PlayoffMatchConfig {
-  id: string; // "semi1", "semi2", "thirdPlace", "final", etc.
+  id: string;
   label: string;
   parallelMode: PlayoffParallelMode;
   enabled: boolean;
@@ -47,7 +71,7 @@ export interface PlayoffMatchConfig {
 
 export interface PlayoffConfig {
   enabled: boolean;
-  allowParallelMatches: boolean; // Global setting
+  allowParallelMatches: boolean;
   matches: PlayoffMatchConfig[];
 }
 
@@ -101,8 +125,13 @@ export interface Tournament {
   roundLogic?: RoundLogic;
   numberOfRounds?: number;
   placementLogic: PlacementCriterion[];
+
+  // Finals configuration (new preset-based system)
+  finalsConfig?: FinalsConfig;
+
+  // Legacy fields (will be migrated)
   finals: Finals;
-  playoffConfig?: PlayoffConfig; // New: Playoff configuration
+  playoffConfig?: PlayoffConfig;
   minRestSlots?: number; // Minimum rest slots between matches for a team (default: 1)
 
   // Bambini Settings
