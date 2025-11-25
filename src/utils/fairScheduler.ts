@@ -344,10 +344,10 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         );
 
         if (score < Infinity) {
-          const stateA = teamStates.get(pairing.teamA.id)!;
-          const stateB = teamStates.get(pairing.teamB.id)!;
-          const restA = currentSlotIndex - stateA.lastSlot;
-          const restB = currentSlotIndex - stateB.lastSlot;
+          const teamAState = teamStates.get(pairing.teamA.id)!;
+          const teamBState = teamStates.get(pairing.teamB.id)!;
+          const restA = currentSlotIndex - teamAState.lastSlot;
+          const restB = currentSlotIndex - teamBState.lastSlot;
           const minRest = Math.min(restA, restB);
 
           candidates.push({ index: i, score, longestRestSinceLastMatch: minRest });
