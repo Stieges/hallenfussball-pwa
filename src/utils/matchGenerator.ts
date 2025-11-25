@@ -1,4 +1,5 @@
 import { Tournament, Match } from '../types/tournament';
+import { generateGroupLabels, getUniqueGroups } from './groupHelpers';
 
 /**
  * Generate matches based on tournament configuration
@@ -63,45 +64,45 @@ const generateRoundRobinMatches = (tournament: Tournament): Match[] => {
  */
 const generateGroupMatches = (tournament: Tournament): Match[] => {
   const matches: Match[] = [];
-  const groupA = tournament.teams.filter(t => t.group === 'A');
-  const groupB = tournament.teams.filter(t => t.group === 'B');
+
+  // Bestimme aktive Gruppen - entweder aus Teams oder generiere sie
+  const numberOfGroups = tournament.numberOfGroups || 2;
+  const groups = getUniqueGroups(tournament.teams);
+
+  // Falls keine Teams Gruppen zugewiesen haben, generiere Gruppen-Labels
+  const groupLabels = groups.length > 0 ? groups : generateGroupLabels(numberOfGroups);
+
   let matchId = 1;
-  let round = 1;
+  let globalRound = 1;
 
-  // Generate matches for Group A
-  for (let i = 0; i < groupA.length; i++) {
-    for (let j = i + 1; j < groupA.length; j++) {
-      matches.push({
-        id: `match-${matchId}`,
-        round,
-        field: 1,
-        teamA: groupA[i].id,
-        teamB: groupA[j].id,
-        group: 'A',
-      });
-      matchId++;
-      round++;
+  // Generiere Matches für jede Gruppe
+  groupLabels.forEach((groupName, groupIndex) => {
+    const groupTeams = tournament.teams.filter(t => t.group === groupName);
+
+    if (groupTeams.length === 0) return; // Keine Teams in dieser Gruppe
+
+    // Round-Robin innerhalb der Gruppe
+    for (let i = 0; i < groupTeams.length; i++) {
+      for (let j = i + 1; j < groupTeams.length; j++) {
+        const field = (groupIndex % tournament.numberOfFields) + 1;
+
+        matches.push({
+          id: `match-${matchId}`,
+          round: globalRound,
+          field: field,
+          teamA: groupTeams[i].id,
+          teamB: groupTeams[j].id,
+          group: groupName,
+        });
+        matchId++;
+
+        // Erhöhe Round nach jedem kompletten Satz von parallelen Spielen
+        if (matchId % tournament.numberOfFields === 1) {
+          globalRound++;
+        }
+      }
     }
-  }
-
-  // Reset round counter for Group B
-  round = 1;
-
-  // Generate matches for Group B
-  for (let i = 0; i < groupB.length; i++) {
-    for (let j = i + 1; j < groupB.length; j++) {
-      matches.push({
-        id: `match-${matchId}`,
-        round,
-        field: tournament.numberOfFields > 1 ? 2 : 1,
-        teamA: groupB[i].id,
-        teamB: groupB[j].id,
-        group: 'B',
-      });
-      matchId++;
-      round++;
-    }
-  }
+  });
 
   return matches;
 };

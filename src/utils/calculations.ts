@@ -7,7 +7,7 @@ export const calculateStandings = (
   teams: Team[],
   matches: Match[],
   tournament: Tournament,
-  group?: 'A' | 'B' | 'C' | 'D'
+  group?: string
 ): Standing[] => {
   // Filter matches for the specific group if provided
   const relevantMatches = group

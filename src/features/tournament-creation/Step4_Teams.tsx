@@ -1,6 +1,7 @@
 import { Card, Button, Input, Icons } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
 import { theme } from '../../styles/theme';
+import { generateGroupLabels } from '../../utils/groupHelpers';
 
 interface Step4Props {
   formData: Partial<Tournament>;
@@ -12,12 +13,40 @@ interface Step4Props {
 
 export const Step4_Teams: React.FC<Step4Props> = ({
   formData,
+  onUpdate,
   onAddTeam,
   onRemoveTeam,
   onUpdateTeam,
 }) => {
   const teams = formData.teams || [];
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
+  const numberOfTeams = formData.numberOfTeams || 4;
+  const needsMoreTeams = teams.length < numberOfTeams;
+
+  // Auto-Generierung: Teams basierend auf numberOfTeams erstellen
+  const handleGenerateTeams = () => {
+    const newTeams: Team[] = [];
+    for (let i = 1; i <= numberOfTeams; i++) {
+      newTeams.push({
+        id: `team-${Date.now()}-${i}`,
+        name: `Team ${i}`,
+      });
+    }
+    onUpdate('teams', newTeams);
+  };
+
+  // Auto-Zuweisung: Teams gleichmäßig auf Gruppen verteilen
+  const handleAutoAssignGroups = () => {
+    const numberOfGroups = formData.numberOfGroups || 2;
+    const groups = generateGroupLabels(numberOfGroups);
+
+    const updatedTeams = teams.map((team, index) => ({
+      ...team,
+      group: groups[index % numberOfGroups],
+    }));
+
+    onUpdate('teams', updatedTeams);
+  };
 
   return (
     <Card>
@@ -25,10 +54,29 @@ export const Step4_Teams: React.FC<Step4Props> = ({
         👥 Teams
       </h2>
 
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <Button onClick={onAddTeam} icon={<Icons.Plus />} variant="secondary">
           Team hinzufügen
         </Button>
+
+        {needsMoreTeams && (
+          <Button
+            onClick={handleGenerateTeams}
+            icon={<Icons.Plus />}
+            variant="primary"
+          >
+            {numberOfTeams} Teams generieren
+          </Button>
+        )}
+
+        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups || 0) > 1 && (
+          <Button
+            onClick={handleAutoAssignGroups}
+            variant="secondary"
+          >
+            Gruppen automatisch zuweisen
+          </Button>
+        )}
       </div>
 
       {teams.length === 0 ? (
@@ -87,7 +135,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               {canAssignGroups && (
                 <select
                   value={team.group || ''}
-                  onChange={(e) => onUpdateTeam(team.id, { group: (e.target.value as 'A' | 'B' | 'C' | 'D') || undefined })}
+                  onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
                   style={{
                     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
                     background: 'rgba(0,0,0,0.3)',
@@ -99,10 +147,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   }}
                 >
                   <option value="">Keine Gruppe</option>
-                  <option value="A">Gruppe A</option>
-                  <option value="B">Gruppe B</option>
-                  {(formData.numberOfGroups || 0) >= 3 && <option value="C">Gruppe C</option>}
-                  {(formData.numberOfGroups || 0) >= 4 && <option value="D">Gruppe D</option>}
+                  {generateGroupLabels(formData.numberOfGroups || 2).map(label => (
+                    <option key={label} value={label}>Gruppe {label}</option>
+                  ))}
                 </select>
               )}
 

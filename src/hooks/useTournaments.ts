@@ -13,7 +13,12 @@ export const useTournaments = () => {
   useEffect(() => {
     try {
       const loaded = storage.getTournaments();
-      setTournaments(loaded);
+      // Migration: Setze status auf 'published' für bestehende Turniere ohne status
+      const migratedTournaments = loaded.map(t => ({
+        ...t,
+        status: t.status || 'published',
+      }));
+      setTournaments(migratedTournaments);
     } catch (error) {
       console.error('Failed to load tournaments:', error);
     } finally {

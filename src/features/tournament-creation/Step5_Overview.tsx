@@ -115,10 +115,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
           )}
         </div>
 
-        {/* Save Button */}
+        {/* Preview Button */}
         <div style={{ marginTop: '24px' }}>
-          <Button onClick={onSave} icon={<Icons.Check />} size="lg" fullWidth>
-            Turnier erstellen
+          <Button onClick={onSave} icon={<Icons.ChevronRight />} size="lg" fullWidth iconPosition="right">
+            Vorschau anzeigen
           </Button>
         </div>
       </div>

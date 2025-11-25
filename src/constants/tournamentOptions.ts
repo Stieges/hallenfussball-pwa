@@ -81,14 +81,12 @@ export const GROUP_SYSTEM_OPTIONS: SelectOption[] = [
 ];
 
 /**
- * Anzahl Gruppen
+ * Anzahl Gruppen - Dynamisch generieren bis zu einer sinnvollen Obergrenze
  */
-export const NUMBER_OF_GROUPS_OPTIONS: SelectOption[] = [
-  { value: 1, label: '1 Gruppe' },
-  { value: 2, label: '2 Gruppen' },
-  { value: 3, label: '3 Gruppen' },
-  { value: 4, label: '4 Gruppen' },
-];
+export const NUMBER_OF_GROUPS_OPTIONS: SelectOption[] = Array.from({ length: 26 }, (_, i) => ({
+  value: i + 1,
+  label: i === 0 ? '1 Gruppe' : `${i + 1} Gruppen`,
+}));
 
 /**
  * Anzahl Felder (für Classic Mode)

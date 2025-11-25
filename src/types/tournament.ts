@@ -5,11 +5,12 @@ export type TournamentMode = 'classic' | 'miniFussball';
 export type GroupSystem = 'roundRobin' | 'groupsAndFinals';
 export type RoundLogic = 'fixed' | 'promotion';
 export type ResultMode = 'goals' | 'winLossOnly';
+export type TournamentStatus = 'draft' | 'published';
 
 export interface Team {
   id: string;
   name: string;
-  group?: 'A' | 'B' | 'C' | 'D';
+  group?: string;
 }
 
 export interface PlacementCriterion {
@@ -31,21 +32,43 @@ export interface Finals {
   seventhEighth: boolean;
 }
 
+/**
+ * Playoff Match Configuration
+ * Defines whether a specific playoff match can run in parallel with others
+ */
+export type PlayoffParallelMode = 'sequentialOnly' | 'parallelAllowed';
+
+export interface PlayoffMatchConfig {
+  id: string; // "semi1", "semi2", "thirdPlace", "final", etc.
+  label: string;
+  parallelMode: PlayoffParallelMode;
+  enabled: boolean;
+}
+
+export interface PlayoffConfig {
+  enabled: boolean;
+  allowParallelMatches: boolean; // Global setting
+  matches: PlayoffMatchConfig[];
+}
+
 export interface Match {
   id: string;
   round: number;
   field: number;
+  slot?: number; // Time slot index for fair scheduling
   teamA: string;
   teamB: string;
   scoreA?: number;
   scoreB?: number;
-  group?: 'A' | 'B';
+  group?: string;
   isFinal?: boolean;
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
+  scheduledTime?: Date; // Actual scheduled time
 }
 
 export interface Tournament {
   id: string;
+  status: TournamentStatus; // 'draft' oder 'published'
 
   // Step 1: Sport & Tournament Type
   sport: Sport;
@@ -54,6 +77,7 @@ export interface Tournament {
   // Step 2: Mode & System
   mode: TournamentMode;
   numberOfFields: number;
+  numberOfTeams: number; // Anzahl teilnehmender Teams (Pflichtfeld)
   groupSystem?: GroupSystem;
   numberOfGroups?: number;
 
@@ -78,6 +102,8 @@ export interface Tournament {
   numberOfRounds?: number;
   placementLogic: PlacementCriterion[];
   finals: Finals;
+  playoffConfig?: PlayoffConfig; // New: Playoff configuration
+  minRestSlots?: number; // Minimum rest slots between matches for a team (default: 1)
 
   // Bambini Settings
   isKidsTournament: boolean;

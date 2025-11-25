@@ -1,10 +1,11 @@
 import { CSSProperties, useState } from 'react';
 import { Card, Select, Input, Icons } from '../../components/ui';
-import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
+import { Tournament, GroupSystem, PlacementCriterion, PlayoffConfig } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { DFB_ROUND_ROBIN_PATTERNS } from '../../constants/dfbMatchPatterns';
 import { FinalRoundConfigurator } from '../../components/FinalRoundConfigurator';
+import { PlayoffParallelConfigurator } from '../../components/PlayoffParallelConfigurator';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -126,7 +127,16 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           )}
 
           {/* Grundlegende Turnier-Parameter */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: canUseGroups ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' }}>
+            <Input
+              label="Anzahl Teams"
+              type="number"
+              min="2"
+              max="64"
+              value={formData.numberOfTeams || 4}
+              onChange={(v) => onUpdate('numberOfTeams', parseInt(v) || 4)}
+              required
+            />
             {canUseGroups && (
               <Select
                 label="Anzahl Gruppen"
@@ -307,11 +317,22 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
           {/* Finalrunden-Konfiguration */}
           {canUseGroups && formData.finals && (
-            <FinalRoundConfigurator
-              numberOfGroups={formData.numberOfGroups || 2}
-              finals={formData.finals}
-              onUpdate={(finals) => onUpdate('finals', finals)}
-            />
+            <>
+              <FinalRoundConfigurator
+                numberOfGroups={formData.numberOfGroups || 2}
+                finals={formData.finals}
+                onUpdate={(finals) => onUpdate('finals', finals)}
+              />
+
+              {/* Playoff Parallelisierungs-Konfiguration */}
+              <PlayoffParallelConfigurator
+                numberOfFields={formData.numberOfFields || 1}
+                numberOfGroups={formData.numberOfGroups || 2}
+                finals={formData.finals}
+                playoffConfig={formData.playoffConfig}
+                onUpdate={(config: PlayoffConfig) => onUpdate('playoffConfig', config)}
+              />
+            </>
           )}
 
           {/* Point System */}

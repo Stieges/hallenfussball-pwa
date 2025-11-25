@@ -8,9 +8,11 @@ import {
   Step4_Teams,
   Step5_Overview,
 } from '../features/tournament-creation';
+import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { Tournament, TournamentType } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
-import { generateMatches } from '../utils/matchGenerator';
+import { generateTournamentSchedule } from '../utils/tournamentScheduler';
+import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { theme } from '../styles/theme';
 
 interface TournamentCreationScreenProps {
@@ -23,6 +25,7 @@ const getDefaultFormData = (): Partial<Tournament> => ({
   tournamentType: 'classic',
   mode: 'classic',
   numberOfFields: 1,
+  numberOfTeams: 4,
   groupSystem: 'roundRobin',
   numberOfGroups: 2,
   groupPhaseGameDuration: 10,
@@ -144,13 +147,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     );
   };
 
-  const handleSave = () => {
-    const tournament: Tournament = {
+  const createDraftTournament = (): Tournament => {
+    return {
       id: existingTournament?.id || `tournament-${Date.now()}`,
+      status: 'draft',
       sport: formData.sport || 'football',
       tournamentType: formData.tournamentType || 'classic',
       mode: formData.mode || 'classic',
       numberOfFields: formData.numberOfFields || 1,
+      numberOfTeams: formData.numberOfTeams || 4,
       groupSystem: formData.groupSystem,
       numberOfGroups: formData.numberOfGroups,
       groupPhaseGameDuration: formData.groupPhaseGameDuration || 10,
@@ -178,13 +183,27 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       timeSlot: formData.timeSlot || '',
       location: formData.location || '',
       teams: formData.teams || [],
-      matches: generateMatches(formData as Tournament),
+      matches: [], // Wird später vom Fair Scheduler generiert
       createdAt: existingTournament?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+  };
 
+  const handlePreview = () => {
+    // Gehe zu Preview-Step
+    setStep(6);
+  };
+
+  const handlePublish = () => {
+    const tournament = createDraftTournament();
+    tournament.status = 'published';
     saveTournament(tournament);
     onBack();
+  };
+
+  const handleBackToEdit = () => {
+    // Zurück zu Step 5 (Overview)
+    setStep(5);
   };
 
   const canGoNext = () => {
@@ -237,12 +256,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         {existingTournament ? 'TURNIER BEARBEITEN' : 'NEUES TURNIER'}
       </h1>
 
-      {/* Progress Bar */}
-      <ProgressBar
-        currentStep={step}
-        totalSteps={5}
-        stepLabels={['Stammdaten', 'Sportart', 'Modus', 'Teams', 'Übersicht']}
-      />
+      {/* Progress Bar - nur bei Steps 1-5 anzeigen */}
+      {step <= 5 && (
+        <ProgressBar
+          currentStep={step}
+          totalSteps={5}
+          stepLabels={['Stammdaten', 'Sportart', 'Modus', 'Teams', 'Übersicht']}
+        />
+      )}
 
       {/* Steps */}
       {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
@@ -274,29 +295,47 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         />
       )}
 
-      {step === 5 && <Step5_Overview formData={formData} onSave={handleSave} />}
+      {step === 5 && <Step5_Overview formData={formData} onSave={handlePreview} />}
 
-      {/* Navigation */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
-        <Button
-          variant="ghost"
-          onClick={() => setStep(Math.max(1, step - 1))}
-          disabled={step === 1}
-          icon={<Icons.ChevronLeft />}
-        >
-          Zurück
-        </Button>
-        {step < 5 && (
+      {step === 6 && (
+        <TournamentPreview
+          tournament={createDraftTournament()}
+          schedule={generateFullSchedule(createDraftTournament())}
+          onEdit={handleBackToEdit}
+          onPublish={handlePublish}
+          onTournamentChange={(updatedTournament) => {
+            // Update formData with the modified playoff config
+            setFormData((prev) => ({
+              ...prev,
+              playoffConfig: updatedTournament.playoffConfig,
+            }));
+          }}
+        />
+      )}
+
+      {/* Navigation - ausblenden wenn Step 6 (Preview hat eigene Navigation) */}
+      {step !== 6 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
           <Button
-            onClick={() => setStep(Math.min(5, step + 1))}
-            disabled={!canGoNext()}
-            icon={<Icons.ChevronRight />}
-            iconPosition="right"
+            variant="ghost"
+            onClick={() => setStep(Math.max(1, step - 1))}
+            disabled={step === 1}
+            icon={<Icons.ChevronLeft />}
           >
-            Weiter
+            Zurück
           </Button>
-        )}
-      </div>
+          {step < 5 && (
+            <Button
+              onClick={() => setStep(Math.min(5, step + 1))}
+              disabled={!canGoNext()}
+              icon={<Icons.ChevronRight />}
+              iconPosition="right"
+            >
+              Weiter
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };

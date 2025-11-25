@@ -7,6 +7,9 @@ function App() {
   const { tournaments, loading } = useTournaments();
   const [screen, setScreen] = useState<'list' | 'create'>('list');
 
+  // Nur veröffentlichte Turniere anzeigen
+  const publishedTournaments = tournaments.filter(t => t.status === 'published');
+
   if (loading) {
     return (
       <div
@@ -72,7 +75,7 @@ function App() {
             </button>
           </div>
 
-          {tournaments.length === 0 ? (
+          {publishedTournaments.length === 0 ? (
             <div
               style={{
                 padding: '60px 20px',
@@ -92,7 +95,7 @@ function App() {
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {tournaments.map((tournament) => (
+              {publishedTournaments.map((tournament) => (
                 <div
                   key={tournament.id}
                   style={{
