@@ -1,12 +1,10 @@
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, useState } from 'react';
 import { Card, Select, Input, Icons } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
-import { getTournamentSchema } from '../../constants/tournamentSchemas';
-import { validateTournamentConfiguration, describeTournamentStructure } from '../../utils/schemaValidator';
-import { TournamentConfiguration } from '../../types/tournamentSchema';
 import { DFB_ROUND_ROBIN_PATTERNS } from '../../constants/dfbMatchPatterns';
+import { FinalRoundConfigurator } from '../../components/FinalRoundConfigurator';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -23,44 +21,12 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 }) => {
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
 
-  // State für Finalturnier-Konfiguration
-  const [hasQuarterfinal, setHasQuarterfinal] = useState(false);
-  const [hasSemifinal, setHasSemifinal] = useState(false);
-  const [tournamentStructureDescription, setTournamentStructureDescription] = useState<string>('');
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-
   // State für DFB-Schlüsselsystem
   const [useDFBKeys, setUseDFBKeys] = useState(false);
   const [selectedDFBPattern, setSelectedDFBPattern] = useState('1T06M');
 
   // State für individuelles Punktesystem
   const [customPointSystem, setCustomPointSystem] = useState(false);
-
-  // Validiere und beschreibe die Turnier-Struktur
-  useEffect(() => {
-    if (!canUseGroups || !formData.sport) return;
-
-    const config: TournamentConfiguration = {
-      groupCount: formData.numberOfGroups || 2,
-      hasQuarterfinal,
-      hasSemifinal,
-      hasFinal: formData.finals?.final || false,
-      hasThirdPlace: formData.finals?.thirdPlace || false,
-      hasFifthSixth: formData.finals?.fifthSixth || false,
-      hasSeventhEighth: formData.finals?.seventhEighth || false,
-    };
-
-    const schema = getTournamentSchema(formData.sport);
-    const validation = validateTournamentConfiguration(schema, config);
-
-    setValidationErrors(validation.errors);
-
-    if (validation.matchedCase) {
-      setTournamentStructureDescription(describeTournamentStructure(validation.matchedCase));
-    } else {
-      setTournamentStructureDescription('');
-    }
-  }, [canUseGroups, formData.sport, formData.numberOfGroups, hasQuarterfinal, hasSemifinal, formData.finals]);
 
   const modeButtonStyle = (isSelected: boolean): CSSProperties => ({
     padding: '20px',
@@ -339,160 +305,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             </div>
           </div>
 
-          {/* K.O.-Runden Konfiguration */}
-          {canUseGroups && (
-            <div style={{ marginTop: '24px' }}>
-              <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 16px 0' }}>
-                🏆 K.O.-Runden
-              </h3>
-
-              {/* Validierungs-Fehler */}
-              {validationErrors.length > 0 && (
-                <div
-                  style={{
-                    padding: '12px',
-                    background: 'rgba(255,0,0,0.1)',
-                    border: '1px solid rgba(255,0,0,0.3)',
-                    borderRadius: theme.borderRadius.md,
-                    marginBottom: '16px',
-                  }}
-                >
-                  {validationErrors.map((error, index) => (
-                    <div key={index} style={{ color: theme.colors.error, fontSize: '13px' }}>
-                      ⚠️ {error}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Turnier-Struktur Vorschau */}
-              {tournamentStructureDescription && (
-                <div
-                  style={{
-                    padding: '12px',
-                    background: 'rgba(0,230,118,0.1)',
-                    border: '1px solid rgba(0,230,118,0.3)',
-                    borderRadius: theme.borderRadius.md,
-                    marginBottom: '16px',
-                  }}
-                >
-                  <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginBottom: '4px' }}>
-                    Turnier-Struktur:
-                  </div>
-                  <div style={{ fontSize: '14px', color: theme.colors.primary, fontWeight: theme.fontWeights.semibold }}>
-                    {tournamentStructureDescription}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {/* Viertelfinale */}
-                <button
-                  onClick={() => setHasQuarterfinal(!hasQuarterfinal)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    background: hasQuarterfinal ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
-                    border: hasQuarterfinal ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>🥊</span>
-                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Viertelfinale</span>
-                  {hasQuarterfinal && (
-                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
-                      <Icons.Check />
-                    </span>
-                  )}
-                </button>
-
-                {/* Halbfinale */}
-                <button
-                  onClick={() => setHasSemifinal(!hasSemifinal)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    background: hasSemifinal ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
-                    border: hasSemifinal ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>🥈</span>
-                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Halbfinale</span>
-                  {hasSemifinal && (
-                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
-                      <Icons.Check />
-                    </span>
-                  )}
-                </button>
-
-                {/* Finale */}
-                <button
-                  onClick={() => {
-                    const currentFinals = formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false };
-                    onUpdate('finals', { ...currentFinals, final: !currentFinals.final });
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    background: formData.finals?.final ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
-                    border: formData.finals?.final ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>🥇</span>
-                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Finale</span>
-                  {formData.finals?.final && (
-                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
-                      <Icons.Check />
-                    </span>
-                  )}
-                </button>
-
-                {/* Spiel um Platz 3 */}
-                <button
-                  onClick={() => {
-                    const currentFinals = formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false };
-                    onUpdate('finals', { ...currentFinals, thirdPlace: !currentFinals.thirdPlace });
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    background: formData.finals?.thirdPlace ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
-                    border: formData.finals?.thirdPlace ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span style={{ fontSize: '20px' }}>🥉</span>
-                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Spiel um Platz 3</span>
-                  {formData.finals?.thirdPlace && (
-                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
-                      <Icons.Check />
-                    </span>
-                  )}
-                </button>
-              </div>
-            </div>
+          {/* Finalrunden-Konfiguration */}
+          {canUseGroups && formData.finals && (
+            <FinalRoundConfigurator
+              numberOfGroups={formData.numberOfGroups || 2}
+              finals={formData.finals}
+              onUpdate={(finals) => onUpdate('finals', finals)}
+            />
           )}
 
           {/* Point System */}
