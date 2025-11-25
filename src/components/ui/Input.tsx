@@ -9,6 +9,7 @@ interface InputProps {
   placeholder?: string;
   min?: string | number;
   max?: string | number;
+  step?: string | number;
   disabled?: boolean;
   required?: boolean;
   style?: CSSProperties;
@@ -22,6 +23,7 @@ export const Input: React.FC<InputProps> = ({
   placeholder,
   min,
   max,
+  step,
   disabled = false,
   required = false,
   style = {},
@@ -68,6 +70,7 @@ export const Input: React.FC<InputProps> = ({
         placeholder={placeholder}
         min={min}
         max={max}
+        step={step}
         disabled={disabled}
         required={required}
         style={inputStyles}

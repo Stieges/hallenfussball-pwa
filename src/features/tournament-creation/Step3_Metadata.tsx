@@ -1,6 +1,7 @@
 import { Card, Select, Input } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
+import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 
 interface Step3Props {
   formData: Partial<Tournament>;
@@ -25,15 +26,9 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <Select
           label="Altersklasse"
-          value={formData.ageClass || 'U11'}
+          value={formData.ageClass || DEFAULT_VALUES.ageClass}
           onChange={(v) => onUpdate('ageClass', v)}
-          options={[
-            { value: 'G-Jugend', label: 'G-Jugend (U7)' },
-            { value: 'F-Jugend', label: 'F-Jugend (U9)' },
-            { value: 'E-Jugend', label: 'E-Jugend (U10/U11)' },
-            { value: 'U11', label: 'U11' },
-            { value: 'D-Jugend', label: 'D-Jugend (U12/U13)' },
-          ]}
+          options={getAgeClassOptions(formData.sport || 'football')}
         />
         <Input
           label="Datum"

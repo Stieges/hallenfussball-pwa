@@ -1,7 +1,12 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useEffect, useState } from 'react';
 import { Card, Select, Input, Icons } from '../../components/ui';
-import { Tournament, GroupSystem, PlacementCriterion, PointSystem } from '../../types/tournament';
+import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
 import { theme } from '../../styles/theme';
+import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
+import { getTournamentSchema } from '../../constants/tournamentSchemas';
+import { validateTournamentConfiguration, describeTournamentStructure } from '../../utils/schemaValidator';
+import { TournamentConfiguration } from '../../types/tournamentSchema';
+import { DFB_ROUND_ROBIN_PATTERNS } from '../../constants/dfbMatchPatterns';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -17,6 +22,45 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   onTogglePlacementLogic,
 }) => {
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
+
+  // State für Finalturnier-Konfiguration
+  const [hasQuarterfinal, setHasQuarterfinal] = useState(false);
+  const [hasSemifinal, setHasSemifinal] = useState(false);
+  const [tournamentStructureDescription, setTournamentStructureDescription] = useState<string>('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // State für DFB-Schlüsselsystem
+  const [useDFBKeys, setUseDFBKeys] = useState(false);
+  const [selectedDFBPattern, setSelectedDFBPattern] = useState('1T06M');
+
+  // State für individuelles Punktesystem
+  const [customPointSystem, setCustomPointSystem] = useState(false);
+
+  // Validiere und beschreibe die Turnier-Struktur
+  useEffect(() => {
+    if (!canUseGroups || !formData.sport) return;
+
+    const config: TournamentConfiguration = {
+      groupCount: formData.numberOfGroups || 2,
+      hasQuarterfinal,
+      hasSemifinal,
+      hasFinal: formData.finals?.final || false,
+      hasThirdPlace: formData.finals?.thirdPlace || false,
+      hasFifthSixth: formData.finals?.fifthSixth || false,
+      hasSeventhEighth: formData.finals?.seventhEighth || false,
+    };
+
+    const schema = getTournamentSchema(formData.sport);
+    const validation = validateTournamentConfiguration(schema, config);
+
+    setValidationErrors(validation.errors);
+
+    if (validation.matchedCase) {
+      setTournamentStructureDescription(describeTournamentStructure(validation.matchedCase));
+    } else {
+      setTournamentStructureDescription('');
+    }
+  }, [canUseGroups, formData.sport, formData.numberOfGroups, hasQuarterfinal, hasSemifinal, formData.finals]);
 
   const modeButtonStyle = (isSelected: boolean): CSSProperties => ({
     padding: '20px',
@@ -78,23 +122,51 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             label="Grundsystem"
             value={formData.groupSystem || 'roundRobin'}
             onChange={(v) => onUpdate('groupSystem', v as GroupSystem)}
-            options={[
-              { value: 'roundRobin', label: 'Jeder gegen jeden' },
-              { value: 'groupsAndFinals', label: 'Gruppenphase + Finalrunde' },
-            ]}
+            options={GROUP_SYSTEM_OPTIONS}
           />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
+          {/* DFB Schlüsselsystem Option */}
+          {formData.groupSystem === 'roundRobin' && (
+            <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(0,176,255,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,176,255,0.2)' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={useDFBKeys}
+                  onChange={(e) => setUseDFBKeys(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.secondary }}
+                />
+                <span style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium }}>
+                  📋 DFB-Schlüsselsystem verwenden
+                </span>
+              </label>
+              <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '8px 0 0 30px', lineHeight: '1.4' }}>
+                Verwendet die offiziellen DFB-Ansetzungsmuster für Round-Robin Turniere
+              </p>
+
+              {useDFBKeys && (
+                <div style={{ marginTop: '16px' }}>
+                  <Select
+                    label="Ansetzungsmuster"
+                    value={selectedDFBPattern}
+                    onChange={(v) => setSelectedDFBPattern(v)}
+                    options={DFB_ROUND_ROBIN_PATTERNS.map(pattern => ({
+                      value: pattern.code,
+                      label: `${pattern.code} - ${pattern.description}`
+                    }))}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Grundlegende Turnier-Parameter */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' }}>
             {canUseGroups && (
               <Select
                 label="Anzahl Gruppen"
                 value={formData.numberOfGroups || 2}
                 onChange={(v) => onUpdate('numberOfGroups', parseInt(v))}
-                options={[
-                  { value: 2, label: '2 Gruppen' },
-                  { value: 3, label: '3 Gruppen' },
-                  { value: 4, label: '4 Gruppen' },
-                ]}
+                options={NUMBER_OF_GROUPS_OPTIONS}
               />
             )}
             <Input
@@ -105,13 +177,91 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               value={formData.numberOfFields || 1}
               onChange={(v) => onUpdate('numberOfFields', parseInt(v) || 1)}
             />
-            <Input
-              label="Spieldauer (Min.)"
-              type="number"
-              value={formData.gameDuration || 10}
-              onChange={(v) => onUpdate('gameDuration', parseInt(v) || 10)}
-            />
           </div>
+
+          {/* Spielzeit-Konfiguration Gruppenphase */}
+          <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,230,118,0.05)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,230,118,0.15)' }}>
+            <h4 style={{ color: theme.colors.primary, fontSize: '13px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
+              ⏱️ Gruppenphase - Spielzeit-Einstellungen
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <Input
+                label="Spieldauer (Min.)"
+                type="number"
+                min="1"
+                max="90"
+                value={formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration}
+                onChange={(v) => onUpdate('groupPhaseGameDuration', parseInt(v) || 10)}
+              />
+              <Input
+                label="Pause zwischen Spielen (Min.)"
+                type="number"
+                min="0"
+                max="30"
+                value={formData.groupPhaseBreakDuration ?? DEFAULT_VALUES.groupPhaseBreakDuration}
+                onChange={(v) => onUpdate('groupPhaseBreakDuration', parseInt(v) || 0)}
+              />
+              <Select
+                label="Spielabschnitte"
+                value={formData.gamePeriods ?? DEFAULT_VALUES.gamePeriods}
+                onChange={(v) => onUpdate('gamePeriods', parseInt(v))}
+                options={GAME_PERIODS_OPTIONS}
+              />
+            </div>
+            {(formData.gamePeriods ?? DEFAULT_VALUES.gamePeriods) > 1 && (
+              <div style={{ marginTop: '16px' }}>
+                <Input
+                  label="Halbzeitpause (Min.)"
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={formData.halftimeBreak ?? DEFAULT_VALUES.halftimeBreak}
+                  onChange={(v) => onUpdate('halftimeBreak', parseInt(v) || 1)}
+                />
+                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
+                  💡 Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods || 1))} Min. unterteilt
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Spielzeit-Konfiguration Finalrunde */}
+          {canUseGroups && (
+            <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.3)' }}>
+              <h4 style={{ color: theme.colors.accent, fontSize: '13px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
+                🏆 Finalrunde - Spielzeit-Einstellungen
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                <Input
+                  label="Spieldauer (Min.)"
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={formData.finalRoundGameDuration ?? DEFAULT_VALUES.finalRoundGameDuration}
+                  onChange={(v) => onUpdate('finalRoundGameDuration', parseInt(v) || 10)}
+                />
+                <Input
+                  label="Pause zwischen Spielen (Min.)"
+                  type="number"
+                  min="0"
+                  max="30"
+                  value={formData.finalRoundBreakDuration ?? DEFAULT_VALUES.finalRoundBreakDuration}
+                  onChange={(v) => onUpdate('finalRoundBreakDuration', parseInt(v) || 0)}
+                />
+                <Input
+                  label="Pause bis Finalrunde (Min.)"
+                  type="number"
+                  min="0"
+                  max="60"
+                  value={formData.breakBetweenPhases ?? DEFAULT_VALUES.breakBetweenPhases}
+                  onChange={(v) => onUpdate('breakBetweenPhases', parseInt(v) || 5)}
+                />
+              </div>
+              <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
+                💡 Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde
+              </p>
+            </div>
+          )}
 
           {/* Placement Logic */}
           <div style={{ marginTop: '24px' }}>
@@ -189,47 +339,158 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             </div>
           </div>
 
-          {/* Finals */}
+          {/* K.O.-Runden Konfiguration */}
           {canUseGroups && (
             <div style={{ marginTop: '24px' }}>
               <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 16px 0' }}>
-                🏆 Finalspiele
+                🏆 K.O.-Runden
               </h3>
+
+              {/* Validierungs-Fehler */}
+              {validationErrors.length > 0 && (
+                <div
+                  style={{
+                    padding: '12px',
+                    background: 'rgba(255,0,0,0.1)',
+                    border: '1px solid rgba(255,0,0,0.3)',
+                    borderRadius: theme.borderRadius.md,
+                    marginBottom: '16px',
+                  }}
+                >
+                  {validationErrors.map((error, index) => (
+                    <div key={index} style={{ color: theme.colors.error, fontSize: '13px' }}>
+                      ⚠️ {error}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Turnier-Struktur Vorschau */}
+              {tournamentStructureDescription && (
+                <div
+                  style={{
+                    padding: '12px',
+                    background: 'rgba(0,230,118,0.1)',
+                    border: '1px solid rgba(0,230,118,0.3)',
+                    borderRadius: theme.borderRadius.md,
+                    marginBottom: '16px',
+                  }}
+                >
+                  <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginBottom: '4px' }}>
+                    Turnier-Struktur:
+                  </div>
+                  <div style={{ fontSize: '14px', color: theme.colors.primary, fontWeight: theme.fontWeights.semibold }}>
+                    {tournamentStructureDescription}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                {[
-                  { key: 'final', label: 'Finale (1. vs. 1.)', icon: '🥇' },
-                  { key: 'thirdPlace', label: 'Spiel um Platz 3', icon: '🥉' },
-                  { key: 'fifthSixth', label: 'Platzierung 5/6', icon: '5️⃣' },
-                  { key: 'seventhEighth', label: 'Platzierung 7/8', icon: '7️⃣' },
-                ].map((final) => (
-                  <button
-                    key={final.key}
-                    onClick={() => {
-                      const currentFinals = formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false };
-                      onUpdate('finals', { ...currentFinals, [final.key]: !currentFinals[final.key as keyof typeof currentFinals] });
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '14px 16px',
-                      background: formData.finals?.[final.key as keyof typeof formData.finals] ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
-                      border: formData.finals?.[final.key as keyof typeof formData.finals] ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
-                      borderRadius: '10px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    <span style={{ fontSize: '20px' }}>{final.icon}</span>
-                    <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>{final.label}</span>
-                    {formData.finals?.[final.key as keyof typeof formData.finals] && (
-                      <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
-                        <Icons.Check />
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {/* Viertelfinale */}
+                <button
+                  onClick={() => setHasQuarterfinal(!hasQuarterfinal)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    background: hasQuarterfinal ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
+                    border: hasQuarterfinal ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>🥊</span>
+                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Viertelfinale</span>
+                  {hasQuarterfinal && (
+                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
+                      <Icons.Check />
+                    </span>
+                  )}
+                </button>
+
+                {/* Halbfinale */}
+                <button
+                  onClick={() => setHasSemifinal(!hasSemifinal)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    background: hasSemifinal ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
+                    border: hasSemifinal ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>🥈</span>
+                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Halbfinale</span>
+                  {hasSemifinal && (
+                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
+                      <Icons.Check />
+                    </span>
+                  )}
+                </button>
+
+                {/* Finale */}
+                <button
+                  onClick={() => {
+                    const currentFinals = formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false };
+                    onUpdate('finals', { ...currentFinals, final: !currentFinals.final });
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    background: formData.finals?.final ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
+                    border: formData.finals?.final ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>🥇</span>
+                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Finale</span>
+                  {formData.finals?.final && (
+                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
+                      <Icons.Check />
+                    </span>
+                  )}
+                </button>
+
+                {/* Spiel um Platz 3 */}
+                <button
+                  onClick={() => {
+                    const currentFinals = formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false };
+                    onUpdate('finals', { ...currentFinals, thirdPlace: !currentFinals.thirdPlace });
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    background: formData.finals?.thirdPlace ? 'rgba(255,215,0,0.15)' : 'rgba(0,0,0,0.2)',
+                    border: formData.finals?.thirdPlace ? '1px solid rgba(255,215,0,0.4)' : '1px solid transparent',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <span style={{ fontSize: '20px' }}>🥉</span>
+                  <span style={{ color: theme.colors.text.primary, fontSize: '14px' }}>Spiel um Platz 3</span>
+                  {formData.finals?.thirdPlace && (
+                    <span style={{ marginLeft: 'auto', color: theme.colors.primary }}>
+                      <Icons.Check />
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -239,35 +500,104 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             <h3 style={{ color: theme.colors.secondary, fontSize: '14px', margin: '0 0 16px 0' }}>
               🎯 Punktesystem
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
               <button
-                onClick={() => onUpdate('pointSystem', { win: 3, draw: 1, loss: 0 })}
+                onClick={() => {
+                  setCustomPointSystem(false);
+                  onUpdate('pointSystem', { win: 3, draw: 1, loss: 0 });
+                }}
                 style={pointPresetStyle(
-                  formData.pointSystem?.win === 3 && formData.pointSystem?.draw === 1 && formData.pointSystem?.loss === 0
+                  !customPointSystem && formData.pointSystem?.win === 3 && formData.pointSystem?.draw === 1 && formData.pointSystem?.loss === 0
                 )}
               >
                 <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>3-1-0</div>
                 <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>Standard</div>
               </button>
               <button
-                onClick={() => onUpdate('pointSystem', { win: 2, draw: 1, loss: 0 })}
+                onClick={() => {
+                  setCustomPointSystem(false);
+                  onUpdate('pointSystem', { win: 2, draw: 1, loss: 0 });
+                }}
                 style={pointPresetStyle(
-                  formData.pointSystem?.win === 2 && formData.pointSystem?.draw === 1 && formData.pointSystem?.loss === 0
+                  !customPointSystem && formData.pointSystem?.win === 2 && formData.pointSystem?.draw === 1 && formData.pointSystem?.loss === 0
                 )}
               >
                 <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>2-1-0</div>
                 <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>Klassisch</div>
               </button>
               <button
-                onClick={() => onUpdate('pointSystem', { win: 3, draw: 0, loss: 0 })}
+                onClick={() => {
+                  setCustomPointSystem(false);
+                  onUpdate('pointSystem', { win: 3, draw: 0, loss: 0 });
+                }}
                 style={pointPresetStyle(
-                  formData.pointSystem?.win === 3 && formData.pointSystem?.draw === 0 && formData.pointSystem?.loss === 0
+                  !customPointSystem && formData.pointSystem?.win === 3 && formData.pointSystem?.draw === 0 && formData.pointSystem?.loss === 0
                 )}
               >
                 <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>3-0-0</div>
                 <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>Nur Siege</div>
               </button>
+              <button
+                onClick={() => setCustomPointSystem(!customPointSystem)}
+                style={pointPresetStyle(customPointSystem)}
+              >
+                <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>⚙️</div>
+                <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>Individuell</div>
+              </button>
             </div>
+
+            {/* Custom Point System Inputs */}
+            {customPointSystem && (
+              <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,176,255,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,176,255,0.2)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, fontWeight: theme.fontWeights.medium }}>
+                      Sieg
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={formData.pointSystem?.win ?? 3}
+                      onChange={(v) => onUpdate('pointSystem', {
+                        ...formData.pointSystem,
+                        win: parseFloat(v) || 0
+                      } as any)}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, fontWeight: theme.fontWeights.medium }}>
+                      Unentschieden
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={formData.pointSystem?.draw ?? 1}
+                      onChange={(v) => onUpdate('pointSystem', {
+                        ...formData.pointSystem,
+                        draw: parseFloat(v) || 0
+                      } as any)}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, fontWeight: theme.fontWeights.medium }}>
+                      Niederlage
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={formData.pointSystem?.loss ?? 0}
+                      onChange={(v) => onUpdate('pointSystem', {
+                        ...formData.pointSystem,
+                        loss: parseFloat(v) || 0
+                      } as any)}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '12px', lineHeight: '1.4' }}>
+                  💡 Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Bambini Settings Accordion */}

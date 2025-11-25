@@ -8,7 +8,7 @@ export const generateMatches = (tournament: Tournament): Match[] => {
 
   if (tournament.mode === 'classic') {
     // Classic mode with groups
-    if (tournament.groupSystem === 'twoGroups') {
+    if (tournament.groupSystem === 'groupsAndFinals') {
       // Generate group stage matches
       matches.push(...generateGroupMatches(tournament));
 

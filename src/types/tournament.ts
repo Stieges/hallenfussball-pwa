@@ -2,7 +2,7 @@
 export type Sport = 'football' | 'other';
 export type TournamentType = 'classic' | 'bambini';
 export type TournamentMode = 'classic' | 'miniFussball';
-export type GroupSystem = 'twoGroups' | 'roundRobin';
+export type GroupSystem = 'roundRobin' | 'groupsAndFinals';
 export type RoundLogic = 'fixed' | 'promotion';
 export type ResultMode = 'goals' | 'winLossOnly';
 
@@ -56,8 +56,24 @@ export interface Tournament {
   numberOfFields: number;
   groupSystem?: GroupSystem;
   numberOfGroups?: number;
-  gameDuration: number;
+
+  // Gruppenphase Zeiten
+  groupPhaseGameDuration: number; // Spieldauer in Gruppenphase (in Minuten)
+  groupPhaseBreakDuration?: number; // Pause zwischen Spielen in Gruppenphase (in Minuten)
+
+  // Finalrunde Zeiten (nur wenn groupSystem === 'groupsAndFinals')
+  finalRoundGameDuration?: number; // Spieldauer in Finalrunde (in Minuten)
+  finalRoundBreakDuration?: number; // Pause zwischen Spielen in Finalrunde (in Minuten)
+  breakBetweenPhases?: number; // Pause zwischen Gruppenphase und Finalrunde (in Minuten)
+
+  // Spielabschnitte (gelten für beide Phasen)
+  gamePeriods?: number; // Anzahl Spielabschnitte (1 = durchgehend, 2 = zwei Halbzeiten, etc.)
+  halftimeBreak?: number; // Pause zwischen Spielabschnitten (nur wenn gamePeriods > 1)
+
+  // Legacy fields (deprecated, werden zu groupPhase* migriert)
+  gameDuration?: number;
   breakDuration?: number;
+
   roundLogic?: RoundLogic;
   numberOfRounds?: number;
   placementLogic: PlacementCriterion[];

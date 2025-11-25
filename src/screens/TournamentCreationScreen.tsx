@@ -8,7 +8,7 @@ import {
   Step4_Teams,
   Step5_Overview,
 } from '../features/tournament-creation';
-import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
+import { Tournament, TournamentType } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { generateMatches } from '../utils/matchGenerator';
 import { theme } from '../styles/theme';
@@ -25,8 +25,13 @@ const getDefaultFormData = (): Partial<Tournament> => ({
   numberOfFields: 1,
   groupSystem: 'roundRobin',
   numberOfGroups: 2,
-  gameDuration: 10,
-  breakDuration: 5,
+  groupPhaseGameDuration: 10,
+  groupPhaseBreakDuration: 2,
+  finalRoundGameDuration: 10,
+  finalRoundBreakDuration: 2,
+  breakBetweenPhases: 5,
+  gamePeriods: 1,
+  halftimeBreak: 1,
   placementLogic: [
     { id: 'points', label: 'Punkte', enabled: true },
     { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
@@ -148,8 +153,16 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       numberOfFields: formData.numberOfFields || 1,
       groupSystem: formData.groupSystem,
       numberOfGroups: formData.numberOfGroups,
-      gameDuration: formData.gameDuration || 10,
-      breakDuration: formData.breakDuration,
+      groupPhaseGameDuration: formData.groupPhaseGameDuration || 10,
+      groupPhaseBreakDuration: formData.groupPhaseBreakDuration,
+      finalRoundGameDuration: formData.finalRoundGameDuration,
+      finalRoundBreakDuration: formData.finalRoundBreakDuration,
+      breakBetweenPhases: formData.breakBetweenPhases,
+      gamePeriods: formData.gamePeriods,
+      halftimeBreak: formData.halftimeBreak,
+      // Legacy support
+      gameDuration: formData.gameDuration || formData.groupPhaseGameDuration || 10,
+      breakDuration: formData.breakDuration || formData.groupPhaseBreakDuration,
       roundLogic: formData.roundLogic,
       numberOfRounds: formData.numberOfRounds,
       placementLogic: formData.placementLogic || [],
@@ -177,11 +190,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const canGoNext = () => {
     switch (step) {
       case 1:
-        return formData.sport && formData.tournamentType;
-      case 2:
-        return formData.mode;
-      case 3:
         return formData.title && formData.date && formData.location;
+      case 2:
+        return formData.sport && formData.tournamentType;
+      case 3:
+        return formData.mode;
       case 4:
         return (formData.teams?.length || 0) >= 2;
       default:
@@ -228,11 +241,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       <ProgressBar
         currentStep={step}
         totalSteps={5}
-        stepLabels={['Sportart', 'Modus', 'Stammdaten', 'Teams', 'Übersicht']}
+        stepLabels={['Stammdaten', 'Sportart', 'Modus', 'Teams', 'Übersicht']}
       />
 
       {/* Steps */}
-      {step === 1 && (
+      {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
+
+      {step === 2 && (
         <Step1_SportAndType
           formData={formData}
           onUpdate={updateForm}
@@ -240,7 +255,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         />
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <Step2_ModeAndSystem
           formData={formData}
           onUpdate={updateForm}
@@ -248,8 +263,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           onTogglePlacementLogic={togglePlacementLogic}
         />
       )}
-
-      {step === 3 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
 
       {step === 4 && (
         <Step4_Teams
