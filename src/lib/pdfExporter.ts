@@ -27,31 +27,36 @@ export interface PDFExportOptions {
 }
 
 /**
- * Sanfte Farbpalette für bessere Lesbarkeit
+ * Grayscale-optimized color palette for print-friendly PDFs
+ *
+ * Design Philosophy:
+ * - High contrast for readability in grayscale
+ * - No color-only information (all info also conveyed through text/icons)
+ * - Optimized for black & white laser printers
  */
 const PDF_COLORS = {
-  // Primärfarben (sanftes Grün)
-  primary: '#4CAF50',       // Sanftes Grün
-  primaryLight: '#81C784',  // Helles Grün
-  primaryDark: '#388E3C',   // Dunkles Grün
+  // Primary grayscale tones
+  primary: '#2C2C2C',       // Dark gray (almost black) - high contrast
+  primaryLight: '#6B6B6B',  // Medium gray
+  primaryDark: '#000000',   // Black
 
-  // Akzentfarben (sanftes Gold/Orange)
-  accent: '#FFB74D',        // Sanftes Orange
-  accentLight: '#FFD54F',   // Helles Gold
+  // Accent tones (gray-based)
+  accent: '#4A4A4A',        // Medium-dark gray
+  accentLight: '#8C8C8C',   // Light gray
 
-  // Graustufen für Text und Rahmen
-  textDark: '#212121',      // Fast Schwarz
-  textMedium: '#757575',    // Mittelgrau
-  textLight: '#BDBDBD',     // Hellgrau
+  // Text colors
+  textDark: '#000000',      // Pure black for maximum readability
+  textMedium: '#505050',    // Dark gray
+  textLight: '#808080',     // Medium gray
 
-  // Hintergründe
-  bgLight: '#F5F5F5',       // Sehr hellgrau
-  bgWhite: '#FFFFFF',       // Weiß
+  // Backgrounds
+  bgLight: '#F0F0F0',       // Very light gray (10% black)
+  bgWhite: '#FFFFFF',       // White
 
-  // Statusfarben
-  success: '#66BB6A',       // Sanftes Grün
-  warning: '#FFA726',       // Sanftes Orange
-  info: '#42A5F5',          // Sanftes Blau
+  // Borders
+  borderDark: '#333333',    // Dark border
+  borderMedium: '#CCCCCC',  // Medium border
+  borderLight: '#E0E0E0',   // Light border
 };
 
 /**
@@ -139,11 +144,10 @@ async function renderPage1(
 
   yPos += 35;
 
-  // Meta-Infos Box (verbesserte Layout)
-  const primaryRgb = hexToRgb(primaryColor);
-  doc.setFillColor(primaryRgb[0], primaryRgb[1], primaryRgb[2], 0.08);
-  doc.setDrawColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-  doc.setLineWidth(0.3);
+  // Meta-Infos Box (grayscale-optimized)
+  doc.setFillColor(240, 240, 240); // Light gray background (PDF_COLORS.bgLight)
+  doc.setDrawColor(204, 204, 204); // Medium gray border (PDF_COLORS.borderMedium)
+  doc.setLineWidth(0.5);
   doc.roundedRect(15, yPos, 180, 30, 2, 2, 'FD');
 
   doc.setFontSize(9);
@@ -553,7 +557,9 @@ function getFinalMatchLabel(match: ScheduledMatch): string {
   if (match.finalType === 'fifthSixth') return 'Spiel um Platz 5';
   if (match.finalType === 'seventhEighth') return 'Spiel um Platz 7';
 
-  if (match.phase === 'semifinal') return '1. Halbfinale';
+  // Check for semifinal labels from match definition
+  if (match.label?.includes('Halbfinale')) return match.label;
+  if (match.phase === 'semifinal') return 'Halbfinale';
   if (match.phase === 'quarterfinal') return 'Viertelfinale';
 
   return 'Finalspiel';

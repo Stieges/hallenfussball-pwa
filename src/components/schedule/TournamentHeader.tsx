@@ -1,0 +1,162 @@
+/**
+ * TournamentHeader - Tournament metadata header matching MeinTurnierplan style
+ */
+
+import { CSSProperties } from 'react';
+import { theme } from '../../styles/theme';
+import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+
+interface TournamentHeaderProps {
+  schedule: GeneratedSchedule;
+  logoUrl?: string;
+  qrCodeUrl?: string;
+}
+
+export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
+  schedule,
+  logoUrl,
+  qrCodeUrl,
+}) => {
+  const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
+  const firstMatch = groupPhase?.matches[0];
+  const matchDuration = firstMatch?.duration || 10;
+  const numberOfTeams = schedule.teams.length;
+  const numberOfMatches = schedule.allMatches.length;
+
+  const containerStyle: CSSProperties = {
+    marginBottom: '32px',
+    borderBottom: `2px solid ${theme.colors.primary}`,
+    paddingBottom: '24px',
+  };
+
+  const headerFlexStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  };
+
+  const titleStyle: CSSProperties = {
+    fontSize: '32px',
+    fontWeight: theme.fontWeights.bold,
+    color: theme.colors.primary,
+    margin: 0,
+    textAlign: 'center',
+    flex: 1,
+  };
+
+  const logoStyle: CSSProperties = {
+    width: '60px',
+    height: '60px',
+    objectFit: 'contain',
+  };
+
+  const qrCodeStyle: CSSProperties = {
+    width: '60px',
+    height: '60px',
+    objectFit: 'contain',
+  };
+
+  const subtitleStyle: CSSProperties = {
+    fontSize: '14px',
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: '16px',
+  };
+
+  const metaGridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '12px',
+    padding: '16px',
+    background: 'rgba(37, 99, 235, 0.05)',
+    borderRadius: theme.borderRadius.md,
+    border: `1px solid ${theme.colors.border}`,
+  };
+
+  const metaItemStyle: CSSProperties = {
+    fontSize: '13px',
+    color: theme.colors.text.primary,
+  };
+
+  const metaLabelStyle: CSSProperties = {
+    fontWeight: theme.fontWeights.semibold,
+    marginRight: '8px',
+  };
+
+  return (
+    <div style={containerStyle} className="tournament-header">
+      <div style={headerFlexStyle}>
+        {logoUrl && (
+          <img src={logoUrl} alt="Logo" style={logoStyle} />
+        )}
+        <h1 style={titleStyle}>{schedule.tournament.title}</h1>
+        {qrCodeUrl && (
+          <div style={{ textAlign: 'center' }}>
+            <img src={qrCodeUrl} alt="QR Code" style={qrCodeStyle} />
+            <div style={{ fontSize: '10px', color: theme.colors.text.secondary, marginTop: '4px' }}>
+              Live Ergebnisse
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={subtitleStyle}>
+        {schedule.tournament.ageClass} • {schedule.tournament.date}
+      </div>
+
+      <div style={metaGridStyle}>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Veranstalter:</span>
+          {schedule.tournament.location}
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Datum:</span>
+          {schedule.tournament.date}
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Beginn:</span>
+          {formatTime(schedule.startTime)} Uhr
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Ende (ca.):</span>
+          {formatTime(schedule.endTime)} Uhr
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Spieldauer:</span>
+          {matchDuration} Minuten
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Teilnehmer:</span>
+          {numberOfTeams} Teams
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Spiele gesamt:</span>
+          {numberOfMatches}
+        </div>
+        <div style={metaItemStyle}>
+          <span style={metaLabelStyle}>Veranstaltungsort:</span>
+          {schedule.tournament.location}
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .tournament-header h1 {
+            font-size: 24px !important;
+          }
+        }
+
+        @media print {
+          .tournament-header {
+            break-inside: avoid;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+}

@@ -36,6 +36,8 @@ export interface ScheduledMatch {
   phase: 'groupStage' | 'quarterfinal' | 'semifinal' | 'final';
   /** Finaltyp (z.B. 'final', 'thirdPlace') */
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
+  /** Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale') */
+  label?: string;
   /** Spielbeginn als Date-Objekt */
   startTime: Date;
   /** Spielende als Date-Objekt */
