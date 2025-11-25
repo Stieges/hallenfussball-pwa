@@ -225,6 +225,9 @@ export function formatFairnessReport(analysis: FairnessAnalysis): string {
       .map(([field, count]) => `Field ${field}: ${count}`)
       .join(', ');
     lines.push(`    Field Distribution: ${fieldDist}`);
+
+    // Home/Away Balance
+    lines.push(`    Home/Away: ${stat.homeCount}/${stat.awayCount} (Balance: ${stat.homeAwayBalance})`);
   }
 
   return lines.join('\n');

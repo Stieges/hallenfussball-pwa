@@ -60,6 +60,9 @@ export interface TeamFairnessStats {
   avgRest: number;
   restVariance: number;
   fieldDistribution: Map<number, number>; // fieldIndex -> count
+  homeCount: number; // Number of home matches
+  awayCount: number; // Number of away matches
+  homeAwayBalance: number; // |homeCount - awayCount|
 }
 
 export interface GlobalFairnessStats {
@@ -70,11 +73,20 @@ export interface GlobalFairnessStats {
 }
 
 /**
+ * Pairing without home/away assignment yet
+ */
+interface TeamPairing {
+  teamA: Team;
+  teamB: Team;
+}
+
+/**
  * Generate round-robin pairings using Circle Method
  * This creates a fair rotation where each team plays every other team once
+ * Note: Home/away assignment is NOT done here - that happens later for balance
  */
-function generateRoundRobinPairings(teams: Team[]): Array<[Team, Team]> {
-  const pairings: Array<[Team, Team]> = [];
+function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
+  const pairings: TeamPairing[] = [];
   const n = teams.length;
 
   if (n < 2) return pairings;
@@ -86,12 +98,12 @@ function generateRoundRobinPairings(teams: Team[]): Array<[Team, Team]> {
   // Circle method: fix one team, rotate others
   for (let round = 0; round < totalTeams - 1; round++) {
     for (let i = 0; i < totalTeams / 2; i++) {
-      const home = teamsWithBye[i];
-      const away = teamsWithBye[totalTeams - 1 - i];
+      const teamA = teamsWithBye[i];
+      const teamB = teamsWithBye[totalTeams - 1 - i];
 
       // Skip if either team is the "bye"
-      if (home && away) {
-        pairings.push([home, away]);
+      if (teamA && teamB) {
+        pairings.push({ teamA, teamB });
       }
     }
 
@@ -247,16 +259,16 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   const teamStates = initializeTeamStates(allTeams);
 
   // Generate round-robin pairings for each group
-  const groupPairings = new Map<string, Array<[Team, Team]>>();
+  const groupPairings = new Map<string, TeamPairing[]>();
   groups.forEach((teams, groupId) => {
     groupPairings.set(groupId, generateRoundRobinPairings(teams));
   });
 
   // Flatten all pairings with group info
-  const allPairings: Array<{ groupId: string; teamA: Team; teamB: Team }> = [];
+  const allPairings: Array<{ groupId: string; pairing: TeamPairing }> = [];
   groupPairings.forEach((pairings, groupId) => {
-    pairings.forEach(([teamA, teamB]) => {
-      allPairings.push({ groupId, teamA, teamB });
+    pairings.forEach((pairing) => {
+      allPairings.push({ groupId, pairing });
     });
   });
 
@@ -285,11 +297,11 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       let bestScore = Infinity;
 
       for (let i = 0; i < remainingPairings.length; i++) {
-        const { teamA, teamB } = remainingPairings[i];
+        const { pairing } = remainingPairings[i];
 
         const score = calculateFairnessScore(
-          teamA.id,
-          teamB.id,
+          pairing.teamA.id,
+          pairing.teamB.id,
           currentSlotIndex,
           field,
           teamStates,
@@ -304,7 +316,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
       // Schedule best pairing if found
       if (bestPairingIndex >= 0 && bestScore < Infinity) {
-        const pairing = remainingPairings[bestPairingIndex];
+        const { groupId, pairing } = remainingPairings[bestPairingIndex];
         const match: Match = {
           id: `match-${Date.now()}-${matches.length}`,
           round: currentSlotIndex + 1,
@@ -312,7 +324,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
           slot: currentSlotIndex,
           teamA: pairing.teamA.id,
           teamB: pairing.teamB.id,
-          group: pairing.groupId,
+          group: groupId,
           scheduledTime: currentSlot.startTime,
         };
 
@@ -348,7 +360,61 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     }
   }
 
+  // STEP 3: Balance home/away distribution
+  balanceHomeAway(matches, teamStates);
+
   return matches;
+}
+
+/**
+ * Balance home/away distribution by swapping team positions in matches
+ * This is done AFTER time scheduling to not affect pause fairness
+ */
+function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleState>): void {
+  // Count current home/away per team
+  const homeAwayBalance = new Map<string, { home: number; away: number }>();
+
+  teamStates.forEach((_, teamId) => {
+    homeAwayBalance.set(teamId, { home: 0, away: 0 });
+  });
+
+  // Initial count
+  for (const match of matches) {
+    const balanceA = homeAwayBalance.get(match.teamA)!;
+    const balanceB = homeAwayBalance.get(match.teamB)!;
+    balanceA.home++;
+    balanceB.away++;
+  }
+
+  // Find matches where swapping would improve balance
+  for (const match of matches) {
+    const balanceA = homeAwayBalance.get(match.teamA)!;
+    const balanceB = homeAwayBalance.get(match.teamB)!;
+
+    // Calculate current imbalances
+    const imbalanceA = Math.abs(balanceA.home - balanceA.away);
+    const imbalanceB = Math.abs(balanceB.home - balanceB.away);
+    const totalImbalance = imbalanceA + imbalanceB;
+
+    // Calculate imbalance after swap
+    const newImbalanceA = Math.abs((balanceA.home - 1) - (balanceA.away + 1));
+    const newImbalanceB = Math.abs((balanceB.home + 1) - (balanceB.away - 1));
+    const newTotalImbalance = newImbalanceA + newImbalanceB;
+
+    // Swap if it improves total balance
+    if (newTotalImbalance < totalImbalance) {
+      // Swap teams
+      const temp = match.teamA;
+      match.teamA = match.teamB;
+      match.teamB = temp;
+
+      // Update balance counters
+      balanceA.home--;
+      balanceA.away++;
+      balanceB.home++;
+      balanceB.away--;
+    }
+  }
 }
 
 /**
@@ -357,29 +423,34 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
   const teamMatchSlots = new Map<string, number[]>();
   const teamFieldCounts = new Map<string, Map<number, number>>();
+  const teamHomeAway = new Map<string, { home: number; away: number }>();
 
   // Collect data
   for (const match of matches) {
     const slot = match.slot ?? match.round - 1;
     const field = match.field;
 
-    // Team A
+    // Team A (Home)
     if (!teamMatchSlots.has(match.teamA)) {
       teamMatchSlots.set(match.teamA, []);
       teamFieldCounts.set(match.teamA, new Map());
+      teamHomeAway.set(match.teamA, { home: 0, away: 0 });
     }
     teamMatchSlots.get(match.teamA)!.push(slot);
     const fieldCountsA = teamFieldCounts.get(match.teamA)!;
     fieldCountsA.set(field, (fieldCountsA.get(field) || 0) + 1);
+    teamHomeAway.get(match.teamA)!.home++;
 
-    // Team B
+    // Team B (Away)
     if (!teamMatchSlots.has(match.teamB)) {
       teamMatchSlots.set(match.teamB, []);
       teamFieldCounts.set(match.teamB, new Map());
+      teamHomeAway.set(match.teamB, { home: 0, away: 0 });
     }
     teamMatchSlots.get(match.teamB)!.push(slot);
     const fieldCountsB = teamFieldCounts.get(match.teamB)!;
     fieldCountsB.set(field, (fieldCountsB.get(field) || 0) + 1);
+    teamHomeAway.get(match.teamB)!.away++;
   }
 
   // Calculate stats per team
@@ -409,6 +480,8 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
     globalAvgSum += avgRest;
     globalCount++;
 
+    const homeAway = teamHomeAway.get(teamId) || { home: 0, away: 0 };
+
     teamStats.push({
       teamId,
       matchSlots: slots,
@@ -418,6 +491,9 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
       avgRest,
       restVariance,
       fieldDistribution: teamFieldCounts.get(teamId) || new Map(),
+      homeCount: homeAway.home,
+      awayCount: homeAway.away,
+      homeAwayBalance: Math.abs(homeAway.home - homeAway.away),
     });
   });
 
