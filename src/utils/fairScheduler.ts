@@ -326,8 +326,10 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       if (currentSlot.matches.has(field)) continue; // Field occupied
 
       // Find best pairing for this slot and field
+      // Strategy: Prioritize matches with teams that have had longest rest
       let bestPairingIndex = -1;
       let bestScore = Infinity;
+      const candidates: Array<{ index: number; score: number; longestRestSinceLastMatch: number }> = [];
 
       for (let i = 0; i < remainingPairings.length; i++) {
         const { pairing } = remainingPairings[i];
@@ -341,17 +343,43 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
           minRestSlotsPerTeam
         );
 
-        if (score < bestScore) {
-          bestScore = score;
-          bestPairingIndex = i;
+        if (score < Infinity) {
+          const stateA = teamStates.get(pairing.teamA.id)!;
+          const stateB = teamStates.get(pairing.teamB.id)!;
+          const restA = currentSlotIndex - stateA.lastSlot;
+          const restB = currentSlotIndex - stateB.lastSlot;
+          const minRest = Math.min(restA, restB);
+
+          candidates.push({ index: i, score, longestRestSinceLastMatch: minRest });
         }
+      }
+
+      // Sort candidates: prefer those with longest rest (to spread matches out)
+      // Then by fairness score
+      candidates.sort((a, b) => {
+        // First priority: choose matches where BOTH teams have had longer rest
+        if (a.longestRestSinceLastMatch !== b.longestRestSinceLastMatch) {
+          return b.longestRestSinceLastMatch - a.longestRestSinceLastMatch; // Descending
+        }
+        // Second priority: fairness score
+        return a.score - b.score;
+      });
+
+      if (candidates.length > 0) {
+        bestPairingIndex = candidates[0].index;
+        bestScore = candidates[0].score;
       }
 
       // Schedule best pairing if found
       if (bestPairingIndex >= 0 && bestScore < Infinity) {
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
 
-        console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}`);
+        const stateA = teamStates.get(pairing.teamA.id)!;
+        const stateB = teamStates.get(pairing.teamB.id)!;
+        const restA = currentSlotIndex - stateA.lastSlot;
+        const restB = currentSlotIndex - stateB.lastSlot;
+
+        console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
 
         const match: Match = {
           id: `match-${Date.now()}-${matches.length}`,
@@ -367,10 +395,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         currentSlot.matches.set(field, match);
         matches.push(match);
 
-        // Update team states
-        const stateA = teamStates.get(pairing.teamA.id)!;
-        const stateB = teamStates.get(pairing.teamB.id)!;
-
+        // Update team states (reuse stateA/stateB from above)
         stateA.matchSlots.push(currentSlotIndex);
         stateA.lastSlot = currentSlotIndex;
         stateA.fieldCounts.set(field, (stateA.fieldCounts.get(field) || 0) + 1);
