@@ -163,6 +163,8 @@ function canTeamPlayInSlot(
 /**
  * Calculate fairness score for assigning a match to a specific slot and field
  * Lower score = more fair
+ *
+ * Key principle: Minimize the GLOBAL variance (maxAvgRest - minAvgRest) across ALL teams
  */
 function calculateFairnessScore(
   teamAId: string,
@@ -183,23 +185,40 @@ function calculateFairnessScore(
     return Infinity; // Invalid assignment
   }
 
-  // Favor more even rest periods
-  const restA = slot - stateA.lastSlot;
-  const restB = slot - stateB.lastSlot;
+  // PRIORITY 1: Minimize global variance (maxAvgRest - minAvgRest)
+  // Calculate new average rest for these teams AFTER this assignment
+  const newAvgRestA = stateA.matchSlots.length > 0
+    ? [...stateA.matchSlots, slot].slice(1).reduce((sum, s, i, arr) => sum + (s - arr[i]), 0) / stateA.matchSlots.length
+    : 0;
+  const newAvgRestB = stateB.matchSlots.length > 0
+    ? [...stateB.matchSlots, slot].slice(1).reduce((sum, s, i, arr) => sum + (s - arr[i]), 0) / stateB.matchSlots.length
+    : 0;
 
-  if (stateA.matchSlots.length > 0) {
-    const avgRestA = stateA.matchSlots.length > 1
-      ? stateA.matchSlots.slice(1).reduce((sum, s, i) => sum + (s - stateA.matchSlots[i]), 0) / (stateA.matchSlots.length - 1)
-      : restA;
-    score += Math.abs(restA - avgRestA);
-  }
+  // Calculate global min/max average rest across ALL teams
+  let globalMinAvg = Infinity;
+  let globalMaxAvg = -Infinity;
 
-  if (stateB.matchSlots.length > 0) {
-    const avgRestB = stateB.matchSlots.length > 1
-      ? stateB.matchSlots.slice(1).reduce((sum, s, i) => sum + (s - stateB.matchSlots[i]), 0) / (stateB.matchSlots.length - 1)
-      : restB;
-    score += Math.abs(restB - avgRestB);
-  }
+  teamStates.forEach((state, teamId) => {
+    if (state.matchSlots.length === 0) return; // Skip teams without matches yet
+
+    let avgRest: number;
+    if (teamId === teamAId) {
+      avgRest = newAvgRestA;
+    } else if (teamId === teamBId) {
+      avgRest = newAvgRestB;
+    } else {
+      avgRest = state.matchSlots.length > 1
+        ? state.matchSlots.slice(1).reduce((sum, s, i) => sum + (s - state.matchSlots[i]), 0) / (state.matchSlots.length - 1)
+        : 0;
+    }
+
+    globalMinAvg = Math.min(globalMinAvg, avgRest);
+    globalMaxAvg = Math.max(globalMaxAvg, avgRest);
+  });
+
+  // Penalize assignments that increase the global variance
+  const globalVariance = globalMaxAvg - globalMinAvg;
+  score += globalVariance * 100; // High weight for global fairness
 
   // Favor fair field distribution
   const fieldCountA = stateA.fieldCounts.get(field) || 0;
@@ -286,7 +305,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     }
 
     const currentSlot = timeSlots[currentSlotIndex];
-    let scheduledInThisSlot = false;
 
     // Try to schedule matches in available fields
     for (let field = 1; field <= numberOfFields; field++) {
@@ -346,7 +364,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         stateB.awayCount++; // Team B is away
 
         remainingPairings.splice(bestPairingIndex, 1);
-        scheduledInThisSlot = true;
       }
     }
 
