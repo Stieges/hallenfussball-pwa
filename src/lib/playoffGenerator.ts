@@ -167,11 +167,9 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
 
   // Viertelfinale
   if (numberOfGroups === 2) {
-    // Bei 2 Gruppen: 1. und 2. jeder Gruppe
-    matches.push(
-      { id: 'qf1', label: 'Viertelfinale 1', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] },
-      { id: 'qf2', label: 'Viertelfinale 2', home: 'group-b-1st', away: 'group-a-2nd', dependsOn: [] }
-    );
+    // Bei 2 Gruppen: Nur Top 4 möglich (kein echtes Top 8)
+    // Verwende einfach Top 4 Logik
+    return generateTop4(numberOfGroups);
   } else if (numberOfGroups >= 4) {
     // Bei 4+ Gruppen: klassische Paarungen
     matches.push(

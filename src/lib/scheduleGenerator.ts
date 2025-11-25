@@ -156,6 +156,13 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
     (tournament.finals && Object.values(tournament.finals).some(Boolean))
   );
 
+  console.log('[ScheduleGenerator] Playoff check:', {
+    groupSystem: tournament.groupSystem,
+    finalsConfig: tournament.finalsConfig,
+    finals: tournament.finals,
+    shouldGeneratePlayoffs,
+  });
+
   if (shouldGeneratePlayoffs) {
     const numberOfGroups = tournament.numberOfGroups || 2;
 
@@ -163,6 +170,8 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
     const playoffDefinitions = tournament.finalsConfig
       ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig)
       : generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals);
+
+    console.log('[ScheduleGenerator] Generated playoff definitions:', playoffDefinitions);
 
     // Berechne Startslot für Playoffs
     const lastGroupSlot = groupStageMatches.length > 0
@@ -192,6 +201,8 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       startTime: playoffStartTime,
       breakBetweenPhases: tournament.breakBetweenPhases,
     });
+
+    console.log('[ScheduleGenerator] Generated final matches:', finalMatches);
   }
 
   // Generiere Zeitplan für Gruppenphase
