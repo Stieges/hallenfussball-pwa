@@ -209,6 +209,16 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               }</strong>
             </p>
 
+            {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
+            {currentTournament.finalsConfig.preset === 'top-8' && (currentTournament.numberOfGroups || 2) < 4 && (
+              <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(255,165,0,0.12)', borderRadius: theme.borderRadius.sm, border: '1px solid rgba(255,165,0,0.3)' }}>
+                <p style={{ fontSize: '11px', color: theme.colors.text.primary, margin: 0, lineHeight: '1.5' }}>
+                  ⚠️ <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
+                  Mit {currentTournament.numberOfGroups || 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
+                </p>
+              </div>
+            )}
+
             {['top-4', 'top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && currentTournament.numberOfFields > 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>

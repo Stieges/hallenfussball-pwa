@@ -373,6 +373,16 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 ))}
               </div>
 
+              {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
+              {formData.finalsConfig?.preset === 'top-8' && (formData.numberOfGroups || 2) < 4 && (
+                <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,165,0,0.12)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,165,0,0.3)' }}>
+                  <p style={{ fontSize: '12px', color: theme.colors.text.primary, margin: 0, lineHeight: '1.5' }}>
+                    ⚠️ <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
+                    Mit {formData.numberOfGroups || 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
+                  </p>
+                </div>
+              )}
+
               {/* Parallelisierungs-Optionen */}
               {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (formData.numberOfFields || 1) > 1 && (
                 <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
