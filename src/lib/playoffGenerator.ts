@@ -206,24 +206,48 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
 /**
  * Alle Plätze: Top 4 + zusätzliche direkte Platzierungsspiele
  * Bei 2 Gruppen: Plätze 5-8 werden ausgespielt (falls vorhanden)
+ *
+ * Reihenfolge: Halbfinale → Platz 7 → Platz 5 → Platz 3 → Finale
  */
 function generateAllPlaces(numberOfGroups: number): PlayoffMatch[] {
-  // Start mit Top-4 Basis (Halbfinale + Finale + Platz 3)
-  const matches = generateTop4(numberOfGroups);
-
-  // Zusätzliche direkte Platzierungsspiele für restliche Plätze
   if (numberOfGroups === 2) {
-    // Bei 2 Gruppen: Spiele um Platz 5 und 7 (falls 3. und 4. existieren)
+    // Bei 2 Gruppen: Eigene Struktur mit korrekter Reihenfolge
+    const matches: PlayoffMatch[] = [];
+
+    // 1. Halbfinale (parallel möglich)
     matches.push(
-      { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: [] },
-      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: [] }
+      { id: 'semi1', label: '1. Halbfinale', home: 'group-a-2nd', away: 'group-b-1st', dependsOn: [] },
+      { id: 'semi2', label: '2. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] }
     );
+
+    // 2. Platz 7 (nach Halbfinale, niedrigste Platzierung zuerst)
+    matches.push(
+      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] }
+    );
+
+    // 3. Platz 5
+    matches.push(
+      { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['place78-direct'] }
+    );
+
+    // 4. Platz 3
+    matches.push(
+      { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['place56-direct'] }
+    );
+
+    // 5. Finale (als letztes)
+    matches.push(
+      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['third-place'] }
+    );
+
+    return matches;
   } else if (numberOfGroups >= 4) {
     // Bei 4+ Gruppen: Verwende Top-8 als Basis
     return generateTop8(numberOfGroups);
   }
 
-  return matches;
+  // Fallback: Standard Top-4
+  return generateTop4(numberOfGroups);
 }
 
 /**
