@@ -192,6 +192,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
         teamB: def.teamBSource,
         isFinal: true,
         finalType: def.finalType,
+        label: def.label,
         scheduledTime,
       };
 
@@ -218,6 +219,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
           teamB: def.teamBSource,
           isFinal: true,
           finalType: def.finalType,
+          label: def.label,
           scheduledTime,
         };
 

@@ -87,6 +87,7 @@ export interface Match {
   group?: string;
   isFinal?: boolean;
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
+  label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
 }
 

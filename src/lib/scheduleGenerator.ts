@@ -389,6 +389,7 @@ function scheduleMatches(
         group: match.group,
         phase: match.isFinal ? determineFinalPhase(match) : 'groupStage',
         finalType: match.finalType,
+        label: match.label,
         startTime: matchStartTime,
         endTime: matchEndTime,
         duration: totalMatchDuration,
