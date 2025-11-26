@@ -219,6 +219,17 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               </div>
             )}
 
+            {/* Info: Alle Plätze */}
+            {currentTournament.finalsConfig.preset === 'all-places' && (
+              <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,176,255,0.12)', borderRadius: theme.borderRadius.sm, border: '1px solid rgba(0,176,255,0.3)' }}>
+                <p style={{ fontSize: '11px', color: theme.colors.text.primary, margin: 0, lineHeight: '1.5' }}>
+                  ℹ️ <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
+                  {(currentTournament.numberOfGroups || 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
+                  {(currentTournament.numberOfGroups || 2) >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
+                </p>
+              </div>
+            )}
+
             {['top-4', 'top-8', 'all-places'].includes(currentTournament.finalsConfig.preset) && currentTournament.numberOfFields > 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>

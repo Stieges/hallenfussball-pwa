@@ -204,25 +204,23 @@ function generateTop8(numberOfGroups: number): PlayoffMatch[] {
 }
 
 /**
- * Alle Plätze: Top 8 + zusätzliche direkte Platzierungsspiele
- * Bei 2 Gruppen à 5 Teams: Platz 9 (5A vs 5B), etc.
+ * Alle Plätze: Top 4 + zusätzliche direkte Platzierungsspiele
+ * Bei 2 Gruppen: Plätze 5-8 werden ausgespielt (falls vorhanden)
  */
 function generateAllPlaces(numberOfGroups: number): PlayoffMatch[] {
-  const matches = generateTop8(numberOfGroups);
+  // Start mit Top-4 Basis (Halbfinale + Finale + Platz 3)
+  const matches = generateTop4(numberOfGroups);
 
-  // Zusätzliche direkte Platzierungsspiele
+  // Zusätzliche direkte Platzierungsspiele für restliche Plätze
   if (numberOfGroups === 2) {
+    // Bei 2 Gruppen: Spiele um Platz 5 und 7 (falls 3. und 4. existieren)
     matches.push(
       { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: [] },
-      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: [] },
-      { id: 'place9-direct', label: 'Spiel um Platz 9', home: 'group-a-5th', away: 'group-b-5th', rank: [9, 10], dependsOn: [] }
+      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: [] }
     );
   } else if (numberOfGroups >= 4) {
-    // Bei mehr Gruppen: weitere Platzierungsspiele nach Bedarf
-    matches.push(
-      { id: 'place9-direct', label: 'Spiel um Platz 9', home: 'group-a-3rd', away: 'group-b-3rd', rank: [9, 10], dependsOn: [] },
-      { id: 'place11-direct', label: 'Spiel um Platz 11', home: 'group-c-3rd', away: 'group-d-3rd', rank: [11, 12], dependsOn: [] }
-    );
+    // Bei 4+ Gruppen: Verwende Top-8 als Basis
+    return generateTop8(numberOfGroups);
   }
 
   return matches;

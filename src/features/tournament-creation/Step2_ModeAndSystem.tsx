@@ -383,6 +383,17 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 </div>
               )}
 
+              {/* Info: Alle Plätze */}
+              {formData.finalsConfig?.preset === 'all-places' && (
+                <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(0,176,255,0.12)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,176,255,0.3)' }}>
+                  <p style={{ fontSize: '12px', color: theme.colors.text.primary, margin: 0, lineHeight: '1.5' }}>
+                    ℹ️ <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
+                    {(formData.numberOfGroups || 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
+                    {(formData.numberOfGroups || 2) >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
+                  </p>
+                </div>
+              )}
+
               {/* Parallelisierungs-Optionen */}
               {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (formData.numberOfFields || 1) > 1 && (
                 <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
