@@ -257,16 +257,10 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
   }
 
   if (scheduledFinals.length > 0) {
-    // Gruppiere Finals nach Typ (QF, SF, Finals)
-    const quarterfinals = scheduledFinals.filter(m =>
-      m.finalType && ['fifthSixth', 'seventhEighth'].includes(m.finalType) === false &&
-      scheduledFinals.indexOf(m) < scheduledFinals.length / 2
-    );
-    const semifinals = scheduledFinals.filter(m =>
-      !m.finalType && scheduledFinals.filter(f => !f.finalType).indexOf(m) >= 0 &&
-      scheduledFinals.filter(f => !f.finalType).length > 2
-    );
-    const finals = scheduledFinals.filter(m => m.finalType);
+    // Gruppiere Finals nach Phase (QF, SF, Finals)
+    const quarterfinals = scheduledFinals.filter(m => m.phase === 'quarterfinal');
+    const semifinals = scheduledFinals.filter(m => m.phase === 'semifinal');
+    const finals = scheduledFinals.filter(m => m.phase === 'final');
 
     if (quarterfinals.length > 0) {
       phases.push({
