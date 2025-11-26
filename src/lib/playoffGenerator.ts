@@ -214,30 +214,22 @@ function generateAllPlaces(numberOfGroups: number): PlayoffMatch[] {
     // Bei 2 Gruppen: Eigene Struktur mit korrekter Reihenfolge
     const matches: PlayoffMatch[] = [];
 
-    // 1. Halbfinale (parallel möglich)
+    // 1. Halbfinale (parallel möglich bei mehreren Feldern)
     matches.push(
       { id: 'semi1', label: '1. Halbfinale', home: 'group-a-2nd', away: 'group-b-1st', dependsOn: [] },
       { id: 'semi2', label: '2. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] }
     );
 
-    // 2. Platz 7 (nach Halbfinale, niedrigste Platzierung zuerst)
+    // 2. Platzierungsspiele (können parallel laufen, brauchen nur Halbfinale-Ergebnisse)
     matches.push(
-      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] }
+      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] },
+      { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['semi1', 'semi2'] },
+      { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] }
     );
 
-    // 3. Platz 5
+    // 3. Finale (muss nach allen Platzierungsspielen kommen)
     matches.push(
-      { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['place78-direct'] }
-    );
-
-    // 4. Platz 3
-    matches.push(
-      { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['place56-direct'] }
-    );
-
-    // 5. Finale (als letztes)
-    matches.push(
-      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['third-place'] }
+      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['place78-direct', 'place56-direct', 'third-place'] }
     );
 
     return matches;
