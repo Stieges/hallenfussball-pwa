@@ -68,14 +68,18 @@ export const calculateStandings = (
     teamBStanding.goalDifference = teamBStanding.goalsFor - teamBStanding.goalsAgainst;
   });
 
-  // Sort by placement logic
-  return sortByPlacementLogic(standings, tournament.placementLogic);
+  // Sort by placement logic (pass relevantMatches for direct comparison)
+  return sortByPlacementLogic(standings, tournament.placementLogic, relevantMatches);
 };
 
 /**
  * Sort standings according to placement logic criteria
  */
-const sortByPlacementLogic = (standings: Standing[], placementLogic: PlacementCriterion[]): Standing[] => {
+const sortByPlacementLogic = (
+  standings: Standing[],
+  placementLogic: PlacementCriterion[],
+  matches?: Match[]
+): Standing[] => {
   const enabledCriteria = placementLogic.filter((c) => c.enabled);
 
   return standings.sort((a, b) => {
@@ -99,8 +103,12 @@ const sortByPlacementLogic = (standings: Standing[], placementLogic: PlacementCr
           comparison = b.won - a.won;
           break;
         case 'directComparison':
-          // TODO: Implement direct comparison logic
-          comparison = 0;
+          // Direct comparison: only relevant if teams have equal points
+          if (a.points === b.points && matches) {
+            comparison = compareDirectMatches(a, b, matches);
+          } else {
+            comparison = 0;
+          }
           break;
       }
 
@@ -111,6 +119,92 @@ const sortByPlacementLogic = (standings: Standing[], placementLogic: PlacementCr
 
     return 0;
   });
+};
+
+/**
+ * Compare two teams based on their direct matches (head-to-head)
+ * Returns: > 0 if a is better, < 0 if b is better, 0 if equal
+ *
+ * Uses fixed criteria order:
+ * 1. Points from direct matches
+ * 2. Goal difference from direct matches
+ * 3. Goals scored from direct matches
+ */
+const compareDirectMatches = (
+  a: Standing,
+  b: Standing,
+  matches: Match[]
+): number => {
+  // Find all direct matches between these two teams
+  const directMatches = matches.filter(
+    (m) =>
+      (m.scoreA !== undefined && m.scoreB !== undefined) &&
+      ((m.teamA === a.team.id && m.teamB === b.team.id) ||
+       (m.teamA === b.team.id && m.teamB === a.team.id))
+  );
+
+  if (directMatches.length === 0) {
+    return 0; // No direct matches, teams are equal in direct comparison
+  }
+
+  // Calculate mini-table stats for direct matches only
+  let aPoints = 0;
+  let bPoints = 0;
+  let aGoalsFor = 0;
+  let bGoalsFor = 0;
+  let aGoalsAgainst = 0;
+  let bGoalsAgainst = 0;
+  let aWins = 0;
+  let bWins = 0;
+
+  directMatches.forEach((match) => {
+    const scoreA = match.scoreA!;
+    const scoreB = match.scoreB!;
+    const isAHome = match.teamA === a.team.id;
+
+    const aScore = isAHome ? scoreA : scoreB;
+    const bScore = isAHome ? scoreB : scoreA;
+
+    aGoalsFor += aScore;
+    aGoalsAgainst += bScore;
+    bGoalsFor += bScore;
+    bGoalsAgainst += aScore;
+
+    if (aScore > bScore) {
+      aWins++;
+      aPoints += 3; // Assuming 3 points for win
+    } else if (bScore > aScore) {
+      bWins++;
+      bPoints += 3;
+    } else {
+      aPoints += 1; // Draw
+      bPoints += 1;
+    }
+  });
+
+  // Apply FIXED criteria order for direct comparison:
+  // 1. Points from direct matches
+  // 2. Goal difference from direct matches
+  // 3. Goals scored from direct matches
+
+  // 1. Compare points from direct matches
+  if (bPoints !== aPoints) {
+    return bPoints - aPoints; // Higher points is better
+  }
+
+  // 2. Compare goal difference from direct matches
+  const aDiff = aGoalsFor - aGoalsAgainst;
+  const bDiff = bGoalsFor - bGoalsAgainst;
+  if (bDiff !== aDiff) {
+    return bDiff - aDiff; // Higher goal difference is better
+  }
+
+  // 3. Compare goals scored in direct matches
+  if (bGoalsFor !== aGoalsFor) {
+    return bGoalsFor - aGoalsFor; // More goals scored is better
+  }
+
+  return 0; // Teams are equal in direct comparison
 };
 
 /**
