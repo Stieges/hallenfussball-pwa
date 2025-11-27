@@ -11,7 +11,6 @@ import {
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { Tournament, TournamentType } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
-import { generateTournamentSchedule } from '../utils/tournamentScheduler';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { theme } from '../styles/theme';
 
