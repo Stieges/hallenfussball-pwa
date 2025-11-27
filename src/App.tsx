@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { TournamentCreationScreen } from './screens/TournamentCreationScreen';
+import { DashboardScreen } from './screens/DashboardScreen';
+import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
 
 function App() {
   const { tournaments, loading } = useTournaments();
-  const [screen, setScreen] = useState<'list' | 'create'>('list');
-
-  // Nur veröffentlichte Turniere anzeigen
-  const publishedTournaments = tournaments.filter(t => t.status === 'published');
+  const [screen, setScreen] = useState<'dashboard' | 'create' | 'view'>('dashboard');
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
   if (loading) {
     return (
@@ -27,6 +27,12 @@ function App() {
     );
   }
 
+  const handleTournamentClick = (tournament: Tournament) => {
+    setSelectedTournament(tournament);
+    setScreen('view');
+    // TODO: Navigate to tournament view/edit screen
+  };
+
   return (
     <div
       style={{
@@ -36,100 +42,36 @@ function App() {
         fontFamily: theme.fonts.body,
       }}
     >
-      {screen === 'list' && (
-        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '32px',
-            }}
-          >
-            <h1
-              style={{
-                fontFamily: theme.fonts.heading,
-                fontSize: theme.fontSizes.xxxl,
-                margin: 0,
-                background: theme.gradients.primary,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              HALLENFUSSBALL PWA
-            </h1>
-            <button
-              onClick={() => setScreen('create')}
-              style={{
-                padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-                background: theme.gradients.primary,
-                border: 'none',
-                borderRadius: theme.borderRadius.md,
-                color: theme.colors.background,
-                fontSize: theme.fontSizes.md,
-                fontWeight: theme.fontWeights.bold,
-                cursor: 'pointer',
-              }}
-            >
-              + Neues Turnier
-            </button>
-          </div>
-
-          {publishedTournaments.length === 0 ? (
-            <div
-              style={{
-                padding: '60px 20px',
-                textAlign: 'center',
-                background: theme.colors.surface,
-                borderRadius: theme.borderRadius.lg,
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚽</div>
-              <h2 style={{ fontSize: theme.fontSizes.xl, marginBottom: '8px' }}>
-                Noch keine Turniere
-              </h2>
-              <p style={{ color: theme.colors.text.secondary }}>
-                Erstelle dein erstes Turnier mit dem Button oben
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-              {publishedTournaments.map((tournament) => (
-                <div
-                  key={tournament.id}
-                  style={{
-                    padding: '24px',
-                    background: theme.gradients.card,
-                    backdropFilter: 'blur(10px)',
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: theme.borderRadius.lg,
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <h3 style={{ margin: '0 0 12px 0', fontSize: theme.fontSizes.lg }}>
-                    {tournament.title}
-                  </h3>
-                  <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary }}>
-                    <div>📅 {tournament.date}</div>
-                    <div>📍 {tournament.location}</div>
-                    <div>👥 {tournament.teams.length} Teams</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {screen === 'dashboard' && (
+        <DashboardScreen
+          tournaments={tournaments}
+          onCreateNew={() => setScreen('create')}
+          onTournamentClick={handleTournamentClick}
+        />
       )}
 
-      {screen === 'create' && <TournamentCreationScreen onBack={() => setScreen('list')} />}
+      {screen === 'create' && <TournamentCreationScreen onBack={() => setScreen('dashboard')} />}
+
+      {screen === 'view' && selectedTournament && (
+        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+          <button
+            onClick={() => setScreen('dashboard')}
+            style={{
+              padding: '12px 24px',
+              background: theme.colors.surface,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.md,
+              color: theme.colors.text.primary,
+              cursor: 'pointer',
+              marginBottom: '24px',
+            }}
+          >
+            ← Zurück zum Dashboard
+          </button>
+          <h2>Tournament View: {selectedTournament.title}</h2>
+          <p>TODO: Implement tournament view screen with Spielplan/Live/Bearbeiten buttons</p>
+        </div>
+      )}
     </div>
   );
 }

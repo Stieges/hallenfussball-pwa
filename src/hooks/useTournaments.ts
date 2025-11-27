@@ -14,9 +14,11 @@ export const useTournaments = () => {
     try {
       const loaded = storage.getTournaments();
       // Migration: Setze status auf 'published' für bestehende Turniere ohne status
+      // Migration: Setze refereeConfig auf { mode: 'none' } für bestehende Turniere ohne refereeConfig
       const migratedTournaments = loaded.map(t => ({
         ...t,
         status: t.status || 'published',
+        refereeConfig: t.refereeConfig || { mode: 'none' as const },
       }));
       setTournaments(migratedTournaments);
     } catch (error) {

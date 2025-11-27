@@ -50,6 +50,9 @@ const getDefaultFormData = (): Partial<Tournament> => ({
   finalsConfig: {
     preset: 'none',
   },
+  refereeConfig: {
+    mode: 'none',
+  },
   isKidsTournament: false,
   hideScoresForPublic: false,
   hideRankingsForPublic: false,
@@ -176,6 +179,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       placementLogic: formData.placementLogic || [],
       finals: formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
       finalsConfig: formData.finalsConfig,
+      refereeConfig: formData.refereeConfig || { mode: 'none' },
       isKidsTournament: formData.isKidsTournament || false,
       hideScoresForPublic: formData.hideScoresForPublic || false,
       hideRankingsForPublic: formData.hideRankingsForPublic || false,

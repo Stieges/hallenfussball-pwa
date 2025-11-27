@@ -63,6 +63,7 @@ export function generatePlayoffDefinitions(
   // Convert to PlayoffMatchDefinition format
   const definitions: PlayoffMatchDefinition[] = playoffMatches.map(match => {
     // Determine parallel mode
+    const isRoundOf16 = match.id.startsWith('r16');
     const isQuarterfinal = match.id.startsWith('qf');
     const isSemifinal = match.id.startsWith('semi');
     const isFinal = match.id === 'final';
@@ -74,6 +75,8 @@ export function generatePlayoffDefinitions(
     } else if (isSemifinal && finalsConfig.parallelSemifinals === false) {
       parallelMode = 'sequentialOnly';
     } else if (isQuarterfinal && finalsConfig.parallelQuarterfinals === false) {
+      parallelMode = 'sequentialOnly';
+    } else if (isRoundOf16 && finalsConfig.parallelRoundOf16 === false) {
       parallelMode = 'sequentialOnly';
     }
 

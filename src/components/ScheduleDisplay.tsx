@@ -31,6 +31,12 @@ interface ScheduleDisplayProps {
   qrCodeUrl?: string;
   /** Logo URL */
   logoUrl?: string;
+  /** Allow editing referees */
+  editable?: boolean;
+  /** Callback when referee is changed */
+  onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
+  /** Callback when field is changed */
+  onFieldChange?: (matchId: string, fieldNumber: number) => void;
 }
 
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
@@ -39,6 +45,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   showQRCode = false,
   qrCodeUrl,
   logoUrl,
+  editable = false,
+  onRefereeChange,
+  onFieldChange,
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -80,6 +89,11 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <GroupStageSchedule
           matches={groupPhase.matches}
           hasGroups={hasGroups}
+          refereeConfig={schedule.refereeConfig}
+          numberOfFields={schedule.numberOfFields}
+          editable={editable}
+          onRefereeChange={onRefereeChange}
+          onFieldChange={onFieldChange}
         />
       )}
 
@@ -93,7 +107,14 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
       {/* Final Stage Schedule */}
       {finalMatches.length > 0 && (
-        <FinalStageSchedule matches={finalMatches} />
+        <FinalStageSchedule
+          matches={finalMatches}
+          refereeConfig={schedule.refereeConfig}
+          numberOfFields={schedule.numberOfFields}
+          editable={editable}
+          onRefereeChange={onRefereeChange}
+          onFieldChange={onFieldChange}
+        />
       )}
 
       {/* Global styles for responsive design */}

@@ -31,26 +31,36 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           options={getAgeClassOptions(formData.sport || 'football')}
         />
         <Input
-          label="Datum"
-          type="date"
-          value={formData.date || ''}
-          onChange={(v) => onUpdate('date', v)}
+          label="Ort"
+          value={formData.location || ''}
+          onChange={(v) => onUpdate('location', v)}
+          placeholder="z.B. Sporthalle Waging"
           required
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <Input
-          label="Zeitfenster"
-          value={formData.timeSlot || ''}
-          onChange={(v) => onUpdate('timeSlot', v)}
-          placeholder="z.B. 09:00 - 16:00"
+          label="Startdatum"
+          type="date"
+          value={formData.startDate || formData.date || ''}
+          onChange={(v) => {
+            onUpdate('startDate', v);
+            // Keep legacy field in sync
+            onUpdate('date', v);
+          }}
+          required
         />
         <Input
-          label="Halle/Ort"
-          value={formData.location || ''}
-          onChange={(v) => onUpdate('location', v)}
-          placeholder="z.B. Sporthalle Waging"
+          label="Startzeit"
+          type="time"
+          value={formData.startTime || ''}
+          onChange={(v) => {
+            onUpdate('startTime', v);
+            // Keep legacy field in sync (simple format)
+            onUpdate('timeSlot', v);
+          }}
+          placeholder="z.B. 09:00"
           required
         />
       </div>

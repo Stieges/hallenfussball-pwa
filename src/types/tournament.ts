@@ -34,6 +34,7 @@ export type FinalsPreset =
   | 'final-only'     // Nur Finale (direkt, ohne Halbfinale)
   | 'top-4'          // Halbfinale + Finale + Platz 3
   | 'top-8'          // Viertelfinale + alles darüber + Platzierungen 5-8
+  | 'top-16'         // Achtelfinale + Viertelfinale + Halbfinale + Finale (8+ Gruppen)
   | 'all-places';    // Alle Plätze ausspielen
 
 /**
@@ -44,6 +45,32 @@ export interface FinalsConfig {
   preset: FinalsPreset;
   parallelSemifinals?: boolean;      // Halbfinale gleichzeitig?
   parallelQuarterfinals?: boolean;   // Viertelfinale gleichzeitig?
+  parallelRoundOf16?: boolean;       // Achtelfinale gleichzeitig?
+}
+
+/**
+ * Referee System Types
+ */
+export type RefereeMode = 'none' | 'organizer' | 'teams';
+
+export type FinalsRefereeMode =
+  | 'none'                    // Keine Schiedsrichter in Finalphase
+  | 'neutralTeams'            // Nur ausgeschiedene/neutrale Teams
+  | 'nonParticipatingTeams';  // Nur nicht-beteiligte Teams des jeweiligen Spiels
+
+export interface RefereeConfig {
+  mode: RefereeMode;
+
+  // Veranstalter-Modus
+  numberOfReferees?: number;          // Anzahl Schiedsrichter (z.B. 3 → SR1, SR2, SR3)
+  maxConsecutiveMatches?: number;     // Max. zusammenhängende Partien (z.B. 1 = keine aufeinanderfolgenden Spiele)
+  refereeNames?: Record<number, string>; // Zuordnung: 1 → "Max Mustermann", 2 → "Anna Schmidt"
+
+  // Finalphase (beide Modi)
+  finalsRefereeMode?: FinalsRefereeMode;
+
+  // Manuelle Zuweisungen (überschreibt automatische Verteilung)
+  manualAssignments?: Record<string, number>; // matchId → refereeNumber
 }
 
 /**
@@ -89,6 +116,7 @@ export interface Match {
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
   label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
+  referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
 }
 
 export interface Tournament {
@@ -130,6 +158,12 @@ export interface Tournament {
   // Finals configuration (new preset-based system)
   finalsConfig?: FinalsConfig;
 
+  // Referee configuration
+  refereeConfig?: RefereeConfig;
+
+  // Field assignments (manual overrides for automatic field distribution)
+  fieldAssignments?: Record<string, number>; // matchId → fieldNumber
+
   // Legacy fields (will be migrated)
   finals: Finals;
   playoffConfig?: PlayoffConfig;
@@ -147,8 +181,10 @@ export interface Tournament {
   // Step 3: Metadata
   title: string;
   ageClass: string;
-  date: string;
-  timeSlot: string;
+  date: string; // Legacy: Will be replaced by startDate
+  timeSlot: string; // Legacy: Will be replaced by startTime
+  startDate?: string; // New: YYYY-MM-DD format
+  startTime?: string; // New: HH:mm format (24h)
   location: string;
 
   // Step 4: Teams

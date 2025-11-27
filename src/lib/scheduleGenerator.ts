@@ -8,10 +8,11 @@
  * - Druckfreundliches Format (A4)
  */
 
-import { Tournament, Match, Team, Standing } from '../types/tournament';
+import { Tournament, Match, Team, Standing, RefereeConfig } from '../types/tournament';
 import { generateGroupPhaseSchedule } from '../utils/fairScheduler';
 import { generatePlayoffSchedule, generatePlayoffDefinitions, generatePlayoffDefinitionsLegacy } from '../utils/playoffScheduler';
 import { getUniqueGroups } from '../utils/groupHelpers';
+import { assignReferees } from './refereeAssigner';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -32,8 +33,8 @@ export interface ScheduledMatch {
   awayTeam: string;
   /** Gruppe oder undefined für Finalspiele */
   group?: string;
-  /** Phase: 'groupStage' | 'final' */
-  phase: 'groupStage' | 'quarterfinal' | 'semifinal' | 'final';
+  /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */
+  phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
   /** Finaltyp (z.B. 'final', 'thirdPlace') */
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
   /** Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale') */
@@ -44,6 +45,10 @@ export interface ScheduledMatch {
   endTime: Date;
   /** Dauer in Minuten */
   duration: number;
+  /** Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.) */
+  referee?: number;
+  /** Slot index für Schiedsrichter-Verteilung */
+  slot?: number;
 }
 
 export interface SchedulePhase {
@@ -96,6 +101,9 @@ export interface GeneratedSchedule {
 
   /** Initial leere Tabelle (für Live-Updates) */
   initialStandings: Standing[];
+
+  /** Schiedsrichter-Konfiguration */
+  refereeConfig?: RefereeConfig;
 }
 
 // ============================================================================
@@ -216,7 +224,8 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
     tournament.halftimeBreak || 0,
     'groupStage',
     teamMap,
-    locale
+    locale,
+    1 // Start mit Spielnummer 1
   );
 
   // Wenn Finalrunde existiert, berechne Start-Zeit nach Gruppenphase
@@ -225,6 +234,11 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
     const groupStageEnd = scheduledGroupStage[scheduledGroupStage.length - 1]?.endTime || startTime;
     const breakBetweenPhases = tournament.breakBetweenPhases || 0;
     const finalStartTime = addMinutes(groupStageEnd, breakBetweenPhases);
+
+    // Finalrunde-Nummerierung nach Gruppenphase fortsetzen
+    const startMatchNumber = scheduledGroupStage.length > 0
+      ? scheduledGroupStage[scheduledGroupStage.length - 1].matchNumber + 1
+      : 1;
 
     scheduledFinals = scheduleMatches(
       finalMatches,
@@ -236,31 +250,53 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       tournament.halftimeBreak || 0,
       'final',
       teamMap,
-      locale
+      locale,
+      startMatchNumber // Fortlaufende Nummerierung
     );
   }
 
   // Kombiniere alle Matches
-  const allMatches = [...scheduledGroupStage, ...scheduledFinals];
+  let allMatches = [...scheduledGroupStage, ...scheduledFinals];
 
-  // Erstelle Phasen
+  // *** REFEREE ASSIGNMENT ***
+  // Assign referees to all matches BEFORE creating phases
+  if (tournament.refereeConfig && tournament.refereeConfig.mode !== 'none') {
+    allMatches = assignReferees(allMatches, tournament.teams, tournament.refereeConfig);
+  }
+
+  // Split back into group stage and finals (now with referee assignments)
+  const matchesWithRefereesGroupStage = allMatches.slice(0, scheduledGroupStage.length);
+  const matchesWithRefereesFinals = allMatches.slice(scheduledGroupStage.length);
+
+  // Erstelle Phasen (with referee-assigned matches)
   const phases: SchedulePhase[] = [];
 
-  if (scheduledGroupStage.length > 0) {
+  if (matchesWithRefereesGroupStage.length > 0) {
     phases.push({
       name: 'groupStage',
       label: 'Gruppenphase',
-      matches: scheduledGroupStage,
-      startTime: scheduledGroupStage[0].startTime,
-      endTime: scheduledGroupStage[scheduledGroupStage.length - 1].endTime,
+      matches: matchesWithRefereesGroupStage,
+      startTime: matchesWithRefereesGroupStage[0].startTime,
+      endTime: matchesWithRefereesGroupStage[matchesWithRefereesGroupStage.length - 1].endTime,
     });
   }
 
-  if (scheduledFinals.length > 0) {
-    // Gruppiere Finals nach Phase (QF, SF, Finals)
-    const quarterfinals = scheduledFinals.filter(m => m.phase === 'quarterfinal');
-    const semifinals = scheduledFinals.filter(m => m.phase === 'semifinal');
-    const finals = scheduledFinals.filter(m => m.phase === 'final');
+  if (matchesWithRefereesFinals.length > 0) {
+    // Gruppiere Finals nach Phase (R16, QF, SF, Finals)
+    const roundOf16 = matchesWithRefereesFinals.filter(m => m.phase === 'roundOf16');
+    const quarterfinals = matchesWithRefereesFinals.filter(m => m.phase === 'quarterfinal');
+    const semifinals = matchesWithRefereesFinals.filter(m => m.phase === 'semifinal');
+    const finals = matchesWithRefereesFinals.filter(m => m.phase === 'final');
+
+    if (roundOf16.length > 0) {
+      phases.push({
+        name: 'roundOf16',
+        label: 'Achtelfinale',
+        matches: roundOf16,
+        startTime: roundOf16[0].startTime,
+        endTime: roundOf16[roundOf16.length - 1].endTime,
+      });
+    }
 
     if (quarterfinals.length > 0) {
       phases.push({
@@ -311,7 +347,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       location: tournament.location,
       ageClass: tournament.ageClass,
     },
-    allMatches,
+    allMatches: allMatches,
     phases,
     startTime,
     endTime,
@@ -323,6 +359,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       group: t.group,
     })),
     initialStandings,
+    refereeConfig: tournament.refereeConfig,
   };
 }
 
@@ -343,11 +380,12 @@ function scheduleMatches(
   halftimeBreak: number,
   _phase: 'groupStage' | 'final',
   teamMap: Map<string, string>,
-  locale: 'de' | 'en'
+  locale: 'de' | 'en',
+  startMatchNumber: number = 1
 ): ScheduledMatch[] {
   const scheduled: ScheduledMatch[] = [];
   let currentTime = new Date(startTime);
-  let matchNumber = 1;
+  let matchNumber = startMatchNumber;
 
   // Sortiere Matches nach Slot (von Fair Scheduler) oder Round (Legacy)
   const sortedMatches = [...matches].sort((a, b) => {
@@ -428,13 +466,14 @@ function calculateTotalMatchDuration(
 /**
  * Bestimmt Final-Phase aus Match
  */
-function determineFinalPhase(match: Match): 'quarterfinal' | 'semifinal' | 'final' {
+function determineFinalPhase(match: Match): 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' {
   if (match.finalType) {
     return 'final';
   }
 
   // Heuristik: Basierend auf Match-ID oder Round
   const matchId = match.id.toLowerCase();
+  if (matchId.includes('r16') || matchId.startsWith('r16-')) return 'roundOf16';
   if (matchId.includes('qf')) return 'quarterfinal';
   if (matchId.includes('sf') || matchId.includes('semi')) return 'semifinal';
 
@@ -478,7 +517,15 @@ function translatePlaceholder(placeholder: string, locale: 'de' | 'en'): string 
       'group-d-2nd': 'Gruppe D - 2. Platz',
       'group-d-3rd': 'Gruppe D - 3. Platz',
       'group-d-4th': 'Gruppe D - 4. Platz',
-      // Finalrunden Platzhalter
+      'group-e-1st': 'Gruppe E - 1. Platz',
+      'group-e-2nd': 'Gruppe E - 2. Platz',
+      'group-f-1st': 'Gruppe F - 1. Platz',
+      'group-f-2nd': 'Gruppe F - 2. Platz',
+      'group-g-1st': 'Gruppe G - 1. Platz',
+      'group-g-2nd': 'Gruppe G - 2. Platz',
+      'group-h-1st': 'Gruppe H - 1. Platz',
+      'group-h-2nd': 'Gruppe H - 2. Platz',
+      // Finalrunden Platzhalter (Legacy-Format)
       'winner-qf-1': 'Sieger VF 1',
       'winner-qf-2': 'Sieger VF 2',
       'winner-qf-3': 'Sieger VF 3',
@@ -491,6 +538,27 @@ function translatePlaceholder(placeholder: string, locale: 'de' | 'en'): string 
       'winner-sf-2': 'Sieger HF 2',
       'loser-sf-1': 'Verlierer HF 1',
       'loser-sf-2': 'Verlierer HF 2',
+      // Neue Playoff-Platzhalter (aktuelles Format)
+      'r16-1-winner': 'Sieger AF 1',
+      'r16-2-winner': 'Sieger AF 2',
+      'r16-3-winner': 'Sieger AF 3',
+      'r16-4-winner': 'Sieger AF 4',
+      'r16-5-winner': 'Sieger AF 5',
+      'r16-6-winner': 'Sieger AF 6',
+      'r16-7-winner': 'Sieger AF 7',
+      'r16-8-winner': 'Sieger AF 8',
+      'qf1-winner': 'Sieger VF 1',
+      'qf2-winner': 'Sieger VF 2',
+      'qf3-winner': 'Sieger VF 3',
+      'qf4-winner': 'Sieger VF 4',
+      'qf1-loser': 'Verlierer VF 1',
+      'qf2-loser': 'Verlierer VF 2',
+      'qf3-loser': 'Verlierer VF 3',
+      'qf4-loser': 'Verlierer VF 4',
+      'semi1-winner': 'Sieger HF 1',
+      'semi2-winner': 'Sieger HF 2',
+      'semi1-loser': 'Verlierer HF 1',
+      'semi2-loser': 'Verlierer HF 2',
     },
     en: {
       // Group Placeholders
@@ -510,7 +578,15 @@ function translatePlaceholder(placeholder: string, locale: 'de' | 'en'): string 
       'group-d-2nd': 'Group D - 2nd Place',
       'group-d-3rd': 'Group D - 3rd Place',
       'group-d-4th': 'Group D - 4th Place',
-      // Finals Placeholders
+      'group-e-1st': 'Group E - 1st Place',
+      'group-e-2nd': 'Group E - 2nd Place',
+      'group-f-1st': 'Group F - 1st Place',
+      'group-f-2nd': 'Group F - 2nd Place',
+      'group-g-1st': 'Group G - 1st Place',
+      'group-g-2nd': 'Group G - 2nd Place',
+      'group-h-1st': 'Group H - 1st Place',
+      'group-h-2nd': 'Group H - 2nd Place',
+      // Finals Placeholders (Legacy)
       'winner-qf-1': 'Winner QF 1',
       'winner-qf-2': 'Winner QF 2',
       'winner-qf-3': 'Winner QF 3',
@@ -523,6 +599,27 @@ function translatePlaceholder(placeholder: string, locale: 'de' | 'en'): string 
       'winner-sf-2': 'Winner SF 2',
       'loser-sf-1': 'Loser SF 1',
       'loser-sf-2': 'Loser SF 2',
+      // New Playoff Placeholders
+      'r16-1-winner': 'Winner R16-1',
+      'r16-2-winner': 'Winner R16-2',
+      'r16-3-winner': 'Winner R16-3',
+      'r16-4-winner': 'Winner R16-4',
+      'r16-5-winner': 'Winner R16-5',
+      'r16-6-winner': 'Winner R16-6',
+      'r16-7-winner': 'Winner R16-7',
+      'r16-8-winner': 'Winner R16-8',
+      'qf1-winner': 'Winner QF 1',
+      'qf2-winner': 'Winner QF 2',
+      'qf3-winner': 'Winner QF 3',
+      'qf4-winner': 'Winner QF 4',
+      'qf1-loser': 'Loser QF 1',
+      'qf2-loser': 'Loser QF 2',
+      'qf3-loser': 'Loser QF 3',
+      'qf4-loser': 'Loser QF 4',
+      'semi1-winner': 'Winner SF 1',
+      'semi2-winner': 'Winner SF 2',
+      'semi1-loser': 'Loser SF 1',
+      'semi2-loser': 'Loser SF 2',
     },
   };
 

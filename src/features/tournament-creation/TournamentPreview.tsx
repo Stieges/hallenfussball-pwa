@@ -8,9 +8,10 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { Tournament, FinalsConfig } from '../../types/tournament';
+import { Tournament, FinalsConfig, RefereeConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
+import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
 import { theme } from '../../styles/theme';
 import { exportScheduleAsPDF } from '../../lib/pdfExporter';
@@ -47,10 +48,88 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     }
   };
 
+  const handleRefereeAssignment = (matchId: string, refereeNumber: number | null) => {
+    const updatedTournament = { ...currentTournament };
+
+    // Update manual assignments
+    if (!updatedTournament.refereeConfig) {
+      return;
+    }
+
+    const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments || {}) };
+
+    if (refereeNumber === null) {
+      delete manualAssignments[matchId];
+    } else {
+      manualAssignments[matchId] = refereeNumber;
+    }
+
+    updatedTournament.refereeConfig = {
+      ...updatedTournament.refereeConfig,
+      manualAssignments,
+    };
+
+    setCurrentTournament(updatedTournament);
+
+    // Regenerate schedule with new referee assignments
+    const newSchedule = generateFullSchedule(updatedTournament);
+    setSchedule(newSchedule);
+
+    // Notify parent if callback provided
+    if (onTournamentChange) {
+      onTournamentChange(updatedTournament);
+    }
+  };
+
+  const handleResetRefereeAssignments = () => {
+    const updatedTournament = { ...currentTournament };
+
+    if (updatedTournament.refereeConfig) {
+      updatedTournament.refereeConfig = {
+        ...updatedTournament.refereeConfig,
+        manualAssignments: {},
+      };
+
+      setCurrentTournament(updatedTournament);
+
+      // Regenerate schedule with automatic assignments
+      const newSchedule = generateFullSchedule(updatedTournament);
+      setSchedule(newSchedule);
+
+      // Notify parent if callback provided
+      if (onTournamentChange) {
+        onTournamentChange(updatedTournament);
+      }
+    }
+  };
+
+  const handleFieldChange = (matchId: string, fieldNumber: number) => {
+    const updatedTournament = { ...currentTournament };
+
+    // Update field assignments
+    if (!updatedTournament.fieldAssignments) {
+      updatedTournament.fieldAssignments = {};
+    }
+
+    updatedTournament.fieldAssignments[matchId] = fieldNumber;
+
+    setCurrentTournament(updatedTournament);
+
+    // Regenerate schedule with new field assignments
+    const newSchedule = generateFullSchedule(updatedTournament);
+    setSchedule(newSchedule);
+
+    // Notify parent if callback provided
+    if (onTournamentChange) {
+      onTournamentChange(updatedTournament);
+    }
+  };
+
   const handleExportPDF = async () => {
+    const hasReferees = !!(schedule.refereeConfig && schedule.refereeConfig.mode !== 'none');
     await exportScheduleAsPDF(schedule, {
       filename: `${currentTournament.title}_Spielplan`,
-      showRefereeColumn: false,
+      showRefereeColumn: hasReferees,
     });
   };
 
@@ -272,7 +351,22 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
         )}
 
-        <ScheduleDisplay schedule={schedule} />
+        <ScheduleDisplay
+          schedule={schedule}
+          editable={true}
+          onRefereeChange={handleRefereeAssignment}
+          onFieldChange={handleFieldChange}
+        />
+
+        {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
+        {currentTournament.refereeConfig && currentTournament.refereeConfig.mode !== 'none' && (
+          <RefereeAssignmentEditor
+            matches={schedule.allMatches}
+            refereeConfig={currentTournament.refereeConfig}
+            onAssignmentChange={handleRefereeAssignment}
+            onResetAssignments={handleResetRefereeAssignments}
+          />
+        )}
 
         {/* Aktionen */}
         <div style={actionsStyle}>

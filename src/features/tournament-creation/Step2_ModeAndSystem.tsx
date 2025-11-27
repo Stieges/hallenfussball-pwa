@@ -1,9 +1,10 @@
 import { CSSProperties, useState } from 'react';
 import { Card, Select, Input, Icons } from '../../components/ui';
-import { Tournament, GroupSystem, PlacementCriterion, FinalsPreset } from '../../types/tournament';
+import { Tournament, GroupSystem, PlacementCriterion, FinalsPreset, RefereeMode, FinalsRefereeMode } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { DFB_ROUND_ROBIN_PATTERNS } from '../../constants/dfbMatchPatterns';
+import { getFinalsOptions } from '../../constants/finalsOptions';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -26,6 +27,15 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
   // State für individuelles Punktesystem
   const [customPointSystem, setCustomPointSystem] = useState(false);
+
+  // State für erweiterte Finalrunden-Optionen
+  const [showAdvancedFinalsOptions, setShowAdvancedFinalsOptions] = useState(false);
+
+  // Finalrunden-Optionen basierend auf Gruppenanzahl
+  const numberOfGroups = formData.numberOfGroups || 2;
+  const finalsOptions = getFinalsOptions(numberOfGroups, formData.numberOfTeams);
+  const recommendedOptions = finalsOptions.filter(opt => opt.category === 'recommended');
+  const possibleOptions = finalsOptions.filter(opt => opt.category === 'possible');
 
   const modeButtonStyle = (isSelected: boolean): CSSProperties => ({
     padding: '20px',
@@ -316,32 +326,29 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           {/* Finalrunden-Konfiguration */}
           {canUseGroups && (
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${theme.colors.border}` }}>
-              <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 16px 0' }}>
+              <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 8px 0' }}>
                 🏆 Finalrunde
               </h3>
+              <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '0 0 16px 0' }}>
+                ⭐ = Empfohlen für {numberOfGroups} Gruppe{numberOfGroups > 1 ? 'n' : ''}
+              </p>
 
+              {/* Empfohlene Optionen */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Preset Radio Buttons */}
-                {[
-                  { value: 'none', label: 'Keine Finalrunde', description: 'Nur Gruppenphase' },
-                  { value: 'final-only', label: 'Nur Finale', description: 'Direkt ohne Halbfinale' },
-                  { value: 'top-4', label: 'Top 4', description: 'Halbfinale + Finale + Platz 3' },
-                  { value: 'top-8', label: 'Top 8', description: 'Viertelfinale + Platzierungen 5-8' },
-                  { value: 'all-places', label: 'Alle Plätze', description: 'Alle Platzierungen ausspielen' },
-                ].map((preset) => (
+                {recommendedOptions.map((option) => (
                   <label
-                    key={preset.value}
+                    key={option.preset}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
                       padding: '14px 16px',
-                      background: (formData.finalsConfig?.preset || 'none') === preset.value
+                      background: (formData.finalsConfig?.preset || 'none') === option.preset
                         ? 'rgba(255,215,0,0.15)'
                         : 'rgba(0,0,0,0.2)',
-                      border: (formData.finalsConfig?.preset || 'none') === preset.value
+                      border: (formData.finalsConfig?.preset || 'none') === option.preset
                         ? `2px solid ${theme.colors.accent}`
-                        : '2px solid transparent',
+                        : '2px solid rgba(255,215,0,0.3)',
                       borderRadius: theme.borderRadius.md,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
@@ -350,8 +357,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     <input
                       type="radio"
                       name="finalsPreset"
-                      value={preset.value}
-                      checked={(formData.finalsConfig?.preset || 'none') === preset.value}
+                      value={option.preset}
+                      checked={(formData.finalsConfig?.preset || 'none') === option.preset}
                       onChange={(e) => {
                         onUpdate('finalsConfig', {
                           preset: e.target.value as FinalsPreset,
@@ -362,16 +369,100 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                       style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
                     />
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium }}>
-                        {preset.label}
+                      <div style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>⭐</span>
+                        {option.label}
                       </div>
                       <div style={{ color: theme.colors.text.secondary, fontSize: '12px', marginTop: '2px' }}>
-                        {preset.description}
+                        {option.description}
                       </div>
+                      {option.explanation && (
+                        <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginTop: '4px', fontStyle: 'italic' }}>
+                          {option.explanation}
+                        </div>
+                      )}
                     </div>
                   </label>
                 ))}
               </div>
+
+              {/* Weitere Optionen (Erweitert) */}
+              {possibleOptions.length > 0 && (
+                <div style={{ marginTop: '16px' }}>
+                  <button
+                    onClick={() => setShowAdvancedFinalsOptions(!showAdvancedFinalsOptions)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      background: 'rgba(0,0,0,0.2)',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.sm,
+                      color: theme.colors.text.secondary,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>⚙️ Weitere Optionen (theoretisch möglich, aber weniger empfohlen)</span>
+                    <span>{showAdvancedFinalsOptions ? '▼' : '▶'}</span>
+                  </button>
+
+                  {showAdvancedFinalsOptions && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                      {possibleOptions.map((option) => (
+                        <label
+                          key={option.preset}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '14px 16px',
+                            background: (formData.finalsConfig?.preset || 'none') === option.preset
+                              ? 'rgba(255,165,0,0.12)'
+                              : 'rgba(0,0,0,0.15)',
+                            border: (formData.finalsConfig?.preset || 'none') === option.preset
+                              ? `2px solid rgba(255,165,0,0.5)`
+                              : '2px solid rgba(255,255,255,0.1)',
+                            borderRadius: theme.borderRadius.md,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="finalsPreset"
+                            value={option.preset}
+                            checked={(formData.finalsConfig?.preset || 'none') === option.preset}
+                            onChange={(e) => {
+                              onUpdate('finalsConfig', {
+                                preset: e.target.value as FinalsPreset,
+                                parallelSemifinals: formData.finalsConfig?.parallelSemifinals,
+                                parallelQuarterfinals: formData.finalsConfig?.parallelQuarterfinals,
+                              });
+                            }}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'rgba(255,165,0,0.8)' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium }}>
+                              {option.label}
+                            </div>
+                            <div style={{ color: theme.colors.text.secondary, fontSize: '12px', marginTop: '2px' }}>
+                              {option.description}
+                            </div>
+                            {option.explanation && (
+                              <div style={{ color: 'rgba(255,165,0,0.8)', fontSize: '11px', marginTop: '4px', fontStyle: 'italic' }}>
+                                ⚠️ {option.explanation}
+                              </div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
               {formData.finalsConfig?.preset === 'top-8' && (formData.numberOfGroups || 2) < 4 && (
@@ -395,13 +486,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               )}
 
               {/* Parallelisierungs-Optionen */}
-              {formData.finalsConfig?.preset && ['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (formData.numberOfFields || 1) > 1 && (
+              {formData.finalsConfig?.preset && ['top-4', 'top-8', 'top-16', 'all-places'].includes(formData.finalsConfig.preset) && (formData.numberOfFields || 1) > 1 && (
                 <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
                   <h4 style={{ color: theme.colors.accent, fontSize: '13px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
                     ⚡ Parallelisierung
                   </h4>
 
-                  {['top-4', 'top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
+                  {['top-4', 'top-8', 'top-16', 'all-places'].includes(formData.finalsConfig.preset) && (
                     <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
@@ -420,8 +511,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     </label>
                   )}
 
-                  {['top-8', 'all-places'].includes(formData.finalsConfig.preset) && (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                  {['top-8', 'top-16', 'all-places'].includes(formData.finalsConfig.preset) && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={formData.finalsConfig?.parallelQuarterfinals ?? true}
@@ -435,6 +526,25 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                       />
                       <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
                         Viertelfinale gleichzeitig austragen
+                      </span>
+                    </label>
+                  )}
+
+                  {formData.finalsConfig.preset === 'top-16' && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={formData.finalsConfig?.parallelRoundOf16 ?? true}
+                        onChange={(e) => {
+                          onUpdate('finalsConfig', {
+                            ...formData.finalsConfig!,
+                            parallelRoundOf16: e.target.checked,
+                          });
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                      />
+                      <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                        Achtelfinale gleichzeitig austragen
                       </span>
                     </label>
                   )}
@@ -548,6 +658,102 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '12px', lineHeight: '1.4' }}>
                   💡 Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)
                 </p>
+              </div>
+            )}
+          </div>
+
+          {/* Schiedsrichter-Konfiguration */}
+          <div style={{ marginTop: '32px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary, marginBottom: '16px' }}>
+              🟨 Schiedsrichter
+            </h3>
+
+            <Select
+              label="Schiedsrichter-Modus"
+              value={formData.refereeConfig?.mode || 'none'}
+              onChange={(v: RefereeMode) => {
+                const newConfig = {
+                  ...formData.refereeConfig,
+                  mode: v,
+                };
+
+                // Initialize default values when switching to organizer mode
+                if (v === 'organizer' && !formData.refereeConfig?.numberOfReferees) {
+                  newConfig.numberOfReferees = 2;
+                  newConfig.maxConsecutiveMatches = 1;
+                }
+
+                onUpdate('refereeConfig', newConfig as any);
+              }}
+              options={[
+                { value: 'none', label: 'Keine Schiedsrichter' },
+                { value: 'organizer', label: 'Veranstalter stellt Schiedsrichter' },
+                { value: 'teams', label: 'Teams stellen Schiedsrichter' },
+              ]}
+            />
+
+            {/* Veranstalter-Modus Einstellungen */}
+            {formData.refereeConfig?.mode === 'organizer' && (
+              <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <Input
+                    label="Anzahl Schiedsrichter"
+                    type="number"
+                    value={formData.refereeConfig?.numberOfReferees?.toString() || '2'}
+                    onChange={(v) => onUpdate('refereeConfig', {
+                      ...formData.refereeConfig,
+                      mode: 'organizer',
+                      numberOfReferees: parseInt(v) || 2,
+                    } as any)}
+                    min="1"
+                    max="20"
+                    placeholder="z.B. 3"
+                  />
+                  <Input
+                    label="Max. zusammenhängende Partien"
+                    type="number"
+                    value={formData.refereeConfig?.maxConsecutiveMatches?.toString() || '1'}
+                    onChange={(v) => onUpdate('refereeConfig', {
+                      ...formData.refereeConfig,
+                      mode: 'organizer',
+                      maxConsecutiveMatches: parseInt(v) || 1,
+                    } as any)}
+                    min="1"
+                    max="5"
+                    placeholder="z.B. 1"
+                  />
+                </div>
+                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', margin: 0 }}>
+                  💡 Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt. "Max. zusammenhängende Partien = 1" bedeutet keine direkt aufeinanderfolgenden Einsätze.
+                </p>
+              </div>
+            )}
+
+            {/* Teams-Modus Info */}
+            {formData.refereeConfig?.mode === 'teams' && (
+              <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,176,255,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,176,255,0.2)' }}>
+                <p style={{ fontSize: '12px', color: theme.colors.text.primary, lineHeight: '1.5', margin: 0 }}>
+                  ℹ️ <strong>Teams als Schiedsrichter:</strong> Jedes Team pfeift nach seinem eigenen Spiel das nächste Spiel auf dem gleichen Feld.
+                </p>
+              </div>
+            )}
+
+            {/* Finalphase Einstellungen (wenn SR aktiv) */}
+            {formData.refereeConfig?.mode && formData.refereeConfig.mode !== 'none' && formData.groupSystem === 'groupsAndFinals' && (
+              <div style={{ marginTop: '16px' }}>
+                <Select
+                  label="Schiedsrichter in Finalphase"
+                  value={formData.refereeConfig?.finalsRefereeMode || 'none'}
+                  onChange={(v: FinalsRefereeMode) => onUpdate('refereeConfig', {
+                    ...formData.refereeConfig,
+                    finalsRefereeMode: v,
+                  } as any)}
+                  options={[
+                    { value: 'none', label: 'Keine Schiedsrichter in Finalphase' },
+                    { value: 'neutralTeams', label: 'Nur neutrale/ausgeschiedene Teams' },
+                    { value: 'nonParticipatingTeams', label: 'Nur nicht-beteiligte Teams' },
+                  ]}
+                />
               </div>
             )}
           </div>
