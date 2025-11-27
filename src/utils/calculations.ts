@@ -103,8 +103,9 @@ const sortByPlacementLogic = (
           comparison = b.won - a.won;
           break;
         case 'directComparison':
-          // Direct comparison: only relevant if teams have equal points
-          if (a.points === b.points && matches) {
+          // Direct comparison: only applied if all previous criteria are equal
+          // (the loop already ensures this - if we reach here, all previous criteria returned 0)
+          if (matches) {
             comparison = compareDirectMatches(a, b, matches);
           } else {
             comparison = 0;
