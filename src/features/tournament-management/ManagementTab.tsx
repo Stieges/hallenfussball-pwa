@@ -278,49 +278,49 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Handler: Finish match
   const handleFinish = useCallback((matchId: string) => {
-    const match = liveMatches.get(matchId);
-    if (!match) {
-      console.error('handleFinish: Match not found:', matchId);
-      return;
-    }
-
-    // Aktualisiere tournament.matches
-    const updatedMatches = tournament.matches.map(m => {
-      if (m.id === matchId) {
-        return {
-          ...m,
-          scoreA: match.homeScore,
-          scoreB: match.awayScore,
-        };
-      }
-      return m;
-    });
-
-    const updatedTournament = {
-      ...tournament,
-      matches: updatedMatches,
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Speichere Tournament
-    onTournamentUpdate(updatedTournament, false);
-
-    const event: MatchEvent = {
-      id: `${matchId}-${Date.now()}`,
-      matchId,
-      timestampSeconds: match.elapsedSeconds,
-      type: 'STATUS_CHANGE',
-      payload: {
-        toStatus: 'FINISHED',
-      },
-      scoreAfter: {
-        home: match.homeScore,
-        away: match.awayScore,
-      },
-    };
-
-    // Markiere Match als FINISHED
     setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleFinish: Match not found:', matchId);
+        return prev;
+      }
+
+      // Aktualisiere tournament.matches
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === matchId) {
+          return {
+            ...m,
+            scoreA: match.homeScore,
+            scoreB: match.awayScore,
+          };
+        }
+        return m;
+      });
+
+      const updatedTournament = {
+        ...tournament,
+        matches: updatedMatches,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Speichere Tournament
+      onTournamentUpdate(updatedTournament, false);
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: match.elapsedSeconds,
+        type: 'STATUS_CHANGE',
+        payload: {
+          toStatus: 'FINISHED',
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      // Markiere Match als FINISHED
       const updated = new Map(prev);
       updated.set(matchId, {
         ...match,
@@ -328,12 +328,13 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         elapsedSeconds: match.durationSeconds,
         events: [...match.events, event],
       });
+
+      // Reset selected match nach dem Update
+      setTimeout(() => setSelectedMatchId(null), 0);
+
       return updated;
     });
-
-    // Reset selected match, damit nächstes Spiel automatisch geladen wird
-    setSelectedMatchId(null);
-  }, [liveMatches, tournament, onTournamentUpdate]);
+  }, [tournament, onTournamentUpdate]);
 
   // Handler: Goal
   const handleGoal = useCallback((matchId: string, teamId: string, delta: 1 | -1) => {
