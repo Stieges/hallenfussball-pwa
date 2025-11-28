@@ -32,8 +32,9 @@ export const calculateStandings = (
 
   // Calculate stats from matches
   relevantMatches.forEach((match) => {
-    const teamAStanding = standings.find((s) => s.team.id === match.teamA);
-    const teamBStanding = standings.find((s) => s.team.id === match.teamB);
+    // Match by team name, not ID (match.teamA/teamB are team names)
+    const teamAStanding = standings.find((s) => s.team.name === match.teamA);
+    const teamBStanding = standings.find((s) => s.team.name === match.teamB);
 
     if (!teamAStanding || !teamBStanding || match.scoreA === undefined || match.scoreB === undefined) {
       return;

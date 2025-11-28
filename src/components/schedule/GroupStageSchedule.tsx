@@ -14,6 +14,7 @@ interface GroupStageScheduleProps {
   numberOfFields?: number;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
   editable?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   numberOfFields = 1,
   onRefereeChange,
   onFieldChange,
+  onScoreChange,
   editable = false,
 }) => {
   if (matches.length === 0) {
@@ -198,7 +200,64 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 </td>
               )}
               <td style={tdStyle}>{match.homeTeam}</td>
-              <td style={resultCellStyle}>___ : ___</td>
+              <td style={resultCellStyle}>
+                {editable && onScoreChange ? (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={match.scoreA !== undefined ? match.scoreA : ''}
+                      onChange={(e) => {
+                        const scoreA = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                    <span>:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={match.scoreB !== undefined ? match.scoreB : ''}
+                      onChange={(e) => {
+                        const scoreB = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span>
+                    {match.scoreA !== undefined && match.scoreB !== undefined
+                      ? `${match.scoreA} : ${match.scoreB}`
+                      : '___ : ___'
+                    }
+                  </span>
+                )}
+              </td>
               <td style={tdStyle}>{match.awayTeam}</td>
               {showFields && (
                 <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>

@@ -687,10 +687,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               }}
               options={[
                 { value: 'none', label: 'Keine Schiedsrichter' },
-                { value: 'organizer', label: 'Veranstalter stellt Schiedsrichter' },
-                { value: 'teams', label: 'Teams stellen Schiedsrichter' },
+                { value: 'organizer', label: 'Veranstalter stellt SR (eigene Schiedsrichter)' },
+                { value: 'teams', label: 'Teams stellen SR (nach eigenem Spiel)' },
               ]}
             />
+            <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', marginTop: '8px' }}>
+              💡 <strong>Veranstalter-Modus:</strong> Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2). <strong>Teams-Modus:</strong> Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld.
+            </p>
 
             {/* Veranstalter-Modus Einstellungen */}
             {formData.refereeConfig?.mode === 'organizer' && (
@@ -700,11 +703,29 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     label="Anzahl Schiedsrichter"
                     type="number"
                     value={formData.refereeConfig?.numberOfReferees?.toString() || '2'}
-                    onChange={(v) => onUpdate('refereeConfig', {
-                      ...formData.refereeConfig,
-                      mode: 'organizer',
-                      numberOfReferees: parseInt(v) || 2,
-                    } as any)}
+                    onChange={(v) => {
+                      const newNumber = parseInt(v) || 2;
+                      const updatedConfig = {
+                        ...formData.refereeConfig,
+                        mode: 'organizer' as const,
+                        numberOfReferees: newNumber,
+                      };
+
+                      // Wenn Namen aktiviert sind, passe die Namen-Einträge an
+                      if (formData.refereeConfig?.refereeNames) {
+                        const existingNames = formData.refereeConfig.refereeNames;
+                        const updatedNames: Record<number, string> = {};
+
+                        // Behalte existierende Namen bei oder füge leere hinzu
+                        for (let i = 1; i <= newNumber; i++) {
+                          updatedNames[i] = existingNames[i] || '';
+                        }
+
+                        updatedConfig.refereeNames = updatedNames;
+                      }
+
+                      onUpdate('refereeConfig', updatedConfig as any);
+                    }}
                     min="1"
                     max="20"
                     placeholder="z.B. 3"
@@ -723,23 +744,82 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     placeholder="z.B. 1"
                   />
                 </div>
-                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', margin: 0 }}>
+                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
                   💡 Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt. "Max. zusammenhängende Partien = 1" bedeutet keine direkt aufeinanderfolgenden Einsätze.
                 </p>
+
+                {/* Checkbox: Namen angeben */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginBottom: '12px' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.refereeConfig?.refereeNames && Object.keys(formData.refereeConfig.refereeNames).length > 0}
+                    onChange={(e) => {
+                      const numberOfRefs = formData.refereeConfig?.numberOfReferees || 2;
+                      if (e.target.checked) {
+                        // Checkbox aktiviert: Initialisiere Namen mit leeren Strings
+                        const names: Record<number, string> = {};
+                        for (let i = 1; i <= numberOfRefs; i++) {
+                          names[i] = '';
+                        }
+                        onUpdate('refereeConfig', {
+                          ...formData.refereeConfig,
+                          mode: 'organizer',
+                          refereeNames: names,
+                        } as any);
+                      } else {
+                        // Checkbox deaktiviert: Entferne Namen
+                        const { refereeNames, ...rest } = formData.refereeConfig || {};
+                        onUpdate('refereeConfig', rest as any);
+                      }
+                    }}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.accent }}
+                  />
+                  <span style={{ color: theme.colors.text.primary, fontSize: '14px', fontWeight: theme.fontWeights.medium }}>
+                    📝 Namen der Schiedsrichter angeben
+                  </span>
+                </label>
+
+                {/* Input-Felder für Schiedsrichter-Namen */}
+                {formData.refereeConfig?.refereeNames && Object.keys(formData.refereeConfig.refereeNames).length > 0 && (
+                  <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.15)', borderRadius: theme.borderRadius.sm }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h4 style={{ color: theme.colors.text.primary, fontSize: '13px', margin: 0, fontWeight: theme.fontWeights.semibold }}>
+                        Schiedsrichter-Namen
+                      </h4>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {Array.from({ length: formData.refereeConfig?.numberOfReferees || 2 }, (_, i) => i + 1).map((refNumber) => (
+                        <div key={refNumber}>
+                          <Input
+                            label={`SR ${refNumber}`}
+                            type="text"
+                            value={formData.refereeConfig?.refereeNames?.[refNumber] || ''}
+                            onChange={(v) => {
+                              const updatedNames = {
+                                ...(formData.refereeConfig?.refereeNames || {}),
+                                [refNumber]: v,
+                              };
+                              onUpdate('refereeConfig', {
+                                ...formData.refereeConfig,
+                                mode: 'organizer',
+                                refereeNames: updatedNames,
+                              } as any);
+                            }}
+                            placeholder={`Name von Schiedsrichter ${refNumber}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
+                      💡 Die Namen erscheinen später im Spielplan statt "SR1", "SR2", etc.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Teams-Modus Info */}
-            {formData.refereeConfig?.mode === 'teams' && (
-              <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,176,255,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(0,176,255,0.2)' }}>
-                <p style={{ fontSize: '12px', color: theme.colors.text.primary, lineHeight: '1.5', margin: 0 }}>
-                  ℹ️ <strong>Teams als Schiedsrichter:</strong> Jedes Team pfeift nach seinem eigenen Spiel das nächste Spiel auf dem gleichen Feld.
-                </p>
-              </div>
-            )}
-
-            {/* Finalphase Einstellungen (wenn SR aktiv) */}
-            {formData.refereeConfig?.mode && formData.refereeConfig.mode !== 'none' && formData.groupSystem === 'groupsAndFinals' && (
+            {/* Finalphase Einstellungen (nur bei Teams-Modus) */}
+            {formData.refereeConfig?.mode === 'teams' && formData.groupSystem === 'groupsAndFinals' && (
               <div style={{ marginTop: '16px' }}>
                 <Select
                   label="Schiedsrichter in Finalphase"
@@ -749,11 +829,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     finalsRefereeMode: v,
                   } as any)}
                   options={[
-                    { value: 'none', label: 'Keine Schiedsrichter in Finalphase' },
-                    { value: 'neutralTeams', label: 'Nur neutrale/ausgeschiedene Teams' },
-                    { value: 'nonParticipatingTeams', label: 'Nur nicht-beteiligte Teams' },
+                    { value: 'none', label: 'Keine SR in Finalphase' },
+                    { value: 'neutralTeams', label: 'Ausgeschiedene Teams (nicht in Finalrunde)' },
+                    { value: 'nonParticipatingTeams', label: 'Unbeteiligte Teams (nicht im aktuellen Spiel)' },
                   ]}
                 />
+                <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', marginTop: '8px' }}>
+                  💡 <strong>Ausgeschiedene Teams:</strong> Nur Teams, die nicht in der Finalrunde spielen. <strong>Unbeteiligte Teams:</strong> Teams die aktuell nicht im Finalspiel stehen (flexibler).
+                </p>
               </div>
             )}
           </div>

@@ -16,6 +16,7 @@ import { theme } from '../styles/theme';
 
 interface TournamentCreationScreenProps {
   onBack: () => void;
+  onSave?: (tournament: Tournament) => void | Promise<void>;
   existingTournament?: Tournament;
 }
 
@@ -71,13 +72,17 @@ const getDefaultFormData = (): Partial<Tournament> => ({
 
 export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> = ({
   onBack,
+  onSave,
   existingTournament,
 }) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<Partial<Tournament>>(
     existingTournament || getDefaultFormData()
   );
-  const { saveTournament } = useTournaments();
+  const { saveTournament: defaultSaveTournament } = useTournaments();
+
+  // Use provided onSave or fallback to default saveTournament
+  const saveTournament = onSave || defaultSaveTournament;
 
   const updateForm = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -204,8 +209,37 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const handlePublish = () => {
     const tournament = createDraftTournament();
     tournament.status = 'published';
+
+    // Generate matches before publishing
+    const schedule = generateFullSchedule(tournament);
+
+    // Convert ScheduledMatch[] to Match[]
+    tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
+      id: scheduledMatch.id,
+      round: Math.floor(index / tournament.numberOfFields) + 1, // Calculate round from index and fields
+      field: scheduledMatch.field,
+      slot: scheduledMatch.slot,
+      teamA: scheduledMatch.homeTeam,
+      teamB: scheduledMatch.awayTeam,
+      scoreA: scheduledMatch.scoreA,
+      scoreB: scheduledMatch.scoreB,
+      group: scheduledMatch.group,
+      isFinal: scheduledMatch.phase !== 'groupStage',
+      finalType: scheduledMatch.finalType,
+      label: scheduledMatch.label,
+      scheduledTime: scheduledMatch.startTime,
+      referee: scheduledMatch.referee,
+    }));
+
     saveTournament(tournament);
     onBack();
+  };
+
+  const handleSaveDraft = () => {
+    const tournament = createDraftTournament();
+    saveTournament(tournament);
+    // Show success feedback (optional: add toast notification later)
+    alert('Turnier als Entwurf gespeichert!');
   };
 
   const handleBackToEdit = () => {
@@ -322,25 +356,41 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       {/* Navigation - ausblenden wenn Step 6 (Preview hat eigene Navigation) */}
       {step !== 6 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px' }}>
-          <Button
-            variant="ghost"
-            onClick={() => setStep(Math.max(1, step - 1))}
-            disabled={step === 1}
-            icon={<Icons.ChevronLeft />}
-          >
-            Zurück
-          </Button>
-          {step < 5 && (
+        <div style={{ marginTop: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Button
-              onClick={() => setStep(Math.min(5, step + 1))}
-              disabled={!canGoNext()}
-              icon={<Icons.ChevronRight />}
-              iconPosition="right"
+              variant="ghost"
+              onClick={() => setStep(Math.max(1, step - 1))}
+              disabled={step === 1}
+              icon={<Icons.ChevronLeft />}
             >
-              Weiter
+              Zurück
             </Button>
-          )}
+
+            <div style={{ display: 'flex', gap: theme.spacing.md }}>
+              {/* Speichern-Button - nur ab Step 2 anzeigen wenn grundlegende Daten vorhanden */}
+              {step >= 2 && formData.title && formData.date && formData.location && (
+                <Button
+                  variant="secondary"
+                  onClick={handleSaveDraft}
+                  icon={<Icons.Check />}
+                >
+                  Als Entwurf speichern
+                </Button>
+              )}
+
+              {step < 5 && (
+                <Button
+                  onClick={() => setStep(Math.min(5, step + 1))}
+                  disabled={!canGoNext()}
+                  icon={<Icons.ChevronRight />}
+                  iconPosition="right"
+                >
+                  Weiter
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

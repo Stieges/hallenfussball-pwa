@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { TournamentCreationScreen } from './screens/TournamentCreationScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
+import { TournamentManagementScreen } from './screens/TournamentManagementScreen';
 import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
 
 function App() {
-  const { tournaments, loading } = useTournaments();
+  const { tournaments, loading, saveTournament } = useTournaments();
   const [screen, setScreen] = useState<'dashboard' | 'create' | 'view'>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
@@ -30,7 +31,6 @@ function App() {
   const handleTournamentClick = (tournament: Tournament) => {
     setSelectedTournament(tournament);
     setScreen('view');
-    // TODO: Navigate to tournament view/edit screen
   };
 
   return (
@@ -50,27 +50,23 @@ function App() {
         />
       )}
 
-      {screen === 'create' && <TournamentCreationScreen onBack={() => setScreen('dashboard')} />}
+      {screen === 'create' && (
+        <TournamentCreationScreen
+          onBack={() => setScreen('dashboard')}
+          onSave={async (tournament) => {
+            await saveTournament(tournament);
+            // Small delay to ensure state updates propagate
+            await new Promise(resolve => setTimeout(resolve, 200));
+            setScreen('dashboard');
+          }}
+        />
+      )}
 
       {screen === 'view' && selectedTournament && (
-        <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
-          <button
-            onClick={() => setScreen('dashboard')}
-            style={{
-              padding: '12px 24px',
-              background: theme.colors.surface,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.md,
-              color: theme.colors.text.primary,
-              cursor: 'pointer',
-              marginBottom: '24px',
-            }}
-          >
-            ← Zurück zum Dashboard
-          </button>
-          <h2>Tournament View: {selectedTournament.title}</h2>
-          <p>TODO: Implement tournament view screen with Spielplan/Live/Bearbeiten buttons</p>
-        </div>
+        <TournamentManagementScreen
+          tournamentId={selectedTournament.id}
+          onBack={() => setScreen('dashboard')}
+        />
       )}
     </div>
   );

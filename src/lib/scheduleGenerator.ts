@@ -49,6 +49,10 @@ export interface ScheduledMatch {
   referee?: number;
   /** Slot index für Schiedsrichter-Verteilung */
   slot?: number;
+  /** Score Heim-Team (optional, wird bei Ergebniseingabe gesetzt) */
+  scoreA?: number;
+  /** Score Auswärts-Team (optional, wird bei Ergebniseingabe gesetzt) */
+  scoreB?: number;
 }
 
 export interface SchedulePhase {

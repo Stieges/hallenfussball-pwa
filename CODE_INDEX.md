@@ -12,6 +12,96 @@ Vollständige Schnellreferenz für die Codebase mit allen Features und deren Imp
 
 ---
 
+## 🔄 Variable Datenfelder (NIE hart codieren!)
+
+**WICHTIG:** Diese Felder müssen IMMER aus Backend/Props/State kommen, niemals hart codiert!
+
+### Turnier-Metadaten
+- `tournament.title` - Turniername (z.B. "U13 Hallenturnier 2025")
+- `tournament.ageClass` - Altersklasse (z.B. "U13", "Herren", "E-Jugend")
+- `tournament.date` - Datum (z.B. "2025-02-15")
+- `tournament.timeSlot` / `tournament.startTime` - Startzeit (z.B. "14:00")
+- `tournament.location` - Ort/Halle (z.B. "Sporthalle Waging")
+- `tournament.id` - Eindeutige Turnier-ID
+
+### Organisator/Veranstalter
+- `organizerName` - Name des Veranstalters (z.B. "SV Waging", "Wieninger-Libella")
+- `hallName` - Hallenname (z.B. "Dreifachturnhalle Nord")
+
+### Teams
+- `team.id` - Eindeutige Team-ID
+- `team.name` - Teamname (z.B. "SV Waging", "TSV Traunstein")
+- `team.group` - Gruppenzuordnung (z.B. "A", "B", "C")
+
+### Spiele
+- `match.id` - Eindeutige Spiel-ID
+- `match.matchNumber` - Spielnummer (dynamisch generiert)
+- `match.homeTeam` / `match.awayTeam` - Teamnamen
+- `match.time` / `match.scheduledKickoff` - Anstoßzeit
+- `match.field` - Feldnummer (1, 2, 3, ...)
+- `match.referee` - Schiedsrichter-Nummer oder Name
+- `match.phase` / `match.phaseLabel` - Spielphase (z.B. "Vorrunde Gruppe A", "Halbfinale")
+- `match.homeScore` / `match.awayScore` - Spielstand (Live-Daten)
+
+### Live-Match-Daten
+- `liveMatch.status` - Spielstatus ('NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED')
+- `liveMatch.elapsedSeconds` - Verstrichene Spielzeit
+- `liveMatch.events` - Ereignisliste (Tore, Statusänderungen)
+
+### Schiedsrichter
+- `refereeConfig.numberOfReferees` - Anzahl Schiedsrichter (z.B. 2, 3)
+- `refereeConfig.refereeNames` - Namen der Schiedsrichter (z.B. {1: "Max Mustermann"})
+- `refereeName` - Schiedsrichter-Name für ein Spiel
+
+### Felder/Plätze
+- `numberOfFields` - Anzahl Spielfelder
+- `fieldId` - Feld-ID (z.B. "field-1", "field-2")
+- `fieldName` - Feldname (z.B. "Feld 1", "Hauptfeld")
+
+### Zeitdaten
+- `tournament.groupPhaseGameDuration` - Spieldauer Gruppenphase (Minuten)
+- `tournament.finalRoundGameDuration` - Spieldauer Finalrunde (Minuten)
+- `tournament.groupPhaseBreakDuration` - Pause zwischen Spielen
+- `schedule.startTime` - Berechnete Turnier-Startzeit
+- `schedule.endTime` - Berechnete Turnier-Endzeit
+
+### Tabellen/Statistiken
+- `standing.played` - Anzahl gespielte Spiele
+- `standing.won` / `standing.drawn` / `standing.lost` - Spielergebnisse
+- `standing.goalsFor` / `standing.goalsAgainst` - Tore
+- `standing.goalDifference` - Tordifferenz
+- `standing.points` - Punkte
+
+### Konfiguration
+- `finalsConfig.preset` - Finalrunden-Preset ('none', 'final-only', 'top-4', etc.)
+- `refereeConfig.mode` - Schiedsrichter-Modus ('none', 'organizer', 'teams')
+- `pointSystem.win` / `pointSystem.draw` / `pointSystem.loss` - Punktevergabe
+
+**Wo kommen diese Daten her?**
+1. **Turniererstellung** → User-Input (Step 1-4)
+2. **Schedule Generation** → Berechnete Daten (scheduleGenerator.ts)
+3. **Live-Tracking** → Backend/WebSocket während des Turniers
+4. **Container-Komponenten** → Props von Parent/State-Management
+
+**Beispiel korrekte Verwendung:**
+```typescript
+// ✅ RICHTIG - Aus Props/State
+<MatchCockpit
+  tournamentName={tournament.title}
+  fieldName={`Feld ${fieldNumber}`}
+  currentMatch={liveMatch}
+  onGoal={handleGoal}
+/>
+
+// ❌ FALSCH - Hart codiert
+<MatchCockpit
+  tournamentName="Wieninger-Libella 2025"  // ← NIEMALS!
+  fieldName="Feld 1"                      // ← NIEMALS!
+/>
+```
+
+---
+
 ## 📁 Datei-Struktur & Verantwortlichkeiten
 
 ### `/src/types/tournament.ts` - Zentrale Type Definitions
@@ -340,6 +430,107 @@ PlacementCriterion {
 **getFinalMatchLabel(match):**
 - Zeile 131-157: Bestimmt Spiel-Label basierend auf finalType und phase
 - Finale: 🏆 Finale, Platz 3: 🥉, Platz 5/7: Text
+
+---
+
+### `/src/components/match-cockpit/` - Live-Spielverwaltung (Admin Cockpit)
+**Zweck**: Admin-Cockpit für Live-Spielverwaltung während des Turniers
+
+**Architektur:**
+- **Reine Präsentationskomponenten** - Alle Daten über Props, keine API-Calls
+- **Single Source of Truth** - Backend/Container ist die Wahrheit, UI nur Darstellung
+- **Callbacks-Only** - Komponenten feuern nur Events nach oben (onStart, onGoal, etc.)
+- **Wiederverwendung** - Nutzt zentrale UI-Komponenten (Button, Card) und Theme-System
+
+**Komponenten:**
+1. `MatchCockpit.tsx` - Hauptkomponente (Layout + Header)
+   - Props: fieldName, tournamentName, currentMatch, upcomingMatches, callbacks
+   - Zeile 120-140: Header mit Turnier/Feld-Name und Status-Chips
+   - Zeile 165-190: Main-Layout (2-spaltig: CurrentMatchPanel + UpcomingMatchesSidebar)
+   - Zeile 206-232: StatusChip und WarningChip Komponenten
+
+2. `CurrentMatchPanel.tsx` - Aktuelles Spiel Panel
+   - Props: currentMatch, lastFinishedMatch, callbacks
+   - Zeile 60-90: LastMatchBanner (Wiedereröffnen letztes Spiel)
+   - Zeile 110-145: MatchMeta (Schiedsrichter, Spiel-ID, Dauer)
+   - Zeile 160-200: Scoreboard (3-spaltig: Home | Center | Away)
+   - Zeile 220-265: TeamBlock (Name, Score, Tor-Buttons)
+   - Zeile 280-350: CenterBlock (Timer, Status, Controls)
+   - Zeile 370-420: FinishPanel (bei Spielende)
+   - Zeile 440-510: EventsList (Ereignisse mit Undo)
+
+3. `UpcomingMatchesSidebar.tsx` - Anstehende Spiele
+   - Props: upcomingMatches, highlightMinutesBefore
+   - Zeile 70-140: NextMatchCard (Highlight bei < 5 Min)
+   - Zeile 160-180: calculateMinutesUntil() Utility
+
+**Type Definitions:**
+```typescript
+type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+interface LiveMatch {
+  id: string;
+  number: number;
+  phaseLabel: string;
+  fieldId: string;
+  scheduledKickoff: string;
+  durationSeconds: number;
+  refereeName?: string;
+  homeTeam: Team;
+  awayTeam: Team;
+  homeScore: number;
+  awayScore: number;
+  status: MatchStatus;
+  elapsedSeconds: number;  // Von außen gesteuert (kein interner Timer!)
+  events: MatchEvent[];
+}
+
+interface MatchEvent {
+  id: string;
+  matchId: string;
+  timestampSeconds: number;
+  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE';
+  payload: { teamId?, direction?, newHomeScore?, newAwayScore?, toStatus? };
+  scoreAfter: { home: number; away: number };
+}
+```
+
+**Features:**
+- ⚽ Live-Scoreboard mit Team-Blöcken
+- ⏱️ Timer (gesteuert von außen via elapsedSeconds Prop)
+- 🎮 Spiel-Controls (Start, Pause, Beenden)
+- ➕ Tor-Buttons (+1/-1 pro Team)
+- 📜 Event-Liste mit Undo-Funktion
+- ✏️ Manuelles Ergebnis anpassen
+- ✅ Finish-Panel bei Spielende
+- 📅 Sidebar mit anstehenden Spielen
+- ⚠️ Warnung bei nächstem Spiel < 5 Min
+- 🔄 Wiedereröffnen letztes Spiel
+
+**Production-Integration:**
+- Container muss State Management übernehmen (Redux/Zustand/Context)
+- Container führt API-Calls in Callback-Handlern durch
+- Container updated elapsedSeconds via Interval oder WebSocket
+- Beispiel-Container: `MatchCockpitDemoScreen.tsx`
+
+**Mapping von existierenden Types:**
+```typescript
+// Aus ScheduledMatch → LiveMatch
+function mapToLiveMatch(scheduledMatch: ScheduledMatch, liveData: LiveData): LiveMatch {
+  return {
+    id: scheduledMatch.id,
+    number: scheduledMatch.matchNumber,
+    phaseLabel: scheduledMatch.phase || 'Vorrunde',
+    fieldId: `field-${scheduledMatch.field}`,
+    scheduledKickoff: scheduledMatch.time,
+    durationSeconds: scheduledMatch.duration * 60,
+    refereeName: getRefereeNameFromNumber(scheduledMatch.referee),
+    homeTeam: { id: ..., name: scheduledMatch.homeTeam },
+    awayTeam: { id: ..., name: scheduledMatch.awayTeam },
+    // ... Live-Daten vom Backend
+  };
+}
+```
 
 ---
 

@@ -1,0 +1,312 @@
+/**
+ * MatchCockpit - Admin Cockpit für Live-Spielverwaltung
+ *
+ * WICHTIG: Reine Präsentationskomponente!
+ * - Alle Daten kommen über Props
+ * - Keine API-Calls, kein fetch, kein axios
+ * - Nur Callbacks nach oben
+ * - Keine Geschäftslogik (außer Formatierung)
+ */
+
+import { CSSProperties } from 'react';
+import { theme } from '../../styles/theme';
+import { Button, Card } from '../ui';
+import { CurrentMatchPanel } from './CurrentMatchPanel';
+import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+export interface Team {
+  id: string;
+  name: string;
+}
+
+export interface MatchEvent {
+  id: string;
+  matchId: string;
+  timestampSeconds: number;
+  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE';
+  payload: {
+    teamId?: string;
+    direction?: 'INC' | 'DEC';
+    newHomeScore?: number;
+    newAwayScore?: number;
+    toStatus?: MatchStatus;
+  };
+  scoreAfter: {
+    home: number;
+    away: number;
+  };
+}
+
+export interface LiveMatch {
+  id: string;
+  number: number;
+  phaseLabel: string;
+  fieldId: string;
+  scheduledKickoff: string;
+  durationSeconds: number;
+  refereeName?: string;
+  homeTeam: Team;
+  awayTeam: Team;
+  homeScore: number;
+  awayScore: number;
+  status: MatchStatus;
+  elapsedSeconds: number;
+  events: MatchEvent[];
+}
+
+export interface MatchSummary {
+  id: string;
+  number: number;
+  phaseLabel: string;
+  scheduledKickoff: string;
+  fieldId: string;
+  homeTeam: Team;
+  awayTeam: Team;
+}
+
+export interface MatchCockpitProps {
+  fieldName: string;
+  tournamentName: string;
+
+  currentMatch: LiveMatch | null;
+  lastFinishedMatch?: {
+    match: MatchSummary;
+    homeScore: number;
+    awayScore: number;
+  } | null;
+  upcomingMatches: MatchSummary[];
+  highlightNextMatchMinutesBefore?: number;
+
+  onStart(matchId: string): void;
+  onPause(matchId: string): void;
+  onFinish(matchId: string): void;
+  onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
+  onUndoLastEvent(matchId: string): void;
+  onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
+
+  onLoadNextMatch(fieldId: string): void;
+  onReopenLastMatch(fieldId: string): void;
+}
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
+
+export const MatchCockpit: React.FC<MatchCockpitProps> = ({
+  fieldName,
+  tournamentName,
+  currentMatch,
+  lastFinishedMatch,
+  upcomingMatches,
+  highlightNextMatchMinutesBefore = 5,
+  onStart,
+  onPause,
+  onFinish,
+  onGoal,
+  onUndoLastEvent,
+  onManualEditResult,
+  onLoadNextMatch,
+  onReopenLastMatch,
+}) => {
+  const containerStyle: CSSProperties = {
+    width: '100%',
+    maxWidth: '1080px',
+    margin: '0 auto',
+    padding: theme.spacing.lg,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing.lg,
+  };
+
+  const headerStyle: CSSProperties = {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: theme.spacing.md,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    background: 'rgba(15, 23, 42, 0.96)',
+    borderRadius: '999px',
+    border: `1px solid ${theme.colors.border}`,
+    boxShadow: theme.shadows.lg,
+    backdropFilter: 'blur(18px)',
+  };
+
+  const headerLeftStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  };
+
+  const tournamentNameStyle: CSSProperties = {
+    fontSize: theme.fontSizes.md,
+    fontWeight: theme.fontWeights.semibold,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: theme.colors.text.secondary,
+  };
+
+  const fieldNameStyle: CSSProperties = {
+    fontSize: theme.fontSizes.xl,
+    fontWeight: theme.fontWeights.bold,
+    color: theme.colors.text.primary,
+  };
+
+  const mainLayoutStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 2.1fr) minmax(0, 1.4fr)',
+    gap: theme.spacing.lg,
+  };
+
+  const nextMatch = upcomingMatches[0];
+  const minutesUntilNext = nextMatch ? calculateMinutesUntil(nextMatch.scheduledKickoff) : null;
+
+  return (
+    <div style={containerStyle}>
+      {/* HEADER */}
+      <header style={headerStyle}>
+        <div style={headerLeftStyle}>
+          <div style={tournamentNameStyle}>{tournamentName}</div>
+          <div style={fieldNameStyle}>{fieldName} – Kampfgericht Cockpit</div>
+        </div>
+        <div style={{ display: 'flex', gap: theme.spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
+          <StatusChip
+            status={currentMatch?.status || 'NOT_STARTED'}
+            phaseLabel={currentMatch?.phaseLabel || ''}
+          />
+          {minutesUntilNext !== null && minutesUntilNext >= 0 && minutesUntilNext <= highlightNextMatchMinutesBefore && (
+            <WarningChip message={`In ${minutesUntilNext} Min: Nächstes Spiel`} />
+          )}
+        </div>
+      </header>
+
+      {/* MAIN LAYOUT */}
+      <main style={mainLayoutStyle}>
+        {/* CURRENT MATCH PANEL */}
+        <CurrentMatchPanel
+          currentMatch={currentMatch}
+          lastFinishedMatch={lastFinishedMatch}
+          onStart={onStart}
+          onPause={onPause}
+          onFinish={onFinish}
+          onGoal={onGoal}
+          onUndoLastEvent={onUndoLastEvent}
+          onManualEditResult={onManualEditResult}
+          onLoadNextMatch={onLoadNextMatch}
+          onReopenLastMatch={onReopenLastMatch}
+        />
+
+        {/* UPCOMING MATCHES SIDEBAR */}
+        <UpcomingMatchesSidebar
+          upcomingMatches={upcomingMatches}
+          highlightMinutesBefore={highlightNextMatchMinutesBefore}
+        />
+      </main>
+    </div>
+  );
+};
+
+// ============================================================================
+// HELPER COMPONENTS
+// ============================================================================
+
+interface StatusChipProps {
+  status: MatchStatus;
+  phaseLabel: string;
+}
+
+const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
+  const chipStyle: CSSProperties = {
+    padding: `6px ${theme.spacing.md}`,
+    borderRadius: '999px',
+    border: `1px solid ${theme.colors.border}`,
+    fontSize: theme.fontSizes.sm,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'rgba(15, 23, 42, 0.85)',
+  };
+
+  const dotStyle: CSSProperties = {
+    width: '8px',
+    height: '8px',
+    borderRadius: '999px',
+    background: theme.colors.primary,
+    boxShadow: `0 0 8px ${theme.colors.primary}`,
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'RUNNING':
+        return 'Läuft';
+      case 'PAUSED':
+        return 'Pausiert';
+      case 'FINISHED':
+        return 'Beendet';
+      default:
+        return 'Bereit';
+    }
+  };
+
+  return (
+    <div style={chipStyle}>
+      <div style={dotStyle} />
+      <span>
+        {getStatusText()} – {phaseLabel}
+      </span>
+    </div>
+  );
+};
+
+interface WarningChipProps {
+  message: string;
+}
+
+const WarningChip: React.FC<WarningChipProps> = ({ message }) => {
+  const chipStyle: CSSProperties = {
+    padding: `6px ${theme.spacing.md}`,
+    borderRadius: '999px',
+    border: `1px solid ${theme.colors.warning}`,
+    fontSize: theme.fontSizes.sm,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    background: `rgba(255, 145, 0, 0.1)`,
+    color: theme.colors.warning,
+  };
+
+  return <div style={chipStyle}>{message}</div>;
+};
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Berechnet Minuten bis zu einer Uhrzeit (z.B. "14:30")
+ * Reine Formatierungs-Logik, keine Geschäftslogik
+ */
+function calculateMinutesUntil(timeString: string): number | null {
+  try {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const now = new Date();
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+
+    if (target < now) {
+      target.setDate(target.getDate() + 1);
+    }
+
+    const diffMs = target.getTime() - now.getTime();
+    return Math.round(diffMs / 60000);
+  } catch {
+    return null;
+  }
+}

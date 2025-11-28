@@ -13,6 +13,7 @@ interface FinalStageScheduleProps {
   numberOfFields?: number;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
   editable?: boolean;
 }
 
@@ -22,12 +23,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   numberOfFields = 1,
   onRefereeChange,
   onFieldChange,
+  onScoreChange,
   editable = false,
 }) => {
   if (matches.length === 0) {
     return null;
   }
 
+  // Show referees in finals for both organizer and teams mode
   const showReferees = refereeConfig && refereeConfig.mode !== 'none';
   const showFields = numberOfFields > 1;
 
@@ -199,7 +202,62 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   {match.homeTeam} - {match.awayTeam}
                 </div>
               </td>
-              <td style={resultCellStyle}>___ : ___</td>
+              <td style={resultCellStyle}>
+                {editable && onScoreChange ? (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      value={match.scoreA !== undefined ? match.scoreA : ''}
+                      onChange={(e) => {
+                        const scoreA = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                    <span>:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={match.scoreB !== undefined ? match.scoreB : ''}
+                      onChange={(e) => {
+                        const scoreB = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span>
+                    {match.scoreA !== undefined && match.scoreB !== undefined
+                      ? `${match.scoreA} : ${match.scoreB}`
+                      : '___ : ___'
+                    }
+                  </span>
+                )}
+              </td>
               {showFields && (
                 <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
                   {editable && onFieldChange ? (

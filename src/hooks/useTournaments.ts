@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Tournament } from '../types/tournament';
-import { storage } from '../utils/storage';
+import * as api from '../services/api';
 
 /**
- * Custom hook for managing tournaments with localStorage persistence
+ * Custom hook for managing tournaments
+ * Verwendet API Service Layer - automatisch localStorage oder Backend
  */
 export const useTournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -11,28 +12,27 @@ export const useTournaments = () => {
 
   // Load tournaments on mount
   useEffect(() => {
-    try {
-      const loaded = storage.getTournaments();
-      // Migration: Setze status auf 'published' für bestehende Turniere ohne status
-      // Migration: Setze refereeConfig auf { mode: 'none' } für bestehende Turniere ohne refereeConfig
-      const migratedTournaments = loaded.map(t => ({
-        ...t,
-        status: t.status || 'published',
-        refereeConfig: t.refereeConfig || { mode: 'none' as const },
-      }));
-      setTournaments(migratedTournaments);
-    } catch (error) {
-      console.error('Failed to load tournaments:', error);
-    } finally {
-      setLoading(false);
-    }
+    const loadTournaments = async () => {
+      try {
+        const loaded = await api.getAllTournaments();
+        setTournaments(loaded);
+      } catch (error) {
+        console.error('Failed to load tournaments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTournaments();
   }, []);
 
   // Save tournament
-  const saveTournament = (tournament: Tournament) => {
+  const saveTournament = async (tournament: Tournament) => {
     try {
-      storage.saveTournament(tournament);
-      setTournaments(storage.getTournaments());
+      await api.saveTournament(tournament);
+      // Reload tournaments from API
+      const updated = await api.getAllTournaments();
+      setTournaments(updated);
     } catch (error) {
       console.error('Failed to save tournament:', error);
       throw error;
@@ -40,10 +40,12 @@ export const useTournaments = () => {
   };
 
   // Delete tournament
-  const deleteTournament = (id: string) => {
+  const deleteTournament = async (id: string) => {
     try {
-      storage.deleteTournament(id);
-      setTournaments(storage.getTournaments());
+      await api.deleteTournament(id);
+      // Reload tournaments from API
+      const updated = await api.getAllTournaments();
+      setTournaments(updated);
     } catch (error) {
       console.error('Failed to delete tournament:', error);
       throw error;

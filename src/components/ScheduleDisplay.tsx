@@ -9,10 +9,10 @@
  * - GroupTables: Group standings tables
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useMemo } from 'react';
 import { theme } from '../styles/theme';
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
-import { Standing } from '../types/tournament';
+import { Standing, Match } from '../types/tournament';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -25,6 +25,8 @@ interface ScheduleDisplayProps {
   schedule: GeneratedSchedule;
   /** Optional: Aktualisierte Standings (nach Ergebnissen) */
   currentStandings?: Standing[];
+  /** Optional: Current matches with live scores (overrides schedule scores) */
+  currentMatches?: Match[];
   /** Zeige QR-Code für Live-Tracking */
   showQRCode?: boolean;
   /** QR-Code URL */
@@ -37,17 +39,21 @@ interface ScheduleDisplayProps {
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   /** Callback when field is changed */
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
+  /** Callback when score is changed */
+  onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
 }
 
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   schedule,
   currentStandings,
+  currentMatches,
   showQRCode = false,
   qrCodeUrl,
   logoUrl,
   editable = false,
   onRefereeChange,
   onFieldChange,
+  onScoreChange,
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -56,6 +62,39 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   const finalMatches = finalPhases.flatMap(p => p.matches);
+
+  // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
+  const groupPhaseMatches = useMemo(() => {
+    if (!groupPhase || !currentMatches) return groupPhase?.matches || [];
+
+    return groupPhase.matches.map(sm => {
+      const currentMatch = currentMatches.find(m => m.id === sm.id);
+      if (currentMatch) {
+        return {
+          ...sm,
+          scoreA: currentMatch.scoreA,
+          scoreB: currentMatch.scoreB,
+        };
+      }
+      return sm;
+    });
+  }, [groupPhase, currentMatches]);
+
+  const finalPhaseMatches = useMemo(() => {
+    if (!currentMatches) return finalMatches;
+
+    return finalMatches.map(sm => {
+      const currentMatch = currentMatches.find(m => m.id === sm.id);
+      if (currentMatch) {
+        return {
+          ...sm,
+          scoreA: currentMatch.scoreA,
+          scoreB: currentMatch.scoreB,
+        };
+      }
+      return sm;
+    });
+  }, [finalMatches, currentMatches]);
 
   // Container Style (A4-ähnlich, responsive)
   const containerStyle: CSSProperties = {
@@ -85,15 +124,16 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Group Stage Schedule */}
-      {groupPhase && (
+      {groupPhaseMatches.length > 0 && (
         <GroupStageSchedule
-          matches={groupPhase.matches}
+          matches={groupPhaseMatches}
           hasGroups={hasGroups}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
           editable={editable}
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
+          onScoreChange={onScoreChange}
         />
       )}
 
@@ -106,14 +146,15 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Final Stage Schedule */}
-      {finalMatches.length > 0 && (
+      {finalPhaseMatches.length > 0 && (
         <FinalStageSchedule
-          matches={finalMatches}
+          matches={finalPhaseMatches}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
           editable={editable}
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
+          onScoreChange={onScoreChange}
         />
       )}
 
