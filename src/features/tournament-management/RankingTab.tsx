@@ -199,6 +199,44 @@ export const RankingTab: React.FC<RankingTabProps> = ({
         <div style={{ padding: theme.spacing.lg }}>
           <h2 style={titleStyle}>🏆 Finale Platzierung</h2>
 
+          {/* Platzierungslogik Anzeige */}
+          <div style={{
+            marginBottom: theme.spacing.lg,
+            padding: theme.spacing.md,
+            background: 'rgba(0, 230, 118, 0.08)',
+            borderRadius: theme.borderRadius.md,
+            border: `1px solid ${theme.colors.primary}40`,
+          }}>
+            <div style={{
+              fontSize: theme.fontSizes.sm,
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.primary,
+              marginBottom: '6px',
+            }}>
+              📋 Platzierungslogik:
+            </div>
+            <div style={{
+              fontSize: theme.fontSizes.sm,
+              color: theme.colors.text.secondary,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '4px',
+            }}>
+              {tournament.placementLogic
+                .filter(c => c.enabled)
+                .map((criterion, index) => (
+                  <span key={criterion.id}>
+                    <strong style={{ color: theme.colors.text.primary }}>
+                      {index + 1}. {criterion.label}
+                    </strong>
+                    {index < tournament.placementLogic.filter(c => c.enabled).length - 1 && (
+                      <span style={{ margin: '0 4px', color: theme.colors.primary }}>→</span>
+                    )}
+                  </span>
+                ))}
+            </div>
+          </div>
+
           {hasPlayoffs ? (
             <div style={{
               textAlign: 'center' as const,

@@ -325,6 +325,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       updated.set(matchId, {
         ...match,
         status: 'FINISHED' as MatchStatus,
+        elapsedSeconds: match.durationSeconds,
         events: [...match.events, event],
       });
       return updated;
@@ -363,6 +364,27 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         },
       };
 
+      // Aktualisiere auch sofort tournament.matches
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === matchId) {
+          return {
+            ...m,
+            scoreA: newHomeScore,
+            scoreB: newAwayScore,
+          };
+        }
+        return m;
+      });
+
+      const updatedTournament = {
+        ...tournament,
+        matches: updatedMatches,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Speichere Tournament
+      onTournamentUpdate(updatedTournament, false);
+
       const updated = new Map(prev);
       updated.set(matchId, {
         ...match,
@@ -372,7 +394,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       });
       return updated;
     });
-  }, []);
+  }, [tournament, onTournamentUpdate]);
 
   // Handler: Undo last event
   const handleUndoLastEvent = useCallback((matchId: string) => {
@@ -425,6 +447,27 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         },
       };
 
+      // Aktualisiere auch sofort tournament.matches
+      const updatedMatches = tournament.matches.map(m => {
+        if (m.id === matchId) {
+          return {
+            ...m,
+            scoreA: newHomeScore,
+            scoreB: newAwayScore,
+          };
+        }
+        return m;
+      });
+
+      const updatedTournament = {
+        ...tournament,
+        matches: updatedMatches,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Speichere Tournament
+      onTournamentUpdate(updatedTournament, false);
+
       const updated = new Map(prev);
       updated.set(matchId, {
         ...match,
@@ -434,7 +477,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       });
       return updated;
     });
-  }, []);
+  }, [tournament, onTournamentUpdate]);
 
   // Handler: Load next match
   const handleLoadNextMatch = useCallback(() => {
