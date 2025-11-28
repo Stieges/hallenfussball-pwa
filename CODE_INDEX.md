@@ -1,13 +1,14 @@
 # Hallenfußball PWA - Code Index
 
-Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
+Vollständige Schnellreferenz für die Codebase mit allen Features und deren Implementierung.
 
 ## 🏗️ Architektur-Übersicht
 
-### Core-Flow: Turniererstellung → Spielplan → Anzeige
+### Core-Flow: Turniererstellung → Spielplan → PDF Export
 1. **Tournament Creation** → Step1-4 → Preview → Publish
-2. **Schedule Generation** → scheduleGenerator.ts → playoffScheduler → ScheduleDisplay
-3. **Display** → FinalStageSchedule / GroupStageSchedule → PDF Export
+2. **Schedule Generation** → scheduleGenerator.ts → playoffScheduler → fairScheduler
+3. **Display** → ScheduleDisplay → GroupStageSchedule / FinalStageSchedule
+4. **PDF Export** → pdfExporter.ts → HTML-basiertes Layout → jsPDF + autoTable
 
 ---
 
@@ -22,13 +23,18 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
 - `RefereeConfig`: { mode, numberOfReferees?, maxConsecutiveMatches?, refereeNames?, finalsRefereeMode?, manualAssignments? }
 - `Tournament`: Haupt-Datenstruktur
 - `Match`: Spiel-Objekt (teamA, teamB, isFinal, finalType, label, slot, field, referee?)
-- `ScheduledMatch`: Spiel mit Zeit (matchNumber, time, homeTeam, awayTeam, phase, referee?)
+- `ScheduledMatch`: Spiel mit Zeit (matchNumber, time, homeTeam, awayTeam, phase, referee?, startTime, endTime)
+- `Standing`: Tabelleneintrag (team, played, won, drawn, lost, goalsFor, goalsAgainst, goalDifference, points)
+- `PlacementCriterion`: Platzierungslogik (id: 'points' | 'goalDifference' | 'goalsFor' | 'goalsAgainst' | 'wins' | 'directComparison', enabled)
 
 **Wichtige Felder:**
 - `tournament.finalsConfig` - Neue preset-basierte Finalrunden-Konfiguration
 - `tournament.refereeConfig` - Schiedsrichter-Konfiguration (Modus, Anzahl, Einstellungen)
+- `tournament.fieldAssignments` - Manuelle Feld-Zuweisungen (matchId → fieldNumber)
+- `tournament.placementLogic` - Platzierungskriterien mit Reihenfolge
 - `match.slot` - Zeitslot vom Fair Scheduler
 - `match.referee` - Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
+- `match.field` - Feld-Nummer (1, 2, 3, ...)
 - `match.isFinal` - Boolean ob Finalrunden-Spiel
 
 ---
@@ -38,16 +44,19 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
 
 **Wichtige Funktionen:**
 - `generateFullSchedule(tournament)` - **Hauptfunktion**: Generiert kompletten Schedule
-  - Zeile 208-220: Gruppenphase schedulen
-  - Zeile 223-247: Finalrunde schedulen (mit durchgehender matchNumber!)
-  - Zeile 230-233: **Berechnung startMatchNumber** für Finalrunde
-  - Zeile 324-337: **Schiedsrichter-Zuweisung** über assignReferees()
+  - Zeile 134-158: Gruppenphase mit Fair Scheduler
+  - Zeile 162-214: Finalrunde schedulen (mit durchgehender matchNumber!)
+  - Zeile 236-254: **Berechnung startMatchNumber** für Finalrunde
+  - Zeile 263-265: **Schiedsrichter-Zuweisung** über assignReferees()
+  - Zeile 268-269: Split back into group stage and finals (mit referee assignments)
+  - Zeile 271-330: Erstellt Phasen (groupStage, roundOf16, quarterfinal, semifinal, final)
 - `scheduleMatches(matches, startTime, ..., startMatchNumber)` - Weist Uhrzeiten zu
-  - Zeile 361: **matchNumber beginnt bei startMatchNumber** (nicht mehr bei 1!)
+  - Zeile 384: **matchNumber beginnt bei startMatchNumber** (nicht mehr bei 1!)
+  - Zeile 373-444: Sortiert Matches nach Slot, gruppiert nach Slot, scheduliert jeden Slot
 - `resolveTeamName(teamId, teamMap, locale)` - Übersetzt Team-IDs
-  - Zeile 467-476: Prüft teamMap, sonst translatePlaceholder
+  - Zeile 486-495: Prüft teamMap, sonst translatePlaceholder
 - `translatePlaceholder(placeholder, locale)` - Übersetzt Playoff-Platzhalter
-  - Zeile 482-605: **Übersetzungstabelle DE/EN**
+  - Zeile 500-628: **Übersetzungstabelle DE/EN**
   - Unterstützt: group-x-1st, semi1-winner, semi1-loser, qf1-winner, r16-1-winner
 
 **Wichtige Übersetzungen (Deutsch):**
@@ -56,59 +65,94 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
 - `'qf1-winner'` → `'Sieger VF 1'`
 - `'r16-1-winner'` → `'Sieger AF 1'`
 
----
-
-### `/src/lib/playoffGenerator.ts` - Playoff Match Definitions
-**Zweck**: Generiert Playoff-Spiel-Definitionen basierend auf Preset
-
-**Wichtige Funktionen:**
-- `generatePlayoffMatches(numberOfGroups, finalsConfig)` - Switch über Presets
-- `generateTop4(numberOfGroups)` - Halbfinale + Finale + Platz 3
-  - Zeile 149-150: Platz 3 mit 'semi1-loser', 'semi2-loser'
-  - Zeile 157-158: Finale mit 'semi1-winner', 'semi2-winner'
-- `generateTop8(numberOfGroups)` - Viertelfinale + Rest
-- `generateTop16(numberOfGroups)` - **Achtelfinale + Rest** (8+ Gruppen)
-  - Zeile 226-233: 8 Achtelfinale-Spiele (r16-1 bis r16-8)
-- `generateAllPlaces(numberOfGroups)` - Alle Platzierungen
-
-**Match-Struktur:**
+**Return Type:**
 ```typescript
-{
-  id: 'semi1',
-  label: '1. Halbfinale',
-  home: 'group-a-2nd',    // Team-Platzhalter
-  away: 'group-b-1st',
-  rank?: 1,
-  dependsOn: []
+GeneratedSchedule {
+  tournament: { id, title, date, location, ageClass },
+  allMatches: ScheduledMatch[],
+  phases: SchedulePhase[],
+  startTime: Date,
+  endTime: Date,
+  totalDuration: number,
+  numberOfFields: number,
+  teams: Array<{ id, name, group? }>,
+  initialStandings: Standing[],
+  refereeConfig?: RefereeConfig
 }
 ```
 
 ---
 
-### `/src/utils/playoffScheduler.ts` - Playoff Scheduling
-**Zweck**: Wandelt Playoff-Definitionen in schedulierte Matches um
+### `/src/lib/pdfExporter.ts` - PDF Export (KOMPLETT NEU)
+**Zweck**: Generiert druckfertigen PDF-Spielplan mit HTML-basiertem Layout
 
-**Wichtige Funktionen:**
-- `generatePlayoffDefinitions(numberOfGroups, finalsConfig)` - Konvertiert zu Definitions
-  - Zeile 64-99: Erstellt PlayoffMatchDefinition mit parallelMode
-  - Zeile 66-80: **Parallel Mode Detection** (r16, qf, semi)
-  - Zeile 93-94: **teamASource / teamBSource** = match.home / match.away
-- `generatePlayoffSchedule(options)` - Scheduliert Matches auf Felder/Slots
-  - Topological Sort für Dependencies
-  - Sequential vs Parallel Execution
+**Architektur:**
+- Basiert auf HTML-Referenz-Layout
+- A4 Portrait (210mm × 297mm)
+- Margins: 14mm top, 16mm bottom, 16mm left/right
+- Grayscale-Farben: border (#e5e7eb), headBg (#f9fafb), textMain (#111827), textMuted (#6b7280)
+- Modularer Aufbau mit separaten Render-Funktionen
 
-**PlayoffMatchDefinition:**
+**Hauptfunktion:**
+- `exportScheduleToPDF(schedule, standings?, options)` - Zeile 129-190
+  - Parameter: GeneratedSchedule, Standing[] | undefined, PDFExportOptions
+  - Options: locale, includeStandings, organizerName, hallName
+  - Erstellt PDF mit allen Sektionen
+
+**Render-Funktionen:**
+1. `renderHeader(doc, schedule, yPos)` - Zeile 196-218
+   - **Dynamischer Titel**: schedule.tournament.title (z.B. "Wieninger-Libella-Hallenturniere 2025/2026")
+   - Untertitel: schedule.tournament.ageClass (z.B. "U12")
+
+2. `renderMetaBox(doc, schedule, t, organizerName, hallName, yPos)` - Zeile 220-308
+   - 4-Spalten Grid Layout
+   - Row 1: Veranstalter | Halle | Spielzeit | Modus
+   - Row 2: Spieltag | Zeit | Pause
+   - Row 3: Altersklasse
+
+3. `renderHints(doc, t, refereeConfig, yPos)` - Zeile 310-339
+   - SR-Erklärung (wenn SR aktiv)
+   - Ergebniseintragung-Hinweis
+
+4. `renderParticipants(doc, schedule, yPos)` - Zeile 341-411
+   - Gruppiert in bordered Boxen
+   - **Globale Team-Nummerierung** (1-10, nicht 1-5 pro Gruppe)
+   - 2-Spalten Layout
+
+5. `renderGroupStage(doc, matches, hasGroups, t, refereeConfig, yPos)` - Zeile 413-497
+   - Vorrunde-Tabelle: Nr | Zeit | Feld | Gr | Heim | Ergebnis | Gast | SR (optional)
+   - Alle Gruppenspiele in einer Tabelle
+
+6. `renderFinalsSection(doc, phases, t, refereeConfig, yPos)` - Zeile 499-547
+   - Separate Tabelle pro Phase (Achtelfinale, Viertelfinale, Halbfinale)
+   - Separate Sub-Tabellen für Platzierungsspiele (Platz 3, 5, 7)
+   - Finale in eigener Tabelle
+
+7. `renderFinalsTable(doc, matches, t, refereeConfig, yPos, subtitle?)` - Zeile 549-624
+   - Single finals table mit optionalem Subtitle
+   - Nr | Zeit | Feld | Heim | Ergebnis | Gast | SR (optional)
+
+8. `renderGroupStandings(doc, schedule, standings, t, yPos)` - Zeile 626-735
+   - 2-Spalten Layout
+   - Format: "Tabelle – Gruppe X"
+   - Pl | Team | Sp | S | U | N | Tore | Diff | Pkt
+
+**PDF Style Configuration:**
 ```typescript
-{
-  id: string,
-  label: string,
-  teamASource: string,   // z.B. 'semi1-loser'
-  teamBSource: string,   // z.B. 'semi2-loser'
-  finalType?: 'final' | 'thirdPlace',
-  parallelMode: 'sequentialOnly' | 'parallelAllowed',
-  dependencies: string[]
+PDF_STYLE = {
+  colors: { border, borderDark, headBg, textMain, textMuted, white },
+  fonts: { h1: 18, h2: 15, meta: 11, sectionTitle: 13, table: 12, hint: 10 },
+  spacing: { pageMargin: {top:14, bottom:16, left:16, right:16}, sectionGap: 6, blockGap: 4 }
 }
 ```
+
+**Translations:**
+- Deutsche Übersetzungen in TRANSLATIONS.de
+- Struktur für zukünftige Internationalisierung vorbereitet
+
+**Integration:**
+- Aufgerufen in TournamentPreview.tsx Zeile 128-135
+- Parameter: schedule, schedule.initialStandings, { locale, includeStandings, organizerName, hallName }
 
 ---
 
@@ -130,8 +174,6 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
   - Zeile 208: Home-Team vom vorherigen Spiel wird SR
 - `applyManualAssignments(matches, config)` - Überschreibt automatische Zuweisung
   - Zeile 49-74: Wendet config.manualAssignments an
-- `getRefereeDisplayName(refereeNumber, config, teams)` - Display-Namen
-  - Zeile 254-278: SR1/SR2 oder Team-Namen oder Custom-Namen
 
 **Algorithmus Organizer-Modus:**
 ```typescript
@@ -144,100 +186,205 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
 3. Fallback: Bei Constraint-Verletzung → SR mit längster Pause
 ```
 
-**MatchLike Interface:**
-- Generische Schnittstelle für Match + ScheduledMatch
-- Unterstützt teamA/teamB (Match) und homeTeam/awayTeam (ScheduledMatch)
+---
+
+### `/src/utils/calculations.ts` - Tabellen-Berechnung & Platzierungslogik
+**Zweck**: Berechnet Standings und sortiert nach Platzierungskriterien
+
+**Wichtige Funktionen:**
+- `calculateStandings(teams, matches, tournament, group?)` - Zeile 6-73
+  - Berechnet Punkte, Tore, Tordifferenz für alle Teams
+  - Filtert Matches für spezifische Gruppe oder alle Spiele (ohne Finals)
+  - Sortiert mit `sortByPlacementLogic()`
+
+- `sortByPlacementLogic(standings, placementLogic, matches?)` - Zeile 78-123
+  - Sortiert nach aktivierten Kriterien in Reihenfolge
+  - Unterstützt: points, goalDifference, goalsFor, goalsAgainst, wins, directComparison
+  - Zeile 101-109: **directComparison** nur wenn alle vorherigen Kriterien gleich
+
+- `compareDirectMatches(a, b, matches)` - Zeile 130-209
+  - **Direkter Vergleich** (Mini-Tabelle aus direkten Begegnungen)
+  - Fixe Kriterien-Reihenfolge:
+    1. Punkte aus direkten Spielen
+    2. Tordifferenz aus direkten Spielen
+    3. Geschossene Tore aus direkten Spielen
+  - Zeile 136-145: Findet alle direkten Matches zwischen zwei Teams
+  - Zeile 157-184: Berechnet Mini-Tabelle Stats
+  - Zeile 187-206: Vergleicht nach fixer Reihenfolge
+
+- `getQualifiedTeams(standings, count)` - Zeile 210-212
+  - Gibt Top N Teams aus Standings zurück
+
+**Platzierungs-Kriterien:**
+```typescript
+PlacementCriterion {
+  id: 'points' | 'goalDifference' | 'goalsFor' | 'goalsAgainst' | 'wins' | 'directComparison',
+  label: string,
+  enabled: boolean
+}
+```
+
+---
+
+### `/src/utils/fairScheduler.ts` - Faire Spielplan-Verteilung
+**Zweck**: Generiert fairen Spielplan mit optimaler Feld- und Zeit-Verteilung
+
+**Wichtige Funktionen:**
+- `generateGroupPhaseSchedule(options)` - Hauptfunktion
+  - Parameter: groups, numberOfFields, slotDurationMinutes, breakBetweenSlotsMinutes, minRestSlotsPerTeam, startTime
+  - Generiert Matches mit optimaler Verteilung
+  - Slot-basiertes System für faire Pausen
+
+**Algorithmus:**
+1. Generiert Round-Robin Matches pro Gruppe
+2. Verteilt Matches auf Slots mit fairen Pausen
+3. Respektiert minRestSlotsPerTeam Constraint
+4. Optimiert Feld-Auslastung
+
+---
+
+### `/src/components/ScheduleDisplay.tsx` - Haupt-Display-Komponente
+**Zweck**: Zeigt kompletten Spielplan mit allen Phasen
+
+**Props:**
+- `schedule: GeneratedSchedule` - Kompletter Schedule
+- `currentStandings?: Standing[]` - Optionale aktuelle Tabelle
+- `showQRCode?: boolean` - QR-Code für Live-Tracking
+- `qrCodeUrl?: string` - QR-Code URL
+- `logoUrl?: string` - Logo URL
+- `editable?: boolean` - Ermöglicht SR/Feld-Änderung
+- `onRefereeChange?: (matchId, refereeNumber) => void` - Callback für SR-Änderungen
+- `onFieldChange?: (matchId, fieldNumber) => void` - Callback für Feld-Änderungen
+
+**Komponenten:**
+- Zeile 73-77: TournamentHeader
+- Zeile 80-85: ParticipantsAndGroups (nur bei Gruppenturnieren)
+- Zeile 88-98: GroupStageSchedule
+- Zeile 101-107: GroupTables
+- Zeile 109-119: FinalStageSchedule
+
+**Editable Mode:**
+- Props werden an Child-Components durchgereicht
+- onRefereeChange und onFieldChange werden an GroupStageSchedule/FinalStageSchedule übergeben
+
+---
+
+### `/src/components/schedule/GroupStageSchedule.tsx` - Gruppenphase-Tabelle
+**Zweck**: Zeigt Gruppenphase-Spiele mit optionaler SR/Feld-Bearbeitung
+
+**Wichtige Features:**
+- Zeile 33-34: `showReferees` und `showFields` basierend auf Config
+- Zeile 36-58: Dropdown-Optionen für SR und Felder
+- Zeile 60-82: **Feld-Konflikt-Erkennung** (findFieldConflict)
+  - Prüft zeitliche Überschneidungen auf gleichem Feld
+  - Zeile 75-77: Overlap-Logik: `(start1 < end2) AND (start2 < end1)`
+- Zeile 98-133: SR-Spalte mit editierbarem Dropdown oder statischer Anzeige
+- Zeile 143-187: Feld-Spalte mit editierbarem Dropdown und Konflikt-Warnung
+  - Zeile 150-159: window.confirm() bei Zeitkonflikt
+
+**Tabellen-Struktur:**
+- Nr | SR (optional) | Zeit | Gr (optional) | Heim | Ergebnis | Gast | Feld (optional)
+
+**Editable Mode:**
+- Native `<select>` Dropdowns für direkte Änderung
+- Zeile 100-126: SR-Dropdown mit onChange-Handler
+- Zeile 145-181: Feld-Dropdown mit Konflikt-Prüfung
+
+---
+
+### `/src/components/schedule/FinalStageSchedule.tsx` - Finalrunden-Tabelle
+**Zweck**: Zeigt Finalrunden-Spiele mit optionaler SR/Feld-Bearbeitung
+
+**Wichtige Features:**
+- Zeile 31-32: `showReferees` und `showFields` basierend auf Config
+- Zeile 34-56: Dropdown-Optionen für SR und Felder
+- Zeile 58-80: **Feld-Konflikt-Erkennung** (identisch zu GroupStageSchedule)
+- Zeile 97-132: SR-Spalte mit editierbarem Dropdown
+- Zeile 143-187: Feld-Spalte mit Konflikt-Warnung
+- Zeile 134-141: Spiel-Label mit Team-Namen
+  - Format: "Halbfinale" (Label) + "Team A - Team B" (Teams)
+
+**Tabellen-Struktur:**
+- Nr | SR (optional) | Zeit | Spiel | Ergebnis | Feld (optional)
+
+**getFinalMatchLabel(match):**
+- Zeile 131-157: Bestimmt Spiel-Label basierend auf finalType und phase
+- Finale: 🏆 Finale, Platz 3: 🥉, Platz 5/7: Text
 
 ---
 
 ### `/src/components/RefereeAssignmentEditor.tsx` - Manuelle SR-Zuweisung
-**Zweck**: UI für manuelle SR-Zuweisung mit Drag & Drop und Konflikt-Erkennung
+**Zweck**: Alternative UI für manuelle SR-Zuweisung mit Drag & Drop
 
 **Wichtige Funktionen:**
-- `findOverlappingConflict(matches, targetMatchId, refereeNumber)` - **Zeitliche Konflikt-Erkennung**
-  - Zeile 21-47: Prüft ob SR bereits zeitgleich bei anderem Spiel eingeteilt ist
-  - Zeile 34-42: Zeit-Overlap-Logik: `(start1 < end2) AND (start2 < end1)`
-  - Gibt konfligierendes Match zurück oder null
+- `findOverlappingConflict(matches, targetMatchId, refereeNumber)` - Zeile 21-47
+  - Prüft zeitliche Konflikte (SR bereits bei anderem Spiel zur gleichen Zeit)
+  - Zeile 34-42: Zeit-Overlap-Logik
+  - Gibt konfligierendes Match oder null zurück
 
 **Komponenten:**
 - Zeile 270-297: Draggable Referee Cards (nur Organizer-Modus)
-- Zeile 304-358: Matches-Liste mit Dropzones und Dropdown-Selects
-- Zeile 324-355: `<Select>` mit Konflikt-Prüfung und Bestätigungs-Dialog
+- Zeile 304-358: Matches-Liste mit Dropzones und Select
+- Zeile 324-355: Dropdown mit Konflikt-Prüfung
 
 **Konflikt-Behandlung:**
-- Zeile 136-155: Drag & Drop - Zeigt window.confirm() bei Zeitkonflikt
-- Zeile 332-348: Dropdown - Zeigt window.confirm() bei Zeitkonflikt
+- Zeile 136-155: Drag & Drop - window.confirm() bei Zeitkonflikt
+- Zeile 332-348: Dropdown - window.confirm() bei Zeitkonflikt
 - User kann Konflikt überschreiben (manuell hat Vorrang)
 
-**Wichtige Features:**
-- Workload-Anzeige: `{refereeWorkload[refNum] || 0} Spiele`
-- Reset-Button: Setzt alle manuellen Zuweisungen zurück
-- Nur zeitliche Überschneidungen werden geprüft (KEINE maxConsecutive-Regeln)
-
 ---
 
-### `/src/constants/finalsOptions.ts` - Tournament Planner Logic
-**Zweck**: Bestimmt empfohlene vs. mögliche Finalrunden-Varianten
+### `/src/features/tournament-creation/TournamentPreview.tsx` - Vorschau & Bearbeitung
+**Zweck**: Zeigt Turnier-Vorschau mit Bearbeitungsmöglichkeit
 
 **Wichtige Funktionen:**
-- `getFinalsOptions(numberOfGroups)` - Gibt FinalsOption[] zurück
-  - 2 Gruppen: top-4, all-places (recommended) | final-only (possible)
-  - 4 Gruppen: top-8, top-4 (recommended)
-  - 8+ Gruppen: **top-16, top-8, top-4 (recommended)**
-- `getRecommendedFinalsPreset(numberOfGroups)` - Default-Preset
-  - 2-3 Gruppen → 'top-4'
-  - 4-7 Gruppen → 'top-8'
-  - 8+ Gruppen → **'top-16'**
+- Zeile 51-82: `handleRefereeAssignment(matchId, refereeNumber)` - SR-Änderung
+  - Aktualisiert manualAssignments
+  - Regeneriert Schedule
+  - Notifiziert Parent-Component
+
+- Zeile 106-126: `handleFieldChange(matchId, fieldNumber)` - Feld-Änderung
+  - Aktualisiert fieldAssignments
+  - Regeneriert Schedule
+  - Notifiziert Parent-Component
+
+- Zeile 128-135: `handleExportPDF()` - PDF Export
+  - Ruft exportScheduleToPDF() auf
+  - Übergibt schedule, standings, options
+
+**Props an ScheduleDisplay:**
+- Zeile 354-359: editable={true}, onRefereeChange, onFieldChange
+- Ermöglicht direkte SR/Feld-Änderung in Tabellen
 
 ---
 
-### `/src/components/schedule/FinalStageSchedule.tsx` - Display Component
-**Zweck**: Zeigt Finalrunden-Spiele in Tabellenform mit optionaler SR-Spalte
+### `/src/features/tournament-creation/Step2_ModeAndSystem.tsx` - Turnier-Konfiguration
+**Zweck**: Konfiguration von Modus, Gruppen, Finalrunden, Schiedsrichtern, Feldern
 
-**Wichtige Elemente:**
-- Zeile 27: `showReferees` - Bedingte Anzeige der SR-Spalte
-- Zeile 108: `<th>SR</th>` - SR-Header (zweite Spalte nach Nr.)
-- Zeile 118-119: `match.matchNumber` - **Durchgehende Spielnummer**
-- Zeile 159-164: `{match.homeTeam} - {match.awayTeam}` - **Übersetzte Team-Namen**
-- Zeile 121-156: SR-Zelle mit editierbarem Dropdown oder statischer Anzeige
-- `getFinalMatchLabel(match)` - Bestimmt Spiel-Label (🏆 Finale, 🥉 Platz 3)
+**Wichtige Sektionen:**
+1. Zeile 50-150: Gruppen-Konfiguration
+2. Zeile 152-250: Finalrunden-Konfiguration (finalsConfig)
+3. Zeile 252-350: Schiedsrichter-Konfiguration (refereeConfig)
+4. Zeile 352-400: Feld-Anzahl und weitere Einstellungen
 
-**Props:**
-- `editable?: boolean` - Ermöglicht direkte SR-Änderung in Tabelle
-- `onRefereeChange?: (matchId, refereeNumber) => void` - Callback für SR-Änderungen
+**Finals Config:**
+- Preset-Auswahl: none, final-only, top-4, top-8, top-16, all-places
+- Parallel-Optionen: parallelSemifinals, parallelQuarterfinals, parallelRoundOf16
 
-**Editable Mode:**
-- Zeile 29-47: `getRefereeOptions()` - Generiert Dropdown-Optionen (SR-Namen + Spieleanzahl)
-- Zeile 124-149: Native `<select>` mit onChange-Handler für direkte SR-Auswahl
-- Zeile 127-129: Konvertiert Dropdown-Wert zu refereeNumber und ruft Callback auf
+**Referee Config:**
+- Mode-Auswahl: none, organizer, teams
+- Organizer-Modus: numberOfReferees, maxConsecutiveMatches
+- Finals-Referee-Mode: none, neutralTeams, nonParticipatingTeams
 
 ---
 
-### `/src/components/schedule/GroupStageSchedule.tsx` - Display Component
-**Zweck**: Zeigt Gruppenphase-Spiele in Tabellenform mit optionaler SR-Spalte
-
-**Wichtige Elemente:**
-- Zeile 29: `showReferees` - Bedingte Anzeige der SR-Spalte
-- Zeile 107: `<th>SR</th>` - SR-Header (zweite Spalte nach Nr.)
-- Zeile 122-156: SR-Zelle mit editierbarem Dropdown oder statischer Anzeige
-
-**Props:**
-- `editable?: boolean` - Ermöglicht direkte SR-Änderung in Tabelle
-- `onRefereeChange?: (matchId, refereeNumber) => void` - Callback für SR-Änderungen
-
-**Editable Mode:**
-- Zeile 31-49: `getRefereeOptions()` - Generiert Dropdown-Optionen (SR-Namen + Spieleanzahl)
-- Zeile 125-149: Native `<select>` mit onChange-Handler für direkte SR-Auswahl
-- Zeile 127-129: Konvertiert Dropdown-Wert zu refereeNumber und ruft Callback auf
-
----
-
-## 🔄 Datenfluss: Turniererstellung mit SR
+## 🔄 Datenfluss: Komplett
 
 ```
-1. User wählt Preset + SR-Modus in Step2_ModeAndSystem.tsx
+1. User konfiguriert Turnier in Step2_ModeAndSystem.tsx
    ↓ finalsConfig: { preset: 'top-4', parallelSemifinals: true }
    ↓ refereeConfig: { mode: 'organizer', numberOfReferees: 3, maxConsecutiveMatches: 1 }
+   ↓ numberOfFields: 2
 
 2. playoffGenerator.generatePlayoffMatches(numberOfGroups, finalsConfig)
    ↓ Erstellt PlayoffMatch[] mit home/away Platzhaltern
@@ -255,6 +402,7 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
    ↓ Erstellt ScheduledMatch[] mit Zeiten
    ↓ homeTeam = resolveTeamName('semi1-loser') → 'Verlierer HF 1'
    ↓ matchNumber = fortlaufend ab startMatchNumber
+   ↓ startTime, endTime = berechnet
 
 6. scheduleGenerator: assignReferees()
    ↓ refereeAssigner.assignReferees(allMatches, teams, refereeConfig)
@@ -264,107 +412,121 @@ Schnellreferenz für die wichtigsten Code-Strukturen und deren Zweck.
 7. TournamentPreview.tsx
    ↓ Zeigt ScheduleDisplay mit editable=true
    ↓ Passes onRefereeChange={handleRefereeAssignment}
+   ↓ Passes onFieldChange={handleFieldChange}
 
 8. ScheduleDisplay → GroupStageSchedule / FinalStageSchedule
-   ↓ Props: editable, onRefereeChange werden durchgereicht
+   ↓ Props: editable, onRefereeChange, onFieldChange werden durchgereicht
    ↓ SR-Spalte als zweite Spalte (nach Nr.)
+   ↓ Feld-Spalte als letzte Spalte (wenn numberOfFields > 1)
 
-9a. Editable Mode (Preview):
-   ↓ Dropdown <select> in SR-Spalte erlaubt direkte Änderung
-   ↓ onChange → onRefereeChange(matchId, refereeNumber)
+9. User ändert SR/Feld in Tabelle
+   ↓ Dropdown onChange → onRefereeChange(matchId, refereeNumber)
+   ↓ Dropdown onChange → onFieldChange(matchId, fieldNumber)
+   ↓ Konflikt-Prüfung bei Feld-Änderung
    ↓ TournamentPreview: regeneriert Schedule mit neuer Zuweisung
 
-9b. RefereeAssignmentEditor:
-   ↓ Alternative UI mit Drag & Drop
-   ↓ findOverlappingConflict() prüft zeitliche Konflikte
-   ↓ window.confirm() bei Overlap, User kann überschreiben
+10. User exportiert PDF
+   ↓ handleExportPDF() → exportScheduleToPDF(schedule, standings, options)
+   ↓ Rendert Header (dynamisch: tournament.title + ageClass)
+   ↓ Rendert Meta-Box (4-Spalten Grid)
+   ↓ Rendert Hints
+   ↓ Rendert Participants (globale Nummerierung)
+   ↓ Rendert GroupStage Table
+   ↓ Rendert Group Standings (2-Spalten)
+   ↓ Rendert Finals Tables (separate Tabellen pro Phase)
+   ↓ Speichert PDF: {tournament.title}_Spielplan.pdf
 ```
 
 ---
 
 ## 🎯 Häufige Änderungen & wo sie gemacht werden
 
-### Neue Playoff-Runde hinzufügen (z.B. Top-32)
-1. **tournament.ts**: Erweitere `FinalsPreset` um `'top-32'`
-2. **tournament.ts**: Erweitere `FinalsConfig` um `parallelRoundOf32?`
-3. **playoffGenerator.ts**: Erstelle `generateTop32()` Funktion
-4. **finalsOptions.ts**: Füge Top-32 zu `getFinalsOptions()` hinzu
-5. **scheduleGenerator.ts**: Erweitere `translatePlaceholder()` um r32-x-winner/loser
-6. **playoffScheduler.ts**: Erweitere parallelMode Detection um Round of 32
+### PDF-Layout ändern
+**Datei**: `/src/lib/pdfExporter.ts`
+- Zeile 23-53: PDF_STYLE - Farben, Fonts, Spacing
+- Zeile 196-218: renderHeader() - Header-Layout
+- Zeile 220-308: renderMetaBox() - Meta-Box Layout
+- Zeile 341-411: renderParticipants() - Teilnehmer-Layout
+- Zeile 413-497: renderGroupStage() - Vorrunde-Tabelle
+- Zeile 626-735: renderGroupStandings() - Tabellen-Layout
 
-### Schiedsrichter-Algorithmus anpassen
-**Datei**: `/src/lib/refereeAssigner.ts`
-- `assignOrganizerReferees()` - Zeile 72-174: Fair Distribution Logik
-- `assignTeamReferees()` - Zeile 171-246: Teams-Modus Logik
-- Workload-Tracking: `refereeWorkload[]` und `refereeLastSlots[]`
-
-### SR-Anzeige in UI ändern
-**Dateien**:
-- `/src/components/schedule/FinalStageSchedule.tsx` - Zeile 121-156: Editable Dropdown oder statische Anzeige
-- `/src/components/schedule/GroupStageSchedule.tsx` - Zeile 122-156: Editable Dropdown oder statische Anzeige
-- `/src/components/ScheduleDisplay.tsx` - Props: editable, onRefereeChange durchreichen
-- `/src/features/tournament-creation/TournamentPreview.tsx` - Zeile 332-336: editable=true übergeben
-- `/src/lib/pdfExporter.ts` - Zeile 507: Zeige referee number
-
-### Team-Namen Übersetzung ändern
-**Datei**: `/src/lib/scheduleGenerator.ts`, Zeile 482-605
-- Deutsche Übersetzungen: `translations.de`
-- Englische Übersetzungen: `translations.en`
-
-### Spielnummern-Logik ändern
-**Datei**: `/src/lib/scheduleGenerator.ts`, Zeile 230-233
+### Team-Nummerierung ändern
+**Datei**: `/src/lib/pdfExporter.ts`, Zeile 355-360
 ```typescript
-const startMatchNumber = scheduledGroupStage.length > 0
-  ? scheduledGroupStage[scheduledGroupStage.length - 1].matchNumber + 1
-  : 1;
+// Globale Team-Nummerierung
+const teamNumbers = new Map<string, number>();
+let globalNumber = 1;
+schedule.teams.forEach(team => {
+  teamNumbers.set(team.id, globalNumber++);
+});
 ```
 
-### Finalrunden-Empfehlungen ändern
-**Datei**: `/src/constants/finalsOptions.ts`
-- `getFinalsOptions()` - Ändere category: 'recommended' | 'possible'
-- `getRecommendedFinalsPreset()` - Ändere Default-Logik
+### Platzierungskriterien ändern
+**Datei**: `/src/utils/calculations.ts`
+- Zeile 78-123: sortByPlacementLogic() - Kriterien-Reihenfolge
+- Zeile 130-209: compareDirectMatches() - Direkter Vergleich Logik
+- Zeile 90-110: Switch über criterion.id - Neue Kriterien hinzufügen
+
+### Feld-Konflikt-Logik ändern
+**Dateien**:
+- `/src/components/schedule/GroupStageSchedule.tsx` - Zeile 60-82
+- `/src/components/schedule/FinalStageSchedule.tsx` - Zeile 58-80
+- Overlap-Prüfung: `(start1 < end2) AND (start2 < end1)`
+
+### SR-Anzeige in PDF ändern
+**Datei**: `/src/lib/pdfExporter.ts`
+- Zeile 438-441: Header-Row mit SR-Spalte
+- Zeile 455-457: Data-Row mit SR-Nummer oder '-'
+- Zeile 488: columnStyles für SR-Spalte
+
+### Neue Playoff-Runde hinzufügen
+1. **tournament.ts**: Erweitere `FinalsPreset` um `'top-32'`
+2. **playoffGenerator.ts**: Erstelle `generateTop32()` Funktion
+3. **finalsOptions.ts**: Füge Top-32 zu `getFinalsOptions()` hinzu
+4. **scheduleGenerator.ts**: Erweitere `translatePlaceholder()` um r32-x-winner/loser
+5. **playoffScheduler.ts**: Erweitere parallelMode Detection
 
 ---
 
 ## 🐛 Debugging-Tipps
 
-### Problem: "semi1-loser" wird nicht übersetzt
-**Check**: `scheduleGenerator.ts` Zeile 482-605 - Ist Platzhalter in Übersetzungstabelle?
+### Problem: PDF-Export funktioniert nicht
+**Check**: Browser Console für Fehler
+**Check**: `exportScheduleToPDF` wird mit korrekten Parametern aufgerufen (TournamentPreview.tsx Zeile 129)
+**Check**: schedule.tournament.title ist gesetzt
 
-### Problem: Finalrunde beginnt bei Spiel 1
-**Check**: `scheduleGenerator.ts` Zeile 230-233 - Wird startMatchNumber korrekt berechnet?
+### Problem: Team-Nummerierung falsch
+**Check**: pdfExporter.ts Zeile 355-360 - Globale Nummerierung
+**Check**: Reihenfolge von schedule.teams
 
-### Problem: Playoff-Matches werden nicht generiert
-**Check Console**: `[ScheduleGenerator] Playoff check:` und `Generated playoff matches:`
-**Check**: `tournament.finalsConfig.preset` ist nicht 'none'
+### Problem: Tabellen sortieren nicht korrekt
+**Check**: calculations.ts Zeile 78-123 - placementLogic
+**Check**: tournament.placementLogic enthält korrekte Kriterien mit enabled: true
+**Check**: compareDirectMatches() wird korrekt aufgerufen
 
-### Problem: Falsche Parallelisierung
-**Check**: `playoffScheduler.ts` Zeile 66-80 - parallelMode Detection
-**Check**: `tournament.finalsConfig.parallelSemifinals` etc.
-
-### Problem: SR werden nicht zugewiesen
-**Check Console**: Logs in `refereeAssigner.ts`
-**Check**: `tournament.refereeConfig.mode` ist nicht 'none'
-**Check**: `refereeConfig.numberOfReferees` ist gesetzt (Organizer-Modus)
+### Problem: Feld-Konflikte werden nicht erkannt
+**Check**: findFieldConflict() in GroupStageSchedule.tsx Zeile 60-82
+**Check**: match.startTime und match.endTime sind korrekt gesetzt
+**Check**: Overlap-Logik: `(targetStart < matchEnd && matchStart < targetEnd)`
 
 ### Problem: SR-Spalte wird nicht angezeigt
-**Check**: `schedule.refereeConfig` wird korrekt durchgereicht
+**Check**: schedule.refereeConfig wird korrekt durchgereicht
 **Check**: `showReferees = refereeConfig && refereeConfig.mode !== 'none'`
-**Check**: `tournament.refereeConfig` initialisiert (TournamentCreationScreen.tsx Zeile 53-55)
+**Check**: Props werden an GroupStageSchedule/FinalStageSchedule übergeben
 
-### Problem: Unfaire SR-Verteilung
-**Check**: `refereeAssigner.ts` Zeile 104-139 - Workload-Sortierung
-**Check**: `maxConsecutiveMatches` Constraint wird respektiert
+### Problem: Feld-Spalte wird nicht angezeigt
+**Check**: `showFields = numberOfFields > 1`
+**Check**: schedule.numberOfFields ist > 1
+**Check**: Props werden korrekt durchgereicht
 
-### Problem: SR können in Tabelle nicht geändert werden
-**Check**: `editable={true}` wird an ScheduleDisplay übergeben (TournamentPreview.tsx)
-**Check**: `onRefereeChange` Callback ist definiert und durchgereicht
-**Check**: Props werden korrekt an GroupStageSchedule/FinalStageSchedule übergeben
+### Problem: Manuelle Zuweisungen funktionieren nicht
+**Check**: onRefereeChange und onFieldChange Callbacks sind definiert
+**Check**: TournamentPreview.tsx regeneriert Schedule nach Änderung
+**Check**: manualAssignments und fieldAssignments werden korrekt aktualisiert
 
-### Problem: Zeitkonflikte werden nicht erkannt
-**Check**: `findOverlappingConflict()` in RefereeAssignmentEditor.tsx Zeile 21-47
-**Check**: Zeitstempel-Vergleich: `(start1 < end2) AND (start2 < end1)`
-**Check**: Konflikt-Dialog wird bei window.confirm() angezeigt
+### Problem: "semi1-loser" wird nicht übersetzt
+**Check**: scheduleGenerator.ts Zeile 500-628 - Übersetzungstabelle
+**Check**: Platzhalter ist in TRANSLATIONS.de vorhanden
 
 ---
 
@@ -380,9 +542,9 @@ const startMatchNumber = scheduledGroupStage.length > 0
 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth'
 ```
 
-### Parallel Modes
+### Placement Criteria IDs
 ```typescript
-'sequentialOnly' | 'parallelAllowed'
+'points' | 'goalDifference' | 'goalsFor' | 'goalsAgainst' | 'wins' | 'directComparison'
 ```
 
 ### Referee Modes
@@ -391,70 +553,85 @@ RefereeMode: 'none' | 'organizer' | 'teams'
 FinalsRefereeMode: 'none' | 'neutralTeams' | 'nonParticipatingTeams'
 ```
 
-### RefereeConfig Structure
+### PDF Style Constants
 ```typescript
-{
-  mode: RefereeMode;
-  numberOfReferees?: number;          // Anzahl SR (Organizer-Modus)
-  maxConsecutiveMatches?: number;     // Max. aufeinanderfolgende Spiele
-  refereeNames?: Record<number, string>; // 1 → "Max Mustermann"
-  finalsRefereeMode?: FinalsRefereeMode;
-  manualAssignments?: Record<string, number>; // matchId → refereeNumber
-}
+PDF_STYLE.colors: border, borderDark, headBg, textMain, textMuted, white
+PDF_STYLE.fonts: h1, h2, meta, sectionTitle, phaseTitle, groupTitle, table, hint
+PDF_STYLE.spacing: pageMargin, sectionGap, blockGap
 ```
 
 ---
 
-## 🔗 Abhängigkeiten zwischen Komponenten
+## 📝 Implementierte Features
+
+### ✅ Core Features
+- Tournament Creation Flow (4 Steps)
+- Fair Scheduler mit Slot-basiertem System
+- Playoff-System mit Presets (none, final-only, top-4, top-8, top-16, all-places)
+- Schiedsrichter-System (Organizer + Teams Modus)
+- Feld-Verwaltung mit Konflikt-Erkennung
+- Platzierungs-Logik mit konfigurierbaren Kriterien
+- Direkter Vergleich (Head-to-Head)
+
+### ✅ PDF Export (Komplett neu)
+- HTML-basiertes Layout
+- Dynamischer Header (Turniername aus Stammdaten)
+- 4-Spalten Meta-Box
+- Globale Team-Nummerierung (1-10)
+- Separate Tabellen pro Finalrunden-Phase
+- 2-Spalten Gruppen-Tabellen Layout
+- "Tabelle – Gruppe X" Format
+- SR-Spalte (optional)
+- A4 Portrait, Grayscale-optimiert
+
+### ✅ Manuelle Bearbeitung
+- SR-Zuweisung via Dropdown in Tabellen
+- Feld-Zuweisung via Dropdown in Tabellen
+- Zeitliche Konflikt-Erkennung
+- User-Bestätigung bei Konflikten
+- Automatische Schedule-Regenerierung
+- RefereeAssignmentEditor mit Drag & Drop
+
+### ✅ Display Features
+- Responsive Tabellen-Ansicht
+- Editable Mode für Vorschau
+- SR-Spalte (dynamisch basierend auf Config)
+- Feld-Spalte (dynamisch basierend auf numberOfFields)
+- Gruppierte Teilnehmer-Anzeige
+- Gruppen-Tabellen mit Live-Berechnung
+
+---
+
+## 🔗 Wichtigste Abhängigkeiten
 
 ```
-TournamentCreationScreen
-  ↓ Step2_ModeAndSystem (finalsConfig + refereeConfig)
-  ↓ TournamentPreview
-    ↓ handleRefereeAssignment(matchId, refereeNumber)
-    ↓ generateFullSchedule()
-      ↓ generatePlayoffDefinitions()
-        ↓ generatePlayoffMatches()
-      ↓ scheduleMatches()
-        ↓ resolveTeamName()
-          ↓ translatePlaceholder()
-      ↓ assignReferees()
-        ↓ applyManualAssignments()
-        ↓ assignOrganizerReferees() | assignTeamReferees()
-    ↓ ScheduleDisplay (editable, onRefereeChange)
-      ↓ FinalStageSchedule (editable, onRefereeChange, refereeConfig)
-      ↓ GroupStageSchedule (editable, onRefereeChange, refereeConfig)
-    ↓ RefereeAssignmentEditor (onAssignmentChange, onResetAssignments)
-      ↓ findOverlappingConflict()
-    ↓ pdfExporter (schedule.refereeConfig)
+Tournament Creation
+  ↓
+Step2_ModeAndSystem
+  ↓ finalsConfig, refereeConfig, numberOfFields, fieldAssignments
+  ↓
+TournamentPreview
+  ↓ generateFullSchedule()
+    ↓ fairScheduler.generateGroupPhaseSchedule()
+    ↓ playoffScheduler.generatePlayoffSchedule()
+    ↓ scheduleGenerator.scheduleMatches()
+    ↓ refereeAssigner.assignReferees()
+  ↓ ScheduleDisplay (editable mode)
+    ↓ GroupStageSchedule (SR/Feld-Dropdowns)
+    ↓ FinalStageSchedule (SR/Feld-Dropdowns)
+    ↓ GroupTables (calculations.calculateStandings)
+  ↓ RefereeAssignmentEditor
+  ↓ handleExportPDF()
+    ↓ pdfExporter.exportScheduleToPDF()
+      ↓ renderHeader()
+      ↓ renderMetaBox()
+      ↓ renderParticipants()
+      ↓ renderGroupStage()
+      ↓ renderGroupStandings()
+      ↓ renderFinalsSection()
 ```
 
 ---
 
-## 📝 Neue Features & TODOs
-
-### ✅ Implementiert
-- TypeScript Types für Schiedsrichter-System
-- UI für Schiedsrichter-Konfiguration in Step2
-- Algorithmus für faire SR-Verteilung (Organizer + Teams Modus)
-- SR-Zuweisung in scheduleGenerator integriert
-- SR-Spalte in PDF Export
-- SR-Anzeige in Schedule-Komponenten (GroupStage + FinalStage)
-- **Manuelle SR-Zuweisung UI (Editable Mode)**
-  - Direkte Änderung in Tabellen via Dropdown (GroupStage + FinalStage)
-  - RefereeAssignmentEditor mit Drag & Drop Interface
-  - Zeitliche Konflikt-Erkennung (findOverlappingConflict)
-  - User-Bestätigung bei Überschneidungen
-  - Reset-Funktion für automatische Zuweisung
-  - Nur Zeit-Overlaps werden geprüft (KEINE maxConsecutive-Regeln bei manueller Zuweisung)
-
-### 📋 Geplant
-- Finals-Referee-Mode Logic (neutralTeams, nonParticipatingTeams)
-- SR-Namen Konfiguration UI
-- Admin View für manuelle Anpassungen während Turnier
-- Live-Tracking Integration
-
----
-
-**Last Updated**: 2025-11-27
-**Version**: 1.2 (Manuelle SR-Zuweisung mit Konflikt-Erkennung)
+**Last Updated**: 2025-11-28
+**Version**: 2.0 (PDF Export + Feld-Management + Platzierungs-Logik)
