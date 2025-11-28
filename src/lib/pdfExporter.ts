@@ -193,23 +193,23 @@ export async function exportScheduleToPDF(
 // ============================================================================
 
 /**
- * Render Header: Fixed title + dynamic subtitle
+ * Render Header: Dynamic tournament title from metadata
  */
 function renderHeader(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): number {
   const centerX = PAGE_WIDTH / 2;
 
-  // Main title (fixed)
+  // Main title (dynamic - from tournament data)
   doc.setFontSize(PDF_STYLE.fonts.h1);
   doc.setTextColor(...PDF_STYLE.colors.textMain);
   doc.setFont('helvetica', 'bold');
-  doc.text('Wieninger-Libella-Hallenturniere 2025/2026', centerX, yPos, { align: 'center' });
+  doc.text(schedule.tournament.title, centerX, yPos, { align: 'center' });
 
   yPos += 7;
 
-  // Subtitle (dynamic tournament title)
+  // Subtitle (age class)
   doc.setFontSize(PDF_STYLE.fonts.h2);
   doc.setFont('helvetica', 'normal');
-  doc.text(schedule.tournament.title, centerX, yPos, { align: 'center' });
+  doc.text(schedule.tournament.ageClass, centerX, yPos, { align: 'center' });
 
   yPos += PDF_STYLE.spacing.sectionGap + 2;
 
