@@ -9,11 +9,6 @@
 
 import { Match, RefereeConfig, Team } from '../types/tournament';
 
-interface RefereeAssignment {
-  matchId: string;
-  referee: number; // Referee number (1 = SR1, 2 = SR2, etc.)
-}
-
 // Generic match interface that works with both Match and ScheduledMatch
 interface MatchLike {
   id: string;
@@ -88,7 +83,6 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
 
   // Skip matches that already have manual assignments
   const matchesToAssign = matches.filter(m => m.referee === undefined);
-  const alreadyAssigned = matches.filter(m => m.referee !== undefined);
 
   // Create metadata for matches (with index and time slot)
   const matchesWithMeta: MatchWithMetadata[] = matchesToAssign.map((match, index) => ({
@@ -209,7 +203,7 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
   // Assign referees field by field
   const result: T[] = [];
 
-  matchesByField.forEach((fieldMatches, field) => {
+  matchesByField.forEach((fieldMatches) => {
     // Sort by time slot
     const sortedMatches = [...fieldMatches].sort((a, b) => (a.slot || 0) - (b.slot || 0));
 

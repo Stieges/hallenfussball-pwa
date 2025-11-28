@@ -22,12 +22,11 @@ interface RankingTabProps {
 
 export const RankingTab: React.FC<RankingTabProps> = ({
   tournament,
-  schedule,
   currentStandings,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const hasGroups = tournament.teams.some(t => t.group);
-  const hasPlayoffs = tournament.finals && tournament.finals.enabled;
+  const hasPlayoffs = tournament.finals && typeof tournament.finals === 'object' && 'enabled' in tournament.finals && tournament.finals.enabled;
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -121,6 +120,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     // Berechne Standings pro Gruppe
     const groupStandingsMap = new Map<string, Standing[]>();
     groups.forEach(group => {
+      if (!group) return;
       const standings = calculateStandings(
         tournament.teams.filter(t => t.group === group),
         tournament.matches,
@@ -139,6 +139,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
 
       // Sammle alle Teams auf dieser Position aus allen Gruppen
       groups.forEach(group => {
+        if (!group) return;
         const standings = groupStandingsMap.get(group);
         if (standings && standings[position]) {
           teamsAtPosition.push(standings[position]);
@@ -198,16 +199,16 @@ export const RankingTab: React.FC<RankingTabProps> = ({
         <div style={{ padding: theme.spacing.lg }}>
           <h2 style={titleStyle}>🏆 Finale Platzierung</h2>
 
-          {hasPlayoffs && (
+          {hasPlayoffs ? (
             <div style={{
-              textAlign: 'center',
+              textAlign: 'center' as const,
               color: theme.colors.text.secondary,
               marginBottom: theme.spacing.lg,
               fontSize: theme.fontSizes.sm,
             }}>
               ℹ️ Die finale Platzierung wird nach Abschluss der Playoffs aktualisiert
             </div>
-          )}
+          ) : null}
 
           <table style={rankingTableStyle}>
             <thead>
@@ -282,7 +283,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                     <td style={{
                       ...tdStyle,
                       textAlign: 'center',
-                      color: goalDiff > 0 ? theme.colors.success : goalDiff < 0 ? theme.colors.error : theme.colors.text.secondary,
+                      color: goalDiff > 0 ? theme.colors.primary : goalDiff < 0 ? theme.colors.error : theme.colors.text.secondary,
                     }}>
                       <span style={{
                         fontWeight: highlightGoalDiff ? theme.fontWeights.bold : theme.fontWeights.semibold,

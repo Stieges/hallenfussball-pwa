@@ -127,11 +127,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     minWidth: '60px',
   };
 
-  const infoCellStyle: CSSProperties = {
-    ...tdStyle,
-    fontSize: '11px',
-    color: theme.colors.text.secondary,
-  };
 
   return (
     <div style={containerStyle} className="group-stage-schedule">

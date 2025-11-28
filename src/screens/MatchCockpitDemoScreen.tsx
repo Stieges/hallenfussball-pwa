@@ -176,7 +176,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
     });
   };
 
-  const handleLoadNextMatch = (fieldId: string) => {
+  const handleLoadNextMatch = () => {
     // Aktuelles Spiel als "letztes Spiel" speichern
     setLastFinishedMatch({
       match: {
@@ -197,7 +197,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
     setCurrentMatch(nextMatch);
   };
 
-  const handleReopenLastMatch = (fieldId: string) => {
+  const handleReopenLastMatch = () => {
     if (!lastFinishedMatch) return;
 
     // Letztes Spiel wieder laden
@@ -222,6 +222,16 @@ export const MatchCockpitDemoScreen: React.FC = () => {
   // RENDER
   // ============================================================================
 
+  const handleAdjustTime = (matchId: string, newElapsedSeconds: number) => {
+    setCurrentMatch((prev) => {
+      if (prev.id !== matchId) return prev;
+      return {
+        ...prev,
+        elapsedSeconds: newElapsedSeconds,
+      };
+    });
+  };
+
   return (
     <MatchCockpit
       fieldName="Feld 1"
@@ -236,6 +246,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
       onGoal={handleGoal}
       onUndoLastEvent={handleUndoLastEvent}
       onManualEditResult={handleManualEditResult}
+      onAdjustTime={handleAdjustTime}
       onLoadNextMatch={handleLoadNextMatch}
       onReopenLastMatch={handleReopenLastMatch}
     />

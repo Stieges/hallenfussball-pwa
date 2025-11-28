@@ -61,7 +61,6 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 }) => {
   const [draggedReferee, setDraggedReferee] = useState<number | null>(null);
   const [dragOverMatch, setDragOverMatch] = useState<string | null>(null);
-  const [conflictWarning, setConflictWarning] = useState<string | null>(null);
 
   if (!refereeConfig || refereeConfig.mode === 'none') {
     return null;
@@ -193,7 +192,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     marginBottom: '24px',
   };
 
-  const refereeCardStyle = (refereeNumber: number): CSSProperties => ({
+  const refereeCardStyle = (): CSSProperties => ({
     padding: '12px',
     background: theme.colors.background,
     border: `2px solid ${theme.colors.accent}`,
@@ -281,7 +280,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                 onDragStart={() => handleDragStart(refNum)}
                 onDragEnd={handleDragEnd}
                 style={{
-                  ...refereeCardStyle(refNum),
+                  ...refereeCardStyle(),
                   ...(draggedReferee === refNum ? refereeCardDraggingStyle : {}),
                 }}
               >
@@ -349,7 +348,6 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                 }
 
                 onAssignmentChange(match.id, refNum);
-                setConflictWarning(null);
               }}
               options={getRefereeOptions()}
             />

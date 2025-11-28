@@ -140,7 +140,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Get matches for selected field
   const fieldMatches = schedule.allMatches
     .filter((m) => m.field === selectedFieldNumber)
-    .sort((a, b) => a.slot - b.slot);
+    .sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
 
   // Find current match (selected OR running OR first without result)
   let currentMatchData: ScheduledMatch | undefined;
@@ -437,12 +437,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, []);
 
   // Handler: Load next match
-  const handleLoadNextMatch = useCallback((fieldId: string) => {
+  const handleLoadNextMatch = useCallback(() => {
     setSelectedMatchId(null); // Reset selection, damit nächstes Spiel automatisch geladen wird
   }, []);
 
   // Handler: Reopen last match
-  const handleReopenLastMatch = useCallback((fieldId: string) => {
+  const handleReopenLastMatch = useCallback(() => {
     if (!lastFinishedMatchData) return;
 
     // Setze selectedMatchId auf das letzte beendete Spiel

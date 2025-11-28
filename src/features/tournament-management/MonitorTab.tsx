@@ -20,7 +20,6 @@ interface MonitorTabProps {
 }
 
 export const MonitorTab: React.FC<MonitorTabProps> = ({
-  tournament,
   schedule,
   currentStandings,
 }) => {

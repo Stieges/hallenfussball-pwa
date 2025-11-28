@@ -10,10 +10,9 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
 import { Card } from '../../components/ui';
 import { Tournament, Standing } from '../../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 

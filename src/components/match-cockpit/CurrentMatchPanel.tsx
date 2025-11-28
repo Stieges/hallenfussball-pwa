@@ -130,7 +130,13 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
 
           {/* EVENTS LIST */}
           <EventsList
-            events={currentMatch.events}
+            events={currentMatch.events.map(e => ({
+              id: e.id,
+              time: e.timestampSeconds,
+              type: e.type,
+              payload: e.payload,
+              scoreAfter: e.scoreAfter
+            }))}
             onUndo={() => onUndoLastEvent(currentMatch.id)}
             onManualEdit={() => {
               const input = prompt(

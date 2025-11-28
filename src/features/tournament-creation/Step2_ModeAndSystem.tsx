@@ -33,7 +33,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
   // Finalrunden-Optionen basierend auf Gruppenanzahl
   const numberOfGroups = formData.numberOfGroups || 2;
-  const finalsOptions = getFinalsOptions(numberOfGroups, formData.numberOfTeams);
+  const finalsOptions = getFinalsOptions(numberOfGroups);
   const recommendedOptions = finalsOptions.filter(opt => opt.category === 'recommended');
   const possibleOptions = finalsOptions.filter(opt => opt.category === 'possible');
 
@@ -671,10 +671,10 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             <Select
               label="Schiedsrichter-Modus"
               value={formData.refereeConfig?.mode || 'none'}
-              onChange={(v: RefereeMode) => {
+              onChange={(v: string) => {
                 const newConfig = {
                   ...formData.refereeConfig,
-                  mode: v,
+                  mode: v as RefereeMode,
                 };
 
                 // Initialize default values when switching to organizer mode
@@ -824,9 +824,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 <Select
                   label="Schiedsrichter in Finalphase"
                   value={formData.refereeConfig?.finalsRefereeMode || 'none'}
-                  onChange={(v: FinalsRefereeMode) => onUpdate('refereeConfig', {
+                  onChange={(v: string) => onUpdate('refereeConfig', {
                     ...formData.refereeConfig,
-                    finalsRefereeMode: v,
+                    finalsRefereeMode: v as FinalsRefereeMode,
                   } as any)}
                   options={[
                     { value: 'none', label: 'Keine SR in Finalphase' },

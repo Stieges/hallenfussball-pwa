@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { Tournament, FinalsConfig, RefereeConfig } from '../../types/tournament';
+import { Tournament, FinalsConfig } from '../../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';

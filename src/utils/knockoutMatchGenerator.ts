@@ -60,29 +60,15 @@ const createMatchFromTemplate = (
 
   return {
     id: `match-${matchNumber}`,
-    matchNumber,
-    homeTeamId: homeTeamId || 'TBD',
-    awayTeamId: awayTeamId || 'TBD',
-    date: '',
-    time: '',
+    round: 1,
     field: 1,
-    duration: tournament.gameDuration || 10,
-    stage: phase as 'group' | 'quarterfinal' | 'semifinal' | 'final' | 'placement',
-    status: 'pending',
-    ...(isPlacementMatch(template) && {
-      placementRange: template.placementRange,
-    }),
+    teamA: homeTeamId || 'TBD',
+    teamB: awayTeamId || 'TBD',
+    isFinal: true,
+    label: phase,
   };
 };
 
-/**
- * Type Guard für PlacementMatch
- */
-const isPlacementMatch = (
-  match: KnockoutMatch | PlacementMatch
-): match is PlacementMatch => {
-  return 'placementRange' in match;
-};
 
 /**
  * Löst eine TeamReference auf und gibt die Team-ID zurück
@@ -156,28 +142,28 @@ export const updateKnockoutMatchesAfterResult = (
     let updated = false;
     let newMatch = { ...match };
 
-    // Prüfe Home Team
-    if (match.homeTeamId === 'TBD') {
+    // Prüfe Home Team (teamA)
+    if (match.teamA === 'TBD') {
       const homeRef = findTeamReferenceForMatch(match, 'home', completedMatchId);
 
       if (homeRef?.source === 'winnerOf' && homeRef.matchId === completedMatchId) {
-        newMatch.homeTeamId = winnerId;
+        newMatch.teamA = winnerId;
         updated = true;
       } else if (homeRef?.source === 'loserOf' && homeRef.matchId === completedMatchId) {
-        newMatch.homeTeamId = loserId;
+        newMatch.teamA = loserId;
         updated = true;
       }
     }
 
-    // Prüfe Away Team
-    if (match.awayTeamId === 'TBD') {
+    // Prüfe Away Team (teamB)
+    if (match.teamB === 'TBD') {
       const awayRef = findTeamReferenceForMatch(match, 'away', completedMatchId);
 
       if (awayRef?.source === 'winnerOf' && awayRef.matchId === completedMatchId) {
-        newMatch.awayTeamId = winnerId;
+        newMatch.teamB = winnerId;
         updated = true;
       } else if (awayRef?.source === 'loserOf' && awayRef.matchId === completedMatchId) {
-        newMatch.awayTeamId = loserId;
+        newMatch.teamB = loserId;
         updated = true;
       }
     }
@@ -191,9 +177,9 @@ export const updateKnockoutMatchesAfterResult = (
  * (Diese Funktion würde in der Praxis eine Mapping-Struktur nutzen)
  */
 const findTeamReferenceForMatch = (
-  match: Match,
-  side: 'home' | 'away',
-  completedMatchId: string
+  _match: Match,
+  _side: 'home' | 'away',
+  _completedMatchId: string
 ): TeamReference | null => {
   // Diese Funktion müsste Zugriff auf das ursprüngliche Schema haben
   // Für jetzt ist sie ein Platzhalter

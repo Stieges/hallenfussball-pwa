@@ -10,7 +10,6 @@
 
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
-import { Button, Card } from '../ui';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
 
