@@ -296,11 +296,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
         phaseLabel={match.phaseLabel}
         onStart={() => onStart(match.id)}
         onPause={() => onPause(match.id)}
-        onFinish={() => {
-          if (window.confirm('Spiel wirklich beenden?')) {
-            onFinish(match.id);
-          }
-        }}
+        onFinish={() => onFinish(match.id)}
         onAdjustTime={onAdjustTime}
       />
 

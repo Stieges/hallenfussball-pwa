@@ -538,6 +538,32 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     });
   }, []);
 
+  // Handler: Match selection change with warning
+  const handleMatchSelectionChange = useCallback((newMatchId: string | null) => {
+    // Prüfe, ob aktuell ein Spiel läuft
+    const currentRunningMatch = Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
+
+    if (currentRunningMatch && currentRunningMatch.id !== newMatchId) {
+      const confirmSwitch = window.confirm(
+        `⚠️ WARNUNG: Spiel #${currentRunningMatch.number} läuft noch!\n\n` +
+        `${currentRunningMatch.homeTeam.name} vs ${currentRunningMatch.awayTeam.name}\n` +
+        `Aktueller Stand: ${currentRunningMatch.homeScore}:${currentRunningMatch.awayScore}\n\n` +
+        `Wenn Sie zu einem anderen Spiel wechseln, wird das laufende Spiel automatisch beendet.\n\n` +
+        `Möchten Sie trotzdem wechseln?`
+      );
+
+      if (!confirmSwitch) {
+        return; // Abbrechen - Match-Wechsel nicht durchführen
+      }
+
+      // Beende das laufende Spiel automatisch
+      handleFinish(currentRunningMatch.id);
+    }
+
+    // Wechsel durchführen
+    setSelectedMatchId(newMatchId);
+  }, [liveMatches, handleFinish]);
+
   return (
     <div style={containerStyle}>
       {/* FIELD SELECTOR (if multiple fields) */}
@@ -566,7 +592,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <select
           style={selectStyle}
           value={selectedMatchId || ''}
-          onChange={(e) => setSelectedMatchId(e.target.value || null)}
+          onChange={(e) => handleMatchSelectionChange(e.target.value || null)}
         >
           <option value="">Automatisch (nächstes Spiel)</option>
           {fieldMatches.map(match => (
