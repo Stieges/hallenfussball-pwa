@@ -21,6 +21,18 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     return null; // Only show for group-based tournaments
   }
 
+  // Calculate continuous team numbers across all groups
+  // This matches the PDF export numbering logic
+  const teamNumberMap = new Map<string, number>();
+  let teamCounter = 1;
+
+  groupStandings.forEach(({ groupStandings: groupTeams }) => {
+    groupTeams.forEach((standing) => {
+      teamNumberMap.set(standing.team.id, teamCounter);
+      teamCounter++;
+    });
+  });
+
   const containerStyle: CSSProperties = {
     marginBottom: '24px',
   };
@@ -65,17 +77,20 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     borderBottom: `1px solid ${theme.colors.border}`,
   };
 
+  // Special case: Only 1 group - hide group title
+  const showGroupTitles = groupStandings.length > 1;
+
   return (
     <div style={containerStyle} className="participants-and-groups">
       <h2 style={titleStyle}>Teilnehmer</h2>
       <div style={groupsGridStyle}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <div key={group} style={groupBoxStyle}>
-            <h3 style={groupTitleStyle}>Gruppe {group}</h3>
+            {showGroupTitles && <h3 style={groupTitleStyle}>Gruppe {group}</h3>}
             <ul style={teamListStyle}>
-              {groupTeams.map((standing, index) => (
+              {groupTeams.map((standing) => (
                 <li key={standing.team.id} style={teamItemStyle}>
-                  {index + 1}. {standing.team.name}
+                  {teamNumberMap.get(standing.team.id)}. {standing.team.name}
                 </li>
               ))}
             </ul>
@@ -110,8 +125,11 @@ function getGroupStandings(
     .sort()
     .map(group => ({
       group,
-      groupStandings: allStandings.filter(s =>
-        teams.find(t => t.id === s.team.id)?.group === group
-      ),
+      groupStandings: allStandings
+        .filter(s =>
+          teams.find(t => t.id === s.team.id)?.group === group
+        )
+        // Sort teams alphabetically within each group (matches PDF export logic)
+        .sort((a, b) => a.team.name.localeCompare(b.team.name)),
     }));
 }

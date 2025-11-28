@@ -5,10 +5,9 @@
  * - A4 Portrait (210mm × 297mm)
  * - Fester Header "Wieninger-Libella-Hallenturniere 2025/2026"
  * - Meta-Box mit 4-Spalten Grid
- * - Teilnehmer gruppiert in Boxen
+ * - Teilnehmer in Tabelle
  * - Spiel-Tabellen für Vorrunde
  * - Separate Tabellen pro Finalrunden-Phase
- * - Tabellen in 2-Spalten Layout
  */
 
 import jsPDF from 'jspdf';
@@ -33,10 +32,10 @@ const PDF_STYLE = {
     h1: 18,           // Main title
     h2: 15,           // Subtitle
     meta: 11,         // Meta box content
-    sectionTitle: 13, // Section titles (Teilnehmer, Vorrunde)
-    phaseTitle: 13,   // Finals phase titles
+    sectionTitle: 14, // Section titles (Teilnehmer, Vorrunde, Platzierung)
+    phaseTitle: 14,   // Finals phase titles
     groupTitle: 13,   // Group standings titles
-    table: 12,        // Table content
+    table: 11,        // Table content
     hint: 10,         // Hints/notes
   },
   spacing: {
@@ -46,15 +45,28 @@ const PDF_STYLE = {
       left: 16,
       right: 16,
     },
-    sectionGap: 6,    // Gap between sections
-    blockGap: 4,      // Gap between blocks within sections
+    sectionGap: 6,    // Gap zwischen Abschnitten
+    blockGap: 4,      // Gap zwischen Blöcken in einem Abschnitt
   },
 };
 
 // A4 dimensions in mm
 const PAGE_WIDTH = 210;
 const PAGE_HEIGHT = 297;
-const CONTENT_WIDTH = PAGE_WIDTH - PDF_STYLE.spacing.pageMargin.left - PDF_STYLE.spacing.pageMargin.right;
+const CONTENT_WIDTH =
+  PAGE_WIDTH - PDF_STYLE.spacing.pageMargin.left - PDF_STYLE.spacing.pageMargin.right;
+const PAGE_BOTTOM = PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom;
+const PAGE_TOP = PDF_STYLE.spacing.pageMargin.top;
+
+// Helper: sorgt dafür, dass für den nächsten Block genug Platz ist,
+// sonst wird eine neue Seite begonnen.
+function ensureSpace(doc: jsPDF, yPos: number, minSpace: number): number {
+  if (yPos + minSpace > PAGE_BOTTOM) {
+    doc.addPage();
+    return PAGE_TOP;
+  }
+  return yPos;
+}
 
 // ============================================================================
 // TRANSLATIONS
@@ -63,18 +75,19 @@ const CONTENT_WIDTH = PAGE_WIDTH - PDF_STYLE.spacing.pageMargin.left - PDF_STYLE
 const TRANSLATIONS = {
   de: {
     // Meta box labels
-    organizer: 'Veranstalter:',
-    hall: 'Halle:',
-    matchDuration: 'Spielzeit:',
-    mode: 'Modus:',
-    gameday: 'Spieltag:',
-    time: 'Zeit:',
-    break: 'Pause:',
+    organizer: 'Veranstalter',
+    hall: 'Halle',
+    matchDuration: 'Spielzeit',
+    mode: 'Modus',
+    gameday: 'Spieltag',
+    time: 'Zeit',
+    break: 'Pause',
 
     // Section titles
     participants: 'Teilnehmer',
-    groupStage: 'Vorrunde',
+    groupStage: 'Gruppenphase',
     standings: 'Tabelle',
+    finalRanking: 'Platzierung',
 
     // Table headers
     nr: 'Nr',
@@ -160,16 +173,22 @@ export async function exportScheduleToPDF(
   // 3. Hints
   yPos = renderHints(doc, t, yPos);
 
-  // 4. Participants (only for group tournaments)
+  // 4. Participants
   const hasGroups = schedule.teams.some(team => team.group);
-  if (hasGroups) {
-    yPos = renderParticipants(doc, schedule, yPos);
-  }
+  yPos = renderParticipants(doc, schedule, t, yPos);
 
   // 5. Group Stage Matches
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   if (groupPhase) {
-    yPos = renderGroupStage(doc, groupPhase.matches, hasGroups, t, schedule.refereeConfig, schedule.numberOfFields, yPos);
+    yPos = renderGroupStage(
+      doc,
+      groupPhase.matches,
+      hasGroups,
+      t,
+      schedule.refereeConfig,
+      schedule.numberOfFields,
+      yPos
+    );
   }
 
   // 6. Group Standings Tables
@@ -180,8 +199,18 @@ export async function exportScheduleToPDF(
   // 7. Finals Sections (separate table per phase)
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   if (finalPhases.length > 0) {
-    yPos = renderFinalsSection(doc, finalPhases, t, schedule.refereeConfig, schedule.numberOfFields, yPos);
+    yPos = renderFinalsSection(
+      doc,
+      finalPhases,
+      t,
+      schedule.refereeConfig,
+      schedule.numberOfFields,
+      yPos
+    );
   }
+
+  // 8. Final Ranking (at the end)
+  yPos = renderFinalRanking(doc, schedule, standings, t, hasGroups, yPos);
 
   // Save PDF
   const filename = `${schedule.tournament.title.replace(/\s+/g, '_')}_Spielplan.pdf`;
@@ -197,6 +226,9 @@ export async function exportScheduleToPDF(
  */
 function renderHeader(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): number {
   const centerX = PAGE_WIDTH / 2;
+
+  // Platz für Titel + Untertitel
+  yPos = ensureSpace(doc, yPos, 14);
 
   // Main title (dynamic - from tournament data)
   doc.setFontSize(PDF_STYLE.fonts.h1);
@@ -217,7 +249,12 @@ function renderHeader(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): nu
 }
 
 /**
- * Render Meta Box: 4-column grid layout
+ * Render Meta Box: Two-column layout with single rounded border
+ *
+ * Note: PDF form fields (fillable fields) are NOT used for metadata.
+ * Form fields are only intended for match results and table statistics.
+ * However, jsPDF does not natively support PDF form fields (AcroForms).
+ * Visual placeholders with spaces are used instead for manual filling.
  */
 function renderMetaBox(
   doc: jsPDF,
@@ -227,55 +264,10 @@ function renderMetaBox(
   hallName: string,
   yPos: number
 ): number {
-  const boxHeight = 18;
-  const startY = yPos;
-  const rowHeight = 6;
-
-  // Border
-  doc.setDrawColor(...PDF_STYLE.colors.borderDark);
-  doc.setLineWidth(0.5);
-  doc.rect(
-    PDF_STYLE.spacing.pageMargin.left,
-    startY,
-    CONTENT_WIDTH,
-    boxHeight
-  );
-
-  // Vertical dividers (4 columns)
-  const colWidth = CONTENT_WIDTH / 4;
-  for (let i = 1; i < 4; i++) {
-    doc.line(
-      PDF_STYLE.spacing.pageMargin.left + colWidth * i,
-      startY,
-      PDF_STYLE.spacing.pageMargin.left + colWidth * i,
-      startY + boxHeight
-    );
-  }
-
-  // Horizontal dividers (3 rows)
-  for (let i = 1; i < 3; i++) {
-    doc.line(
-      PDF_STYLE.spacing.pageMargin.left,
-      startY + rowHeight * i,
-      PDF_STYLE.spacing.pageMargin.left + CONTENT_WIDTH,
-      startY + rowHeight * i
-    );
-  }
-
-  // Helper function to render label-value pair
-  const renderCell = (col: number, row: number, label: string, value: string) => {
-    const x = PDF_STYLE.spacing.pageMargin.left + colWidth * col + 2;
-    const y = startY + rowHeight * row;
-
-    doc.setFontSize(PDF_STYLE.fonts.meta);
-    doc.setTextColor(...PDF_STYLE.colors.textMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.text(label, x, y + 3);
-
-    doc.setTextColor(...PDF_STYLE.colors.textMain);
-    doc.setFont('helvetica', 'bold');
-    doc.text(value, x, y + 5.5);
-  };
+  const padding = 4;
+  const lineHeight = 5;
+  const rowGap = 1;
+  const columnGap = 10;
 
   // Get duration values from first group stage match
   const firstGroupMatch = schedule.phases.find(p => p.name === 'groupStage')?.matches[0];
@@ -290,39 +282,100 @@ function renderMetaBox(
     pauseDuration = Math.round((match2Start - match1End) / 60000); // Convert to minutes
   }
 
-  // Row 1: Veranstalter | Halle | Spielzeit | Modus
-  renderCell(0, 0, t.organizer, organizerName);
-  renderCell(1, 0, t.hall, hallName);
-  renderCell(2, 0, t.matchDuration, `${groupDuration} Min.`);
-  renderCell(3, 0, t.mode, schedule.teams.some(team => team.group) ? 'Gruppen + Finals' : 'Jeder gegen Jeden');
+  const startTime = schedule.startTime.toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const endTime = schedule.endTime.toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  // Row 2: Spieltag | Zeit | Pause | (empty)
-  renderCell(0, 1, t.gameday, schedule.tournament.date);
-  const startTime = schedule.startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  const endTime = schedule.endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  renderCell(1, 1, t.time, `${startTime} - ${endTime}`);
-  renderCell(2, 1, t.break, `${pauseDuration} Min.`);
+  const mode = schedule.teams.some(team => team.group) ? 'Gruppen + Finals' : 'Jeder gegen Jeden';
 
-  // Row 3: Age class spanning columns
-  const ageX = PDF_STYLE.spacing.pageMargin.left + 2;
-  const ageY = startY + rowHeight * 2 + 4;
+  // Split fields into two columns
+  const leftFields = [
+    { label: t.organizer, value: organizerName },
+    { label: t.hall, value: hallName },
+    { label: t.gameday, value: schedule.tournament.date },
+    { label: t.time, value: `${startTime} - ${endTime}` },
+  ];
+
+  const rightFields = [
+    { label: t.mode, value: mode },
+    { label: t.matchDuration, value: `${groupDuration} Min.` },
+    { label: t.break, value: `${pauseDuration} Min.` },
+  ];
+
+  // Calculate the longest label width for each column (including colon)
   doc.setFontSize(PDF_STYLE.fonts.meta);
-  doc.setTextColor(...PDF_STYLE.colors.textMain);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schedule.tournament.ageClass, ageX, ageY);
+  doc.setFont('helvetica', 'normal');
 
-  yPos = startY + boxHeight + PDF_STYLE.spacing.sectionGap;
+  const leftMaxLabelWidth = Math.max(...leftFields.map(f => doc.getTextWidth(`${f.label}:`)));
+  const rightMaxLabelWidth = Math.max(...rightFields.map(f => doc.getTextWidth(`${f.label}:`)));
+
+  const valueStartXLeft = leftMaxLabelWidth + 3;
+  const valueStartXRight = rightMaxLabelWidth + 3;
+
+  // Calculate content height (use the max of both columns)
+  const maxRows = Math.max(leftFields.length, rightFields.length);
+  const contentHeight = maxRows * lineHeight + (maxRows - 1) * rowGap + padding * 2;
+
+  // Platz für Meta-Box
+  yPos = ensureSpace(doc, yPos, contentHeight + 4);
+  const startY = yPos;
+  const startX = PDF_STYLE.spacing.pageMargin.left;
+
+  // Single rounded border
+  doc.setDrawColor(...PDF_STYLE.colors.borderDark);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(startX, startY, CONTENT_WIDTH, contentHeight, 2, 2); // 2mm radius for rounded corners
+
+  // Left column
+  const leftColumnX = startX + padding;
+  let currentYLeft = startY + padding + 4;
+
+  leftFields.forEach((field) => {
+    doc.setFontSize(PDF_STYLE.fonts.meta);
+    doc.setTextColor(...PDF_STYLE.colors.textMuted);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${field.label}:`, leftColumnX, currentYLeft);
+
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(field.value, leftColumnX + valueStartXLeft, currentYLeft);
+
+    currentYLeft += lineHeight + rowGap;
+  });
+
+  // Right column
+  const rightColumnX = startX + (CONTENT_WIDTH / 2) + columnGap;
+  let currentYRight = startY + padding + 4;
+
+  rightFields.forEach((field) => {
+    doc.setFontSize(PDF_STYLE.fonts.meta);
+    doc.setTextColor(...PDF_STYLE.colors.textMuted);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${field.label}:`, rightColumnX, currentYRight);
+
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(field.value, rightColumnX + valueStartXRight, currentYRight);
+
+    currentYRight += lineHeight + rowGap;
+  });
+
+  yPos = startY + contentHeight + PDF_STYLE.spacing.sectionGap;
   return yPos;
 }
 
 /**
  * Render Hints Section
  */
-function renderHints(
-  doc: jsPDF,
-  t: typeof TRANSLATIONS.de,
-  yPos: number
-): number {
+function renderHints(doc: jsPDF, t: typeof TRANSLATIONS.de, yPos: number): number {
+  // Platz für Hinweis
+  yPos = ensureSpace(doc, yPos, 6);
+
   // Only show result hint (no SR explanation)
   doc.setFontSize(PDF_STYLE.fonts.hint);
   doc.setTextColor(...PDF_STYLE.colors.textMuted);
@@ -335,74 +388,149 @@ function renderHints(
 }
 
 /**
- * Render Participants: Grouped in bordered boxes with global team numbering
+ * Render Participants: Rounded boxes per group, 2 groups side-by-side
+ * Special case: If only 1 group, show all teams in single box without group title
  */
-function renderParticipants(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): number {
+function renderParticipants(
+  doc: jsPDF,
+  schedule: GeneratedSchedule,
+  t: typeof TRANSLATIONS.de,
+  yPos: number
+): number {
+  // Platz für Titel
+  yPos = ensureSpace(doc, yPos, 10);
+
   // Section title
   doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
   doc.setTextColor(...PDF_STYLE.colors.textMain);
   doc.setFont('helvetica', 'bold');
-  doc.text(TRANSLATIONS.de.participants, PDF_STYLE.spacing.pageMargin.left, yPos);
-  yPos += 6;
+  doc.text(t.participants, PDF_STYLE.spacing.pageMargin.left, yPos);
+  yPos += 4;
 
-  // Get unique groups
-  const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
-
-  // Calculate global team numbers
-  const teamNumbers = new Map<string, number>();
-  let globalNumber = 1;
+  // Teams nach Gruppe sortieren
+  const teamsByGroup: Map<string, typeof schedule.teams> = new Map();
   schedule.teams.forEach(team => {
-    teamNumbers.set(team.id, globalNumber++);
+    const groupKey = team.group || 'Alle';
+    if (!teamsByGroup.has(groupKey)) {
+      teamsByGroup.set(groupKey, []);
+    }
+    teamsByGroup.get(groupKey)!.push(team);
   });
 
-  // Render groups in 2-column layout
-  const groupsPerRow = 2;
-  const colWidth = (CONTENT_WIDTH - 4) / groupsPerRow;
-  const boxHeight = 8 + Math.ceil(schedule.teams.length / groups.length) * 5;
+  // Sortiere Teams in jeder Gruppe alphabetisch
+  teamsByGroup.forEach(teams => teams.sort((a, b) => a.name.localeCompare(b.name)));
 
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i];
-    const col = i % groupsPerRow;
-    const row = Math.floor(i / groupsPerRow);
+  const groups = Array.from(teamsByGroup.keys()).sort();
+  const colGap = 6;
+  const colWidth = (CONTENT_WIDTH - colGap) / 2;
+  const boxPadding = 3;
+  const titleHeight = 6;
+  const teamLineHeight = 4;
 
-    const x = PDF_STYLE.spacing.pageMargin.left + col * (colWidth + 4);
-    const y = yPos + row * (boxHeight + 3);
+  let teamCounter = 1;
 
-    // Check page break
-    if (y + boxHeight > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
-      doc.addPage();
-      yPos = PDF_STYLE.spacing.pageMargin.top;
-      return renderParticipants(doc, schedule, yPos);
-    }
+  // Special case: Only 1 group - show all teams in single box without group title
+  if (groups.length === 1) {
+    const allTeams = teamsByGroup.get(groups[0])!;
+    const boxHeight = allTeams.length * teamLineHeight + boxPadding * 2;
 
-    // Group box
-    doc.setDrawColor(...PDF_STYLE.colors.border);
-    doc.setLineWidth(0.3);
-    doc.rect(x, y, colWidth, boxHeight);
+    yPos = ensureSpace(doc, yPos, boxHeight + 4);
+    const rowStartY = yPos;
 
-    // Group title
-    doc.setFillColor(...PDF_STYLE.colors.headBg);
-    doc.rect(x, y, colWidth, 6, 'F');
+    // Single box spanning full width
+    const boxX = PDF_STYLE.spacing.pageMargin.left;
+    doc.setDrawColor(...PDF_STYLE.colors.borderDark);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(boxX, rowStartY, CONTENT_WIDTH, boxHeight, 2, 2);
+
+    // Teams (no title)
+    let currentY = rowStartY + boxPadding + 4;
+    doc.setFontSize(PDF_STYLE.fonts.table - 1);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+
+    allTeams.forEach(team => {
+      doc.text(`${teamCounter}. ${team.name}`, boxX + boxPadding, currentY);
+      currentY += teamLineHeight;
+      teamCounter++;
+    });
+
+    yPos = rowStartY + boxHeight + PDF_STYLE.spacing.sectionGap;
+    return yPos;
+  }
+
+  // Process groups in rows of 2
+  for (let i = 0; i < groups.length; i += 2) {
+    const leftGroup = groups[i];
+    const rightGroup = i + 1 < groups.length ? groups[i + 1] : null;
+
+    const leftTeams = teamsByGroup.get(leftGroup)!;
+    const rightTeams = rightGroup ? teamsByGroup.get(rightGroup)! : [];
+
+    // Calculate box heights
+    const leftBoxHeight = titleHeight + leftTeams.length * teamLineHeight + boxPadding * 2;
+    const rightBoxHeight = rightGroup ? titleHeight + rightTeams.length * teamLineHeight + boxPadding * 2 : 0;
+    const rowHeight = Math.max(leftBoxHeight, rightBoxHeight);
+
+    // Ensure space for this row
+    yPos = ensureSpace(doc, yPos, rowHeight + 4);
+    const rowStartY = yPos;
+
+    // Render left box
+    const leftX = PDF_STYLE.spacing.pageMargin.left;
+    doc.setDrawColor(...PDF_STYLE.colors.borderDark);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(leftX, rowStartY, colWidth, leftBoxHeight, 2, 2);
+
+    // Left group title
+    let currentY = rowStartY + boxPadding + 4;
     doc.setFontSize(PDF_STYLE.fonts.table);
     doc.setTextColor(...PDF_STYLE.colors.textMain);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Gruppe ${group}`, x + colWidth / 2, y + 4, { align: 'center' });
+    const leftTitle = leftGroup !== 'Alle' ? `Gruppe ${leftGroup}` : 'Teilnehmer';
+    doc.text(leftTitle, leftX + boxPadding, currentY);
+    currentY += titleHeight - 2;
 
-    // Teams
-    const groupTeams = schedule.teams.filter(t => t.group === group);
-    doc.setFont('helvetica', 'normal');
+    // Left teams
     doc.setFontSize(PDF_STYLE.fonts.table - 1);
-    groupTeams.forEach((team, idx) => {
-      const teamNum = teamNumbers.get(team.id) || 0;
-      const teamY = y + 6 + 2 + idx * 5;
-      doc.text(`${teamNum}. ${team.name}`, x + 2, teamY + 3);
+    doc.setFont('helvetica', 'normal');
+    leftTeams.forEach(team => {
+      doc.text(`${teamCounter}. ${team.name}`, leftX + boxPadding, currentY);
+      currentY += teamLineHeight;
+      teamCounter++;
     });
+
+    // Render right box (if exists)
+    if (rightGroup) {
+      const rightX = PDF_STYLE.spacing.pageMargin.left + colWidth + colGap;
+      doc.setDrawColor(...PDF_STYLE.colors.borderDark);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(rightX, rowStartY, colWidth, rightBoxHeight, 2, 2);
+
+      // Right group title
+      currentY = rowStartY + boxPadding + 4;
+      doc.setFontSize(PDF_STYLE.fonts.table);
+      doc.setTextColor(...PDF_STYLE.colors.textMain);
+      doc.setFont('helvetica', 'bold');
+      const rightTitle = rightGroup !== 'Alle' ? `Gruppe ${rightGroup}` : 'Teilnehmer';
+      doc.text(rightTitle, rightX + boxPadding, currentY);
+      currentY += titleHeight - 2;
+
+      // Right teams
+      doc.setFontSize(PDF_STYLE.fonts.table - 1);
+      doc.setFont('helvetica', 'normal');
+      rightTeams.forEach(team => {
+        doc.text(`${teamCounter}. ${team.name}`, rightX + boxPadding, currentY);
+        currentY += teamLineHeight;
+        teamCounter++;
+      });
+    }
+
+    // Move to next row
+    yPos = rowStartY + rowHeight + 4;
   }
 
-  // Calculate final yPos
-  const totalRows = Math.ceil(groups.length / groupsPerRow);
-  yPos += totalRows * (boxHeight + 3) + PDF_STYLE.spacing.sectionGap;
-
+  yPos += PDF_STYLE.spacing.sectionGap;
   return yPos;
 }
 
@@ -418,11 +546,12 @@ function renderGroupStage(
   numberOfFields: number,
   yPos: number
 ): number {
-  // Check page break
-  if (yPos + 40 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
-    doc.addPage();
-    yPos = PDF_STYLE.spacing.pageMargin.top;
-  }
+  // Platz für Titel
+  yPos = ensureSpace(doc, yPos, 10);
+
+  // Check how many unique groups exist
+  const uniqueGroups = new Set(matches.map(m => m.group).filter(Boolean));
+  const hasMultipleGroups = uniqueGroups.size > 1;
 
   // Section title
   doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
@@ -437,7 +566,8 @@ function renderGroupStage(
   // Table headers
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
   if (showFieldColumn) headerRow.push(t.field);
-  headerRow.push(t.group, t.home, t.result, t.away);
+  if (hasMultipleGroups) headerRow.push(t.group);
+  headerRow.push(t.home, t.result, t.away);
   if (refereeConfig && refereeConfig.mode !== 'none') {
     headerRow.push(t.referee);
   }
@@ -445,17 +575,10 @@ function renderGroupStage(
 
   // Table data
   const data: RowInput[] = matches.map(match => {
-    const row: CellInput[] = [
-      match.matchNumber.toString(),
-      match.time,
-    ];
+    const row: CellInput[] = [match.matchNumber.toString(), match.time];
     if (showFieldColumn) row.push(match.field.toString());
-    row.push(
-      match.group || '-',
-      match.homeTeam,
-      '___:___',
-      match.awayTeam
-    );
+    if (hasMultipleGroups) row.push(match.group || '-');
+    row.push(match.homeTeam, '     :     ', match.awayTeam);
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');
@@ -469,7 +592,10 @@ function renderGroupStage(
     startY: yPos,
     head: headers,
     body: data,
-    margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
+    margin: {
+      left: PDF_STYLE.spacing.pageMargin.left,
+      right: PDF_STYLE.spacing.pageMargin.right,
+    },
     styles: {
       fontSize: PDF_STYLE.fonts.table,
       cellPadding: 2,
@@ -482,29 +608,23 @@ function renderGroupStage(
       fontStyle: 'bold',
       halign: 'center',
     },
-    columnStyles: showFieldColumn
-      ? {
-          0: { halign: 'center', cellWidth: 10 },  // Nr
-          1: { halign: 'center', cellWidth: 15 },  // Zeit
-          2: { halign: 'center', cellWidth: 15 },  // Feld
-          3: { halign: 'center', cellWidth: 10 },  // Gr
-          4: { halign: 'left' },                   // Heim
-          5: { halign: 'center', cellWidth: 25 },  // Ergebnis
-          6: { halign: 'left' },                   // Gast
-          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 7: { halign: 'center', cellWidth: 15 } } : {}),
-        }
-      : {
-          0: { halign: 'center', cellWidth: 10 },  // Nr
-          1: { halign: 'center', cellWidth: 15 },  // Zeit
-          2: { halign: 'center', cellWidth: 10 },  // Gr
-          3: { halign: 'left' },                   // Heim
-          4: { halign: 'center', cellWidth: 25 },  // Ergebnis
-          5: { halign: 'left' },                   // Gast
-          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 15 } } : {}),
-        },
-    didDrawPage: () => {
-      // Reset yPos after page break
-    },
+    columnStyles: (() => {
+      let colIndex = 0;
+      const styles: any = {};
+
+      styles[colIndex++] = { halign: 'center', cellWidth: 10 }; // Nr
+      styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Zeit
+      if (showFieldColumn) styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Feld
+      if (hasMultipleGroups) styles[colIndex++] = { halign: 'center', cellWidth: 10 }; // Gr
+      styles[colIndex++] = { halign: 'left' }; // Heim
+      styles[colIndex++] = { halign: 'center', cellWidth: 25 }; // Ergebnis
+      styles[colIndex++] = { halign: 'left' }; // Gast
+      if (refereeConfig && refereeConfig.mode !== 'none') {
+        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // SR
+      }
+
+      return styles;
+    })(),
   });
 
   yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
@@ -513,6 +633,7 @@ function renderGroupStage(
 
 /**
  * Render Finals Section: Separate table per phase
+ * Renders matches in their original order (by matchNumber) like in the preview
  */
 function renderFinalsSection(
   doc: jsPDF,
@@ -523,11 +644,8 @@ function renderFinalsSection(
   yPos: number
 ): number {
   phases.forEach(phase => {
-    // Check page break
-    if (yPos + 30 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
-      doc.addPage();
-      yPos = PDF_STYLE.spacing.pageMargin.top;
-    }
+    // Platz für Phasen-Titel
+    yPos = ensureSpace(doc, yPos, 10);
 
     // Phase title
     doc.setFontSize(PDF_STYLE.fonts.phaseTitle);
@@ -536,46 +654,66 @@ function renderFinalsSection(
     doc.text(phase.label, PDF_STYLE.spacing.pageMargin.left, yPos);
     yPos += 2;
 
-    // Separate matches by finalType and render in correct order
-    // Order: main matches (without finalType) > thirdPlace > fifthSixth > seventhEighth > final
-    // Platzierungsspiele kommen VOR dem Finale!
+    // Sort matches by matchNumber to maintain original schedule order
+    const sortedMatches = [...phase.matches].sort((a, b) => a.matchNumber - b.matchNumber);
 
-    // Group matches by finalType
+    // Group consecutive matches with same finalType
     const matchGroups: Array<{ matches: ScheduledMatch[]; subtitle?: string }> = [];
+    let currentGroup: ScheduledMatch[] = [];
+    let currentFinalType: string | undefined = undefined;
 
-    const mainMatches = phase.matches.filter(m => !m.finalType);
-    if (mainMatches.length > 0) {
-      matchGroups.push({ matches: mainMatches });
-    }
+    sortedMatches.forEach((match, index) => {
+      if (match.finalType !== currentFinalType) {
+        // Start new group
+        if (currentGroup.length > 0) {
+          matchGroups.push({
+            matches: currentGroup,
+            subtitle: getSubtitleForFinalType(currentFinalType, t),
+          });
+        }
+        currentGroup = [match];
+        currentFinalType = match.finalType;
+      } else {
+        currentGroup.push(match);
+      }
 
-    const thirdPlaceMatches = phase.matches.filter(m => m.finalType === 'thirdPlace');
-    if (thirdPlaceMatches.length > 0) {
-      matchGroups.push({ matches: thirdPlaceMatches, subtitle: t.thirdPlace });
-    }
+      // Push last group
+      if (index === sortedMatches.length - 1 && currentGroup.length > 0) {
+        matchGroups.push({
+          matches: currentGroup,
+          subtitle: getSubtitleForFinalType(currentFinalType, t),
+        });
+      }
+    });
 
-    const fifthSixthMatches = phase.matches.filter(m => m.finalType === 'fifthSixth');
-    if (fifthSixthMatches.length > 0) {
-      matchGroups.push({ matches: fifthSixthMatches, subtitle: t.fifthSixth });
-    }
-
-    const seventhEighthMatches = phase.matches.filter(m => m.finalType === 'seventhEighth');
-    if (seventhEighthMatches.length > 0) {
-      matchGroups.push({ matches: seventhEighthMatches, subtitle: t.seventhEighth });
-    }
-
-    // Finale kommt ALS LETZTES (nach allen Platzierungsspielen)
-    const finaleMatches = phase.matches.filter(m => m.finalType === 'final');
-    if (finaleMatches.length > 0) {
-      matchGroups.push({ matches: finaleMatches });
-    }
-
-    // Render all match groups in correct order
+    // Render all match groups
     matchGroups.forEach(group => {
       yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, numberOfFields, yPos, group.subtitle);
     });
   });
 
   return yPos;
+}
+
+/**
+ * Get subtitle for finalType
+ */
+function getSubtitleForFinalType(
+  finalType: string | undefined,
+  t: typeof TRANSLATIONS.de
+): string | undefined {
+  if (!finalType) return undefined;
+
+  switch (finalType) {
+    case 'thirdPlace':
+      return t.thirdPlace;
+    case 'fifthSixth':
+      return t.fifthSixth;
+    case 'seventhEighth':
+      return t.seventhEighth;
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -590,17 +728,17 @@ function renderFinalsTable(
   yPos: number,
   subtitle?: string
 ): number {
-  // Subtitle for placement matches
+  const showFieldColumn = numberOfFields > 1;
+
+  // Subtitle für Platzierungsspiele
   if (subtitle) {
+    yPos = ensureSpace(doc, yPos, 8);
     doc.setFontSize(PDF_STYLE.fonts.table);
     doc.setTextColor(...PDF_STYLE.colors.textMuted);
     doc.setFont('helvetica', 'bold');
     doc.text(subtitle, PDF_STYLE.spacing.pageMargin.left, yPos);
-    yPos += 2;
+    yPos += 4; // Mehr Abstand nach Untertitel
   }
-
-  // Determine if we should show field column
-  const showFieldColumn = numberOfFields > 1;
 
   // Table headers
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
@@ -613,16 +751,9 @@ function renderFinalsTable(
 
   // Table data
   const data: RowInput[] = matches.map(match => {
-    const row: CellInput[] = [
-      match.matchNumber.toString(),
-      match.time,
-    ];
+    const row: CellInput[] = [match.matchNumber.toString(), match.time];
     if (showFieldColumn) row.push(match.field.toString());
-    row.push(
-      match.homeTeam,
-      '___:___',
-      match.awayTeam
-    );
+    row.push(match.homeTeam, '     :     ', match.awayTeam);
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');
@@ -636,7 +767,10 @@ function renderFinalsTable(
     startY: yPos,
     head: headers,
     body: data,
-    margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
+    margin: {
+      left: PDF_STYLE.spacing.pageMargin.left,
+      right: PDF_STYLE.spacing.pageMargin.right,
+    },
     styles: {
       fontSize: PDF_STYLE.fonts.table,
       cellPadding: 2,
@@ -651,30 +785,34 @@ function renderFinalsTable(
     },
     columnStyles: showFieldColumn
       ? {
-          0: { halign: 'center', cellWidth: 10 },  // Nr
-          1: { halign: 'center', cellWidth: 15 },  // Zeit
-          2: { halign: 'center', cellWidth: 15 },  // Feld
-          3: { halign: 'left' },                   // Heim
-          4: { halign: 'center', cellWidth: 25 },  // Ergebnis
-          5: { halign: 'left' },                   // Gast
-          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 15 } } : {}),
+          0: { halign: 'center', cellWidth: 10 }, // Nr
+          1: { halign: 'center', cellWidth: 15 }, // Zeit
+          2: { halign: 'center', cellWidth: 15 }, // Feld
+          3: { halign: 'left' },                  // Heim
+          4: { halign: 'center', cellWidth: 25 }, // Ergebnis
+          5: { halign: 'left' },                  // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none'
+            ? { 6: { halign: 'center', cellWidth: 15 } }
+            : {}),
         }
       : {
-          0: { halign: 'center', cellWidth: 10 },  // Nr
-          1: { halign: 'center', cellWidth: 15 },  // Zeit
-          2: { halign: 'left' },                   // Heim
-          3: { halign: 'center', cellWidth: 25 },  // Ergebnis
-          4: { halign: 'left' },                   // Gast
-          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 5: { halign: 'center', cellWidth: 15 } } : {}),
+          0: { halign: 'center', cellWidth: 10 }, // Nr
+          1: { halign: 'center', cellWidth: 15 }, // Zeit
+          2: { halign: 'left' },                  // Heim
+          3: { halign: 'center', cellWidth: 25 }, // Ergebnis
+          4: { halign: 'left' },                  // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none'
+            ? { 5: { halign: 'center', cellWidth: 15 } }
+            : {}),
         },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.blockGap;
+  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
   return yPos;
 }
 
 /**
- * Render Group Standings: 2-column layout with "Tabelle – Gruppe X"
+ * Render Group Standings: einfache Liste von Tabellen
  */
 function renderGroupStandings(
   doc: jsPDF,
@@ -683,56 +821,46 @@ function renderGroupStandings(
   t: typeof TRANSLATIONS.de,
   yPos: number
 ): number {
-  // Get unique groups
+  // Einzigartige Gruppen bestimmen
   const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
   if (groups.length === 0) return yPos;
 
-  // Calculate standings if not provided
+  // Standings-Quelle
   const currentStandings = standings || schedule.initialStandings;
 
-  // Check page break
-  if (yPos + 60 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
-    doc.addPage();
-    yPos = PDF_STYLE.spacing.pageMargin.top;
-  }
+  groups.forEach(group => {
+    // Platz für Titel + Tabelle
+    yPos = ensureSpace(doc, yPos, 12);
 
-  // Render groups in 2-column layout
-  const groupsPerRow = 2;
-  const colGap = 8; // Gap between columns
-  const colWidth = (CONTENT_WIDTH - colGap) / groupsPerRow;
-
-  let currentRowStartY = yPos;
-
-  for (let i = 0; i < groups.length; i++) {
-    const group = groups[i];
-    const col = i % groupsPerRow;
-
-    // Check if we need new row
-    if (col === 0 && i > 0) {
-      currentRowStartY += 55; // Height for previous row
-      if (currentRowStartY + 55 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
-        doc.addPage();
-        currentRowStartY = PDF_STYLE.spacing.pageMargin.top;
-      }
-    }
-
-    const x = PDF_STYLE.spacing.pageMargin.left + col * (colWidth + colGap);
-    const y = currentRowStartY; // Always use current row start Y for both columns
-
-    // Group title: "Tabelle – Gruppe X"
+    // Titel "Tabelle – Gruppe X"
     doc.setFontSize(PDF_STYLE.fonts.groupTitle);
     doc.setTextColor(...PDF_STYLE.colors.textMain);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${t.standings} – Gruppe ${group}`, x, y);
+    doc.text(`${t.standings} – Gruppe ${group}`, PDF_STYLE.spacing.pageMargin.left, yPos);
+    yPos += 2;
 
-    // Get group standings
     const groupTeams = schedule.teams.filter(t => t.group === group);
     const groupStandings = currentStandings
       .filter(s => groupTeams.some(t => t.id === s.team.id))
-      .sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
+      .sort(
+        (a, b) =>
+          b.points - a.points ||
+          b.goalDifference - a.goalDifference ||
+          b.goalsFor - a.goalsFor
+      );
 
-    // Table data
-    const headers: RowInput[] = [[t.pos, t.team, t.played, t.won, t.drawn, t.lost, t.goals, t.diff, t.points]];
+    const headers: RowInput[] = [[
+      t.pos,
+      t.team,
+      t.played,
+      t.won,
+      t.drawn,
+      t.lost,
+      t.goals,
+      t.diff,
+      t.points,
+    ]];
+
     const data: RowInput[] = groupStandings.map((standing, index): CellInput[] => [
       (index + 1).toString(),
       standing.team.name,
@@ -740,18 +868,25 @@ function renderGroupStandings(
       standing.won > 0 ? standing.won.toString() : '',
       standing.drawn > 0 ? standing.drawn.toString() : '',
       standing.lost > 0 ? standing.lost.toString() : '',
-      (standing.goalsFor > 0 || standing.goalsAgainst > 0) ? `${standing.goalsFor}:${standing.goalsAgainst}` : '',
-      standing.goalDifference !== 0 ? (standing.goalDifference > 0 ? `+${standing.goalDifference}` : standing.goalDifference.toString()) : '',
+      standing.goalsFor > 0 || standing.goalsAgainst > 0
+        ? `${standing.goalsFor}:${standing.goalsAgainst}`
+        : '',
+      standing.goalDifference !== 0
+        ? standing.goalDifference > 0
+          ? `+${standing.goalDifference}`
+          : standing.goalDifference.toString()
+        : '',
       standing.points > 0 ? standing.points.toString() : '',
     ]);
 
-    // Render table
     autoTable(doc, {
-      startY: y + 2,
+      startY: yPos,
       head: headers,
       body: data,
-      margin: { left: x, right: PAGE_WIDTH - x - colWidth },
-      tableWidth: colWidth,
+      margin: {
+        left: PDF_STYLE.spacing.pageMargin.left,
+        right: PDF_STYLE.spacing.pageMargin.right,
+      },
       styles: {
         fontSize: PDF_STYLE.fonts.table - 1,
         cellPadding: 1.5,
@@ -765,21 +900,121 @@ function renderGroupStandings(
         halign: 'center',
       },
       columnStyles: {
-        0: { halign: 'center', cellWidth: 8 },   // Pos
-        1: { halign: 'left', cellWidth: 30 },    // Team
-        2: { halign: 'center', cellWidth: 8 },   // Sp
-        3: { halign: 'center', cellWidth: 7 },   // S
-        4: { halign: 'center', cellWidth: 7 },   // U
-        5: { halign: 'center', cellWidth: 7 },   // N
-        6: { halign: 'center', cellWidth: 12 },  // Tore
-        7: { halign: 'center', cellWidth: 10 },  // Diff
-        8: { halign: 'center', cellWidth: 8 },   // Pkt
+        0: { halign: 'center', cellWidth: 8 },  // Pos
+        1: { halign: 'left', cellWidth: 40 },   // Team
+        2: { halign: 'center', cellWidth: 8 },  // Sp
+        3: { halign: 'center', cellWidth: 7 },  // S
+        4: { halign: 'center', cellWidth: 7 },  // U
+        5: { halign: 'center', cellWidth: 7 },  // N
+        6: { halign: 'center', cellWidth: 12 }, // Tore
+        7: { halign: 'center', cellWidth: 10 }, // Diff
+        8: { halign: 'center', cellWidth: 8 },  // Pkt
       },
     });
-  }
 
-  // Final yPos after all standings
-  yPos = currentRowStartY + 55 + PDF_STYLE.spacing.sectionGap;
+    yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap + 4;
+  });
+
+  yPos += PDF_STYLE.spacing.sectionGap;
+  return yPos;
+}
+
+/**
+ * Render Final Ranking: Overall placement at the end of the document
+ */
+function renderFinalRanking(
+  doc: jsPDF,
+  schedule: GeneratedSchedule,
+  standings: Standing[] | undefined,
+  t: typeof TRANSLATIONS.de,
+  _hasGroups: boolean,
+  yPos: number
+): number {
+  // Platz für Titel + Tabelle
+  yPos = ensureSpace(doc, yPos, 12);
+
+  // Section title
+  doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
+  doc.setTextColor(...PDF_STYLE.colors.textMain);
+  doc.setFont('helvetica', 'bold');
+  doc.text(t.finalRanking, PDF_STYLE.spacing.pageMargin.left, yPos);
+  yPos += 2;
+
+  const currentStandings = standings || schedule.initialStandings;
+
+  // Sort all teams by points, goal difference, etc.
+  const finalStandings = [...currentStandings].sort(
+    (a, b) =>
+      b.points - a.points ||
+      b.goalDifference - a.goalDifference ||
+      b.goalsFor - a.goalsFor
+  );
+
+  // Table data
+  const headers: RowInput[] = [[
+    t.pos,
+    t.team,
+    t.played,
+    t.won,
+    t.drawn,
+    t.lost,
+    t.goals,
+    t.diff,
+    t.points,
+  ]];
+  const data: RowInput[] = finalStandings.map((standing, index): CellInput[] => [
+    (index + 1).toString(),
+    standing.team.name,
+    standing.played > 0 ? standing.played.toString() : '',
+    standing.won > 0 ? standing.won.toString() : '',
+    standing.drawn > 0 ? standing.drawn.toString() : '',
+    standing.lost > 0 ? standing.lost.toString() : '',
+    standing.goalsFor > 0 || standing.goalsAgainst > 0
+      ? `${standing.goalsFor}:${standing.goalsAgainst}`
+      : '',
+    standing.goalDifference !== 0
+      ? standing.goalDifference > 0
+        ? `+${standing.goalDifference}`
+        : standing.goalDifference.toString()
+      : '',
+    standing.points > 0 ? standing.points.toString() : '',
+  ]);
+
+  // Render table
+  autoTable(doc, {
+    startY: yPos,
+    head: headers,
+    body: data,
+    margin: {
+      left: PDF_STYLE.spacing.pageMargin.left,
+      right: PDF_STYLE.spacing.pageMargin.right,
+    },
+    styles: {
+      fontSize: PDF_STYLE.fonts.table - 1,
+      cellPadding: 1.5,
+      lineColor: PDF_STYLE.colors.border,
+      lineWidth: 0.3,
+    },
+    headStyles: {
+      fillColor: PDF_STYLE.colors.headBg,
+      textColor: PDF_STYLE.colors.textMain,
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 8 },  // Pos
+      1: { halign: 'left', cellWidth: 40 },   // Team
+      2: { halign: 'center', cellWidth: 8 },  // Sp
+      3: { halign: 'center', cellWidth: 7 },  // S
+      4: { halign: 'center', cellWidth: 7 },  // U
+      5: { halign: 'center', cellWidth: 7 },  // N
+      6: { halign: 'center', cellWidth: 12 }, // Tore
+      7: { halign: 'center', cellWidth: 10 }, // Diff
+      8: { halign: 'center', cellWidth: 8 },  // Pkt
+    },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
 
   return yPos;
 }

@@ -94,48 +94,54 @@ GeneratedSchedule {
 - Modularer Aufbau mit separaten Render-Funktionen
 
 **Hauptfunktion:**
-- `exportScheduleToPDF(schedule, standings?, options)` - Zeile 129-190
+- `exportScheduleToPDF(schedule, standings?, options)` - Zeile 129-206
   - Parameter: GeneratedSchedule, Standing[] | undefined, PDFExportOptions
   - Options: locale, includeStandings, organizerName, hallName
   - Erstellt PDF mit allen Sektionen
 
 **Render-Funktionen:**
-1. `renderHeader(doc, schedule, yPos)` - Zeile 196-218
-   - **Dynamischer Titel**: schedule.tournament.title (z.B. "Wieninger-Libella-Hallenturniere 2025/2026")
-   - Untertitel: schedule.tournament.ageClass (z.B. "U12")
+1. `renderHeader(doc, schedule, yPos)` - Zeile 215-237
+   - **Dynamischer Titel**: schedule.tournament.title (zentriert)
+   - Untertitel: schedule.tournament.ageClass
 
-2. `renderMetaBox(doc, schedule, t, organizerName, hallName, yPos)` - Zeile 220-308
-   - 4-Spalten Grid Layout
-   - Row 1: Veranstalter | Halle | Spielzeit | Modus
-   - Row 2: Spieltag | Zeit | Pause
-   - Row 3: Altersklasse
+2. `renderMetaBox(doc, schedule, t, organizerName, hallName, yPos)` - Zeile 247-358
+   - **2-Spalten Layout** mit einzelnem abgerundeten Rahmen
+   - Linke Spalte: Veranstalter, Halle, Spieltag, Zeit
+   - Rechte Spalte: Modus, Spielzeit, Pause
+   - Labels dynamisch mit ":" versehen (Zeile 342, 359)
+   - Automatische Label-Breiten-Berechnung für Ausrichtung
 
-3. `renderHints(doc, t, refereeConfig, yPos)` - Zeile 310-339
-   - SR-Erklärung (wenn SR aktiv)
-   - Ergebniseintragung-Hinweis
+3. `renderHints(doc, t, yPos)` - Zeile 363-376
+   - Nur Ergebniseintragung-Hinweis (SR-Erklärung entfernt)
 
-4. `renderParticipants(doc, schedule, yPos)` - Zeile 341-411
-   - Gruppiert in bordered Boxen
-   - **Globale Team-Nummerierung** (1-10, nicht 1-5 pro Gruppe)
-   - 2-Spalten Layout
+4. `renderParticipants(doc, schedule, t, yPos)` - Zeile 382-523
+   - **Spezialfall für 1 Gruppe** (Zeile 421-448): Volle Breite, kein Gruppentitel
+   - **Multi-Gruppe** (Zeile 450-519): 2 Gruppen nebeneinander in Boxen
+   - **Kontinuierliche Team-Nummerierung** (Zeile 418, 429): 1, 2, 3... über alle Gruppen
+   - Alphabetische Sortierung innerhalb Gruppen (Zeile 409)
+   - Gruppen alphabetisch sortiert (Zeile 411)
 
-5. `renderGroupStage(doc, matches, hasGroups, t, refereeConfig, yPos)` - Zeile 413-497
-   - Vorrunde-Tabelle: Nr | Zeit | Feld | Gr | Heim | Ergebnis | Gast | SR (optional)
-   - Alle Gruppenspiele in einer Tabelle
+5. `renderGroupStage(doc, matches, hasGroups, t, refereeConfig, numberOfFields, yPos)` - Zeile 528-620
+   - Vorrunde-Tabelle: Nr | Zeit | Feld (optional) | Gr (optional) | Heim | Ergebnis | Gast | SR (optional)
+   - Feld-Spalte nur bei numberOfFields > 1 (Zeile 552)
+   - Gruppen-Spalte nur bei mehreren Gruppen (Zeile 541-542)
 
-6. `renderFinalsSection(doc, phases, t, refereeConfig, yPos)` - Zeile 499-547
-   - Separate Tabelle pro Phase (Achtelfinale, Viertelfinale, Halbfinale)
+6. `renderFinalsSection(doc, phases, t, refereeConfig, numberOfFields, yPos)` - Zeile 626-684
+   - Phasentitel linksbündig (Zeile 642)
+   - Sortiert Matches nach matchNumber (Zeile 646)
+   - Gruppiert aufeinanderfolgende Matches mit gleichem finalType (Zeile 649-675)
    - Separate Sub-Tabellen für Platzierungsspiele (Platz 3, 5, 7)
-   - Finale in eigener Tabelle
 
-7. `renderFinalsTable(doc, matches, t, refereeConfig, yPos, subtitle?)` - Zeile 549-624
-   - Single finals table mit optionalem Subtitle
-   - Nr | Zeit | Feld | Heim | Ergebnis | Gast | SR (optional)
+7. `renderFinalsTable(doc, matches, t, refereeConfig, numberOfFields, yPos, subtitle?)` - Zeile 710-800
+   - Optional Subtitle für Platzierungsspiele (Zeile 722-729)
+   - Nr | Zeit | Feld (optional) | Heim | Ergebnis | Gast | SR (optional)
+   - Dynamische Column-Styles basierend auf numberOfFields
 
-8. `renderGroupStandings(doc, schedule, standings, t, yPos)` - Zeile 626-735
-   - 2-Spalten Layout
+8. `renderGroupStandings(doc, schedule, standings, t, yPos)` - Zeile 805-908
+   - Separate Tabelle pro Gruppe
    - Format: "Tabelle – Gruppe X"
    - Pl | Team | Sp | S | U | N | Tore | Diff | Pkt
+   - 4mm zusätzlicher Abstand zwischen Gruppen (Zeile 903)
 
 **PDF Style Configuration:**
 ```typescript
@@ -266,6 +272,30 @@ PlacementCriterion {
 **Editable Mode:**
 - Props werden an Child-Components durchgereicht
 - onRefereeChange und onFieldChange werden an GroupStageSchedule/FinalStageSchedule übergeben
+
+---
+
+### `/src/components/schedule/ParticipantsAndGroups.tsx` - Teilnehmer-Anzeige
+**Zweck**: Zeigt Teams nach Gruppen organisiert mit kontinuierlicher Nummerierung
+
+**Wichtige Features:**
+- Zeile 24-34: **Kontinuierliche Team-Nummerierung** über alle Gruppen hinweg
+  - Erstellt teamNumberMap mit fortlaufenden Nummern (1, 2, 3...)
+  - Wichtig für "Teams stellen Schiedsrichter" Modus (Team-Nummer = SR-Nummer)
+- Zeile 80-81: **Spezialfall einzelne Gruppe** - Gruppentitel wird ausgeblendet
+- Zeile 89: Gruppentitel nur anzeigen wenn showGroupTitles = true
+- Zeile 115-131: `getGroupStandings()` Funktion
+  - Zeile 122: Gruppen alphabetisch sortiert
+  - Zeile 130: Teams alphabetisch innerhalb Gruppe sortiert
+  - **Wichtig**: Sortierung muss mit PDF-Export übereinstimmen!
+
+**Team-Nummerierung Logik:**
+```typescript
+// 1. Gruppen alphabetisch sortieren (A, B, C...)
+// 2. Teams innerhalb Gruppe alphabetisch sortieren
+// 3. Durchgehende Nummerierung: Gruppe A (1-5), Gruppe B (6-10)...
+// → Identisch mit PDF-Export für konsistente SR-Nummern
+```
 
 ---
 
