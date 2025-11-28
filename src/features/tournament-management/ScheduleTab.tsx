@@ -30,6 +30,29 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   onTournamentUpdate,
 }) => {
   const handleScoreChange = (matchId: string, scoreA: number, scoreB: number) => {
+    // Prüfe, ob das Spiel gerade live läuft
+    const liveMatchesData = localStorage.getItem(`liveMatches-${tournament.id}`);
+    if (liveMatchesData) {
+      try {
+        const liveMatches = JSON.parse(liveMatchesData);
+        const liveMatch = liveMatches[matchId];
+
+        if (liveMatch && liveMatch.status === 'RUNNING') {
+          const confirmEdit = window.confirm(
+            '⚠️ WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\n' +
+            'Wenn Sie hier das Ergebnis ändern, wird es die Live-Verwaltung überschreiben.\n\n' +
+            'Möchten Sie trotzdem fortfahren?'
+          );
+
+          if (!confirmEdit) {
+            return; // Abbrechen
+          }
+        }
+      } catch (e) {
+        console.error('Error checking live matches:', e);
+      }
+    }
+
     // Update tournament matches
     const updatedMatches = tournament.matches.map((match) =>
       match.id === matchId ? { ...match, scoreA, scoreB } : match
