@@ -24,6 +24,7 @@ interface CurrentMatchPanelProps {
   onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
   onUndoLastEvent(matchId: string): void;
   onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
+  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
   onLoadNextMatch(fieldId: string): void;
   onReopenLastMatch(fieldId: string): void;
 }
@@ -37,6 +38,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onGoal,
   onUndoLastEvent,
   onManualEditResult,
+  onAdjustTime,
   onLoadNextMatch,
   onReopenLastMatch,
 }) => {
@@ -101,6 +103,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
             onStart={onStart}
             onPause={onPause}
             onFinish={onFinish}
+            onAdjustTime={onAdjustTime}
           />
 
           {/* FINISH PANEL */}
@@ -256,9 +259,10 @@ interface ScoreboardProps {
   onStart(matchId: string): void;
   onPause(matchId: string): void;
   onFinish(matchId: string): void;
+  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onFinish }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onFinish, onAdjustTime }) => {
   const scoreboardStyle: CSSProperties = {
     marginTop: theme.spacing.sm,
     display: 'grid',
@@ -279,6 +283,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
 
       {/* CENTER */}
       <CenterBlock
+        matchId={match.id}
         elapsedSeconds={match.elapsedSeconds}
         durationSeconds={match.durationSeconds}
         status={match.status}
@@ -290,6 +295,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             onFinish(match.id);
           }
         }}
+        onAdjustTime={onAdjustTime}
       />
 
       {/* AWAY TEAM */}
@@ -375,6 +381,7 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align
 };
 
 interface CenterBlockProps {
+  matchId: string;
   elapsedSeconds: number;
   durationSeconds: number;
   status: MatchStatus;
@@ -382,9 +389,11 @@ interface CenterBlockProps {
   onStart(): void;
   onPause(): void;
   onFinish(): void;
+  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 }
 
 const CenterBlock: React.FC<CenterBlockProps> = ({
+  matchId,
   elapsedSeconds,
   durationSeconds,
   status,
@@ -392,6 +401,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   onStart,
   onPause,
   onFinish,
+  onAdjustTime,
 }) => {
   const blockStyle: CSSProperties = {
     display: 'flex',
@@ -410,6 +420,8 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
     border: `1px solid ${theme.colors.border}`,
     background: 'radial-gradient(circle at top, rgba(15, 23, 42, 0.98), #020617)',
     boxShadow: `0 0 25px ${theme.colors.primary}40`,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   };
 
   const phaseLabelStyle: CSSProperties = {
@@ -447,9 +459,32 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
 
   const minutes = Math.floor(durationSeconds / 60);
 
+  const handleTimeClick = () => {
+    const input = prompt(
+      `Neue Spielzeit eingeben (Format: MM:SS)`,
+      formatTime(elapsedSeconds)
+    );
+    if (!input) return;
+
+    const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
+    if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
+      alert('Ungültiges Format. Bitte z.B. 5:30 eingeben.');
+      return;
+    }
+
+    const newElapsedSeconds = parts[0] * 60 + parts[1];
+    onAdjustTime(matchId, newElapsedSeconds);
+  };
+
   return (
     <div style={blockStyle}>
-      <div style={timerStyle}>{formatTime(elapsedSeconds)}</div>
+      <div
+        style={timerStyle}
+        onClick={handleTimeClick}
+        title="Klicken zum Bearbeiten der Zeit"
+      >
+        {formatTime(elapsedSeconds)}
+      </div>
       <div style={phaseLabelStyle}>
         {phaseLabel} · {minutes}:00 Min
       </div>

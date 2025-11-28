@@ -89,6 +89,7 @@ export interface MatchCockpitProps {
   onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
   onUndoLastEvent(matchId: string): void;
   onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
+  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 
   onLoadNextMatch(fieldId: string): void;
   onReopenLastMatch(fieldId: string): void;
@@ -111,6 +112,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   onGoal,
   onUndoLastEvent,
   onManualEditResult,
+  onAdjustTime,
   onLoadNextMatch,
   onReopenLastMatch,
 }) => {
@@ -198,6 +200,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           onGoal={onGoal}
           onUndoLastEvent={onUndoLastEvent}
           onManualEditResult={onManualEditResult}
+          onAdjustTime={onAdjustTime}
           onLoadNextMatch={onLoadNextMatch}
           onReopenLastMatch={onReopenLastMatch}
         />

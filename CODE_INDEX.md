@@ -444,18 +444,19 @@ PlacementCriterion {
 
 **Komponenten:**
 1. `MatchCockpit.tsx` - Hauptkomponente (Layout + Header)
-   - Props: fieldName, tournamentName, currentMatch, upcomingMatches, callbacks
+   - Props: fieldName, tournamentName, currentMatch, upcomingMatches, callbacks, onAdjustTime
    - Zeile 120-140: Header mit Turnier/Feld-Name und Status-Chips
    - Zeile 165-190: Main-Layout (2-spaltig: CurrentMatchPanel + UpcomingMatchesSidebar)
    - Zeile 206-232: StatusChip und WarningChip Komponenten
 
 2. `CurrentMatchPanel.tsx` - Aktuelles Spiel Panel
-   - Props: currentMatch, lastFinishedMatch, callbacks
+   - Props: currentMatch, lastFinishedMatch, callbacks, onAdjustTime
    - Zeile 60-90: LastMatchBanner (Wiedereröffnen letztes Spiel)
    - Zeile 110-145: MatchMeta (Schiedsrichter, Spiel-ID, Dauer)
    - Zeile 160-200: Scoreboard (3-spaltig: Home | Center | Away)
    - Zeile 220-265: TeamBlock (Name, Score, Tor-Buttons)
-   - Zeile 280-350: CenterBlock (Timer, Status, Controls)
+   - Zeile 280-350: CenterBlock (Timer, Status, Controls, **Zeit-Editor**)
+   - Zeile 462-477: **handleTimeClick()** - Manuelle Zeitanpassung mit MM:SS Format
    - Zeile 370-420: FinishPanel (bei Spielende)
    - Zeile 440-510: EventsList (Ereignisse mit Undo)
 
@@ -498,6 +499,7 @@ interface MatchEvent {
 **Features:**
 - ⚽ Live-Scoreboard mit Team-Blöcken
 - ⏱️ Timer (gesteuert von außen via elapsedSeconds Prop)
+- ⌚ **Klickbarer Timer** - Manuelle Zeitanpassung (Format: MM:SS)
 - 🎮 Spiel-Controls (Start, Pause, Beenden)
 - ➕ Tor-Buttons (+1/-1 pro Team)
 - 📜 Event-Liste mit Undo-Funktion
@@ -531,6 +533,101 @@ function mapToLiveMatch(scheduledMatch: ScheduledMatch, liveData: LiveData): Liv
   };
 }
 ```
+
+---
+
+### `/src/features/tournament-management/` - Live-Turnierverwaltung
+**Zweck**: Verwaltung veröffentlichter Turniere mit Tabs für verschiedene Ansichten
+
+**Hauptkomponenten:**
+
+1. **TournamentManagementScreen.tsx** - Container mit Tab-Navigation
+   - Tabs: Spielplan, Gruppen-Tabelle, Platzierung, Turnierleitung, Monitor
+   - Zeile 43-147: Tournament Loading mit Migration für alte Turniere
+   - Zeile 104-128: **ID-Synchronisierung** zwischen tournament.matches und schedule
+   - Zeile 149-201: handleTournamentUpdate() - Zentrale Update-Funktion
+   - Zeile 162-193: Bedingte Schedule-Regenerierung (regenerateSchedule flag)
+
+2. **ManagementTab.tsx** - Turnierleitung (Kampfgericht)
+   - Live-Spielverwaltung mit MatchCockpit
+   - Zeile 39-56: LiveMatch State Management in localStorage
+   - Zeile 59-80: Timer für laufende Spiele (1-Sekunden-Interval)
+   - Zeile 158-190: **getLiveMatchData()** - Erstellt LiveMatch sofort bei Zugriff
+   - Zeile 214-244: handleStart() - Status → RUNNING
+   - Zeile 247-277: handlePause() - Status → PAUSED
+   - Zeile 280-335: handleFinish() - Status → FINISHED, speichert Ergebnis
+   - Zeile 338-375: handleGoal() - Torzählung mit MatchEvent
+   - Zeile 378-402: handleUndoLastEvent() - Rückgängig letztes Event
+   - Zeile 405-437: handleManualEditResult() - Manuelles Ergebnis
+   - Zeile 477-495: **handleAdjustTime()** - Manuelle Zeitanpassung
+   - Zeile 145-156: **Match-Selektor** - Automatisch oder manuell auswählbar
+   - Zeile 496-514: Match Selector UI mit Dropdown
+
+3. **ScheduleTab.tsx** - Bearbeitbarer Spielplan
+   - Zeile 35-47: handleScoreChange() - Direkte Ergebniseingabe in Tabelle
+   - Zeile 49-71: handleRefereeAssignment() - SR-Zuweisung
+   - Zeile 87-99: handleFieldChange() - Feld-Zuweisung
+   - Zeile 111-119: ScheduleDisplay mit editable=true
+
+4. **TableTab.tsx** - Gruppen-Tabellen
+   - Zeigt aktuelle Tabellenstände pro Gruppe
+   - Live-Berechnung nach jedem Ergebnis
+
+5. **RankingTab.tsx** - Finale Platzierung
+   - Zeile 98-174: **getFinalRanking()** - Berechnet Endplatzierung
+   - Zeile 99-103: Jeder-gegen-Jeden → currentStandings
+   - Zeile 105-173: Gruppenturniere → Erst Gruppensieger, dann beste Zweite
+   - Zeile 181-183: Fullscreen Button für Monitor-Modus
+
+6. **MonitorTab.tsx** - Zuschauer-Ansicht
+   - Große Anzeige für Publikum
+   - Zeigt aktuelle Tabellen und Ergebnisse
+
+**LiveMatch State Management:**
+```typescript
+// ManagementTab.tsx
+const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(() => {
+  const stored = localStorage.getItem(`liveMatches-${tournament.id}`);
+  return stored ? new Map(Object.entries(JSON.parse(stored))) : new Map();
+});
+
+// Persistierung
+useEffect(() => {
+  const obj = Object.fromEntries(liveMatches.entries());
+  localStorage.setItem(`liveMatches-${tournament.id}`, JSON.stringify(obj));
+}, [liveMatches, tournament.id]);
+```
+
+**MatchEvent Structure:**
+```typescript
+interface MatchEvent {
+  id: string;
+  matchId: string;
+  timestampSeconds: number;  // Spielzeit bei Event
+  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE';
+  payload: {
+    teamId?: string;
+    direction?: 'INC' | 'DEC';
+    newHomeScore?: number;
+    newAwayScore?: number;
+    toStatus?: MatchStatus;
+  };
+  scoreAfter: {
+    home: number;
+    away: number;
+  };
+}
+```
+
+**Features:**
+- 🎮 Live-Spielsteuerung pro Feld
+- 🔄 Automatische Spielprogression nach Spielende
+- 📝 Match-Selektor für nachträgliche Bearbeitung
+- ⏱️ Manuelle Zeitanpassung (MM:SS Format)
+- 💾 Persistierung in localStorage
+- 📊 Live-Tabellen mit Auto-Update
+- 🏆 Finale Platzierungsberechnung
+- 📺 Monitor-Modus für Publikum
 
 ---
 
@@ -821,6 +918,19 @@ PDF_STYLE.spacing: pageMargin, sectionGap, blockGap
 - Gruppierte Teilnehmer-Anzeige
 - Gruppen-Tabellen mit Live-Berechnung
 
+### ✅ Tournament Management (NEU)
+- Live-Turnierverwaltung mit Tab-Navigation
+- Turnierleitung (Kampfgericht) mit MatchCockpit
+- Match-Selektor für flexible Spielauswahl
+- Manuelle Zeitanpassung (klickbarer Timer)
+- LiveMatch State mit localStorage-Persistierung
+- MatchEvent-System für vollständige Event-Historie
+- Automatische Spielprogression
+- Live-Tabellen mit Auto-Update
+- Finale Platzierungsberechnung (Gruppensieger-Logik)
+- Monitor-Modus für Publikum
+- Bearbeitbarer Spielplan mit direkter Ergebniseingabe
+
 ---
 
 ## 🔗 Wichtigste Abhängigkeiten
@@ -854,5 +964,5 @@ TournamentPreview
 
 ---
 
-**Last Updated**: 2025-11-28
-**Version**: 2.0 (PDF Export + Feld-Management + Platzierungs-Logik)
+**Last Updated**: 2025-11-29
+**Version**: 2.1 (Tournament Management + Live-Spielverwaltung + Zeit-Editor)

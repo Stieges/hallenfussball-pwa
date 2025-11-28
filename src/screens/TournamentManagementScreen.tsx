@@ -373,7 +373,11 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         )}
 
         {activeTab === 'management' && (
-          <ManagementTab tournament={tournament} schedule={schedule} />
+          <ManagementTab
+            tournament={tournament}
+            schedule={schedule}
+            onTournamentUpdate={handleTournamentUpdate}
+          />
         )}
 
         {activeTab === 'monitor' && (
