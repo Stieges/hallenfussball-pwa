@@ -169,7 +169,7 @@ export async function exportScheduleToPDF(
   // 5. Group Stage Matches
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   if (groupPhase) {
-    yPos = renderGroupStage(doc, groupPhase.matches, hasGroups, t, schedule.refereeConfig, yPos);
+    yPos = renderGroupStage(doc, groupPhase.matches, hasGroups, t, schedule.refereeConfig, schedule.numberOfFields, yPos);
   }
 
   // 6. Group Standings Tables
@@ -180,7 +180,7 @@ export async function exportScheduleToPDF(
   // 7. Finals Sections (separate table per phase)
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   if (finalPhases.length > 0) {
-    yPos = renderFinalsSection(doc, finalPhases, t, schedule.refereeConfig, yPos);
+    yPos = renderFinalsSection(doc, finalPhases, t, schedule.refereeConfig, schedule.numberOfFields, yPos);
   }
 
   // Save PDF
@@ -265,16 +265,16 @@ function renderMetaBox(
   // Helper function to render label-value pair
   const renderCell = (col: number, row: number, label: string, value: string) => {
     const x = PDF_STYLE.spacing.pageMargin.left + colWidth * col + 2;
-    const y = startY + rowHeight * row + 2;
+    const y = startY + rowHeight * row;
 
     doc.setFontSize(PDF_STYLE.fonts.meta);
     doc.setTextColor(...PDF_STYLE.colors.textMuted);
     doc.setFont('helvetica', 'normal');
-    doc.text(label, x, y + 2);
+    doc.text(label, x, y + 3);
 
     doc.setTextColor(...PDF_STYLE.colors.textMain);
     doc.setFont('helvetica', 'bold');
-    doc.text(value, x, y + 5);
+    doc.text(value, x, y + 5.5);
   };
 
   // Get duration values from first group stage match
@@ -415,6 +415,7 @@ function renderGroupStage(
   _hasGroups: boolean,
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
+  numberOfFields: number,
   yPos: number
 ): number {
   // Check page break
@@ -430,8 +431,13 @@ function renderGroupStage(
   doc.text(t.groupStage, PDF_STYLE.spacing.pageMargin.left, yPos);
   yPos += 2;
 
+  // Determine if we should show field column
+  const showFieldColumn = numberOfFields > 1;
+
   // Table headers
-  const headerRow: CellInput[] = [t.nr, t.timeHeader, t.field, t.group, t.home, t.result, t.away];
+  const headerRow: CellInput[] = [t.nr, t.timeHeader];
+  if (showFieldColumn) headerRow.push(t.field);
+  headerRow.push(t.group, t.home, t.result, t.away);
   if (refereeConfig && refereeConfig.mode !== 'none') {
     headerRow.push(t.referee);
   }
@@ -442,12 +448,14 @@ function renderGroupStage(
     const row: CellInput[] = [
       match.matchNumber.toString(),
       match.time,
-      match.field.toString(),
+    ];
+    if (showFieldColumn) row.push(match.field.toString());
+    row.push(
       match.group || '-',
       match.homeTeam,
       '___:___',
-      match.awayTeam,
-    ];
+      match.awayTeam
+    );
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');
@@ -474,16 +482,26 @@ function renderGroupStage(
       fontStyle: 'bold',
       halign: 'center',
     },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 10 },  // Nr
-      1: { halign: 'center', cellWidth: 15 },  // Zeit
-      2: { halign: 'center', cellWidth: 15 },  // Feld (verbreitert)
-      3: { halign: 'center', cellWidth: 10 },  // Gr
-      4: { halign: 'left' },                   // Heim
-      5: { halign: 'center', cellWidth: 25 },  // Ergebnis (verbreitert)
-      6: { halign: 'left' },                   // Gast
-      ...(refereeConfig && refereeConfig.mode !== 'none' ? { 7: { halign: 'center', cellWidth: 15 } } : {}),
-    },
+    columnStyles: showFieldColumn
+      ? {
+          0: { halign: 'center', cellWidth: 10 },  // Nr
+          1: { halign: 'center', cellWidth: 15 },  // Zeit
+          2: { halign: 'center', cellWidth: 15 },  // Feld
+          3: { halign: 'center', cellWidth: 10 },  // Gr
+          4: { halign: 'left' },                   // Heim
+          5: { halign: 'center', cellWidth: 25 },  // Ergebnis
+          6: { halign: 'left' },                   // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 7: { halign: 'center', cellWidth: 15 } } : {}),
+        }
+      : {
+          0: { halign: 'center', cellWidth: 10 },  // Nr
+          1: { halign: 'center', cellWidth: 15 },  // Zeit
+          2: { halign: 'center', cellWidth: 10 },  // Gr
+          3: { halign: 'left' },                   // Heim
+          4: { halign: 'center', cellWidth: 25 },  // Ergebnis
+          5: { halign: 'left' },                   // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 15 } } : {}),
+        },
     didDrawPage: () => {
       // Reset yPos after page break
     },
@@ -501,6 +519,7 @@ function renderFinalsSection(
   phases: Array<{ name: string; label: string; matches: ScheduledMatch[] }>,
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
+  numberOfFields: number,
   yPos: number
 ): number {
   phases.forEach(phase => {
@@ -518,7 +537,8 @@ function renderFinalsSection(
     yPos += 2;
 
     // Separate matches by finalType and render in correct order
-    // Order: main matches (without finalType) > final > thirdPlace > fifthSixth > seventhEighth
+    // Order: main matches (without finalType) > thirdPlace > fifthSixth > seventhEighth > final
+    // Platzierungsspiele kommen VOR dem Finale!
 
     // Group matches by finalType
     const matchGroups: Array<{ matches: ScheduledMatch[]; subtitle?: string }> = [];
@@ -526,11 +546,6 @@ function renderFinalsSection(
     const mainMatches = phase.matches.filter(m => !m.finalType);
     if (mainMatches.length > 0) {
       matchGroups.push({ matches: mainMatches });
-    }
-
-    const finaleMatches = phase.matches.filter(m => m.finalType === 'final');
-    if (finaleMatches.length > 0) {
-      matchGroups.push({ matches: finaleMatches });
     }
 
     const thirdPlaceMatches = phase.matches.filter(m => m.finalType === 'thirdPlace');
@@ -548,9 +563,15 @@ function renderFinalsSection(
       matchGroups.push({ matches: seventhEighthMatches, subtitle: t.seventhEighth });
     }
 
+    // Finale kommt ALS LETZTES (nach allen Platzierungsspielen)
+    const finaleMatches = phase.matches.filter(m => m.finalType === 'final');
+    if (finaleMatches.length > 0) {
+      matchGroups.push({ matches: finaleMatches });
+    }
+
     // Render all match groups in correct order
     matchGroups.forEach(group => {
-      yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, yPos, group.subtitle);
+      yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, numberOfFields, yPos, group.subtitle);
     });
   });
 
@@ -565,6 +586,7 @@ function renderFinalsTable(
   matches: ScheduledMatch[],
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
+  numberOfFields: number,
   yPos: number,
   subtitle?: string
 ): number {
@@ -577,8 +599,13 @@ function renderFinalsTable(
     yPos += 2;
   }
 
+  // Determine if we should show field column
+  const showFieldColumn = numberOfFields > 1;
+
   // Table headers
-  const headerRow: CellInput[] = [t.nr, t.timeHeader, t.field, t.home, t.result, t.away];
+  const headerRow: CellInput[] = [t.nr, t.timeHeader];
+  if (showFieldColumn) headerRow.push(t.field);
+  headerRow.push(t.home, t.result, t.away);
   if (refereeConfig && refereeConfig.mode !== 'none') {
     headerRow.push(t.referee);
   }
@@ -589,11 +616,13 @@ function renderFinalsTable(
     const row: CellInput[] = [
       match.matchNumber.toString(),
       match.time,
-      match.field.toString(),
+    ];
+    if (showFieldColumn) row.push(match.field.toString());
+    row.push(
       match.homeTeam,
       '___:___',
-      match.awayTeam,
-    ];
+      match.awayTeam
+    );
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');
@@ -620,15 +649,24 @@ function renderFinalsTable(
       fontStyle: 'bold',
       halign: 'center',
     },
-    columnStyles: {
-      0: { halign: 'center', cellWidth: 10 },  // Nr
-      1: { halign: 'center', cellWidth: 15 },  // Zeit
-      2: { halign: 'center', cellWidth: 15 },  // Feld (verbreitert)
-      3: { halign: 'left' },                   // Heim
-      4: { halign: 'center', cellWidth: 25 },  // Ergebnis (verbreitert)
-      5: { halign: 'left' },                   // Gast
-      ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 15 } } : {}),
-    },
+    columnStyles: showFieldColumn
+      ? {
+          0: { halign: 'center', cellWidth: 10 },  // Nr
+          1: { halign: 'center', cellWidth: 15 },  // Zeit
+          2: { halign: 'center', cellWidth: 15 },  // Feld
+          3: { halign: 'left' },                   // Heim
+          4: { halign: 'center', cellWidth: 25 },  // Ergebnis
+          5: { halign: 'left' },                   // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 15 } } : {}),
+        }
+      : {
+          0: { halign: 'center', cellWidth: 10 },  // Nr
+          1: { halign: 'center', cellWidth: 15 },  // Zeit
+          2: { halign: 'left' },                   // Heim
+          3: { halign: 'center', cellWidth: 25 },  // Ergebnis
+          4: { halign: 'left' },                   // Gast
+          ...(refereeConfig && refereeConfig.mode !== 'none' ? { 5: { halign: 'center', cellWidth: 15 } } : {}),
+        },
   });
 
   yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.blockGap;
