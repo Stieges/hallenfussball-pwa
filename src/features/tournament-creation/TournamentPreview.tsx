@@ -14,7 +14,7 @@ import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';
 import { theme } from '../../styles/theme';
-import { exportScheduleAsPDF } from '../../lib/pdfExporter';
+import { exportScheduleToPDF } from '../../lib/pdfExporter';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -126,10 +126,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   const handleExportPDF = async () => {
-    const hasReferees = !!(schedule.refereeConfig && schedule.refereeConfig.mode !== 'none');
-    await exportScheduleAsPDF(schedule, {
-      filename: `${currentTournament.title}_Spielplan`,
-      showRefereeColumn: hasReferees,
+    await exportScheduleToPDF(schedule, schedule.initialStandings, {
+      locale: 'de',
+      includeStandings: true,
+      organizerName: 'Wieninger-Libella',
+      hallName: currentTournament.location,
     });
   };
 
