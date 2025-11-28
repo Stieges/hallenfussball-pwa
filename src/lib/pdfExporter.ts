@@ -1,673 +1,747 @@
 /**
- * PDF Exporter - Exportiert Schedule als druckfertiges PDF
+ * PDF Exporter - Generiert druckfertigen PDF-Spielplan
  *
- * Verwendet jsPDF + autoTable für professionelle PDF-Generierung
- * Layout basiert auf MeinTurnierplan PDFs
+ * Basiert auf HTML-Layout-Referenz:
+ * - A4 Portrait (210mm × 297mm)
+ * - Fester Header "Wieninger-Libella-Hallenturniere 2025/2026"
+ * - Meta-Box mit 4-Spalten Grid
+ * - Teilnehmer gruppiert in Boxen
+ * - Spiel-Tabellen für Vorrunde
+ * - Separate Tabellen pro Finalrunden-Phase
+ * - Tabellen in 2-Spalten Layout
  */
 
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import jsPDF from 'jspdf';
+import autoTable, { RowInput, CellInput } from 'jspdf-autotable';
 import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
-import { Standing } from '../types/tournament';
+import { Standing, RefereeConfig } from '../types/tournament';
 
-export interface PDFExportOptions {
-  /** Dateiname (ohne .pdf) */
-  filename?: string;
-  /** Logo URL (optional) */
-  logoUrl?: string;
-  /** QR-Code URL für Live-Tracking */
-  qrCodeUrl?: string;
-  /** Zeige Schiedsrichter-Spalte (SR) */
-  showRefereeColumn?: boolean;
-  /** Farb-Schema */
-  primaryColor?: string;
-  accentColor?: string;
-  /** Sprache für Übersetzungen */
-  locale?: 'de' | 'en';
-}
+// ============================================================================
+// STYLE CONFIGURATION (matching HTML reference)
+// ============================================================================
 
-/**
- * Grayscale-optimized color palette for print-friendly PDFs
- *
- * Design Philosophy:
- * - High contrast for readability in grayscale
- * - No color-only information (all info also conveyed through text/icons)
- * - Optimized for black & white laser printers
- */
-const PDF_COLORS = {
-  // Primary grayscale tones
-  primary: '#2C2C2C',       // Dark gray (almost black) - high contrast
-  primaryLight: '#6B6B6B',  // Medium gray
-  primaryDark: '#000000',   // Black
-
-  // Accent tones (gray-based)
-  accent: '#4A4A4A',        // Medium-dark gray
-  accentLight: '#8C8C8C',   // Light gray
-
-  // Text colors
-  textDark: '#000000',      // Pure black for maximum readability
-  textMedium: '#505050',    // Dark gray
-  textLight: '#808080',     // Medium gray
-
-  // Backgrounds
-  bgLight: '#F0F0F0',       // Very light gray (10% black)
-  bgWhite: '#FFFFFF',       // White
-
-  // Borders
-  borderDark: '#333333',    // Dark border
-  borderMedium: '#CCCCCC',  // Medium border
-  borderLight: '#E0E0E0',   // Light border
+const PDF_STYLE = {
+  colors: {
+    border: [229, 231, 235] as [number, number, number],      // #e5e7eb
+    borderDark: [212, 212, 216] as [number, number, number],  // #d4d4d8
+    headBg: [249, 250, 251] as [number, number, number],      // #f9fafb
+    textMain: [17, 24, 39] as [number, number, number],       // #111827
+    textMuted: [107, 114, 128] as [number, number, number],   // #6b7280
+    white: [255, 255, 255] as [number, number, number],       // #ffffff
+  },
+  fonts: {
+    h1: 18,           // Main title
+    h2: 15,           // Subtitle
+    meta: 11,         // Meta box content
+    sectionTitle: 13, // Section titles (Teilnehmer, Vorrunde)
+    phaseTitle: 13,   // Finals phase titles
+    groupTitle: 13,   // Group standings titles
+    table: 12,        // Table content
+    hint: 10,         // Hints/notes
+  },
+  spacing: {
+    pageMargin: {
+      top: 14,
+      bottom: 16,
+      left: 16,
+      right: 16,
+    },
+    sectionGap: 6,    // Gap between sections
+    blockGap: 4,      // Gap between blocks within sections
+  },
 };
 
-/**
- * Hauptfunktion: Exportiert Schedule als PDF
- */
-export async function exportScheduleAsPDF(
+// A4 dimensions in mm
+const PAGE_WIDTH = 210;
+const PAGE_HEIGHT = 297;
+const CONTENT_WIDTH = PAGE_WIDTH - PDF_STYLE.spacing.pageMargin.left - PDF_STYLE.spacing.pageMargin.right;
+
+// ============================================================================
+// TRANSLATIONS
+// ============================================================================
+
+const TRANSLATIONS = {
+  de: {
+    // Meta box labels
+    organizer: 'Veranstalter:',
+    hall: 'Halle:',
+    matchDuration: 'Spielzeit:',
+    mode: 'Modus:',
+    gameday: 'Spieltag:',
+    time: 'Zeit:',
+    break: 'Pause:',
+
+    // Section titles
+    participants: 'Teilnehmer',
+    groupStage: 'Vorrunde',
+    standings: 'Tabelle',
+
+    // Table headers
+    nr: 'Nr',
+    timeHeader: 'Zeit',
+    field: 'Feld',
+    group: 'Gr',
+    home: 'Heim',
+    result: 'Ergebnis',
+    away: 'Gast',
+    referee: 'SR',
+
+    // Standings table headers
+    pos: 'Pl',
+    team: 'Team',
+    played: 'Sp',
+    won: 'S',
+    drawn: 'U',
+    lost: 'N',
+    goals: 'Tore',
+    diff: 'Diff',
+    points: 'Pkt',
+
+    // Finals phases
+    roundOf16: 'Achtelfinale',
+    quarterfinal: 'Viertelfinale',
+    semifinal: 'Halbfinale',
+    final: 'Finalspiele',
+    thirdPlace: 'Spiel um Platz 3',
+    fifthSixth: 'Spiel um Platz 5',
+    seventhEighth: 'Spiel um Platz 7',
+
+    // Hints
+    hintReferees: 'SR = Schiedsrichter (SR1, SR2, ...)',
+    hintResults: 'Ergebnisse bitte nach Spielende eintragen',
+  },
+};
+
+type Language = keyof typeof TRANSLATIONS;
+
+// ============================================================================
+// MAIN EXPORT FUNCTION
+// ============================================================================
+
+export interface PDFExportOptions {
+  locale?: Language;
+  includeStandings?: boolean;
+  organizerName?: string;
+  hallName?: string;
+}
+
+export async function exportScheduleToPDF(
   schedule: GeneratedSchedule,
+  standings: Standing[] | undefined,
   options: PDFExportOptions = {}
 ): Promise<void> {
-  // Auto-enable referee column if referees are configured
-  const hasReferees = !!(schedule.refereeConfig && schedule.refereeConfig.mode !== 'none');
-
   const {
-    filename = `${schedule.tournament.title.replace(/\s+/g, '_')}_Spielplan.pdf`,
-    logoUrl,
-    qrCodeUrl,
-    showRefereeColumn = hasReferees,
-    primaryColor = PDF_COLORS.primary,
-    accentColor = PDF_COLORS.accent,
+    locale = 'de',
+    includeStandings = true,
+    organizerName = 'Wieninger-Libella',
+    hallName = schedule.tournament.location,
   } = options;
 
+  const t = TRANSLATIONS[locale];
+
+  // Create PDF (A4 Portrait)
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
     format: 'a4',
   });
 
-  // A4-Format: 210mm x 297mm
-  // Standardränder: 15mm auf allen Seiten
-  // Nutzbare Fläche: 180mm x 267mm (von x=15 bis x=195, y=15 bis y=282)
+  // Set default font
+  doc.setFont('helvetica');
 
-  const hasGroups = schedule.teams.some(t => t.group);
+  let yPos = PDF_STYLE.spacing.pageMargin.top;
 
-  // Seite 1: Header + Spielplan + Tabelle
-  await renderPage1(doc, schedule, { logoUrl, qrCodeUrl, showRefereeColumn, primaryColor, hasGroups });
+  // 1. Header
+  yPos = renderHeader(doc, schedule, yPos);
 
-  // Seite 2 (nur bei Finalrunde): Finalspiele + Finaltabelle
-  const hasFinals = schedule.phases.some(p => p.name !== 'groupStage');
-  if (hasFinals && hasGroups) {
-    doc.addPage();
-    renderPage2Finals(doc, schedule, { primaryColor, accentColor });
+  // 2. Meta Box
+  yPos = renderMetaBox(doc, schedule, t, organizerName, hallName, yPos);
+
+  // 3. Hints
+  yPos = renderHints(doc, t, schedule.refereeConfig, yPos);
+
+  // 4. Participants (only for group tournaments)
+  const hasGroups = schedule.teams.some(team => team.group);
+  if (hasGroups) {
+    yPos = renderParticipants(doc, schedule, yPos);
   }
 
-  // Download
+  // 5. Group Stage Matches
+  const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
+  if (groupPhase) {
+    yPos = renderGroupStage(doc, groupPhase.matches, hasGroups, t, schedule.refereeConfig, yPos);
+  }
+
+  // 6. Group Standings Tables
+  if (hasGroups && includeStandings) {
+    yPos = renderGroupStandings(doc, schedule, standings, t, yPos);
+  }
+
+  // 7. Finals Sections (separate table per phase)
+  const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
+  if (finalPhases.length > 0) {
+    yPos = renderFinalsSection(doc, finalPhases, t, schedule.refereeConfig, yPos);
+  }
+
+  // Save PDF
+  const filename = `${schedule.tournament.title.replace(/\s+/g, '_')}_Spielplan.pdf`;
   doc.save(filename);
 }
 
 // ============================================================================
-// PAGE 1: HAUPTSEITE (Spielplan + Tabelle)
+// RENDERING FUNCTIONS
 // ============================================================================
 
-async function renderPage1(
+/**
+ * Render Header: Fixed title + dynamic subtitle
+ */
+function renderHeader(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): number {
+  const centerX = PAGE_WIDTH / 2;
+
+  // Main title (fixed)
+  doc.setFontSize(PDF_STYLE.fonts.h1);
+  doc.setTextColor(...PDF_STYLE.colors.textMain);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Wieninger-Libella-Hallenturniere 2025/2026', centerX, yPos, { align: 'center' });
+
+  yPos += 7;
+
+  // Subtitle (dynamic tournament title)
+  doc.setFontSize(PDF_STYLE.fonts.h2);
+  doc.setFont('helvetica', 'normal');
+  doc.text(schedule.tournament.title, centerX, yPos, { align: 'center' });
+
+  yPos += PDF_STYLE.spacing.sectionGap + 2;
+
+  return yPos;
+}
+
+/**
+ * Render Meta Box: 4-column grid layout
+ */
+function renderMetaBox(
   doc: jsPDF,
   schedule: GeneratedSchedule,
-  options: {
-    logoUrl?: string;
-    qrCodeUrl?: string;
-    showRefereeColumn: boolean;
-    primaryColor: string;
-    hasGroups: boolean;
-  }
-) {
-  const { logoUrl, qrCodeUrl, showRefereeColumn, primaryColor, hasGroups } = options;
-  const MAX_Y = 277; // Maximum Y position (15mm bottom margin: 297 - 15 - 5 for footer)
-  let yPos = 15;
+  t: typeof TRANSLATIONS.de,
+  organizerName: string,
+  hallName: string,
+  yPos: number
+): number {
+  const boxHeight = 18;
+  const startY = yPos;
+  const rowHeight = 6;
 
-  // Logo (links oben)
-  if (logoUrl) {
-    try {
-      doc.addImage(logoUrl, 'PNG', 15, yPos, 25, 25);
-    } catch (e) {
-      console.warn('Logo konnte nicht geladen werden:', e);
-    }
-  }
-
-  // Titel (zentriert)
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schedule.tournament.title, 105, yPos + 8, { align: 'center' });
-
-  // QR-Code (rechts oben)
-  if (qrCodeUrl) {
-    try {
-      doc.addImage(qrCodeUrl, 'PNG', 170, yPos, 25, 25);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Ergebnisse live', 182.5, yPos + 28, { align: 'center' });
-    } catch (e) {
-      console.warn('QR-Code konnte nicht geladen werden:', e);
-    }
-  }
-
-  yPos += 35;
-
-  // Meta-Infos Box (grayscale-optimized)
-  doc.setFillColor(240, 240, 240); // Light gray background (PDF_COLORS.bgLight)
-  doc.setDrawColor(204, 204, 204); // Medium gray border (PDF_COLORS.borderMedium)
+  // Border
+  doc.setDrawColor(...PDF_STYLE.colors.borderDark);
   doc.setLineWidth(0.5);
-  doc.roundedRect(15, yPos, 180, 30, 2, 2, 'FD');
+  doc.rect(
+    PDF_STYLE.spacing.pageMargin.left,
+    startY,
+    CONTENT_WIDTH,
+    boxHeight
+  );
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...hexToRgb(PDF_COLORS.textDark));
-
-  const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
-  const firstMatch = groupPhase?.matches[0];
-  const matchDuration = firstMatch?.duration || 10;
-
-  // Linke Spalte
-  const metaY = yPos + 7;
-  const leftX = 20;
-  const rightX = 110;
-  const lineHeight = 5;
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Veranstalter:', leftX, metaY);
-  doc.setFont('helvetica', 'normal');
-  doc.text(schedule.tournament.location, leftX + 30, metaY);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Datum:', leftX, metaY + lineHeight);
-  doc.setFont('helvetica', 'normal');
-  doc.text(schedule.tournament.date, leftX + 30, metaY + lineHeight);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Beginn:', leftX, metaY + lineHeight * 2);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${formatTime(schedule.startTime)} Uhr`, leftX + 30, metaY + lineHeight * 2);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Ort:', leftX, metaY + lineHeight * 3);
-  doc.setFont('helvetica', 'normal');
-  doc.text(schedule.tournament.location, leftX + 30, metaY + lineHeight * 3);
-
-  // Rechte Spalte
-  doc.setFont('helvetica', 'bold');
-  doc.text('Spieldauer:', rightX, metaY);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${matchDuration} Min.`, rightX + 25, metaY);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Teilnehmer:', rightX, metaY + lineHeight);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${schedule.teams.length} Teams`, rightX + 25, metaY + lineHeight);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Spiele:', rightX, metaY + lineHeight * 2);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${schedule.allMatches.length} gesamt`, rightX + 25, metaY + lineHeight * 2);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Ende (ca.):', rightX, metaY + lineHeight * 3);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${formatTime(schedule.endTime)} Uhr`, rightX + 25, metaY + lineHeight * 3);
-
-  yPos += 38; // Increased spacing after meta box
-
-  // Teilnehmerliste (bei Gruppen und bei Jeder-gegen-Jeden)
-  yPos = renderParticipantsList(doc, schedule, yPos, primaryColor, hasGroups);
-  yPos += 5; // Add spacing after participants list
-
-  // Check if we need a new page before match table
-  if (yPos > MAX_Y - 50) {
-    doc.addPage();
-    yPos = 15;
+  // Vertical dividers (4 columns)
+  const colWidth = CONTENT_WIDTH / 4;
+  for (let i = 1; i < 4; i++) {
+    doc.line(
+      PDF_STYLE.spacing.pageMargin.left + colWidth * i,
+      startY,
+      PDF_STYLE.spacing.pageMargin.left + colWidth * i,
+      startY + boxHeight
+    );
   }
 
-  // Spielplan-Tabelle
-  yPos = renderMatchTable(doc, schedule, yPos, showRefereeColumn, primaryColor, hasGroups);
-
-  // Tabelle rechts (nur ohne Gruppen)
-  if (!hasGroups) {
-    renderStandingsTable(doc, schedule.initialStandings, 'Tabelle', 125, 80, primaryColor);
+  // Horizontal dividers (3 rows)
+  for (let i = 1; i < 3; i++) {
+    doc.line(
+      PDF_STYLE.spacing.pageMargin.left,
+      startY + rowHeight * i,
+      PDF_STYLE.spacing.pageMargin.left + CONTENT_WIDTH,
+      startY + rowHeight * i
+    );
   }
 
-  // Tabellen unten (bei Gruppen)
-  if (hasGroups) {
-    yPos += 8; // Add spacing before group standings
+  // Helper function to render label-value pair
+  const renderCell = (col: number, row: number, label: string, value: string) => {
+    const x = PDF_STYLE.spacing.pageMargin.left + colWidth * col + 2;
+    const y = startY + rowHeight * row + 2;
 
-    // Check if we need a new page for group standings
-    if (yPos > MAX_Y - 50) {
-      doc.addPage();
-      yPos = 15;
-    }
-
-    const groupStandings = getGroupStandings(schedule.initialStandings, schedule.teams);
-    renderGroupStandings(doc, groupStandings, yPos, primaryColor);
-  }
-
-  // Footer (within 15mm bottom margin)
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text('Erstellt mit Hallenfußball Turnier Manager', 105, 287, { align: 'center' });
-}
-
-// ============================================================================
-// PAGE 2: FINALRUNDE (nur bei Gruppen + Finals)
-// ============================================================================
-
-function renderPage2Finals(
-  doc: jsPDF,
-  schedule: GeneratedSchedule,
-  options: { primaryColor: string; accentColor: string }
-) {
-  const { primaryColor, accentColor } = options;
-  let yPos = 15; // Start at 15mm top margin
-
-  // Titel
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text(schedule.tournament.title, 105, yPos, { align: 'center' });
-
-  yPos += 10;
-  doc.setFontSize(14);
-  doc.text('Finalrunde', 105, yPos, { align: 'center' });
-
-  yPos += 15;
-
-  // Finalspiele-Tabelle
-  const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
-  const finalMatches = finalPhases.flatMap(p => p.matches);
-
-  if (finalMatches.length > 0) {
-    autoTable(doc, {
-      startY: yPos,
-      head: [['Nr.', 'Beginn', 'Spiel', 'Ergebnis', 'n.V.', 'n.E.']],
-      body: finalMatches.map(match => [
-        match.matchNumber.toString(),
-        match.time,
-        `${getFinalMatchLabel(match)}\n${match.homeTeam} - ${match.awayTeam}`,
-        ' : ',
-        '',
-        '',
-      ]),
-      theme: 'striped',
-      headStyles: {
-        fillColor: hexToRgb(accentColor),
-        textColor: hexToRgb(PDF_COLORS.textDark),
-        fontStyle: 'bold',
-        fontSize: 9,
-        halign: 'center',
-      },
-      bodyStyles: {
-        fontSize: 8,
-        textColor: hexToRgb(PDF_COLORS.textDark),
-      },
-      alternateRowStyles: {
-        fillColor: hexToRgb(PDF_COLORS.bgLight),
-      },
-      columnStyles: {
-        0: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 80 },
-        3: { cellWidth: 25, halign: 'center', fontStyle: 'bold' },
-        4: { cellWidth: 15, halign: 'center' },
-        5: { cellWidth: 15, halign: 'center' },
-      },
-      margin: { left: 15, right: 15 },
-    });
-
-    yPos = (doc as any).lastAutoTable.finalY + 15;
-  }
-
-  // Finaltabelle (Plätze 1-10)
-  const finalStandingsData = [
-    ['1.', ''],
-    ['2.', ''],
-    ['3.', ''],
-    ['4.', ''],
-    ['5.', ''],
-    ['6.', ''],
-    ['7.', ''],
-    ['8.', ''],
-    ['9.', ''],
-    ['10.', ''],
-  ];
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [['Pl', 'Teilnehmer']],
-    body: finalStandingsData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: hexToRgb(primaryColor),
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 10,
-    },
-    bodyStyles: {
-      fontSize: 9,
-    },
-    columnStyles: {
-      0: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 100 },
-    },
-    margin: { left: 15 },
-  });
-}
-
-// ============================================================================
-// HELPER RENDERERS
-// ============================================================================
-
-function renderParticipantsList(
-  doc: jsPDF,
-  schedule: GeneratedSchedule,
-  yPos: number,
-  _primaryColor: string,
-  hasGroups: boolean
-): number {
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Teilnehmer', 15, yPos);
-
-  yPos += 5;
-
-  if (hasGroups) {
-    // Mit Gruppen: Gruppiert darstellen
-    const groupStandings = getGroupStandings(schedule.initialStandings, schedule.teams as any);
-    const xOffset = 15;
-    const colWidth = 90;
-
-    groupStandings.forEach((groupData, index) => {
-      const xPos = xOffset + (index % 2) * colWidth;
-      const currentYPos = yPos + Math.floor(index / 2) * 30;
-
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Gruppe ${groupData.group}`, xPos, currentYPos);
-
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-
-      groupData.groupStandings.forEach((standing, teamIndex) => {
-        const teamY = currentYPos + 5 + teamIndex * 4;
-        doc.text(`${teamIndex + 1}. ${standing.team.name}`, xPos, teamY);
-      });
-    });
-
-    return yPos + Math.ceil(groupStandings.length / 2) * 30 + 5;
-  } else {
-    // Ohne Gruppen (Jeder gegen Jeden): In Spalten darstellen
-    const teams = schedule.teams;
-    const columns = 3; // 3 Spalten
-    const colWidth = 60;
-    const xOffset = 15;
-    const teamsPerColumn = Math.ceil(teams.length / columns);
-
-    doc.setFontSize(9);
+    doc.setFontSize(PDF_STYLE.fonts.meta);
+    doc.setTextColor(...PDF_STYLE.colors.textMuted);
     doc.setFont('helvetica', 'normal');
+    doc.text(label, x, y + 2);
 
-    teams.forEach((team, index) => {
-      const col = Math.floor(index / teamsPerColumn);
-      const row = index % teamsPerColumn;
-      const xPos = xOffset + col * colWidth;
-      const teamY = yPos + row * 5;
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value, x, y + 5);
+  };
 
-      doc.text(`${index + 1}. ${team.name}`, xPos, teamY);
-    });
+  // Calculate duration values (default values for now - these should come from tournament config)
+  const groupDuration = 10; // Default game duration
+  const groupBreak = 2; // Default break duration
 
-    return yPos + teamsPerColumn * 5 + 5;
-  }
+  // Row 1: Veranstalter | Halle | Spielzeit | Modus
+  renderCell(0, 0, t.organizer, organizerName);
+  renderCell(1, 0, t.hall, hallName);
+  renderCell(2, 0, t.matchDuration, `${groupDuration} Min.`);
+  renderCell(3, 0, t.mode, schedule.teams.some(t => t.group) ? 'Gruppen + Finals' : 'Jeder gegen Jeden');
+
+  // Row 2: Spieltag | Zeit | Pause | (empty)
+  renderCell(0, 1, t.gameday, schedule.tournament.date);
+  const startTime = schedule.startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const endTime = schedule.endTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  renderCell(1, 1, t.time, `${startTime} - ${endTime}`);
+  renderCell(2, 1, t.break, `${groupBreak} Min.`);
+
+  // Row 3: Age class spanning columns
+  const ageX = PDF_STYLE.spacing.pageMargin.left + 2;
+  const ageY = startY + rowHeight * 2 + 4;
+  doc.setFontSize(PDF_STYLE.fonts.meta);
+  doc.setTextColor(...PDF_STYLE.colors.textMain);
+  doc.setFont('helvetica', 'bold');
+  doc.text(schedule.tournament.ageClass, ageX, ageY);
+
+  yPos = startY + boxHeight + PDF_STYLE.spacing.sectionGap;
+  return yPos;
 }
 
-function getColumnStyles(hasGroups: boolean, showFieldColumn: boolean, showRefereeColumn: boolean) {
-  if (hasGroups) {
-    // Mit Gruppen: Nr | Beginn | Gr | Spiel | Ergebnis | [Feld] | [SR]
-    const styles: any = {
-      0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Nr
-      1: { cellWidth: 18, halign: 'center' }, // Beginn
-      2: { cellWidth: 10, halign: 'center' }, // Gr
-      3: { cellWidth: showFieldColumn || showRefereeColumn ? 50 : 60 }, // Spiel
-      4: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // Ergebnis
-    };
-
-    let colIndex = 5;
-    if (showFieldColumn) {
-      styles[colIndex] = { cellWidth: 12, halign: 'center' }; // Feld
-      colIndex++;
-    }
-    if (showRefereeColumn) {
-      styles[colIndex] = { cellWidth: 12, halign: 'center' }; // SR
-    }
-    return styles;
-  } else {
-    // Ohne Gruppen: Nr | Beginn | Spiel | Ergebnis | [Feld] | [SR]
-    const styles: any = {
-      0: { cellWidth: 12, halign: 'center', fontStyle: 'bold' }, // Nr
-      1: { cellWidth: 18, halign: 'center' }, // Beginn
-      2: { cellWidth: showFieldColumn || showRefereeColumn ? 50 : 60 }, // Spiel
-      3: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }, // Ergebnis
-    };
-
-    let colIndex = 4;
-    if (showFieldColumn) {
-      styles[colIndex] = { cellWidth: 12, halign: 'center' }; // Feld
-      colIndex++;
-    }
-    if (showRefereeColumn) {
-      styles[colIndex] = { cellWidth: 12, halign: 'center' }; // SR
-    }
-    return styles;
-  }
-}
-
-function renderMatchTable(
+/**
+ * Render Hints Section
+ */
+function renderHints(
   doc: jsPDF,
-  schedule: GeneratedSchedule,
-  yPos: number,
-  showRefereeColumn: boolean,
-  primaryColor: string,
-  hasGroups: boolean
+  t: typeof TRANSLATIONS.de,
+  refereeConfig: RefereeConfig | undefined,
+  yPos: number
 ): number {
-  const phase = schedule.phases.find(p => p.name === 'groupStage');
-  if (!phase) return yPos;
+  const hints: string[] = [];
 
-  const showFieldColumn = schedule.numberOfFields > 1;
+  if (refereeConfig && refereeConfig.mode !== 'none') {
+    hints.push(t.hintReferees);
+  }
+  hints.push(t.hintResults);
 
-  const headers = hasGroups
-    ? ['Nr.', 'Beginn', 'Gr', 'Spiel', 'Ergebnis']
-    : ['Nr.', 'Beginn', 'Spiel', 'Ergebnis'];
+  if (hints.length === 0) return yPos;
 
-  if (showFieldColumn) {
-    headers.push('Feld');
+  doc.setFontSize(PDF_STYLE.fonts.hint);
+  doc.setTextColor(...PDF_STYLE.colors.textMuted);
+  doc.setFont('helvetica', 'italic');
+
+  hints.forEach(hint => {
+    doc.text(hint, PDF_STYLE.spacing.pageMargin.left, yPos);
+    yPos += 4;
+  });
+
+  yPos += PDF_STYLE.spacing.blockGap;
+  return yPos;
+}
+
+/**
+ * Render Participants: Grouped in bordered boxes with global team numbering
+ */
+function renderParticipants(doc: jsPDF, schedule: GeneratedSchedule, yPos: number): number {
+  // Section title
+  doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
+  doc.setTextColor(...PDF_STYLE.colors.textMain);
+  doc.setFont('helvetica', 'bold');
+  doc.text(TRANSLATIONS.de.participants, PDF_STYLE.spacing.pageMargin.left, yPos);
+  yPos += 6;
+
+  // Get unique groups
+  const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
+
+  // Calculate global team numbers
+  const teamNumbers = new Map<string, number>();
+  let globalNumber = 1;
+  schedule.teams.forEach(team => {
+    teamNumbers.set(team.id, globalNumber++);
+  });
+
+  // Render groups in 2-column layout
+  const groupsPerRow = 2;
+  const colWidth = (CONTENT_WIDTH - 4) / groupsPerRow;
+  const boxHeight = 8 + Math.ceil(schedule.teams.length / groups.length) * 5;
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    const col = i % groupsPerRow;
+    const row = Math.floor(i / groupsPerRow);
+
+    const x = PDF_STYLE.spacing.pageMargin.left + col * (colWidth + 4);
+    const y = yPos + row * (boxHeight + 3);
+
+    // Check page break
+    if (y + boxHeight > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
+      doc.addPage();
+      yPos = PDF_STYLE.spacing.pageMargin.top;
+      return renderParticipants(doc, schedule, yPos);
+    }
+
+    // Group box
+    doc.setDrawColor(...PDF_STYLE.colors.border);
+    doc.setLineWidth(0.3);
+    doc.rect(x, y, colWidth, boxHeight);
+
+    // Group title
+    doc.setFillColor(...PDF_STYLE.colors.headBg);
+    doc.rect(x, y, colWidth, 6, 'F');
+    doc.setFontSize(PDF_STYLE.fonts.table);
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Gruppe ${group}`, x + colWidth / 2, y + 4, { align: 'center' });
+
+    // Teams
+    const groupTeams = schedule.teams.filter(t => t.group === group);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(PDF_STYLE.fonts.table - 1);
+    groupTeams.forEach((team, idx) => {
+      const teamNum = teamNumbers.get(team.id) || 0;
+      const teamY = y + 6 + 2 + idx * 5;
+      doc.text(`${teamNum}. ${team.name}`, x + 2, teamY + 3);
+    });
   }
 
-  if (showRefereeColumn) {
-    headers.push('SR');
+  // Calculate final yPos
+  const totalRows = Math.ceil(groups.length / groupsPerRow);
+  yPos += totalRows * (boxHeight + 3) + PDF_STYLE.spacing.sectionGap;
+
+  return yPos;
+}
+
+/**
+ * Render Group Stage Matches Table
+ */
+function renderGroupStage(
+  doc: jsPDF,
+  matches: ScheduledMatch[],
+  _hasGroups: boolean,
+  t: typeof TRANSLATIONS.de,
+  refereeConfig: RefereeConfig | undefined,
+  yPos: number
+): number {
+  // Check page break
+  if (yPos + 40 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
+    doc.addPage();
+    yPos = PDF_STYLE.spacing.pageMargin.top;
   }
 
-  const body = phase.matches.map(match => {
-    const row = [
+  // Section title
+  doc.setFontSize(PDF_STYLE.fonts.sectionTitle);
+  doc.setTextColor(...PDF_STYLE.colors.textMain);
+  doc.setFont('helvetica', 'bold');
+  doc.text(t.groupStage, PDF_STYLE.spacing.pageMargin.left, yPos);
+  yPos += 2;
+
+  // Table headers
+  const headerRow: CellInput[] = [t.nr, t.timeHeader, t.field, t.group, t.home, t.result, t.away];
+  if (refereeConfig && refereeConfig.mode !== 'none') {
+    headerRow.push(t.referee);
+  }
+  const headers: RowInput[] = [headerRow];
+
+  // Table data
+  const data: RowInput[] = matches.map(match => {
+    const row: CellInput[] = [
       match.matchNumber.toString(),
       match.time,
+      match.field.toString(),
+      match.group || '-',
+      match.homeTeam,
+      '__ : __',
+      match.awayTeam,
     ];
 
-    if (hasGroups) {
-      row.push(match.group || '-');
-    }
-
-    row.push(`${match.homeTeam} - ${match.awayTeam}`);
-    row.push(' : ');
-
-    if (showFieldColumn) {
-      row.push(match.field ? match.field.toString() : '-');
-    }
-
-    if (showRefereeColumn) {
-      row.push(match.referee ? match.referee.toString() : '-');
+    if (refereeConfig && refereeConfig.mode !== 'none') {
+      row.push(match.referee ? `SR${match.referee}` : '-');
     }
 
     return row;
   });
 
-  const tableWidth = hasGroups ? 120 : 110;
-
+  // Render table
   autoTable(doc, {
     startY: yPos,
-    head: [headers],
-    body: body,
-    theme: 'striped',
+    head: headers,
+    body: data,
+    margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
+    styles: {
+      fontSize: PDF_STYLE.fonts.table,
+      cellPadding: 2,
+      lineColor: PDF_STYLE.colors.border,
+      lineWidth: 0.3,
+    },
     headStyles: {
-      fillColor: hexToRgb(primaryColor),
-      textColor: [255, 255, 255],
+      fillColor: PDF_STYLE.colors.headBg,
+      textColor: PDF_STYLE.colors.textMain,
       fontStyle: 'bold',
-      fontSize: 9,
       halign: 'center',
-    },
-    bodyStyles: {
-      fontSize: 8,
-      textColor: hexToRgb(PDF_COLORS.textDark),
-    },
-    alternateRowStyles: {
-      fillColor: hexToRgb(PDF_COLORS.bgLight),
-    },
-    columnStyles: getColumnStyles(hasGroups, showFieldColumn, showRefereeColumn),
-    margin: { left: 15, right: hasGroups ? 15 : 100 },
-    tableWidth: tableWidth,
-  });
-
-  return (doc as any).lastAutoTable.finalY;
-}
-
-function renderStandingsTable(
-  doc: jsPDF,
-  standings: Standing[],
-  title: string,
-  xPos: number,
-  yPos: number,
-  primaryColor: string
-) {
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(title, xPos, yPos);
-
-  yPos += 5;
-
-  const headers = ['Pl', 'Team', 'Sp', 'S', 'U', 'N', 'T', 'TD', 'Pkt'];
-  const body = standings.map((standing, index) => [
-    (index + 1).toString(),
-    standing.team.name.substring(0, 15),
-    standing.played.toString(),
-    standing.won.toString(),
-    standing.drawn.toString(),
-    standing.lost.toString(),
-    `${standing.goalsFor}:${standing.goalsAgainst}`,
-    (standing.goalDifference >= 0 ? '+' : '') + standing.goalDifference,
-    standing.points.toString(),
-  ]);
-
-  autoTable(doc, {
-    startY: yPos,
-    head: [headers],
-    body: body,
-    theme: 'striped',
-    headStyles: {
-      fillColor: hexToRgb(primaryColor),
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      fontSize: 7,
-      halign: 'center',
-    },
-    bodyStyles: {
-      fontSize: 7,
-      textColor: hexToRgb(PDF_COLORS.textDark),
-    },
-    alternateRowStyles: {
-      fillColor: hexToRgb(PDF_COLORS.bgLight),
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: 'center', fontStyle: 'bold', fillColor: hexToRgb(PDF_COLORS.bgLight) },
-      1: { cellWidth: 30 },
-      2: { cellWidth: 7, halign: 'center' },
-      3: { cellWidth: 7, halign: 'center' },
-      4: { cellWidth: 7, halign: 'center' },
-      5: { cellWidth: 7, halign: 'center' },
-      6: { cellWidth: 12, halign: 'center', fontSize: 6 },
-      7: { cellWidth: 10, halign: 'center' },
-      8: { cellWidth: 10, halign: 'center', fontStyle: 'bold' },
+      0: { halign: 'center', cellWidth: 10 },  // Nr
+      1: { halign: 'center', cellWidth: 15 },  // Zeit
+      2: { halign: 'center', cellWidth: 12 },  // Feld
+      3: { halign: 'center', cellWidth: 10 },  // Gr
+      4: { halign: 'left' },                   // Heim
+      5: { halign: 'center', cellWidth: 20 },  // Ergebnis
+      6: { halign: 'left' },                   // Gast
+      ...(refereeConfig && refereeConfig.mode !== 'none' ? { 7: { halign: 'center', cellWidth: 12 } } : {}),
     },
-    margin: { left: xPos },
-    tableWidth: 70,
+    didDrawPage: () => {
+      // Reset yPos after page break
+    },
   });
+
+  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
+  return yPos;
 }
 
+/**
+ * Render Finals Section: Separate table per phase
+ */
+function renderFinalsSection(
+  doc: jsPDF,
+  phases: Array<{ name: string; label: string; matches: ScheduledMatch[] }>,
+  t: typeof TRANSLATIONS.de,
+  refereeConfig: RefereeConfig | undefined,
+  yPos: number
+): number {
+  phases.forEach(phase => {
+    // Check page break
+    if (yPos + 30 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
+      doc.addPage();
+      yPos = PDF_STYLE.spacing.pageMargin.top;
+    }
+
+    // Phase title
+    doc.setFontSize(PDF_STYLE.fonts.phaseTitle);
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(phase.label, PDF_STYLE.spacing.pageMargin.left, yPos);
+    yPos += 2;
+
+    // Separate matches by finalType
+    const mainMatches = phase.matches.filter(m => !m.finalType || m.finalType === 'final');
+    const thirdPlaceMatches = phase.matches.filter(m => m.finalType === 'thirdPlace');
+    const fifthSixthMatches = phase.matches.filter(m => m.finalType === 'fifthSixth');
+    const seventhEighthMatches = phase.matches.filter(m => m.finalType === 'seventhEighth');
+
+    // Render main matches
+    if (mainMatches.length > 0) {
+      yPos = renderFinalsTable(doc, mainMatches, t, refereeConfig, yPos);
+    }
+
+    // Render placement matches with sub-titles
+    if (thirdPlaceMatches.length > 0) {
+      yPos = renderFinalsTable(doc, thirdPlaceMatches, t, refereeConfig, yPos, t.thirdPlace);
+    }
+    if (fifthSixthMatches.length > 0) {
+      yPos = renderFinalsTable(doc, fifthSixthMatches, t, refereeConfig, yPos, t.fifthSixth);
+    }
+    if (seventhEighthMatches.length > 0) {
+      yPos = renderFinalsTable(doc, seventhEighthMatches, t, refereeConfig, yPos, t.seventhEighth);
+    }
+  });
+
+  return yPos;
+}
+
+/**
+ * Render a single finals table
+ */
+function renderFinalsTable(
+  doc: jsPDF,
+  matches: ScheduledMatch[],
+  t: typeof TRANSLATIONS.de,
+  refereeConfig: RefereeConfig | undefined,
+  yPos: number,
+  subtitle?: string
+): number {
+  // Subtitle for placement matches
+  if (subtitle) {
+    doc.setFontSize(PDF_STYLE.fonts.table);
+    doc.setTextColor(...PDF_STYLE.colors.textMuted);
+    doc.setFont('helvetica', 'bold');
+    doc.text(subtitle, PDF_STYLE.spacing.pageMargin.left, yPos);
+    yPos += 2;
+  }
+
+  // Table headers
+  const headerRow: CellInput[] = [t.nr, t.timeHeader, t.field, t.home, t.result, t.away];
+  if (refereeConfig && refereeConfig.mode !== 'none') {
+    headerRow.push(t.referee);
+  }
+  const headers: RowInput[] = [headerRow];
+
+  // Table data
+  const data: RowInput[] = matches.map(match => {
+    const row: CellInput[] = [
+      match.matchNumber.toString(),
+      match.time,
+      match.field.toString(),
+      match.homeTeam,
+      '__ : __',
+      match.awayTeam,
+    ];
+
+    if (refereeConfig && refereeConfig.mode !== 'none') {
+      row.push(match.referee ? `SR${match.referee}` : '-');
+    }
+
+    return row;
+  });
+
+  // Render table
+  autoTable(doc, {
+    startY: yPos,
+    head: headers,
+    body: data,
+    margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
+    styles: {
+      fontSize: PDF_STYLE.fonts.table,
+      cellPadding: 2,
+      lineColor: PDF_STYLE.colors.border,
+      lineWidth: 0.3,
+    },
+    headStyles: {
+      fillColor: PDF_STYLE.colors.headBg,
+      textColor: PDF_STYLE.colors.textMain,
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    columnStyles: {
+      0: { halign: 'center', cellWidth: 10 },  // Nr
+      1: { halign: 'center', cellWidth: 15 },  // Zeit
+      2: { halign: 'center', cellWidth: 12 },  // Feld
+      3: { halign: 'left' },                   // Heim
+      4: { halign: 'center', cellWidth: 20 },  // Ergebnis
+      5: { halign: 'left' },                   // Gast
+      ...(refereeConfig && refereeConfig.mode !== 'none' ? { 6: { halign: 'center', cellWidth: 12 } } : {}),
+    },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.blockGap;
+  return yPos;
+}
+
+/**
+ * Render Group Standings: 2-column layout with "Tabelle – Gruppe X"
+ */
 function renderGroupStandings(
   doc: jsPDF,
-  groupStandings: Array<{ group: string; groupStandings: Standing[] }>,
-  yPos: number,
-  primaryColor: string
-) {
-  const xOffset = 15;
-  const colWidth = 90;
+  schedule: GeneratedSchedule,
+  standings: Standing[] | undefined,
+  t: typeof TRANSLATIONS.de,
+  yPos: number
+): number {
+  // Get unique groups
+  const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
+  if (groups.length === 0) return yPos;
 
-  groupStandings.forEach((groupData, index) => {
-    const xPos = xOffset + (index % 2) * colWidth;
-    const currentYPos = yPos + Math.floor(index / 2) * 60;
+  // Calculate standings if not provided
+  const currentStandings = standings || schedule.initialStandings;
 
-    renderStandingsTable(
-      doc,
-      groupData.groupStandings,
-      `Gruppe ${groupData.group}`,
-      xPos,
-      currentYPos,
-      primaryColor
-    );
-  });
+  // Check page break
+  if (yPos + 60 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
+    doc.addPage();
+    yPos = PDF_STYLE.spacing.pageMargin.top;
+  }
+
+  // Render groups in 2-column layout
+  const groupsPerRow = 2;
+  const colWidth = (CONTENT_WIDTH - 6) / groupsPerRow;
+
+  for (let i = 0; i < groups.length; i++) {
+    const group = groups[i];
+    const col = i % groupsPerRow;
+
+    // Check if we need new row
+    if (col === 0 && i > 0) {
+      yPos += 50; // Approximate height per row
+      if (yPos + 50 > PAGE_HEIGHT - PDF_STYLE.spacing.pageMargin.bottom) {
+        doc.addPage();
+        yPos = PDF_STYLE.spacing.pageMargin.top;
+      }
+    }
+
+    const x = PDF_STYLE.spacing.pageMargin.left + col * (colWidth + 6);
+    const y = yPos + (col === 0 ? 0 : 0); // Same Y for both columns
+
+    // Group title: "Tabelle – Gruppe X"
+    doc.setFontSize(PDF_STYLE.fonts.groupTitle);
+    doc.setTextColor(...PDF_STYLE.colors.textMain);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${t.standings} – Gruppe ${group}`, x, y);
+
+    // Get group standings
+    const groupTeams = schedule.teams.filter(t => t.group === group);
+    const groupStandings = currentStandings
+      .filter(s => groupTeams.some(t => t.id === s.team.id))
+      .sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference);
+
+    // Table data
+    const headers: RowInput[] = [[t.pos, t.team, t.played, t.won, t.drawn, t.lost, t.goals, t.diff, t.points]];
+    const data: RowInput[] = groupStandings.map((standing, index): CellInput[] => [
+      (index + 1).toString(),
+      standing.team.name,
+      standing.played.toString(),
+      standing.won.toString(),
+      standing.drawn.toString(),
+      standing.lost.toString(),
+      `${standing.goalsFor}:${standing.goalsAgainst}`,
+      standing.goalDifference > 0 ? `+${standing.goalDifference}` : standing.goalDifference.toString(),
+      standing.points.toString(),
+    ]);
+
+    // Render table
+    autoTable(doc, {
+      startY: y + 2,
+      head: headers,
+      body: data,
+      margin: { left: x, right: PAGE_WIDTH - x - colWidth },
+      tableWidth: colWidth,
+      styles: {
+        fontSize: PDF_STYLE.fonts.table - 1,
+        cellPadding: 1.5,
+        lineColor: PDF_STYLE.colors.border,
+        lineWidth: 0.3,
+      },
+      headStyles: {
+        fillColor: PDF_STYLE.colors.headBg,
+        textColor: PDF_STYLE.colors.textMain,
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 8 },   // Pos
+        1: { halign: 'left', cellWidth: 30 },    // Team
+        2: { halign: 'center', cellWidth: 8 },   // Sp
+        3: { halign: 'center', cellWidth: 7 },   // S
+        4: { halign: 'center', cellWidth: 7 },   // U
+        5: { halign: 'center', cellWidth: 7 },   // N
+        6: { halign: 'center', cellWidth: 12 },  // Tore
+        7: { halign: 'center', cellWidth: 10 },  // Diff
+        8: { halign: 'center', cellWidth: 8 },   // Pkt
+      },
+    });
+  }
+
+  // Final yPos after all standings
+  const totalRows = Math.ceil(groups.length / groupsPerRow);
+  yPos += totalRows * 50 + PDF_STYLE.spacing.sectionGap;
+
+  return yPos;
 }
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// TYPE AUGMENTATION FOR AUTOTABLE
 // ============================================================================
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-}
-
-function getFinalMatchLabel(match: ScheduledMatch): string {
-  if (match.finalType === 'final') return 'Finale';
-  if (match.finalType === 'thirdPlace') return 'Spiel um Platz 3';
-  if (match.finalType === 'fifthSixth') return 'Spiel um Platz 5';
-  if (match.finalType === 'seventhEighth') return 'Spiel um Platz 7';
-
-  // Check for semifinal labels from match definition
-  if (match.label?.includes('Halbfinale')) return match.label;
-  if (match.phase === 'semifinal') return 'Halbfinale';
-  if (match.phase === 'roundOf16') return 'Achtelfinale';
-  if (match.phase === 'quarterfinal') return 'Viertelfinale';
-
-  return 'Finalspiel';
-}
-
-function getGroupStandings(
-  allStandings: Standing[],
-  teams: Array<{ id: string; name: string; group?: string }>
-): Array<{ group: string; groupStandings: Standing[] }> {
-  const groups = new Set(teams.map(t => t.group).filter(Boolean)) as Set<string>;
-
-  return Array.from(groups)
-    .sort()
-    .map(group => ({
-      group,
-      groupStandings: allStandings.filter(s =>
-        teams.find(t => t.id === s.team.id)?.group === group
-      ),
-    }));
-}
-
-function hexToRgb(hex: string): [number, number, number] {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [0, 230, 118]; // Fallback: primary green
+// Extend jsPDF type to include autoTable metadata
+declare module 'jspdf' {
+  interface jsPDF {
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
 }
