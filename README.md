@@ -373,17 +373,20 @@ npm run lint         # ESLint ausführen
 - ✅ Responsive Design
 - ✅ Theme System
 
-#### Tournament Management System (NEU v2.1)
+#### Tournament Management System (NEU v2.2)
 - ✅ Live-Turnierverwaltung mit Tab-Navigation
 - ✅ Turnierleitung (Kampfgericht) Tab
 - ✅ Match Cockpit für Live-Spielsteuerung
 - ✅ Match-Selektor (automatisch oder manuell)
 - ✅ Klickbarer Timer mit manueller Zeitanpassung (MM:SS)
+- ✅ Dedizierte Pause/Fortsetzen-Funktion
+- ✅ Warnungen bei Ergebnis-Überschreibung
 - ✅ LiveMatch State Management (localStorage)
 - ✅ MatchEvent-System für vollständige Event-Historie
+- ✅ Verbesserte Event-Liste mit Emojis und Farbcodierung
 - ✅ Automatische Spielprogression
 - ✅ Live-Tabellen mit Auto-Update
-- ✅ Finale Platzierungsberechnung (Gruppensieger-Logik)
+- ✅ Finale Platzierungsberechnung mit Platzierungslogik-Anzeige
 - ✅ Bearbeitbarer Spielplan mit direkter Ergebniseingabe
 - ✅ Schiedsrichter-Zuweisung (Organizer + Teams Modus)
 - ✅ Multi-Field Support (1-4 Felder)
@@ -550,4 +553,4 @@ Daniel Stiegler
 ---
 
 **Letzte Aktualisierung:** 2025-11-29
-**Version:** 2.1.0 (Tournament Management + Live-Spielverwaltung)
+**Version:** 2.2.0 (Tournament Management + Erweiterte Pause/Resume-Logik + Event-Liste Verbesserungen)

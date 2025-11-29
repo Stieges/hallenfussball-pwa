@@ -552,14 +552,16 @@ function mapToLiveMatch(scheduledMatch: ScheduledMatch, liveData: LiveData): Liv
    - Live-Spielverwaltung mit MatchCockpit
    - Zeile 39-56: LiveMatch State Management in localStorage
    - Zeile 59-80: Timer für laufende Spiele (1-Sekunden-Interval)
-   - Zeile 158-190: **getLiveMatchData()** - Erstellt LiveMatch sofort bei Zugriff
-   - Zeile 214-244: handleStart() - Status → RUNNING
-   - Zeile 247-277: handlePause() - Status → PAUSED
-   - Zeile 280-335: handleFinish() - Status → FINISHED, speichert Ergebnis
-   - Zeile 338-375: handleGoal() - Torzählung mit MatchEvent
-   - Zeile 378-402: handleUndoLastEvent() - Rückgängig letztes Event
-   - Zeile 405-437: handleManualEditResult() - Manuelles Ergebnis
+   - Zeile 158-190: **getLiveMatchData()** - Erstellt LiveMatch sofort bei Zugriff, lädt bestehende Ergebnisse
+   - Zeile 213-286: handleStart() - Status → RUNNING, Warnung bei vorhandenen Ergebnissen
+   - Zeile 288-310: handlePause() - Status → PAUSED
+   - Zeile 279-310: handleResume() - Status → RUNNING (von PAUSED)
+   - Zeile 312-370: handleFinish() - Status → FINISHED, speichert Ergebnis
+   - Zeile 372-396: handleGoal() - Torzählung mit MatchEvent
+   - Zeile 398-458: handleUndoLastEvent() - Rückgängig letztes Event
+   - Zeile 405-458: handleManualEditResult() - Manuelles Ergebnis
    - Zeile 477-495: **handleAdjustTime()** - Manuelle Zeitanpassung
+   - Zeile 497-521: **handleMatchSelectionChange()** - Warnung bei laufendem Spiel
    - Zeile 145-156: **Match-Selektor** - Automatisch oder manuell auswählbar
    - Zeile 496-514: Match Selector UI mit Dropdown
 
@@ -624,6 +626,9 @@ interface MatchEvent {
 - 🔄 Automatische Spielprogression nach Spielende
 - 📝 Match-Selektor für nachträgliche Bearbeitung
 - ⏱️ Manuelle Zeitanpassung (MM:SS Format)
+- ⏯️ Dedizierte Pause/Fortsetzen-Funktion
+- ⚠️ Warnungen bei Ergebnis-Überschreibung
+- ⚠️ Warnung bei Match-Wechsel während laufendem Spiel
 - 💾 Persistierung in localStorage
 - 📊 Live-Tabellen mit Auto-Update
 - 🏆 Finale Platzierungsberechnung
@@ -923,11 +928,15 @@ PDF_STYLE.spacing: pageMargin, sectionGap, blockGap
 - Turnierleitung (Kampfgericht) mit MatchCockpit
 - Match-Selektor für flexible Spielauswahl
 - Manuelle Zeitanpassung (klickbarer Timer)
+- Dedizierte Pause/Fortsetzen-Funktion (statt kombinierter Button)
+- Warnungen bei Ergebnis-Überschreibung (Spielplan → Live)
+- Warnung bei Match-Wechsel während laufendem Spiel
 - LiveMatch State mit localStorage-Persistierung
 - MatchEvent-System für vollständige Event-Historie
+- Verbesserte Event-Liste mit Emojis und Farbcodierung
 - Automatische Spielprogression
 - Live-Tabellen mit Auto-Update
-- Finale Platzierungsberechnung (Gruppensieger-Logik)
+- Finale Platzierungsberechnung mit Platzierungslogik-Anzeige
 - Monitor-Modus für Publikum
 - Bearbeitbarer Spielplan mit direkter Ergebniseingabe
 
@@ -965,4 +974,4 @@ TournamentPreview
 ---
 
 **Last Updated**: 2025-11-29
-**Version**: 2.1 (Tournament Management + Live-Spielverwaltung + Zeit-Editor)
+**Version**: 2.2 (Tournament Management + Erweiterte Pause/Resume-Logik + Event-Liste Verbesserungen)

@@ -219,6 +219,48 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         return prev;
       }
 
+      // Prüfe, ob bereits Ergebnisse im Spielplan vorhanden sind
+      const hasExistingResult = match.homeScore > 0 || match.awayScore > 0;
+
+      if (hasExistingResult && match.status === 'NOT_STARTED') {
+        const confirmStart = window.confirm(
+          `⚠️ WARNUNG: Für dieses Spiel liegen bereits Ergebnisse vor!\n\n` +
+          `Aktueller Stand: ${match.homeScore}:${match.awayScore}\n\n` +
+          `Wenn Sie das Spiel jetzt starten, werden die vorhandenen Ergebnisse gelöscht ` +
+          `und durch die Live-Erfassung ersetzt (Start bei 0:0).\n\n` +
+          `Möchten Sie trotzdem starten?`
+        );
+
+        if (!confirmStart) {
+          return prev; // Abbrechen
+        }
+
+        // Lösche vorhandene Ergebnisse und starte bei 0:0
+        const updated = new Map(prev);
+        updated.set(matchId, {
+          ...match,
+          homeScore: 0,
+          awayScore: 0,
+          status: 'RUNNING' as MatchStatus,
+          elapsedSeconds: 0,
+          events: [{
+            id: `${matchId}-${Date.now()}`,
+            matchId,
+            timestampSeconds: 0,
+            type: 'STATUS_CHANGE',
+            payload: {
+              toStatus: 'RUNNING',
+            },
+            scoreAfter: {
+              home: 0,
+              away: 0,
+            },
+          }],
+        });
+        return updated;
+      }
+
+      // Normaler Start ohne vorhandene Ergebnisse
       const event: MatchEvent = {
         id: `${matchId}-${Date.now()}`,
         matchId,
@@ -270,6 +312,39 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       updated.set(matchId, {
         ...match,
         status: 'PAUSED' as MatchStatus,
+        events: [...match.events, event],
+      });
+      return updated;
+    });
+  }, []);
+
+  // Handler: Resume match (from PAUSED)
+  const handleResume = useCallback((matchId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleResume: Match not found:', matchId);
+        return prev;
+      }
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: match.elapsedSeconds,
+        type: 'STATUS_CHANGE',
+        payload: {
+          toStatus: 'RUNNING',
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'RUNNING' as MatchStatus,
         events: [...match.events, event],
       });
       return updated;
@@ -615,6 +690,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           highlightNextMatchMinutesBefore={5}
           onStart={handleStart}
           onPause={handlePause}
+          onResume={handleResume}
           onFinish={handleFinish}
           onGoal={handleGoal}
           onUndoLastEvent={handleUndoLastEvent}

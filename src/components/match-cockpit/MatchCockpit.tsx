@@ -84,6 +84,7 @@ export interface MatchCockpitProps {
 
   onStart(matchId: string): void;
   onPause(matchId: string): void;
+  onResume(matchId: string): void;
   onFinish(matchId: string): void;
   onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
   onUndoLastEvent(matchId: string): void;
@@ -107,6 +108,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   highlightNextMatchMinutesBefore = 5,
   onStart,
   onPause,
+  onResume,
   onFinish,
   onGoal,
   onUndoLastEvent,
@@ -195,6 +197,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           lastFinishedMatch={lastFinishedMatch}
           onStart={onStart}
           onPause={onPause}
+          onResume={onResume}
           onFinish={onFinish}
           onGoal={onGoal}
           onUndoLastEvent={onUndoLastEvent}

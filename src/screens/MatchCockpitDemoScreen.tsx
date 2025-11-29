@@ -88,6 +88,18 @@ export const MatchCockpitDemoScreen: React.FC = () => {
     });
   };
 
+  const handleResume = (matchId: string) => {
+    setCurrentMatch((prev) => {
+      if (prev.id !== matchId || prev.status !== 'PAUSED') return prev;
+      const newEvent = createEvent(prev, 'STATUS_CHANGE', { toStatus: 'RUNNING' });
+      return {
+        ...prev,
+        status: 'RUNNING',
+        events: [...prev.events, newEvent],
+      };
+    });
+  };
+
   const handleFinish = (matchId: string) => {
     setCurrentMatch((prev) => {
       if (prev.id !== matchId || prev.status === 'FINISHED') return prev;
@@ -242,6 +254,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
       highlightNextMatchMinutesBefore={5}
       onStart={handleStart}
       onPause={handlePause}
+      onResume={handleResume}
       onFinish={handleFinish}
       onGoal={handleGoal}
       onUndoLastEvent={handleUndoLastEvent}

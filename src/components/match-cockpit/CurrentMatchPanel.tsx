@@ -20,6 +20,7 @@ interface CurrentMatchPanelProps {
 
   onStart(matchId: string): void;
   onPause(matchId: string): void;
+  onResume(matchId: string): void;
   onFinish(matchId: string): void;
   onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
   onUndoLastEvent(matchId: string): void;
@@ -34,6 +35,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   lastFinishedMatch,
   onStart,
   onPause,
+  onResume,
   onFinish,
   onGoal,
   onUndoLastEvent,
@@ -296,6 +298,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
         phaseLabel={match.phaseLabel}
         onStart={() => onStart(match.id)}
         onPause={() => onPause(match.id)}
+        onResume={() => onResume(match.id)}
         onFinish={() => onFinish(match.id)}
         onAdjustTime={onAdjustTime}
       />
@@ -390,6 +393,7 @@ interface CenterBlockProps {
   phaseLabel: string;
   onStart(): void;
   onPause(): void;
+  onResume(): void;
   onFinish(): void;
   onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 }
@@ -402,6 +406,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   phaseLabel,
   onStart,
   onPause,
+  onResume,
   onFinish,
   onAdjustTime,
 }) => {
@@ -478,6 +483,42 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
     onAdjustTime(matchId, newElapsedSeconds);
   };
 
+  const handleStartClick = () => {
+    // Fall 1: Spiel ist pausiert → Warnung, dass Beenden-Button genutzt werden muss
+    if (status === 'PAUSED') {
+      alert(
+        '⚠️ HINWEIS: Das Spiel ist pausiert.\n\n' +
+        'Um das Spiel fortzusetzen, nutzen Sie bitte den "Fortsetzen" Button.\n\n' +
+        'Der "Start" Button ist nur für den Spielbeginn gedacht.'
+      );
+      return;
+    }
+
+    // Fall 2: Spiel ist beendet → Warnung und Bestätigung für Neustart
+    if (status === 'FINISHED') {
+      const confirmRestart = window.confirm(
+        '⚠️ ACHTUNG: Dieses Spiel wurde bereits beendet!\n\n' +
+        'Möchten Sie das Spiel wirklich neu starten?\n\n' +
+        'Dabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.'
+      );
+
+      if (!confirmRestart) {
+        return; // Abbrechen
+      }
+    }
+
+    // Normaler Start
+    onStart();
+  };
+
+  const handlePauseResumeClick = () => {
+    if (status === 'RUNNING') {
+      onPause();
+    } else if (status === 'PAUSED') {
+      onResume();
+    }
+  };
+
   return (
     <div style={blockStyle}>
       <div
@@ -495,13 +536,28 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
         <span>{getStatusLabel(status)}</span>
       </div>
       <div style={controlsStyle}>
-        <Button variant="primary" size="sm" onClick={onStart} disabled={status === 'RUNNING'}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleStartClick}
+          disabled={status === 'RUNNING'}
+        >
           Start
         </Button>
-        <Button variant="secondary" size="sm" onClick={onPause} disabled={status !== 'RUNNING'}>
-          Pause
+        <Button
+          variant={status === 'PAUSED' ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={handlePauseResumeClick}
+          disabled={status === 'NOT_STARTED' || status === 'FINISHED'}
+        >
+          {status === 'PAUSED' ? 'Fortsetzen' : 'Pause'}
         </Button>
-        <Button variant="danger" size="sm" onClick={onFinish} disabled={status === 'FINISHED'}>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={onFinish}
+          disabled={status === 'FINISHED'}
+        >
           Beenden
         </Button>
       </div>
@@ -618,14 +674,33 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
     paddingRight: theme.spacing.xs,
   };
 
-  const eventItemStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    gap: theme.spacing.sm,
-    padding: `${theme.spacing.xs} 0`,
-    fontSize: theme.fontSizes.sm,
-    borderBottom: `1px dashed ${theme.colors.border}`,
+  const getEventItemStyle = (eventType: string): CSSProperties => {
+    let backgroundColor = 'transparent';
+    let borderColor = theme.colors.border;
+
+    if (eventType === 'GOAL') {
+      backgroundColor = 'rgba(0, 230, 118, 0.05)';
+      borderColor = 'rgba(0, 230, 118, 0.3)';
+    } else if (eventType === 'STATUS_CHANGE') {
+      backgroundColor = 'rgba(59, 130, 246, 0.05)';
+      borderColor = 'rgba(59, 130, 246, 0.3)';
+    } else if (eventType === 'RESULT_EDIT') {
+      backgroundColor = 'rgba(251, 191, 36, 0.05)';
+      borderColor = 'rgba(251, 191, 36, 0.3)';
+    }
+
+    return {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      gap: theme.spacing.sm,
+      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+      fontSize: theme.fontSizes.sm,
+      borderBottom: `1px dashed ${borderColor}`,
+      backgroundColor,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: '2px',
+    };
   };
 
   const timeStyle: CSSProperties = {
@@ -648,12 +723,25 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
   const getEventDescription = (event: any) => {
     if (event.type === 'GOAL') {
       const { teamName, direction } = event.payload;
-      const sign = direction === 'INC' ? '+' : '-';
-      return `Tor ${teamName} (${sign}1)`;
+      if (direction === 'INC') {
+        return `⚽ Tor für ${teamName}`;
+      } else {
+        return `↩️ Tor zurückgenommen bei ${teamName}`;
+      }
     } else if (event.type === 'RESULT_EDIT') {
-      return 'Ergebnis manuell angepasst';
+      return '✏️ Ergebnis manuell korrigiert';
     } else if (event.type === 'STATUS_CHANGE') {
-      return `Status: ${event.payload.to}`;
+      const toStatus = event.payload.toStatus || event.payload.to;
+      switch (toStatus) {
+        case 'RUNNING':
+          return '▶️ Spiel gestartet';
+        case 'PAUSED':
+          return '⏸️ Spiel pausiert';
+        case 'FINISHED':
+          return '🏁 Spiel beendet';
+        default:
+          return `Status: ${toStatus}`;
+      }
     }
     return 'Ereignis';
   };
@@ -676,7 +764,7 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
           .slice()
           .reverse()
           .map((event) => (
-            <div key={event.id} style={eventItemStyle}>
+            <div key={event.id} style={getEventItemStyle(event.type)}>
               <div style={timeStyle}>{formatTime(event.time)}</div>
               <div style={descStyle}>{getEventDescription(event)}</div>
               <div style={scoreStyle}>
