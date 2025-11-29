@@ -1,5 +1,5 @@
 import { CSSProperties, useState } from 'react';
-import { Card, Select, Input, Icons } from '../../components/ui';
+import { Card, Select, Input, Icons, NumberStepper } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion, FinalsPreset, RefereeMode, FinalsRefereeMode } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS, GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../constants/tournamentOptions';
@@ -136,14 +136,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
           {/* Grundlegende Turnier-Parameter */}
           <div style={{ display: 'grid', gridTemplateColumns: canUseGroups ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '16px', marginTop: '16px' }}>
-            <Input
+            <NumberStepper
               label="Anzahl Teams"
-              type="number"
-              min="2"
-              max="64"
               value={formData.numberOfTeams || 4}
-              onChange={(v) => onUpdate('numberOfTeams', parseInt(v) || 4)}
-              required
+              onChange={(v) => onUpdate('numberOfTeams', v)}
+              min={2}
+              max={32}
+              mode="stepper"
             />
             {canUseGroups && (
               <Select
@@ -153,13 +152,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 options={NUMBER_OF_GROUPS_OPTIONS}
               />
             )}
-            <Input
+            <NumberStepper
               label={`Anzahl ${formData.sport === 'other' ? 'Spielflächen' : 'Felder'}`}
-              type="number"
-              min="1"
-              max="10"
               value={formData.numberOfFields || 1}
-              onChange={(v) => onUpdate('numberOfFields', parseInt(v) || 1)}
+              onChange={(v) => onUpdate('numberOfFields', v)}
+              min={1}
+              max={10}
+              mode="stepper"
             />
           </div>
 
@@ -169,21 +168,23 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ⏱️ Gruppenphase - Spielzeit-Einstellungen
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              <Input
-                label="Spieldauer (Min.)"
-                type="number"
-                min="1"
-                max="90"
+              <NumberStepper
+                label="Spieldauer"
                 value={formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration}
-                onChange={(v) => onUpdate('groupPhaseGameDuration', parseInt(v) || 10)}
+                onChange={(v) => onUpdate('groupPhaseGameDuration', v)}
+                min={3}
+                max={30}
+                suffix="Min"
+                mode="slider"
               />
-              <Input
-                label="Pause zwischen Spielen (Min.)"
-                type="number"
-                min="0"
-                max="30"
+              <NumberStepper
+                label="Pause zwischen Spielen"
                 value={formData.groupPhaseBreakDuration ?? DEFAULT_VALUES.groupPhaseBreakDuration}
-                onChange={(v) => onUpdate('groupPhaseBreakDuration', parseInt(v) || 0)}
+                onChange={(v) => onUpdate('groupPhaseBreakDuration', v)}
+                min={0}
+                max={15}
+                suffix="Min"
+                mode="slider"
               />
               <Select
                 label="Spielabschnitte"
@@ -194,13 +195,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             </div>
             {(formData.gamePeriods ?? DEFAULT_VALUES.gamePeriods) > 1 && (
               <div style={{ marginTop: '16px' }}>
-                <Input
-                  label="Halbzeitpause (Min.)"
-                  type="number"
-                  min="0"
-                  max="10"
+                <NumberStepper
+                  label="Halbzeitpause"
                   value={formData.halftimeBreak ?? DEFAULT_VALUES.halftimeBreak}
-                  onChange={(v) => onUpdate('halftimeBreak', parseInt(v) || 1)}
+                  onChange={(v) => onUpdate('halftimeBreak', v)}
+                  min={0}
+                  max={10}
+                  suffix="Min"
+                  mode="slider"
                 />
                 <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
                   💡 Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods || 1))} Min. unterteilt
@@ -216,29 +218,32 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 🏆 Finalrunde - Spielzeit-Einstellungen
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-                <Input
-                  label="Spieldauer (Min.)"
-                  type="number"
-                  min="1"
-                  max="90"
+                <NumberStepper
+                  label="Spieldauer"
                   value={formData.finalRoundGameDuration ?? DEFAULT_VALUES.finalRoundGameDuration}
-                  onChange={(v) => onUpdate('finalRoundGameDuration', parseInt(v) || 10)}
+                  onChange={(v) => onUpdate('finalRoundGameDuration', v)}
+                  min={3}
+                  max={30}
+                  suffix="Min"
+                  mode="slider"
                 />
-                <Input
-                  label="Pause zwischen Spielen (Min.)"
-                  type="number"
-                  min="0"
-                  max="30"
+                <NumberStepper
+                  label="Pause zwischen Spielen"
                   value={formData.finalRoundBreakDuration ?? DEFAULT_VALUES.finalRoundBreakDuration}
-                  onChange={(v) => onUpdate('finalRoundBreakDuration', parseInt(v) || 0)}
+                  onChange={(v) => onUpdate('finalRoundBreakDuration', v)}
+                  min={0}
+                  max={15}
+                  suffix="Min"
+                  mode="slider"
                 />
-                <Input
-                  label="Pause bis Finalrunde (Min.)"
-                  type="number"
-                  min="0"
-                  max="60"
+                <NumberStepper
+                  label="Pause bis Finalrunde"
                   value={formData.breakBetweenPhases ?? DEFAULT_VALUES.breakBetweenPhases}
-                  onChange={(v) => onUpdate('breakBetweenPhases', parseInt(v) || 5)}
+                  onChange={(v) => onUpdate('breakBetweenPhases', v)}
+                  min={0}
+                  max={60}
+                  suffix="Min"
+                  mode="slider"
                 />
               </div>
               <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
@@ -699,12 +704,10 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             {formData.refereeConfig?.mode === 'organizer' && (
               <div style={{ marginTop: '16px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <Input
+                  <NumberStepper
                     label="Anzahl Schiedsrichter"
-                    type="number"
-                    value={formData.refereeConfig?.numberOfReferees?.toString() || '2'}
-                    onChange={(v) => {
-                      const newNumber = parseInt(v) || 2;
+                    value={formData.refereeConfig?.numberOfReferees || 2}
+                    onChange={(newNumber) => {
                       const updatedConfig = {
                         ...formData.refereeConfig,
                         mode: 'organizer' as const,
@@ -726,22 +729,21 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
                       onUpdate('refereeConfig', updatedConfig as any);
                     }}
-                    min="1"
-                    max="20"
-                    placeholder="z.B. 3"
+                    min={1}
+                    max={20}
+                    mode="stepper"
                   />
-                  <Input
+                  <NumberStepper
                     label="Max. zusammenhängende Partien"
-                    type="number"
-                    value={formData.refereeConfig?.maxConsecutiveMatches?.toString() || '1'}
+                    value={formData.refereeConfig?.maxConsecutiveMatches || 1}
                     onChange={(v) => onUpdate('refereeConfig', {
                       ...formData.refereeConfig,
                       mode: 'organizer',
-                      maxConsecutiveMatches: parseInt(v) || 1,
+                      maxConsecutiveMatches: v,
                     } as any)}
-                    min="1"
-                    max="5"
-                    placeholder="z.B. 1"
+                    min={1}
+                    max={5}
+                    mode="stepper"
                   />
                 </div>
                 <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>

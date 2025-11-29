@@ -4,3 +4,4 @@ export { Card } from './Card';
 export { Input } from './Input';
 export { Select } from './Select';
 export { Icons } from './Icons';
+export { NumberStepper } from './NumberStepper';

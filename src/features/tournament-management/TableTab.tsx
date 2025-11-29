@@ -4,7 +4,7 @@
  * Zeigt die aktuellen Tabellenstände aller Gruppen
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useEffect } from 'react';
 import { theme } from '../../styles/theme';
 import { Card } from '../../components/ui';
 import { Tournament, Standing } from '../../types/tournament';
@@ -22,19 +22,31 @@ export const TableTab: React.FC<TableTabProps> = ({
   schedule,
   currentStandings,
 }) => {
+  const [isMobile, setIsMobile] = useState(false);
   const hasGroups = tournament.teams.some(t => t.group);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const containerStyle: CSSProperties = {
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '24px',
+    padding: isMobile ? '12px' : '24px',
   };
 
   const noGroupsStyle: CSSProperties = {
     textAlign: 'center',
-    padding: '48px 24px',
+    padding: isMobile ? '24px 12px' : '48px 24px',
     color: theme.colors.text.secondary,
-    fontSize: theme.fontSizes.lg,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.lg,
   };
 
   if (!hasGroups) {
@@ -57,6 +69,8 @@ export const TableTab: React.FC<TableTabProps> = ({
         <GroupTables
           standings={currentStandings}
           teams={schedule.teams}
+          tournament={tournament}
+          isMobile={isMobile}
         />
       </Card>
     </div>

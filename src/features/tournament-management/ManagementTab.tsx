@@ -86,10 +86,16 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     minHeight: 'calc(100vh - 200px)',
   };
 
+  // Responsive container style for mobile
+  const responsiveContainerStyle: CSSProperties = {
+    ...containerStyle,
+    padding: window.innerWidth < 768 ? theme.spacing.md : theme.spacing.lg,
+  };
+
   const fieldSelectorStyle: CSSProperties = {
     maxWidth: '1080px',
     margin: '0 auto',
-    padding: theme.spacing.md,
+    padding: window.innerWidth < 768 ? theme.spacing.sm : theme.spacing.md,
     display: 'flex',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.lg,
@@ -97,33 +103,39 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   };
 
   const fieldButtonStyle = (isActive: boolean): CSSProperties => ({
-    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+    padding: window.innerWidth < 768
+      ? `${theme.spacing.md} ${theme.spacing.md}`
+      : `${theme.spacing.sm} ${theme.spacing.lg}`,
     background: isActive ? theme.colors.primary : theme.colors.surface,
     color: isActive ? theme.colors.background : theme.colors.text.primary,
     border: `1px solid ${isActive ? theme.colors.primary : theme.colors.border}`,
     borderRadius: theme.borderRadius.md,
     cursor: 'pointer',
-    fontSize: theme.fontSizes.md,
+    fontSize: window.innerWidth < 768 ? theme.fontSizes.lg : theme.fontSizes.md,
     fontWeight: theme.fontWeights.semibold,
     transition: 'all 0.2s ease',
+    minHeight: '44px',
+    minWidth: window.innerWidth < 768 ? '80px' : 'auto',
+    flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : '0 0 auto',
   });
 
   const matchSelectorStyle: CSSProperties = {
     maxWidth: '1080px',
     margin: '0 auto',
-    padding: theme.spacing.md,
+    padding: window.innerWidth < 768 ? theme.spacing.sm : theme.spacing.md,
     marginBottom: theme.spacing.lg,
   };
 
   const selectStyle: CSSProperties = {
     width: '100%',
-    padding: theme.spacing.md,
+    padding: window.innerWidth < 768 ? theme.spacing.md : theme.spacing.md,
     background: theme.colors.surface,
     color: theme.colors.text.primary,
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
+    fontSize: window.innerWidth < 768 ? theme.fontSizes.lg : theme.fontSizes.md,
     cursor: 'pointer',
+    minHeight: '44px',
   };
 
   // Hilfsfunktion: Konvertiere ScheduledMatch zu MatchSummary
@@ -640,7 +652,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [liveMatches, handleFinish]);
 
   return (
-    <div style={containerStyle}>
+    <div style={responsiveContainerStyle}>
       {/* FIELD SELECTOR (if multiple fields) */}
       {tournament.numberOfFields > 1 && (
         <div style={fieldSelectorStyle}>
@@ -702,9 +714,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       ) : (
         <div style={{
           textAlign: 'center',
-          padding: theme.spacing.xxl,
+          padding: window.innerWidth < 768 ? theme.spacing.lg : theme.spacing.xxl,
           color: theme.colors.text.secondary,
-          fontSize: theme.fontSizes.lg,
+          fontSize: window.innerWidth < 768 ? theme.fontSizes.md : theme.fontSizes.lg,
         }}>
           Keine Spiele auf diesem Feld vorhanden
         </div>

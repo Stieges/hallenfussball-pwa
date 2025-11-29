@@ -117,25 +117,27 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   onLoadNextMatch,
   onReopenLastMatch,
 }) => {
+  const isMobile = window.innerWidth < 768;
+
   const containerStyle: CSSProperties = {
     width: '100%',
     maxWidth: '1080px',
     margin: '0 auto',
-    padding: theme.spacing.lg,
+    padding: isMobile ? theme.spacing.md : theme.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.lg,
+    gap: isMobile ? theme.spacing.md : theme.spacing.lg,
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: theme.spacing.md,
+    gap: isMobile ? theme.spacing.sm : theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    padding: isMobile ? theme.spacing.md : `${theme.spacing.md} ${theme.spacing.lg}`,
     background: 'rgba(15, 23, 42, 0.96)',
-    borderRadius: '999px',
+    borderRadius: isMobile ? theme.borderRadius.lg : '999px',
     border: `1px solid ${theme.colors.border}`,
     boxShadow: theme.shadows.lg,
     backdropFilter: 'blur(18px)',
@@ -145,10 +147,11 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
+    flex: isMobile ? '1 1 100%' : '0 1 auto',
   };
 
   const tournamentNameStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
+    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md,
     fontWeight: theme.fontWeights.semibold,
     letterSpacing: '0.06em',
     textTransform: 'uppercase',
@@ -156,15 +159,15 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   };
 
   const fieldNameStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
+    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.xl,
     fontWeight: theme.fontWeights.bold,
     color: theme.colors.text.primary,
   };
 
   const mainLayoutStyle: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'minmax(0, 2.1fr) minmax(0, 1.4fr)',
-    gap: theme.spacing.lg,
+    gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 2.1fr) minmax(0, 1.4fr)',
+    gap: isMobile ? theme.spacing.md : theme.spacing.lg,
   };
 
   const nextMatch = upcomingMatches[0];
@@ -227,11 +230,13 @@ interface StatusChipProps {
 }
 
 const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
+  const isMobile = window.innerWidth < 768;
+
   const chipStyle: CSSProperties = {
-    padding: `6px ${theme.spacing.md}`,
+    padding: isMobile ? `8px ${theme.spacing.md}` : `6px ${theme.spacing.md}`,
     borderRadius: '999px',
     border: `1px solid ${theme.colors.border}`,
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     display: 'inline-flex',
@@ -241,8 +246,8 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
   };
 
   const dotStyle: CSSProperties = {
-    width: '8px',
-    height: '8px',
+    width: isMobile ? '6px' : '8px',
+    height: isMobile ? '6px' : '8px',
     borderRadius: '999px',
     background: theme.colors.primary,
     boxShadow: `0 0 8px ${theme.colors.primary}`,
@@ -276,11 +281,13 @@ interface WarningChipProps {
 }
 
 const WarningChip: React.FC<WarningChipProps> = ({ message }) => {
+  const isMobile = window.innerWidth < 768;
+
   const chipStyle: CSSProperties = {
-    padding: `6px ${theme.spacing.md}`,
+    padding: isMobile ? `8px ${theme.spacing.md}` : `6px ${theme.spacing.md}`,
     borderRadius: '999px',
     border: `1px solid ${theme.colors.warning}`,
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     background: `rgba(255, 145, 0, 0.1)`,

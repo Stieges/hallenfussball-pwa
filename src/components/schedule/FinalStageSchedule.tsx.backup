@@ -1,5 +1,5 @@
 /**
- * GroupStageSchedule - Displays group stage matches in MeinTurnierplan style
+ * FinalStageSchedule - Displays playoff/final matches in MeinTurnierplan style
  * Fully responsive with table view for desktop and card view for mobile
  */
 
@@ -8,9 +8,8 @@ import { theme } from '../../styles/theme';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
 
-interface GroupStageScheduleProps {
+interface FinalStageScheduleProps {
   matches: ScheduledMatch[];
-  hasGroups: boolean;
   refereeConfig?: RefereeConfig;
   numberOfFields?: number;
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
@@ -19,9 +18,8 @@ interface GroupStageScheduleProps {
   editable?: boolean;
 }
 
-export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
+export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   matches,
-  hasGroups,
   refereeConfig,
   numberOfFields = 1,
   onRefereeChange,
@@ -30,18 +28,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   editable = false,
 }) => {
   if (matches.length === 0) {
-    return (
-      <div style={{
-        textAlign: 'center',
-        padding: '40px 20px',
-        color: theme.colors.text.secondary,
-        fontSize: '15px'
-      }}>
-        Keine Spiele vorhanden
-      </div>
-    );
+    return null;
   }
 
+  // Show referees in finals for both organizer and teams mode
   const showReferees = refereeConfig && refereeConfig.mode !== 'none';
   const showFields = numberOfFields > 1;
 
@@ -104,7 +94,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const titleStyle: CSSProperties = {
     fontSize: '18px',
     fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     marginBottom: '16px',
   };
 
@@ -116,7 +106,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   };
 
   const thStyle: CSSProperties = {
-    background: theme.colors.primary,
+    background: theme.colors.accent,
     color: theme.colors.background,
     padding: '10px 8px',
     textAlign: 'left',
@@ -135,6 +125,17 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     textAlign: 'center',
     fontWeight: theme.fontWeights.bold,
     minWidth: '60px',
+  };
+
+  const matchLabelStyle: CSSProperties = {
+    fontWeight: theme.fontWeights.semibold,
+    color: theme.colors.accent,
+    marginBottom: '4px',
+  };
+
+  const matchTeamsStyle: CSSProperties = {
+    fontSize: '12px',
+    color: theme.colors.text.secondary,
   };
 
   // Mobile Card Styles
@@ -159,12 +160,20 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const mobileMatchNumberStyle: CSSProperties = {
     fontSize: '16px',
     fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    color: theme.colors.accent,
   };
 
   const mobileTimeStyle: CSSProperties = {
     fontSize: '14px',
     color: theme.colors.text.secondary,
+  };
+
+  const mobileMatchLabelStyle: CSSProperties = {
+    fontSize: '14px',
+    fontWeight: theme.fontWeights.semibold,
+    color: theme.colors.accent,
+    marginBottom: '12px',
+    textAlign: 'center',
   };
 
   const mobileTeamsContainerStyle: CSSProperties = {
@@ -229,183 +238,178 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   };
 
   return (
-    <div style={containerStyle} className="group-stage-schedule">
-      <h2 style={titleStyle}>
-        {hasGroups ? 'Vorrunde' : 'Spielplan'}
-      </h2>
+    <div style={containerStyle} className="final-stage-schedule">
+      <h2 style={titleStyle}>Finalrunde</h2>
 
       {/* Desktop Table View */}
       <div className="desktop-view" style={{ overflowX: 'auto' }}>
         <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
-              {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
-              <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
-              {hasGroups && <th style={{ ...thStyle, width: '40px' }}>Gr</th>}
-              <th style={thStyle}>Heim</th>
-              <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
-              <th style={thStyle}>Gast</th>
-              {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {matches.map((match) => (
-              <tr key={match.id}>
-                <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
-                  {match.matchNumber}
-                </td>
-                {showReferees && (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
-                    {editable && onRefereeChange ? (
-                      <select
-                        value={match.referee || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          onRefereeChange(match.id, value ? parseInt(value) : null);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: theme.fontWeights.semibold,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      >
-                        <option value="">-</option>
-                        {refereeOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: theme.fontWeights.semibold }}>
-                        {match.referee || '-'}
-                      </span>
-                    )}
-                  </td>
-                )}
-                <td style={tdStyle}>{match.time}</td>
-                {hasGroups && (
-                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
-                    {match.group || '-'}
-                  </td>
-                )}
-                <td style={tdStyle}>{match.homeTeam}</td>
-                <td style={resultCellStyle}>
-                  {editable && onScoreChange ? (
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={match.scoreA !== undefined ? match.scoreA : ''}
-                        onChange={(e) => {
-                          const scoreA = e.target.value ? parseInt(e.target.value) : 0;
-                          const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
-                          onScoreChange(match.id, scoreA, scoreB);
-                        }}
-                        style={{
-                          width: '40px',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '13px',
-                          fontWeight: theme.fontWeights.bold,
-                          textAlign: 'center',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      />
-                      <span>:</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={match.scoreB !== undefined ? match.scoreB : ''}
-                        onChange={(e) => {
-                          const scoreB = e.target.value ? parseInt(e.target.value) : 0;
-                          const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
-                          onScoreChange(match.id, scoreA, scoreB);
-                        }}
-                        style={{
-                          width: '40px',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '13px',
-                          fontWeight: theme.fontWeights.bold,
-                          textAlign: 'center',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      />
-                    </div>
+        <thead>
+          <tr>
+            <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
+            {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
+            <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
+            <th style={thStyle}>Spiel</th>
+            <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
+            {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {matches.map((match) => (
+            <tr key={match.id}>
+              <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
+                {match.matchNumber}
+              </td>
+              {showReferees && (
+                <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
+                  {editable && onRefereeChange ? (
+                    <select
+                      value={match.referee || ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        onRefereeChange(match.id, value ? parseInt(value) : null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: theme.fontWeights.semibold,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    >
+                      <option value="">-</option>
+                      {refereeOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-                    <span>
-                      {match.scoreA !== undefined && match.scoreB !== undefined
-                        ? `${match.scoreA} : ${match.scoreB}`
-                        : '___ : ___'
-                      }
+                    <span style={{ fontWeight: theme.fontWeights.semibold }}>
+                      {match.referee || '-'}
                     </span>
                   )}
                 </td>
-                <td style={tdStyle}>{match.awayTeam}</td>
-                {showFields && (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
-                    {editable && onFieldChange ? (
-                      <select
-                        value={match.field || 1}
-                        onChange={(e) => {
-                          const fieldNum = parseInt(e.target.value);
-                          const conflict = findFieldConflict(match.id, fieldNum);
-                          if (conflict) {
-                            const confirmed = window.confirm(
-                              `⚠️ Zeitkonflikt erkannt!\n\n` +
-                              `Feld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\n` +
-                              `Die Spiele überschneiden sich zeitlich.\n\n` +
-                              `Möchtest du die Zuweisung trotzdem vornehmen?`
-                            );
-                            if (!confirmed) return;
-                          }
-                          onFieldChange(match.id, fieldNum);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: theme.fontWeights.semibold,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      >
-                        {fieldOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: theme.fontWeights.semibold }}>
-                        {match.field || '-'}
-                      </span>
-                    )}
-                  </td>
+              )}
+              <td style={tdStyle}>{match.time}</td>
+              <td style={tdStyle}>
+                <div style={matchLabelStyle}>
+                  {getFinalMatchLabel(match)}
+                </div>
+                <div style={matchTeamsStyle}>
+                  {match.homeTeam} - {match.awayTeam}
+                </div>
+              </td>
+              <td style={resultCellStyle}>
+                {editable && onScoreChange ? (
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
+                    <input
+                      type="number"
+                      min="0"
+                      value={match.scoreA !== undefined ? match.scoreA : ''}
+                      onChange={(e) => {
+                        const scoreA = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                    <span>:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={match.scoreB !== undefined ? match.scoreB : ''}
+                      onChange={(e) => {
+                        const scoreB = e.target.value ? parseInt(e.target.value) : 0;
+                        const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
+                        onScoreChange(match.id, scoreA, scoreB);
+                      }}
+                      style={{
+                        width: '40px',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: theme.fontWeights.bold,
+                        textAlign: 'center',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <span>
+                    {match.scoreA !== undefined && match.scoreB !== undefined
+                      ? `${match.scoreA} : ${match.scoreB}`
+                      : '___ : ___'
+                    }
+                  </span>
                 )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </td>
+              {showFields && (
+                <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
+                  {editable && onFieldChange ? (
+                    <select
+                      value={match.field || 1}
+                      onChange={(e) => {
+                        const fieldNum = parseInt(e.target.value);
+                        const conflict = findFieldConflict(match.id, fieldNum);
+                        if (conflict) {
+                          const confirmed = window.confirm(
+                            `⚠️ Zeitkonflikt erkannt!\n\n` +
+                            `Feld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\n` +
+                            `Die Spiele überschneiden sich zeitlich.\n\n` +
+                            `Möchtest du die Zuweisung trotzdem vornehmen?`
+                          );
+                          if (!confirmed) return;
+                        }
+                        onFieldChange(match.id, fieldNum);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '4px',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: theme.fontWeights.semibold,
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text.primary,
+                      }}
+                    >
+                      {fieldOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span style={{ fontWeight: theme.fontWeights.semibold }}>
+                      {match.field || '-'}
+                    </span>
+                  )}
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
       </div>
 
       {/* Mobile Card View */}
@@ -416,6 +420,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             <div style={mobileCardHeaderStyle}>
               <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
               <span style={mobileTimeStyle}>{match.time}</span>
+            </div>
+
+            {/* Match Label (Final, Semifinal, etc.) */}
+            <div style={mobileMatchLabelStyle}>
+              {getFinalMatchLabel(match)}
             </div>
 
             {/* Teams */}
@@ -468,12 +477,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
             {/* Meta information */}
             <div style={mobileMetaStyle}>
-              {hasGroups && (
-                <div style={mobileMetaItemStyle}>
-                  <strong>Gruppe:</strong>
-                  <span>{match.group || '-'}</span>
-                </div>
-              )}
               {showReferees && (
                 <div style={mobileMetaItemStyle}>
                   <strong>SR:</strong>
@@ -538,43 +541,43 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
       <style>{`
         /* Hide mobile view by default */
-        .group-stage-schedule .mobile-view {
+        .final-stage-schedule .mobile-view {
           display: none;
         }
 
         /* Mobile: Show cards, hide table */
         @media (max-width: 767px) {
-          .group-stage-schedule .desktop-view {
+          .final-stage-schedule .desktop-view {
             display: none;
           }
-          .group-stage-schedule .mobile-view {
+          .final-stage-schedule .mobile-view {
             display: block;
           }
         }
 
         /* Tablet: Keep table but adjust sizing */
         @media (min-width: 768px) and (max-width: 1024px) {
-          .group-stage-schedule table {
+          .final-stage-schedule table {
             font-size: 12px;
           }
-          .group-stage-schedule th,
-          .group-stage-schedule td {
+          .final-stage-schedule th,
+          .final-stage-schedule td {
             padding: 8px 6px;
           }
         }
 
         /* Print: Always use table layout */
         @media print {
-          .group-stage-schedule {
+          .final-stage-schedule {
             break-inside: avoid;
           }
-          .group-stage-schedule .mobile-view {
+          .final-stage-schedule .mobile-view {
             display: none !important;
           }
-          .group-stage-schedule .desktop-view {
+          .final-stage-schedule .desktop-view {
             display: block !important;
           }
-          .group-stage-schedule table {
+          .final-stage-schedule table {
             min-width: 100%;
           }
         }
@@ -582,3 +585,18 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     </div>
   );
 };
+
+function getFinalMatchLabel(match: ScheduledMatch): string {
+  if (match.finalType === 'final') return '🏆 Finale';
+  if (match.finalType === 'thirdPlace') return '🥉 Spiel um Platz 3';
+  if (match.finalType === 'fifthSixth') return 'Spiel um Platz 5';
+  if (match.finalType === 'seventhEighth') return 'Spiel um Platz 7';
+
+  if (match.phase === 'semifinal') return 'Halbfinale';
+  if (match.phase === 'quarterfinal') return 'Viertelfinale';
+
+  // Check match label for semifinals
+  if (match.label?.includes('Halbfinale')) return match.label;
+
+  return 'Finalspiel';
+}

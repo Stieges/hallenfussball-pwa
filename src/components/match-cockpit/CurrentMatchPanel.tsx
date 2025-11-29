@@ -44,22 +44,25 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onLoadNextMatch,
   onReopenLastMatch,
 }) => {
+  const isMobile = window.innerWidth < 768;
+
   const cardHeaderStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: isMobile ? 'flex-start' : 'center',
     gap: theme.spacing.sm,
     marginBottom: theme.spacing.md,
   };
 
   const cardTitleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.lg,
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.text.primary,
   };
 
   const cardSubtitleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
     color: theme.colors.text.secondary,
   };
 
@@ -179,17 +182,20 @@ interface LastMatchBannerProps {
 }
 
 const LastMatchBanner: React.FC<LastMatchBannerProps> = ({ lastMatch, onReopen }) => {
+  const isMobile = window.innerWidth < 768;
+
   const bannerStyle: CSSProperties = {
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
-    borderRadius: '999px',
+    borderRadius: isMobile ? theme.borderRadius.lg : '999px',
     border: `1px dashed ${theme.colors.border}`,
     background: 'rgba(15, 23, 42, 0.9)',
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: isMobile ? 'column' : 'row',
+    alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
     gap: theme.spacing.sm,
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
   };
 
   return (
@@ -215,12 +221,14 @@ interface MatchMetaProps {
 }
 
 const MatchMeta: React.FC<MatchMetaProps> = ({ refereeName, matchId, durationSeconds }) => {
+  const isMobile = window.innerWidth < 768;
+
   const metaStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
     alignItems: 'center',
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
     color: theme.colors.text.secondary,
     marginBottom: theme.spacing.md,
   };
@@ -229,7 +237,7 @@ const MatchMeta: React.FC<MatchMetaProps> = ({ refereeName, matchId, durationSec
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: `4px ${theme.spacing.sm}`,
+    padding: isMobile ? `6px ${theme.spacing.sm}` : `4px ${theme.spacing.sm}`,
     borderRadius: '999px',
     border: `1px solid ${theme.colors.border}`,
     background: 'rgba(15, 23, 42, 0.65)',
@@ -273,46 +281,82 @@ interface ScoreboardProps {
 }
 
 const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onResume, onFinish, onAdjustTime }) => {
+  const isMobile = window.innerWidth < 768;
+
   const scoreboardStyle: CSSProperties = {
     marginTop: theme.spacing.sm,
     display: 'grid',
-    gridTemplateColumns: '1.4fr auto 1.4fr',
-    gap: theme.spacing.sm,
+    gridTemplateColumns: isMobile ? '1fr' : '1.4fr auto 1.4fr',
+    gap: isMobile ? theme.spacing.md : theme.spacing.sm,
     alignItems: 'center',
   };
 
   return (
     <div style={scoreboardStyle}>
-      {/* HOME TEAM */}
-      <TeamBlock
-        label="Heim"
-        team={match.homeTeam}
-        score={match.homeScore}
-        onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
-      />
+      {isMobile ? (
+        <>
+          {/* MOBILE: CENTER FIRST */}
+          <CenterBlock
+            matchId={match.id}
+            elapsedSeconds={match.elapsedSeconds}
+            durationSeconds={match.durationSeconds}
+            status={match.status}
+            phaseLabel={match.phaseLabel}
+            onStart={() => onStart(match.id)}
+            onPause={() => onPause(match.id)}
+            onResume={() => onResume(match.id)}
+            onFinish={() => onFinish(match.id)}
+            onAdjustTime={onAdjustTime}
+          />
 
-      {/* CENTER */}
-      <CenterBlock
-        matchId={match.id}
-        elapsedSeconds={match.elapsedSeconds}
-        durationSeconds={match.durationSeconds}
-        status={match.status}
-        phaseLabel={match.phaseLabel}
-        onStart={() => onStart(match.id)}
-        onPause={() => onPause(match.id)}
-        onResume={() => onResume(match.id)}
-        onFinish={() => onFinish(match.id)}
-        onAdjustTime={onAdjustTime}
-      />
+          {/* HOME TEAM */}
+          <TeamBlock
+            label="Heim"
+            team={match.homeTeam}
+            score={match.homeScore}
+            onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
+          />
 
-      {/* AWAY TEAM */}
-      <TeamBlock
-        label="Gast"
-        team={match.awayTeam}
-        score={match.awayScore}
-        onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
-        align="right"
-      />
+          {/* AWAY TEAM */}
+          <TeamBlock
+            label="Gast"
+            team={match.awayTeam}
+            score={match.awayScore}
+            onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
+          />
+        </>
+      ) : (
+        <>
+          {/* DESKTOP: HOME - CENTER - AWAY */}
+          <TeamBlock
+            label="Heim"
+            team={match.homeTeam}
+            score={match.homeScore}
+            onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
+          />
+
+          <CenterBlock
+            matchId={match.id}
+            elapsedSeconds={match.elapsedSeconds}
+            durationSeconds={match.durationSeconds}
+            status={match.status}
+            phaseLabel={match.phaseLabel}
+            onStart={() => onStart(match.id)}
+            onPause={() => onPause(match.id)}
+            onResume={() => onResume(match.id)}
+            onFinish={() => onFinish(match.id)}
+            onAdjustTime={onAdjustTime}
+          />
+
+          <TeamBlock
+            label="Gast"
+            team={match.awayTeam}
+            score={match.awayScore}
+            onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
+            align="right"
+          />
+        </>
+      )}
     </div>
   );
 };
@@ -326,32 +370,34 @@ interface TeamBlockProps {
 }
 
 const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align = 'left' }) => {
+  const isMobile = window.innerWidth < 768;
+
   const blockStyle: CSSProperties = {
-    padding: theme.spacing.md,
+    padding: isMobile ? theme.spacing.lg : theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.9))',
     border: `1px solid ${theme.colors.border}`,
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
-    alignItems: align === 'right' ? 'flex-end' : 'flex-start',
+    gap: isMobile ? theme.spacing.sm : '6px',
+    alignItems: isMobile ? 'flex-start' : (align === 'right' ? 'flex-end' : 'flex-start'),
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xs,
+    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     color: theme.colors.text.secondary,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
+    fontSize: isMobile ? theme.fontSizes.xl : theme.fontSizes.lg,
     fontWeight: theme.fontWeights.bold,
     color: theme.colors.text.primary,
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: '30px',
+    fontSize: isMobile ? '48px' : '30px',
     fontWeight: theme.fontWeights.bold,
     marginTop: '2px',
   };
@@ -359,8 +405,9 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align
   const controlsStyle: CSSProperties = {
     marginTop: theme.spacing.xs,
     display: 'flex',
-    gap: '6px',
+    gap: isMobile ? theme.spacing.sm : '6px',
     flexWrap: 'wrap',
+    width: isMobile ? '100%' : 'auto',
   };
 
   return (
@@ -370,14 +417,23 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align
       <div style={scoreStyle}>{score}</div>
 
       <div style={controlsStyle}>
-        <Button variant="primary" size="sm" onClick={() => onGoal(1)}>
+        <Button
+          variant="primary"
+          size={isMobile ? "md" : "sm"}
+          onClick={() => onGoal(1)}
+          style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+        >
           Tor {team.name}
         </Button>
         <Button
           variant="secondary"
-          size="sm"
+          size={isMobile ? "md" : "sm"}
           onClick={() => onGoal(-1)}
-          style={{ width: '36px', padding: '6px' }}
+          style={{
+            width: isMobile ? '48px' : '36px',
+            minHeight: isMobile ? '48px' : 'auto',
+            padding: '6px'
+          }}
           disabled={score === 0}
         >
           −
@@ -412,35 +468,44 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   onFinish,
   onAdjustTime,
 }) => {
+  const isMobile = window.innerWidth < 768;
+
   const blockStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing.sm,
+    gap: isMobile ? theme.spacing.md : theme.spacing.sm,
+    padding: isMobile ? theme.spacing.lg : theme.spacing.sm,
+    background: isMobile ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.9))' : 'transparent',
+    border: isMobile ? `1px solid ${theme.colors.border}` : 'none',
+    borderRadius: isMobile ? theme.borderRadius.lg : '0',
   };
 
   const timerStyle: CSSProperties = {
     fontFamily: 'ui-monospace, monospace',
-    fontSize: '26px',
+    fontSize: isMobile ? '40px' : '26px',
     fontWeight: theme.fontWeights.semibold,
-    padding: `6px ${theme.spacing.md}`,
+    padding: isMobile ? `${theme.spacing.md} ${theme.spacing.lg}` : `6px ${theme.spacing.md}`,
     borderRadius: '999px',
     border: `1px solid ${theme.colors.border}`,
     background: 'radial-gradient(circle at top, rgba(15, 23, 42, 0.98), #020617)',
     boxShadow: `0 0 25px ${theme.colors.primary}40`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
+    minHeight: isMobile ? '60px' : 'auto',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   };
 
   const phaseLabelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
     color: theme.colors.text.secondary,
   };
 
   const statusPillStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xs,
-    padding: `4px ${theme.spacing.sm}`,
+    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.xs,
+    padding: isMobile ? `8px ${theme.spacing.md}` : `4px ${theme.spacing.sm}`,
     borderRadius: '999px',
     display: 'inline-flex',
     alignItems: 'center',
@@ -453,8 +518,8 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   };
 
   const dotStyle: CSSProperties = {
-    width: '7px',
-    height: '7px',
+    width: isMobile ? '9px' : '7px',
+    height: isMobile ? '9px' : '7px',
     borderRadius: '999px',
     background: 'currentColor',
   };
@@ -462,8 +527,10 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   const controlsStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    gap: isMobile ? theme.spacing.md : theme.spacing.sm,
     marginTop: theme.spacing.sm,
+    justifyContent: 'center',
+    width: isMobile ? '100%' : 'auto',
   };
 
   const minutes = Math.floor(durationSeconds / 60);
@@ -540,25 +607,37 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
       <div style={controlsStyle}>
         <Button
           variant="primary"
-          size="sm"
+          size={isMobile ? "md" : "sm"}
           onClick={handleStartClick}
           disabled={status === 'RUNNING'}
+          style={{
+            flex: isMobile ? '1 1 100%' : '0 1 auto',
+            minHeight: isMobile ? '48px' : 'auto'
+          }}
         >
           Start
         </Button>
         <Button
           variant={status === 'PAUSED' ? 'primary' : 'secondary'}
-          size="sm"
+          size={isMobile ? "md" : "sm"}
           onClick={handlePauseResumeClick}
           disabled={status === 'NOT_STARTED' || status === 'FINISHED'}
+          style={{
+            flex: isMobile ? '1 1 calc(50% - 8px)' : '0 1 auto',
+            minHeight: isMobile ? '48px' : 'auto'
+          }}
         >
           {status === 'PAUSED' ? 'Fortsetzen' : 'Pause'}
         </Button>
         <Button
           variant="danger"
-          size="sm"
+          size={isMobile ? "md" : "sm"}
           onClick={onFinish}
           disabled={status === 'FINISHED'}
+          style={{
+            flex: isMobile ? '1 1 calc(50% - 8px)' : '0 1 auto',
+            minHeight: isMobile ? '48px' : 'auto'
+          }}
         >
           Beenden
         </Button>
@@ -575,30 +654,34 @@ interface FinishPanelProps {
 }
 
 const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdit, onNext }) => {
+  const isMobile = window.innerWidth < 768;
+
   const panelStyle: CSSProperties = {
     marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
+    padding: isMobile ? theme.spacing.lg : theme.spacing.md,
     borderRadius: theme.borderRadius.lg,
     border: `1px dashed ${theme.colors.border}`,
     background: 'rgba(15, 23, 42, 0.95)',
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: isMobile ? theme.spacing.sm : '6px',
   };
 
   const titleStyle: CSSProperties = {
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.text.primary,
+    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.md,
   };
 
   const summaryStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
     color: theme.colors.text.secondary,
   };
 
   const controlsStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
@@ -620,13 +703,28 @@ const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdit, onNe
         </div>
       </div>
       <div style={controlsStyle}>
-        <Button variant="secondary" size="sm" onClick={onEdit}>
+        <Button
+          variant="secondary"
+          size={isMobile ? "md" : "sm"}
+          onClick={onEdit}
+          style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+        >
           Ergebnis korrigieren
         </Button>
-        <Button variant="secondary" size="sm" onClick={onResume}>
+        <Button
+          variant="secondary"
+          size={isMobile ? "md" : "sm"}
+          onClick={onResume}
+          style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+        >
           Spiel wieder aufnehmen
         </Button>
-        <Button variant="primary" size="sm" onClick={onNext}>
+        <Button
+          variant="primary"
+          size={isMobile ? "md" : "sm"}
+          onClick={onNext}
+          style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+        >
           Nächstes Spiel laden
         </Button>
       </div>
@@ -647,6 +745,8 @@ interface EventsListProps {
 }
 
 const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit }) => {
+  const isMobile = window.innerWidth < 768;
+
   const containerStyle: CSSProperties = {
     marginTop: theme.spacing.md,
     paddingTop: theme.spacing.md,
@@ -658,20 +758,21 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
 
   const headerStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: isMobile ? 'stretch' : 'center',
     gap: theme.spacing.sm,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
+    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     color: theme.colors.text.secondary,
   };
 
   const listStyle: CSSProperties = {
-    maxHeight: '140px',
+    maxHeight: isMobile ? '200px' : '140px',
     overflowY: 'auto',
     paddingRight: theme.spacing.xs,
   };
@@ -752,11 +853,27 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
     <div style={containerStyle}>
       <div style={headerStyle}>
         <div style={titleStyle}>Spielereignisse</div>
-        <div style={{ display: 'flex', gap: theme.spacing.xs }}>
-          <Button variant="secondary" size="sm" onClick={onManualEdit}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: theme.spacing.xs,
+          width: isMobile ? '100%' : 'auto'
+        }}>
+          <Button
+            variant="secondary"
+            size={isMobile ? "md" : "sm"}
+            onClick={onManualEdit}
+            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+          >
             Ergebnis manuell anpassen
           </Button>
-          <Button variant="danger" size="sm" onClick={onUndo} disabled={events.length === 0}>
+          <Button
+            variant="danger"
+            size={isMobile ? "md" : "sm"}
+            onClick={onUndo}
+            disabled={events.length === 0}
+            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+          >
             Letztes Ereignis zurücknehmen
           </Button>
         </div>

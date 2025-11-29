@@ -128,7 +128,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <>
+      <div style={containerStyle} className="schedule-tab-container">
       {/* Spielplan-Anzeige - wie in TournamentPreview, aber ohne grünen Header */}
       <Card>
         <ScheduleDisplay
@@ -152,5 +153,31 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         )}
       </Card>
     </div>
+
+    {/* Responsive Styles */}
+    <style>{`
+      /* Mobile adjustments */
+      @media (max-width: 767px) {
+        .schedule-tab-container {
+          padding: 16px 12px !important;
+        }
+      }
+
+      /* Tablet adjustments */
+      @media (min-width: 768px) and (max-width: 1024px) {
+        .schedule-tab-container {
+          padding: 20px 16px !important;
+        }
+      }
+
+      /* Ensure cards are responsive on mobile */
+      @media (max-width: 767px) {
+        .schedule-tab-container .card {
+          border-radius: 8px;
+          padding: 12px;
+        }
+      }
+    `}</style>
+    </>
   );
 };

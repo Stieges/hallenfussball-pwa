@@ -167,11 +167,12 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     marginTop: '24px',
     paddingTop: '24px',
     borderTop: `1px solid ${theme.colors.border}`,
+    flexWrap: 'wrap',
   };
 
   const infoGridStyle: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
     gap: '16px',
     marginTop: '16px',
   };
@@ -195,9 +196,9 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} className="tournament-preview-container">
       {/* Header mit Status-Badge */}
-      <div style={headerStyle}>
+      <div style={headerStyle} className="tournament-preview-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
           <span
             style={{
@@ -220,7 +221,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         </p>
 
         {/* Turnier-Infos Grid */}
-        <div style={infoGridStyle}>
+        <div style={infoGridStyle} className="tournament-info-grid">
           <div style={infoItemStyle}>
             <span style={labelStyle}>Sportart</span>
             <span style={valueStyle}>
@@ -275,7 +276,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         {currentTournament.groupSystem === 'groupsAndFinals' &&
          currentTournament.finalsConfig?.preset &&
          currentTournament.finalsConfig.preset !== 'none' && (
-          <div style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
+          <div className="finals-config-box" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
             <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
               🏆 Finalrunden-Einstellungen
             </h3>
@@ -370,7 +371,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         )}
 
         {/* Aktionen */}
-        <div style={actionsStyle}>
+        <div style={actionsStyle} className="tournament-actions">
           <Button variant="secondary" onClick={onEdit}>
             Bearbeiten
           </Button>
@@ -414,6 +415,94 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           jetzt als PDF exportieren oder zurück zur Bearbeitung gehen.
         </p>
       </div>
+
+      {/* Mobile-first responsive styles */}
+      <style>{`
+        @media (max-width: 768px) {
+          /* Container padding for mobile */
+          .tournament-preview-container {
+            padding: 16px 12px !important;
+          }
+
+          /* Header adjustments for mobile */
+          .tournament-preview-header {
+            padding: 24px 16px !important;
+            border-radius: ${theme.borderRadius.md} !important;
+          }
+
+          .tournament-preview-header h1 {
+            font-size: 22px !important;
+          }
+
+          .tournament-preview-header p {
+            font-size: 14px !important;
+          }
+
+          /* Info grid - stack on mobile */
+          .tournament-info-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 12px !important;
+          }
+
+          /* Action buttons - full width on mobile */
+          .tournament-actions {
+            flex-direction: column !important;
+            gap: 12px !important;
+          }
+
+          .tournament-actions button {
+            width: 100% !important;
+            min-height: 48px !important;
+            font-size: 16px !important;
+          }
+
+          /* Finals config box */
+          .finals-config-box {
+            padding: 12px !important;
+          }
+
+          .finals-config-box h3 {
+            font-size: 13px !important;
+          }
+
+          .finals-config-box p {
+            font-size: 12px !important;
+          }
+
+          .finals-config-box label {
+            font-size: 12px !important;
+          }
+
+          .finals-config-box input[type="checkbox"] {
+            min-width: 20px !important;
+            min-height: 20px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          /* Extra small screens */
+          .tournament-preview-container {
+            padding: 12px 8px !important;
+          }
+
+          .tournament-preview-header {
+            padding: 20px 12px !important;
+          }
+
+          .tournament-preview-header h1 {
+            font-size: 20px !important;
+          }
+
+          .tournament-preview-header p {
+            font-size: 13px !important;
+          }
+
+          /* Stack info grid vertically on very small screens */
+          .tournament-info-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
