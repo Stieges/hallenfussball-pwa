@@ -104,6 +104,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
             onGoal={onGoal}
             onStart={onStart}
             onPause={onPause}
+            onResume={onResume}
             onFinish={onFinish}
             onAdjustTime={onAdjustTime}
           />
@@ -266,11 +267,12 @@ interface ScoreboardProps {
   onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
   onStart(matchId: string): void;
   onPause(matchId: string): void;
+  onResume(matchId: string): void;
   onFinish(matchId: string): void;
   onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onFinish, onAdjustTime }) => {
+const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onResume, onFinish, onAdjustTime }) => {
   const scoreboardStyle: CSSProperties = {
     marginTop: theme.spacing.sm,
     display: 'grid',
@@ -675,8 +677,8 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
   };
 
   const getEventItemStyle = (eventType: string): CSSProperties => {
-    let backgroundColor = 'transparent';
-    let borderColor = theme.colors.border;
+    let backgroundColor: string = 'transparent';
+    let borderColor: string = theme.colors.border;
 
     if (eventType === 'GOAL') {
       backgroundColor = 'rgba(0, 230, 118, 0.05)';
