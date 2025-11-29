@@ -104,6 +104,58 @@ Vollständige Schnellreferenz für die Codebase mit allen Features und deren Imp
 
 ## 📁 Datei-Struktur & Verantwortlichkeiten
 
+### `/src/components/ui/NumberStepper.tsx` - Mobile-freundliche Zahleneingabe
+**Zweck**: Wiederverwendbare Komponente für mobile-optimierte Zahleneingabe
+
+**Modi:**
+- `stepper` (Default): ± Buttons mit großen Touch-Targets (44x44px)
+- `slider`: Range-Slider für schnelle Auswahl
+- `input`: Direkte Tastatur-Eingabe für Power-User
+
+**Props:**
+- `value: number` - Aktueller Wert
+- `onChange: (value: number) => void` - Änderungs-Callback
+- `min?: number` - Minimalwert (default: 0)
+- `max?: number` - Maximalwert (default: 100)
+- `step?: number` - Schrittgröße (default: 1)
+- `label?: string` - Label-Text
+- `suffix?: string` - Suffix (z.B. "Min", "Teams")
+- `mode?: 'stepper' | 'slider' | 'input'` - Eingabe-Modus
+- `disabled?: boolean` - Disabled-Status
+
+**Features:**
+- WCAG 2.1 Level AA konforme Touch-Targets (min 44x44px)
+- Automatische Min/Max-Validierung
+- Visuelles Feedback (hover, active states)
+- Responsive Design mit Media Queries
+- Theme-System Integration
+
+**Verwendung:**
+```typescript
+<NumberStepper
+  value={numberOfTeams}
+  onChange={setNumberOfTeams}
+  min={2}
+  max={32}
+  mode="stepper"
+  label="Anzahl Teams"
+/>
+
+<NumberStepper
+  value={gameDuration}
+  onChange={setGameDuration}
+  min={5}
+  max={20}
+  mode="slider"
+  suffix=" Min"
+  label="Spieldauer"
+/>
+```
+
+**Exportiert in:** `/src/components/ui/index.ts`
+
+---
+
 ### `/src/types/tournament.ts` - Zentrale Type Definitions
 **Wichtige Types:**
 - `FinalsPreset`: 'none' | 'final-only' | 'top-4' | 'top-8' | 'top-16' | 'all-places'
@@ -973,5 +1025,186 @@ TournamentPreview
 
 ---
 
+## 📱 Responsive Design Patterns
+
+### Breakpoints
+```typescript
+Mobile:   < 768px   // Card-basierte Layouts, Vertical Stacking
+Tablet:   768-1024px // Kompakte Tabellen
+Desktop:  > 1024px   // Vollständige Tabellen mit allen Spalten
+```
+
+### Window Width Detection Hook
+**Pattern**: useState + useEffect mit window.addEventListener
+```typescript
+const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const checkMobile = () => setIsMobile(window.innerWidth < 768);
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  return () => window.removeEventListener('resize', checkMobile);
+}, []);
+```
+
+**Verwendet in:**
+- [RankingTab.tsx:26-33](/Users/daniel.stiegler/Downloads/hallenfussball-pwa/src/features/tournament-management/RankingTab.tsx#L26-L33)
+- [TableTab.tsx:19-26](/Users/daniel.stiegler/Downloads/hallenfussball-pwa/src/features/tournament-management/TableTab.tsx#L19-L26)
+- [ManagementTab.tsx:86-93](/Users/daniel.stiegler/Downloads/hallenfussball-pwa/src/features/tournament-management/ManagementTab.tsx#L86-L93)
+
+### Mobile Responsive Components
+
+#### `/src/features/tournament-management/RankingTab.tsx`
+**Mobile Features:**
+- Kondensierte Tabelle: Zeigt nur Platz, Team, Pkt, Diff
+- Expandable Rows: Tap-to-Expand für vollständige Statistiken (Sp, S, U, N, Tore)
+- Zeile 118-158: Expandable Row Logik mit toggleExpandedRow()
+- Zeile 221-241: Desktop → Alle Spalten, Mobile → Nur Essentials
+
+#### `/src/features/tournament-management/TableTab.tsx`
+**Mobile Features:**
+- Responsive Container Padding: 12px mobile, 24px desktop
+- GroupTables mit isMobile Prop
+- Zeile 47-78: Responsive Styles mit Media Queries
+
+#### `/src/features/tournament-management/ManagementTab.tsx`
+**Mobile Features:**
+- Responsive Controls Container
+- Größere Match-Selector Buttons auf Mobile
+- Vertical Stacking der Controls
+- Zeile 132-161: Responsive Match Selector mit isMobile-Styling
+
+#### `/src/features/tournament-management/ScheduleTab.tsx`
+**Mobile Features:**
+- Responsive Container Padding
+- Card-Optimierung für kleine Bildschirme
+- Zeile 158-180: Media Queries für Mobile/Tablet/Desktop
+
+#### `/src/features/tournament-creation/TournamentPreview.tsx`
+**Mobile Features:**
+- Responsive Container mit max-width: 1200px
+- Card Padding: 12px mobile, 16px tablet, 20px desktop
+- Zeile 348-378: Umfassende Media Queries
+
+#### `/src/components/schedule/GroupStageSchedule.tsx`
+**Mobile Features:**
+- Card-basiertes Layout auf Mobile (< 767px)
+- Tabellen-Layout auf Desktop (≥ 768px)
+- Touch-friendly Score Inputs (60x48px)
+- Zeile 217-448: Card Styles und Mobile Layout
+- Zeile 196-215: Tabellen-Layout für Desktop
+
+#### `/src/components/schedule/FinalStageSchedule.tsx`
+**Mobile Features:**
+- Identisches Card/Table Pattern wie GroupStageSchedule
+- Vertical Stacking der Spiel-Informationen
+- Große Touch-Targets für alle interaktiven Elemente
+- Zeile 237-467: Card Styles und Responsive Logic
+
+#### `/src/components/schedule/GroupTables.tsx`
+**Mobile Features:**
+- Responsive Grid: 1 Spalte mobile, 2 Spalten desktop
+- Kondensierte Tabelle auf Mobile
+- Props: `isMobile?: boolean` für conditional rendering
+- Zeile 142-237: Responsive Grid Styles
+
+#### `/src/components/match-cockpit/MatchCockpit.tsx`
+**Mobile Features:**
+- Single Column Layout auf Mobile
+- Responsive Header mit kleineren Chips
+- Zeile 203-248: Media Queries für Main Layout
+
+#### `/src/components/match-cockpit/CurrentMatchPanel.tsx`
+**Mobile Features:**
+- Vertical Stacking aller Elemente
+- Timer: 40px font mobile, 26px desktop
+- Tor-Buttons: Full width, 48px height
+- Control Buttons: 48px height, 100% width
+- Zeile 594-697: Umfassende Mobile Styles
+
+#### `/src/components/match-cockpit/UpcomingMatchesSidebar.tsx`
+**Mobile Features:**
+- Stacked Buttons statt Grid
+- Größere Schrift für bessere Lesbarkeit
+- Zeile 165-207: Mobile-spezifische Styles
+
+### Design-Prinzipien
+
+**Touch-Targets:**
+- Minimum: 44x44px (WCAG 2.1 Level AA)
+- NumberStepper Buttons: 44x44px
+- Score Inputs: 60x48px
+- Control Buttons: 48px height
+- Match Cards: 100% width, großzügige Padding
+
+**Typography:**
+```typescript
+Mobile:
+- Headings: 18-20px
+- Body: 14-15px
+- Small: 11-12px
+
+Desktop:
+- Headings: 20-24px
+- Body: 15-16px
+- Small: 12-13px
+```
+
+**Spacing:**
+```typescript
+Mobile:
+- Container Padding: 12-16px
+- Card Padding: 12px
+- Section Gap: 16px
+- Element Gap: 8px
+
+Desktop:
+- Container Padding: 24px
+- Card Padding: 20px
+- Section Gap: 24px
+- Element Gap: 12px
+```
+
+**Layout Patterns:**
+- Mobile: Card-basiert, Vertical Stacking, Single Column
+- Desktop: Tabellen, Grid Layouts, Multi-Column
+- No Horizontal Scroll on Mobile
+- Progressive Disclosure (Expandable Rows)
+
+### CSS-in-JS Pattern
+**Embedded Media Queries:**
+```typescript
+<style>{`
+  @media (max-width: 767px) {
+    .container {
+      padding: 12px !important;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .container {
+      padding: 20px !important;
+    }
+  }
+
+  @media (min-width: 1025px) {
+    .container {
+      padding: 24px !important;
+    }
+  }
+`}</style>
+```
+
+**Inline CSSProperties mit Conditional Logic:**
+```typescript
+const containerStyle: CSSProperties = {
+  padding: isMobile ? '12px' : '24px',
+  flexDirection: isMobile ? 'column' : 'row',
+  fontSize: isMobile ? '14px' : '16px',
+};
+```
+
+---
+
 **Last Updated**: 2025-11-29
-**Version**: 2.2 (Tournament Management + Erweiterte Pause/Resume-Logik + Event-Liste Verbesserungen)
+**Version**: 2.3 (Tournament Management + Mobile-First Responsive Design)

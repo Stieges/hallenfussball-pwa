@@ -370,7 +370,8 @@ npm run lint         # ESLint ausführen
 - ✅ Live Preview mit editierbarer Playoff-Config
 - ✅ PDF Export
 - ✅ localStorage Persistence
-- ✅ Responsive Design
+- ✅ **Vollständig Responsive Design** (Mobile, Tablet, Desktop)
+- ✅ **NumberStepper Komponente** (Touch-freundliche Zahleneingabe)
 - ✅ Theme System
 
 #### Tournament Management System (NEU v2.2)
@@ -402,6 +403,178 @@ npm run lint         # ESLint ausführen
 - 📅 Offline-First PWA
 - 📅 Cloud Sync (optional)
 - 📅 QR-Code für Live-Tracking
+
+---
+
+## 📱 Mobile-First Responsive Design
+
+### Übersicht
+
+Die App ist vollständig für Mobile, Tablet und Desktop optimiert mit einem **Mobile-First Ansatz**.
+
+### NumberStepper Komponente
+
+**Datei:** `src/components/ui/NumberStepper.tsx`
+
+Eine wiederverwendbare Komponente für mobile-freundliche Zahleneingabe mit drei Modi:
+
+```typescript
+<NumberStepper
+  value={numberOfTeams}
+  onChange={setNumberOfTeams}
+  min={2}
+  max={32}
+  mode="stepper"  // oder "slider" oder "input"
+  label="Anzahl Teams"
+  suffix="Teams"
+/>
+```
+
+**Modi:**
+- **Stepper** (±Buttons): Für präzise Eingabe (Teams, Felder, Gruppen)
+  - Touch-freundliche Buttons (min 44x44px)
+  - Große Anzeige des aktuellen Werts
+- **Slider** (Range): Für schnelle Auswahl (Spielzeiten, Pausen)
+  - Visueller Slider mit Daumen-Indikator
+  - Min/Max/Current-Value-Anzeige
+- **Input** (Tastatur): Direkte Eingabe für Power-User
+
+### Responsive Breakpoints
+
+```typescript
+// Mobile-First Strategie
+Mobile:   < 768px   // Card-basierte Layouts, vertikales Stacking
+Tablet:   768-1024px // Kompakte Tabellen, reduzierte Abstände
+Desktop:  > 1024px   // Vollständige Tabellen, alle Features sichtbar
+```
+
+### Screen-spezifische Optimierungen
+
+#### 1. Turnier-Erstellung (Tournament Creation)
+**Datei:** `src/features/tournament-creation/Step2_ModeAndSystem.tsx`
+- ✅ NumberStepper für alle Zahlenfelder
+- ✅ Responsive Form-Layout
+- ✅ Touch-freundliche Buttons (48px Höhe)
+
+**Preview:**
+- ✅ Card-Layout auf Mobile (<768px)
+- ✅ Horizontales Scrollen auf Tablet
+- ✅ Vollständige Tabellen auf Desktop
+
+#### 2. Spielplan-Tab
+**Dateien:**
+- `src/features/tournament-management/ScheduleTab.tsx`
+- `src/components/schedule/GroupStageSchedule.tsx`
+- `src/components/schedule/FinalStageSchedule.tsx`
+
+**Mobile (<768px):**
+- Card-basiertes Layout (ein Match pro Card)
+- Große Score-Inputs (60x48px)
+- Touch-freundliche Dropdowns (44px min-height)
+- Team-Namen gut lesbar (15px font)
+
+**Desktop (≥768px):**
+- Table-Layout mit allen Spalten
+- Kompakte Darstellung
+
+#### 3. Platzierungs-Tab
+**Datei:** `src/features/tournament-management/RankingTab.tsx`
+
+**Mobile (<768px):**
+- Kondensierte Tabelle (Platz, Team, Pkt, Diff)
+- Erweiterbare Zeilen (Tap zum Aufklappen)
+- Detaillierte Statistiken in expandierbarem Panel
+- Keine horizontale Scrollbalken
+
+**Desktop (≥768px):**
+- Vollständige Tabelle mit allen Spalten
+- Alle Statistiken sofort sichtbar
+
+#### 4. Gruppen-Tabelle
+**Dateien:**
+- `src/features/tournament-management/TableTab.tsx`
+- `src/components/schedule/GroupTables.tsx`
+
+**Features:**
+- Identisches responsive Pattern wie Platzierungs-Tab
+- Responsive Grid für mehrere Gruppen
+- Mobile: Single-Column, Desktop: Multi-Column
+- Platzierungslogik-Highlighting funktioniert überall
+
+#### 5. Turnierleitung (Management/Kampfgericht)
+**Dateien:**
+- `src/features/tournament-management/ManagementTab.tsx`
+- `src/components/match-cockpit/MatchCockpit.tsx`
+- `src/components/match-cockpit/CurrentMatchPanel.tsx`
+- `src/components/match-cockpit/UpcomingMatchesSidebar.tsx`
+
+**Mobile (<768px):**
+- Vertikales Stacking aller Komponenten
+- Timer: 40px Schriftgröße, klickbar für manuelle Anpassung
+- Tor-Buttons: Volle Breite, 48px Höhe
+- Control-Buttons: 48px Höhe (Start, Pause, Beenden)
+- Events-Liste: 200px max-height mit Scroll
+- Sidebar: Stapelt sich unter Hauptbereich
+
+**Desktop (≥768px):**
+- 2-Spalten-Layout (Hauptbereich + Sidebar)
+- Kompaktere Darstellung
+
+### Design-Prinzipien
+
+#### Touch-Targets
+- **Minimum:** 44x44px (WCAG 2.1 Level AA)
+- **Empfohlen:** 48x48px (unsere Standard-Buttons)
+- **Score-Inputs:** 60x48px (extra groß für präzise Eingabe)
+
+#### Typography
+```typescript
+// Responsive Font-Größen
+Mobile:   11-15px (kompakt aber lesbar)
+Tablet:   12-16px (ausgewogen)
+Desktop:  13-18px (komfortabel)
+
+// Wichtige Inhalte größer
+Timer:    40px (Mobile) / 26px (Desktop)
+Score:    48px (Mobile) / 30px (Desktop)
+```
+
+#### Spacing
+```typescript
+// Responsive Padding
+Mobile:   12-16px
+Tablet:   16-20px
+Desktop:  20-24px
+
+// Zwischen Elementen
+Mobile:   8-12px gaps
+Desktop:  12-16px gaps
+```
+
+#### Layout-Patterns
+- **Mobile:** Card-basiert, vertikales Stacking
+- **Desktop:** Tables, Grids, Side-by-Side
+- **Transitions:** Smooth bei Window-Resize
+- **No Horizontal Scroll:** Immer vermieden auf Mobile
+
+### Testing-Empfehlungen
+
+```bash
+# Test auf verschiedenen Viewports
+Mobile:  375px (iPhone SE)
+Mobile:  390px (iPhone 12/13/14)
+Mobile:  428px (iPhone 14 Pro Max)
+Tablet:  768px (iPad)
+Tablet: 1024px (iPad Pro)
+Desktop: 1440px (Standard Laptop)
+Desktop: 1920px (Full HD)
+```
+
+**Browser DevTools:**
+1. Chrome DevTools → Toggle Device Toolbar (Cmd+Shift+M)
+2. Teste alle Breakpoints (375px, 768px, 1024px, 1440px)
+3. Teste Touch-Events mit Device Emulation
+4. Prüfe, dass keine horizontalen Scrollbalken erscheinen
 
 ---
 
