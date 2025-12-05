@@ -13,6 +13,22 @@ export interface Team {
   group?: string;
 }
 
+/**
+ * Structured location data for tournaments
+ * Prepared for international scaling and backend migration
+ */
+export interface LocationDetails {
+  name: string;           // "Sporthalle Waging"
+  street?: string;        // "Mozartstraße 9"
+  postalCode?: string;    // "83329"
+  city?: string;          // "Waging am See"
+  country?: string;       // "Deutschland" (für internationale Skalierung)
+  coordinates?: {         // Für spätere Maps-Integration
+    latitude: number;
+    longitude: number;
+  };
+}
+
 export interface PlacementCriterion {
   id: string;
   label: string;
@@ -185,7 +201,8 @@ export interface Tournament {
   timeSlot: string; // Legacy: Will be replaced by startTime
   startDate?: string; // New: YYYY-MM-DD format
   startTime?: string; // New: HH:mm format (24h)
-  location: string;
+  location: LocationDetails;
+  organizer?: string; // Veranstalter-Name (optional)
 
   // Step 4: Teams
   teams: Team[];

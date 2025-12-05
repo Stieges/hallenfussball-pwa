@@ -14,6 +14,7 @@ import { Tournament } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
 import { Standing } from '../types/tournament';
 import { calculateStandings } from '../utils/calculations';
+import { getLocationName } from '../utils/locationHelpers';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
@@ -312,7 +313,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         )}
         <div style={titleStyle}>{tournament.title}</div>
         <div style={subtitleStyle}>
-          {tournament.ageClass} · {tournament.date} · {tournament.location}
+          {tournament.ageClass} · {tournament.date} · {getLocationName(tournament)}
         </div>
       </header>
 

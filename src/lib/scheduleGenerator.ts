@@ -8,7 +8,7 @@
  * - Druckfreundliches Format (A4)
  */
 
-import { Tournament, Match, Team, Standing, RefereeConfig } from '../types/tournament';
+import { Tournament, Match, Team, Standing, RefereeConfig, LocationDetails } from '../types/tournament';
 import { generateGroupPhaseSchedule } from '../utils/fairScheduler';
 import { generatePlayoffSchedule, generatePlayoffDefinitions, generatePlayoffDefinitionsLegacy } from '../utils/playoffScheduler';
 import { getUniqueGroups } from '../utils/groupHelpers';
@@ -74,7 +74,7 @@ export interface GeneratedSchedule {
     id: string;
     title: string;
     date: string;
-    location: string;
+    location: LocationDetails;
     ageClass: string;
   };
 

@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# MCP Server und sensitive Daten
+mcp-adesso-analyzer/
+.mcp.json
+.claude/
+**/mcp*.md
+**/MCP*.md
+
+# API Keys und Credentials
+*.key
+*.pem
+.env
+.env.local
+.env.*.local
+**/credentials.json
+**/*secret*
+**/*apikey*

@@ -2,6 +2,7 @@ import { Card, Select, Input } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
+import { LocationForm } from '../../components/LocationForm';
 
 interface Step3Props {
   formData: Partial<Tournament>;
@@ -23,6 +24,14 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         required
       />
 
+      <Input
+        label="Veranstalter (optional)"
+        value={formData.organizer || ''}
+        onChange={(v) => onUpdate('organizer', v)}
+        placeholder="z.B. TSV Waging e.V."
+        style={{ marginTop: '16px' }}
+      />
+
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <Select
           label="Altersklasse"
@@ -30,14 +39,13 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           onChange={(v) => onUpdate('ageClass', v)}
           options={getAgeClassOptions(formData.sport || 'football')}
         />
-        <Input
-          label="Ort"
-          value={formData.location || ''}
-          onChange={(v) => onUpdate('location', v)}
-          placeholder="z.B. Sporthalle Waging"
-          required
-        />
       </div>
+
+      <LocationForm
+        value={formData.location || { name: '' }}
+        onChange={(location) => onUpdate('location', location)}
+        required
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
         <Input

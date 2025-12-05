@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Tournament } from '../types/tournament';
 import * as api from '../services/api';
+import { migrateLocationsToStructured } from '../utils/locationHelpers';
 
 /**
  * Custom hook for managing tournaments
@@ -15,7 +16,22 @@ export const useTournaments = () => {
     const loadTournaments = async () => {
       try {
         const loaded = await api.getAllTournaments();
-        setTournaments(loaded);
+
+        // Migration: Convert old string locations to LocationDetails
+        const migrated = migrateLocationsToStructured(loaded);
+
+        // Check if any tournaments were migrated
+        const hasChanges = migrated.some((t, idx) =>
+          typeof loaded[idx]?.location === 'string'
+        );
+
+        // If migrations occurred, save them back
+        if (hasChanges) {
+          console.log('[useTournaments] Migrating tournaments to structured location format');
+          await Promise.all(migrated.map(t => api.saveTournament(t)));
+        }
+
+        setTournaments(migrated);
       } catch (error) {
         console.error('Failed to load tournaments:', error);
       } finally {

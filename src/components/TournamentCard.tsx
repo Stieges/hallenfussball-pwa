@@ -12,18 +12,21 @@ import { CSSProperties } from 'react';
 import { Tournament } from '../types/tournament';
 import { Card } from './ui';
 import { theme } from '../styles/theme';
+import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 
 interface TournamentCardProps {
   tournament: Tournament;
   onClick?: () => void;
   categoryLabel?: string; // Optional: "Läuft", "Bevorstehend", etc.
+  onDelete?: () => void; // Optional: Delete callback
 }
 
 export const TournamentCard: React.FC<TournamentCardProps> = ({
   tournament,
   onClick,
   categoryLabel,
+  onDelete,
 }) => {
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
@@ -119,6 +122,24 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: theme.fontWeights.medium,
   };
 
+  const deleteButtonStyle: CSSProperties = {
+    marginTop: '12px',
+    width: '100%',
+    background: '#ef4444',
+    color: 'white',
+    border: 'none',
+    borderRadius: theme.borderRadius.sm,
+    padding: '8px 12px',
+    fontSize: '13px',
+    fontWeight: theme.fontWeights.bold,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+    transition: 'all 0.2s ease',
+  };
+
   const badgeColors = getBadgeColor();
 
   return (
@@ -151,7 +172,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
         <div style={infoItemStyle}>
           <span style={labelStyle}>Ort</span>
-          <span style={valueStyle}>{tournament.location}</span>
+          <span style={valueStyle}>{getLocationName(tournament)}</span>
         </div>
 
         <div style={infoItemStyle}>
@@ -174,6 +195,27 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Delete Button - Only show if onDelete is provided - At the bottom */}
+      {onDelete && (
+        <button
+          style={deleteButtonStyle}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent card click
+            onDelete();
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#dc2626';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#ef4444';
+          }}
+          title="Turnier löschen"
+        >
+          <span>🗑️</span>
+          <span>Löschen</span>
+        </button>
+      )}
     </Card>
   );
 };

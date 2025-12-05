@@ -1,6 +1,7 @@
 import { Card, Button, Icons } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
+import { getFullLocationAddress } from '../../utils/locationHelpers';
 
 interface Step5Props {
   formData: Partial<Tournament>;
@@ -80,7 +81,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Ort
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
-              📍 {formData.location || '-'}
+              📍 {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
             </div>
           </div>
         </div>

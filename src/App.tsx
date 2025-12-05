@@ -7,7 +7,7 @@ import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
 
 function App() {
-  const { tournaments, loading, saveTournament } = useTournaments();
+  const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
   const [screen, setScreen] = useState<'dashboard' | 'create' | 'view'>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
@@ -30,7 +30,30 @@ function App() {
 
   const handleTournamentClick = (tournament: Tournament) => {
     setSelectedTournament(tournament);
-    setScreen('view');
+
+    // If tournament is a draft, open in edit mode
+    if (tournament.status === 'draft') {
+      setScreen('create');
+    } else {
+      // Published tournaments open in view/management mode
+      setScreen('view');
+    }
+  };
+
+  const handleDeleteTournament = async (id: string, title: string) => {
+    const confirmed = window.confirm(
+      `Möchtest du das Turnier "${title}" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`
+    );
+
+    if (confirmed) {
+      try {
+        await deleteTournament(id);
+        console.log(`[App] Tournament ${id} deleted successfully`);
+      } catch (error) {
+        console.error('[App] Failed to delete tournament:', error);
+        alert('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+      }
+    }
   };
 
   return (
@@ -47,18 +70,24 @@ function App() {
           tournaments={tournaments}
           onCreateNew={() => setScreen('create')}
           onTournamentClick={handleTournamentClick}
+          onDeleteTournament={handleDeleteTournament}
         />
       )}
 
       {screen === 'create' && (
         <TournamentCreationScreen
-          onBack={() => setScreen('dashboard')}
+          onBack={() => {
+            setSelectedTournament(null); // Clear selection when going back
+            setScreen('dashboard');
+          }}
           onSave={async (tournament) => {
             await saveTournament(tournament);
+            setSelectedTournament(null); // Clear selection after save
             // Small delay to ensure state updates propagate
             await new Promise(resolve => setTimeout(resolve, 200));
             setScreen('dashboard');
           }}
+          existingTournament={selectedTournament || undefined}
         />
       )}
 

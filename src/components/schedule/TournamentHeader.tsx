@@ -5,6 +5,7 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { getFullLocationAddress } from '../../utils/locationHelpers';
 
 interface TournamentHeaderProps {
   schedule: GeneratedSchedule;
@@ -108,7 +109,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
       <div style={metaGridStyle}>
         <div style={metaItemStyle}>
           <span style={metaLabelStyle}>Veranstalter:</span>
-          {schedule.tournament.location}
+          {getFullLocationAddress(schedule.tournament)}
         </div>
         <div style={metaItemStyle}>
           <span style={metaLabelStyle}>Datum:</span>
@@ -136,7 +137,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
         </div>
         <div style={metaItemStyle}>
           <span style={metaLabelStyle}>Veranstaltungsort:</span>
-          {schedule.tournament.location}
+          {getFullLocationAddress(schedule.tournament)}
         </div>
       </div>
 

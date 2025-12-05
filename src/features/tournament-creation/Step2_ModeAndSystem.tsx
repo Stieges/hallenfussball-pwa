@@ -141,7 +141,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               value={formData.numberOfTeams || 4}
               onChange={(v) => onUpdate('numberOfTeams', v)}
               min={2}
-              max={32}
+              max={64}
               mode="stepper"
             />
             {canUseGroups && (

@@ -19,12 +19,14 @@ interface DashboardScreenProps {
   tournaments: Tournament[];
   onCreateNew: () => void;
   onTournamentClick: (tournament: Tournament) => void;
+  onDeleteTournament: (id: string, title: string) => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   tournaments,
   onCreateNew,
   onTournamentClick,
+  onDeleteTournament,
 }) => {
   const categorized: CategorizedTournaments = categorizeTournaments(tournaments);
 
@@ -87,7 +89,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     icon: string,
     tournaments: Tournament[],
     categoryLabel: string,
-    emptyMessage: string
+    emptyMessage: string,
+    allowDelete: boolean = false
   ) => {
     if (tournaments.length === 0) {
       return (
@@ -120,6 +123,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               tournament={tournament}
               categoryLabel={categoryLabel}
               onClick={() => onTournamentClick(tournament)}
+              onDelete={allowDelete ? () => onDeleteTournament(tournament.id, tournament.title) : undefined}
             />
           ))}
         </div>
@@ -169,40 +173,44 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Sections (only render if tournaments exist) */}
       {tournaments.length > 0 && (
         <>
-          {/* 1. Aktuell laufende Turniere */}
+          {/* 1. Aktuell laufende Turniere - NO DELETE */}
           {renderSection(
             'Aktuell laufende Turniere',
             '🏃',
             categorized.running,
             'Läuft',
-            'Keine laufenden Turniere'
+            'Keine laufenden Turniere',
+            false // NO delete for running tournaments
           )}
 
-          {/* 2. Bevorstehende Turniere */}
+          {/* 2. Bevorstehende Turniere - ALLOW DELETE */}
           {renderSection(
             'Bevorstehende Turniere',
             '📅',
             categorized.upcoming,
             'Bevorstehend',
-            'Keine bevorstehenden Turniere'
+            'Keine bevorstehenden Turniere',
+            true // Allow delete
           )}
 
-          {/* 3. Beendete Turniere */}
+          {/* 3. Beendete Turniere - ALLOW DELETE */}
           {renderSection(
             'Beendete Turniere',
             '✅',
             categorized.finished,
             'Beendet',
-            'Keine beendeten Turniere'
+            'Keine beendeten Turniere',
+            true // Allow delete
           )}
 
-          {/* 4. Gespeicherte Turniere (Entwürfe) */}
+          {/* 4. Gespeicherte Turniere (Entwürfe) - ALLOW DELETE */}
           {renderSection(
             'Gespeicherte Turniere',
             '💾',
             categorized.draft,
             'Entwurf',
-            'Keine gespeicherten Entwürfe'
+            'Keine gespeicherten Entwürfe',
+            true // Allow delete
           )}
         </>
       )}

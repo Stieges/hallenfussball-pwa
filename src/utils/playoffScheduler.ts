@@ -10,6 +10,7 @@
 
 import { Match, FinalsConfig } from '../types/tournament';
 import { generatePlayoffMatches as generatePlayoffMatchesFromPreset } from '../lib/playoffGenerator';
+import { generateFinalsMatchId } from './idGenerator';
 
 /**
  * Playoff match definition before scheduling
@@ -187,7 +188,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
       const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
       const match: Match = {
-        id: def.id,
+        id: generateFinalsMatchId(),
         round: currentSlot + 1,
         field,
         slot: currentSlot,
@@ -214,7 +215,7 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
         const scheduledTime = startTime ? new Date(startTime.getTime() + currentSlot * (slotDurationMinutes + breakBetweenSlotsMinutes) * 60000) : undefined;
 
         const match: Match = {
-          id: def.id,
+          id: generateFinalsMatchId(),
           round: currentSlot + 1,
           field,
           slot: currentSlot,

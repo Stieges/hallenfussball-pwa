@@ -15,6 +15,7 @@ import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEdito
 import { Button, Card } from '../../components/ui';
 import { theme } from '../../styles/theme';
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
+import { getLocationName, getLocationAddressLine } from '../../utils/locationHelpers';
 
 interface TournamentPreviewProps {
   tournament: Tournament;
@@ -129,8 +130,8 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     await exportScheduleToPDF(schedule, schedule.initialStandings, {
       locale: 'de',
       includeStandings: true,
-      organizerName: 'Wieninger-Libella',
-      hallName: currentTournament.location,
+      organizerName: currentTournament.organizer || 'Wieninger-Libella',
+      hallName: getLocationName(currentTournament),
     });
   };
 
@@ -217,8 +218,13 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         </div>
         <h1 style={titleStyle}>{currentTournament.title}</h1>
         <p style={subtitleStyle}>
-          {currentTournament.ageClass} • {currentTournament.date} • {currentTournament.location}
+          {currentTournament.ageClass} • {currentTournament.date} • {getLocationName(currentTournament)}
         </p>
+        {getLocationAddressLine(currentTournament) && (
+          <p style={{ ...subtitleStyle, fontSize: '14px', marginTop: '4px', opacity: 0.8 }}>
+            {getLocationAddressLine(currentTournament)}
+          </p>
+        )}
 
         {/* Turnier-Infos Grid */}
         <div style={infoGridStyle} className="tournament-info-grid">

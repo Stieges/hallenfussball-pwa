@@ -9,6 +9,8 @@
  */
 
 import { Team, Match } from '../types/tournament';
+import { FairnessCalculator } from './FairnessCalculator';
+import { generateGroupStageMatchId } from './idGenerator';
 
 /**
  * Represents a time slot in the schedule
@@ -22,7 +24,7 @@ export interface TimeSlot {
 /**
  * Team scheduling state for fairness tracking
  */
-interface TeamScheduleState {
+export interface TeamScheduleState {
   teamId: string;
   matchSlots: number[]; // Slots where team plays
   fieldCounts: Map<number, number>; // fieldIndex -> count
@@ -77,7 +79,7 @@ export interface GlobalFairnessStats {
  */
 interface TeamPairing {
   teamA: Team;
-  teamB: Team;
+  teamB: Team | null;
 }
 
 /**
@@ -92,7 +94,7 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
   if (n < 2) return pairings;
 
   // For odd number of teams, add a "bye" team
-  const teamsWithBye = n % 2 === 0 ? [...teams] : [...teams, null as any];
+  const teamsWithBye: (Team | null)[] = n % 2 === 0 ? [...teams] : [...teams, null];
   const totalTeams = teamsWithBye.length;
 
   // Circle method: fix one team, rotate others
@@ -172,7 +174,8 @@ function calculateFairnessScore(
   slot: number,
   field: number,
   teamStates: Map<string, TeamScheduleState>,
-  minRestSlots: number
+  minRestSlots: number,
+  fairnessCalculator: FairnessCalculator
 ): number {
   const stateA = teamStates.get(teamAId)!;
   const stateB = teamStates.get(teamBId)!;
@@ -186,45 +189,29 @@ function calculateFairnessScore(
   }
 
   // PRIORITY 1: Minimize global variance (maxAvgRest - minAvgRest)
-  // Calculate what average rest would be for teams AFTER this assignment
+  // Use cached values from FairnessCalculator for O(1) lookups
 
-  // Calculate current average rest for all teams (including projected values for A & B)
-  const avgRestByTeam = new Map<string, number>();
+  // Get projected average rest for the two teams playing in this slot
+  const projectedAvgA = fairnessCalculator.projectedAvgRest(teamAId, slot);
+  const projectedAvgB = fairnessCalculator.projectedAvgRest(teamBId, slot);
 
-  teamStates.forEach((state, teamId) => {
-    if (teamId === teamAId || teamId === teamBId) {
-      // Project what the average would be after adding this match
-      const projectedSlots = [...state.matchSlots, slot].sort((a, b) => a - b);
-      if (projectedSlots.length < 2) {
-        avgRestByTeam.set(teamId, 0);
-      } else {
-        const rests: number[] = [];
-        for (let i = 1; i < projectedSlots.length; i++) {
-          rests.push(projectedSlots[i] - projectedSlots[i - 1]);
-        }
-        const avgRest = rests.reduce((sum, r) => sum + r, 0) / rests.length;
-        avgRestByTeam.set(teamId, avgRest);
-      }
-    } else if (state.matchSlots.length >= 2) {
-      // Calculate current average for teams not in this match
-      const sortedSlots = [...state.matchSlots].sort((a, b) => a - b);
-      const rests: number[] = [];
-      for (let i = 1; i < sortedSlots.length; i++) {
-        rests.push(sortedSlots[i] - sortedSlots[i - 1]);
-      }
-      const avgRest = rests.reduce((sum, r) => sum + r, 0) / rests.length;
-      avgRestByTeam.set(teamId, avgRest);
-    } else {
-      avgRestByTeam.set(teamId, 0);
+  // Get current average rest for all other teams from cache
+  const currentAvgs = fairnessCalculator.getAvgRestByTeam();
+
+  // Build complete list with projections for A & B
+  const allAvgs: number[] = [];
+  currentAvgs.forEach((avg, teamId) => {
+    if (teamId !== teamAId && teamId !== teamBId) {
+      allAvgs.push(avg);
     }
   });
+  allAvgs.push(projectedAvgA, projectedAvgB);
 
-  // Calculate global min/max average rest
-  const avgRests = Array.from(avgRestByTeam.values()).filter(avg => avg > 0);
-
-  if (avgRests.length > 0) {
-    const globalMinAvg = Math.min(...avgRests);
-    const globalMaxAvg = Math.max(...avgRests);
+  // Calculate global variance with projected values
+  const filtered = allAvgs.filter(v => v > 0);
+  if (filtered.length > 0) {
+    const globalMinAvg = Math.min(...filtered);
+    const globalMaxAvg = Math.max(...filtered);
     const globalVariance = globalMaxAvg - globalMinAvg;
     score += globalVariance * 100; // High weight for global fairness
   }
@@ -265,6 +252,53 @@ function calculateFairnessScore(
 }
 
 /**
+ * Validates scheduling options before attempting to generate schedule
+ * Returns error message if invalid, null if valid
+ */
+function validateSchedulingConstraints(
+  options: GroupPhaseScheduleOptions
+): string | null {
+  const { groups, numberOfFields, slotDurationMinutes, breakBetweenSlotsMinutes } = options;
+
+  // Count total teams
+  let totalTeams = 0;
+  groups.forEach(teams => totalTeams += teams.length);
+
+  // Check 1: Minimum 2 teams
+  if (totalTeams < 2) {
+    return 'Mindestens 2 Teams werden benötigt';
+  }
+
+  // Check 2: Minimum 1 field
+  if (numberOfFields < 1 || numberOfFields === 0) {
+    return 'Mindestens 1 Feld wird benötigt';
+  }
+
+  // Check 3: Positive durations
+  if (slotDurationMinutes <= 0) {
+    return 'Spieldauer muss positiv sein';
+  }
+
+  if (breakBetweenSlotsMinutes < 0) {
+    return 'Pause zwischen Spielen kann nicht negativ sein';
+  }
+
+  // Check 4: Extreme edge cases (only reject truly impossible scenarios)
+  // This is a very conservative check - the actual scheduling algorithm
+  // will provide better error messages if constraints can't be met
+
+  // Only reject if setup is obviously impossible (e.g., 100+ teams with 1 field)
+  if (totalTeams > 100 && numberOfFields < 3) {
+    return (
+      `Zu viele Teams (${totalTeams}) für nur ${numberOfFields} Feld(er). ` +
+      `Empfehlung: Mindestens 5 Felder verwenden.`
+    );
+  }
+
+  return null; // ✅ Valid
+}
+
+/**
  * Generate fair group phase schedule
  */
 export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): Match[] {
@@ -277,6 +311,12 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     startTime,
   } = options;
 
+  // Pre-validation: Check constraints before attempting to schedule
+  const validationError = validateSchedulingConstraints(options);
+  if (validationError) {
+    throw new Error(validationError);
+  }
+
   const matches: Match[] = [];
   const timeSlots: TimeSlot[] = [];
   let currentSlotIndex = 0;
@@ -285,6 +325,10 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   const allTeams: Team[] = [];
   groups.forEach(teams => allTeams.push(...teams));
   const teamStates = initializeTeamStates(allTeams);
+
+  // Create FairnessCalculator for performance optimization
+  const fairnessCalculator = new FairnessCalculator();
+  fairnessCalculator.bindTeamStates(teamStates);
 
   // Generate round-robin pairings for each group
   const groupPairings = new Map<string, TeamPairing[]>();
@@ -310,6 +354,8 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   });
 
   while (remainingPairings.length > 0) {
+    let progressThisSlot = false; // Track if any match was placed this slot
+
     // Find slot with available fields
     if (timeSlots.length === currentSlotIndex) {
       timeSlots.push({
@@ -334,13 +380,18 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       for (let i = 0; i < remainingPairings.length; i++) {
         const { pairing } = remainingPairings[i];
 
+        // NOTE: pairing.teamB is guaranteed non-null here because BYE-pairings
+        // are filtered out in generateRoundRobinPairings() at line 105
+        if (!pairing.teamB) continue; // Type guard for safety
+
         const score = calculateFairnessScore(
           pairing.teamA.id,
           pairing.teamB.id,
           currentSlotIndex,
           field,
           teamStates,
-          minRestSlotsPerTeam
+          minRestSlotsPerTeam,
+          fairnessCalculator
         );
 
         if (score < Infinity) {
@@ -374,15 +425,19 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       if (bestPairingIndex >= 0 && bestScore < Infinity) {
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
 
+        // Type guard: pairing.teamB is non-null (BYE-pairings filtered earlier)
+        if (!pairing.teamB) continue;
+
         const stateA = teamStates.get(pairing.teamA.id)!;
         const stateB = teamStates.get(pairing.teamB.id)!;
-        const restA = currentSlotIndex - stateA.lastSlot;
-        const restB = currentSlotIndex - stateB.lastSlot;
 
-        console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
+        // Debug logging (disabled for performance with large tournaments)
+        // const restA = currentSlotIndex - stateA.lastSlot;
+        // const restB = currentSlotIndex - stateB.lastSlot;
+        // console.log(`[FairScheduler] Slot ${currentSlotIndex}, Field ${field}: Scheduled ${pairing.teamA.name} vs ${pairing.teamB.name} (Group ${groupId}), Score: ${bestScore.toFixed(2)}, Rest: ${restA}/${restB} slots`);
 
         const match: Match = {
-          id: `match-${Date.now()}-${matches.length}`,
+          id: generateGroupStageMatchId(),
           round: currentSlotIndex + 1,
           field,
           slot: currentSlotIndex,
@@ -406,8 +461,27 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         stateB.fieldCounts.set(field, (stateB.fieldCounts.get(field) || 0) + 1);
         stateB.awayCount++; // Team B is away
 
+        // Update FairnessCalculator caches after assignment
+        fairnessCalculator.recordAssignment(pairing.teamA.id);
+        fairnessCalculator.recordAssignment(pairing.teamB.id);
+
         remainingPairings.splice(bestPairingIndex, 1);
+        progressThisSlot = true; // Mark that we made progress
       }
+    }
+
+    // Stall detection: If no match was placed in this slot, we have a deadlock
+    if (!progressThisSlot) {
+      console.error(
+        `[FairScheduler] DEADLOCK: No match could be placed in slot ${currentSlotIndex}.`,
+        `Remaining: ${remainingPairings.length} matches`
+      );
+
+      throw new Error(
+        `Spielplan konnte nicht vollständig erstellt werden. ` +
+        `${remainingPairings.length} Matches fehlen. ` +
+        `Bitte mehr Felder hinzufügen oder minRestSlotsPerTeam reduzieren.`
+      );
     }
 
     // Move to next slot

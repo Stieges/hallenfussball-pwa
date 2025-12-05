@@ -14,6 +14,7 @@ import jsPDF from 'jspdf';
 import autoTable, { RowInput, CellInput } from 'jspdf-autotable';
 import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
 import { Standing, RefereeConfig } from '../types/tournament';
+import { formatLocationForPrint, getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
 
 // ============================================================================
 // STYLE CONFIGURATION (matching HTML reference)
@@ -147,7 +148,7 @@ export async function exportScheduleToPDF(
     locale = 'de',
     includeStandings = true,
     organizerName = 'Wieninger-Libella',
-    hallName = schedule.tournament.location,
+    hallName = getLocationName(schedule.tournament),
   } = options;
 
   const t = TRANSLATIONS[locale];
@@ -293,6 +294,9 @@ function renderMetaBox(
 
   const mode = schedule.teams.some(team => team.group) ? 'Gruppen + Finals' : 'Jeder gegen Jeden';
 
+  // Get location address line (street, city)
+  const locationAddressLine = getLocationAddressLine(schedule.tournament);
+
   // Split fields into two columns
   const leftFields = [
     { label: t.organizer, value: organizerName },
@@ -318,8 +322,10 @@ function renderMetaBox(
   const valueStartXRight = rightMaxLabelWidth + 3;
 
   // Calculate content height (use the max of both columns)
+  // Add extra line for location address if present
   const maxRows = Math.max(leftFields.length, rightFields.length);
-  const contentHeight = maxRows * lineHeight + (maxRows - 1) * rowGap + padding * 2;
+  const extraLineForAddress = locationAddressLine ? 1 : 0;
+  const contentHeight = maxRows * lineHeight + (maxRows - 1) * rowGap + padding * 2 + (extraLineForAddress * lineHeight);
 
   // Platz für Meta-Box
   yPos = ensureSpace(doc, yPos, contentHeight + 4);
@@ -346,6 +352,15 @@ function renderMetaBox(
     doc.text(field.value, leftColumnX + valueStartXLeft, currentYLeft);
 
     currentYLeft += lineHeight + rowGap;
+
+    // Add location address line below "Halle" field
+    if (field.label === t.hall && locationAddressLine) {
+      doc.setFontSize(PDF_STYLE.fonts.meta - 1);
+      doc.setTextColor(...PDF_STYLE.colors.textMuted);
+      doc.setFont('helvetica', 'normal');
+      doc.text(locationAddressLine, leftColumnX + valueStartXLeft, currentYLeft);
+      currentYLeft += lineHeight + rowGap;
+    }
   });
 
   // Right column
