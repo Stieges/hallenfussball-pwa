@@ -193,11 +193,40 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       setSchedule(syncedSchedule);
       setCurrentStandings(standings);
     } else {
-      // For score updates: ONLY update tournament, NOT schedule
-      const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
+      // For updates without regeneration: Sync referee assignments from tournament.matches to schedule
+      if (schedule) {
+        const updatedSchedule = {
+          ...schedule,
+          allMatches: schedule.allMatches.map(sm => {
+            const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
+            if (tournamentMatch) {
+              return { ...sm, referee: tournamentMatch.referee };
+            }
+            return sm;
+          }),
+          phases: schedule.phases.map(phase => ({
+            ...phase,
+            matches: phase.matches.map(sm => {
+              const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
+              if (tournamentMatch) {
+                return { ...sm, referee: tournamentMatch.referee };
+              }
+              return sm;
+            })
+          }))
+        };
 
-      setTournament(updatedTournament);
-      setCurrentStandings(standings);
+        const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
+
+        setTournament(updatedTournament);
+        setSchedule(updatedSchedule);
+        setCurrentStandings(standings);
+      } else {
+        // Fallback if schedule is null
+        const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
+        setTournament(updatedTournament);
+        setCurrentStandings(standings);
+      }
     }
   };
 

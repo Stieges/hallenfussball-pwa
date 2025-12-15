@@ -605,10 +605,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             onEdit={handleBackToEdit}
             onPublish={handlePublish}
             onTournamentChange={(updatedTournament) => {
-              // Update formData with the modified playoff config
+              // Update formData with the modified playoff config and referee config
               setFormData((prev) => ({
                 ...prev,
                 playoffConfig: updatedTournament.playoffConfig,
+                refereeConfig: updatedTournament.refereeConfig,
               }));
             }}
           />

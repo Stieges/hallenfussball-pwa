@@ -7,6 +7,7 @@ import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
+import { MatchScoreCell } from './MatchScoreCell';
 
 interface GroupStageScheduleProps {
   matches: ScheduledMatch[];
@@ -17,6 +18,9 @@ interface GroupStageScheduleProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
   editable?: boolean;
+  finishedMatches?: Set<string>;
+  correctionMatchId?: string | null;
+  onStartCorrection?: (matchId: string) => void;
 }
 
 export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
@@ -28,6 +32,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onFieldChange,
   onScoreChange,
   editable = false,
+  finishedMatches,
+  correctionMatchId,
+  onStartCorrection,
 }) => {
   if (matches.length === 0) {
     return (
@@ -189,19 +196,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     marginBottom: '12px',
   };
 
-  const mobileScoreInputStyle: CSSProperties = {
-    width: '60px',
-    height: '48px',
-    padding: '8px',
-    border: `2px solid ${theme.colors.border}`,
-    borderRadius: '6px',
-    fontSize: '18px',
-    fontWeight: theme.fontWeights.bold,
-    textAlign: 'center',
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.primary,
-  };
-
   const mobileMetaStyle: CSSProperties = {
     display: 'flex',
     gap: '16px',
@@ -299,62 +293,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 )}
                 <td style={tdStyle}>{match.homeTeam}</td>
                 <td style={resultCellStyle}>
-                  {editable && onScoreChange ? (
-                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', justifyContent: 'center' }}>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={match.scoreA !== undefined ? match.scoreA : ''}
-                        onChange={(e) => {
-                          const scoreA = e.target.value ? parseInt(e.target.value) : 0;
-                          const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
-                          onScoreChange(match.id, scoreA, scoreB);
-                        }}
-                        style={{
-                          width: '40px',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '13px',
-                          fontWeight: theme.fontWeights.bold,
-                          textAlign: 'center',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      />
-                      <span>:</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={match.scoreB !== undefined ? match.scoreB : ''}
-                        onChange={(e) => {
-                          const scoreB = e.target.value ? parseInt(e.target.value) : 0;
-                          const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
-                          onScoreChange(match.id, scoreA, scoreB);
-                        }}
-                        style={{
-                          width: '40px',
-                          padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '13px',
-                          fontWeight: theme.fontWeights.bold,
-                          textAlign: 'center',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <span>
-                      {match.scoreA !== undefined && match.scoreB !== undefined
-                        ? `${match.scoreA} : ${match.scoreB}`
-                        : '___ : ___'
-                      }
-                    </span>
-                  )}
+                  <MatchScoreCell
+                    matchId={match.id}
+                    scoreA={match.scoreA}
+                    scoreB={match.scoreB}
+                    editable={editable && onScoreChange !== undefined}
+                    isFinished={finishedMatches?.has(match.id) ?? false}
+                    inCorrectionMode={correctionMatchId === match.id}
+                    onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
+                    onStartCorrection={() => onStartCorrection?.(match.id)}
+                  />
                 </td>
                 <td style={tdStyle}>{match.awayTeam}</td>
                 {showFields && (
@@ -426,44 +374,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
             {/* Score Input */}
             <div style={mobileScoreContainerStyle}>
-              {editable && onScoreChange ? (
-                <>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={match.scoreA !== undefined ? match.scoreA : ''}
-                    onChange={(e) => {
-                      const scoreA = e.target.value ? parseInt(e.target.value) : 0;
-                      const scoreB = match.scoreB !== undefined ? match.scoreB : 0;
-                      onScoreChange(match.id, scoreA, scoreB);
-                    }}
-                    style={mobileScoreInputStyle}
-                    placeholder="0"
-                  />
-                  <span style={{ fontSize: '24px', fontWeight: theme.fontWeights.bold }}>:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={match.scoreB !== undefined ? match.scoreB : ''}
-                    onChange={(e) => {
-                      const scoreB = e.target.value ? parseInt(e.target.value) : 0;
-                      const scoreA = match.scoreA !== undefined ? match.scoreA : 0;
-                      onScoreChange(match.id, scoreA, scoreB);
-                    }}
-                    style={mobileScoreInputStyle}
-                    placeholder="0"
-                  />
-                </>
-              ) : (
-                <span style={{ fontSize: '24px', fontWeight: theme.fontWeights.bold }}>
-                  {match.scoreA !== undefined && match.scoreB !== undefined
-                    ? `${match.scoreA} : ${match.scoreB}`
-                    : '___ : ___'
-                  }
-                </span>
-              )}
+              <MatchScoreCell
+                matchId={match.id}
+                scoreA={match.scoreA}
+                scoreB={match.scoreB}
+                editable={editable && onScoreChange !== undefined}
+                isFinished={finishedMatches?.has(match.id) ?? false}
+                inCorrectionMode={correctionMatchId === match.id}
+                onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
+                onStartCorrection={() => onStartCorrection?.(match.id)}
+              />
             </div>
 
             {/* Meta information */}

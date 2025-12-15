@@ -21,6 +21,7 @@ import {
   MatchStatus,
   MatchEvent,
 } from '../../components/match-cockpit/MatchCockpit';
+import { autoResolvePlayoffsIfReady } from '../../utils/playoffResolver';
 
 interface ManagementTabProps {
   tournament: Tournament;
@@ -56,7 +57,19 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     localStorage.setItem(`liveMatches-${tournament.id}`, JSON.stringify(obj));
   }, [liveMatches, tournament.id]);
 
-  // Timer für laufende Spiele
+  // DEF-005: beforeunload handler for crash safety
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Ensure final state is saved before tab closes
+      const obj = Object.fromEntries(liveMatches.entries());
+      localStorage.setItem(`liveMatches-${tournament.id}`, JSON.stringify(obj));
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [liveMatches, tournament.id]);
+
+  // Timer für laufende Spiele (DEF-005: Timestamp-based calculation)
   useEffect(() => {
     const interval = setInterval(() => {
       setLiveMatches(prev => {
@@ -64,10 +77,16 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         let hasChanges = false;
 
         updated.forEach((match, matchId) => {
-          if (match.status === 'RUNNING') {
+          if (match.status === 'RUNNING' && match.timerStartTime) {
+            // Calculate elapsed time based on start timestamp
+            const startTime = new Date(match.timerStartTime).getTime();
+            const now = Date.now();
+            const runtimeSeconds = Math.floor((now - startTime) / 1000);
+            const totalElapsed = (match.timerElapsedSeconds || 0) + runtimeSeconds;
+
             updated.set(matchId, {
               ...match,
-              elapsedSeconds: match.elapsedSeconds + 1,
+              elapsedSeconds: totalElapsed,
             });
             hasChanges = true;
           }
@@ -255,6 +274,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           awayScore: 0,
           status: 'RUNNING' as MatchStatus,
           elapsedSeconds: 0,
+          // DEF-005: Timer persistence - set start time
+          timerStartTime: new Date().toISOString(),
+          timerElapsedSeconds: 0,
+          timerPausedAt: undefined,
           events: [{
             id: `${matchId}-${Date.now()}`,
             matchId,
@@ -291,6 +314,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       updated.set(matchId, {
         ...match,
         status: 'RUNNING' as MatchStatus,
+        // DEF-005: Timer persistence - set start time
+        timerStartTime: new Date().toISOString(),
+        timerElapsedSeconds: match.elapsedSeconds || 0,
+        timerPausedAt: undefined,
         events: [...match.events, event],
       });
       return updated;
@@ -324,6 +351,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       updated.set(matchId, {
         ...match,
         status: 'PAUSED' as MatchStatus,
+        // DEF-005: Timer persistence - save pause timestamp and elapsed time
+        timerPausedAt: new Date().toISOString(),
+        timerElapsedSeconds: match.elapsedSeconds,
         events: [...match.events, event],
       });
       return updated;
@@ -357,6 +387,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       updated.set(matchId, {
         ...match,
         status: 'RUNNING' as MatchStatus,
+        // DEF-005: Timer persistence - resume with new start time accounting for elapsed time
+        timerStartTime: new Date().toISOString(),
+        timerElapsedSeconds: match.elapsedSeconds,
+        timerPausedAt: undefined,
         events: [...match.events, event],
       });
       return updated;
@@ -392,6 +426,24 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
       // Speichere Tournament
       onTournamentUpdate(updatedTournament, false);
+
+      // ✅ FIX DEF-003: Automatic playoff resolution after group match completion
+      const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
+      if (playoffResolution?.wasResolved) {
+        console.log('✅ Playoff-Paarungen automatisch aufgelöst:', playoffResolution);
+
+        // Update tournament with resolved playoff matches
+        onTournamentUpdate(updatedTournament, false);
+
+        // Notify user
+        setTimeout(() => {
+          alert(
+            `🎉 Gruppenphase abgeschlossen!\n\n` +
+            `${playoffResolution.message}\n\n` +
+            `Die Playoff-Paarungen wurden automatisch basierend auf den Gruppenplatzierungen erstellt.`
+          );
+        }, 500);
+      }
 
       const event: MatchEvent = {
         id: `${matchId}-${Date.now()}`,
@@ -444,6 +496,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         type: 'GOAL',
         payload: {
           teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
+          teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name, // DEF-004: Add team name
           direction: delta > 0 ? 'INC' : 'DEC',
         },
         scoreAfter: {
@@ -567,10 +620,23 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     });
   }, [tournament, onTournamentUpdate]);
 
-  // Handler: Load next match
+  // Handler: Load next match (DEF-006 fix)
   const handleLoadNextMatch = useCallback(() => {
-    setSelectedMatchId(null); // Reset selection, damit nächstes Spiel automatisch geladen wird
-  }, []);
+    // Find current match index
+    const currentIndex = fieldMatches.findIndex(m => m.id === currentMatchData?.id);
+
+    // Find next match without result after current match
+    const nextMatch = fieldMatches
+      .slice(currentIndex + 1)
+      .find(m => m.scoreA === undefined || m.scoreB === undefined);
+
+    if (nextMatch) {
+      setSelectedMatchId(nextMatch.id);
+    } else {
+      // No next match available - show user feedback
+      alert('ℹ️ Kein weiteres Spiel auf diesem Feld verfügbar.');
+    }
+  }, [fieldMatches, currentMatchData]);
 
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {

@@ -12,6 +12,7 @@ interface InputProps {
   step?: string | number;
   disabled?: boolean;
   required?: boolean;
+  list?: string;
   style?: CSSProperties;
 }
 
@@ -26,6 +27,7 @@ export const Input: React.FC<InputProps> = ({
   step,
   disabled = false,
   required = false,
+  list,
   style = {},
 }) => {
   const containerStyles: CSSProperties = {
@@ -73,6 +75,7 @@ export const Input: React.FC<InputProps> = ({
         step={step}
         disabled={disabled}
         required={required}
+        list={list}
         style={inputStyles}
         onFocus={(e) => {
           e.target.style.borderColor = theme.colors.primary;

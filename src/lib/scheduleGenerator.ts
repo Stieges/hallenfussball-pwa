@@ -76,6 +76,7 @@ export interface GeneratedSchedule {
     date: string;
     location: LocationDetails;
     ageClass: string;
+    organizer?: string; // Veranstalter-Name (optional)
   };
 
   /** Alle Spiele chronologisch sortiert */
@@ -350,6 +351,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       date: tournament.date,
       location: tournament.location,
       ageClass: tournament.ageClass,
+      organizer: tournament.organizer, // FIX DEF-001: Veranstalter aus Metadaten
     },
     allMatches: allMatches,
     phases,

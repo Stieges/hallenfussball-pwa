@@ -41,6 +41,12 @@ interface ScheduleDisplayProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   /** Callback when score is changed */
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
+  /** Set of finished match IDs (for correction mode) */
+  finishedMatches?: Set<string>;
+  /** Match ID currently in correction mode */
+  correctionMatchId?: string | null;
+  /** Callback when starting correction mode */
+  onStartCorrection?: (matchId: string) => void;
 }
 
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
@@ -54,6 +60,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onRefereeChange,
   onFieldChange,
   onScoreChange,
+  finishedMatches,
+  correctionMatchId,
+  onStartCorrection,
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -134,6 +143,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
+          finishedMatches={finishedMatches}
+          correctionMatchId={correctionMatchId}
+          onStartCorrection={onStartCorrection}
         />
       )}
 
@@ -155,6 +167,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
+          finishedMatches={finishedMatches}
+          correctionMatchId={correctionMatchId}
+          onStartCorrection={onStartCorrection}
         />
       )}
 

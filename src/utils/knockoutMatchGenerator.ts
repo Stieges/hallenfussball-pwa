@@ -5,6 +5,7 @@ import {
   TeamReference,
 } from '../types/tournamentSchema';
 import { Match, Tournament } from '../types/tournament';
+import { calculateStandings } from './calculations';
 
 /**
  * Generiert K.O.-Spiele basierend auf einem TournamentCase Schema
@@ -101,6 +102,7 @@ const resolveTeamReference = (
 
 /**
  * Findet ein Team basierend auf Gruppenplatzierung
+ * FIXED: Now properly calculates standings using calculateStandings()
  */
 const resolveGroupStanding = (
   ref: TeamReference,
@@ -112,8 +114,7 @@ const resolveGroupStanding = (
 
   // Sonderfall: "bestSecond" für den besten Zweiten
   if (ref.groupId === 'bestSecond') {
-    // Diese Logik müsste nach der Gruppenphase ausgeführt werden
-    return null;
+    return resolveBestSecondPlace(tournament);
   }
 
   // Finde Teams in der angegebenen Gruppe
@@ -123,9 +124,56 @@ const resolveGroupStanding = (
     return null;
   }
 
-  // Sortiere Teams nach Platzierung (muss nach Gruppenphase berechnet werden)
-  // Für jetzt geben wir das n-te Team in der Gruppe zurück
-  return teamsInGroup[ref.position - 1]?.id || null;
+  // ✅ FIX: Berechne tatsächliche Tabellenstände basierend auf Spielergebnissen
+  const groupMatches = tournament.matches || [];
+  const standings = calculateStandings(teamsInGroup, groupMatches, tournament, ref.groupId);
+
+  // Hole das Team an der gewünschten Position (1-indexed)
+  if (standings.length >= ref.position) {
+    return standings[ref.position - 1].team.id;
+  }
+
+  return null;
+};
+
+/**
+ * Findet den besten Zweiten über alle Gruppen hinweg
+ */
+const resolveBestSecondPlace = (tournament: Tournament): string | null => {
+  const groups = Array.from(new Set(tournament.teams.map(t => t.group).filter(Boolean)));
+  const secondPlaceTeams: Array<{ teamId: string; points: number; goalDifference: number; goalsFor: number }> = [];
+
+  for (const group of groups) {
+    const teamsInGroup = tournament.teams.filter(t => t.group === group);
+    const groupMatches = tournament.matches || [];
+    const standings = calculateStandings(teamsInGroup, groupMatches, tournament, group);
+
+    if (standings.length >= 2) {
+      const secondPlace = standings[1];
+      secondPlaceTeams.push({
+        teamId: secondPlace.team.id,
+        points: secondPlace.points,
+        goalDifference: secondPlace.goalDifference,
+        goalsFor: secondPlace.goalsFor,
+      });
+    }
+  }
+
+  if (secondPlaceTeams.length === 0) {
+    return null;
+  }
+
+  // Sortiere die Zweiten nach den gleichen Kriterien wie die Haupttabelle
+  secondPlaceTeams.sort((a, b) => {
+    // 1. Punkte
+    if (b.points !== a.points) return b.points - a.points;
+    // 2. Tordifferenz
+    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    // 3. Erzielte Tore
+    return b.goalsFor - a.goalsFor;
+  });
+
+  return secondPlaceTeams[0].teamId;
 };
 
 /**

@@ -93,6 +93,13 @@ export const Icons = {
     </svg>
   ),
 
+  Copy: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="7" y="7" width="10" height="10" rx="2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 13V5a2 2 0 012-2h8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
   Trophy: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <path d="M6 9H2v4h4M14 9h4v4h-4M10 16v2M7 18h6M10 2v8a3 3 0 01-3 3 3 3 0 003 3 3 3 0 003-3 3 3 0 01-3-3V2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

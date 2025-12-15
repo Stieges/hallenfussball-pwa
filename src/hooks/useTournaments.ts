@@ -21,7 +21,7 @@ export const useTournaments = () => {
         const migrated = migrateLocationsToStructured(loaded);
 
         // Check if any tournaments were migrated
-        const hasChanges = migrated.some((t, idx) =>
+        const hasChanges = migrated.some((_, idx) =>
           typeof loaded[idx]?.location === 'string'
         );
 

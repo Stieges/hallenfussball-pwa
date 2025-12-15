@@ -14,7 +14,7 @@ import jsPDF from 'jspdf';
 import autoTable, { RowInput, CellInput } from 'jspdf-autotable';
 import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
 import { Standing, RefereeConfig } from '../types/tournament';
-import { formatLocationForPrint, getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
+import { getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
 
 // ============================================================================
 // STYLE CONFIGURATION (matching HTML reference)
@@ -135,6 +135,7 @@ type Language = keyof typeof TRANSLATIONS;
 export interface PDFExportOptions {
   locale?: Language;
   includeStandings?: boolean;
+  includeScores?: boolean;
   organizerName?: string;
   hallName?: string;
 }
@@ -147,7 +148,8 @@ export async function exportScheduleToPDF(
   const {
     locale = 'de',
     includeStandings = true,
-    organizerName = 'Wieninger-Libella',
+    includeScores = false,
+    organizerName = schedule.tournament.organizer || 'Veranstalter',
     hallName = getLocationName(schedule.tournament),
   } = options;
 
@@ -188,6 +190,7 @@ export async function exportScheduleToPDF(
       t,
       schedule.refereeConfig,
       schedule.numberOfFields,
+      includeScores,
       yPos
     );
   }
@@ -206,6 +209,7 @@ export async function exportScheduleToPDF(
       t,
       schedule.refereeConfig,
       schedule.numberOfFields,
+      includeScores,
       yPos
     );
   }
@@ -559,6 +563,7 @@ function renderGroupStage(
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
+  includeScores: boolean,
   yPos: number
 ): number {
   // Platz für Titel
@@ -593,7 +598,13 @@ function renderGroupStage(
     const row: CellInput[] = [match.matchNumber.toString(), match.time];
     if (showFieldColumn) row.push(match.field.toString());
     if (hasMultipleGroups) row.push(match.group || '-');
-    row.push(match.homeTeam, '     :     ', match.awayTeam);
+
+    // Show scores if includeScores is true and scores are available
+    const resultColumn = includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
+      ? `${match.scoreA} : ${match.scoreB}`
+      : '     :     ';
+
+    row.push(match.homeTeam, resultColumn, match.awayTeam);
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');
@@ -656,6 +667,7 @@ function renderFinalsSection(
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
+  includeScores: boolean,
   yPos: number
 ): number {
   phases.forEach(phase => {
@@ -703,7 +715,7 @@ function renderFinalsSection(
 
     // Render all match groups
     matchGroups.forEach(group => {
-      yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, numberOfFields, yPos, group.subtitle);
+      yPos = renderFinalsTable(doc, group.matches, t, refereeConfig, numberOfFields, includeScores, yPos, group.subtitle);
     });
   });
 
@@ -740,6 +752,7 @@ function renderFinalsTable(
   t: typeof TRANSLATIONS.de,
   refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
+  includeScores: boolean,
   yPos: number,
   subtitle?: string
 ): number {
@@ -768,7 +781,13 @@ function renderFinalsTable(
   const data: RowInput[] = matches.map(match => {
     const row: CellInput[] = [match.matchNumber.toString(), match.time];
     if (showFieldColumn) row.push(match.field.toString());
-    row.push(match.homeTeam, '     :     ', match.awayTeam);
+
+    // Show scores if includeScores is true and scores are available
+    const resultColumn = includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
+      ? `${match.scoreA} : ${match.scoreB}`
+      : '     :     ';
+
+    row.push(match.homeTeam, resultColumn, match.awayTeam);
 
     if (refereeConfig && refereeConfig.mode !== 'none') {
       row.push(match.referee ? `SR${match.referee}` : '-');

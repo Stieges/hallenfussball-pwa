@@ -10,3 +10,5 @@ export { ParticipantsAndGroups } from './ParticipantsAndGroups';
 export { GroupStageSchedule } from './GroupStageSchedule';
 export { FinalStageSchedule } from './FinalStageSchedule';
 export { GroupTables } from './GroupTables';
+export { CorrectionBanner } from './CorrectionBanner';
+export { MatchScoreCell } from './MatchScoreCell';

@@ -314,6 +314,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             label="Heim"
             team={match.homeTeam}
             score={match.homeScore}
+            status={match.status}
             onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
           />
 
@@ -322,6 +323,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             label="Gast"
             team={match.awayTeam}
             score={match.awayScore}
+            status={match.status}
             onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
           />
         </>
@@ -332,6 +334,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             label="Heim"
             team={match.homeTeam}
             score={match.homeScore}
+            status={match.status}
             onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
           />
 
@@ -352,6 +355,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             label="Gast"
             team={match.awayTeam}
             score={match.awayScore}
+            status={match.status}
             onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
             align="right"
           />
@@ -365,11 +369,12 @@ interface TeamBlockProps {
   label: string;
   team: { id: string; name: string };
   score: number;
+  status: MatchStatus;
   onGoal(delta: 1 | -1): void;
   align?: 'left' | 'right';
 }
 
-const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align = 'left' }) => {
+const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, status, onGoal, align = 'left' }) => {
   const isMobile = window.innerWidth < 768;
 
   const blockStyle: CSSProperties = {
@@ -422,6 +427,7 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align
           size={isMobile ? "md" : "sm"}
           onClick={() => onGoal(1)}
           style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+          disabled={status === 'FINISHED'}
         >
           Tor {team.name}
         </Button>
@@ -434,7 +440,7 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, onGoal, align
             minHeight: isMobile ? '48px' : 'auto',
             padding: '6px'
           }}
-          disabled={score === 0}
+          disabled={score === 0 || status === 'FINISHED'}
         >
           −
         </Button>
@@ -826,10 +832,12 @@ const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit })
   const getEventDescription = (event: any) => {
     if (event.type === 'GOAL') {
       const { teamName, direction } = event.payload;
+      // DEF-004: Robust fallback for missing teamName
+      const displayName = teamName || 'Unbekanntes Team';
       if (direction === 'INC') {
-        return `⚽ Tor für ${teamName}`;
+        return `⚽ Tor für ${displayName}`;
       } else {
-        return `↩️ Tor zurückgenommen bei ${teamName}`;
+        return `↩️ Tor zurückgenommen bei ${displayName}`;
       }
     } else if (event.type === 'RESULT_EDIT') {
       return '✏️ Ergebnis manuell korrigiert';

@@ -1,15 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { TournamentCreationScreen } from './screens/TournamentCreationScreen';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { TournamentManagementScreen } from './screens/TournamentManagementScreen';
+import { PublicTournamentViewScreen } from './screens/PublicTournamentViewScreen';
 import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
 
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public';
+
 function App() {
   const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
-  const [screen, setScreen] = useState<'dashboard' | 'create' | 'view'>('dashboard');
+  const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
+
+  // Parse URL on mount to detect public tournament view
+  useEffect(() => {
+    const path = window.location.pathname;
+    const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
+
+    if (publicMatch) {
+      const tournamentId = publicMatch[1];
+      setPublicTournamentId(tournamentId);
+      setScreen('public');
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -96,6 +112,10 @@ function App() {
           tournamentId={selectedTournament.id}
           onBack={() => setScreen('dashboard')}
         />
+      )}
+
+      {screen === 'public' && publicTournamentId && (
+        <PublicTournamentViewScreen tournamentId={publicTournamentId} />
       )}
     </div>
   );

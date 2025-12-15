@@ -130,7 +130,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     await exportScheduleToPDF(schedule, schedule.initialStandings, {
       locale: 'de',
       includeStandings: true,
-      organizerName: currentTournament.organizer || 'Wieninger-Libella',
+      // organizerName wird automatisch aus schedule.tournament.organizer gezogen
       hallName: getLocationName(currentTournament),
     });
   };

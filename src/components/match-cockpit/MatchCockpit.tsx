@@ -31,6 +31,7 @@ export interface MatchEvent {
   type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE';
   payload: {
     teamId?: string;
+    teamName?: string; // DEF-004: Add team name for display
     direction?: 'INC' | 'DEC';
     newHomeScore?: number;
     newAwayScore?: number;
@@ -57,6 +58,11 @@ export interface LiveMatch {
   status: MatchStatus;
   elapsedSeconds: number;
   events: MatchEvent[];
+
+  // DEF-005: Timer persistence fields
+  timerStartTime?: string;
+  timerPausedAt?: string;
+  timerElapsedSeconds?: number;
 }
 
 export interface MatchSummary {

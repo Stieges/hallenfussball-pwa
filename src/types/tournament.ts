@@ -133,6 +133,11 @@ export interface Match {
   label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
   referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
+
+  // Timer persistence for DEF-005 fix
+  timerStartTime?: string;       // ISO timestamp when timer was started
+  timerPausedAt?: string;        // ISO timestamp when timer was paused (undefined = running)
+  timerElapsedSeconds?: number;  // Elapsed seconds before current run/pause
 }
 
 export interface Tournament {

@@ -3,7 +3,7 @@ import { Tournament, LocationDetails } from '../types/tournament';
 /**
  * Gibt den Hallen-Namen zurück
  */
-export function getLocationName(tournament: Tournament): string {
+export function getLocationName(tournament: { location?: LocationDetails }): string {
   return tournament.location?.name || '';
 }
 
@@ -11,7 +11,7 @@ export function getLocationName(tournament: Tournament): string {
  * Gibt vollständige Adresse als formatierter String zurück
  * Format: "Sporthalle Waging, Mozartstraße 9, 83329 Waging am See, Deutschland"
  */
-export function getFullLocationAddress(tournament: Tournament): string {
+export function getFullLocationAddress(tournament: { location?: LocationDetails }): string {
   const { location } = tournament;
 
   if (!location) return '';
@@ -43,7 +43,7 @@ export function getFullLocationAddress(tournament: Tournament): string {
  * Formatiert Adresse für PDF/Export (mehrzeilig)
  * Gibt Array von Zeilen zurück
  */
-export function formatLocationForPrint(tournament: Tournament): string[] {
+export function formatLocationForPrint(tournament: { location?: LocationDetails }): string[] {
   const { location } = tournament;
 
   if (!location) return [];
@@ -74,7 +74,7 @@ export function formatLocationForPrint(tournament: Tournament): string[] {
 /**
  * Prüft ob erweiterte Adressdaten vorhanden sind
  */
-export function hasExtendedLocationData(tournament: Tournament): boolean {
+export function hasExtendedLocationData(tournament: { location?: LocationDetails }): boolean {
   const { location } = tournament;
 
   if (!location) return false;
@@ -127,7 +127,7 @@ export function findLocationByName(
  * Gibt Adresszeile im Format "Straße, Stadt" zurück (für PDF/Vorschau)
  * Format: "Mozartstraße 9, Waging am See"
  */
-export function getLocationAddressLine(tournament: Tournament): string {
+export function getLocationAddressLine(tournament: { location?: LocationDetails }): string {
   const { location } = tournament;
 
   if (!location) return '';
@@ -159,9 +159,9 @@ export function migrateLocationsToStructured(tournaments: Tournament[]): Tournam
     }
 
     // String zu LocationDetails konvertieren
-    if (typeof location === 'string' && location.length > 0) {
+    if (typeof location === 'string' && (location as string).length > 0) {
       const locationDetails: LocationDetails = {
-        name: location,
+        name: location as string,
         // Andere Felder bleiben leer (Nutzer kann später ergänzen)
       };
 
