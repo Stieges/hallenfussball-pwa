@@ -158,7 +158,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       numberOfFields: tournament.numberOfFields,
       slotDurationMinutes: tournament.groupPhaseGameDuration,
       breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration || 0,
-      minRestSlotsPerTeam: tournament.minRestSlots || 1,
+      minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
       startTime,
     });
   }
@@ -209,7 +209,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       numberOfFields: tournament.numberOfFields,
       slotDurationMinutes: tournament.finalRoundGameDuration || tournament.groupPhaseGameDuration,
       breakBetweenSlotsMinutes: tournament.finalRoundBreakDuration || tournament.groupPhaseBreakDuration || 0,
-      minRestSlotsPerTeam: tournament.minRestSlots || 1,
+      minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
       startSlot: playoffStartSlot,
       startTime: playoffStartTime,
       breakBetweenPhases: tournament.breakBetweenPhases,

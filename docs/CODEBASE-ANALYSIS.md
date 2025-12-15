@@ -31,15 +31,19 @@ Die Hallenfussball-PWA ist eine gut strukturierte React-TypeScript-Anwendung zur
 - PDF-Export und Sharing-Funktionen
 
 **Gesamtbewertung:**
-- **Code-Qualität:** 7.5/10
+- **Code-Qualität:** 8/10
 - **Architektur:** 8/10
-- **Test-Abdeckung:** 3/10 (nur 2 Testdateien)
+- **Test-Abdeckung:** 6/10 (4 Testdateien, 59 Tests)
 - **Hosting-Readiness:** 6/10 (localStorage-basiert, kein Backend)
 
-### Kritische Issues (sofort beheben):
-1. Team-ID vs. Team-Name Mismatch in `calculations.ts`
-2. Group-ID Schema Mismatch in `playoffResolver.ts`
-3. Fehlende Backend-Abstraktion für Mitgliederbereich
+### Kritische Issues (ALLE BEHOBEN ✅):
+1. ~~Team-ID vs. Team-Name Mismatch in `calculations.ts`~~ ✅
+2. ~~Group-ID Schema Mismatch in `playoffResolver.ts`~~ ✅
+3. ~~Direct Comparison Matching~~ ✅
+4. ~~minRestSlots=0 wird ignoriert~~ ✅
+
+### Verbleibende Issues (Vor Go-Live empfohlen):
+1. Fehlende Backend-Abstraktion für Mitgliederbereich
 
 ### Stärken:
 - Durchdachter Fair-Scheduling-Algorithmus
@@ -280,47 +284,47 @@ const useTournamentStore = create((set) => ({
 
 ## Potentielle Bugs
 
-### Kritisch (Sofort beheben)
+### Behoben (15. Dezember 2025)
 
-#### BUG-001: Team-ID vs. Team-Name Mismatch
-**Datei:** `src/utils/calculations.ts:36`
-
-```typescript
-// FEHLERHAFT:
-const teamAStanding = standings.find((s) => s.team.name === match.teamA);
-
-// KORREKT:
-const teamAStanding = standings.find((s) => s.team.id === match.teamA);
-```
-
-**Auswirkung:** Tabellen-Berechnung findet keine Teams, wenn IDs statt Namen verwendet werden.
-
-#### BUG-002: Group-ID Schema Mismatch
-**Datei:** `src/utils/playoffResolver.ts:223-224`
+#### BUG-001: Team-ID vs. Team-Name Mismatch ✅ BEHOBEN
+**Datei:** `src/utils/calculations.ts`
+**Fix:** Team-Matching prüft jetzt sowohl `team.id` als auch `team.name`
 
 ```typescript
-// FEHLERHAFT:
-const groupKey = `Gruppe ${groupId}`;  // Erwartet "Gruppe A"
-const standings = groupStandings[groupKey];
-
-// PROBLEM: Placeholder ist "group-a-1st", aber groupStandings verwendet andere Keys
+// NEU: Prüft beide Felder
+const teamAStanding = standings.find(
+  (s) => s.team.name === match.teamA || s.team.id === match.teamA
+);
 ```
 
-**Auswirkung:** Playoff-Paarungen werden nicht korrekt aufgelöst.
+#### BUG-002: Group-ID Schema Mismatch ✅ BEHOBEN
+**Datei:** `src/utils/playoffResolver.ts`
+**Fix:** Mehrere Gruppenkey-Formate werden unterstützt ("A", "Gruppe A", "a")
+
+```typescript
+// NEU: Versucht mehrere Key-Formate
+const possibleKeys = [groupId, `Gruppe ${groupId}`, groupId.toLowerCase()];
+```
+
+#### BUG-003: Direct Comparison Matching ✅ BEHOBEN
+**Datei:** `src/utils/calculations.ts`
+**Fix:** Teil des BUG-001 Fixes - alle Team-Matches prüfen ID und Name
+
+#### BUG-004: minRestSlots=0 wird ignoriert ✅ BEHOBEN
+**Datei:** `src/lib/scheduleGenerator.ts:161, 212`
+**Fix:** Verwendung von nullish coalescing (`??`) statt logical OR (`||`)
+
+```typescript
+// ALT (fehlerhaft): 0 || 1 = 1 (weil 0 falsy ist)
+minRestSlotsPerTeam: tournament.minRestSlots || 1,
+
+// NEU (korrekt): 0 ?? 1 = 0 (nur bei null/undefined)
+minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
+```
 
 ### Hoch (Vor Go-Live beheben)
 
-#### BUG-003: Direct Comparison Matching
-**Datei:** `src/utils/calculations.ts:165`
-
-```typescript
-// Vergleicht match.teamA mit team.id
-// Aber match.teamA könnte Team-NAME sein (je nach Kontext)
-```
-
-**Auswirkung:** Direkter Vergleich funktioniert nur inkonsistent.
-
-#### BUG-004: Fragile Phase Detection
+#### BUG-005: Fragile Phase Detection
 **Datei:** `src/lib/scheduleGenerator.ts:475-487`
 
 ```typescript
@@ -335,11 +339,11 @@ function determineFinalPhase(match: Match) {
 
 ### Mittel (Nach Go-Live OK)
 
-#### BUG-005: Scheduler Deadlock bei großen Turnieren
+#### BUG-006: Scheduler Deadlock bei großen Turnieren
 - 128+ Teams mit strikten Rest-Constraints können hängen
 - **Workaround:** minRestSlots reduzieren oder mehr Felder
 
-#### BUG-006: Unused Parameter in scheduleMatches
+#### BUG-007: Unused Parameter in scheduleMatches
 **Datei:** `src/lib/scheduleGenerator.ts:382`
 
 ```typescript
