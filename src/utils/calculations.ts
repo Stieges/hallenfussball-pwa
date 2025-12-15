@@ -32,9 +32,16 @@ export const calculateStandings = (
 
   // Calculate stats from matches
   relevantMatches.forEach((match) => {
-    // Match by team name, not ID (match.teamA/teamB are team names)
-    const teamAStanding = standings.find((s) => s.team.name === match.teamA);
-    const teamBStanding = standings.find((s) => s.team.name === match.teamB);
+    // Match by team name OR ID (match.teamA/teamB can be either depending on context)
+    // - In tournament.matches: usually team names (from schedule display)
+    // - In ScheduledMatch: also team names (homeTeam/awayTeam resolved)
+    // - In some edge cases: team IDs
+    const teamAStanding = standings.find(
+      (s) => s.team.name === match.teamA || s.team.id === match.teamA
+    );
+    const teamBStanding = standings.find(
+      (s) => s.team.name === match.teamB || s.team.id === match.teamB
+    );
 
     if (!teamAStanding || !teamBStanding || match.scoreA === undefined || match.scoreB === undefined) {
       return;
@@ -137,12 +144,16 @@ const compareDirectMatches = (
   b: Standing,
   matches: Match[]
 ): number => {
+  // Helper to check if match team reference matches a standing's team (by ID or name)
+  const matchesTeam = (matchTeam: string, standing: Standing) =>
+    matchTeam === standing.team.id || matchTeam === standing.team.name;
+
   // Find all direct matches between these two teams
   const directMatches = matches.filter(
     (m) =>
       (m.scoreA !== undefined && m.scoreB !== undefined) &&
-      ((m.teamA === a.team.id && m.teamB === b.team.id) ||
-       (m.teamA === b.team.id && m.teamB === a.team.id))
+      ((matchesTeam(m.teamA, a) && matchesTeam(m.teamB, b)) ||
+       (matchesTeam(m.teamA, b) && matchesTeam(m.teamB, a)))
   );
 
   if (directMatches.length === 0) {
@@ -162,7 +173,7 @@ const compareDirectMatches = (
   directMatches.forEach((match) => {
     const scoreA = match.scoreA!;
     const scoreB = match.scoreB!;
-    const isAHome = match.teamA === a.team.id;
+    const isAHome = matchesTeam(match.teamA, a);
 
     const aScore = isAHome ? scoreA : scoreB;
     const bScore = isAHome ? scoreB : scoreA;

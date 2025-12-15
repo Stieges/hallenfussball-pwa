@@ -1,0 +1,437 @@
+[
+  {
+    "id": "TOUR-EDIT-01",
+    "title": "Turnier über Dashboard-Spielplan bearbeiten",
+    "as_a": "Turnier-Owner oder -Organisator",
+    "i_want": "nach dem Anlegen eines Turniers über das Dashboard den Spielplan im Unterreiter 'Spielplan' in einer Editieransicht öffnen können",
+    "so_that": "ich das Turnier auch nach der Erstellung komfortabel anpassen und Änderungen konsistent speichern kann",
+    "acceptance_criteria": [
+      "Given ich habe ein Turnier angelegt und bin eingeloggt, When ich auf dem Dashboard das Turnier anklicke und den Unterreiter 'Spielplan' öffne, Then wird mir dieselbe Konfigurations-/Editieransicht wie bei der Turniererstellung angezeigt.",
+      "Given ich befinde mich in dieser Editieransicht im Reiter 'Spielplan', When ich Änderungen an Spielplan, Teams oder Modus vornehme, Then steht mir ein primärer Button mit der Beschriftung 'Turnier speichern' zur Verfügung.",
+      "Given ich klicke auf 'Turnier speichern', When meine Eingaben valide sind, Then werden alle Änderungen (Teams, Paarungen, Modus etc.) persistiert und der aktuelle Spielplan des Turniers entsprechend aktualisiert.",
+      "Given ein Teamname geändert werden soll, das bereits an mindestens einem Spiel mit gespeichertem Ergebnis beteiligt ist, When ich den Teamnamen ändere und auf 'Turnier speichern' klicke, Then erhalte ich eine deutlich sichtbare, übersteuerbare Warnmeldung, die erklärt, dass sich diese Änderung auf bestehende Spiele/Ergebnisse auswirkt (z. B. Anzeige in Listen, PDF, Monitor).",
+      "Given die Warnmeldung für Teamänderungen mit bestehenden Ergebnissen angezeigt wird, When ich die Änderung explizit bestätige (z. B. durch 'Trotzdem speichern'), Then werden die Teamänderungen übernommen und alle referenzierten Spiele zeigen den aktualisierten Teamnamen an.",
+      "Given die Warnmeldung für Teamänderungen mit bestehenden Ergebnissen angezeigt wird, When ich die Warnung abbreche, Then werden keine Änderungen am betroffenen Team gespeichert und der vorherige Zustand bleibt erhalten.",
+      "Given für das Turnier bereits mindestens ein Spielergebnis vorliegt, When ich den Turniermodus (z. B. Anzahl Gruppen, Finalstruktur, Spielsystem) ändern möchte, Then erhalte ich vor dem Speichern eine deutliche Warnmeldung, dass diese Änderung dazu führt, dass bestehende Ergebnisse zurückgesetzt oder gelöscht werden.",
+      "Given die Warnmeldung für eine Modusänderung mit vorhandenen Ergebnissen angezeigt wird, When ich die Änderung explizit bestätige, Then wird der Modus geändert und alle bestehenden Ergebnisse, die mit der alten Struktur nicht mehr konsistent sind, werden gelöscht oder ungültig gemacht und im UI nicht mehr angezeigt.",
+      "Given die Warnmeldung für eine Modusänderung mit vorhandenen Ergebnissen angezeigt wird, When ich die Warnung abbreche, Then bleibt der bisherige Turniermodus unverändert und alle bisherigen Ergebnisse bleiben bestehen.",
+      "Given ich habe ein Turnier mit Ergebnissen und öffne den Reiter 'Spielplan' über das Dashboard, When ich keine strukturrelevante Änderung (Modus, Gruppenanzahl, Finalstruktur) vornehme, sondern nur nicht-kritische Felder bearbeite (z. B. Anstoßzeiten, Platz, optionale Metadaten), Then kann ich diese Änderungen ohne Löschwarnung speichern.",
+      "Given ich öffne ein Turnier im Reiter 'Spielplan' erneut zu einem späteren Zeitpunkt, When ich auf 'Turnier speichern' klicke ohne Änderungen vorgenommen zu haben, Then wird entweder kein persistenter Schreibvorgang ausgelöst oder dieser läuft ohne sichtbare Nebenwirkungen durch."
+    ],
+    "ux_suggestions": [
+      "In der Spielplan-Ansicht klar zwischen 'Konfiguration bearbeiten' und 'Ergebnisse erfassen' trennen (z. B. zwei Tabs oder klar getrennte Bereiche), damit für den Nutzer verständlich ist, wann er strukturelle Anpassungen macht.",
+      "Den Button-Text im Bearbeitungsmodus einheitlich als 'Turnier speichern' halten und ihn nur dann aktivieren, wenn tatsächlich Änderungen vorgenommen wurden (Dirty-Form-Handling).",
+      "Warnmeldungen bei riskanten Änderungen (Teamname mit Ergebnissen, Modusänderung mit Ergebnissen) als modale Dialoge implementieren, mit eindeutigen Button-Beschriftungen wie 'Trotzdem ändern' und 'Abbrechen', statt generischer 'OK/Cancel'-Buttons.",
+      "In der Warnung zur Modusänderung konkret anzeigen, wie viele Spiele/Ergebnisse betroffen sind (z. B. 'Durch diese Änderung werden 12 vorhandene Spielergebnisse zurückgesetzt.').",
+      "Einen Hinweisbereich am oberen Rand der Editieransicht einblenden, sobald Ergebnisse existieren, z. B.: 'Achtung: Änderungen am Turniermodus können vorhandene Ergebnisse zurücksetzen.'",
+      "Optional: Zwischenzustand 'Entwurf' vs. 'veröffentlicht' unterstützen, sodass größere Strukturänderungen am Turnier zunächst im Entwurf getestet und erst nach expliziter Bestätigung live übernommen werden.",
+      "Optional: Eine einfache Undo/Restore-Funktion für die letzte Turnierkonfiguration anbieten (z. B. 'Letzte gespeicherte Version wiederherstellen'), um versehentliche Änderungen rückgängig zu machen.",
+      "In der Spielplan-Übersicht visuell kennzeichnen, welche Bereiche direkt vom Modus abhängen (Gruppenanzahl, Finalstruktur), damit klar ist, warum eine Modusänderung kritisch ist.",
+      "Bei Hover oder Info-Icon neben dem Modus-Feld eine kurze Erklärung anzeigen, welche Auswirkungen eine Änderung auf bestehende Spiele und Ergebnisse hat.",
+      "Wenn der Nutzer wiederholt kritische Änderungen vornimmt, eine Option 'Warnung künftig nicht mehr anzeigen' nur sehr vorsichtig anbieten – idealerweise nicht bei Modusänderungen mit Ergebnissen, um Datenverlust zu vermeiden."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "TL-RESULT-LOCK-01",
+    "title": "Ergebnisse beendeter Spiele nur über 'Ergebnis korrigieren' änderbar",
+    "as_a": "Mitglied der Turnierleitung",
+    "i_want": "dass ich das Ergebnis eines bereits beendeten Spiels nicht mehr direkt, sondern nur noch über einen expliziten Korrektur-Workflow ändern kann",
+    "so_that": "Ergebnisänderungen nach Spielende bewusst, nachvollziehbar und weniger fehleranfällig erfolgen",
+    "acceptance_criteria": [
+      "Given ein Spiel hat den Status 'laufend', When ich im Reiter 'Turnierleitung' das Ergebnis erfasse oder ändere, Then kann ich die Tore wie gewohnt eingeben bzw. über Events erfassen.",
+      "Given ein Spiel wird regulär beendet (Status wird auf 'beendet' gesetzt), When ich anschließend den Reiter 'Turnierleitung' für dieses Spiel öffne, Then werden die Ergebnisfelder (Heim/Gast) nur noch als read-only angezeigt und die üblichen Live-Event-Buttons (Tor, Karte etc.) sind deaktiviert oder nicht mehr sichtbar.",
+      "Given ein Spiel hat den Status 'beendet', When ich den Reiter 'Turnierleitung' öffne, Then sehe ich einen Button 'Ergebnis korrigieren' in der Nähe der Ergebnisanzeige.",
+      "Given ein Spiel hat den Status 'beendet', When ich NICHT auf 'Ergebnis korrigieren' klicke, Then kann ich das Ergebnis an keiner Stelle direkt bearbeiten.",
+      "Given ein Spiel hat den Status 'beendet', When ich auf den Button 'Ergebnis korrigieren' klicke, Then öffnet sich ein Dialog/Modal mit einem Hinweistext, dass die Änderung des Ergebnisses Auswirkungen auf Tabellen, Platzierungen und eine ggf. vorhandene Finalphase haben kann.",
+      "Given der Dialog zur Ergebniskorrektur ist geöffnet, When ich auf 'Abbrechen' klicke, Then wird der Dialog geschlossen und das Spiel verbleibt im Zustand 'beendet' mit read-only Ergebnisanzeige.",
+      "Given der Dialog zur Ergebniskorrektur ist geöffnet, When ich auf 'Ergebnisbearbeitung starten' (oder ähnlich bezeichneten Bestätigungsbutton) klicke, Then wird das Spiel in einen Korrekturmodus versetzt und ich kann die Ergebnisfelder wieder bearbeiten.",
+      "Given ich befinde mich im Korrekturmodus, When die Ansicht geladen ist, Then wird dies visuell erkennbar gemacht (z. B. Hinweisbanner 'Korrekturmodus – Änderungen werden protokolliert').",
+      "Given ich befinde mich im Korrekturmodus, When ich das Ergebnis ändere und auf einen Button 'Korrektur speichern' klicke, Then werden das neue Ergebnis und die Änderung persistent gespeichert und der Korrekturmodus wird wieder verlassen.",
+      "Given ich befinde mich im Korrekturmodus, When ich auf 'Korrektur abbrechen' klicke, Then werden alle seit Eintritt in den Korrekturmodus vorgenommenen Änderungen verworfen und das zuvor gespeicherte Endergebnis wiederhergestellt.",
+      "Given das geänderte Ergebnis kann Tabellen oder Finalpaarungen beeinflussen, When ich im Korrekturmodus auf 'Korrektur speichern' klicke, Then erhalte ich vor dem endgültigen Speichern eine Warnmeldung, dass Tabellen und ggf. Finalpaarungen anhand des neuen Ergebnisses neu berechnet werden und sich ändern können.",
+      "Given ich bestätige die Warnmeldung zur potentiellen Änderung von Tabellen/Finalpaarungen, When das Spiel gespeichert wird, Then werden alle abhängigen Tabellenstände und Finalpaarungen entsprechend der neuen Ergebnisse neu berechnet und in den entsprechenden Ansichten aktualisiert.",
+      "Given ich verwerfe die Warnmeldung zur potentiellen Änderung von Tabellen/Finalpaarungen (z. B. 'Abbrechen'), When der Speichervorgang abgebrochen wird, Then bleibt das zuvor gespeicherte Ergebnis unverändert und alle Tabellen/Finalpaarungen bleiben in ihrem bisherigen Zustand.",
+      "Given eine Ergebniskorrektur wurde erfolgreich gespeichert, When ich später erneut den Reiter 'Turnierleitung' für dieses Spiel öffne, Then sehe ich das korrigierte Ergebnis sowie weiterhin die read-only Darstellung (kein Korrekturmodus, solange ich nicht erneut 'Ergebnis korrigieren' auslöse)."
+    ],
+    "ux_suggestions": [
+      "In der Ansicht eines beendeten Spiels die Ergebnisfelder optisch klar von editierbaren Feldern absetzen (z. B. durch grauen Hintergrund und fehlende Input-Rahmen), damit für Nutzer intuitiv erkennbar ist, dass das Ergebnis nicht mehr direkt änderbar ist.",
+      "Den Button 'Ergebnis korrigieren' visuell hervorheben, aber mit einer eher sekundären Priorität (z. B. sekundärer Button), um zu signalisieren, dass es sich um einen Sonderfall und nicht um die Standardaktion handelt.",
+      "Im Korrekturmodus ein auffälliges Banner oberhalb der Spielansicht einblenden (z. B. mit Text wie 'Korrekturmodus aktiv – Änderungen am Ergebnis beeinflussen Tabellen und Platzierungen'), damit jederzeit ersichtlich ist, dass man sich in einem besonderen Bearbeitungszustand befindet.",
+      "Während des Korrekturmodus nur die unbedingt notwendigen Elemente editierbar machen (z. B. Tore Heim/Gast, ggf. Torschützen), um unbeabsichtigte Änderungen an anderen Spielparametern zu vermeiden.",
+      "Im Warn-Dialog vor dem endgültigen Speichern der Korrektur die Anzahl der betroffenen Tabellen- oder Finalspiele anzeigen (z. B. 'Hinweis: Diese Änderung kann die Platzierung in Gruppe A und die Paarungen in der Finalrunde beeinflussen.').",
+      "Optional ein kleines Änderungsprotokoll pro Spiel darstellen (z. B. 'Ergebnis am 15.12.2025 von 2:1 auf 2:2 geändert'), um die Nachvollziehbarkeit von Korrekturen zu unterstützen.",
+      "Verhindern, dass der Browser-Back-Button oder ein unabsichtliches Verlassen der Seite im aktiven Korrekturmodus ungespeicherte Änderungen stillschweigend verwirft; stattdessen einen Confirm-Dialog anzeigen ('Sie haben ungespeicherte Änderungen, wirklich verlassen?')."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "TL-PENALTY-JERSEY-01",
+    "title": "Optionale Trikotnummer bei persönlichen Strafen erfassen",
+    "as_a": "Mitglied der Turnierleitung",
+    "i_want": "bei der Vergabe von persönlichen Strafen optional eine Trikotnummer angeben können",
+    "so_that": "ich bei Bedarf nachvollziehen kann, welcher Spieler die Strafe erhalten hat, ohne den Standardablauf zu verlangsamen, wenn ich diese Information nicht benötige",
+    "acceptance_criteria": [
+      "Given ein Turnier ist angelegt, When ich die Turnier-Einstellungen öffne, Then sehe ich eine Option wie 'Trikotnummern bei persönlichen Strafen erfassen' (Boolean-Einstellung auf Turnier-Ebene).",
+      "Given die Option 'Trikotnummern bei persönlichen Strafen erfassen' ist DEAKTIVIERT, When ich im Reiter 'Turnierleitung' persönliche Strafen (z. B. 2-Min-Strafe, Gelb-Rot, Rot, Verwarnung) vergebe, Then erscheint keine Eingabemöglichkeit für Trikotnummern und der Ablauf entspricht exakt dem bisherigen Verhalten.",
+      "Given die Option 'Trikotnummern bei persönlichen Strafen erfassen' ist AKTIVIERT, When ich im Reiter 'Turnierleitung' unter einem Team die Buttons für persönliche Strafen sehe, Then ist in unmittelbarer Nähe (z. B. neben/unter den Buttons) ein optionales Eingabefeld für eine Trikotnummer (z. B. '# [ ]') sichtbar.",
+      "Given die Option 'Trikotnummern bei persönlichen Strafen erfassen' ist AKTIVIERT, When ich eine persönliche Strafe über den entsprechenden Button vergebe UND in das Trikotnummernfeld zuvor einen Wert eingetragen habe, Then wird im erzeugten Straf-Event zusätzlich die Trikotnummer gespeichert (z. B. Feld 'jerseyNumber').",
+      "Given die Option 'Trikotnummern bei persönlichen Strafen erfassen' ist AKTIVIERT, When ich eine persönliche Strafe über den entsprechenden Button vergebe OHNE eine Trikotnummer eingetragen zu haben, Then wird die Strafe wie gewohnt erzeugt, aber OHNE Trikotnummer; der Ablauf wird dadurch nicht unterbrochen und es erfolgt keine Fehlermeldung.",
+      "Given eine persönliche Strafe wurde mit Trikotnummer erfasst, When ich mir im Reiter 'Turnierleitung' die laufenden oder historischen Strafen eines Teams ansehe, Then wird die Trikotnummer in der Darstellung mit angezeigt (z. B. im Straf-Countdown-Kreis oder in einer Ereignisliste als '#7').",
+      "Given eine persönliche Strafe wurde OHNE Trikotnummer erfasst, When ich mir im Reiter 'Turnierleitung' die Strafen ansehe, Then wird die Strafe ohne Trikotnummer dargestellt und es werden keine leeren oder fehlerhaften Platzhalter (z. B. '#undefined') angezeigt.",
+      "Given ein Turnier, bei dem die Option später wieder deaktiviert wird, When ich im Reiter 'Turnierleitung' neue Strafen vergebe, Then kann ich für neue Strafen keine Trikotnummer mehr eingeben, aber bereits gespeicherte Strafen mit Trikotnummer behalten ihre gespeicherten Werte und werden weiterhin korrekt angezeigt.",
+      "Given ich nutze die Trikotnummern-Funktion NICHT, When ich im Turnier während des gesamten Spiels Strafen vergebe, Then bleibt der Ablauf (Anzahl Klicks, Geschwindigkeit) im Wesentlichen unverändert gegenüber dem bisherigen Verhalten."
+    ],
+    "ux_suggestions": [
+      "Das Eingabefeld für die Trikotnummer als kleines, diskretes '#'-Feld direkt neben den Straf-Buttons positionieren, sodass es mit einem Blick sichtbar, aber nicht dominant ist.",
+      "Das Trikotnummernfeld klar als 'optional' kennzeichnen (z. B. Placeholder 'Trikotnummer (optional)'), damit Nutzer nicht den Eindruck haben, dass die Eingabe zwingend erforderlich ist.",
+      "In der Darstellung der Strafzeiten (z. B. Kreis/Badge) die Trikotnummer kompakt integrieren, z. B. als Text im Kreis ('7') oder darunter ('#7'), ohne das Layout zu überladen.",
+      "Wenn mehrere Strafzeiten aktiv sind, die Trikotnummern in einer Liste der Strafen mitführen, z. B. '10:23 – 2-Min-Strafe Team A (#7)'.",
+      "Die Aktivierung der Trikotnummern-Funktion pro Turnier klar in den Einstellungen kommunizieren, sodass Turnierleitungen bewusst entscheiden können, ob sie diese Detailtiefe wünschen oder nicht."
+    ],
+    "status": "open",
+    "priority": "medium",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "TOUR-WIZARD-NAV-01",
+    "title": "Navigation über Screenbar im Turnier-Erstellungswizard mit automatischem Speichern",
+    "as_a": "Benutzer, der ein neues Turnier erstellt",
+    "i_want": "über die Screenbar in der oberen Leiste zwischen den einzelnen Screens ('Grunddaten', 'Teams', 'Spielmodus', 'Spielplan') navigieren können",
+    "so_that": "ich den Fortschritt überblicke, gezielt Informationen in einzelnen Screens korrigieren und nahtlos fortsetzen kann, ohne meinen bisherigen Input zu verlieren",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ich befinde mich im Turnier-Erstellungswizard, When der Wizard in einem Screen geöffnet ist, Then sehe ich am oberen Rand (in der 'Screenbar') alle Screens des Wizards (z. B. 'Grunddaten', 'Teams', 'Spielmodus', 'Spielplan') in einer horizontalen Navigation angezeigt."
+      },
+      {
+        "id": "AC2",
+        "text": "Given die Screenbar zeigt alle Screens an, When ich mich aktuell auf einem bestimmten Screen befinde (z. B. 'Teams'), Then ist der aktuelle Screen visuell hervorgehoben (z. B. durch Fettdruck, andere Farbe, Unterstreichung)."
+      },
+      {
+        "id": "AC3",
+        "text": "Given ich befinde mich auf einem Screen (z. B. 'Teams'), When ich in einem Screen Daten eingegeben oder geändert habe, und ich anschließend einen anderen Screen über die Screenbar anklicke (z. B. 'Spielmodus'), Then werden alle Eingaben im aktuellen Screen automatisch gespeichert, bevor ich zum neuen Screen gewechselt habe."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ein Screen enthält unvollständige oder ungültige Eingaben, When ich versuche, über die Screenbar zu einem anderen Screen zu navigieren, Then wird eine kurze Validierungsmeldung angezeigt (z. B. 'Bitte alle Pflichtfelder ausfüllen'), und die Navigation wird NICHT durchgeführt, solange die Validierung fehlschlägt."
+      },
+      {
+        "id": "AC5",
+        "text": "Given ein Screen enthält unvollständige oder ungültige Eingaben, When ich über die Screenbar zu einem anderen Screen navigieren möchte, Then erhalte ich eine OPTIONALE Bestätigungsabfrage (z. B. 'Einige Felder sind noch nicht vollständig ausgefüllt. Trotzdem fortfahren?'), und wenn ich bestätige, werden die vorhandenen (ggf. teilweise) Daten gespeichert und ich wechsle zum gewünschten Screen."
+      },
+      {
+        "id": "AC6",
+        "text": "Given ich kehre zu einem zuvor besuchten Screen zurück (z. B. von 'Spielplan' zurück zu 'Teams'), When der Screen geladen ist, Then werden alle zuvor eingegebenen und gespeicherten Daten korrekt im Formular wiederhergestellt."
+      },
+      {
+        "id": "AC7",
+        "text": "Given ich habe den Wizard zwischenzeitlich geschlossen oder verlassen, ohne ihn abzuschließen, When ich den Wizard zu einem späteren Zeitpunkt erneut öffne, Then wird der zuletzt besuchte Screen geöffnet, und alle zuvor gespeicherten Eingaben sind vorhanden."
+      },
+      {
+        "id": "AC8",
+        "text": "Given ich befinde mich im Wizard, When ich von einem Screen zu einem anderen über die Screenbar navigiere, Then erfolgt der Wechsel ohne sichtbares vollständiges Neuladen der Seite (Single-Page-Verhalten), und der Übergang ist visuell flüssig (z. B. durch Fade-In/Out oder Slide)."
+      }
+    ],
+    "ux_suggestions": [
+      "Die Screenbar optisch klar vom restlichen Wizard-Content abgrenzen, z. B. durch eine leicht kontrastierende Hintergrundfarbe oder einen subtilen Schatten, damit sie als Navigationselement sofort erkennbar ist.",
+      "Screens, die bereits besucht wurden, visuell als 'besucht' markieren (z. B. durch einen Haken, einen anderen Farbton oder Icon), damit der Nutzer auf einen Blick sieht, welche Schritte bereits abgeschlossen sind.",
+      "Falls Validierungsfehler auftreten, den Screen-Link in der Screenbar mit einem visuellen Hinweis (z. B. rotes Symbol, Ausrufezeichen) versehen, damit der Nutzer erkennt, welcher Screen noch fehlerhaft ist.",
+      "Einen Fortschrittsbalken unterhalb oder innerhalb der Screenbar anzeigen (z. B. '2 von 4 Screens abgeschlossen'), um den Gesamtfortschritt zu verdeutlichen.",
+      "Auto-Save-Bestätigungen dezent und nicht intrusiv gestalten (z. B. ein kurzes Fade-In einer kleinen Benachrichtigung 'Gespeichert' in der Ecke), damit der Flow nicht unterbrochen wird.",
+      "Optional: Einen 'Zurück'- und 'Weiter'-Button zusätzlich zur Screenbar anbieten, falls Nutzer es gewohnt sind, linear durch den Wizard zu navigieren, anstatt über die Screenbar zu springen."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "PUBLIC-SCHEDULE-HIGHLIGHT-CLUB-01",
+    "title": "Verein im öffentlichen Spielplan hervorheben",
+    "as_a": "Zuschauer",
+    "i_want": "einen Verein im Spielplan auswählen können",
+    "so_that": "alle Spiele und Tabellenzeilen dieses Vereins im Spielplan und in den Tabellenansichten optisch hervorgehoben sind und ich seinen Turnierverlauf schneller erkennen kann",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ich befinde mich in der öffentlichen Zuschauer-Ansicht eines Turniers, When ich mir den Spielplan oder eine Tabelle ansehe, Then werden alle Vereine/Teams zunächst einheitlich dargestellt (keine Hervorhebung)."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ich befinde mich in der öffentlichen Zuschauer-Ansicht, When ich in einer Liste von Vereinen/Teams oder direkt im Spielplan auf einen Vereinsnamen tippe/klicke, Then wird dieser Verein als 'ausgewählt' gesetzt."
+      },
+      {
+        "id": "AC3",
+        "text": "Given ein Verein als 'ausgewählt' gesetzt wurde, When ich weiterhin auf der Spielplan-Ansicht bin, Then werden alle Spiele, in denen dieser Verein beteiligt ist, optisch hervorgehoben (z. B. der Vereinsname fett dargestellt, Zeile leicht hervorgehoben), während alle anderen Spiele normal dargestellt bleiben."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ein Verein als 'ausgewählt' gesetzt wurde, When ich auf die Tabellenansicht (Gruppentabelle oder Gesamttabelle) wechsle, Then werden alle Tabellenzeilen des ausgewählten Vereins ebenfalls optisch hervorgehoben (z. B. der Vereinsname fett), während andere Vereine normal dargestellt bleiben."
+      },
+      {
+        "id": "AC5",
+        "text": "Given ein Verein als 'ausgewählt' gesetzt wurde, When ich innerhalb der Zuschauer-Ansicht zwischen verschiedenen Unteransichten wie Spielplan, Gruppen, Tabelle oder Finalrunde wechsle, Then bleibt der ausgewählte Verein über diese Ansichten hinweg bestehen und wird in allen relevanten Listen/Tabellen hervorgehoben."
+      },
+      {
+        "id": "AC6",
+        "text": "Given ein Verein als 'ausgewählt' gesetzt wurde, When ich erneut auf denselben Verein tippe/klicke (Toggle-Verhalten), Then wird die Auswahl aufgehoben und alle Vereine/Teams werden wieder in der Standarddarstellung ohne Hervorhebung angezeigt."
+      },
+      {
+        "id": "AC7",
+        "text": "Given ein Verein als 'ausgewählt' gesetzt wurde, When ich einen anderen Verein tippe/klicke, Then wird die Hervorhebung vom bisherigen Verein entfernt und der neu ausgewählte Verein wird in Spielplan und Tabellen hervorgehoben."
+      },
+      {
+        "id": "AC8",
+        "text": "Given kein Verein ausgewählt ist, When ich den Spielplan oder eine Tabelle anschaue, Then ändert sich die Darstellung nicht gegenüber dem bisherigen Verhalten (Feature ist transparent, wenn es nicht genutzt wird)."
+      },
+      {
+        "id": "AC9",
+        "text": "Given ein Verein ausgewählt ist, When ich die Seite aktualisiere oder den direkten Link zum Spielplan erneut öffne (ohne zusätzliche Personalisierung), Then ist der Zustand wieder ohne Vereinsauswahl (Voreinstellung: keine Hervorhebung), sofern keine explizite Persistierung der Auswahl umgesetzt wurde."
+      }
+    ],
+    "ux_suggestions": [
+      "In der Zuschauer-Ansicht einen gut sichtbaren, aber dezenten Hinweis einblenden, z. B. 'Tipp einen Verein an, um alle Spiele dieses Vereins hervorzuheben'.",
+      "Beim ausgewählten Verein den Namen sowohl in Spielplanzeilen als auch in Tabellen fett darstellen und optional die gesamte Zeile leicht hinterlegen, um die Hervorhebung klar erkennbar zu machen.",
+      "Optional einen kleinen 'Favorit setzen'-Bereich oberhalb des Spielplans anbieten (Dropdown oder Suche nach Verein), der dieselbe Funktion wie das direkte Antippen im Spielplan auslöst.",
+      "Den aktuell ausgewählten Verein z. B. in einem Badge oder einer kleinen Infoleiste oberhalb des Spielplans anzeigen ('Ausgewählter Verein: FC Musterstadt'), inklusive einer klaren Option 'Auswahl zurücksetzen'.",
+      "Auf mobilen Geräten sicherstellen, dass das Antippen von Vereinsnamen oder Tabellenzeilen ausreichend groß klickbar ist, damit die Auswahl intuitiv funktioniert.",
+      "Wenn ein Verein mehrere Teams im Turnier hat (z. B. 'FC Musterstadt I' und 'FC Musterstadt II'), optional überlegen, ob sich die Auswahl auf das konkrete Team oder auf alle Teams des Vereins beziehen soll – dies kann später als zusätzliche Einstellung ergänzt werden."
+    ],
+    "status": "open",
+    "priority": "medium",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-TV-01",
+    "title": "Monitor-Ansicht für TV-Display mit aktueller Paarung und Spielstand",
+    "as_a": "Zuschauer in der Halle",
+    "i_want": "auf einem TV-Bildschirm eine speziell optimierte Monitor-Ansicht mit der aktuellen Paarung und dem aktuellen Spielstand sehen",
+    "so_that": "ich den Spielverlauf bequem und gut lesbar aus der Distanz verfolgen kann",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ich befinde mich im Reiter 'Monitor' eines laufenden Spiels, When die Ansicht auf einem TV oder großen Bildschirm geöffnet wird, Then wird die aktuelle Paarung (Heimteam vs. Gastteam) prominent und klar lesbar angezeigt."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ich befinde mich im Reiter 'Monitor', When das Spiel läuft, Then wird der aktuelle Spielstand (Tore Heim/Gast) groß und gut sichtbar dargestellt."
+      },
+      {
+        "id": "AC3",
+        "text": "Given die Monitor-Ansicht wird auf einem TV genutzt, When die Seite geladen wird, Then enthält sie keine überflüssigen Bedienelemente (Buttons, Formulare), sondern ist klar auf die Anzeige von Informationen fokussiert."
+      },
+      {
+        "id": "AC4",
+        "text": "Given die Monitor-Ansicht ist geöffnet, When der Spielstand sich ändert (z. B. Tor), Then wird der neue Spielstand ohne manuellen Reload automatisch aktualisiert."
+      }
+    ],
+    "ux_suggestions": [],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-TV-02",
+    "title": "Anzeige der Spielzeit und Restspielzeit in der Monitor-Ansicht",
+    "as_a": "Zuschauer in der Halle",
+    "i_want": "in der Monitor-Ansicht die aktuelle Spielzeit und erkennbar angezeigt bekommen, wie lange das Spiel noch läuft",
+    "so_that": "ich sofort sehen kann, wie weit das Spiel fortgeschritten ist und wann es endet",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ein Spiel läuft und die Monitor-Ansicht ist geöffnet, When das Spiel gestartet wurde, Then wird die aktuelle Spielzeit (z. B. '09:34') gut sichtbar angezeigt und läuft in Echtzeit weiter."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ein Spiel hat eine definierte Gesamtdauer (z. B. 12 Minuten), When die Monitor-Ansicht angezeigt wird, Then ist visuell erkennbar, wie viel Zeit bereits vergangen und wie viel Zeit noch verbleibend ist (z. B. mittels Fortschrittsbalken, Countdown oder grafischer Restzeit-Anzeige)."
+      },
+      {
+        "id": "AC3",
+        "text": "Given die Spielzeit wird auf der Monitor-Ansicht angezeigt, When die Spieluhr pausiert oder das Spiel beendet wird, Then bleibt die Anzeige konsistent (z. B. Stop der Zeit bei Pause, Endzeit bei Spielende) und ändert sich nicht weiter."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ich sehe die Monitor-Ansicht auf Distanz, When ich auf den Bildschirm schaue, Then kann ich ohne genaueres Hinschauen erkennen, ob das Spiel eher am Anfang, in der Mitte oder kurz vor Ende ist (z. B. durch klaren Fortschrittsbalken oder Farbwechsel gegen Ende)."
+      }
+    ],
+    "ux_suggestions": [],
+    "status": "open",
+    "priority": "high",
+    "related_defects": ["DEF-005"],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-TV-03",
+    "title": "Tor-Animation bei Torereignissen in der Monitor-Ansicht",
+    "as_a": "Zuschauer in der Halle",
+    "i_want": "bei einem Tor in der Monitor-Ansicht eine kurze Tor-Animation auf der Seite des treffenden Teams sehen",
+    "so_that": "Tore emotional hervorgehoben werden und klar erkennbar ist, welches Team getroffen hat",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given die Monitor-Ansicht ist geöffnet und ein Tor wird für ein Team erfasst, When das Tor-Event registriert wird, Then erscheint auf der Seite des treffenden Teams eine kurze Tor-Animation (z. B. Aufleuchten, Animation, 'TOR!'-Banner)."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ein Tor wurde angezeigt, When die Tor-Animation abgelaufen ist, Then kehrt die Darstellung in den normalen Monitor-Zustand zurück, der weiterhin Paarung, Spielstand und Spielzeit zeigt."
+      },
+      {
+        "id": "AC3",
+        "text": "Given mehrere Tore kurz hintereinander fallen, When mehrere Tor-Events ausgelöst werden, Then wird für jedes Tor eine Animation abgespielt, ohne dass der laufende Spielstand oder die Zeit-Anzeige verloren gehen."
+      },
+      {
+        "id": "AC4",
+        "text": "Given Tor-Animationen sind optional, When die Animation technisch deaktiviert oder nicht unterstützt ist, Then wird dennoch der Spielstand korrekt aktualisiert, damit die Funktionalität des Monitors nicht beeinträchtigt wird."
+      }
+    ],
+    "ux_suggestions": [],
+    "status": "open",
+    "priority": "medium",
+    "related_defects": ["DEF-004"],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-TV-04",
+    "title": "Vorschau der nächsten Paarung kurz vor Spielende in der Monitor-Ansicht",
+    "as_a": "Zuschauer in der Halle",
+    "i_want": "kurz vor Ende eines Spiels in der Monitor-Ansicht eine Vorschau der nächsten Paarung eingeblendet bekommen",
+    "so_that": "ich weiß, welche Teams als nächstes spielen und mich rechtzeitig darauf einstellen kann",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ein Spiel läuft in der Monitor-Ansicht, When die verbleibende Spielzeit auf 3 Minuten oder weniger sinkt, Then wird automatisch die nächste geplante Paarung für dieses Spielfeld kurz eingeblendet."
+      },
+      {
+        "id": "AC2",
+        "text": "Given die verbleibende Spielzeit beträgt 3 Minuten oder weniger, When die Vorschau der nächsten Paarung eingeblendet wird, Then bleibt diese Vorschau für ca. 7 Sekunden sichtbar, bevor die Monitor-Ansicht wieder zur vollständigen Anzeige des aktuellen Spiels zurückkehrt."
+      },
+      {
+        "id": "AC3",
+        "text": "Given die Vorschau der nächsten Paarung wurde angezeigt und ist wieder ausgeblendet, When die Spielzeit weiterläuft (z. B. bis zum Ende), Then wird anschließend wieder permanent das aktuelle Spiel mit Paarung, Spielstand und Spielzeit dargestellt, ohne dass zusätzliche manuelle Aktionen erforderlich sind."
+      },
+      {
+        "id": "AC4",
+        "text": "Given es existiert keine nachfolgende Paarung (z. B. letztes Spiel des Tages), When die Restspielzeit 3 Minuten erreicht, Then wird keine nächstes-Spiel-Vorschau eingeblendet und die Monitor-Ansicht bleibt beim aktuellen Spiel, ohne Fehlermeldung."
+      },
+      {
+        "id": "AC5",
+        "text": "Given die Restspielzeit-Logik löst die Vorschau aus, When das Spiel vor Ablauf der 3 Minuten vorzeitig beendet wird (z. B. manuelles Spiel-Ende), Then wird die Vorschau der nächsten Paarung nicht mehr automatisch eingeblendet oder sofort beendet, damit die Anzeige nicht widersprüchlich ist."
+      }
+    ],
+    "ux_suggestions": [],
+    "status": "open",
+    "priority": "medium",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-TV-GOAL-SFX-01",
+    "title": "Individuell anpassbare Toranimation mit Mannschafts-spezifischem Sound",
+    "as_a": "Turnier-Organisator",
+    "i_want": "bei einem Tor eine Toranimation mit einer individuell pro Mannschaft konfigurierbaren Tonsequenz abspielen",
+    "so_that": "Tore stimmungsvoll hervorgehoben werden und jede Mannschaft ihren eigenen Wiedererkennungs-Effekt bei Toren hat",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ein Turnier ist angelegt, When ich in den Turnier- oder Team-Einstellungen ein Team bearbeite, Then kann ich optional eine Tor-Tonsequenz für dieses Team auswählen oder hochladen (z. B. aus einer Liste vorhandener Sounds oder über Datei-Upload), ohne dass dies Pflicht ist."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ein Team keine eigene Tor-Tonsequenz konfiguriert hat, When dieses Team ein Tor erzielt und ein Tor-Event ausgelöst wird, Then wird entweder ein Standard-Tor-Sound abgespielt oder es wird gar kein Ton abgespielt (abhängig von der definierten Standardkonfiguration), die Toranimation selbst funktioniert aber in jedem Fall."
+      },
+      {
+        "id": "AC3",
+        "text": "Given ein Team eine eigene Tor-Tonsequenz konfiguriert hat, When dieses Team ein Tor erzielt und das Tor-Event in der Monitor-Ansicht ausgelöst wird, Then wird die Toranimation auf der betreffenden Seite angezeigt und gleichzeitig die für dieses Team hinterlegte Tonsequenz abgespielt."
+      },
+      {
+        "id": "AC4",
+        "text": "Given beide Teams im Spiel jeweils eigene Tor-Tonsequenzen konfiguriert haben, When das Heimteam ein Tor erzielt, Then wird ausschließlich der Heimteam-Sound abgespielt; When das Gastteam ein Tor erzielt, Then wird ausschließlich der Gastteam-Sound abgespielt."
+      },
+      {
+        "id": "AC5",
+        "text": "Given der Monitor wird auf einem Endgerät ohne Audioausgabe oder mit stummgeschaltetem Ton betrieben, When ein Tor erzielt wird, Then wird die Toranimation trotzdem sichtbar abgespielt, ohne dass ein Fehler angezeigt wird (das Feature ist bei fehlendem Ton weiterhin robust)."
+      },
+      {
+        "id": "AC6",
+        "text": "Given während einer laufenden Tor-Tonsequenz ein weiteres Tor erzielt wird, When technisch möglich, Then wird entweder die laufende Tonsequenz sauber beendet/überblendet oder eine neue Sequenz gestartet, ohne dass es zu hörbarem 'Chaos' kommt (definiertes Verhalten)."
+      },
+      {
+        "id": "AC7",
+        "text": "Given ich ändere die Tor-Tonsequenz eines Teams in den Einstellungen, When ich später in der Monitor-Ansicht ein Tor für dieses Team erfasse, Then wird ab diesem Zeitpunkt die neue Tonsequenz abgespielt und nicht mehr die alte."
+      },
+      {
+        "id": "AC8",
+        "text": "Given ich nutze die Funktion nicht (keine Tonsequenzen konfiguriert, Audio optional deaktiviert), When Tore in der Monitor-Ansicht angezeigt werden, Then funktioniert die visuelle Toranimation wie in MON-TV-03 beschrieben unverändert und der Ablauf in der Turnierleitung wird nicht beeinträchtigt."
+      }
+    ],
+    "ux_suggestions": [
+      "In den Team-Einstellungen einen klar gekennzeichneten Bereich 'Tor-Sound' vorsehen, mit einfacher Möglichkeit: 'Kein spezieller Sound' (Standard), 'Aus Liste wählen', 'Datei hochladen'.",
+      "In der Monitor-Ansicht visuell anzeigen, dass Ton aktiv ist (z. B. kleines Lautsprecher-Icon), und eine schnelle Möglichkeit bieten, den Ton stummzuschalten, ohne die Toranimationen zu verlieren.",
+      "Beim Testen der Konfiguration in den Einstellungen einen 'Test abspielen'-Button für den Tor-Sound eines Teams anbieten, damit der Organisator vorab prüfen kann, wie es klingt.",
+      "Die Dauer und Lautstärke der Tor-Tonsequenz begrenzen bzw. klar dokumentieren (z. B. max. 5–10 Sekunden), damit die Halle nicht durch lange oder extrem laute Clips gestört wird.",
+      "Bei mehreren parallel laufenden Spielfeldern überlegen, ob alle Tor-Sounds oder nur die des aktuell fokussierten Spielfelds auf einem Monitor abgespielt werden, um Überlagerungen zu vermeiden."
+    ],
+    "status": "open",
+    "priority": "low",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  },
+  {
+    "id": "MON-LIVE-INDICATOR-01",
+    "title": "Live-Markierung für gestartete Spiele in Spielplan und Turnierleitungs-Cockpit",
+    "as_a": "Zuschauer und Mitglied der Turnierleitung",
+    "i_want": "dass Spiele, die über den Reiter 'Turnierleitung' gestartet wurden, im öffentlichen Spielplan und im Cockpit der Turnierleitung als 'live' gekennzeichnet und hervorgehoben werden",
+    "so_that": "ich auf einen Blick erkennen kann, welches Spiel aktuell läuft",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ein Spiel wurde im Reiter 'Turnierleitung' gestartet (Status von 'geplant' auf 'laufend' gesetzt), When ich den öffentlichen Spielplan betrachte, Then wird dieses Spiel mit einem deutlich sichtbaren 'LIVE'-Symbol gekennzeichnet und optisch hervorgehoben (z. B. farbiger Hintergrund oder Rahmen)."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ein Spiel wurde im Reiter 'Turnierleitung' gestartet, When ich im Cockpit der Turnierleitung den Spielplan oder die Spielübersicht betrachte, Then wird dieses Spiel ebenfalls mit einem 'LIVE'-Symbol gekennzeichnet und optisch hervorgehoben."
+      },
+      {
+        "id": "AC3",
+        "text": "Given mehrere Spiele eines Turniers existieren, When genau eines dieser Spiele im Reiter 'Turnierleitung' gestartet ist, Then genau dieses eine Spiel zeigt das 'LIVE'-Symbol und die Hervorhebung, alle anderen Spiele werden ohne 'LIVE'-Kennzeichnung in der normalen Darstellung angezeigt."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ein laufendes Spiel im Reiter 'Turnierleitung' wird regulär beendet (Status von 'laufend' auf 'beendet' gesetzt), When ich anschließend den öffentlichen Spielplan oder das Turnierleitungs-Cockpit öffne oder aktualisiere, Then verschwindet die 'LIVE'-Kennzeichnung und die optische Hervorhebung für dieses Spiel wieder."
+      },
+      {
+        "id": "AC5",
+        "text": "Given ein Spiel war fälschlicherweise gestartet worden und wird im Reiter 'Turnierleitung' wieder auf einen nicht-laufenden Status zurückgesetzt (z. B. 'geplant' oder 'unterbrochen' je nach Modellierung), When ich den öffentlichen Spielplan oder das Cockpit betrachte, Then wird die 'LIVE'-Kennzeichnung entfernt und das Spiel wieder im neutralen Layout ohne Hervorhebung dargestellt."
+      },
+      {
+        "id": "AC6",
+        "text": "Given ein Spiel ist nicht gestartet (Status 'geplant' oder 'noch nicht begonnen'), When ich den öffentlichen Spielplan oder das Turnierleitungs-Cockpit betrachte, Then wird für dieses Spiel kein 'LIVE'-Symbol angezeigt und es ist nicht hervorgehoben."
+      },
+      {
+        "id": "AC7",
+        "text": "Given der Status eines Spiels ändert sich von 'geplant' zu 'laufend' oder von 'laufend' zu 'beendet', When die öffentliche Spielplan-Ansicht oder das Turnierleitungs-Cockpit geöffnet ist, Then wird die 'LIVE'-Kennzeichnung und Hervorhebung ohne manuelles Neuladen der Seite aktualisiert (z. B. über Live-Update/Websocket/Periodic Refresh), sofern diese Mechanismen bereits für Spielstand und Zeit genutzt werden."
+      }
+    ],
+    "ux_suggestions": [
+      "In beiden Ansichten (öffentlicher Spielplan und Turnierleitungs-Cockpit) ein einheitliches 'LIVE'-Badge mit klarer Signalfarbe (z. B. rotes Badge mit der Aufschrift 'LIVE') verwenden, damit der Status auf einen Blick erkennbar ist.",
+      "Die komplette Zeile des laufenden Spiels leicht hinterlegen (z. B. dezenter Hintergrund) oder mit einem farbigen Rand versehen, um das Spiel zusätzlich zum 'LIVE'-Symbol hervorzuheben.",
+      "In der Turnierleitungs-Ansicht das aktuell laufende Spiel zusätzlich in einer 'Aktuelles Spiel'-Sektion oben anzeigen, die ebenfalls das 'LIVE'-Badge trägt, damit der Zeitnehmer nicht im Spielplan scrollen muss.",
+      "Optional im öffentlichen Spielplan eine kleine Legende einblenden, die erklärt: 'LIVE = Spiel läuft gerade', um neuen Nutzern die Bedeutung des Symbols verständlich zu machen.",
+      "Darauf achten, dass das 'LIVE'-Badge auch auf mobilen Geräten gut sichtbar ist (groß genug, kontrastreiche Farben, ausreichender Abstand zum Spieltext)."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-15"
+  }
+]

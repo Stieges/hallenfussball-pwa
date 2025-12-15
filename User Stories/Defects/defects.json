@@ -1,0 +1,192 @@
+[
+  {
+    "id": "DEF-001",
+    "title": "Turniername im PDF nicht aus Metadaten übernommen",
+    "description": "Im generierten Turnier-PDF wird ein Turniername angezeigt, der an keiner Stelle in der Anwendung konfiguriert werden kann. Der in den Turnier-Metadaten gepflegte Turniername wird im PDF aktuell nicht verwendet bzw. nirgends angezeigt.",
+    "severity": "medium",
+    "priority": "high",
+    "status": "open",
+    "affected_component": "PDF-Export / src/lib/pdfExporter.ts",
+    "module": "Turnier-Ansicht / PDF-Export",
+    "steps_to_reproduce": [
+      "Ein Turnier anlegen oder ein bestehendes Turnier öffnen",
+      "In den Turnier-Metadaten einen Turniernamen setzen bzw. prüfen (z. B. \"Hallenturnier U13 – Musterstadt\")",
+      "Das PDF zum Turnier generieren (z. B. Spielplan-/Übersichts-PDF)",
+      "Das generierte PDF öffnen und den im PDF dargestellten Turniernamen prüfen"
+    ],
+    "expected_behavior": "Der Turniername im PDF entspricht dem in den Turnier-Metadaten gepflegten Namen (z. B. Tournament.name). Der Turniername ist konsistent zwischen UI und PDF (gleiche Bezeichnung). Es wird kein statischer oder nicht konfigurierbarer Turniername angezeigt.",
+    "actual_behavior": "Im PDF wird ein Turniername angezeigt, der nicht über die Oberfläche konfiguriert werden kann und nicht dem in den Turnier-Metadaten hinterlegten Namen entspricht. Der korrekte Turniername aus den Metadaten taucht im PDF an keiner Stelle auf.",
+    "impact": "Turnierorganisatoren können den im PDF dargestellten Turniernamen nicht anpassen. Bei mehreren Turnieren kann dies zu Verwirrung führen, da der Name im PDF nicht mit dem im System gepflegten Namen übereinstimmt. Wirkt unprofessionell gegenüber Teams, Zuschauern und ggf. Sponsoren.",
+    "root_cause_hypothesis": "Das PDF-Template verwendet einen hardcodierten oder veralteten Turniernamen (z. B. statische Zeichenkette). Der Wert Tournament.name bzw. das entsprechende Metadatenfeld wird beim Rendern des PDFs nicht übergeben oder nicht gebunden.",
+    "proposed_solution": "Im PDF-Template den Turniernamen aus den Turnier-Metadaten verwenden (z. B. Tournament.name). Sicherstellen, dass bei Generierung des PDFs die aktuellen Metadaten des Turniers geladen und an das Template übergeben werden. Optional: Im UI einen klar sichtbaren Turniernamen konfigurieren lassen und diesen als Single Source of Truth auch im PDF verwenden.",
+    "related_user_story": "TOUR-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["pdf", "metadata", "tournament", "ui-inconsistency"]
+  },
+  {
+    "id": "DEF-002",
+    "title": "Schiedsrichter (SR) in Turnier-Vorschau nicht änderbar",
+    "description": "Nachdem ein Turnier erstellt wurde, kann in der Vorschau-Ansicht der Schiedsrichter (SR) zwar über die vorhandene Funktionalität geändert werden, der neue Wert wird jedoch nicht übernommen/gespeichert. Die Änderung ist weder direkt in der UI noch in den zugrunde liegenden Daten wirksam.",
+    "severity": "high",
+    "priority": "high",
+    "status": "open",
+    "affected_component": "Turnier-Vorschau / Spielplan-Ansicht",
+    "module": "Turnier-Vorschau / Spielplan-Ansicht",
+    "steps_to_reproduce": [
+      "Als berechtigter Benutzer ein neues Turnier anlegen (oder ein bestehendes Turnier verwenden)",
+      "Den Spielplan generieren (sofern notwendig)",
+      "Die Vorschau-Ansicht des Turniers öffnen, in der Spiele inkl. SR angezeigt werden",
+      "Bei genau einem Spiel den Schiedsrichter (SR) über die vorhandene UI-Funktion ändern (z. B. Auswahl/Dropdown/Textfeld)",
+      "Änderung bestätigen/speichern (z. B. per Button oder automatischem Save)",
+      "Ansicht aktualisieren bzw. erneut öffnen und den SR-Wert für dieses Spiel prüfen"
+    ],
+    "expected_behavior": "Die geänderte SR-Zuordnung wird nach dem Speichern nur für das ausgewählte Spiel übernommen. Andere Spiele behalten ihre bisherigen SR-Zuordnungen unverändert. Die bestehende SR-Zuteilung für das Turnier wird durch die Bearbeitung einer einzelnen Partie nicht global neu generiert oder überschrieben. Nach einem Reload/Neuaufruf der Vorschau bleibt der neue SR-Wert für diese Partie erhalten. Der geänderte SR-Wert wird auch in anderen relevanten Ansichten (z. B. Monitor, Detailansicht des Spiels, ggf. PDF) konsistent angezeigt.",
+    "actual_behavior": "Die UI zur Änderung des SR ist vorhanden und kann bedient werden. Nach der vermeintlichen Speicherung bleibt jedoch der ursprüngliche SR-Wert bestehen. Ein Reload/Neuaufruf der Vorschau zeigt weiterhin den alten SR-Wert, die Änderung geht verloren. Es entsteht der Eindruck, dass die Änderung ignoriert wird oder nicht persistiert wird.",
+    "impact": "Schiedsrichter-Zuordnungen können nicht sinnvoll für einzelne Spiele gepflegt oder korrigiert werden. Turnierorganisation wird erschwert, insbesondere bei mehreren Spielen und Schiedsrichtern. Daten in der Vorschau (und ggf. Monitor/Export) sind falsch oder veraltet.",
+    "root_cause_hypothesis": "Das UI-Event zur SR-Änderung ruft keinen (oder einen falschen) API-Endpunkt auf. Der API-Endpunkt übernimmt die SR-Information nicht und speichert sie nicht im Spielobjekt. Das Vorschau-Rendering verwendet nicht das Feld, in dem der neue SR-Wert gespeichert wird (Mismatch zwischen UI-Feld und Datenmodell). Client-State wird aktualisiert, aber nicht mit dem Backend synchronisiert (oder umgekehrt).",
+    "proposed_solution": "1. Prüfen, ob beim Ändern des SR ein entsprechender Update-Call (z. B. PATCH /games/:id oder ähnlicher Endpoint) mit dem SR-Feld abgesetzt wird. 2. Sicherstellen, dass das SR-Feld im Request mit dem im Backend erwarteten Feldnamen übereinstimmt und persistiert wird. 3. Vorschau-Ansicht so anpassen, dass sie den gespeicherten SR-Wert aus dem Backend (oder dem zentralen State) liest. 4. Verifizieren, dass beim Speichern eines einzelnen Spiels keine erneute globale SR-Generierung für das gesamte Turnier angestoßen wird. 5. Optional: Erfolgreiche SR-Änderung mit UI-Feedback anzeigen (z. B. kurze Bestätigung oder sichtbare Aktualisierung ohne Reload).",
+    "related_user_story": "SCHED-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD",
+      "role": "Turnier-Owner/Organisator"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["referee", "match", "preview", "data-persistence", "ui-state"]
+  },
+  {
+    "id": "DEF-003",
+    "title": "Paarungen für die Finalphase werden nicht automatisch erzeugt",
+    "description": "Obwohl alle Spiele der Gruppenphase abgeschlossen und Ergebnisse eingetragen sind, werden die Paarungen für die Finalphase (z. B. Halbfinale, Finale, Platzierungsspiele) nicht automatisch erzeugt/angezeigt. Die Finalspiele werden nicht 'aufgelöst' (keine Teams zugeordnet), obwohl die Tabellenstände eindeutig feststehen.",
+    "severity": "critical",
+    "priority": "high",
+    "status": "open",
+    "affected_component": "Finalphase / Playoff Scheduling / src/utils/playoffScheduler.ts",
+    "module": "Turnier – Gruppenphase / Finalphase / Spielplan",
+    "steps_to_reproduce": [
+      "Als berechtigter Benutzer ein Turnier mit Gruppen- und Finalphase anlegen",
+      "Teams den Gruppen zuordnen und den Spielplan für die Gruppenphase generieren",
+      "Alle Gruppenspiele durchführen und die Ergebnisse eintragen, sodass alle Spiele den Status 'abgeschlossen' haben",
+      "Zur Ansicht der Finalphase bzw. der gesamten KO-Runde wechseln (z. B. Spielplan-Ansicht, Finalrunden-Tab, Vorschau)",
+      "Prüfen, ob die Paarungen in der Finalphase (z. B. 1. Gruppe A vs. 2. Gruppe B) korrekt mit Teams befüllt wurden"
+    ],
+    "expected_behavior": "Sobald alle Spiele einer relevanten Gruppenphase abgeschlossen sind: Werden auf Basis der Tabellenstände die qualifizierten Teams automatisch ermittelt. Die entsprechenden Finalspiele (z. B. Halbfinale, Finale, Platzierungsspiele) werden mit den qualifizierten Teams befüllt. Die Paarungen der Finalphase sind in der UI sichtbar, inkl. Teamnamen und ggf. Anstoßzeiten/Plätzen. Es ist keine zusätzliche manuelle Aktion zur 'Aktualisierung' der Finalphase erforderlich, außer ggf. einem page reload. Änderungen an Gruppenergebnissen nachträglich führen (sofern vorgesehen) zu einer entsprechenden Aktualisierung der Finalpaarungen oder werden entsprechend geregelt (z. B. Warnung).",
+    "actual_behavior": "Alle Gruppenspiele wurden abgeschlossen und Ergebnisse erfasst. Die Tabellenstände sind vorhanden bzw. können berechnet werden. Die Finalphase zeigt jedoch weiterhin keine zugeordneten Teams: Die Spiele in der Finalphase bleiben leer oder zeigen Platzhalter ohne konkrete Teams. Die Paarungen werden nicht automatisch 'aufgelöst', obwohl die Grundlage (Gruppenergebnisse) vorhanden ist. Es gibt keine sichtbare Fehlermeldung, warum keine Paarungen erzeugt werden.",
+    "impact": "Die KO-Runde kann nicht sinnvoll gespielt oder geplant werden, da Teams in der Finalphase nicht angezeigt/zugeordnet werden. Organisatoren müssen sich die Paarungen manuell herleiten und ggf. außerhalb der Anwendung dokumentieren. Die Gesamtfunktion 'Turnier durchplanen von Gruppenphase bis Finale' ist faktisch nicht nutzbar. Wirkt unvollständig/unprofessionell für Turnierorganisation und Darstellung gegenüber Teams und Zuschauern.",
+    "root_cause_hypothesis": "Die Logik zur Ermittlung der qualifizierten Teams aus den Gruppen (z. B. top N pro Gruppe) wird nach Abschluss aller Gruppenspiele nicht angestoßen. Ein Event oder Trigger ('alle Gruppenspiele beendet') fehlt oder ist fehlerhaft implementiert. Die Finalrunden-Struktur ist zwar angelegt, aber die Zuordnung von Teams zu Finalspielen wird nicht ausgeführt oder schlägt im Hintergrund fehl. Die Finalphase-Ansicht liest nicht die berechneten Paarungen, sondern nur eine statische Struktur ohne Teams.",
+    "proposed_solution": "1. Logik implementieren oder prüfen, die nach Abschluss aller relevanten Gruppenspiele: die Tabellenstände berechnet und die qualifizierten Teams den Finalspielen zuordnet (z. B. HF1: 1. Gruppe A vs. 2. Gruppe B). 2. Sicherstellen, dass diese Logik entweder: automatisch nach jeder Ergebnisänderung prüft, ob alle Gruppenspiele abgeschlossen sind, oder beim Laden der Finalphasen-Ansicht eine Aktualisierung der Paarungen durchführt. 3. UI-seitig die aktualisierten Paarungen in der Finalphase anzeigen (Teamnamen statt Platzhalter). 4. Optional: Visuelles Feedback, wenn die Finalpaarungen erfolgreich berechnet wurden. Falls einzelne Gruppenspiele noch offen sind, klaren Hinweis anzeigen, dass die Finalpaarungen erst nach vollständigem Abschluss der Gruppenphase erzeugt werden.",
+    "related_user_story": "SCHED-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD",
+      "role": "Turnier-Owner/Organisator"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["playoff", "knockout", "group-stage", "automatic-pairing", "critical-feature"]
+  },
+  {
+    "id": "DEF-004",
+    "title": "Spielereignis 'Tor' zeigt Mannschaft als undefined an",
+    "description": "Im Reiter 'Turnierleitung' werden Spielereignisse (Events) getrackt und angezeigt. Bei einem Tor-Ereignis wird jedoch die zugehörige Mannschaft nicht korrekt mitgegeben. Statt 'Tor für [Mannschaftsname]' wird der Text 'Tor für undefined' angezeigt, gefolgt vom Spielstand.",
+    "severity": "medium",
+    "priority": "medium",
+    "status": "open",
+    "affected_component": "Turnierleitung / Live-Events / Match Events",
+    "module": "Turnier – Reiter 'Turnierleitung' / Live-Events",
+    "steps_to_reproduce": [
+      "Ein Turnier mit mindestens einem Spiel anlegen und den Spielplan aufrufen",
+      "Das betroffene Spiel im Reiter 'Turnierleitung' öffnen",
+      "Ein Tor-Ereignis erfassen (z. B. durch Klick auf 'Tor Heimteam' oder 'Tor Gastteam' bzw. entsprechende UI-Aktion)",
+      "Die Liste der Spielereignisse für dieses Spiel betrachten"
+    ],
+    "expected_behavior": "Für jedes Tor-Ereignis wird die Mannschaft eindeutig und korrekt angezeigt, z. B.: 'Tor für Team A – Spielstand: 1:0' oder 'Tor für Team B – Spielstand: 2:3'. Im zugrunde liegenden Datenmodell ist das Tor-Ereignis einem Team eindeutig zugeordnet (z. B. per teamId oder teamSide). In der 'Turnierleitung'-Ansicht wird der Mannschaftsname aus den Spieldaten/Teamdaten korrekt aufgelöst.",
+    "actual_behavior": "Das Tor-Ereignis wird zwar erstellt, aber die Mannschaft wird im Text nicht korrekt aufgelöst. In der 'Turnierleitung'-Ansicht wird bei einem Tor z. B. angezeigt: 'Tor für undefined – Spielstand: 1:0'. Dies tritt unabhängig davon auf, welche Mannschaft das Tor erzielt hat (Heim- oder Gastteam).",
+    "impact": "Die Darstellung der Spielereignisse ist unklar und für Nutzer verwirrend. In der Turnierleitung bzw. bei Live-Mitschnitt ist nicht ersichtlich, welches Team das Tor erzielt hat. Für spätere Auswertungen / Protokolle ist die Information unvollständig bzw. nur über den Spielstand indirekt nachvollziehbar.",
+    "root_cause_hypothesis": "Beim Erstellen des Tor-Events wird die Referenz auf das Team (z. B. teamId, team oder teamName) nicht gesetzt, nur der neue Spielstand. Die Rendering-Logik in der 'Turnierleitung'-Ansicht greift auf ein Feld zu, das nicht existiert oder undefined ist (z. B. event.team.name statt event.teamName oder umgekehrt). Mismatch zwischen: Event-Datenstruktur (z. B. scoringTeamId) und Anzeige-Logik (z. B. versucht event.team aufzulösen).",
+    "proposed_solution": "1. Prüfen, welche Daten beim Erstellen eines Tor-Events persistiert werden: Sicherstellen, dass das Tor-Ereignis eine eindeutige Team-Referenz enthält (z. B. scoringTeamId oder teamSide wie HOME/AWAY). 2. Bei der Anzeige im Reiter 'Turnierleitung': Die richtige Datenquelle für den Mannschaftsnamen verwenden (z. B. über das Spielobjekt die teamId auf den tatsächlichen Teamnamen mappen). 3. Optional: Unit-Tests/Integrationstests ergänzen, die prüfen, dass bei einem Tor-Ereignis der Text 'Tor für <Teamname>' korrekt gerendert wird. Log-Ausgabe/Fehler-Handling einbauen, falls Teamdaten unerwartet fehlen, um undefined in der Anzeige zu vermeiden.",
+    "related_user_story": "RESULT-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD",
+      "role": "Turnier-Owner/Organisator / Schiedsrichter / Zeitnehmer"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["match-events", "live-tracking", "ui-display", "data-mapping", "team-reference"]
+  },
+  {
+    "id": "DEF-005",
+    "title": "Spieluhr stoppt beim Schließen des Tabs und läuft nicht weiter",
+    "description": "Wird ein Spiel gestartet und anschließend der Browser-Tab geschlossen (oder die Ansicht verlassen), bleibt die Spielzeit praktisch 'stehen'. Beim erneuten Öffnen des Tabs läuft die Zeit nicht korrekt weiter, sondern wird so angezeigt, als wäre das Spiel angehalten gewesen. Zukünftig soll die Spielzeit auch dann korrekt fortgeschrieben werden, wenn der Tab geschlossen wird – sowohl mit als auch ohne Internetverbindung.",
+    "severity": "high",
+    "priority": "high",
+    "status": "open",
+    "affected_component": "Turnierleitung / Live-Spielansicht / Match Timer",
+    "module": "Turnierleitung / Live-Spielansicht (Spieluhr)",
+    "steps_to_reproduce": [
+      "Ein Turnier mit mindestens einem Spiel anlegen",
+      "In der Turnierleitung ein Spiel auswählen",
+      "Das Spiel starten, sodass die Spieluhr läuft",
+      "Den Browser-Tab schließen oder auf eine andere Seite navigieren",
+      "Einige Minuten warten (die 'Spielzeit' läuft in der Realität weiter)",
+      "Den Tab bzw. die Spielansicht erneut öffnen und die angezeigte Spielzeit prüfen"
+    ],
+    "expected_behavior": "Allgemein: Das Schließen des Tabs oder das Verlassen der Ansicht darf die logische Spielzeit nicht anhalten. Die Spieluhr soll beim erneuten Öffnen des Spiels den korrekten Zeitstand anzeigen, als wäre das Spiel kontinuierlich weitergelaufen. Mit Internetverbindung: Beim Starten des Spiels wird ein entsprechendes Event (z. B. 'Spiel gestartet' mit Startzeit) an das Backend geschrieben. Die 'offizielle' Spielzeit basiert auf der Serverzeit bzw. den im Backend gespeicherten Events. Beim erneuten Öffnen des Spiels: Wird der aktuelle Spielstatus vom Backend geladen. Die Spieluhr berechnet den verstrichenen Zeitraum seit der Startzeit (abzüglich etwaiger Pausen/Unterbrechungen, falls vorhanden). Die Uhr zeigt die korrekte fortgeschriebene Spielzeit ('Zeit wird nachgeholt'). Ohne Internetverbindung: Wenn keine Internetverbindung besteht, basiert die Berechnung der Spielzeit auf der lokalen Systemzeit des Geräts. Beim Start wird die lokale Startzeit gespeichert. Beim erneuten Öffnen werden die aktuelle Systemzeit und die gespeicherte Startzeit verglichen. Die Spieluhr zeigt die entsprechend verstrichene Zeit an. Sobald wieder Internet verfügbar ist, kann optional eine Synchronisation mit dem Backend erfolgen, ohne dass die Spielzeit 'zurückspringt'.",
+    "actual_behavior": "Beim Starten eines Spiels beginnt die Spieluhr korrekt zu laufen. Wird der Tab geschlossen oder die Ansicht verlassen: Es scheint kein persistentes Start-/Zeit-Event zu geben, auf dessen Basis die Zeit weiterlaufen könnte. Beim erneuten Öffnen des Spiels: Die Spieluhr zeigt einen Stand, als wäre in der Zwischenzeit keine Zeit vergangen (die Uhr 'steht'). Die echte, vergangene Spielzeit wird weder nachgezogen noch korrekt rekonstruiert.",
+    "impact": "Die angezeigte Spielzeit ist nach Tab-Wechsel / Tab-Schließen nicht mehr korrekt. Zeitnehmer/Schiedsrichter können sich nicht auf die Spieluhr in der Anwendung verlassen. Für die Turnierorganisation (z. B. genaue Spiel- und Pausenplanung) ist die Zeitmessung unzuverlässig. Bei mehreren parallel laufenden Spielen oder häufigem Kontextwechsel im Browser ist die Bedienung kaum praktikabel.",
+    "root_cause_hypothesis": "Die Spieluhr läuft rein clientseitig im aktiven Tab (z. B. via setInterval) ohne: persistente Speicherung der Startzeit im Backend oder saubere Speicherung im Local Storage mit Bezug zur Systemzeit. Beim Schließen des Tabs geht der laufende Timer verloren. Beim erneuten Öffnen wird kein Abgleich mit einem zentralen 'Startzeitpunkt' vorgenommen, sondern ggf. eine neue oder statische Zeitbasis verwendet.",
+    "proposed_solution": "1. Persistente Startzeit einführen: Beim Start des Spiels ein Event mit Startzeit speichern (mit Internet: Startzeit im Backend speichern, ohne Internet: Startzeit lokal in Local Storage). 2. Zeitberechnung beim Rendern: Beim Laden des Spiels Startzeit prüfen (Backend oder lokal), aktuelle Zeit minus Startzeit = verstrichene Spielzeit berechnen, diese als initialen Wert für die Spieluhr verwenden. 3. Unterscheidung Online/Offline: Bei navigator.onLine === true: offizielle Spielzeit aus Backend laden, bei navigator.onLine === false: auf Basis lokaler Startzeit weiterrechnen. 4. Synchronisation bei Rückkehr der Verbindung (optional): Spielstatus mit Backend synchronisieren. 5. Tests & UX: Testfälle für 'Tab schließen und nach X Minuten wieder öffnen' und Online → Offline → Online-Übergänge.",
+    "related_user_story": "MON-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD",
+      "role": "Turnier-Owner/Organisator / Schiedsrichter / Zeitnehmer"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["match-timer", "persistence", "offline-support", "pwa", "time-tracking", "critical-ux"]
+  },
+  {
+    "id": "DEF-006",
+    "title": "Button 'Nächstes Spiel laden' ohne Funktion im Reiter 'Turnierleitung'",
+    "description": "Im Reiter 'Turnierleitung' existiert der Button 'Nächstes Spiel laden'. Aktuell hat dieser Button keine erkennbare Funktion: Beim Klicken wird kein nächstes Spiel geladen und die Ansicht ändert sich nicht. Erwartet wird, dass nach dem Drücken des Buttons automatisch die nächste Paarung (das nächste Spiel) in der Turnierleitung geladen wird.",
+    "severity": "medium",
+    "priority": "medium",
+    "status": "open",
+    "affected_component": "Turnierleitung / Navigation / Match Management",
+    "module": "Turnier – Reiter 'Turnierleitung'",
+    "steps_to_reproduce": [
+      "Ein Turnier mit mehreren Spielen (z. B. Gruppenphase oder Finalrunde) anlegen und den Spielplan generieren",
+      "In den Reiter 'Turnierleitung' wechseln und ein bestimmtes Spiel laden",
+      "Den Button 'Nächstes Spiel laden' anklicken",
+      "Beobachten, ob sich die dargestellte Partie bzw. die Inhalte ändern"
+    ],
+    "expected_behavior": "Beim Klick auf 'Nächstes Spiel laden': Wird das im Spielplan zeitlich nächste Spiel geladen, das dem aktuellen Spiel folgt (z. B. nach Spielnummer oder Startzeit sortiert). Die Ansicht 'Turnierleitung' aktualisiert sich auf die Daten des nächsten Spiels: Teams (Heim/Gast), Spieluhr, Spielereignisse (anfangs leer oder bestehende, falls das Spiel schon gespielt wurde), ggf. Platz und Anstoßzeit. Falls kein weiteres Spiel mehr existiert: Wird eine verständliche Meldung angezeigt (z. B. 'Es gibt kein weiteres Spiel'), oder der Button wird deaktiviert. Der Button ist nur dann aktiv/klickbar, wenn tatsächlich ein 'nächstes Spiel' in der Reihenfolge existiert.",
+    "actual_behavior": "Der Button 'Nächstes Spiel laden' ist sichtbar und klickbar. Beim Klick: Wird kein anderes Spiel geladen. Die sichtbaren Daten in der Turnierleitung bleiben unverändert. Es erfolgt keine Fehlermeldung, kein UI-Feedback und keine Navigationsänderung. Für den Nutzer entsteht der Eindruck, dass der Button keine Funktion hat oder defekt ist.",
+    "impact": "Die Bedienung der Turnierleitung wird erschwert, insbesondere bei vielen aufeinanderfolgenden Spielen: Zeitnehmer/Schiedsrichter müssen das nächste Spiel manuell auswählen statt mit einem Klick weiterzublättern. Der Button suggeriert eine Komfortfunktion, die tatsächlich nicht verfügbar ist (UX-Problem). Potenziell steigt die Fehleranfälligkeit, wenn versehentlich das falsche Spiel weitergeführt oder getrackt wird.",
+    "root_cause_hypothesis": "Dem Button 'Nächstes Spiel laden' ist kein Event-Handler oder keine Logik zugeordnet. Die Logik zur Ermittlung des 'nächsten Spiels' in der Reihenfolge (nach Spielnummer, Startzeit, etc.) ist nicht implementiert oder liefert kein Ergebnis. Die Turnierleitungskomponente reagiert nicht auf einen 'Spielwechsel' (fehlendes State-Update oder Routing).",
+    "proposed_solution": "1. Logik zur Ermittlung des nächsten Spiels implementieren: Grundlage: sortierte Liste der Spiele eines Turniers (z. B. nach kickoffTime oder orderIndex). Vom aktuell geladenen Spiel aus das nächste Spiel in dieser Liste bestimmen. 2. Event-Handler für den Button implementieren: Beim Klick: Das nächste Spiel ermitteln, den aktuellen Spielkontext (State) in der Turnierleitung auf dieses Spiel setzen, UI neu rendern. 3. Fehlende Fälle behandeln: Wenn kein nächstes Spiel vorhanden: Button deaktivieren oder Nutzerfreundliche Meldung anzeigen. 4. Tests & UX: Testfälle für 'Nächstes Spiel laden' mitten in der Spielreihe und beim letzten Spiel. Optional: Keyboard-Navigation mit Pfeiltasten, visuelles Feedback beim Wechsel.",
+    "related_user_story": "MON-01",
+    "environment": {
+      "browser": "TBD",
+      "os": "TBD",
+      "role": "Turnier-Owner/Organisator / Schiedsrichter / Zeitnehmer"
+    },
+    "created_date": "2025-12-15",
+    "reporter": "User",
+    "assigned_to": null,
+    "labels": ["button", "navigation", "match-management", "ui-action", "turnierleitung", "ux-improvement"]
+  }
+]

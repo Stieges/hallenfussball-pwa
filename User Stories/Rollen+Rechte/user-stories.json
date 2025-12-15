@@ -1,0 +1,291 @@
+[
+  {
+    "id": "AUTH-01",
+    "title": "Registrierung als Benutzer",
+    "as_a": "Unauthentifizierter Benutzer",
+    "i_want": "mich mit E-Mail und Passwort registrieren",
+    "so_that": "ich Turniere anlegen und an Turnieren teilnehmen kann",
+    "acceptance_criteria": [
+      "Given ich bin nicht eingeloggt, When ich eine gültige E-Mail, ein Passwort und optional einen Anzeigenamen angebe und das Formular absende, Then wird ein neuer Benutzer angelegt und ich erhalte ein Auth-Token.",
+      "Given ich bin nicht eingeloggt, When ich eine bereits registrierte E-Mail verwende, Then erhalte ich eine Fehlermeldung, dass die E-Mail bereits existiert."
+    ]
+  },
+  {
+    "id": "AUTH-02",
+    "title": "Login als Benutzer",
+    "as_a": "Registrierter Benutzer",
+    "i_want": "mich mit E-Mail und Passwort einloggen",
+    "so_that": "ich Zugriff auf geschützte Funktionen wie Turniererstellung erhalte",
+    "acceptance_criteria": [
+      "Given ich bin registriert, When ich meine korrekte E-Mail und Passwort eingebe, Then werde ich eingeloggt und erhalte ein Auth-Token.",
+      "Given ich bin registriert, When ich ein falsches Passwort eingebe, Then erhalte ich eine Fehlermeldung und werde nicht eingeloggt."
+    ]
+  },
+  {
+    "id": "AUTH-03",
+    "title": "Logout",
+    "as_a": "Eingeloggter Benutzer",
+    "i_want": "mich ausloggen können",
+    "so_that": "niemand anderes meinen Account auf diesem Gerät verwenden kann",
+    "acceptance_criteria": [
+      "Given ich bin eingeloggt, When ich auf 'Logout' klicke, Then wird mein Auth-Token lokal entfernt und ich gelte als ausgeloggt.",
+      "Given ich bin ausgeloggt, When ich eine geschützte Route öffne, Then werde ich auf die Login-Seite weitergeleitet."
+    ]
+  },
+  {
+    "id": "AUTH-04",
+    "title": "Aktuellen Benutzer abfragen",
+    "as_a": "Frontend-System",
+    "i_want": "den aktuell eingeloggten Benutzer über das Auth-Token abfragen",
+    "so_that": "ich rollenbasierte Sichten im UI anzeigen kann",
+    "acceptance_criteria": [
+      "Given ein gültiges Auth-Token ist vorhanden, When ich den Endpunkt für den aktuellen Benutzer aufrufe, Then erhalte ich die User-ID und Basisdaten (z.B. E-Mail, DisplayName).",
+      "Given kein oder ein ungültiges Auth-Token ist vorhanden, When ich den Endpunkt für den aktuellen Benutzer aufrufe, Then erhalte ich eine Fehlermeldung oder einen 'unauthorized'-Status."
+    ]
+  },
+  {
+    "id": "TOUR-01",
+    "title": "Turnier anlegen",
+    "as_a": "Eingeloggter Benutzer",
+    "i_want": "ein neues Turnier erstellen",
+    "so_that": "ich ein Hallenfußballturnier organisieren kann",
+    "acceptance_criteria": [
+      "Given ich bin eingeloggt, When ich das Formular zur Turniererstellung mit gültigen Pflichtfeldern absende, Then wird ein Turnier mit mir als OWNER erstellt.",
+      "Given ich bin nicht eingeloggt, When ich versuche ein Turnier zu erstellen, Then erhalte ich einen 'unauthorized'-Fehler."
+    ]
+  },
+  {
+    "id": "TOUR-02",
+    "title": "Turnier-Stammdaten bearbeiten",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "Name, Datum, Status und Sichtbarkeit eines Turniers bearbeiten",
+    "so_that": "ich das Turnier anpassen und verwalten kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER des Turniers, When ich die Turnier-Stammdaten im UI ändere und speichere, Then werden die Änderungen im Backend übernommen.",
+      "Given ich habe eine andere Rolle oder keine Rolle im Turnier, When ich versuche die Turnier-Stammdaten zu ändern, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "TOUR-03",
+    "title": "Turnier löschen",
+    "as_a": "Turnier-OWNER",
+    "i_want": "ein Turnier löschen können",
+    "so_that": "ich nicht mehr benötigte Turniere entfernen kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER eines Turniers, When ich den Befehl zum Löschen des Turniers ausführe und bestätige, Then wird das Turnier samt zugehöriger Daten gelöscht oder als gelöscht markiert.",
+      "Given ich bin nicht OWNER, When ich versuche ein Turnier zu löschen, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "TOUR-04",
+    "title": "Eigene Turniere auflisten",
+    "as_a": "Eingeloggter Benutzer",
+    "i_want": "eine Übersicht über Turniere sehen, an denen ich beteiligt bin",
+    "so_that": "ich schnell in die Turnierverwaltung einsteigen kann",
+    "acceptance_criteria": [
+      "Given ich bin eingeloggt, When ich die Turnierübersicht öffne, Then sehe ich alle Turniere, bei denen ich OWNER oder Mitglied mit einer Rolle bin.",
+      "Given ich bin nicht eingeloggt, When ich die Turnierübersicht öffne, Then werde ich auf die Login-Seite umgeleitet oder bekomme keine Daten."
+    ]
+  },
+  {
+    "id": "ROLE-01",
+    "title": "Rollen eines Turniers einsehen",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "alle Mitglieder und deren Rollen für ein Turnier sehen",
+    "so_that": "ich die Berechtigungen nachvollziehen und verwalten kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich den Bereich 'Rollen/Berechtigungen' im Turnier öffne, Then sehe ich eine Liste aller TournamentMember mit Nutzer, Rolle und ggf. Teamzuordnung.",
+      "Given ich bin SCORER, MONITOR oder PLAYER, When ich diesen Bereich öffne, Then sehe ich entweder nur mich selbst oder bekomme einen Berechtigungsfehler (je nach Design)."
+    ]
+  },
+  {
+    "id": "ROLE-02",
+    "title": "Mitglied mit Rolle hinzufügen",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "Benutzer mit einer spezifischen Rolle zu einem Turnier einladen",
+    "so_that": "diese Benutzer organisatorische Aufgaben übernehmen oder spezielle Sichten nutzen können",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich eine E-Mail-Adresse und Rolle (z.B. ORGANIZER, SCORER, MONITOR, PLAYER) eingebe und speichere, Then wird im Backend eine Einladung mit Token erzeugt.",
+      "Given ich eine ungültige Rolle eingebe, When ich speichere, Then erhalte ich eine Fehlermeldung."
+    ]
+  },
+  {
+    "id": "ROLE-03",
+    "title": "Rolle eines Turniermitglieds ändern",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "die Rolle eines bestehenden Turniermitglieds anpassen",
+    "so_that": "ich die Berechtigungen nach Bedarf erhöhen oder reduzieren kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich die Rolle eines Mitglieds auf eine gültige Rolle ändere und speichere, Then wird die neue Rolle übernommen.",
+      "Given ich versuche, die OWNER-Rolle zu entfernen, ohne einen neuen OWNER festzulegen, Then erhalte ich eine Fehlermeldung.",
+      "Given ich bin nicht OWNER oder ORGANIZER, When ich versuche Rollen zu ändern, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "ROLE-04",
+    "title": "Turnier-Ownership übertragen",
+    "as_a": "Turnier-OWNER",
+    "i_want": "die OWNER-Rolle auf einen anderen Benutzer übertragen",
+    "so_that": "die Hauptverantwortung für das Turnier wechseln kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER, When ich einen ORGANIZER als neuen OWNER festlege, Then bekommt dieser Benutzer die OWNER-Rolle und ich selbst erhalte typischerweise die ORGANIZER-Rolle.",
+      "Given ich bin nicht OWNER, When ich versuche die OWNER-Rolle zu übertragen, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "INV-01",
+    "title": "Einladung für Mitorganisator/SCORE/MONITOR erstellen",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "Einladungslinks für spezifische Rollen erzeugen",
+    "so_that": "Personen per Link dem Turnier zugeordnet werden können",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich eine Einladung mit E-Mail und Rolle anlege, Then wird ein eindeutiger Einladungstoken mit Status 'pending' erzeugt.",
+      "Given ich eine Einladung anlege, When die Erstellung erfolgreich war, Then kann ich den Einladungslink im UI sehen oder kopieren."
+    ]
+  },
+  {
+    "id": "INV-02",
+    "title": "Einladung als bestehender Benutzer annehmen",
+    "as_a": "Registrierter Benutzer",
+    "i_want": "eine Turniereinladung annehmen",
+    "so_that": "ich mit der zugewiesenen Rolle am Turnier teilnehmen kann",
+    "acceptance_criteria": [
+      "Given ich bin eingeloggt und habe einen gültigen Einladungslink, When ich den Link öffne und annehme, Then werde ich als TournamentMember mit der vorgesehenen Rolle zum Turnier hinzugefügt.",
+      "Given der Einladungslink bereits verwendet wurde, When ich ihn öffne, Then erhalte ich eine Meldung, dass die Einladung ungültig oder bereits angenommen ist."
+    ]
+  },
+  {
+    "id": "INV-03",
+    "title": "Einladung als neuer Benutzer annehmen",
+    "as_a": "Unauthentifizierter Benutzer mit Einladungslink",
+    "i_want": "zuerst einen Account registrieren und dann die Einladung annehmen",
+    "so_that": "ich mit meinem neuen Account dem Turnier zugeordnet werde",
+    "acceptance_criteria": [
+      "Given ich bin nicht eingeloggt und öffne einen gültigen Einladungslink, When ich aufgefordert werde, mich zu registrieren und die Registrierung erfolgreich abschließe, Then kann ich anschließend die Einladung annehmen und werde dem Turnier zugeordnet.",
+      "Given ich breche die Registrierung ab, When ich die Einladung nicht akzeptiere, Then werde ich nicht als Mitglied zum Turnier hinzugefügt."
+    ]
+  },
+  {
+    "id": "INV-04",
+    "title": "Abgelaufene oder ungültige Einladung behandeln",
+    "as_a": "System",
+    "i_want": "ungültige oder abgelaufene Einladungstokens ablehnen",
+    "so_that": "die Turniermitgliedschaften sicher bleiben",
+    "acceptance_criteria": [
+      "Given ein Einladungslink ist abgelaufen, When ein Benutzer den Link öffnet, Then erhält er eine Meldung, dass die Einladung abgelaufen ist.",
+      "Given ein Einladungslink nicht existiert, When ein Benutzer den Link öffnet, Then erhält er eine Meldung, dass die Einladung ungültig ist."
+    ]
+  },
+  {
+    "id": "TEAM-01",
+    "title": "Teams durch Organisator verwalten",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "Teams anlegen, bearbeiten und löschen",
+    "so_that": "ich die Turnierstruktur vorbereiten kann",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich ein neues Team anlege, Then wird das Team dem Turnier zugeordnet.",
+      "Given ich bin OWNER oder ORGANIZER, When ich Teamdaten (Name, Verein, etc.) ändere, Then werden die Änderungen gespeichert.",
+      "Given ich bin nicht OWNER oder ORGANIZER, When ich versuche Teams zu bearbeiten, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "TEAM-02",
+    "title": "Eigenes Team durch PLAYER verwalten",
+    "as_a": "PLAYER mit Teamzuordnung",
+    "i_want": "die Daten meines eigenen Teams bearbeiten",
+    "so_that": "ich Spielerinformationen aktuell halten kann",
+    "acceptance_criteria": [
+      "Given ich habe die Rolle PLAYER und bin einem Team zugeordnet, When ich mein Team aufrufe, Then kann ich bestimmte Teamdaten (z.B. Spielerlisten) bearbeiten.",
+      "Given ich habe die Rolle PLAYER, When ich versuche ein anderes Team zu bearbeiten, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "SCHED-01",
+    "title": "Spielplan erstellen und bearbeiten",
+    "as_a": "Turnier-OWNER oder ORGANIZER",
+    "i_want": "einen Spielplan aus den Teams generieren und nachbearbeiten",
+    "so_that": "alle Spiele eines Turniers geplant sind",
+    "acceptance_criteria": [
+      "Given ich bin OWNER oder ORGANIZER, When ich die Funktion 'Spielplan generieren' ausführe, Then wird ein Spielplan auf Basis der Teams und des Modus erstellt.",
+      "Given ein Spielplan existiert, When ich Spiele bearbeite (Anstoßzeit, Platz, Paarung), Then werden die Änderungen gespeichert.",
+      "Given ich bin nicht OWNER oder ORGANIZER, When ich versuche den Spielplan zu ändern, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "SCHED-02",
+    "title": "Spielplan einsehen (Mitglieder)",
+    "as_a": "Turniermitglied (OWNER, ORGANIZER, SCORER, MONITOR, PLAYER)",
+    "i_want": "den vollständigen Spielplan sehen",
+    "so_that": "ich weiß, wann welche Spiele stattfinden",
+    "acceptance_criteria": [
+      "Given ich bin Mitglied des Turniers, When ich die Spielplan-Ansicht öffne, Then sehe ich alle Spiele des Turniers inklusive Zeiten, Plätze und Teams.",
+      "Given ich bin Mitglied, When ich die Spielplan-Ansicht öffne, Then kann ich ohne zusätzliche Berechtigung keine Spielplandaten verändern (die Bearbeitung ist UI-seitig rollenabhängig)."
+    ]
+  },
+  {
+    "id": "SCHED-03",
+    "title": "Spielplan einsehen (Zuschauer via Public Link)",
+    "as_a": "Zuschauer ohne Account",
+    "i_want": "den Spielplan über einen öffentlichen Link lesen",
+    "so_that": "ich Spiele verfolgen kann, ohne mich anzumelden",
+    "acceptance_criteria": [
+      "Given ein Turnier hat einen gültigen Public-Share-Link, When ich den Link aufrufe, Then sehe ich den Spielplan, Gruppen und Tabellen in einer reinen Lesesicht.",
+      "Given ein Turnier ist privat und ohne Share-Link, When ich versuche, über einen zufälligen Link zuzugreifen, Then bekomme ich eine Fehlermeldung oder eine leere Ansicht."
+    ]
+  },
+  {
+    "id": "RESULT-01",
+    "title": "Spielergebnisse erfassen",
+    "as_a": "SCORER, OWNER oder ORGANIZER",
+    "i_want": "Ergebnisse für Spiele eintragen und bei Bedarf korrigieren",
+    "so_that": "Tabellen und Platzierungen aktuell sind",
+    "acceptance_criteria": [
+      "Given ich bin SCORER, OWNER oder ORGANIZER, When ich ein Spiel auswähle und das Ergebnis eingebe, Then wird das Ergebnis gespeichert und Tabellen/Platzierungen werden aktualisiert.",
+      "Given ich bin SCORER, OWNER oder ORGANIZER, When ich ein bereits gespeichertes Ergebnis ändere, Then wird die Änderung übernommen und neu berechnet."
+    ]
+  },
+  {
+    "id": "RESULT-02",
+    "title": "Unberechtigte Ergebniseingabe verhindern",
+    "as_a": "System",
+    "i_want": "Benutzer ohne passende Rolle an der Ergebnisänderung hindern",
+    "so_that": "die Integrität der Turnierergebnisse gewährleistet ist",
+    "acceptance_criteria": [
+      "Given ich habe nur die Rolle PLAYER oder MONITOR oder bin SPECTATOR, When ich versuche, ein Ergebnis zu ändern, Then schlägt der Request mit einem Berechtigungsfehler fehl.",
+      "Given ich bin nicht eingeloggt und nutze keinen public Read-only Endpoint, When ich versuche, ein Ergebnis per API zu ändern, Then erhalte ich einen 'unauthorized'-Status."
+    ]
+  },
+  {
+    "id": "MON-01",
+    "title": "Monitor-Ansicht für Berechtigte",
+    "as_a": "MONITOR, SCORER, ORGANIZER oder OWNER",
+    "i_want": "eine spezielle Monitor-Ansicht öffnen",
+    "so_that": "ich den Spielplan und aktuelle Ergebnisse großflächig anzeigen kann",
+    "acceptance_criteria": [
+      "Given ich habe mindestens die Rolle MONITOR, When ich die Monitor-Route des Turniers öffne, Then erhalte ich eine angepasste Anzeige-Ansicht (z.B. für Großbildschirm) mit Spielplan und Ergebnissen.",
+      "Given ich habe nicht die Rolle MONITOR oder höher, When ich die Monitor-Route öffne, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  },
+  {
+    "id": "MON-02",
+    "title": "Monitor-Ansicht ist read-only",
+    "as_a": "System",
+    "i_want": "dass die Monitor-Ansicht nur zur Anzeige dient",
+    "so_that": "von dort keine Daten geändert werden können",
+    "acceptance_criteria": [
+      "Given ich befinde mich in der Monitor-Ansicht, When ich die UI verwende, Then stehen mir keine Funktionen zum Bearbeiten von Ergebnissen, Teams oder Turnierdaten zur Verfügung.",
+      "Given ich befinde mich in der Monitor-Ansicht, When ich die API aus dieser Ansicht heraus nutze, Then werden nur lesende Requests erzeugt."
+    ]
+  },
+  {
+    "id": "SEC-01",
+    "title": "Zugriff auf private Turnierverwaltung schützen",
+    "as_a": "System",
+    "i_want": "dass nur berechtigte Benutzer Turnierverwaltungs-Seiten aufrufen können",
+    "so_that": "unautorisierte Änderungen verhindert werden",
+    "acceptance_criteria": [
+      "Given ich bin nicht eingeloggt, When ich die Turniermanagement-Route eines Turniers aufrufe, Then werde ich auf die Login-Seite umgeleitet oder erhalte einen 'unauthorized'-Status.",
+      "Given ich bin eingeloggt, aber kein MEMBER des Turniers, When ich die Turniermanagement-Route aufrufe, Then erhalte ich einen Berechtigungsfehler."
+    ]
+  }
+]

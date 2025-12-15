@@ -220,8 +220,22 @@ const resolvePlaceholder = (
   const groupId = match[1].toUpperCase(); // "A", "B", etc.
   const position = parseInt(match[2], 10);
 
-  const groupKey = `Gruppe ${groupId}`;
-  const standings = groupStandings[groupKey];
+  // Try multiple key formats to handle different group naming conventions:
+  // - "A" (from Step4_Teams auto-assign using generateGroupLabels)
+  // - "Gruppe A" (legacy/test format)
+  const possibleKeys = [
+    groupId,                    // "A"
+    `Gruppe ${groupId}`,        // "Gruppe A"
+    groupId.toLowerCase(),      // "a"
+  ];
+
+  let standings: { teamId: string; position: number }[] | undefined;
+  for (const key of possibleKeys) {
+    if (groupStandings[key]) {
+      standings = groupStandings[key];
+      break;
+    }
+  }
 
   if (!standings || standings.length < position) {
     return null;
