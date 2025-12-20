@@ -362,6 +362,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       startDate: formData.startDate, // New field for date picker
       startTime: formData.startTime, // New field for time picker
       location: formData.location || { name: '' },
+      organizer: formData.organizer, // Veranstalter-Name
+      contactInfo: formData.contactInfo, // Kontaktinformationen
       teams: formData.teams || [],
       matches: [], // Wird später vom Fair Scheduler generiert
       createdAt: existingTournament?.createdAt || new Date().toISOString(),

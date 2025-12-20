@@ -3,6 +3,7 @@ import { NumberStepper, Select } from '../../../components/ui';
 import { theme } from '../../../styles/theme';
 import { Tournament } from '../../../types/tournament';
 import { GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../../constants/tournamentOptions';
+import styles from './GameTimeConfig.module.css';
 
 interface GameTimeConfigProps {
   formData: Partial<Tournament>;
@@ -38,7 +39,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
         <h4 style={headerStyle}>
           Gruppenphase - Spielzeit-Einstellungen
         </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+        <div className={styles.timeGrid}>
           <NumberStepper
             label="Spieldauer"
             value={formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration}
@@ -46,7 +47,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
             min={3}
             max={30}
             suffix="Min"
-            mode="slider"
+            mode="stepper"
           />
           <NumberStepper
             label="Pause zwischen Spielen"
@@ -55,7 +56,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
             min={0}
             max={15}
             suffix="Min"
-            mode="slider"
+            mode="stepper"
           />
           <Select
             label="Spielabschnitte"
@@ -65,7 +66,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           />
         </div>
         {(formData.gamePeriods ?? DEFAULT_VALUES.gamePeriods) > 1 && (
-          <div style={{ marginTop: '16px' }}>
+          <div className={styles.halftimeSection}>
             <NumberStepper
               label="Halbzeitpause"
               value={formData.halftimeBreak ?? DEFAULT_VALUES.halftimeBreak}
@@ -73,7 +74,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
               min={0}
               max={10}
               suffix="Min"
-              mode="slider"
+              mode="stepper"
             />
             <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
               Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods || 1))} Min. unterteilt
@@ -90,7 +91,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
       <h4 style={headerStyle}>
         Finalrunde - Spielzeit-Einstellungen
       </h4>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+      <div className={styles.timeGrid}>
         <NumberStepper
           label="Spieldauer"
           value={formData.finalRoundGameDuration ?? DEFAULT_VALUES.finalRoundGameDuration}
@@ -98,7 +99,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           min={3}
           max={30}
           suffix="Min"
-          mode="slider"
+          mode="stepper"
         />
         <NumberStepper
           label="Pause zwischen Spielen"
@@ -107,7 +108,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           min={0}
           max={15}
           suffix="Min"
-          mode="slider"
+          mode="stepper"
         />
         <NumberStepper
           label="Pause bis Finalrunde"
@@ -116,7 +117,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           min={0}
           max={60}
           suffix="Min"
-          mode="slider"
+          mode="stepper"
         />
       </div>
       <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>

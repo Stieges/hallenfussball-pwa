@@ -90,8 +90,9 @@ export const ShareDialog = ({
   };
 
   const qrImageStyle: CSSProperties = {
-    width: '256px',
-    height: '256px',
+    width: '100%',
+    maxWidth: '220px',
+    aspectRatio: '1 / 1',
     borderRadius: theme.borderRadius.md,
     border: `1px solid ${theme.colors.border}`,
     background: '#FFFFFF',
@@ -132,15 +133,16 @@ export const ShareDialog = ({
     border: `1px solid ${theme.colors.border}`,
     background: theme.colors.surface,
     color: theme.colors.text.primary,
-    fontSize: theme.fontSizes.md,
+    fontSize: '13px',
     fontFamily: 'monospace',
     cursor: 'text',
+    wordBreak: 'break-all',
   };
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: 'column',
     gap: theme.spacing.md,
-    flexWrap: 'wrap',
   };
 
   const feedbackStyle: CSSProperties = {

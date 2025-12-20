@@ -76,6 +76,8 @@ export const Dialog = ({
     boxShadow: theme.shadows.lg,
     width: '100%',
     maxWidth: maxWidth,
+    maxHeight: '90vh',
+    overflowY: 'auto',
     position: 'relative',
     animation: 'dialogSlideIn 0.2s ease-out',
   };
@@ -113,8 +115,8 @@ export const Dialog = ({
   };
 
   const dialog = (
-    <div style={overlayStyle} onClick={handleBackdropClick}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
+    <div style={overlayStyle} className="dialog-overlay" onClick={handleBackdropClick}>
+      <div style={modalStyle} className="dialog-modal" onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
           <h2 style={titleStyle}>{title}</h2>
           <button
@@ -148,7 +150,29 @@ export const Dialog = ({
 
         @media (max-width: 767px) {
           .dialog-overlay {
-            padding: ${theme.spacing.sm};
+            padding: 12px !important;
+            align-items: flex-start !important;
+            padding-top: 32px !important;
+          }
+
+          .dialog-modal {
+            max-width: 100% !important;
+            border-radius: 12px !important;
+          }
+
+          .dialog-modal > div:first-child {
+            padding: 16px !important;
+          }
+
+          .dialog-modal > div:last-child {
+            padding: 16px !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .dialog-overlay {
+            padding: 8px !important;
+            padding-top: 24px !important;
           }
         }
       `}</style>

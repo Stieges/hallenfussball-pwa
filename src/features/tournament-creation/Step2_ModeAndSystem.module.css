@@ -1,0 +1,32 @@
+/* Step2_ModeAndSystem - Responsive Styles */
+
+/* Base configuration grid */
+.configGrid {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+/* Mobile first: single column */
+.configGrid {
+  grid-template-columns: 1fr;
+}
+
+/* Tablet: 2 columns */
+@media (min-width: 481px) {
+  .configGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop with 3 items: 3 columns */
+@media (min-width: 769px) {
+  .configGrid.threeColumns {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Ensure consistent item styling */
+.configGridItem {
+  min-width: 0; /* Prevent grid blowout */
+}

@@ -1,0 +1,44 @@
+/* Step5_Overview - Responsive Summary Layout */
+
+/* Info Grid - 2 columns on desktop, 1 on mobile */
+.infoGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 481px) {
+  .infoGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Info Box */
+.infoBox {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+/* Teams container with wrap */
+.teamsContainer {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Team badge */
+.teamBadge {
+  padding: 6px 12px;
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  color: #FFFFFF;
+}
+
+/* Preview button container */
+.buttonContainer {
+  margin-top: 24px;
+}

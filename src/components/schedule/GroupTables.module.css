@@ -1,0 +1,149 @@
+/* GroupTables - Responsive Layout */
+
+/* Tables Grid - stack on mobile, side-by-side on desktop */
+.tablesGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+/* Desktop: 2 columns for 2 groups */
+@media (min-width: 769px) {
+  .tablesGrid.twoGroups {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tablesGrid.manyGroups {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
+}
+
+/* Table wrapper */
+.tableWrapper {
+  background: rgba(10, 22, 40, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .tableWrapper {
+    padding: 12px;
+  }
+}
+
+/* Desktop table - hidden on mobile */
+.desktopTable {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+  .desktopTable {
+    display: none;
+  }
+}
+
+/* Mobile table - hidden on desktop */
+.mobileTable {
+  display: none;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+  .mobileTable {
+    display: table;
+  }
+}
+
+/* Table styles */
+.tableTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #00E676;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .tableTitle {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Table header */
+.tableHeader {
+  background: #00E676;
+  color: #0A1628;
+}
+
+.tableHeader th {
+  padding: 10px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .tableHeader th {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+}
+
+/* Table body */
+.tableBody td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+}
+
+@media (max-width: 768px) {
+  .tableBody td {
+    padding: 10px 6px;
+  }
+}
+
+/* Expandable row for mobile */
+.expandableRow {
+  cursor: pointer;
+}
+
+.expandedDetails {
+  padding: 12px;
+  background: rgba(0, 230, 118, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  font-size: 13px;
+}
+
+.detailItem {
+  text-align: center;
+}
+
+.detailLabel {
+  color: #8BA3C7;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.detailValue {
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* Highlight styles for placement criteria */
+.highlighted {
+  font-weight: 700;
+  padding: 2px 6px;
+  background: rgba(34, 197, 94, 0.15);
+  border-radius: 4px;
+}

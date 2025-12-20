@@ -114,16 +114,18 @@ export const PDFExportDialog = ({
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing.md,
-    padding: theme.spacing.md,
+    padding: '14px 16px',
     borderRadius: theme.borderRadius.sm,
     border: `1px solid ${theme.colors.border}`,
     cursor: 'pointer',
     transition: 'all 0.2s',
+    minHeight: '60px',
   };
 
   const radioInputStyle: CSSProperties = {
-    width: '18px',
-    height: '18px',
+    width: '22px',
+    height: '22px',
+    minWidth: '22px',
     cursor: 'pointer',
     accentColor: theme.colors.primary,
   };
@@ -145,14 +147,16 @@ export const PDFExportDialog = ({
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing.md,
-    padding: theme.spacing.md,
+    padding: '14px 16px',
     borderRadius: theme.borderRadius.sm,
     border: `1px solid ${theme.colors.border}`,
     cursor: 'pointer',
+    minHeight: '60px',
   };
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
+    flexDirection: 'column',
     gap: theme.spacing.md,
   };
 

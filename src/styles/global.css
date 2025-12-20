@@ -55,6 +55,32 @@ select option {
   color: #FFFFFF;
 }
 
+/* Input placeholder styling for dark theme */
+input::placeholder,
+textarea::placeholder {
+  color: #8BA3C7; /* theme.colors.text.secondary */
+  opacity: 1; /* Firefox default is 0.54 */
+}
+
+/* Webkit browsers */
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: #8BA3C7;
+}
+
+/* Firefox */
+input::-moz-placeholder,
+textarea::-moz-placeholder {
+  color: #8BA3C7;
+  opacity: 1;
+}
+
+/* IE/Edge */
+input:-ms-input-placeholder,
+textarea:-ms-input-placeholder {
+  color: #8BA3C7;
+}
+
 /* Wizard Step Transitions */
 @keyframes fadeIn {
   from {

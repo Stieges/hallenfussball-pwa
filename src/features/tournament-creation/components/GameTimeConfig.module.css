@@ -1,0 +1,38 @@
+/* GameTimeConfig - Responsive Styles */
+
+/* Time configuration grid */
+.timeGrid {
+  display: grid;
+  gap: 16px;
+}
+
+/* Mobile first: single column for precise touch control */
+.timeGrid {
+  grid-template-columns: 1fr;
+}
+
+/* Tablet: 2 columns */
+@media (min-width: 481px) {
+  .timeGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: 3 columns */
+@media (min-width: 769px) {
+  .timeGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Halftime section responsive */
+.halftimeSection {
+  margin-top: 16px;
+}
+
+/* On mobile, make halftime full width */
+@media (max-width: 480px) {
+  .halftimeSection {
+    margin-top: 12px;
+  }
+}

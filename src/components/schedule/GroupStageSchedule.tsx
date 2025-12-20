@@ -191,7 +191,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Dark theme compatible
     borderRadius: '6px',
     marginBottom: '12px',
   };

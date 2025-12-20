@@ -92,6 +92,23 @@ export const theme = {
     heading: '"Bebas Neue", sans-serif',
     body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
+
+  // Responsive breakpoints
+  breakpoints: {
+    mobile: '480px',   // Small phones
+    tablet: '768px',   // Tablets and large phones
+    desktop: '1024px', // Desktops
+    wide: '1280px',    // Wide screens
+  },
+
+  // Media query helpers (for use in CSS modules)
+  media: {
+    mobile: '@media (max-width: 480px)',
+    tablet: '@media (min-width: 481px) and (max-width: 768px)',
+    tabletUp: '@media (min-width: 481px)',
+    desktop: '@media (min-width: 769px)',
+    wide: '@media (min-width: 1024px)',
+  },
 } as const;
 
 export type Theme = typeof theme;

@@ -1,16 +1,19 @@
 /**
  * GroupTables - Displays group standings tables in MeinTurnierplan style
  * Fully responsive with mobile condensed view and expandable rows
+ * Uses CSS media queries for responsive layout (no isMobile prop needed)
  */
 
 import { CSSProperties, useState } from 'react';
 import { theme } from '../../styles/theme';
 import { Standing, Tournament } from '../../types/tournament';
+import styles from './GroupTables.module.css';
 
 interface GroupTablesProps {
   standings: Standing[];
   teams: Array<{ id: string; name: string; group?: string }>;
   tournament?: Tournament;
+  /** @deprecated No longer needed - responsive layout handled via CSS */
   isMobile?: boolean;
 }
 
@@ -18,17 +21,16 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   standings,
   teams,
   tournament,
-  isMobile = false,
 }) => {
   const groupStandings = getGroupStandings(standings, teams);
 
   if (groupStandings.length === 0) {
     return (
-      <div style={{
+      <div className="group-tables-empty" style={{
         textAlign: 'center',
-        padding: isMobile ? '24px 12px' : '48px 24px',
+        padding: '48px 24px',
         color: theme.colors.text.secondary,
-        fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.lg,
+        fontSize: theme.fontSizes.lg,
       }}>
         Noch keine Spiele gespielt.
         <br />
@@ -37,35 +39,37 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
     );
   }
 
-  const containerStyle: CSSProperties = {
-    padding: isMobile ? theme.spacing.md : theme.spacing.lg,
-  };
-
-  const gridStyle: CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: isMobile
-      ? '1fr'
-      : groupStandings.length === 1
-        ? '1fr'
-        : groupStandings.length === 2
-          ? 'repeat(2, 1fr)'
-          : 'repeat(auto-fit, minmax(350px, 1fr))',
-    gap: isMobile ? theme.spacing.md : theme.spacing.lg,
-  };
+  // Determine grid class based on number of groups
+  const gridClass = groupStandings.length === 2
+    ? styles.twoGroups
+    : groupStandings.length > 2
+      ? styles.manyGroups
+      : '';
 
   return (
-    <div style={containerStyle}>
-      <div style={gridStyle}>
+    <div style={{ padding: theme.spacing.lg }} className="group-tables-container">
+      <div className={`${styles.tablesGrid} ${gridClass}`}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <StandingsTable
             key={group}
             standings={groupTeams}
             title={`Gruppe ${group}`}
             tournament={tournament}
-            isMobile={isMobile}
           />
         ))}
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .group-tables-container {
+            padding: 12px !important;
+          }
+          .group-tables-empty {
+            padding: 24px 12px !important;
+            font-size: 14px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
@@ -74,10 +78,9 @@ interface StandingsTableProps {
   standings: Standing[];
   title: string;
   tournament?: Tournament;
-  isMobile: boolean;
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, isMobile }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const toggleRowExpansion = (teamId: string) => {
@@ -94,33 +97,33 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
     background: theme.colors.background,
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borderRadius.md,
-    padding: isMobile ? '12px' : '16px',
+    padding: '16px',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.lg,
+    fontSize: theme.fontSizes.lg,
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.primary,
-    marginBottom: isMobile ? '8px' : '12px',
+    marginBottom: '12px',
   };
 
   const tableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: isMobile ? '14px' : theme.fontSizes.md,
+    fontSize: theme.fontSizes.md,
   };
 
   const thStyle: CSSProperties = {
     background: theme.colors.primary,
     color: theme.colors.background,
-    padding: isMobile ? '8px 6px' : '10px 8px',
+    padding: '10px 8px',
     textAlign: 'left',
     fontWeight: theme.fontWeights.semibold,
-    fontSize: isMobile ? '12px' : '13px',
+    fontSize: '13px',
   };
 
   const tdStyle: CSSProperties = {
-    padding: isMobile ? '10px 6px' : '10px 8px',
+    padding: '10px 8px',
     borderBottom: `1px solid ${theme.colors.border}`,
     color: theme.colors.text.primary,
   };
@@ -134,11 +137,11 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   const highlightGoalsAgainst = enabledCriteria.some(c => c.id === 'goalsAgainst');
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} className="standings-table">
       <h3 style={titleStyle}>{title}</h3>
 
-      {/* Desktop Table View */}
-      {!isMobile && (
+      {/* Desktop Table View - hidden on mobile via CSS */}
+      <div className="desktop-view">
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -225,10 +228,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
             })}
           </tbody>
         </table>
-      )}
+      </div>
 
-      {/* Mobile Condensed View */}
-      {isMobile && (
+      {/* Mobile Condensed View - hidden on desktop via CSS */}
+      <div className="mobile-view">
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -370,7 +373,51 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
             })}
           </tbody>
         </table>
-      )}
+      </div>
+
+      {/* CSS for responsive view switching */}
+      <style>{`
+        /* Hide mobile view by default (desktop first) */
+        .standings-table .mobile-view {
+          display: none;
+        }
+
+        /* Mobile: Show cards, hide table */
+        @media (max-width: 768px) {
+          .standings-table {
+            padding: 12px !important;
+          }
+          .standings-table h3 {
+            font-size: 14px !important;
+            margin-bottom: 8px !important;
+          }
+          .standings-table .desktop-view {
+            display: none;
+          }
+          .standings-table .mobile-view {
+            display: block;
+          }
+          .standings-table table {
+            font-size: 14px;
+          }
+          .standings-table th,
+          .standings-table td {
+            padding: 8px 6px;
+          }
+          .standings-table th {
+            font-size: 12px;
+          }
+        }
+
+        @media print {
+          .standings-table .mobile-view {
+            display: none !important;
+          }
+          .standings-table .desktop-view {
+            display: block !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

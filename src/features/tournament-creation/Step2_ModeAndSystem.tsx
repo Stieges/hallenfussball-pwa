@@ -1,8 +1,9 @@
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
 import { theme } from '../../styles/theme';
-import { GROUP_SYSTEM_OPTIONS, NUMBER_OF_GROUPS_OPTIONS } from '../../constants/tournamentOptions';
+import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
+import styles from './Step2_ModeAndSystem.module.css';
 import {
   ModeSelection,
   DFBKeySystem,
@@ -103,13 +104,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               onUpdate={onUpdate}
             />
 
-            {/* Basic Tournament Parameters */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: canUseGroups ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)',
-              gap: '16px',
-              marginTop: '16px'
-            }}>
+            {/* Basic Tournament Parameters - Responsive Grid */}
+            <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
               <NumberStepper
                 label="Anzahl Teams"
                 value={formData.numberOfTeams || 4}
@@ -119,11 +115,13 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 mode="stepper"
               />
               {canUseGroups && (
-                <Select
+                <NumberStepper
                   label="Anzahl Gruppen"
                   value={formData.numberOfGroups || 2}
-                  onChange={(v) => onUpdate('numberOfGroups', parseInt(v))}
-                  options={NUMBER_OF_GROUPS_OPTIONS}
+                  onChange={(v) => onUpdate('numberOfGroups', v)}
+                  min={2}
+                  max={8}
+                  mode="stepper"
                 />
               )}
               <NumberStepper
