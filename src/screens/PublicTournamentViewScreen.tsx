@@ -14,6 +14,7 @@ import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
 import { calculateStandings } from '../utils/calculations';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
+import { formatDateGerman } from '../utils/locationHelpers';
 import { ScheduleActionButtons } from '../components/ScheduleActionButtons';
 import { Card } from '../components/ui/Card';
 
@@ -198,7 +199,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         <div style={headerStyle}>
           <h1 style={titleStyle}>{tournament.title}</h1>
           <p style={subtitleStyle}>
-            {tournament.ageClass} • {tournament.date}
+            {tournament.ageClass} • {formatDateGerman(tournament.date)}
           </p>
         </div>
 

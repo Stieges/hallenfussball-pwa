@@ -1,6 +1,22 @@
 import { Tournament, LocationDetails } from '../types/tournament';
 
 /**
+ * Formatiert ein ISO-Datum (YYYY-MM-DD) in deutsches Format (DD.MM.YYYY)
+ */
+export function formatDateGerman(isoDate: string | undefined): string {
+  if (!isoDate) {return '';}
+
+  // Handle ISO date format (YYYY-MM-DD)
+  const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[3]}.${match[2]}.${match[1]}`;
+  }
+
+  // Fallback: return as-is if not in expected format
+  return isoDate;
+}
+
+/**
  * Gibt den Hallen-Namen zurück
  */
 export function getLocationName(tournament: { location?: LocationDetails }): string {

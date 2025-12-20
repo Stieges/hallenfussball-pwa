@@ -34,8 +34,10 @@
       "Given ein Team hat bereits gespielte Matches mit Ergebnissen, When ich den Teamnamen ändere, Then erhalte ich eine Warnmeldung: 'Dieses Team hat bereits {n} Spiele mit Ergebnissen. Der neue Name wird in allen Spielen, Listen und PDFs angezeigt.'",
       "Given die Warnmeldung für Teamumbenennung angezeigt wird, When ich 'Trotzdem ändern' bestätige, Then wird der Name überall aktualisiert.",
       "Given die Warnmeldung für Teamumbenennung angezeigt wird, When ich 'Abbrechen' klicke, Then bleibt der ursprüngliche Name erhalten.",
-      "Given ein Team hat bereits gespielte Matches mit Ergebnissen, When ich versuche das Team zu löschen, Then wird die Aktion blockiert mit Hinweis: 'Team kann nicht gelöscht werden, da bereits Ergebnisse vorliegen. Nutzen Sie Turnier zurücksetzen.'",
-      "Given ein Team hat noch keine Ergebnisse, When ich es lösche, Then wird das Team entfernt und der Spielplan entsprechend angepasst.",
+      "Given ein Team hat Matches MIT Ergebnissen, When ich versuche das Team zu löschen, Then werden nur die Matches OHNE Ergebnisse aus dem Spielplan entfernt. Die Matches mit Ergebnissen bleiben erhalten, aber das Team wird als 'entfernt' markiert.",
+      "Given ein Team wird gelöscht und hat Matches mit Ergebnissen, Then erhalte ich eine Warnmeldung: 'Team hat {n} Spiele mit Ergebnissen. Diese bleiben erhalten. {m} Spiele ohne Ergebnisse werden entfernt.'",
+      "Given ein Team hat NUR Matches OHNE Ergebnisse, When ich es lösche, Then wird das Team vollständig entfernt und alle zugehörigen Matches werden aus dem Spielplan gelöscht.",
+      "Given ein Team wurde als 'entfernt' markiert (hatte Ergebnisse), Then wird der Teamname in historischen Ergebnissen weiterhin angezeigt, aber visuell als entfernt gekennzeichnet (z.B. durchgestrichen oder mit Badge).",
       "Given ich füge ein neues Team zu einem laufenden Turnier hinzu, When bereits Gruppenspiele stattgefunden haben, Then erhalte ich einen Hinweis: 'Das neue Team startet mit 0 Punkten. Der Spielplan muss manuell ergänzt werden.'"
     ],
     "ux_suggestions": [
@@ -495,5 +497,220 @@
     "priority": "high",
     "related_defects": [],
     "created_date": "2025-12-15"
+  },
+  {
+    "id": "US-USER-PROFILE",
+    "title": "Benutzerbereich & Profilverwaltung",
+    "as_a": "Turnier-Organisator",
+    "i_want": "einen persönlichen Benutzerbereich mit Profil und Einstellungen",
+    "so_that": "meine Kontaktdaten automatisch in Turnieren erscheinen, mein Logo verwendet wird und ich App-weite Einstellungen zentral verwalten kann",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given die App ist geöffnet, When ich auf den Avatar rechts oben klicke, Then öffnet sich das Benutzer-Dropdown-Menü mit Optionen: Meine Turniere, Einstellungen, Daten exportieren, Hilfe."
+      },
+      {
+        "id": "AC2",
+        "text": "Given ich habe meinen Namen und Kontaktdaten im Profil gespeichert, When ich ein neues Turnier erstelle, Then werden diese als Turnierleitung/Kontakt im Footer vorgeschlagen."
+      },
+      {
+        "id": "AC3",
+        "text": "Given ich habe ein Vereins-/Organisations-Logo hochgeladen und als Standard aktiviert, When ich ein neues Turnier erstelle, Then ist das Logo automatisch dem Turnier zugewiesen."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ich lade ein Logo hoch das größer als 2MB ist, When der Upload verarbeitet wird, Then erhalte ich eine Fehlermeldung mit Hinweis zur Bildkomprimierung."
+      },
+      {
+        "id": "AC5",
+        "text": "Given ich habe Standard-Spielzeit/Pausenzeit/Punktesystem definiert, When ich ein neues Turnier erstelle, Then sind diese Werte vorausgewählt im Wizard."
+      },
+      {
+        "id": "AC6",
+        "text": "Given ich ändere meine Standard-Einstellungen, When bestehende Turniere existieren, Then werden diese NICHT verändert (nur neue Turniere erben die neuen Standards)."
+      },
+      {
+        "id": "AC7",
+        "text": "Given ich klicke 'Alle Daten exportieren', When der Export abgeschlossen ist, Then erhalte ich eine JSON-Datei mit allen Turnieren und Profildaten."
+      },
+      {
+        "id": "AC8",
+        "text": "Given ich klicke 'Alle Daten löschen', Then erscheint ein Bestätigungsdialog mit deutlicher Warnung, der eine erneute Bestätigung durch Eingabe von 'LÖSCHEN' erfordert."
+      },
+      {
+        "id": "AC9",
+        "text": "Given ich öffne 'Meine Turniere' im Dropdown, Then sehe ich eine Übersicht aller Turniere mit Status-Badge (Draft/Live/Beendet) und kann direkt zum Turnier-Management navigieren."
+      },
+      {
+        "id": "AC10",
+        "text": "Given mein Profil hat ein Profilbild gespeichert, Then zeigt der Avatar im Header mein Bild. Given kein Bild vorhanden, Then werden farbige Initialen aus meinem Namen angezeigt."
+      }
+    ],
+    "ux_suggestions": [
+      "Avatar-Komponente mit Initialen-Fallback (Farbe aus Name generiert, z.B. 'DS' in Blau für Daniel Stiegler).",
+      "Onboarding-Hinweis beim ersten App-Start: 'Richte dein Profil ein für personalisierte Turniere'.",
+      "Autosave für alle Profil-Änderungen mit dezenter 'Gespeichert'-Bestätigung (Toast).",
+      "Bei Logo-Upload automatische Komprimierung anbieten wenn Bild zu groß.",
+      "Profil-Seite als Tab-Navigation (Profil, Branding, Standards, Datenschutz, App) für übersichtliche Struktur.",
+      "Responsive Design: Tab-Navigation auf Mobile, Sidebar auf Desktop.",
+      "Daten-Export als vollständiges Backup mit Option zur Wiederherstellung (Import)."
+    ],
+    "status": "draft",
+    "priority": "medium",
+    "related_defects": [],
+    "created_date": "2025-12-20",
+    "components": {
+      "new_files": [
+        "src/features/user-profile/UserProfileScreen.tsx",
+        "src/features/user-profile/ProfileTab.tsx",
+        "src/features/user-profile/BrandingTab.tsx",
+        "src/features/user-profile/DefaultsTab.tsx",
+        "src/features/user-profile/PrivacyTab.tsx",
+        "src/features/user-profile/SettingsTab.tsx",
+        "src/components/UserMenu/UserAvatar.tsx",
+        "src/components/UserMenu/UserDropdown.tsx",
+        "src/hooks/useUserProfile.ts",
+        "src/types/userProfile.ts"
+      ],
+      "modified_files": [
+        "src/App.tsx",
+        "src/screens/TournamentCreationScreen.tsx",
+        "src/components/schedule/TournamentFooter.tsx"
+      ]
+    },
+    "data_model": {
+      "localStorage_key": "userProfile",
+      "interface": "UserProfile",
+      "fields": [
+        "id: string (UUID)",
+        "name: string",
+        "email?: string",
+        "phone?: string",
+        "organization?: string",
+        "avatarUrl?: string (Base64)",
+        "logoUrl?: string (Base64)",
+        "useLogoAsDefault: boolean",
+        "defaults: TournamentDefaults",
+        "settings: AppSettings"
+      ]
+    }
+  },
+  {
+    "id": "US-INVITE",
+    "title": "Einladungen & Turnier-Sharing",
+    "as_a": "Turnier-Organisator",
+    "i_want": "verschiedene Personen zu meinem Turnier einladen und ein dauerhaftes Team von Helfern im Benutzerbereich verwalten können",
+    "so_that": "Helfer bei der Zeitnahme unterstützen, Teams sich anmelden und Zuschauer den Spielplan verfolgen können - und ich mein Team einmal definieren und wiederverwenden kann",
+    "acceptance_criteria": [
+      {
+        "id": "AC1",
+        "text": "Given ich bin im Turnier-Management, When ich 'Teilen' öffne, Then sehe ich den öffentlichen Link, QR-Code und Sharing-Optionen."
+      },
+      {
+        "id": "AC2",
+        "text": "Given der QR-Code wird angezeigt, When ich 'Drucken' klicke, Then wird ein druckoptimiertes PDF mit QR-Code, Turnier-Logo, Datum und Ort generiert."
+      },
+      {
+        "id": "AC3",
+        "text": "Given ich wähle eine Rolle (Zeitnehmer/Spielleiter/Vollzugriff), When ich 'Einladungslink erstellen' klicke, Then wird ein einzigartiger Token generiert mit 7 Tagen Gültigkeit."
+      },
+      {
+        "id": "AC4",
+        "text": "Given ein Helfer öffnet den Einladungslink, Then sieht er die Einladungs-Annahme-Seite mit Rolleninfo und Berechtigungen."
+      },
+      {
+        "id": "AC5",
+        "text": "Given ein Helfer akzeptiert die Einladung, Then wird sein Token im localStorage gespeichert und er hat entsprechend seiner Rolle Zugang zum Cockpit."
+      },
+      {
+        "id": "AC6",
+        "text": "Given ein Zeitnehmer (Feld 1) ist eingeloggt, Then sieht er NUR die Spiele von Feld 1 im Cockpit."
+      },
+      {
+        "id": "AC7",
+        "text": "Given ich als Organisator eine Einladung lösche, Then verliert der Helfer beim nächsten Laden den Zugang."
+      },
+      {
+        "id": "AC8",
+        "text": "Given ein Einladungstoken ist älter als 7 Tage und wurde nicht genutzt, Then wird er automatisch ungültig."
+      },
+      {
+        "id": "AC9",
+        "text": "Given ich bin im Benutzerbereich unter 'Mein Team', When ich einen neuen Helfer hinzufüge, Then kann ich Name, Rolle und optional Altersklassen-Einschränkung angeben."
+      },
+      {
+        "id": "AC10",
+        "text": "Given ich habe Helfer mit Altersklassen-Einschränkung (z.B. nur U11, U13), When dieser Helfer ein Turnier öffnet, Then sieht er nur Turniere der erlaubten Altersklassen."
+      },
+      {
+        "id": "AC11",
+        "text": "Given ich habe ein persistentes Team im Benutzerbereich definiert, When ich ein neues Turnier erstelle, Then kann ich Team-Mitglieder aus meinem Pool schnell zuweisen."
+      }
+    ],
+    "ux_suggestions": [
+      "One-Click-Share: Großer 'Teilen'-Button der Web Share API nutzt (Mobile).",
+      "QR-Vorschau immer sichtbar, nicht hinter Klick versteckt.",
+      "Rollen-Erklärung bei Helfer-Einladung mit Berechtigungs-Liste.",
+      "Status-Feedback: Klare Anzeige ob Einladung angenommen wurde.",
+      "Im Benutzerbereich eigener Tab 'Mein Team' für persistente Helfer-Verwaltung.",
+      "Altersklassen-Filter als Multi-Select Chips (U9, U11, U13, U15, Alle).",
+      "QR-Code Poster mit Turnier-Logo, Datum, Ort für Hallenausdruck."
+    ],
+    "status": "draft",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-20",
+    "invite_types": {
+      "public": {
+        "description": "Öffentlicher Spielplan für Zuschauer/Eltern",
+        "features": ["Live-Spielplan", "QR-Code", "Web Share"]
+      },
+      "timekeeper": {
+        "description": "Zeitnehmer für einzelnes Feld",
+        "permissions": ["view_schedule", "control_timer", "enter_score_own_field"]
+      },
+      "scorekeeper": {
+        "description": "Ergebnis-Eingabe für alle Felder",
+        "permissions": ["view_schedule", "enter_score_all_fields"]
+      },
+      "manager": {
+        "description": "Spielleiter mit Korrektur-Rechten",
+        "permissions": ["view_schedule", "enter_score_all_fields", "assign_referees", "correct_results"]
+      },
+      "admin": {
+        "description": "Vollzugriff wie Organisator",
+        "permissions": ["*"]
+      }
+    },
+    "team_management": {
+      "description": "Persistente Helfer-Verwaltung im Benutzerbereich",
+      "fields": [
+        "id: string (UUID)",
+        "name: string",
+        "email?: string",
+        "phone?: string",
+        "role: InviteRole",
+        "ageClassRestrictions?: string[] (z.B. ['U11', 'U13'])",
+        "createdAt: string",
+        "lastActiveAt?: string"
+      ]
+    },
+    "components": {
+      "new_files": [
+        "src/features/invites/InviteShareScreen.tsx",
+        "src/features/invites/InviteAcceptScreen.tsx",
+        "src/features/invites/HelperCockpit.tsx",
+        "src/features/invites/QRCodeGenerator.tsx",
+        "src/features/invites/InviteList.tsx",
+        "src/features/user-profile/TeamTab.tsx",
+        "src/features/user-profile/TeamMemberForm.tsx",
+        "src/hooks/useInvites.ts",
+        "src/types/invites.ts"
+      ],
+      "modified_files": [
+        "src/features/user-profile/UserProfileScreen.tsx",
+        "src/screens/TournamentManagementScreen.tsx"
+      ]
+    }
   }
 ]

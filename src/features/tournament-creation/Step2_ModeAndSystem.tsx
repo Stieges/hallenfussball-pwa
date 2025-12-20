@@ -24,6 +24,10 @@ interface Step2Props {
   onMovePlacementLogic: (index: number, direction: number) => void;
   onTogglePlacementLogic: (index: number) => void;
   onReorderPlacementLogic?: (newOrder: PlacementCriterion[]) => void;
+  /** TOUR-EDIT-STRUCTURE: True wenn Ergebnisse vorhanden sind - blockiert Strukturänderungen */
+  hasResults?: boolean;
+  /** TOUR-EDIT-STRUCTURE: Callback zum Zurücksetzen des Turniers */
+  onResetTournament?: () => void;
 }
 
 export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
@@ -32,9 +36,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   onMovePlacementLogic,
   onTogglePlacementLogic,
   onReorderPlacementLogic,
+  hasResults = false,
+  onResetTournament,
 }) => {
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
   const useDFBKeys = formData.useDFBKeys ?? false;
+
+  // TOUR-EDIT-STRUCTURE: Strukturfelder sind gesperrt wenn Ergebnisse vorhanden
+  const structureFieldsLocked = hasResults;
 
   const handleTeamCountChange = (newCount: number) => {
     onUpdate('numberOfTeams', newCount);
@@ -77,6 +86,57 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
         Modus & Spielsystem
       </h2>
 
+      {/* TOUR-EDIT-STRUCTURE: Warning banner when structure is locked */}
+      {structureFieldsLocked && (
+        <div style={{
+          background: theme.colors.correction.bg,
+          border: `2px solid ${theme.colors.correction.border}`,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.md,
+          marginBottom: theme.spacing.lg,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+            <span style={{ fontSize: '20px' }}>🔒</span>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                color: theme.colors.correction.text,
+                fontWeight: theme.fontWeights.semibold,
+                marginBottom: '4px'
+              }}>
+                Strukturänderungen gesperrt
+              </div>
+              <div style={{
+                color: theme.colors.text.secondary,
+                fontSize: theme.fontSizes.sm,
+                marginBottom: theme.spacing.md
+              }}>
+                Das Turnier hat bereits Ergebnisse. Anzahl Teams, Felder und Gruppen können nicht mehr geändert werden.
+              </div>
+              {onResetTournament && (
+                <button
+                  onClick={onResetTournament}
+                  style={{
+                    background: 'rgba(244, 67, 54, 0.15)',
+                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    borderRadius: theme.borderRadius.sm,
+                    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                    color: '#F44336',
+                    fontSize: theme.fontSizes.sm,
+                    fontWeight: theme.fontWeights.medium,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: theme.spacing.xs,
+                  }}
+                >
+                  <span>🔄</span> Turnier zurücksetzen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tournament Mode Selection */}
       <ModeSelection
         selectedMode={formData.mode || 'classic'}
@@ -96,6 +156,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               value={formData.groupSystem || 'roundRobin'}
               onChange={(v) => onUpdate('groupSystem', v as GroupSystem)}
               options={GROUP_SYSTEM_OPTIONS}
+              disabled={structureFieldsLocked}
             />
 
             {/* DFB Key System */}
@@ -113,6 +174,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 min={2}
                 max={24}
                 mode="stepper"
+                disabled={structureFieldsLocked}
               />
               {canUseGroups && (
                 <NumberStepper
@@ -122,6 +184,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                   min={2}
                   max={8}
                   mode="stepper"
+                  disabled={structureFieldsLocked}
                 />
               )}
               <NumberStepper
@@ -131,6 +194,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 min={1}
                 max={10}
                 mode="stepper"
+                disabled={structureFieldsLocked}
               />
             </div>
 

@@ -51,6 +51,10 @@ interface ScheduleDisplayProps {
   correctionMatchId?: string | null;
   /** Callback when starting correction mode */
   onStartCorrection?: (matchId: string) => void;
+  /** MON-LIVE-INDICATOR-01: Set of match IDs that are currently running */
+  runningMatchIds?: Set<string>;
+  /** Permission: Can user correct results? (hides correction button if false) */
+  canCorrectResults?: boolean;
 }
 
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
@@ -68,6 +72,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   finishedMatches,
   correctionMatchId,
   onStartCorrection,
+  runningMatchIds,
+  canCorrectResults = true, // Default: allow corrections (for backward compatibility)
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -76,6 +82,27 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const finalPhases = schedule.phases.filter(p => p.name !== 'groupStage');
   const finalMatches = finalPhases.flatMap(p => p.matches);
+
+  // Helper: Check if a team reference is a placeholder (not a real team ID)
+  const isPlaceholder = (teamRef: string): boolean => {
+    return (
+      teamRef === 'TBD' ||
+      teamRef.includes('group-') ||
+      teamRef.includes('-1st') ||
+      teamRef.includes('-2nd') ||
+      teamRef.includes('-3rd') ||
+      teamRef.includes('-4th') ||
+      teamRef.includes('bestSecond') ||
+      teamRef.includes('Sieger') ||
+      teamRef.includes('Verlierer')
+    );
+  };
+
+  // Helper: Get team name from team ID
+  const getTeamName = (teamId: string): string | null => {
+    const team = schedule.teams.find(t => t.id === teamId);
+    return team?.name || null;
+  };
 
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
@@ -94,21 +121,41 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [groupPhase, currentMatches]);
 
+  // FIX: Merge playoff matches with resolved team names from tournament.matches
   const finalPhaseMatches = useMemo(() => {
     if (!currentMatches) {return finalMatches;}
 
     return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
       if (currentMatch) {
-        return {
+        // Start with score updates
+        const updated = {
           ...sm,
           scoreA: currentMatch.scoreA,
           scoreB: currentMatch.scoreB,
         };
+
+        // Check if teamA was resolved (no longer a placeholder)
+        if (currentMatch.teamA && !isPlaceholder(currentMatch.teamA)) {
+          const teamName = getTeamName(currentMatch.teamA);
+          if (teamName) {
+            updated.homeTeam = teamName;
+          }
+        }
+
+        // Check if teamB was resolved (no longer a placeholder)
+        if (currentMatch.teamB && !isPlaceholder(currentMatch.teamB)) {
+          const teamName = getTeamName(currentMatch.teamB);
+          if (teamName) {
+            updated.awayTeam = teamName;
+          }
+        }
+
+        return updated;
       }
       return sm;
     });
-  }, [finalMatches, currentMatches]);
+  }, [finalMatches, currentMatches, schedule.teams]);
 
   // Container Style (A4-ähnlich, responsive)
   const containerStyle: CSSProperties = {
@@ -151,6 +198,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           finishedMatches={finishedMatches}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
+          runningMatchIds={runningMatchIds}
+          canCorrectResults={canCorrectResults}
         />
       )}
 
@@ -175,6 +224,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           finishedMatches={finishedMatches}
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
+          runningMatchIds={runningMatchIds}
+          canCorrectResults={canCorrectResults}
         />
       )}
 

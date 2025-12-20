@@ -14,7 +14,7 @@ import { Tournament } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
 import { Standing } from '../types/tournament';
 import { calculateStandings } from '../utils/calculations';
-import { getLocationName } from '../utils/locationHelpers';
+import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
@@ -22,23 +22,32 @@ import { TableTab } from '../features/tournament-management/TableTab';
 import { RankingTab } from '../features/tournament-management/RankingTab';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
 import { MonitorTab } from '../features/tournament-management/MonitorTab';
+import { SettingsTab } from '../features/tournament-management/SettingsTab';
+import { TeamsTab } from '../features/tournament-management/TeamsTab';
 
 interface TournamentManagementScreenProps {
   tournamentId: string;
   onBack?: () => void;
+  onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
 }
 
-type TabType = 'schedule' | 'table' | 'ranking' | 'management' | 'monitor';
+type TabType = 'schedule' | 'table' | 'ranking' | 'management' | 'monitor' | 'teams' | 'settings';
 
 export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = ({
   tournamentId,
   onBack,
+  onEditInWizard,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('schedule');
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
   const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  // TOUR-EDIT-META: Dirty-State-Tracking für SettingsTab
+  const [isSettingsDirty, setIsSettingsDirty] = useState(false);
+  const [pendingTab, setPendingTab] = useState<TabType | null>(null);
+  const [showDirtyWarning, setShowDirtyWarning] = useState(false);
 
   // Load tournament from localStorage (später von Backend)
   useEffect(() => {
@@ -116,10 +125,20 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             phases: generatedSchedule.phases.map(phase => ({
               ...phase,
               matches: phase.matches.map((sm) => {
-                // Find corresponding match in tournament.matches by comparing teams
-                const tournamentMatch = updatedTournament.matches.find(
-                  m => m.teamA === sm.homeTeam && m.teamB === sm.awayTeam
-                );
+                // FIX: Match by round + field + group/label instead of team names
+                // Team names can differ in format (technical placeholder vs display text)
+                const tournamentMatch = updatedTournament.matches.find(m => {
+                  // For group stage: match by round + field + group
+                  if (sm.group && m.group) {
+                    return m.round === sm.matchNumber && m.field === sm.field && m.group === sm.group;
+                  }
+                  // For playoffs: match by round + field + label (more reliable than team names)
+                  if (sm.label && m.label) {
+                    return m.label === sm.label;
+                  }
+                  // Fallback: match by round + field (may not be unique, but better than team names)
+                  return m.round === sm.matchNumber && m.field === sm.field;
+                });
                 if (tournamentMatch) {
                   return { ...sm, id: tournamentMatch.id };
                 }
@@ -176,9 +195,20 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         phases: generatedSchedule.phases.map(phase => ({
           ...phase,
           matches: phase.matches.map((sm) => {
-            const tournamentMatch = updatedTournament.matches.find(
-              m => m.teamA === sm.homeTeam && m.teamB === sm.awayTeam
-            );
+            // FIX: Match by round + field + group/label instead of team names
+            // Team names can differ in format (technical placeholder vs display text)
+            const tournamentMatch = updatedTournament.matches.find(m => {
+              // For group stage: match by round + field + group
+              if (sm.group && m.group) {
+                return m.round === sm.matchNumber && m.field === sm.field && m.group === sm.group;
+              }
+              // For playoffs: match by round + field + label (more reliable than team names)
+              if (sm.label && m.label) {
+                return m.label === sm.label;
+              }
+              // Fallback: match by round + field (may not be unique, but better than team names)
+              return m.round === sm.matchNumber && m.field === sm.field;
+            });
             if (tournamentMatch) {
               return { ...sm, id: tournamentMatch.id };
             }
@@ -228,6 +258,33 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         setCurrentStandings(standings);
       }
     }
+  };
+
+  // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
+  const handleTabChange = (newTab: TabType) => {
+    // Wenn wir im Settings-Tab sind und es ungespeicherte Änderungen gibt
+    if (activeTab === 'settings' && isSettingsDirty && newTab !== 'settings') {
+      setPendingTab(newTab);
+      setShowDirtyWarning(true);
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
+  // TOUR-EDIT-META: Dirty-Warning Dialog bestätigen
+  const handleConfirmTabChange = () => {
+    if (pendingTab) {
+      setActiveTab(pendingTab);
+      setPendingTab(null);
+      setShowDirtyWarning(false);
+      setIsSettingsDirty(false);
+    }
+  };
+
+  // TOUR-EDIT-META: Dirty-Warning Dialog abbrechen
+  const handleCancelTabChange = () => {
+    setPendingTab(null);
+    setShowDirtyWarning(false);
   };
 
   if (!tournament || !schedule) {
@@ -320,6 +377,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     padding: `0 ${theme.spacing.lg}`,
     borderBottom: `1px solid ${theme.colors.border}`,
     background: theme.colors.surface,
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    scrollbarWidth: 'none', // Firefox
+    msOverflowStyle: 'none', // IE/Edge
   };
 
   const contentStyle: CSSProperties = {
@@ -342,7 +403,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         )}
         <div style={titleStyle}>{tournament.title}</div>
         <div style={subtitleStyle}>
-          {tournament.ageClass} · {tournament.date} · {getLocationName(tournament)}
+          {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
         </div>
       </header>
 
@@ -351,27 +412,38 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         <TabButton
           label="Spielplan"
           isActive={activeTab === 'schedule'}
-          onClick={() => setActiveTab('schedule')}
+          onClick={() => handleTabChange('schedule')}
         />
         <TabButton
           label="Gruppen-Tabelle"
           isActive={activeTab === 'table'}
-          onClick={() => setActiveTab('table')}
+          onClick={() => handleTabChange('table')}
         />
         <TabButton
           label="Platzierung"
           isActive={activeTab === 'ranking'}
-          onClick={() => setActiveTab('ranking')}
+          onClick={() => handleTabChange('ranking')}
         />
         <TabButton
           label="Turnierleitung"
           isActive={activeTab === 'management'}
-          onClick={() => setActiveTab('management')}
+          onClick={() => handleTabChange('management')}
         />
         <TabButton
           label="Monitor"
           isActive={activeTab === 'monitor'}
-          onClick={() => setActiveTab('monitor')}
+          onClick={() => handleTabChange('monitor')}
+        />
+        <TabButton
+          label="Teams"
+          isActive={activeTab === 'teams'}
+          onClick={() => handleTabChange('teams')}
+        />
+        <TabButton
+          label="Einstellungen"
+          isActive={activeTab === 'settings'}
+          onClick={() => handleTabChange('settings')}
+          isDirty={isSettingsDirty}
         />
       </nav>
 
@@ -417,7 +489,52 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             currentStandings={currentStandings}
           />
         )}
+
+        {activeTab === 'teams' && (
+          <TeamsTab
+            tournament={tournament}
+            onTournamentUpdate={handleTournamentUpdate}
+          />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsTab
+            tournament={tournament}
+            onTournamentUpdate={handleTournamentUpdate}
+            onDirtyChange={setIsSettingsDirty}
+            onEditInWizard={onEditInWizard}
+          />
+        )}
       </div>
+
+      {/* TOUR-EDIT-META: Dirty-Warning Dialog */}
+      {showDirtyWarning && (
+        <div style={overlayStyle}>
+          <div style={dialogStyle}>
+            <h3 style={{ margin: '0 0 16px 0', color: theme.colors.text.primary }}>
+              Ungespeicherte Änderungen
+            </h3>
+            <p style={{ margin: '0 0 24px 0', color: theme.colors.text.secondary }}>
+              Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden.
+              Möchtest du die Änderungen verwerfen?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCancelTabChange}
+                style={dialogButtonStyle('secondary')}
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleConfirmTabChange}
+                style={dialogButtonStyle('danger')}
+              >
+                Verwerfen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -430,9 +547,10 @@ interface TabButtonProps {
   label: string;
   isActive: boolean;
   onClick: () => void;
+  isDirty?: boolean;
 }
 
-const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick }) => {
+const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty }) => {
   const buttonStyle: CSSProperties = {
     padding: `${theme.spacing.md} ${theme.spacing.lg}`,
     background: 'transparent',
@@ -461,6 +579,16 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {label}
+      {isDirty && (
+        <span style={{
+          marginLeft: '6px',
+          width: '8px',
+          height: '8px',
+          borderRadius: '50%',
+          background: '#FF9800',
+          display: 'inline-block',
+        }} title="Ungespeicherte Änderungen" />
+      )}
     </button>
   );
 };
@@ -481,3 +609,38 @@ const loadingTextStyle: CSSProperties = {
   fontSize: theme.fontSizes.xl,
   color: theme.colors.text.secondary,
 };
+
+// TOUR-EDIT-META: Dialog Styles
+const overlayStyle: CSSProperties = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  background: 'rgba(0, 0, 0, 0.5)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 1000,
+};
+
+const dialogStyle: CSSProperties = {
+  background: theme.colors.surface,
+  borderRadius: theme.borderRadius.lg,
+  padding: theme.spacing.xl,
+  maxWidth: '400px',
+  width: '90%',
+  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+};
+
+const dialogButtonStyle = (variant: 'secondary' | 'danger'): CSSProperties => ({
+  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+  border: variant === 'secondary' ? `1px solid ${theme.colors.border}` : 'none',
+  borderRadius: theme.borderRadius.md,
+  fontSize: theme.fontSizes.md,
+  fontWeight: theme.fontWeights.semibold,
+  cursor: 'pointer',
+  background: variant === 'danger' ? theme.colors.error : 'transparent',
+  color: variant === 'danger' ? 'white' : theme.colors.text.secondary,
+  transition: 'all 0.2s ease',
+});

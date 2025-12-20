@@ -14,6 +14,7 @@ function App() {
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
+  const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
 
   // Parse URL on mount to detect public tournament view
   useEffect(() => {
@@ -98,6 +99,28 @@ function App() {
     }
   };
 
+  // Handler for editing a published tournament in the wizard
+  const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
+    try {
+      // Update lastVisitedStep if targetStep is provided
+      const tournamentToEdit = targetStep
+        ? { ...tournament, lastVisitedStep: targetStep }
+        : tournament;
+
+      // Save the tournament with draft status (already set by SettingsTab)
+      await saveTournament(tournamentToEdit);
+      console.log(`[App] Tournament "${tournament.title}" opened in wizard at step ${targetStep || 1}`);
+
+      // Enable quick edit mode and navigate to create screen
+      setQuickEditMode(true);
+      setSelectedTournament(tournamentToEdit);
+      setScreen('create');
+    } catch (error) {
+      console.error('[App] Failed to open tournament in wizard:', error);
+      alert('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
+    }
+  };
+
   return (
     <div
       style={{
@@ -121,16 +144,19 @@ function App() {
         <TournamentCreationScreen
           onBack={() => {
             setSelectedTournament(null); // Clear selection when going back
+            setQuickEditMode(false); // Reset quick edit mode
             setScreen('dashboard');
           }}
           onSave={async (tournament) => {
             await saveTournament(tournament);
             setSelectedTournament(null); // Clear selection after save
+            setQuickEditMode(false); // Reset quick edit mode
             // Small delay to ensure state updates propagate
             await new Promise(resolve => setTimeout(resolve, 200));
             setScreen('dashboard');
           }}
           existingTournament={selectedTournament || undefined}
+          quickEditMode={quickEditMode}
         />
       )}
 
@@ -138,6 +164,7 @@ function App() {
         <TournamentManagementScreen
           tournamentId={selectedTournament.id}
           onBack={() => setScreen('dashboard')}
+          onEditInWizard={handleEditInWizard}
         />
       )}
 

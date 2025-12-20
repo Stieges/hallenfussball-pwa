@@ -3,6 +3,7 @@ export const theme = {
     background: '#0A1628',
     surface: 'rgba(255,255,255,0.05)',
     surfaceHover: 'rgba(255,255,255,0.08)',
+    surfaceDark: 'rgba(0,0,0,0.3)', // For score containers, input backgrounds
     primary: '#00E676',
     primaryDark: '#00C853',
     secondary: '#00B0FF',
@@ -14,6 +15,7 @@ export const theme = {
       primary: '#FFFFFF',
       secondary: '#8BA3C7',
       muted: 'rgba(255,255,255,0.5)',
+      placeholder: '#9575CD', // For unresolved playoff placeholders
     },
     border: 'rgba(255,255,255,0.1)',
     borderActive: 'rgba(0,230,118,0.3)',
@@ -21,6 +23,7 @@ export const theme = {
     status: {
       live: '#00B0FF',
       liveBg: 'rgba(0,176,255,0.15)',
+      liveRowBg: 'rgba(0,176,255,0.08)', // Subtle row highlight for running matches
       upcoming: '#4CAF50',
       upcomingBg: 'rgba(76,175,80,0.15)',
       finished: '#9E9E9E',

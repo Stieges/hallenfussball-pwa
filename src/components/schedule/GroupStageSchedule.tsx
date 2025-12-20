@@ -8,6 +8,7 @@ import { theme } from '../../styles/theme';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
+import { LiveBadge } from './LiveBadge';
 
 interface GroupStageScheduleProps {
   matches: ScheduledMatch[];
@@ -21,6 +22,10 @@ interface GroupStageScheduleProps {
   finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
+  /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
+  runningMatchIds?: Set<string>;
+  /** Permission: Can user correct results? */
+  canCorrectResults?: boolean;
 }
 
 export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
@@ -35,6 +40,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   finishedMatches,
   correctionMatchId,
   onStartCorrection,
+  runningMatchIds,
+  canCorrectResults = true,
 }) => {
   if (matches.length === 0) {
     return (
@@ -191,7 +198,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Dark theme compatible
+    backgroundColor: theme.colors.surfaceDark,
     borderRadius: '6px',
     marginBottom: '12px',
   };
@@ -244,10 +251,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             </tr>
           </thead>
           <tbody>
-            {matches.map((match) => (
-              <tr key={match.id}>
+            {matches.map((match) => {
+              const isRunning = runningMatchIds?.has(match.id);
+              const rowStyle = isRunning ? { backgroundColor: theme.colors.status.liveRowBg } : {};
+              return (
+              <tr key={match.id} style={rowStyle}>
                 <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
-                  {match.matchNumber}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{match.matchNumber}</span>
+                    {isRunning && <LiveBadge compact />}
+                  </div>
                 </td>
                 {showReferees && (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
@@ -302,6 +315,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     inCorrectionMode={correctionMatchId === match.id}
                     onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                     onStartCorrection={() => onStartCorrection?.(match.id)}
+                    canCorrectResults={canCorrectResults}
                   />
                 </td>
                 <td style={tdStyle}>{match.awayTeam}</td>
@@ -351,18 +365,24 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   </td>
                 )}
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
 
       {/* Mobile Card View */}
       <div className="mobile-view">
-        {matches.map((match) => (
+        {matches.map((match) => {
+          const isRunning = runningMatchIds?.has(match.id);
+          return (
           <div key={match.id} style={mobileCardStyle}>
             {/* Header with match number and time */}
             <div style={mobileCardHeaderStyle}>
-              <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+                {isRunning && <LiveBadge compact />}
+              </div>
               <span style={mobileTimeStyle}>{match.time}</span>
             </div>
 
@@ -383,6 +403,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 inCorrectionMode={correctionMatchId === match.id}
                 onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                 onStartCorrection={() => onStartCorrection?.(match.id)}
+                canCorrectResults={canCorrectResults}
               />
             </div>
 
@@ -453,7 +474,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <style>{`

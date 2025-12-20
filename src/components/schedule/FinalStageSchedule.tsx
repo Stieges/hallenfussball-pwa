@@ -8,6 +8,7 @@ import { theme } from '../../styles/theme';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
+import { LiveBadge } from './LiveBadge';
 
 interface FinalStageScheduleProps {
   matches: ScheduledMatch[];
@@ -20,6 +21,10 @@ interface FinalStageScheduleProps {
   finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
+  /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
+  runningMatchIds?: Set<string>;
+  /** Permission: Can user correct results? */
+  canCorrectResults?: boolean;
 }
 
 export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
@@ -33,6 +38,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   finishedMatches,
   correctionMatchId,
   onStartCorrection,
+  runningMatchIds,
+  canCorrectResults = true,
 }) => {
   if (matches.length === 0) {
     return (
@@ -121,14 +128,18 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     fontWeight: theme.fontWeights.bold,
     minWidth: '60px',
   };
-  const matchLabelStyle: CSSProperties = {
+  // Match label column style (compact for "Runde" column)
+  const matchLabelCellStyle: CSSProperties = {
+    fontSize: '11px',
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.accent,
-    marginBottom: '4px',
+    whiteSpace: 'nowrap',
   };
-  const matchTeamsStyle: CSSProperties = {
-    fontSize: '12px',
-    color: theme.colors.text.secondary,
+
+  // Team cell style (matching GroupStageSchedule)
+  const teamCellStyle: CSSProperties = {
+    ...tdStyle,
+    fontWeight: theme.fontWeights.medium,
   };
 
   // Mobile card styles
@@ -177,7 +188,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    backgroundColor: '#fff9e6',
+    backgroundColor: theme.colors.surfaceDark,
     borderRadius: '6px',
     marginBottom: '12px',
   };
@@ -216,15 +227,25 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
               {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
               <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
-              <th style={thStyle}>Spiel</th>
+              <th style={{ ...thStyle, width: '100px' }}>Runde</th>
+              <th style={thStyle}>Heim</th>
               <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
+              <th style={thStyle}>Gast</th>
               {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
             </tr>
           </thead>
           <tbody>
-            {matches.map((match) => (
-              <tr key={match.id}>
-                <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>{match.matchNumber}</td>
+            {matches.map((match) => {
+              const isRunning = runningMatchIds?.has(match.id);
+              const rowStyle = isRunning ? { backgroundColor: theme.colors.status.liveRowBg } : {};
+              return (
+              <tr key={match.id} style={rowStyle}>
+                <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{match.matchNumber}</span>
+                    {isRunning && <LiveBadge compact />}
+                  </div>
+                </td>
                 {showReferees && (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
                     {editable && onRefereeChange ? (
@@ -236,9 +257,12 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </td>
                 )}
                 <td style={tdStyle}>{match.time}</td>
-                <td style={tdStyle}>
-                  <div style={matchLabelStyle}>{getFinalMatchLabel(match)}</div>
-                  <div style={matchTeamsStyle}>{match.homeTeam} - {match.awayTeam}</div>
+                <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match)}</td>
+                <td style={{
+                  ...teamCellStyle,
+                  ...(isPlaceholderTeam(match.homeTeam) ? { color: theme.colors.text.placeholder, fontStyle: 'italic' } : {})
+                }}>
+                  {match.homeTeam}
                 </td>
                 <td style={resultCellStyle}>
                   <MatchScoreCell
@@ -250,7 +274,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     inCorrectionMode={correctionMatchId === match.id}
                     onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                     onStartCorrection={() => onStartCorrection?.(match.id)}
+                    canCorrectResults={canCorrectResults}
                   />
+                </td>
+                <td style={{
+                  ...teamCellStyle,
+                  ...(isPlaceholderTeam(match.awayTeam) ? { color: theme.colors.text.placeholder, fontStyle: 'italic' } : {})
+                }}>
+                  {match.awayTeam}
                 </td>
                 {showFields && (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
@@ -262,22 +293,34 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   </td>
                 )}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="mobile-view">
-        {matches.map((match) => (
+        {matches.map((match) => {
+          const isRunning = runningMatchIds?.has(match.id);
+          return (
           <div key={match.id} style={mobileCardStyle}>
             <div style={mobileCardHeaderStyle}>
-              <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+                {isRunning && <LiveBadge compact />}
+              </div>
               <span style={mobileTimeStyle}>{match.time}</span>
             </div>
             <div style={mobileLabelStyle}>{getFinalMatchLabel(match)}</div>
             <div style={mobileTeamsContainerStyle}>
-              <div style={mobileTeamStyle}>{match.homeTeam}</div>
-              <div style={mobileTeamStyle}>{match.awayTeam}</div>
+              <div style={{
+                ...mobileTeamStyle,
+                ...(isPlaceholderTeam(match.homeTeam) ? { color: theme.colors.text.placeholder, fontStyle: 'italic' } : {})
+              }}>{match.homeTeam}</div>
+              <div style={{
+                ...mobileTeamStyle,
+                ...(isPlaceholderTeam(match.awayTeam) ? { color: theme.colors.text.placeholder, fontStyle: 'italic' } : {})
+              }}>{match.awayTeam}</div>
             </div>
             <div style={mobileScoreContainerStyle}>
               <MatchScoreCell
@@ -289,6 +332,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 inCorrectionMode={correctionMatchId === match.id}
                 onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                 onStartCorrection={() => onStartCorrection?.(match.id)}
+                canCorrectResults={canCorrectResults}
               />
             </div>
             <div style={mobileMetaStyle}>
@@ -315,7 +359,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <style>{`
@@ -338,6 +383,24 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     </div>
   );
 };
+
+/**
+ * Check if a team name is an unresolved placeholder
+ * Examples: "TBD", "1. Gruppe A", "Sieger HF1", "group-a-1st"
+ */
+function isPlaceholderTeam(teamName: string): boolean {
+  if (!teamName) {return false;}
+  const placeholderPatterns = [
+    /^TBD$/i,
+    /^\d+\.\s*(Gruppe|Group)/i,  // "1. Gruppe A"
+    /^(Sieger|Verlierer|Winner|Loser)/i,  // "Sieger HF1"
+    /group-[a-z]-\d+(st|nd|rd|th)/i,  // "group-a-1st"
+    /-winner$/i,  // "semi1-winner"
+    /-loser$/i,  // "semi1-loser"
+    /^bestSecond$/i,
+  ];
+  return placeholderPatterns.some(pattern => pattern.test(teamName));
+}
 
 function getFinalMatchLabel(match: ScheduledMatch): string {
   if (match.finalType === 'final') {return '🏆 Finale';}

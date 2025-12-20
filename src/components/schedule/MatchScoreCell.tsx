@@ -1,4 +1,4 @@
-import { CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 
 interface MatchScoreCellProps {
@@ -10,9 +10,12 @@ interface MatchScoreCellProps {
   inCorrectionMode: boolean;
   onScoreChange: (scoreA: number, scoreB: number) => void;
   onStartCorrection: () => void;
+  /** Permission: Can user correct results? If false, hide correction button */
+  canCorrectResults?: boolean;
 }
 
 export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
+  matchId,
   scoreA,
   scoreB,
   editable,
@@ -20,7 +23,34 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   inCorrectionMode,
   onScoreChange,
   onStartCorrection,
+  canCorrectResults = true,
 }) => {
+  // Local state for partial score entry - allows user to fill one field at a time
+  const [localScoreA, setLocalScoreA] = useState<string>(scoreA !== undefined ? String(scoreA) : '');
+  const [localScoreB, setLocalScoreB] = useState<string>(scoreB !== undefined ? String(scoreB) : '');
+
+  // Sync local state when props change (e.g., from parent updates)
+  useEffect(() => {
+    setLocalScoreA(scoreA !== undefined ? String(scoreA) : '');
+    setLocalScoreB(scoreB !== undefined ? String(scoreB) : '');
+  }, [matchId, scoreA, scoreB]);
+
+  // Only propagate to parent when BOTH fields have valid values
+  const handleScoreAChange = (value: string) => {
+    setLocalScoreA(value);
+    // Only save if both fields have values
+    if (value !== '' && localScoreB !== '') {
+      onScoreChange(parseInt(value), parseInt(localScoreB));
+    }
+  };
+
+  const handleScoreBChange = (value: string) => {
+    setLocalScoreB(value);
+    // Only save if both fields have values
+    if (localScoreA !== '' && value !== '') {
+      onScoreChange(parseInt(localScoreA), parseInt(value));
+    }
+  };
   // State 1: Finished match - read-only with correction button
   if (isFinished && !inCorrectionMode && !editable) {
     const containerStyle: CSSProperties = {
@@ -56,16 +86,19 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
               : '___ : ___'
             }
           </span>
-          <button
-            style={buttonStyle}
-            onClick={(e) => {
-              e.stopPropagation();
-              onStartCorrection();
-            }}
-            className="correction-button"
-          >
-            Ergebnis korrigieren
-          </button>
+          {/* Only show correction button if user has permission */}
+          {canCorrectResults && (
+            <button
+              style={buttonStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                onStartCorrection();
+              }}
+              className="correction-button"
+            >
+              Ergebnis korrigieren
+            </button>
+          )}
         </div>
 
         <style>{`
@@ -130,12 +163,9 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
           type="number"
           min="0"
           step="1"
-          value={scoreA !== undefined ? scoreA : ''}
-          onChange={(e) => {
-            const newScoreA = e.target.value ? parseInt(e.target.value) : 0;
-            const newScoreB = scoreB !== undefined ? scoreB : 0;
-            onScoreChange(newScoreA, newScoreB);
-          }}
+          value={localScoreA}
+          onChange={(e) => handleScoreAChange(e.target.value)}
+          placeholder="–"
           style={inputStyle}
         />
         <span>:</span>
@@ -143,12 +173,9 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
           type="number"
           min="0"
           step="1"
-          value={scoreB !== undefined ? scoreB : ''}
-          onChange={(e) => {
-            const newScoreB = e.target.value ? parseInt(e.target.value) : 0;
-            const newScoreA = scoreA !== undefined ? scoreA : 0;
-            onScoreChange(newScoreA, newScoreB);
-          }}
+          value={localScoreB}
+          onChange={(e) => handleScoreBChange(e.target.value)}
+          placeholder="–"
           style={inputStyle}
         />
       </div>

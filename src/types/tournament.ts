@@ -11,6 +11,8 @@ export interface Team {
   id: string;
   name: string;
   group?: string;
+  isRemoved?: boolean;  // TOUR-EDIT-TEAMS: Team wurde entfernt (aber hat noch historische Ergebnisse)
+  removedAt?: string;   // ISO timestamp wann das Team entfernt wurde
 }
 
 /**
@@ -118,6 +120,14 @@ export interface PlayoffConfig {
   matches: PlayoffMatchConfig[];
 }
 
+/**
+ * Match Status for TL-RESULT-LOCK-01
+ * - scheduled: Match not yet started
+ * - running: Match currently in progress
+ * - finished: Match completed, results locked
+ */
+export type MatchStatus = 'scheduled' | 'running' | 'finished';
+
 export interface Match {
   id: string;
   round: number;
@@ -134,10 +144,37 @@ export interface Match {
   scheduledTime?: Date; // Actual scheduled time
   referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
 
+  // TL-RESULT-LOCK-01: Match Status & Correction Mode
+  matchStatus?: MatchStatus;           // Current match status (default: 'scheduled')
+  finishedAt?: string;                 // ISO timestamp when match was finished
+  correctionHistory?: CorrectionEntry[]; // History of result corrections
+
   // Timer persistence for DEF-005 fix
   timerStartTime?: string;       // ISO timestamp when timer was started
   timerPausedAt?: string;        // ISO timestamp when timer was paused (undefined = running)
   timerElapsedSeconds?: number;  // Elapsed seconds before current run/pause
+}
+
+/**
+ * TL-RESULT-LOCK-01: Correction history entry
+ */
+export type CorrectionReasonType =
+  | 'input_error'       // Eingabefehler
+  | 'referee_decision'  // Schiedsrichterentscheidung
+  | 'protest_accepted'  // Protestentscheidung
+  | 'technical_error'   // Technischer Fehler
+  | 'other';            // Sonstiges
+
+export interface CorrectionEntry {
+  timestamp: string;             // When correction was made
+  previousScoreA: number;
+  previousScoreB: number;
+  newScoreA: number;
+  newScoreB: number;
+  reasonType?: CorrectionReasonType; // Correction reason type (optional for legacy entries)
+  reason?: string;               // Legacy: Old reason field for backward compatibility
+  note?: string;                 // Optional additional note
+  userName?: string;             // Name of user who made correction (from profile)
 }
 
 export interface Tournament {

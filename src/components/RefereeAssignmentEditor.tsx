@@ -61,6 +61,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 }) => {
   const [draggedReferee, setDraggedReferee] = useState<number | null>(null);
   const [dragOverMatch, setDragOverMatch] = useState<string | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Collapsed by default
 
   if (!refereeConfig || refereeConfig.mode === 'none') {
     return null;
@@ -175,7 +176,9 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '20px',
+    marginBottom: isCollapsed ? '0' : '20px',
+    cursor: 'pointer',
+    userSelect: 'none',
   };
 
   const titleStyle: CSSProperties = {
@@ -183,6 +186,14 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.accent,
     margin: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
+  const toggleIconStyle: CSSProperties = {
+    transition: 'transform 0.2s ease',
+    transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
   };
 
   const refereeGridStyle: CSSProperties = {
@@ -246,26 +257,34 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 
   return (
     <div style={containerStyle} className="referee-assignment-editor">
-      <div style={headerStyle}>
+      <div style={headerStyle} onClick={() => setIsCollapsed(!isCollapsed)}>
         <div>
-          <h3 style={titleStyle}>🟨 Manuelle Schiedsrichter-Zuweisung</h3>
-          <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '4px 0 0 0' }}>
-            {refereeConfig.mode === 'organizer'
-              ? 'Ziehe Schiedsrichter auf Spiele oder nutze das Dropdown-Menü'
-              : 'Ziehe Teams auf Spiele oder nutze das Dropdown-Menü'}
-          </p>
+          <h3 style={titleStyle}>
+            <span style={toggleIconStyle}>▼</span>
+            🟨 Manuelle Schiedsrichter-Zuweisung
+          </h3>
+          {isCollapsed && (
+            <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '4px 0 0 24px' }}>
+              Klicken zum Aufklappen
+            </p>
+          )}
         </div>
-        {hasManualAssignments && (
-          <Button
-            variant="secondary"
-            onClick={onResetAssignments}
-            style={{ fontSize: '12px', padding: '8px 16px' }}
-          >
-            Automatische Zuweisung wiederherstellen
-          </Button>
+        {!isCollapsed && hasManualAssignments && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="secondary"
+              onClick={onResetAssignments}
+              style={{ fontSize: '12px', padding: '8px 16px' }}
+            >
+              Automatische Zuweisung wiederherstellen
+            </Button>
+          </div>
         )}
       </div>
 
+      {/* Collapsible Content */}
+      {!isCollapsed && (
+        <>
       {/* Referee Drag Source */}
       {refereeConfig.mode === 'organizer' && (
         <>
@@ -354,6 +373,8 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
           </div>
         ))}
       </div>
+        </>
+      )}
 
       <style>{`
         .referee-assignment-editor {
