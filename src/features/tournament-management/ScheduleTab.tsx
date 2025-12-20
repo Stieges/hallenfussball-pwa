@@ -9,16 +9,19 @@
  * - Live-Tabellen-Berechnung
  */
 
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { Card } from '../../components/ui';
 import { theme } from '../../styles/theme';
-import { Tournament, Standing } from '../../types/tournament';
+import { Tournament, Standing, CorrectionEntry, CorrectionReasonType } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { ScheduleActionButtons } from '../../components/ScheduleActionButtons';
-import { ConfirmDialog } from '../../components/dialogs';
-import { CorrectionBanner } from '../../components/schedule';
+import { CorrectionDialog } from '../../components/dialogs';
+import { useAppSettings, useUserProfile } from '../../hooks/useUserProfile';
+import { usePermissions } from '../../hooks/usePermissions';
+import { CorrectionReason } from '../../types/userProfile';
+import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../utils/playoffResolver';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -40,11 +43,16 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   currentStandings,
   onTournamentUpdate,
 }) => {
+  // App settings for result lock behavior
+  const appSettings = useAppSettings();
+  // User profile for correction logging
+  const { profile } = useUserProfile();
+  // Permission check for corrections
+  const { canCorrectResults } = usePermissions(tournament.id);
+
   // Correction mode state
   const [correctionState, setCorrectionState] = useState<CorrectionState | null>(null);
-  const [showCorrectionStartDialog, setShowCorrectionStartDialog] = useState(false);
-  const [showCorrectionSaveDialog, setShowCorrectionSaveDialog] = useState(false);
-  const [pendingMatch, setPendingMatch] = useState<{id: string, scoreA: number, scoreB: number} | null>(null);
+  const [showCorrectionDialog, setShowCorrectionDialog] = useState(false);
 
   // Helper: Check if match is finished
   const isMatchFinished = (matchId: string): boolean => {
@@ -71,9 +79,60 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     return true;
   };
 
-  // Helper: Check if match is in correction mode
-  const isInCorrectionMode = (matchId: string): boolean =>
-    correctionState?.matchId === matchId;
+  // MON-LIVE-INDICATOR-01: Get running match IDs from localStorage
+  const getRunningMatchIds = (): Set<string> => {
+    try {
+      const stored = localStorage.getItem(`liveMatches-${tournament.id}`);
+      if (stored) {
+        const liveMatches = JSON.parse(stored);
+        const runningIds = Object.keys(liveMatches).filter(
+          matchId => liveMatches[matchId]?.status === 'RUNNING'
+        );
+        return new Set(runningIds);
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return new Set();
+  };
+
+  // State for running match IDs with polling for live updates
+  const [runningMatchIds, setRunningMatchIds] = useState<Set<string>>(() => getRunningMatchIds());
+
+  // Poll localStorage every 2 seconds to detect changes from ManagementTab
+  useEffect(() => {
+    const updateRunningMatches = () => {
+      const newIds = getRunningMatchIds();
+      setRunningMatchIds(prev => {
+        // Only update if the sets are different
+        const prevArray = Array.from(prev).sort();
+        const newArray = Array.from(newIds).sort();
+        if (JSON.stringify(prevArray) !== JSON.stringify(newArray)) {
+          return newIds;
+        }
+        return prev;
+      });
+    };
+
+    // Initial update
+    updateRunningMatches();
+
+    // Poll every 2 seconds
+    const interval = setInterval(updateRunningMatches, 2000);
+
+    // Also listen for storage events (when changed in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === `liveMatches-${tournament.id}`) {
+        updateRunningMatches();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [tournament.id]);
 
   // Correction handlers
   const handleStartCorrection = (matchId: string) => {
@@ -85,67 +144,65 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       originalScoreA: match.scoreA,
       originalScoreB: match.scoreB,
     });
-    setShowCorrectionStartDialog(true);
-  };
-
-  const handleConfirmStartCorrection = () => {
-    setShowCorrectionStartDialog(false);
-    // Correction mode is now active (correctionState is set)
+    setShowCorrectionDialog(true);
   };
 
   const handleCancelCorrection = () => {
-    if (!correctionState) {return;}
-
-    // Revert to original scores
-    const updatedMatches = tournament.matches.map(m =>
-      m.id === correctionState.matchId
-        ? { ...m, scoreA: correctionState.originalScoreA, scoreB: correctionState.originalScoreB }
-        : m
-    );
-
-    onTournamentUpdate(
-      { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() },
-      false
-    );
-
+    setShowCorrectionDialog(false);
     setCorrectionState(null);
   };
 
-  const handleSaveCorrection = (matchId: string, scoreA: number, scoreB: number) => {
-    setPendingMatch({ id: matchId, scoreA, scoreB });
-    setShowCorrectionSaveDialog(true);
-  };
+  const handleConfirmCorrection = (
+    newScoreA: number,
+    newScoreB: number,
+    reason: CorrectionReason,
+    note?: string
+  ) => {
+    if (!correctionState) {return;}
 
-  const handleConfirmSave = () => {
-    if (!pendingMatch) {return;}
+    // Create correction entry for match history
+    const correctionEntry: CorrectionEntry = {
+      timestamp: new Date().toISOString(),
+      previousScoreA: correctionState.originalScoreA,
+      previousScoreB: correctionState.originalScoreB,
+      newScoreA,
+      newScoreB,
+      reasonType: reason as CorrectionReasonType,
+      note,
+      userName: profile.name || 'Unbekannt',
+    };
 
-    // Update tournament
-    const updatedMatches = tournament.matches.map(m =>
-      m.id === pendingMatch.id
-        ? { ...m, scoreA: pendingMatch.scoreA, scoreB: pendingMatch.scoreB }
-        : m
-    );
+    // Log correction to console
+    console.log('[Correction]', correctionEntry);
+
+    // Update tournament matches with correction history
+    const updatedMatches = tournament.matches.map(m => {
+      if (m.id !== correctionState.matchId) {return m;}
+
+      // Add correction to history
+      const existingHistory = m.correctionHistory || [];
+      return {
+        ...m,
+        scoreA: newScoreA,
+        scoreB: newScoreB,
+        correctionHistory: [...existingHistory, correctionEntry],
+      };
+    });
 
     onTournamentUpdate(
       { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() },
       false // Triggers standings recalculation in parent
     );
 
-    setShowCorrectionSaveDialog(false);
-    setPendingMatch(null);
+    setShowCorrectionDialog(false);
     setCorrectionState(null);
   };
 
   const handleScoreChange = (matchId: string, scoreA: number, scoreB: number) => {
-    // NEW: Block editing finished matches unless in correction mode
-    if (isMatchFinished(matchId) && !isInCorrectionMode(matchId)) {
+    // Block editing finished matches (if lock is enabled)
+    // Corrections are handled via the CorrectionDialog, not inline editing
+    if (appSettings.lockFinishedResults && isMatchFinished(matchId)) {
       alert('⚠️ Dieses Spiel ist bereits beendet.\n\nVerwenden Sie den Button "Ergebnis korrigieren".');
-      return;
-    }
-
-    // If in correction mode, handle via save dialog
-    if (isInCorrectionMode(matchId)) {
-      handleSaveCorrection(matchId, scoreA, scoreB);
       return;
     }
 
@@ -185,6 +242,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // Score changes don't need schedule regeneration
     onTournamentUpdate(updatedTournament, false);
+
+    // FIX: Auto-resolve playoff pairings after group match completion
+    const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
+    if (playoffResolution?.wasResolved) {
+      console.log('✅ Playoff-Paarungen automatisch aufgelöst:', playoffResolution);
+      onTournamentUpdate(updatedTournament, false);
+    }
+
+    // FIX: Also resolve bracket placeholders after playoff matches (e.g., semi → final)
+    const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
+    if (bracketResolution?.wasResolved) {
+      console.log('✅ Bracket-Paarungen automatisch aufgelöst:', bracketResolution);
+      onTournamentUpdate(updatedTournament, false);
+    }
   };
 
   const handleRefereeAssignment = (matchId: string, refereeNumber: number | null) => {
@@ -272,26 +343,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           />
         </div>
 
-        {/* Correction Banner */}
-        {correctionState && (() => {
-          const match = tournament.matches.find(m => m.id === correctionState.matchId);
-          if (!match) {return null;}
-
-          return (
-            <div style={{ padding: theme.spacing.lg }}>
-              <CorrectionBanner
-                matchId={correctionState.matchId}
-                matchLabel={`Spiel #${match.round}`}
-                teamA={match.teamA}
-                teamB={match.teamB}
-                originalScoreA={correctionState.originalScoreA}
-                originalScoreB={correctionState.originalScoreB}
-                onCancel={handleCancelCorrection}
-              />
-            </div>
-          );
-        })()}
-
         <ScheduleDisplay
           schedule={schedule}
           currentStandings={currentStandings}
@@ -300,13 +351,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onScoreChange={handleScoreChange}
           onRefereeChange={handleRefereeAssignment}
           onFieldChange={handleFieldChange}
-          finishedMatches={new Set(
-            tournament.matches
-              .filter(m => isMatchFinished(m.id))
-              .map(m => m.id)
-          )}
+          finishedMatches={appSettings.lockFinishedResults
+            ? new Set(
+                tournament.matches
+                  .filter(m => isMatchFinished(m.id))
+                  .map(m => m.id)
+              )
+            : new Set() // Lock disabled: all matches stay editable
+          }
           correctionMatchId={correctionState?.matchId ?? null}
           onStartCorrection={handleStartCorrection}
+          runningMatchIds={runningMatchIds}
+          canCorrectResults={canCorrectResults}
         />
 
         {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
@@ -321,87 +377,21 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       </Card>
     </div>
 
-    {/* Correction Start Dialog */}
+    {/* Correction Dialog */}
     {correctionState && (() => {
       const match = tournament.matches.find(m => m.id === correctionState.matchId);
       if (!match) {return null;}
 
       return (
-        <ConfirmDialog
-          isOpen={showCorrectionStartDialog}
-          onClose={() => {
-            setShowCorrectionStartDialog(false);
-            setCorrectionState(null);
-          }}
-          onConfirm={handleConfirmStartCorrection}
-          title="⚠️ Ergebnis korrigieren?"
-          message={
-            <div>
-              <p>Sie sind dabei, das Ergebnis eines beendeten Spiels zu ändern.</p>
-              <p style={{ marginTop: '12px', fontWeight: 600 }}>
-                Spiel: #{match.round}<br />
-                {match.teamA} vs {match.teamB}<br />
-                Aktuelles Ergebnis: {correctionState.originalScoreA}:{correctionState.originalScoreB}
-              </p>
-              <p style={{ marginTop: '16px', fontWeight: 600 }}>WICHTIG:</p>
-              <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                <li>Die Gruppentabelle wird neu berechnet</li>
-                <li>Playoff-Paarungen können sich ändern</li>
-                <li>Bereits gespielte Finalspiele bleiben unverändert</li>
-              </ul>
-              <p style={{ marginTop: '16px' }}>Möchten Sie fortfahren?</p>
-            </div>
-          }
-          confirmText="Ja, korrigieren"
-          cancelText="Abbrechen"
-          variant="warning"
-        />
-      );
-    })()}
-
-    {/* Correction Save Dialog */}
-    {pendingMatch && correctionState && (() => {
-      const oldScoreA = correctionState.originalScoreA;
-      const oldScoreB = correctionState.originalScoreB;
-      const newScoreA = pendingMatch.scoreA;
-      const newScoreB = pendingMatch.scoreB;
-
-      return (
-        <ConfirmDialog
-          isOpen={showCorrectionSaveDialog}
-          onClose={() => {
-            setShowCorrectionSaveDialog(false);
-            setPendingMatch(null);
-          }}
-          onConfirm={handleConfirmSave}
-          title="⚠️ Korrektur speichern?"
-          message={
-            <div>
-              <p style={{ fontWeight: 600, fontSize: '16px' }}>
-                Neues Ergebnis: {newScoreA}:{newScoreB}<br />
-                <span style={{ color: theme.colors.text.secondary, fontSize: '14px' }}>
-                  (vorher: {oldScoreA}:{oldScoreB})
-                </span>
-              </p>
-              <p style={{ marginTop: '16px' }}>
-                Die Änderung wird folgende Auswirkungen haben:
-              </p>
-              <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                <li>Gruppentabelle wird neu berechnet</li>
-                <li>Playoff-Paarungen werden aktualisiert</li>
-                <li>Bereits gespielte Finalrunden bleiben unverändert</li>
-              </ul>
-              <p style={{ marginTop: '16px', fontWeight: 600 }}>
-                Diese Aktion kann nicht rückgängig gemacht werden.
-              </p>
-              <p style={{ marginTop: '12px' }}>
-                Möchten Sie die Korrektur speichern?
-              </p>
-            </div>
-          }
-          confirmText="Speichern"
-          cancelText="Abbrechen"
-          variant="warning"
+        <CorrectionDialog
+          isOpen={showCorrectionDialog}
+          onClose={handleCancelCorrection}
+          onConfirm={handleConfirmCorrection}
+          matchLabel={`Spiel #${match.round}`}
+          teamA={match.teamA}
+          teamB={match.teamB}
+          originalScoreA={correctionState.originalScoreA}
+          originalScoreB={correctionState.originalScoreB}
         />
       );
     })()}

@@ -4,6 +4,7 @@ import {
   needsPlayoffResolution,
   resolvePlayoffPairings,
   autoResolvePlayoffsIfReady,
+  resolveBracketAfterPlayoffMatch,
 } from '../playoffResolver';
 import { Tournament, Team, Match } from '../../types/tournament';
 
@@ -638,6 +639,381 @@ describe('Playoff Resolver - DEF-003 Fix', () => {
       const final = tournament.matches.find(m => m.id === 'final');
       expect(final?.teamA).toBe('TBD');
       expect(final?.teamB).toBe('TBD');
+    });
+  });
+
+  /**
+   * ============================================================================
+   * BRACKET RESOLUTION TESTS (Semi → Final, QF → Place 5/7)
+   * ============================================================================
+   *
+   * Diese Tests prüfen die kaskadierende Auflösung von Bracket-Platzhaltern:
+   * - semi1-winner / semi1-loser → Finale / Spiel um Platz 3
+   * - qf1-loser / qf2-loser → Spiel um Platz 5
+   *
+   * KONTEXT für Debugging:
+   * - Platzhalter-Format: "{matchId}-{winner|loser}" (z.B. "semi1-winner")
+   * - resolveBracketPlaceholder() parst diese mit Regex: /^(.+)-(winner|loser)$/
+   * - Das referenzierte Match muss: isFinal=true, Ergebnis eingetragen, Teams aufgelöst sein
+   *
+   * Häufige Fehlerquellen:
+   * 1. Match-ID stimmt nicht überein (z.B. "semi1" vs "semi-1")
+   * 2. isFinal ist nicht gesetzt
+   * 3. Teams des referenzierten Matches sind selbst noch Platzhalter
+   * 4. Unentschieden (scoreA === scoreB) → kann nicht aufgelöst werden
+   */
+  describe('resolveBracketAfterPlayoffMatch - Bracket Resolution', () => {
+    /**
+     * Test: Halbfinal-Ergebnisse lösen Finale und Spiel um Platz 3 auf
+     *
+     * Szenario:
+     * - semi1: Team A (2) vs Team B (1) → Team A gewinnt
+     * - semi2: Team C (0) vs Team D (3) → Team D gewinnt
+     * - Finale: semi1-winner vs semi2-winner → Team A vs Team D
+     * - Platz 3: semi1-loser vs semi2-loser → Team B vs Team C
+     */
+    it('resolves final and third-place match after both semifinals are completed', () => {
+      const teams: Team[] = [
+        { id: 'team-a', name: 'Team A', group: 'A' },
+        { id: 'team-b', name: 'Team B', group: 'A' },
+        { id: 'team-c', name: 'Team C', group: 'B' },
+        { id: 'team-d', name: 'Team D', group: 'B' },
+      ];
+
+      const matches: Match[] = [
+        // Gruppenspiele (alle fertig)
+        { id: 'g1', round: 1, field: 1, teamA: 'team-a', teamB: 'team-b', group: 'A', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g2', round: 1, field: 2, teamA: 'team-c', teamB: 'team-d', group: 'B', isFinal: false, scoreA: 0, scoreB: 1 },
+
+        // Halbfinale (bereits aufgelöst UND Ergebnisse eingetragen)
+        {
+          id: 'semi1',
+          round: 2,
+          field: 1,
+          teamA: 'team-a', // Aufgelöst!
+          teamB: 'team-b', // Aufgelöst!
+          isFinal: true,
+          label: '1. Halbfinale',
+          scoreA: 2, // Team A gewinnt
+          scoreB: 1,
+        },
+        {
+          id: 'semi2',
+          round: 2,
+          field: 2,
+          teamA: 'team-c', // Aufgelöst!
+          teamB: 'team-d', // Aufgelöst!
+          isFinal: true,
+          label: '2. Halbfinale',
+          scoreA: 0, // Team D gewinnt
+          scoreB: 3,
+        },
+
+        // Finale (noch mit Platzhaltern)
+        {
+          id: 'final',
+          round: 3,
+          field: 1,
+          teamA: 'semi1-winner',
+          teamB: 'semi2-winner',
+          isFinal: true,
+          finalType: 'final',
+          label: 'Finale',
+        },
+
+        // Spiel um Platz 3 (noch mit Platzhaltern)
+        {
+          id: 'third-place',
+          round: 3,
+          field: 2,
+          teamA: 'semi1-loser',
+          teamB: 'semi2-loser',
+          isFinal: true,
+          finalType: 'thirdPlace',
+          label: 'Spiel um Platz 3',
+        },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      // Act: Bracket-Auflösung triggern
+      const result = resolveBracketAfterPlayoffMatch(tournament);
+
+      // Assert
+      expect(result).not.toBeNull();
+      expect(result?.wasResolved).toBe(true);
+      expect(result?.updatedMatches).toBe(2); // Finale + Platz 3
+
+      // Finale prüfen
+      const finalMatch = tournament.matches.find(m => m.id === 'final');
+      expect(finalMatch?.teamA).toBe('team-a'); // semi1-winner
+      expect(finalMatch?.teamB).toBe('team-d'); // semi2-winner
+
+      // Platz 3 prüfen
+      const thirdPlace = tournament.matches.find(m => m.id === 'third-place');
+      expect(thirdPlace?.teamA).toBe('team-b'); // semi1-loser
+      expect(thirdPlace?.teamB).toBe('team-c'); // semi2-loser
+    });
+
+    /**
+     * Test: Viertelfinal-Ergebnisse lösen Spiel um Platz 5/7 auf
+     *
+     * Kontext: Bei 8+ Teams gibt es Viertelfinals und Platzierungsspiele
+     * - qf1-loser vs qf2-loser → Spiel um Platz 5
+     * - qf3-loser vs qf4-loser → Spiel um Platz 7
+     */
+    it('resolves 5th/7th place matches after quarterfinals are completed', () => {
+      const teams: Team[] = [
+        { id: 't1', name: 'T1', group: 'A' },
+        { id: 't2', name: 'T2', group: 'A' },
+        { id: 't3', name: 'T3', group: 'B' },
+        { id: 't4', name: 'T4', group: 'B' },
+        { id: 't5', name: 'T5', group: 'C' },
+        { id: 't6', name: 'T6', group: 'C' },
+        { id: 't7', name: 'T7', group: 'D' },
+        { id: 't8', name: 'T8', group: 'D' },
+      ];
+
+      const matches: Match[] = [
+        // Gruppenspiele (vereinfacht - alle fertig)
+        { id: 'g1', round: 1, field: 1, teamA: 't1', teamB: 't2', group: 'A', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g2', round: 1, field: 2, teamA: 't3', teamB: 't4', group: 'B', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g3', round: 1, field: 1, teamA: 't5', teamB: 't6', group: 'C', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g4', round: 1, field: 2, teamA: 't7', teamB: 't8', group: 'D', isFinal: false, scoreA: 1, scoreB: 0 },
+
+        // Viertelfinals (aufgelöst + Ergebnisse)
+        { id: 'qf1', round: 2, field: 1, teamA: 't1', teamB: 't4', isFinal: true, scoreA: 2, scoreB: 1 }, // t1 wins, t4 loses
+        { id: 'qf2', round: 2, field: 2, teamA: 't3', teamB: 't2', isFinal: true, scoreA: 0, scoreB: 3 }, // t2 wins, t3 loses
+        { id: 'qf3', round: 2, field: 1, teamA: 't5', teamB: 't8', isFinal: true, scoreA: 1, scoreB: 2 }, // t8 wins, t5 loses
+        { id: 'qf4', round: 2, field: 2, teamA: 't7', teamB: 't6', isFinal: true, scoreA: 4, scoreB: 0 }, // t7 wins, t6 loses
+
+        // Spiel um Platz 5 (mit Platzhaltern)
+        {
+          id: 'place56',
+          round: 3,
+          field: 1,
+          teamA: 'qf1-loser',
+          teamB: 'qf2-loser',
+          isFinal: true,
+          finalType: 'fifthSixth',
+          label: 'Spiel um Platz 5',
+        },
+
+        // Spiel um Platz 7 (mit Platzhaltern)
+        {
+          id: 'place78',
+          round: 3,
+          field: 2,
+          teamA: 'qf3-loser',
+          teamB: 'qf4-loser',
+          isFinal: true,
+          finalType: 'seventhEighth',
+          label: 'Spiel um Platz 7',
+        },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      // Act
+      const result = resolveBracketAfterPlayoffMatch(tournament);
+
+      // Assert
+      expect(result?.wasResolved).toBe(true);
+      expect(result?.updatedMatches).toBe(2);
+
+      const place5 = tournament.matches.find(m => m.id === 'place56');
+      expect(place5?.teamA).toBe('t4'); // qf1-loser
+      expect(place5?.teamB).toBe('t3'); // qf2-loser
+
+      const place7 = tournament.matches.find(m => m.id === 'place78');
+      expect(place7?.teamA).toBe('t5'); // qf3-loser
+      expect(place7?.teamB).toBe('t6'); // qf4-loser
+    });
+
+    /**
+     * Test: Keine Auflösung wenn Halbfinale noch nicht gespielt
+     *
+     * Edge Case: Platzhalter können nicht aufgelöst werden wenn
+     * das referenzierte Match noch kein Ergebnis hat.
+     */
+    it('does not resolve final when semifinals have no scores yet', () => {
+      const teams: Team[] = [
+        { id: 'team-a', name: 'Team A', group: 'A' },
+        { id: 'team-b', name: 'Team B', group: 'A' },
+        { id: 'team-c', name: 'Team C', group: 'B' },
+        { id: 'team-d', name: 'Team D', group: 'B' },
+      ];
+
+      const matches: Match[] = [
+        { id: 'g1', round: 1, field: 1, teamA: 'team-a', teamB: 'team-b', group: 'A', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g2', round: 1, field: 2, teamA: 'team-c', teamB: 'team-d', group: 'B', isFinal: false, scoreA: 0, scoreB: 1 },
+
+        // Halbfinale aufgelöst, aber OHNE Ergebnis
+        { id: 'semi1', round: 2, field: 1, teamA: 'team-a', teamB: 'team-b', isFinal: true, label: '1. HF' },
+        { id: 'semi2', round: 2, field: 2, teamA: 'team-c', teamB: 'team-d', isFinal: true, label: '2. HF' },
+
+        // Finale mit Platzhaltern
+        { id: 'final', round: 3, field: 1, teamA: 'semi1-winner', teamB: 'semi2-winner', isFinal: true },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      // Call resolution - result not checked, we verify the mutation directly
+      resolveBracketAfterPlayoffMatch(tournament);
+
+      // Finale sollte NICHT aufgelöst werden (Semis haben keine Ergebnisse)
+      const finalMatch = tournament.matches.find(m => m.id === 'final');
+      expect(finalMatch?.teamA).toBe('semi1-winner'); // Immer noch Platzhalter
+      expect(finalMatch?.teamB).toBe('semi2-winner');
+    });
+
+    /**
+     * Test: Keine Auflösung bei Unentschieden
+     *
+     * Edge Case: Im K.O.-System kann es bei Unentschieden keinen
+     * automatischen Sieger geben (Elfmeterschießen etc. nicht abgebildet)
+     */
+    it('does not resolve bracket when semifinal ended in a draw', () => {
+      const teams: Team[] = [
+        { id: 'team-a', name: 'Team A', group: 'A' },
+        { id: 'team-b', name: 'Team B', group: 'A' },
+        { id: 'team-c', name: 'Team C', group: 'B' },
+        { id: 'team-d', name: 'Team D', group: 'B' },
+      ];
+
+      const matches: Match[] = [
+        { id: 'g1', round: 1, field: 1, teamA: 'team-a', teamB: 'team-b', group: 'A', isFinal: false, scoreA: 1, scoreB: 0 },
+        { id: 'g2', round: 1, field: 2, teamA: 'team-c', teamB: 'team-d', group: 'B', isFinal: false, scoreA: 0, scoreB: 1 },
+
+        // Halbfinale mit UNENTSCHIEDEN
+        { id: 'semi1', round: 2, field: 1, teamA: 'team-a', teamB: 'team-b', isFinal: true, scoreA: 1, scoreB: 1 }, // Draw!
+        { id: 'semi2', round: 2, field: 2, teamA: 'team-c', teamB: 'team-d', isFinal: true, scoreA: 2, scoreB: 0 },
+
+        { id: 'final', round: 3, field: 1, teamA: 'semi1-winner', teamB: 'semi2-winner', isFinal: true },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      resolveBracketAfterPlayoffMatch(tournament);
+
+      // semi1-winner kann nicht aufgelöst werden (Unentschieden)
+      const finalMatch = tournament.matches.find(m => m.id === 'final');
+      expect(finalMatch?.teamA).toBe('semi1-winner'); // Nicht aufgelöst
+      expect(finalMatch?.teamB).toBe('team-c'); // Aber semi2-winner wurde aufgelöst
+    });
+
+    /**
+     * Test: Keine Auflösung wenn Teams noch Platzhalter sind
+     *
+     * Edge Case: semi1-winner kann nicht aufgelöst werden wenn
+     * semi1.teamA selbst noch ein Platzhalter ist (z.B. "group-a-1st")
+     */
+    it('does not resolve bracket when semifinal teams are still placeholders', () => {
+      const teams: Team[] = [
+        { id: 'team-a', name: 'Team A', group: 'A' },
+        { id: 'team-b', name: 'Team B', group: 'B' },
+      ];
+
+      const matches: Match[] = [
+        { id: 'g1', round: 1, field: 1, teamA: 'team-a', teamB: 'team-b', group: 'A', isFinal: false, scoreA: 1, scoreB: 0 },
+
+        // Halbfinale mit PLATZHALTERN (nicht aufgelöst), aber Ergebnis eingetragen
+        {
+          id: 'semi1',
+          round: 2,
+          field: 1,
+          teamA: 'group-a-1st', // Noch Platzhalter!
+          teamB: 'group-b-1st', // Noch Platzhalter!
+          isFinal: true,
+          scoreA: 2,
+          scoreB: 1,
+        },
+
+        { id: 'final', round: 3, field: 1, teamA: 'semi1-winner', teamB: 'TBD', isFinal: true },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      resolveBracketAfterPlayoffMatch(tournament);
+
+      // semi1-winner kann nicht aufgelöst werden (semi1.teamA ist selbst Platzhalter)
+      const finalMatch = tournament.matches.find(m => m.id === 'final');
+      expect(finalMatch?.teamA).toBe('semi1-winner'); // Nicht aufgelöst
+    });
+  });
+
+  /**
+   * ============================================================================
+   * KASKADIERENDER AUFLÖSUNGS-TEST (Kompletter Turnier-Flow)
+   * ============================================================================
+   *
+   * Testet den kompletten Flow:
+   * 1. Gruppenphase → Halbfinale aufgelöst
+   * 2. Halbfinale gespielt → Finale aufgelöst
+   *
+   * Dies simuliert einen echten Turnierverlauf.
+   */
+  describe('Cascading Resolution - Full Tournament Flow', () => {
+    it('resolves playoffs in correct order: groups → semis → final', () => {
+      const teams: Team[] = [
+        { id: 'team-a', name: 'Team A', group: 'A' },
+        { id: 'team-b', name: 'Team B', group: 'A' },
+        { id: 'team-c', name: 'Team C', group: 'B' },
+        { id: 'team-d', name: 'Team D', group: 'B' },
+      ];
+
+      const matches: Match[] = [
+        // Gruppenspiele
+        { id: 'g1', round: 1, field: 1, teamA: 'team-a', teamB: 'team-b', group: 'A', isFinal: false, scoreA: 2, scoreB: 0 },
+        { id: 'g2', round: 1, field: 2, teamA: 'team-c', teamB: 'team-d', group: 'B', isFinal: false, scoreA: 1, scoreB: 3 },
+
+        // Halbfinale (noch mit Gruppen-Platzhaltern)
+        { id: 'semi1', round: 2, field: 1, teamA: 'group-a-1st', teamB: 'group-b-2nd', isFinal: true, label: 'HF 1' },
+        { id: 'semi2', round: 2, field: 2, teamA: 'group-b-1st', teamB: 'group-a-2nd', isFinal: true, label: 'HF 2' },
+
+        // Finale (mit Bracket-Platzhaltern)
+        { id: 'final', round: 3, field: 1, teamA: 'semi1-winner', teamB: 'semi2-winner', isFinal: true, finalType: 'final' },
+        { id: 'third', round: 3, field: 2, teamA: 'semi1-loser', teamB: 'semi2-loser', isFinal: true, finalType: 'thirdPlace' },
+      ];
+
+      const tournament = createTournament(teams, matches);
+
+      // SCHRITT 1: Gruppenphase fertig → Halbfinale auflösen
+      const step1 = autoResolvePlayoffsIfReady(tournament);
+      expect(step1?.wasResolved).toBe(true);
+      expect(step1?.updatedMatches).toBe(2); // Beide Halbfinale
+
+      const semi1After1 = tournament.matches.find(m => m.id === 'semi1');
+      const semi2After1 = tournament.matches.find(m => m.id === 'semi2');
+      expect(semi1After1?.teamA).toBe('team-a'); // 1st A
+      expect(semi1After1?.teamB).toBe('team-c'); // 2nd B
+      expect(semi2After1?.teamA).toBe('team-d'); // 1st B
+      expect(semi2After1?.teamB).toBe('team-b'); // 2nd A
+
+      // Finale sollte noch Platzhalter haben (Semis nicht gespielt)
+      const finalAfter1 = tournament.matches.find(m => m.id === 'final');
+      expect(finalAfter1?.teamA).toBe('semi1-winner');
+
+      // SCHRITT 2: Halbfinale spielen (Ergebnisse eintragen)
+      const semi1 = tournament.matches.find(m => m.id === 'semi1');
+      const semi2 = tournament.matches.find(m => m.id === 'semi2');
+      if (semi1) { semi1.scoreA = 3; semi1.scoreB = 1; } // team-a gewinnt
+      if (semi2) { semi2.scoreA = 2; semi2.scoreB = 0; } // team-d gewinnt
+
+      // SCHRITT 3: Bracket-Auflösung nach Halbfinale
+      const step2 = resolveBracketAfterPlayoffMatch(tournament);
+      expect(step2?.wasResolved).toBe(true);
+      expect(step2?.updatedMatches).toBe(2); // Finale + Platz 3
+
+      // Finale prüfen
+      const finalAfter2 = tournament.matches.find(m => m.id === 'final');
+      expect(finalAfter2?.teamA).toBe('team-a'); // semi1-winner
+      expect(finalAfter2?.teamB).toBe('team-d'); // semi2-winner
+
+      // Platz 3 prüfen
+      const thirdAfter2 = tournament.matches.find(m => m.id === 'third');
+      expect(thirdAfter2?.teamA).toBe('team-c'); // semi1-loser (war team-b, aber team-c hat verloren)
+      expect(thirdAfter2?.teamB).toBe('team-b'); // semi2-loser
     });
   });
 });

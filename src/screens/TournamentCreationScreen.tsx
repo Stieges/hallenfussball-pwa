@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo } from 'react';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -7,6 +7,7 @@ import { Tournament, TournamentType, PlacementCriterion } from '../types/tournam
 import { useTournaments } from '../hooks/useTournaments';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { generateTournamentId } from '../utils/idGenerator';
+import { countMatchesWithResults } from '../utils/teamHelpers';
 import { theme } from '../styles/theme';
 
 // Lazy load step components for better performance
@@ -54,6 +55,7 @@ interface TournamentCreationScreenProps {
   onBack: () => void;
   onSave?: (tournament: Tournament) => void | Promise<void>;
   existingTournament?: Tournament;
+  quickEditMode?: boolean; // Schnellbearbeitung: Zeigt prominenten Speichern-Button
 }
 
 const getDefaultFormData = (): Partial<Tournament> => ({
@@ -110,12 +112,30 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   onBack,
   onSave,
   existingTournament,
+  quickEditMode = false,
 }) => {
   // Restore last visited step from existing tournament (draft restoration)
   const initialStep = existingTournament?.lastVisitedStep || 1;
   const initialVisitedSteps = new Set<number>();
-  for (let i = 1; i <= initialStep; i++) {
-    initialVisitedSteps.add(i);
+
+  // Bei bestehendem Turnier (das Daten hat) alle Schritte als besucht markieren
+  // damit der Benutzer frei navigieren kann
+  const hasExistingData = existingTournament && (
+    existingTournament.teams.length > 0 ||
+    existingTournament.matches.length > 0 ||
+    existingTournament.title
+  );
+
+  if (hasExistingData) {
+    // Alle 5 Schritte als besucht markieren
+    for (let i = 1; i <= 5; i++) {
+      initialVisitedSteps.add(i);
+    }
+  } else {
+    // Nur Schritte bis zum aktuellen als besucht markieren
+    for (let i = 1; i <= initialStep; i++) {
+      initialVisitedSteps.add(i);
+    }
   }
 
   const [step, setStep] = useState(initialStep);
@@ -136,6 +156,49 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   // Use provided onSave or fallback to default saveTournament
   const saveTournament = onSave || defaultSaveTournament;
+
+  // TOUR-EDIT-STRUCTURE: Check if tournament has results (blocks structure changes)
+  const hasResults = useMemo(() => {
+    if (!formData.matches || formData.matches.length === 0) {return false;}
+    return countMatchesWithResults(formData.matches) > 0;
+  }, [formData.matches]);
+
+  // TOUR-EDIT-STRUCTURE: Reset tournament (clears all results)
+  const handleResetTournament = useCallback(() => {
+    if (!formData.matches || formData.matches.length === 0) {return;}
+
+    const resultCount = countMatchesWithResults(formData.matches);
+
+    const confirmed = window.confirm(
+      `⚠️ TURNIER ZURÜCKSETZEN\n\n` +
+      `Es werden ${resultCount} Ergebnis${resultCount === 1 ? '' : 'se'} gelöscht!\n\n` +
+      `Diese Aktion kann nicht rückgängig gemacht werden.\n\n` +
+      `Möchtest du wirklich fortfahren?`
+    );
+
+    if (!confirmed) {return;}
+
+    // Clear all scores and reset match status
+    const resetMatches = formData.matches.map(match => ({
+      ...match,
+      scoreA: undefined,
+      scoreB: undefined,
+      matchStatus: 'scheduled' as const,
+      finishedAt: undefined,
+      correctionHistory: undefined,
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      matches: resetMatches,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    // Trigger save
+    setTimeout(() => {
+      console.log('[TournamentCreation] Tournament reset - results cleared');
+    }, 100);
+  }, [formData.matches]);
 
   const updateForm = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
     setFormData((prev) => {
@@ -403,13 +466,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       const schedule = generateFullSchedule(tournament);
 
       // Convert ScheduledMatch[] to Match[]
+      // WICHTIG: Verwende originalTeamA/B (technische IDs/Platzhalter) statt homeTeam/awayTeam (Display-Text)
+      // damit der playoffResolver die Platzhalter wie "group-a-1st" erkennen kann
       tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
         id: scheduledMatch.id,
         round: Math.floor(index / tournament.numberOfFields) + 1, // Calculate round from index and fields
         field: scheduledMatch.field,
         slot: scheduledMatch.slot,
-        teamA: scheduledMatch.homeTeam,
-        teamB: scheduledMatch.awayTeam,
+        teamA: scheduledMatch.originalTeamA, // Original ID/Placeholder für playoffResolver
+        teamB: scheduledMatch.originalTeamB, // Original ID/Placeholder für playoffResolver
         scoreA: scheduledMatch.scoreA,
         scoreB: scheduledMatch.scoreB,
         group: scheduledMatch.group,
@@ -579,6 +644,36 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   return (
     <div style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto' }}>
       {/* Header */}
+      {/* Quick Edit Banner */}
+      {quickEditMode && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          background: 'rgba(76, 175, 80, 0.1)',
+          border: '1px solid rgba(76, 175, 80, 0.3)',
+          borderRadius: theme.borderRadius.md,
+        }}>
+          <div>
+            <span style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+              Schnellbearbeitung
+            </span>
+            <span style={{ marginLeft: '8px', color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+              Änderungen vornehmen und speichern
+            </span>
+          </div>
+          <Button
+            variant="primary"
+            onClick={handlePublish}
+            style={{ background: '#4CAF50' }}
+          >
+            Speichern & Zurück
+          </Button>
+        </div>
+      )}
+
       <button
         onClick={handleBackToDashboard}
         style={{
@@ -595,7 +690,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         }}
       >
         <Icons.ChevronLeft />
-        Zurück zum Dashboard
+        {quickEditMode ? 'Abbrechen' : 'Zurück zum Dashboard'}
       </button>
 
       <h1
@@ -644,6 +739,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             onMovePlacementLogic={movePlacementLogic}
             onTogglePlacementLogic={togglePlacementLogic}
             onReorderPlacementLogic={reorderPlacementLogic}
+            hasResults={hasResults}
+            onResetTournament={handleResetTournament}
           />
         )}
 

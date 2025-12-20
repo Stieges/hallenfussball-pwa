@@ -28,10 +28,14 @@ export interface ScheduledMatch {
   time: string;
   /** Feld-Nummer */
   field: number;
-  /** Heim-Team Name */
+  /** Heim-Team Name (übersetzt für Anzeige) */
   homeTeam: string;
-  /** Auswärts-Team Name */
+  /** Auswärts-Team Name (übersetzt für Anzeige) */
   awayTeam: string;
+  /** Original Team-ID oder Platzhalter (z.B. "group-a-1st" für Playoffs) */
+  originalTeamA: string;
+  /** Original Team-ID oder Platzhalter (z.B. "group-b-2nd" für Playoffs) */
+  originalTeamB: string;
   /** Gruppe oder undefined für Finalspiele */
   group?: string;
   /** Phase: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final' */
@@ -443,6 +447,8 @@ function scheduleMatches(
         field: match.field,
         homeTeam: resolveTeamName(match.teamA, teamMap, locale),
         awayTeam: resolveTeamName(match.teamB, teamMap, locale),
+        originalTeamA: match.teamA, // Original ID/Placeholder für Persistenz
+        originalTeamB: match.teamB, // Original ID/Placeholder für Persistenz
         group: match.group,
         phase: match.isFinal ? determineFinalPhase(match) : 'groupStage',
         finalType: match.finalType,

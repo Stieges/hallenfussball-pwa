@@ -21,7 +21,7 @@ import {
   MatchStatus,
   MatchEvent,
 } from '../../components/match-cockpit/MatchCockpit';
-import { autoResolvePlayoffsIfReady } from '../../utils/playoffResolver';
+import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../utils/playoffResolver';
 
 interface ManagementTabProps {
   tournament: Tournament;
@@ -406,13 +406,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         return prev;
       }
 
-      // Aktualisiere tournament.matches
+      // Aktualisiere tournament.matches mit TL-RESULT-LOCK-01: matchStatus
       const updatedMatches = tournament.matches.map(m => {
         if (m.id === matchId) {
           return {
             ...m,
             scoreA: match.homeScore,
             scoreB: match.awayScore,
+            matchStatus: 'finished' as const,
+            finishedAt: new Date().toISOString(),
           };
         }
         return m;
@@ -431,18 +433,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
       if (playoffResolution?.wasResolved) {
         console.log('✅ Playoff-Paarungen automatisch aufgelöst:', playoffResolution);
-
-        // Update tournament with resolved playoff matches
         onTournamentUpdate(updatedTournament, false);
+      }
 
-        // Notify user
-        setTimeout(() => {
-          alert(
-            `🎉 Gruppenphase abgeschlossen!\n\n` +
-            `${playoffResolution.message}\n\n` +
-            `Die Playoff-Paarungen wurden automatisch basierend auf den Gruppenplatzierungen erstellt.`
-          );
-        }, 500);
+      // FIX: Also resolve bracket placeholders after playoff matches (e.g., semi → final)
+      const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
+      if (bracketResolution?.wasResolved) {
+        console.log('✅ Bracket-Paarungen automatisch aufgelöst:', bracketResolution);
+        onTournamentUpdate(updatedTournament, false);
       }
 
       const event: MatchEvent = {
@@ -589,12 +587,30 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       };
 
       // Aktualisiere auch sofort tournament.matches
+      // TL-RESULT-LOCK-01: Track correction history for finished matches
       const updatedMatches = tournament.matches.map(m => {
         if (m.id === matchId) {
+          const isFinished = m.matchStatus === 'finished';
+          const previousScoreA = m.scoreA ?? 0;
+          const previousScoreB = m.scoreB ?? 0;
+
+          // Build correction entry if match was finished
+          const correctionEntry = isFinished && (previousScoreA !== newHomeScore || previousScoreB !== newAwayScore) ? {
+            timestamp: new Date().toISOString(),
+            previousScoreA,
+            previousScoreB,
+            newScoreA: newHomeScore,
+            newScoreB: newAwayScore,
+          } : null;
+
           return {
             ...m,
             scoreA: newHomeScore,
             scoreB: newAwayScore,
+            // Add to correction history if this is a correction
+            ...(correctionEntry ? {
+              correctionHistory: [...(m.correctionHistory || []), correctionEntry],
+            } : {}),
           };
         }
         return m;

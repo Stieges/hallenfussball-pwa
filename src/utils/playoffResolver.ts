@@ -43,16 +43,26 @@ export const needsPlayoffResolution = (tournament: Tournament): boolean => {
 
   return playoffMatches.some(
     (match) =>
-      typeof match.teamA === 'string' &&
-      (match.teamA.includes('group-') ||
-       match.teamA.includes('-1st') ||
-       match.teamA.includes('-2nd') ||
-       match.teamA.includes('TBD') ||
-       typeof match.teamB === 'string' &&
-       (match.teamB.includes('group-') ||
-        match.teamB.includes('-1st') ||
-        match.teamB.includes('-2nd') ||
-        match.teamB.includes('TBD')))
+      (typeof match.teamA === 'string' && isPlaceholder(match.teamA)) ||
+      (typeof match.teamB === 'string' && isPlaceholder(match.teamB))
+  );
+};
+
+/**
+ * Check if a team reference is a placeholder (group-based or bracket-based)
+ */
+const isPlaceholder = (teamRef: string): boolean => {
+  return (
+    teamRef === 'TBD' ||
+    // Group-based placeholders
+    teamRef.includes('group-') ||
+    teamRef.includes('-1st') ||
+    teamRef.includes('-2nd') ||
+    teamRef.includes('-3rd') ||
+    teamRef.includes('bestSecond') ||
+    // Bracket-based placeholders (winner/loser of previous rounds)
+    teamRef.includes('-winner') ||
+    teamRef.includes('-loser')
   );
 };
 
@@ -108,7 +118,7 @@ export const resolvePlayoffPairings = (
 
     // Resolve teamA if it's a placeholder
     if (typeof match.teamA === 'string' && isPlaceholder(match.teamA)) {
-      const resolvedTeamA = resolvePlaceholder(match.teamA, groupStandings);
+      const resolvedTeamA = resolvePlaceholder(match.teamA, groupStandings, tournament);
       if (resolvedTeamA) {
         newTeamA = resolvedTeamA;
         updated = true;
@@ -117,7 +127,7 @@ export const resolvePlayoffPairings = (
 
     // Resolve teamB if it's a placeholder
     if (typeof match.teamB === 'string' && isPlaceholder(match.teamB)) {
-      const resolvedTeamB = resolvePlaceholder(match.teamB, groupStandings);
+      const resolvedTeamB = resolvePlaceholder(match.teamB, groupStandings, tournament);
       if (resolvedTeamB) {
         newTeamB = resolvedTeamB;
         updated = true;
@@ -176,30 +186,20 @@ const calculateAllGroupStandings = (tournament: Tournament) => {
 };
 
 /**
- * Check if a team reference is a placeholder
- */
-const isPlaceholder = (teamRef: string): boolean => {
-  return (
-    teamRef === 'TBD' ||
-    teamRef.includes('group-') ||
-    teamRef.includes('-1st') ||
-    teamRef.includes('-2nd') ||
-    teamRef.includes('-3rd') ||
-    teamRef.includes('bestSecond')
-  );
-};
-
-/**
  * Resolve a placeholder to an actual team ID
  *
  * Supported formats:
  * - "group-a-1st" -> First place from group A
  * - "group-b-2nd" -> Second place from group B
  * - "bestSecond" -> Best second place across all groups
+ * - "semi1-winner" -> Winner of semifinal 1
+ * - "semi1-loser" -> Loser of semifinal 1
+ * - "qf1-winner" -> Winner of quarterfinal 1
  */
 const resolvePlaceholder = (
   placeholder: string,
-  groupStandings: Record<string, { teamId: string; position: number }[]>
+  groupStandings: Record<string, { teamId: string; position: number }[]>,
+  tournament?: Tournament
 ): string | null => {
   // Handle "TBD" - cannot be resolved yet
   if (placeholder === 'TBD') {
@@ -209,6 +209,11 @@ const resolvePlaceholder = (
   // Handle "bestSecond" - find best second place
   if (placeholder === 'bestSecond') {
     return resolveBestSecondFromStandings(groupStandings);
+  }
+
+  // Handle bracket-based placeholders (winner/loser of previous rounds)
+  if (placeholder.includes('-winner') || placeholder.includes('-loser')) {
+    return resolveBracketPlaceholder(placeholder, tournament);
   }
 
   // Parse "group-X-Yth" format
@@ -245,6 +250,65 @@ const resolvePlaceholder = (
 };
 
 /**
+ * Resolve bracket-based placeholders like "semi1-winner", "qf2-loser"
+ */
+const resolveBracketPlaceholder = (
+  placeholder: string,
+  tournament?: Tournament
+): string | null => {
+  if (!tournament?.matches) {
+    return null;
+  }
+
+  // Parse placeholder: "semi1-winner" -> matchId="semi1", type="winner"
+  // Also handles: "qf1-winner", "r16-3-winner", etc.
+  const bracketMatch = placeholder.match(/^(.+)-(winner|loser)$/);
+  if (!bracketMatch) {
+    return null;
+  }
+
+  const matchId = bracketMatch[1]; // e.g., "semi1", "qf1", "r16-3"
+  const resultType = bracketMatch[2]; // "winner" or "loser"
+
+  // Find the referenced match
+  const referencedMatch = tournament.matches.find(
+    (m) => m.id === matchId && m.isFinal
+  );
+
+  if (!referencedMatch) {
+    return null;
+  }
+
+  // Check if the match is completed
+  if (referencedMatch.scoreA === undefined || referencedMatch.scoreB === undefined) {
+    return null; // Match not yet played
+  }
+
+  // Check if teams are already resolved (not placeholders)
+  if (isPlaceholder(referencedMatch.teamA) || isPlaceholder(referencedMatch.teamB)) {
+    return null; // Can't determine winner/loser if teams aren't resolved yet
+  }
+
+  // Determine winner/loser
+  const scoreA = referencedMatch.scoreA;
+  const scoreB = referencedMatch.scoreB;
+
+  if (scoreA === scoreB) {
+    // Draw - can't determine winner/loser in knockout
+    // In real tournaments, there would be penalties, but for now return null
+    return null;
+  }
+
+  const isTeamAWinner = scoreA > scoreB;
+
+  if (resultType === 'winner') {
+    return isTeamAWinner ? referencedMatch.teamA : referencedMatch.teamB;
+  } else {
+    return isTeamAWinner ? referencedMatch.teamB : referencedMatch.teamA;
+  }
+};
+
+/**
  * Find the best second place team across all groups
  */
 const resolveBestSecondFromStandings = (
@@ -265,7 +329,7 @@ const resolveBestSecondFromStandings = (
 
 /**
  * Hook to automatically check and resolve playoffs after match completion
- * Call this function after saving a group match result
+ * Call this function after saving any match result (group or playoff)
  *
  * @param tournament Current tournament state
  * @returns Resolution result if triggered, null if not needed
@@ -285,4 +349,76 @@ export const autoResolvePlayoffsIfReady = (
 
   // Trigger automatic resolution
   return resolvePlayoffPairings(tournament);
+};
+
+/**
+ * Resolves bracket placeholders after a playoff match is completed.
+ * This should be called after entering a result for a knockout match.
+ * It will resolve any dependent matches (e.g., after semifinal → resolve final).
+ *
+ * @param tournament Current tournament state
+ * @returns Resolution result
+ */
+export const resolveBracketAfterPlayoffMatch = (
+  tournament: Tournament
+): PlayoffResolutionResult | null => {
+  // Check if any playoff matches have unresolved bracket placeholders
+  if (!needsPlayoffResolution(tournament)) {
+    return null;
+  }
+
+  // Calculate group standings (needed for mixed resolution)
+  const groupStandings = calculateAllGroupStandings(tournament);
+
+  // Resolve playoff matches (will now also resolve bracket placeholders)
+  const updatedMatchIds: string[] = [];
+  let updatedCount = 0;
+
+  const updatedMatches = (tournament.matches || []).map((match) => {
+    if (!match.isFinal) {
+      return match;
+    }
+
+    let updated = false;
+    let newTeamA = match.teamA;
+    let newTeamB = match.teamB;
+
+    // Resolve teamA if it's a bracket placeholder (winner/loser)
+    if (typeof match.teamA === 'string' && isPlaceholder(match.teamA)) {
+      const resolvedTeamA = resolvePlaceholder(match.teamA, groupStandings, tournament);
+      if (resolvedTeamA) {
+        newTeamA = resolvedTeamA;
+        updated = true;
+      }
+    }
+
+    // Resolve teamB if it's a bracket placeholder
+    if (typeof match.teamB === 'string' && isPlaceholder(match.teamB)) {
+      const resolvedTeamB = resolvePlaceholder(match.teamB, groupStandings, tournament);
+      if (resolvedTeamB) {
+        newTeamB = resolvedTeamB;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      updatedMatchIds.push(match.id);
+      updatedCount++;
+      return { ...match, teamA: newTeamA, teamB: newTeamB };
+    }
+
+    return match;
+  });
+
+  // Update tournament with resolved matches
+  tournament.matches = updatedMatches;
+
+  return {
+    wasResolved: updatedCount > 0,
+    updatedMatches: updatedCount,
+    message: updatedCount > 0
+      ? `${updatedCount} Bracket-Spiele wurden aufgelöst`
+      : 'Keine Bracket-Spiele konnten aufgelöst werden',
+    updatedMatchIds,
+  };
 };
