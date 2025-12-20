@@ -294,7 +294,8 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
 
           {recommendation && recommendation.teams < (formData.numberOfTeams || 6) && (
             <p className={styles.warningText} role="alert">
-              <span aria-hidden="true">⚠️</span> Die Teamanzahl wurde reduziert, da {formData.numberOfTeams} Teams nicht in {availableHours}h passen.
+              <span aria-hidden="true">⚠️</span> {formData.numberOfTeams} Teams passen nicht in {availableHours}h.
+              Alternative: {recommendation.teams} Teams oder mehr Zeit/Felder einplanen.
             </p>
           )}
         </div>

@@ -60,10 +60,11 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
 
   // 3. Very long duration (> 6 hours) - warning
   else if (hours > 6 && hours <= 10) {
+    const recommendedFields = Math.ceil(fields * (hours / 6));
     issues.push({
       type: 'warning',
       message: `Lange Turnierdauer von ca. ${Math.round(hours)}h`,
-      suggestion: 'Plane ausreichend Pausen ein',
+      suggestion: `Mit ${recommendedFields} Feldern oder kürzerer Spieldauer (z.B. ${Math.max(5, gameDuration - 2)} Min) verkürzt sich die Dauer`,
     });
   }
 
@@ -71,9 +72,12 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (groupSystem === 'groupsAndFinals' && teams % groups !== 0) {
     const teamsPerGroup = Math.ceil(teams / groups);
     const lastGroupSize = teams - (teamsPerGroup * (groups - 1));
+    // Find nearest team count that divides evenly
+    const nearestEven = Math.round(teams / groups) * groups;
     issues.push({
       type: 'info',
       message: `Ungleiche Gruppengrößen: ${groups - 1}x ${teamsPerGroup} Teams, 1x ${lastGroupSize} Teams`,
+      suggestion: nearestEven !== teams ? `Für gleichmäßige Gruppen: ${nearestEven} Teams wählen` : undefined,
     });
   }
 
@@ -91,9 +95,9 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] || '0');
     if (patternTeams > 0 && patternTeams !== teams) {
       issues.push({
-        type: 'warning',
-        message: `DFB-Muster ist für ${patternTeams} Teams, aber ${teams} Teams ausgewählt`,
-        suggestion: 'Die Teamanzahl wird automatisch angepasst',
+        type: 'info',
+        message: `DFB-Muster passt zu ${patternTeams} Teams (aktuell: ${teams})`,
+        suggestion: `Teamanzahl auf ${patternTeams} ändern oder anderes DFB-Muster wählen`,
       });
     }
   }
@@ -103,14 +107,16 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     issues.push({
       type: 'info',
       message: `Sehr kurze Spieldauer von ${gameDuration} Minuten`,
+      suggestion: 'Empfohlen: mindestens 8-10 Minuten pro Spiel',
     });
   }
 
   // 8. No break between matches
   if (breakDuration === 0 && totalMatches > 10) {
     issues.push({
-      type: 'info',
+      type: 'warning',
       message: 'Keine Pause zwischen Spielen - Teams haben keine Erholungszeit',
+      suggestion: 'Empfohlen: 2-3 Minuten Pause für Teamwechsel',
     });
   }
 
@@ -120,6 +126,7 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     issues.push({
       type: 'warning',
       message: 'Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig',
+      suggestion: 'Standard-Punktesystem: 3 Punkte Sieg, 1 Punkt Unentschieden, 0 Punkte Niederlage',
     });
   }
 

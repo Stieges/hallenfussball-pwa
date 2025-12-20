@@ -154,12 +154,12 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
 
       {isCritical && (
         <p style={{ fontSize: '12px', color: theme.colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
-          Diese Turnierdauer ist unrealistisch für einen Tag. Erhöhe die Anzahl der Felder oder reduziere die Teamanzahl/Spieldauer.
+          Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {Math.ceil(fields * (totalMinutes / 360))} Felder oder Spieldauer auf {Math.max(5, groupGameDuration - 3)} Min reduzieren.
         </p>
       )}
       {isWarning && !isCritical && (
         <p style={{ fontSize: '12px', color: theme.colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
-          Tipp: Mit mehr Feldern oder kürzerer Spieldauer lässt sich die Turnierdauer verkürzen.
+          Tipp: Mit {fields + 1} Feldern ca. {Math.round((totalMinutes / (fields + 1)) / 60 * 10) / 10}h oder mit {Math.max(5, groupGameDuration - 2)} Min Spieldauer verkürzt sich die Dauer.
         </p>
       )}
     </div>
