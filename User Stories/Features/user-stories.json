@@ -1,39 +1,101 @@
 [
   {
-    "id": "TOUR-EDIT-01",
-    "title": "Turnier über Dashboard-Spielplan bearbeiten",
+    "id": "TOUR-EDIT-META",
+    "title": "Turnier-Metadaten bearbeiten (nicht-destruktiv)",
     "as_a": "Turnier-Owner oder -Organisator",
-    "i_want": "nach dem Anlegen eines Turniers über das Dashboard den Spielplan im Unterreiter 'Spielplan' in einer Editieransicht öffnen können",
-    "so_that": "ich das Turnier auch nach der Erstellung komfortabel anpassen und Änderungen konsistent speichern kann",
+    "i_want": "die Metadaten eines veröffentlichten Turniers jederzeit bearbeiten können",
+    "so_that": "ich Informationen wie Titel, Ort, Veranstalter und Anstoßzeiten anpassen kann, ohne Ergebnisse zu gefährden",
     "acceptance_criteria": [
-      "Given ich habe ein Turnier angelegt und bin eingeloggt, When ich auf dem Dashboard das Turnier anklicke und den Unterreiter 'Spielplan' öffne, Then wird mir dieselbe Konfigurations-/Editieransicht wie bei der Turniererstellung angezeigt.",
-      "Given ich befinde mich in dieser Editieransicht im Reiter 'Spielplan', When ich Änderungen an Spielplan, Teams oder Modus vornehme, Then steht mir ein primärer Button mit der Beschriftung 'Turnier speichern' zur Verfügung.",
-      "Given ich klicke auf 'Turnier speichern', When meine Eingaben valide sind, Then werden alle Änderungen (Teams, Paarungen, Modus etc.) persistiert und der aktuelle Spielplan des Turniers entsprechend aktualisiert.",
-      "Given ein Teamname geändert werden soll, das bereits an mindestens einem Spiel mit gespeichertem Ergebnis beteiligt ist, When ich den Teamnamen ändere und auf 'Turnier speichern' klicke, Then erhalte ich eine deutlich sichtbare, übersteuerbare Warnmeldung, die erklärt, dass sich diese Änderung auf bestehende Spiele/Ergebnisse auswirkt (z. B. Anzeige in Listen, PDF, Monitor).",
-      "Given die Warnmeldung für Teamänderungen mit bestehenden Ergebnissen angezeigt wird, When ich die Änderung explizit bestätige (z. B. durch 'Trotzdem speichern'), Then werden die Teamänderungen übernommen und alle referenzierten Spiele zeigen den aktualisierten Teamnamen an.",
-      "Given die Warnmeldung für Teamänderungen mit bestehenden Ergebnissen angezeigt wird, When ich die Warnung abbreche, Then werden keine Änderungen am betroffenen Team gespeichert und der vorherige Zustand bleibt erhalten.",
-      "Given für das Turnier bereits mindestens ein Spielergebnis vorliegt, When ich den Turniermodus (z. B. Anzahl Gruppen, Finalstruktur, Spielsystem) ändern möchte, Then erhalte ich vor dem Speichern eine deutliche Warnmeldung, dass diese Änderung dazu führt, dass bestehende Ergebnisse zurückgesetzt oder gelöscht werden.",
-      "Given die Warnmeldung für eine Modusänderung mit vorhandenen Ergebnissen angezeigt wird, When ich die Änderung explizit bestätige, Then wird der Modus geändert und alle bestehenden Ergebnisse, die mit der alten Struktur nicht mehr konsistent sind, werden gelöscht oder ungültig gemacht und im UI nicht mehr angezeigt.",
-      "Given die Warnmeldung für eine Modusänderung mit vorhandenen Ergebnissen angezeigt wird, When ich die Warnung abbreche, Then bleibt der bisherige Turniermodus unverändert und alle bisherigen Ergebnisse bleiben bestehen.",
-      "Given ich habe ein Turnier mit Ergebnissen und öffne den Reiter 'Spielplan' über das Dashboard, When ich keine strukturrelevante Änderung (Modus, Gruppenanzahl, Finalstruktur) vornehme, sondern nur nicht-kritische Felder bearbeite (z. B. Anstoßzeiten, Platz, optionale Metadaten), Then kann ich diese Änderungen ohne Löschwarnung speichern.",
-      "Given ich öffne ein Turnier im Reiter 'Spielplan' erneut zu einem späteren Zeitpunkt, When ich auf 'Turnier speichern' klicke ohne Änderungen vorgenommen zu haben, Then wird entweder kein persistenter Schreibvorgang ausgelöst oder dieser läuft ohne sichtbare Nebenwirkungen durch."
+      "Given ich habe ein veröffentlichtes Turnier, When ich die Einstellungen öffne, Then kann ich folgende Felder bearbeiten: Titel, Ort, Veranstalter, Datum, Startzeit, Kontaktinformationen.",
+      "Given ich ändere Metadaten eines Turniers mit Ergebnissen, When ich auf 'Speichern' klicke, Then werden die Änderungen ohne Warnung gespeichert, da sie keine Ergebnisse beeinflussen.",
+      "Given ich ändere die Anstoßzeiten einzelner Spiele, When ich speichere, Then werden nur die Zeiten aktualisiert, Ergebnisse und Struktur bleiben unverändert.",
+      "Given ich bearbeite Metadaten, When ich die Seite verlasse ohne zu speichern, Then werde ich gewarnt, dass ungespeicherte Änderungen verloren gehen.",
+      "Given ich öffne die Metadaten erneut, When keine Änderungen vorgenommen wurden und ich 'Speichern' klicke, Then wird kein Schreibvorgang ausgelöst (Dirty-Form-Handling)."
     ],
     "ux_suggestions": [
-      "In der Spielplan-Ansicht klar zwischen 'Konfiguration bearbeiten' und 'Ergebnisse erfassen' trennen (z. B. zwei Tabs oder klar getrennte Bereiche), damit für den Nutzer verständlich ist, wann er strukturelle Anpassungen macht.",
-      "Den Button-Text im Bearbeitungsmodus einheitlich als 'Turnier speichern' halten und ihn nur dann aktivieren, wenn tatsächlich Änderungen vorgenommen wurden (Dirty-Form-Handling).",
-      "Warnmeldungen bei riskanten Änderungen (Teamname mit Ergebnissen, Modusänderung mit Ergebnissen) als modale Dialoge implementieren, mit eindeutigen Button-Beschriftungen wie 'Trotzdem ändern' und 'Abbrechen', statt generischer 'OK/Cancel'-Buttons.",
-      "In der Warnung zur Modusänderung konkret anzeigen, wie viele Spiele/Ergebnisse betroffen sind (z. B. 'Durch diese Änderung werden 12 vorhandene Spielergebnisse zurückgesetzt.').",
-      "Einen Hinweisbereich am oberen Rand der Editieransicht einblenden, sobald Ergebnisse existieren, z. B.: 'Achtung: Änderungen am Turniermodus können vorhandene Ergebnisse zurücksetzen.'",
-      "Optional: Zwischenzustand 'Entwurf' vs. 'veröffentlicht' unterstützen, sodass größere Strukturänderungen am Turnier zunächst im Entwurf getestet und erst nach expliziter Bestätigung live übernommen werden.",
-      "Optional: Eine einfache Undo/Restore-Funktion für die letzte Turnierkonfiguration anbieten (z. B. 'Letzte gespeicherte Version wiederherstellen'), um versehentliche Änderungen rückgängig zu machen.",
-      "In der Spielplan-Übersicht visuell kennzeichnen, welche Bereiche direkt vom Modus abhängen (Gruppenanzahl, Finalstruktur), damit klar ist, warum eine Modusänderung kritisch ist.",
-      "Bei Hover oder Info-Icon neben dem Modus-Feld eine kurze Erklärung anzeigen, welche Auswirkungen eine Änderung auf bestehende Spiele und Ergebnisse hat.",
-      "Wenn der Nutzer wiederholt kritische Änderungen vornimmt, eine Option 'Warnung künftig nicht mehr anzeigen' nur sehr vorsichtig anbieten – idealerweise nicht bei Modusänderungen mit Ergebnissen, um Datenverlust zu vermeiden."
+      "Metadaten-Bearbeitung in einem eigenen 'Einstellungen'-Tab platzieren, getrennt vom Spielplan.",
+      "Speichern-Button nur aktivieren, wenn tatsächlich Änderungen vorgenommen wurden.",
+      "Erfolgreiche Speicherung mit dezenter Bestätigung anzeigen ('Gespeichert')."
     ],
     "status": "open",
     "priority": "high",
     "related_defects": [],
-    "created_date": "2025-12-15"
+    "created_date": "2025-12-20",
+    "supersedes": "TOUR-EDIT-01 (aufgeteilt)"
+  },
+  {
+    "id": "TOUR-EDIT-TEAMS",
+    "title": "Teams bearbeiten (mit Warnungen bei Ergebnissen)",
+    "as_a": "Turnier-Owner oder -Organisator",
+    "i_want": "Teams eines veröffentlichten Turniers umbenennen, hinzufügen oder entfernen können",
+    "so_that": "ich Teamdaten korrigieren kann, wobei ich bei vorhandenen Ergebnissen gewarnt werde",
+    "acceptance_criteria": [
+      "Given ein Turnier ohne Ergebnisse, When ich Teams hinzufüge, umbenenne oder entferne, Then werden die Änderungen ohne Warnung übernommen und der Spielplan wird neu generiert.",
+      "Given ein Team hat bereits gespielte Matches mit Ergebnissen, When ich den Teamnamen ändere, Then erhalte ich eine Warnmeldung: 'Dieses Team hat bereits {n} Spiele mit Ergebnissen. Der neue Name wird in allen Spielen, Listen und PDFs angezeigt.'",
+      "Given die Warnmeldung für Teamumbenennung angezeigt wird, When ich 'Trotzdem ändern' bestätige, Then wird der Name überall aktualisiert.",
+      "Given die Warnmeldung für Teamumbenennung angezeigt wird, When ich 'Abbrechen' klicke, Then bleibt der ursprüngliche Name erhalten.",
+      "Given ein Team hat bereits gespielte Matches mit Ergebnissen, When ich versuche das Team zu löschen, Then wird die Aktion blockiert mit Hinweis: 'Team kann nicht gelöscht werden, da bereits Ergebnisse vorliegen. Nutzen Sie Turnier zurücksetzen.'",
+      "Given ein Team hat noch keine Ergebnisse, When ich es lösche, Then wird das Team entfernt und der Spielplan entsprechend angepasst.",
+      "Given ich füge ein neues Team zu einem laufenden Turnier hinzu, When bereits Gruppenspiele stattgefunden haben, Then erhalte ich einen Hinweis: 'Das neue Team startet mit 0 Punkten. Der Spielplan muss manuell ergänzt werden.'"
+    ],
+    "ux_suggestions": [
+      "Teams mit Ergebnissen visuell kennzeichnen (z.B. kleines Badge '3 Spiele').",
+      "Warnmeldungen als modale Dialoge mit klaren Buttons: 'Trotzdem ändern' / 'Abbrechen'.",
+      "Bei Teamlöschung mit Ergebnissen Link zu 'Turnier zurücksetzen' anbieten.",
+      "Anzahl betroffener Spiele in der Warnung anzeigen."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-20",
+    "supersedes": "TOUR-EDIT-01 (aufgeteilt)"
+  },
+  {
+    "id": "TOUR-EDIT-STRUCTURE",
+    "title": "Turnierstruktur bearbeiten (nur ohne Ergebnisse oder mit Reset)",
+    "as_a": "Turnier-Owner oder -Organisator",
+    "i_want": "die Turnierstruktur (Modus, Gruppen, Finals) nur ändern können, wenn noch keine Ergebnisse vorliegen",
+    "so_that": "versehentlicher Datenverlust durch implizite Löschung von Ergebnissen verhindert wird",
+    "acceptance_criteria": [
+      "Given ein Turnier ohne Ergebnisse, When ich Strukturparameter ändere (Anzahl Gruppen, Spielsystem, Finalrunden-Konfiguration), Then werden die Änderungen übernommen und der Spielplan wird neu generiert.",
+      "Given ein Turnier mit mindestens einem Ergebnis, When ich die Struktureinstellungen öffne, Then sind alle strukturrelevanten Felder (Anzahl Gruppen, Spielsystem, Finalrunden-Preset) als read-only dargestellt.",
+      "Given strukturrelevante Felder sind read-only, Then wird ein Hinweistext angezeigt: 'Strukturänderungen sind nicht möglich, da bereits Ergebnisse vorliegen. Nutzen Sie Turnier zurücksetzen, um alle Ergebnisse zu löschen.'",
+      "Given ich möchte die Struktur trotz vorhandener Ergebnisse ändern, When ich auf 'Turnier zurücksetzen' klicke, Then erhalte ich einen Bestätigungs-Dialog: 'Alle {n} Ergebnisse werden unwiderruflich gelöscht. Fortfahren?'",
+      "Given ich bestätige 'Turnier zurücksetzen', Then werden alle Ergebnisse gelöscht, das Turnier geht in den Zustand 'bereit' (keine Ergebnisse) und die Strukturfelder werden editierbar.",
+      "Given ich breche 'Turnier zurücksetzen' ab, Then bleiben alle Ergebnisse erhalten und die Strukturfelder bleiben read-only.",
+      "Given ein Turnier wird zurückgesetzt, Then wird ein Audit-Log-Eintrag erstellt: 'Turnier zurückgesetzt von [Benutzer] am [Datum]. {n} Ergebnisse gelöscht.'"
+    ],
+    "ux_suggestions": [
+      "Read-only Strukturfelder visuell deutlich als gesperrt kennzeichnen (grauer Hintergrund, Schloss-Icon).",
+      "'Turnier zurücksetzen' als separaten, rot markierten Button im Einstellungsbereich platzieren.",
+      "Im Bestätigungsdialog die genaue Anzahl betroffener Ergebnisse anzeigen.",
+      "Nach dem Zurücksetzen eine Erfolgsmeldung anzeigen und automatisch zur Strukturbearbeitung navigieren.",
+      "Optional: Vor dem Zurücksetzen einen JSON/CSV-Export der aktuellen Ergebnisse anbieten."
+    ],
+    "status": "open",
+    "priority": "high",
+    "related_defects": [],
+    "created_date": "2025-12-20",
+    "supersedes": "TOUR-EDIT-01 (aufgeteilt)"
+  },
+  {
+    "id": "TOUR-EDIT-01",
+    "title": "[DEPRECATED] Turnier über Dashboard-Spielplan bearbeiten",
+    "as_a": "Turnier-Owner oder -Organisator",
+    "i_want": "nach dem Anlegen eines Turniers über das Dashboard den Spielplan im Unterreiter 'Spielplan' in einer Editieransicht öffnen können",
+    "so_that": "ich das Turnier auch nach der Erstellung komfortabel anpassen und Änderungen konsistent speichern kann",
+    "acceptance_criteria": [
+      "Diese Story wurde in drei separate Stories aufgeteilt: TOUR-EDIT-META, TOUR-EDIT-TEAMS, TOUR-EDIT-STRUCTURE.",
+      "Grund: Die ursprüngliche Story war zu komplex und vermischte sichere Änderungen (Metadaten) mit potenziell destruktiven Änderungen (Struktur).",
+      "Das implizite Löschen von Ergebnissen bei Strukturänderungen wurde durch einen expliziten 'Turnier zurücksetzen' Mechanismus ersetzt."
+    ],
+    "ux_suggestions": [],
+    "status": "deprecated",
+    "priority": "low",
+    "related_defects": [],
+    "created_date": "2025-12-15",
+    "deprecated_date": "2025-12-20",
+    "replaced_by": ["TOUR-EDIT-META", "TOUR-EDIT-TEAMS", "TOUR-EDIT-STRUCTURE"]
   },
   {
     "id": "TL-RESULT-LOCK-01",
