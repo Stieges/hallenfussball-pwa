@@ -139,7 +139,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
       {/* Organizer Mode Settings */}
       {mode === 'organizer' && (
         <div style={organizerSettingsStyle}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div className="referee-grid" style={{ display: 'grid', gap: '16px', marginBottom: '16px' }}>
             <NumberStepper
               label="Anzahl Schiedsrichter"
               value={refereeConfig?.numberOfReferees || 2}
@@ -220,6 +220,19 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           </p>
         </div>
       )}
+
+      {/* Responsive Styles */}
+      <style>{`
+        .referee-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 540px) {
+          .referee-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

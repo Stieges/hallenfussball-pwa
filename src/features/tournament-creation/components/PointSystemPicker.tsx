@@ -84,7 +84,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
       <h3 style={{ color: theme.colors.secondary, fontSize: '14px', margin: '0 0 16px 0' }}>
         Punktesystem
       </h3>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div className="point-system-presets" style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
         {PRESETS.map((preset) => {
           const isActive = !isCustom &&
             currentPoints.win === preset.win &&
@@ -128,7 +128,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
       {/* Custom Point System Inputs - always show when custom is active */}
       {isCustom && (
         <div style={customContainerStyle}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+          <div className="point-system-custom" style={{ display: 'grid', gap: '16px' }}>
             <div>
               <label style={{
                 display: 'block',
@@ -186,6 +186,33 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
           </p>
         </div>
       )}
+
+      {/* Responsive Styles */}
+      <style>{`
+        .point-system-presets {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        .point-system-custom {
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 600px) {
+          .point-system-presets {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+
+          .point-system-custom {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .point-system-custom {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

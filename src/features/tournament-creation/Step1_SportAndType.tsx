@@ -103,7 +103,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
       {/* Sportart wählen */}
       <div style={{ marginBottom: '32px' }}>
         <label style={labelStyle}>Sportart</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} role="radiogroup" aria-label="Sportart auswählen">
+        <div className="sport-type-grid" style={{ display: 'grid', gap: '12px' }} role="radiogroup" aria-label="Sportart auswählen">
           <SelectionButton
             isSelected={formData.sport === 'football'}
             onClick={() => onUpdate('sport', 'football')}
@@ -124,7 +124,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
       {/* Turniertyp wählen */}
       <div>
         <label style={labelStyle}>Turniertyp</label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} role="radiogroup" aria-label="Turniertyp auswählen">
+        <div className="sport-type-grid" style={{ display: 'grid', gap: '12px' }} role="radiogroup" aria-label="Turniertyp auswählen">
           <SelectionButton
             isSelected={formData.tournamentType === 'classic'}
             onClick={() => onTournamentTypeChange('classic')}
@@ -174,6 +174,19 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
           </div>
         </div>
       )}
+
+      {/* Responsive Styles */}
+      <style>{`
+        .sport-type-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 480px) {
+          .sport-type-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </Card>
   );
 };

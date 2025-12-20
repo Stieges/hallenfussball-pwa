@@ -52,7 +52,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         onChange={(contactInfo) => onUpdate('contactInfo', contactInfo)}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+      <div className="date-time-grid" style={{ display: 'grid', gap: '16px', marginTop: '16px' }}>
         <Input
           label="Startdatum"
           type="date"
@@ -77,6 +77,19 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           required
         />
       </div>
+
+      {/* Responsive Styles */}
+      <style>{`
+        .date-time-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        @media (max-width: 480px) {
+          .date-time-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </Card>
   );
 };
