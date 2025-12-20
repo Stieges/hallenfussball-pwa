@@ -93,6 +93,12 @@ export const Icons = {
     </svg>
   ),
 
+  Upload: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M10 13V3m0 0L6 7m4-4l4 4M3 17h14" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
   Copy: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <rect x="7" y="7" width="10" height="10" rx="2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

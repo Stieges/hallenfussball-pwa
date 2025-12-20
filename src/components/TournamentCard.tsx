@@ -164,6 +164,16 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
   const badgeColors = getBadgeColor();
 
+  const externalBadgeStyle: CSSProperties = {
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    borderRadius: theme.borderRadius.sm,
+    fontSize: '10px',
+    fontWeight: theme.fontWeights.medium,
+    background: theme.colors.status.externalBg,
+    color: theme.colors.status.external,
+    marginLeft: theme.spacing.sm,
+  };
+
   return (
     <Card
       style={cardStyle}
@@ -182,7 +192,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       <article
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
-        aria-label={`Turnier: ${tournament.title}, ${categoryLabel || 'Entwurf'}`}
+        aria-label={`Turnier: ${tournament.title}, ${categoryLabel || 'Entwurf'}${tournament.externalSource ? `, ${tournament.externalSource}` : ''}`}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -192,14 +202,21 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       >
         <div style={headerStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>
-          {(categoryLabel || tournament.status === 'draft') && (
-            <span
-              style={{ ...badgeStyle, ...badgeColors }}
-              aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
-            >
-              {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {tournament.isExternal && tournament.externalSource && (
+              <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
+                {tournament.externalSource}
+              </span>
+            )}
+            {(categoryLabel || tournament.status === 'draft') && (
+              <span
+                style={{ ...badgeStyle, ...badgeColors }}
+                aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
+              >
+                {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
+              </span>
+            )}
+          </div>
         </div>
 
         <dl style={infoGridStyle}>

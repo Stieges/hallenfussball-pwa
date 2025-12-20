@@ -246,6 +246,8 @@ hallenfussball-pwa/
 │   │   │   ├── Input.tsx
 │   │   │   ├── Select.tsx
 │   │   │   └── Icons.tsx
+│   │   ├── dialogs/
+│   │   │   └── ImportDialog.tsx         # Turnier-Import Dialog (JSON/CSV)
 │   │   ├── PlayoffParallelConfigurator.tsx  # Playoff Config UI
 │   │   └── ScheduleDisplay.tsx          # Schedule Visualization
 │   │
@@ -269,6 +271,7 @@ hallenfussball-pwa/
 │   │   ├── fairScheduler.ts             # ⭐ CORE: Fair Scheduling Algorithm
 │   │   ├── playoffScheduler.ts          # Playoff Match Generation
 │   │   ├── tournamentScheduler.ts       # Integration Layer
+│   │   ├── tournamentImporter.ts        # JSON/CSV Import Parser & Validator
 │   │   ├── matchGenerator.ts            # Legacy (deprecated)
 │   │   ├── groupHelpers.ts              # Group Utilities
 │   │   ├── calculations.ts              # Duration Calculations
@@ -308,8 +311,10 @@ hallenfussball-pwa/
 |-------|-------------|-----------|
 | `src/utils/fairScheduler.ts` | Kern-Algorithmus für faire Spielplanung | ⭐⭐⭐ |
 | `src/utils/playoffScheduler.ts` | Playoff-Logik mit Parallelisierung | ⭐⭐⭐ |
+| `src/utils/tournamentImporter.ts` | JSON/CSV Import mit Validierung | ⭐⭐ |
 | `src/lib/scheduleGenerator.ts` | Integration & Zeit-Berechnung | ⭐⭐⭐ |
 | `src/types/tournament.ts` | Alle TypeScript-Typen | ⭐⭐ |
+| `src/components/dialogs/ImportDialog.tsx` | Import Dialog UI | ⭐⭐ |
 | `src/components/PlayoffParallelConfigurator.tsx` | Playoff-Config UI | ⭐⭐ |
 | `docs/FAIR_SCHEDULER.md` | Ausführliche Dokumentation | ⭐⭐ |
 
@@ -373,6 +378,7 @@ npm run lint         # ESLint ausführen
 - ✅ **Vollständig Responsive Design** (Mobile, Tablet, Desktop)
 - ✅ **NumberStepper Komponente** (Touch-freundliche Zahleneingabe)
 - ✅ Theme System
+- ✅ **Turnier-Import (JSON/CSV)** - Externe Turniere importieren mit visueller Kennzeichnung (US-005)
 
 #### Tournament Management System (NEU v2.2)
 - ✅ Live-Turnierverwaltung mit Tab-Navigation
@@ -725,5 +731,28 @@ Daniel Stiegler
 
 ---
 
-**Letzte Aktualisierung:** 2025-11-29
-**Version:** 2.2.0 (Tournament Management + Erweiterte Pause/Resume-Logik + Event-Liste Verbesserungen)
+**Letzte Aktualisierung:** 2025-12-20
+**Version:** 2.3.0 (Turnier-Import JSON/CSV mit visueller Kennzeichnung)
+
+---
+
+## 📝 Changelog
+
+### v2.3.0 (2025-12-20)
+**US-005: Import und visuelle Differenzierung externer Turniere**
+- ✅ JSON-Import für komplette Turniere (inkl. Teams, Matches, Ergebnisse)
+- ✅ CSV-Import für Team-Listen (Spielplan wird automatisch generiert)
+- ✅ Drag & Drop Datei-Upload im ImportDialog
+- ✅ Validierung mit Warnungen (nicht-blockierend)
+- ✅ Visuelle Kennzeichnung: "Import (komplett)" vs. "Import (nur Teams)"
+- ✅ Dezentes Badge in TournamentCard für externe Turniere
+- ✅ Differenziertes Routing nach Import:
+  - Komplette Imports → Dashboard
+  - Nur-Teams-Imports → Wizard Step 2 zur Spielplan-Generierung
+- ✅ Vorlagen-Download (JSON/CSV Templates)
+
+### v2.2.0 (2025-11-29)
+- Tournament Management System mit Live-Verwaltung
+- Match Cockpit für Live-Spielsteuerung
+- Event-System mit Historie
+- Schiedsrichter-Zuweisung

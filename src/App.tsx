@@ -72,6 +72,32 @@ function App() {
     }
   };
 
+  const handleImportTournament = async (tournament: Tournament) => {
+    try {
+      const hasMatches = tournament.matches && tournament.matches.length > 0;
+
+      if (hasMatches) {
+        // Complete import → Just save and stay in dashboard
+        await saveTournament(tournament);
+        console.log(`[App] Tournament "${tournament.title}" imported (complete) - staying in dashboard`);
+        // Dashboard will auto-refresh via useTournaments hook
+      } else {
+        // Partial import → Open wizard at Step 2 to generate schedule
+        const tournamentWithStep = {
+          ...tournament,
+          lastVisitedStep: 2, // Go to Mode/System step
+        };
+        await saveTournament(tournamentWithStep);
+        console.log(`[App] Tournament "${tournament.title}" imported (teams only) - opening wizard`);
+        setSelectedTournament(tournamentWithStep);
+        setScreen('create');
+      }
+    } catch (error) {
+      console.error('[App] Failed to import tournament:', error);
+      alert('Fehler beim Importieren des Turniers. Bitte versuche es erneut.');
+    }
+  };
+
   return (
     <div
       style={{
@@ -87,6 +113,7 @@ function App() {
           onCreateNew={() => setScreen('create')}
           onTournamentClick={handleTournamentClick}
           onDeleteTournament={handleDeleteTournament}
+          onImportTournament={handleImportTournament}
         />
       )}
 

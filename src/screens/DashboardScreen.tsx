@@ -8,18 +8,21 @@
  * 4. Gespeicherte Turniere (draft status)
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { Tournament } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
 import { Button } from '../components/ui';
+import { Icons } from '../components/ui/Icons';
 import { theme } from '../styles/theme';
 import { categorizeTournaments, CategorizedTournaments } from '../utils/tournamentCategories';
+import { ImportDialog } from '../components/dialogs/ImportDialog';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
   onCreateNew: () => void;
   onTournamentClick: (tournament: Tournament) => void;
   onDeleteTournament: (id: string, title: string) => void;
+  onImportTournament: (tournament: Tournament) => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -27,7 +30,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onCreateNew,
   onTournamentClick,
   onDeleteTournament,
+  onImportTournament,
 }) => {
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const categorized: CategorizedTournaments = categorizeTournaments(tournaments);
 
   const containerStyle: CSSProperties = {
@@ -136,17 +141,31 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Header */}
       <div style={headerStyle}>
         <h1 style={titleStyle}>HALLENFUSSBALL PWA</h1>
-        <Button
-          variant="primary"
-          onClick={onCreateNew}
-          style={{
-            padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-            fontSize: theme.fontSizes.md,
-            fontWeight: theme.fontWeights.bold,
-          }}
-        >
-          + Neues Turnier
-        </Button>
+        <div style={{ display: 'flex', gap: theme.spacing.md }}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowImportDialog(true)}
+            icon={<Icons.Upload />}
+            style={{
+              padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+              fontSize: theme.fontSizes.md,
+              fontWeight: theme.fontWeights.medium,
+            }}
+          >
+            Importieren
+          </Button>
+          <Button
+            variant="primary"
+            onClick={onCreateNew}
+            style={{
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.fontSizes.md,
+              fontWeight: theme.fontWeights.bold,
+            }}
+          >
+            + Neues Turnier
+          </Button>
+        </div>
       </div>
 
       {/* Check if user has any tournaments at all */}
@@ -214,6 +233,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           )}
         </>
       )}
+
+      {/* Import Dialog */}
+      <ImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImportComplete={(tournament) => {
+          onImportTournament(tournament);
+          setShowImportDialog(false);
+        }}
+      />
     </div>
   );
 };

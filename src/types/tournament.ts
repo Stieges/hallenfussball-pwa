@@ -144,6 +144,10 @@ export interface Tournament {
   id: string;
   status: TournamentStatus; // 'draft' oder 'published'
 
+  // External Import Marker
+  isExternal?: boolean;      // true wenn aus JSON/CSV importiert
+  externalSource?: string;   // z.B. "JSON Import", "CSV Import"
+
   // Step 1: Sport & Tournament Type
   sport: Sport;
   tournamentType: TournamentType;
@@ -247,4 +251,29 @@ export interface ContactInfo {
   email?: string;       // E-Mail
   phone?: string;       // Telefon
   website?: string;     // Website
+}
+
+/**
+ * Import Types for External Tournament Data (US-005)
+ */
+export type ImportFormat = 'json' | 'csv';
+
+export interface ImportValidationWarning {
+  code: string;
+  field?: string;
+  message: string;
+  severity: 'info' | 'warning';
+}
+
+export interface ImportValidationError {
+  code: string;
+  field: string;
+  message: string;
+}
+
+export interface ImportValidationResult {
+  isValid: boolean;
+  errors: ImportValidationError[];
+  warnings: ImportValidationWarning[];
+  tournament?: Tournament;
 }

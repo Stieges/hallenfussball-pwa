@@ -27,6 +27,8 @@ export const theme = {
       finishedBg: 'rgba(158,158,158,0.15)',
       draft: '#FF9100',
       draftBg: 'rgba(255,145,0,0.15)',
+      external: '#9575CD',
+      externalBg: 'rgba(149,117,205,0.15)',
     },
     // Correction/Warning banner (dark theme compatible)
     correction: {
