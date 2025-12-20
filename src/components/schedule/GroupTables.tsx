@@ -126,7 +126,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   };
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
-  const enabledCriteria = tournament?.placementLogic?.filter(c => c.enabled && c.id !== 'directComparison') || [];
+  const enabledCriteria = tournament?.placementLogic.filter(c => c.enabled && c.id !== 'directComparison') || [];
   const highlightPoints = enabledCriteria.some(c => c.id === 'points');
   const highlightWins = enabledCriteria.some(c => c.id === 'wins');
   const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');

@@ -35,6 +35,7 @@ export const Input: React.FC<InputProps> = ({
     flexDirection: 'column',
     gap: theme.spacing.sm,
     width: '100%',
+    ...style,
   };
 
   const labelStyles: CSSProperties = {
@@ -54,7 +55,6 @@ export const Input: React.FC<InputProps> = ({
     outline: 'none',
     transition: 'border-color 0.2s ease',
     width: '100%',
-    ...style,
   };
 
   return (

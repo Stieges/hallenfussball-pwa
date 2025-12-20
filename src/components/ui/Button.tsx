@@ -11,6 +11,10 @@ interface ButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   style?: CSSProperties;
+  /** Accessible label for screen readers (required for icon-only buttons) */
+  'aria-label'?: string;
+  /** Button type attribute */
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -23,6 +27,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled = false,
   fullWidth = false,
   style = {},
+  'aria-label': ariaLabel,
+  type = 'button',
 }) => {
   const baseStyles: CSSProperties = {
     display: 'flex',
@@ -83,13 +89,20 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
+      type={type}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       style={combinedStyles}
+      aria-label={ariaLabel}
+      aria-disabled={disabled}
     >
-      {icon && iconPosition === 'left' && <span style={{ display: 'flex' }}>{icon}</span>}
+      {icon && iconPosition === 'left' && (
+        <span style={{ display: 'flex' }} aria-hidden="true">{icon}</span>
+      )}
       {children}
-      {icon && iconPosition === 'right' && <span style={{ display: 'flex' }}>{icon}</span>}
+      {icon && iconPosition === 'right' && (
+        <span style={{ display: 'flex' }} aria-hidden="true">{icon}</span>
+      )}
     </button>
   );
 };

@@ -45,7 +45,7 @@ export const Dialog = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen) {return null;}
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (closeOnBackdropClick && e.target === e.currentTarget) {

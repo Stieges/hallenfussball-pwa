@@ -34,7 +34,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
     if (currentMatch.status === 'RUNNING') {
       timerRef.current = window.setInterval(() => {
         setCurrentMatch((prev) => {
-          if (prev.status !== 'RUNNING') return prev;
+          if (prev.status !== 'RUNNING') {return prev;}
 
           const newElapsed = Math.min(prev.elapsedSeconds + 0.5, prev.durationSeconds);
 
@@ -55,7 +55,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
       }, 500);
 
       return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) {clearInterval(timerRef.current);}
       };
     }
   }, [currentMatch.status]);
@@ -66,7 +66,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleStart = (matchId: string) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId || prev.status === 'RUNNING') return prev;
+      if (prev.id !== matchId || prev.status === 'RUNNING') {return prev;}
       const newEvent = createEvent(prev, 'STATUS_CHANGE', { toStatus: 'RUNNING' });
       return {
         ...prev,
@@ -78,7 +78,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handlePause = (matchId: string) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId || prev.status !== 'RUNNING') return prev;
+      if (prev.id !== matchId || prev.status !== 'RUNNING') {return prev;}
       const newEvent = createEvent(prev, 'STATUS_CHANGE', { toStatus: 'PAUSED' });
       return {
         ...prev,
@@ -90,7 +90,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleResume = (matchId: string) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId || prev.status !== 'PAUSED') return prev;
+      if (prev.id !== matchId || prev.status !== 'PAUSED') {return prev;}
       const newEvent = createEvent(prev, 'STATUS_CHANGE', { toStatus: 'RUNNING' });
       return {
         ...prev,
@@ -102,7 +102,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleFinish = (matchId: string) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId || prev.status === 'FINISHED') return prev;
+      if (prev.id !== matchId || prev.status === 'FINISHED') {return prev;}
       const newEvent = createEvent(prev, 'STATUS_CHANGE', { toStatus: 'FINISHED' });
       return {
         ...prev,
@@ -115,7 +115,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleGoal = (matchId: string, teamId: string, delta: 1 | -1) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId) return prev;
+      if (prev.id !== matchId) {return prev;}
 
       const isHome = teamId === prev.homeTeam.id;
       const currentScore = isHome ? prev.homeScore : prev.awayScore;
@@ -140,7 +140,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleUndoLastEvent = (matchId: string) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId || prev.events.length === 0) return prev;
+      if (prev.id !== matchId || prev.events.length === 0) {return prev;}
 
       // Events ohne letztes Event
       const remainingEvents = prev.events.slice(0, -1);
@@ -172,7 +172,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleManualEditResult = (matchId: string, newHomeScore: number, newAwayScore: number) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId) return prev;
+      if (prev.id !== matchId) {return prev;}
 
       const newEvent = createEvent(prev, 'RESULT_EDIT', {
         newHomeScore,
@@ -210,7 +210,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
   };
 
   const handleReopenLastMatch = () => {
-    if (!lastFinishedMatch) return;
+    if (!lastFinishedMatch) {return;}
 
     // Letztes Spiel wieder laden
     setCurrentMatch({
@@ -236,7 +236,7 @@ export const MatchCockpitDemoScreen: React.FC = () => {
 
   const handleAdjustTime = (matchId: string, newElapsedSeconds: number) => {
     setCurrentMatch((prev) => {
-      if (prev.id !== matchId) return prev;
+      if (prev.id !== matchId) {return prev;}
       return {
         ...prev,
         elapsedSeconds: newElapsedSeconds,

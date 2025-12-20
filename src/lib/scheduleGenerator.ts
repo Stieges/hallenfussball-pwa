@@ -8,11 +8,12 @@
  * - Druckfreundliches Format (A4)
  */
 
-import { Tournament, Match, Team, Standing, RefereeConfig, LocationDetails } from '../types/tournament';
+import { Tournament, Match, Team, Standing, RefereeConfig, LocationDetails, ContactInfo } from '../types/tournament';
 import { generateGroupPhaseSchedule } from '../utils/fairScheduler';
 import { generatePlayoffSchedule, generatePlayoffDefinitions, generatePlayoffDefinitionsLegacy } from '../utils/playoffScheduler';
 import { getUniqueGroups } from '../utils/groupHelpers';
 import { assignReferees } from './refereeAssigner';
+import { GroupSizeInfo } from './playoffGenerator';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -77,6 +78,7 @@ export interface GeneratedSchedule {
     location: LocationDetails;
     ageClass: string;
     organizer?: string; // Veranstalter-Name (optional)
+    contactInfo?: ContactInfo; // Kontaktinformationen (optional)
   };
 
   /** Alle Spiele chronologisch sortiert */
@@ -153,6 +155,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
     }
 
     // Fair Scheduler für Gruppenphase
+    // Mit optionaler DFB-Schlüsselzahlen-Unterstützung
     groupStageMatches = generateGroupPhaseSchedule({
       groups: groupsMap,
       numberOfFields: tournament.numberOfFields,
@@ -160,6 +163,7 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration || 0,
       minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
       startTime,
+      dfbPatternCode: tournament.useDFBKeys ? tournament.dfbKeyPattern : undefined,
     });
   }
 
@@ -179,9 +183,17 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
   if (shouldGeneratePlayoffs) {
     const numberOfGroups = tournament.numberOfGroups || 2;
 
+    // Calculate group sizes for dynamic placement matches
+    const groupSizes: GroupSizeInfo = {};
+    const groupLabels = getUniqueGroups(tournament.teams);
+    for (const label of groupLabels) {
+      const teamsInGroup = tournament.teams.filter(t => t.group === label);
+      groupSizes[label] = teamsInGroup.length;
+    }
+
     // Use new FinalsConfig if available, otherwise migrate from legacy
     const playoffDefinitions = tournament.finalsConfig
-      ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig)
+      ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig, groupSizes)
       : generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals);
 
     console.log('[ScheduleGenerator] Generated playoff definitions:', playoffDefinitions);
@@ -351,7 +363,8 @@ export function generateFullSchedule(tournament: Tournament, locale: 'de' | 'en'
       date: tournament.date,
       location: tournament.location,
       ageClass: tournament.ageClass,
-      organizer: tournament.organizer, // FIX DEF-001: Veranstalter aus Metadaten
+      organizer: tournament.organizer,
+      contactInfo: tournament.contactInfo,
     },
     allMatches: allMatches,
     phases,
@@ -397,7 +410,7 @@ function scheduleMatches(
   const sortedMatches = [...matches].sort((a, b) => {
     const slotA = a.slot ?? a.round - 1;
     const slotB = b.slot ?? b.round - 1;
-    if (slotA !== slotB) return slotA - slotB;
+    if (slotA !== slotB) {return slotA - slotB;}
     return a.field - b.field;
   });
 
@@ -479,9 +492,9 @@ function determineFinalPhase(match: Match): 'roundOf16' | 'quarterfinal' | 'semi
 
   // Heuristik: Basierend auf Match-ID oder Round
   const matchId = match.id.toLowerCase();
-  if (matchId.includes('r16') || matchId.startsWith('r16-')) return 'roundOf16';
-  if (matchId.includes('qf')) return 'quarterfinal';
-  if (matchId.includes('sf') || matchId.includes('semi')) return 'semifinal';
+  if (matchId.includes('r16') || matchId.startsWith('r16-')) {return 'roundOf16';}
+  if (matchId.includes('qf')) {return 'quarterfinal';}
+  if (matchId.includes('sf') || matchId.includes('semi')) {return 'semifinal';}
 
   return 'final';
 }
@@ -629,7 +642,7 @@ function translatePlaceholder(placeholder: string, locale: 'de' | 'en'): string 
     },
   };
 
-  const translated = translations[locale]?.[placeholder.toLowerCase()];
+  const translated = translations[locale][placeholder.toLowerCase()];
   return translated || placeholder;
 }
 

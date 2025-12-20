@@ -97,7 +97,7 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
   // Track referee assignments
   const refereeWorkload: number[] = new Array(numberOfReferees).fill(0);
   const refereeLastSlots: number[] = new Array(numberOfReferees).fill(-100); // Last time slot each referee worked
-  const assignments: Map<string, number> = new Map();
+  const assignments = new Map<string, number>();
 
   // Assign referees
   for (const match of matchesWithMeta) {
@@ -186,13 +186,13 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
   };
 
   // Create team name -> team number mapping
-  const teamToNumber: Map<string, number> = new Map();
+  const teamToNumber = new Map<string, number>();
   teams.forEach((team, index) => {
     teamToNumber.set(team.name, index + 1);
   });
 
   // Group matches by field
-  const matchesByField: Map<number, T[]> = new Map();
+  const matchesByField = new Map<number, T[]>();
   matches.forEach(match => {
     if (!matchesByField.has(match.field)) {
       matchesByField.set(match.field, []);
@@ -255,7 +255,7 @@ export function getRefereeDisplayName(
   }
 
   // Check for custom name (organizer mode)
-  if (config?.refereeNames && config.refereeNames[refereeNumber]) {
+  if (config?.refereeNames?.[refereeNumber]) {
     return config.refereeNames[refereeNumber];
   }
 

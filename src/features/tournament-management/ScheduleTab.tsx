@@ -50,7 +50,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const isMatchFinished = (matchId: string): boolean => {
     // 1. Check if scores exist
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match || match.scoreA === undefined || match.scoreB === undefined) {
+    if (match?.scoreA === undefined || match.scoreB === undefined) {
       return false;
     }
 
@@ -78,7 +78,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Correction handlers
   const handleStartCorrection = (matchId: string) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match || match.scoreA === undefined || match.scoreB === undefined) return;
+    if (match?.scoreA === undefined || match.scoreB === undefined) {return;}
 
     setCorrectionState({
       matchId,
@@ -94,7 +94,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   };
 
   const handleCancelCorrection = () => {
-    if (!correctionState) return;
+    if (!correctionState) {return;}
 
     // Revert to original scores
     const updatedMatches = tournament.matches.map(m =>
@@ -117,7 +117,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   };
 
   const handleConfirmSave = () => {
-    if (!pendingMatch) return;
+    if (!pendingMatch) {return;}
 
     // Update tournament
     const updatedMatches = tournament.matches.map(m =>
@@ -275,7 +275,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         {/* Correction Banner */}
         {correctionState && (() => {
           const match = tournament.matches.find(m => m.id === correctionState.matchId);
-          if (!match) return null;
+          if (!match) {return null;}
 
           return (
             <div style={{ padding: theme.spacing.lg }}>
@@ -324,7 +324,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     {/* Correction Start Dialog */}
     {correctionState && (() => {
       const match = tournament.matches.find(m => m.id === correctionState.matchId);
-      if (!match) return null;
+      if (!match) {return null;}
 
       return (
         <ConfirmDialog

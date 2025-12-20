@@ -144,7 +144,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     // Berechne Standings pro Gruppe
     const groupStandingsMap = new Map<string, Standing[]>();
     groups.forEach(group => {
-      if (!group) return;
+      if (!group) {return;}
       const standings = calculateStandings(
         tournament.teams.filter(t => t.group === group),
         tournament.matches,
@@ -163,9 +163,9 @@ export const RankingTab: React.FC<RankingTabProps> = ({
 
       // Sammle alle Teams auf dieser Position aus allen Gruppen
       groups.forEach(group => {
-        if (!group) return;
+        if (!group) {return;}
         const standings = groupStandingsMap.get(group);
-        if (standings && standings[position]) {
+        if (standings?.[position]) {
           teamsAtPosition.push(standings[position]);
         }
       });

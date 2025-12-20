@@ -10,6 +10,9 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
   timeSlot: '10:00',
   location: { name: 'Test Location' },
   ageClass: 'U15',
+  sport: 'football',
+  tournamentType: 'classic',
+  mode: 'classic',
   numberOfTeams: 4,
   numberOfFields: 1,
   groupSystem: 'roundRobin',
@@ -18,11 +21,16 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
   matches: [],
   pointSystem: { win: 3, draw: 1, loss: 0 },
   placementLogic: [
-    { id: 'points', label: 'Punkte', enabled: true, order: 1 },
-    { id: 'goalDifference', label: 'Tordifferenz', enabled: true, order: 2 },
-    { id: 'goalsFor', label: 'Tore', enabled: true, order: 3 },
-    { id: 'directComparison', label: 'Direkter Vergleich', enabled: true, order: 4 },
+    { id: 'points', label: 'Punkte', enabled: true },
+    { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
+    { id: 'goalsFor', label: 'Tore', enabled: true },
+    { id: 'directComparison', label: 'Direkter Vergleich', enabled: true },
   ],
+  finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+  isKidsTournament: false,
+  hideScoresForPublic: false,
+  hideRankingsForPublic: false,
+  resultMode: 'goals',
   status: 'published',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -222,12 +230,7 @@ describe('calculateStandings', () => {
     });
 
     it('sorts by goals scored when goal difference is equal', () => {
-      const teams = createTeams(2);
-      const matches: Match[] = [
-        { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 2, scoreB: 2 },
-      ];
-      // Additional context needed - both have same GD
-      // Let's create a scenario with multiple matches
+      // Create a scenario with equal goal difference but different goals scored
       const teams3 = createTeams(3);
       const matches3: Match[] = [
         { id: 'm1', round: 1, field: 1, teamA: 'Team 1', teamB: 'Team 2', scoreA: 3, scoreB: 1 }, // T1: +2

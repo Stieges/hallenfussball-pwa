@@ -3,6 +3,7 @@ import { Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
+import { ContactForm } from '../../components/ContactForm';
 
 interface Step3Props {
   formData: Partial<Tournament>;
@@ -32,19 +33,23 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         style={{ marginTop: '16px' }}
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
-        <Select
-          label="Altersklasse"
-          value={formData.ageClass || DEFAULT_VALUES.ageClass}
-          onChange={(v) => onUpdate('ageClass', v)}
-          options={getAgeClassOptions(formData.sport || 'football')}
-        />
-      </div>
+      <Select
+        label="Altersklasse"
+        value={formData.ageClass || DEFAULT_VALUES.ageClass}
+        onChange={(v) => onUpdate('ageClass', v)}
+        options={getAgeClassOptions(formData.sport || 'football')}
+        style={{ marginTop: '16px' }}
+      />
 
       <LocationForm
         value={formData.location || { name: '' }}
         onChange={(location) => onUpdate('location', location)}
         required
+      />
+
+      <ContactForm
+        value={formData.contactInfo || {}}
+        onChange={(contactInfo) => onUpdate('contactInfo', contactInfo)}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>

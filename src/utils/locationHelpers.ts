@@ -14,7 +14,7 @@ export function getLocationName(tournament: { location?: LocationDetails }): str
 export function getFullLocationAddress(tournament: { location?: LocationDetails }): string {
   const { location } = tournament;
 
-  if (!location) return '';
+  if (!location) {return '';}
 
   const parts: string[] = [];
 
@@ -46,7 +46,7 @@ export function getFullLocationAddress(tournament: { location?: LocationDetails 
 export function formatLocationForPrint(tournament: { location?: LocationDetails }): string[] {
   const { location } = tournament;
 
-  if (!location) return [];
+  if (!location) {return [];}
 
   const lines: string[] = [];
 
@@ -77,7 +77,7 @@ export function formatLocationForPrint(tournament: { location?: LocationDetails 
 export function hasExtendedLocationData(tournament: { location?: LocationDetails }): boolean {
   const { location } = tournament;
 
-  if (!location) return false;
+  if (!location) {return false;}
 
   return !!(
     location.street ||
@@ -97,7 +97,7 @@ export function getUniqueLocations(tournaments: Tournament[]): LocationDetails[]
   tournaments.forEach(tournament => {
     const { location } = tournament;
 
-    if (!location) return;
+    if (!location) {return;}
 
     const key = location.name.toLowerCase();
     if (!seen.has(key)) {
@@ -130,7 +130,7 @@ export function findLocationByName(
 export function getLocationAddressLine(tournament: { location?: LocationDetails }): string {
   const { location } = tournament;
 
-  if (!location) return '';
+  if (!location) {return '';}
 
   const parts: string[] = [];
 

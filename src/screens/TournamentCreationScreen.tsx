@@ -1,19 +1,54 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
-import {
-  Step1_SportAndType,
-  Step2_ModeAndSystem,
-  Step3_Metadata,
-  Step4_Teams,
-  Step5_Overview,
-} from '../features/tournament-creation';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
-import { Tournament, TournamentType } from '../types/tournament';
+import { Tournament, TournamentType, PlacementCriterion } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { generateTournamentId } from '../utils/idGenerator';
 import { theme } from '../styles/theme';
+
+// Lazy load step components for better performance
+const Step1_SportAndType = lazy(() =>
+  import('../features/tournament-creation').then(module => ({ default: module.Step1_SportAndType }))
+);
+const Step2_ModeAndSystem = lazy(() =>
+  import('../features/tournament-creation').then(module => ({ default: module.Step2_ModeAndSystem }))
+);
+const Step3_Metadata = lazy(() =>
+  import('../features/tournament-creation').then(module => ({ default: module.Step3_Metadata }))
+);
+const Step4_Teams = lazy(() =>
+  import('../features/tournament-creation').then(module => ({ default: module.Step4_Teams }))
+);
+const Step5_Overview = lazy(() =>
+  import('../features/tournament-creation').then(module => ({ default: module.Step5_Overview }))
+);
+
+// Loading fallback component
+const StepLoadingFallback: React.FC = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '200px',
+    color: theme.colors.text.secondary,
+  }}>
+    <div style={{ textAlign: 'center' }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: `3px solid ${theme.colors.border}`,
+        borderTopColor: theme.colors.primary,
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        margin: '0 auto 12px',
+      }} />
+      <span>Lade...</span>
+    </div>
+  </div>
+);
 
 interface TournamentCreationScreenProps {
   onBack: () => void;
@@ -76,7 +111,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   onSave,
   existingTournament,
 }) => {
-  const [step, setStep] = useState(1);
+  // Restore last visited step from existing tournament (draft restoration)
+  const initialStep = existingTournament?.lastVisitedStep || 1;
+  const initialVisitedSteps = new Set<number>();
+  for (let i = 1; i <= initialStep; i++) {
+    initialVisitedSteps.add(i);
+  }
+
+  const [step, setStep] = useState(initialStep);
   const [formData, setFormData] = useState<Partial<Tournament>>(
     existingTournament || getDefaultFormData()
   );
@@ -85,11 +127,31 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const lastSavedDataRef = useRef<string>('');
   const { saveTournament: defaultSaveTournament } = useTournaments();
 
+  // Navigation state for clickable ProgressBar
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(initialVisitedSteps);
+  const [stepErrors, setStepErrors] = useState<Record<number, string[]>>({});
+
+  // Auto-save notification state
+  const [showSaveNotification, setShowSaveNotification] = useState(false);
+
   // Use provided onSave or fallback to default saveTournament
   const saveTournament = onSave || defaultSaveTournament;
 
   const updateForm = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+
+      // When switching to roundRobin, remove group assignments from teams
+      // This fixes the bug where group tables were shown for "Jeder gegen Jeden" mode
+      if (field === 'groupSystem' && value === 'roundRobin' && prev.teams) {
+        updated.teams = prev.teams.map((team) => {
+          const { group: _group, ...teamWithoutGroup } = team;
+          return teamWithoutGroup;
+        });
+      }
+
+      return updated;
+    });
   };
 
   // Helper function to check if data has changed
@@ -99,18 +161,24 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       formData.location ||
       (formData.teams && formData.teams.length > 0);
 
-    if (!hasData) return false;
+    if (!hasData) {return false;}
 
     // Check if data is different from last save
     const currentData = JSON.stringify(formData);
     return currentData !== lastSavedDataRef.current;
   }, [formData]);
 
+  // Show auto-save confirmation notification
+  const showSaveConfirmation = useCallback(() => {
+    setShowSaveNotification(true);
+    setTimeout(() => setShowSaveNotification(false), 2000); // Hide after 2 seconds
+  }, []);
+
   // Helper function to save as draft
   // IMPORTANT: Always use defaultSaveTournament for autosave, not saveTournament!
   // saveTournament might be mapped to onSave which triggers navigation back to dashboard
   const saveAsDraft = useCallback(() => {
-    if (!hasUnsavedChanges()) return;
+    if (!hasUnsavedChanges()) {return;}
 
     const tournament = createDraftTournament();
 
@@ -124,6 +192,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       lastSavedDataRef.current = JSON.stringify(formData);
       console.log('[TournamentCreation] Autosave:', tournament.id);
+
+      // Show save confirmation notification
+      showSaveConfirmation();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'QuotaExceededError') {
         console.error('[TournamentCreation] localStorage quota exceeded');
@@ -131,7 +202,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         console.error('[TournamentCreation] Failed to save draft:', error);
       }
     }
-  }, [hasUnsavedChanges, formData, defaultSaveTournament]);
+  }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation]);
 
   // Helper function to change step with autosave
   const handleStepChange = useCallback((newStep: number) => {
@@ -140,6 +211,10 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       saveAsDraft();
       console.log('[TournamentCreation] Autosave on step change');
     }
+
+    // Mark new step as visited
+    setVisitedSteps(prev => new Set([...prev, newStep]));
+
     setStep(newStep);
   }, [hasUnsavedChanges, saveAsDraft]);
 
@@ -182,7 +257,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       const confirmed = window.confirm(
         `Möchtest du wirklich zu "${newType === 'classic' ? 'Klassisches Turnier' : 'Bambini-Turnier'}" wechseln?\n\nDie Einstellungen werden angepasst.`
       );
-      if (!confirmed) return;
+      if (!confirmed) {return;}
     }
 
     if (newType === 'bambini') {
@@ -207,10 +282,10 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   const movePlacementLogic = (index: number, direction: number) => {
-    if (!formData.placementLogic) return;
+    if (!formData.placementLogic) {return;}
 
     const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= formData.placementLogic.length) return;
+    if (newIndex < 0 || newIndex >= formData.placementLogic.length) {return;}
 
     const newLogic = [...formData.placementLogic];
     [newLogic[index], newLogic[newIndex]] = [newLogic[newIndex], newLogic[index]];
@@ -218,11 +293,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   const togglePlacementLogic = (index: number) => {
-    if (!formData.placementLogic) return;
+    if (!formData.placementLogic) {return;}
 
     const newLogic = [...formData.placementLogic];
     newLogic[index] = { ...newLogic[index], enabled: !newLogic[index].enabled };
     updateForm('placementLogic', newLogic);
+  };
+
+  const reorderPlacementLogic = (newOrder: PlacementCriterion[]) => {
+    updateForm('placementLogic', newOrder);
   };
 
   const addTeam = () => {
@@ -287,6 +366,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       matches: [], // Wird später vom Fair Scheduler generiert
       createdAt: existingTournament?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      lastVisitedStep: step, // Save current step for wizard restoration
     };
   };
 
@@ -409,6 +489,91 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   };
 
+  // Validate a specific step and return errors
+  const validateStep = useCallback((stepNumber: number): string[] => {
+    const errors: string[] = [];
+
+    switch (stepNumber) {
+      case 1: // Stammdaten
+        if (!formData.title) {errors.push('Turniername erforderlich');}
+        if (!formData.date) {errors.push('Startdatum erforderlich');}
+        if (!formData.location?.name) {errors.push('Ort erforderlich');}
+        break;
+      case 2: // Sportart
+        if (!formData.sport) {errors.push('Sportart erforderlich');}
+        if (!formData.tournamentType) {errors.push('Turniertyp erforderlich');}
+        break;
+      case 3: // Modus
+        if (!formData.mode) {errors.push('Turniermodus erforderlich');}
+        break;
+      case 4: // Teams
+        if ((formData.teams?.length || 0) < 2) {
+          errors.push('Mindestens 2 Teams erforderlich');
+        }
+        break;
+      case 5: // Übersicht
+        // No validation - overview is always accessible
+        break;
+    }
+
+    return errors;
+  }, [formData]);
+
+  // Check if navigation to target step is allowed
+  const canNavigateToStep = useCallback((targetStep: number): boolean => {
+    // Always allow backward navigation
+    if (targetStep <= step) {return true;}
+
+    // Allow navigation to already visited steps (forward or backward)
+    if (visitedSteps.has(targetStep)) {return true;}
+
+    // For forward navigation to unvisited steps, validate all steps between current and target
+    for (let i = step; i < targetStep; i++) {
+      const errors = validateStep(i);
+      if (errors.length > 0) {
+        setStepErrors(prev => ({ ...prev, [i]: errors }));
+        return false;
+      }
+    }
+
+    return true;
+  }, [step, validateStep, visitedSteps]);
+
+  // Handle navigation to a specific step via ProgressBar
+  const handleNavigateToStep = useCallback((targetStep: number) => {
+    // Check if navigation is allowed
+    if (!canNavigateToStep(targetStep)) {
+      // Show error message for first blocking step
+      for (let i = step; i < targetStep; i++) {
+        const errors = validateStep(i);
+        if (errors.length > 0) {
+          alert(`⚠️ Bitte fülle alle erforderlichen Felder aus:\n\n${errors.join('\n')}`);
+          break;
+        }
+      }
+      return;
+    }
+
+    // Auto-save before navigation
+    if (hasUnsavedChanges()) {
+      saveAsDraft();
+      console.log('[TournamentCreation] Autosave on ProgressBar navigation');
+    }
+
+    // Update visited steps
+    setVisitedSteps(prev => new Set([...prev, targetStep]));
+
+    // Clear errors for target step
+    setStepErrors(prev => {
+      const updated = { ...prev };
+      delete updated[targetStep];
+      return updated;
+    });
+
+    // Navigate
+    setStep(targetStep);
+  }, [canNavigateToStep, step, validateStep, hasUnsavedChanges, saveAsDraft]);
+
   return (
     <div style={{ padding: '40px 20px', maxWidth: '800px', margin: '0 auto' }}>
       {/* Header */}
@@ -450,38 +615,45 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           currentStep={step}
           totalSteps={5}
           stepLabels={['Stammdaten', 'Sportart', 'Modus', 'Teams', 'Übersicht']}
+          onStepClick={handleNavigateToStep}
+          visitedSteps={visitedSteps}
+          stepErrors={stepErrors}
+          clickable={true}
         />
       )}
 
-      {/* Steps */}
-      {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
+      {/* Steps with lazy loading and error boundary */}
+      <ErrorBoundary>
+        <Suspense fallback={<StepLoadingFallback />}>
+        {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
 
-      {step === 2 && (
-        <Step1_SportAndType
-          formData={formData}
-          onUpdate={updateForm}
-          onTournamentTypeChange={handleTournamentTypeChange}
-        />
-      )}
+        {step === 2 && (
+          <Step1_SportAndType
+            formData={formData}
+            onUpdate={updateForm}
+            onTournamentTypeChange={handleTournamentTypeChange}
+          />
+        )}
 
-      {step === 3 && (
-        <Step2_ModeAndSystem
-          formData={formData}
-          onUpdate={updateForm}
-          onMovePlacementLogic={movePlacementLogic}
-          onTogglePlacementLogic={togglePlacementLogic}
-        />
-      )}
+        {step === 3 && (
+          <Step2_ModeAndSystem
+            formData={formData}
+            onUpdate={updateForm}
+            onMovePlacementLogic={movePlacementLogic}
+            onTogglePlacementLogic={togglePlacementLogic}
+            onReorderPlacementLogic={reorderPlacementLogic}
+          />
+        )}
 
-      {step === 4 && (
-        <Step4_Teams
-          formData={formData}
-          onUpdate={updateForm}
-          onAddTeam={addTeam}
-          onRemoveTeam={removeTeam}
-          onUpdateTeam={updateTeam}
-        />
-      )}
+        {step === 4 && (
+          <Step4_Teams
+            formData={formData}
+            onUpdate={updateForm}
+            onAddTeam={addTeam}
+            onRemoveTeam={removeTeam}
+            onUpdateTeam={updateTeam}
+          />
+        )}
 
       {step === 5 && (
         <>
@@ -542,6 +714,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           <Step5_Overview formData={formData} onSave={handlePreview} />
         </>
       )}
+        </Suspense>
+      </ErrorBoundary>
 
       {step === 6 && generatedSchedule && (
         <>
@@ -653,6 +827,34 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Auto-Save Notification Toast */}
+      {showSaveNotification && (
+        <div
+          className="save-notification"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            padding: '12px 16px',
+            background: 'rgba(0, 230, 118, 0.9)',
+            borderRadius: theme.borderRadius.sm,
+            color: theme.colors.background,
+            fontSize: theme.fontSizes.sm,
+            fontWeight: theme.fontWeights.medium,
+            boxShadow: theme.shadows.lg,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span style={{ width: '16px', height: '16px', display: 'flex', alignItems: 'center' }}>
+            <Icons.Check />
+          </span>
+          Gespeichert
         </div>
       )}
     </div>

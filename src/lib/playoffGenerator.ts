@@ -24,11 +24,22 @@ export interface PlayoffMatch {
 }
 
 /**
+ * Group size information for dynamic playoff generation
+ */
+export interface GroupSizeInfo {
+  [groupLabel: string]: number; // e.g., { 'A': 3, 'B': 2 }
+}
+
+/**
  * Generiert alle Playoff-Spiele basierend auf Preset und Gruppenanzahl
+ * @param numberOfGroups - Anzahl der Gruppen
+ * @param config - Finals-Konfiguration
+ * @param groupSizes - Optional: Größe jeder Gruppe für dynamische Platzierungsspiele
  */
 export function generatePlayoffMatches(
   numberOfGroups: number,
-  config: FinalsConfig
+  config: FinalsConfig,
+  groupSizes?: GroupSizeInfo
 ): PlayoffMatch[] {
   const { preset } = config;
 
@@ -56,7 +67,7 @@ export function generatePlayoffMatches(
       break;
 
     case 'all-places':
-      matches.push(...generateAllPlaces(numberOfGroups));
+      matches.push(...generateAllPlaces(numberOfGroups, groupSizes));
       break;
   }
 
@@ -258,14 +269,22 @@ function generateTop16(numberOfGroups: number): PlayoffMatch[] {
 
 /**
  * Alle Plätze: Top 4 + zusätzliche direkte Platzierungsspiele
- * Bei 2 Gruppen: Plätze 5-8 werden ausgespielt (falls vorhanden)
+ * Bei 2 Gruppen: Plätze 5-8 werden ausgespielt (falls genug Teams vorhanden)
  *
  * Reihenfolge: Halbfinale → Platz 7 → Platz 5 → Platz 3 → Finale
+ *
+ * @param numberOfGroups - Anzahl der Gruppen
+ * @param groupSizes - Optional: Tatsächliche Größe jeder Gruppe
  */
-function generateAllPlaces(numberOfGroups: number): PlayoffMatch[] {
+function generateAllPlaces(numberOfGroups: number, groupSizes?: GroupSizeInfo): PlayoffMatch[] {
   if (numberOfGroups === 2) {
     // Bei 2 Gruppen: Eigene Struktur mit korrekter Reihenfolge
     const matches: PlayoffMatch[] = [];
+
+    // Determine minimum group size (for deciding which placement matches are possible)
+    const minGroupSize = groupSizes
+      ? Math.min(groupSizes['A'] || 2, groupSizes['B'] || 2)
+      : 4; // Default to 4 if no size info (legacy behavior)
 
     // 1. Halbfinale (parallel möglich bei mehreren Feldern)
     matches.push(
@@ -273,16 +292,34 @@ function generateAllPlaces(numberOfGroups: number): PlayoffMatch[] {
       { id: 'semi2', label: '2. Halbfinale', home: 'group-a-1st', away: 'group-b-2nd', dependsOn: [] }
     );
 
-    // 2. Platzierungsspiele (können parallel laufen, brauchen nur Halbfinale-Ergebnisse)
+    // 2. Platzierungsspiele - nur wenn beide Gruppen genug Teams haben
+    const placementDependencies: string[] = ['semi1', 'semi2'];
+
+    // Platz 7/8: Nur wenn beide Gruppen mindestens 4 Teams haben
+    if (minGroupSize >= 4) {
+      matches.push(
+        { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] }
+      );
+      placementDependencies.push('place78-direct');
+    }
+
+    // Platz 5/6: Nur wenn beide Gruppen mindestens 3 Teams haben
+    if (minGroupSize >= 3) {
+      matches.push(
+        { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['semi1', 'semi2'] }
+      );
+      placementDependencies.push('place56-direct');
+    }
+
+    // Platz 3: Immer möglich (Halbfinal-Verlierer)
     matches.push(
-      { id: 'place78-direct', label: 'Spiel um Platz 7', home: 'group-a-4th', away: 'group-b-4th', rank: [7, 8], dependsOn: ['semi1', 'semi2'] },
-      { id: 'place56-direct', label: 'Spiel um Platz 5', home: 'group-a-3rd', away: 'group-b-3rd', rank: [5, 6], dependsOn: ['semi1', 'semi2'] },
       { id: 'third-place', label: 'Spiel um Platz 3', home: 'semi1-loser', away: 'semi2-loser', rank: 3, dependsOn: ['semi1', 'semi2'] }
     );
+    placementDependencies.push('third-place');
 
     // 3. Finale (muss nach allen Platzierungsspielen kommen)
     matches.push(
-      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: ['place78-direct', 'place56-direct', 'third-place'] }
+      { id: 'final', label: 'Finale', home: 'semi1-winner', away: 'semi2-winner', rank: 1, dependsOn: placementDependencies }
     );
 
     return matches;

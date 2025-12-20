@@ -9,6 +9,7 @@ export const theme = {
     accent: '#FFD700',
     warning: '#FF9100',
     error: '#FF5252',
+    success: '#4CAF50',
     text: {
       primary: '#FFFFFF',
       secondary: '#8BA3C7',
@@ -16,6 +17,30 @@ export const theme = {
     },
     border: 'rgba(255,255,255,0.1)',
     borderActive: 'rgba(0,230,118,0.3)',
+    // Status colors for tournament badges
+    status: {
+      live: '#00B0FF',
+      liveBg: 'rgba(0,176,255,0.15)',
+      upcoming: '#4CAF50',
+      upcomingBg: 'rgba(76,175,80,0.15)',
+      finished: '#9E9E9E',
+      finishedBg: 'rgba(158,158,158,0.15)',
+      draft: '#FF9100',
+      draftBg: 'rgba(255,145,0,0.15)',
+    },
+    // Correction/Warning banner (dark theme compatible)
+    correction: {
+      bg: 'rgba(255,145,0,0.12)',
+      border: 'rgba(255,145,0,0.4)',
+      text: '#FFB74D',
+      icon: '#FF9100',
+    },
+    // Medal colors (for rankings)
+    medal: {
+      gold: '#FFD700',
+      silver: '#C0C0C0',
+      bronze: '#CD7F32',
+    },
   },
 
   gradients: {

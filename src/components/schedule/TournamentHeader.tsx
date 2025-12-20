@@ -107,10 +107,12 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
       </div>
 
       <div style={metaGridStyle}>
-        <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Veranstalter:</span>
-          {getFullLocationAddress(schedule.tournament)}
-        </div>
+        {schedule.tournament.organizer && (
+          <div style={metaItemStyle}>
+            <span style={metaLabelStyle}>Veranstalter:</span>
+            {schedule.tournament.organizer}
+          </div>
+        )}
         <div style={metaItemStyle}>
           <span style={metaLabelStyle}>Datum:</span>
           {schedule.tournament.date}

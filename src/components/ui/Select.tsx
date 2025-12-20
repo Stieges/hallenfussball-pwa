@@ -30,6 +30,7 @@ export const Select: React.FC<SelectProps> = ({
     flexDirection: 'column',
     gap: theme.spacing.sm,
     width: '100%',
+    ...style,
   };
 
   const labelStyles: CSSProperties = {
@@ -50,7 +51,6 @@ export const Select: React.FC<SelectProps> = ({
     cursor: 'pointer',
     transition: 'border-color 0.2s ease',
     width: '100%',
-    ...style,
   };
 
   return (

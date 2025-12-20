@@ -245,11 +245,11 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
  * Gibt die empfohlene (default) Finalrunden-Option zurück
  */
 export function getRecommendedFinalsPreset(numberOfGroups: number): FinalsPreset {
-  if (numberOfGroups === 2) return 'top-4';
-  if (numberOfGroups === 3) return 'top-4';
-  if (numberOfGroups === 4) return 'top-8';
-  if (numberOfGroups >= 5 && numberOfGroups < 8) return 'top-8';
-  if (numberOfGroups >= 8) return 'top-16';
+  if (numberOfGroups === 2) {return 'top-4';}
+  if (numberOfGroups === 3) {return 'top-4';}
+  if (numberOfGroups === 4) {return 'top-8';}
+  if (numberOfGroups >= 5 && numberOfGroups < 8) {return 'top-8';}
+  if (numberOfGroups >= 8) {return 'top-16';}
   return 'none';
 }
 

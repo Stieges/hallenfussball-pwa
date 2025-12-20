@@ -53,10 +53,10 @@ function getTournamentDateTime(tournament: Tournament): Date | null {
  * Running = datum ist heute UND aktuelle Zeit > Startzeit
  */
 function isTournamentRunning(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published') return false;
+  if (tournament.status !== 'published') {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) return false;
+  if (!tournamentDate) {return false;}
 
   const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tournamentDateOnly = new Date(
@@ -67,7 +67,7 @@ function isTournamentRunning(tournament: Tournament, now: Date): boolean {
 
   // Check if tournament date is today
   const isToday = nowDateOnly.getTime() === tournamentDateOnly.getTime();
-  if (!isToday) return false;
+  if (!isToday) {return false;}
 
   // Check if current time is after tournament start time
   return now >= tournamentDate;
@@ -77,10 +77,10 @@ function isTournamentRunning(tournament: Tournament, now: Date): boolean {
  * Check if tournament is upcoming (future date/time)
  */
 function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published') return false;
+  if (tournament.status !== 'published') {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) return false;
+  if (!tournamentDate) {return false;}
 
   return tournamentDate > now;
 }
@@ -89,10 +89,10 @@ function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
  * Check if tournament is finished (past date/time)
  */
 function isTournamentFinished(tournament: Tournament, now: Date): boolean {
-  if (tournament.status !== 'published') return false;
+  if (tournament.status !== 'published') {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
-  if (!tournamentDate) return false;
+  if (!tournamentDate) {return false;}
 
   // Tournament is finished if:
   // 1. Date is in the past (not today)
@@ -107,7 +107,7 @@ function isTournamentFinished(tournament: Tournament, now: Date): boolean {
   );
 
   // If date is in the past (before today), it's finished
-  if (tournamentDateOnly < nowDateOnly) return true;
+  if (tournamentDateOnly < nowDateOnly) {return true;}
 
   // If date is today, check if it's running
   if (tournamentDateOnly.getTime() === nowDateOnly.getTime()) {
@@ -176,21 +176,21 @@ export function categorizeTournaments(tournaments: Tournament[], now: Date = new
   categorized.running.sort((a, b) => {
     const dateA = getTournamentDateTime(a);
     const dateB = getTournamentDateTime(b);
-    if (!dateA || !dateB) return 0;
+    if (!dateA || !dateB) {return 0;}
     return dateA.getTime() - dateB.getTime();
   });
 
   categorized.upcoming.sort((a, b) => {
     const dateA = getTournamentDateTime(a);
     const dateB = getTournamentDateTime(b);
-    if (!dateA || !dateB) return 0;
+    if (!dateA || !dateB) {return 0;}
     return dateA.getTime() - dateB.getTime();
   });
 
   categorized.finished.sort((a, b) => {
     const dateA = getTournamentDateTime(a);
     const dateB = getTournamentDateTime(b);
-    if (!dateA || !dateB) return 0;
+    if (!dateA || !dateB) {return 0;}
     return dateB.getTime() - dateA.getTime(); // Most recent first
   });
 

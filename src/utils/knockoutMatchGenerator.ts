@@ -166,9 +166,9 @@ const resolveBestSecondPlace = (tournament: Tournament): string | null => {
   // Sortiere die Zweiten nach den gleichen Kriterien wie die Haupttabelle
   secondPlaceTeams.sort((a, b) => {
     // 1. Punkte
-    if (b.points !== a.points) return b.points - a.points;
+    if (b.points !== a.points) {return b.points - a.points;}
     // 2. Tordifferenz
-    if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+    if (b.goalDifference !== a.goalDifference) {return b.goalDifference - a.goalDifference;}
     // 3. Erzielte Tore
     return b.goalsFor - a.goalsFor;
   });
@@ -188,7 +188,7 @@ export const updateKnockoutMatchesAfterResult = (
 ): Match[] => {
   return matches.map((match) => {
     let updated = false;
-    let newMatch = { ...match };
+    const newMatch = { ...match };
 
     // Prüfe Home Team (teamA)
     if (match.teamA === 'TBD') {

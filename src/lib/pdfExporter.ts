@@ -149,7 +149,7 @@ export async function exportScheduleToPDF(
     locale = 'de',
     includeStandings = true,
     includeScores = false,
-    organizerName = schedule.tournament.organizer || 'Veranstalter',
+    organizerName = schedule.tournament.organizer || '',
     hallName = getLocationName(schedule.tournament),
   } = options;
 
@@ -215,7 +215,7 @@ export async function exportScheduleToPDF(
   }
 
   // 8. Final Ranking (at the end)
-  yPos = renderFinalRanking(doc, schedule, standings, t, hasGroups, yPos);
+  renderFinalRanking(doc, schedule, standings, t, hasGroups, yPos);
 
   // Save PDF
   const filename = `${schedule.tournament.title.replace(/\s+/g, '_')}_Spielplan.pdf`;
@@ -278,15 +278,6 @@ function renderMetaBox(
   const firstGroupMatch = schedule.phases.find(p => p.name === 'groupStage')?.matches[0];
   const groupDuration = firstGroupMatch?.duration || 10;
 
-  // Calculate break duration from time between matches
-  const groupPhaseMatches = schedule.phases.find(p => p.name === 'groupStage')?.matches || [];
-  let pauseDuration = 2; // Default
-  if (groupPhaseMatches.length >= 2) {
-    const match1End = groupPhaseMatches[0].endTime.getTime();
-    const match2Start = groupPhaseMatches[1].startTime.getTime();
-    pauseDuration = Math.round((match2Start - match1End) / 60000); // Convert to minutes
-  }
-
   const startTime = schedule.startTime.toLocaleTimeString('de-DE', {
     hour: '2-digit',
     minute: '2-digit',
@@ -301,18 +292,39 @@ function renderMetaBox(
   // Get location address line (street, city)
   const locationAddressLine = getLocationAddressLine(schedule.tournament);
 
-  // Split fields into two columns
-  const leftFields = [
-    { label: t.organizer, value: organizerName },
-    { label: t.hall, value: hallName },
-    { label: t.gameday, value: schedule.tournament.date },
-    { label: t.time, value: `${startTime} - ${endTime}` },
-  ];
+  // Format date as DD.MM.YYYY
+  const formatGameDay = (): string => {
+    const dateStr = schedule.tournament.date;
+    if (!dateStr) {
+      return 'Kein Datum';
+    }
+    // If already in DD.MM.YYYY format, return as is
+    if (dateStr.includes('.')) {
+      return dateStr;
+    }
+    // Otherwise try to parse YYYY-MM-DD
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    }
+    return dateStr;
+  };
 
+  // Split fields into two columns - only include organizer if it has a value
+  const leftFields: { label: string; value: string }[] = [];
+  if (organizerName) {
+    leftFields.push({ label: t.organizer, value: organizerName });
+  }
+  leftFields.push(
+    { label: t.hall, value: hallName },
+    { label: t.gameday, value: formatGameDay() },
+    { label: t.time, value: `${startTime} - ${endTime}` }
+  );
+
+  // Right fields - removed "Pause" as it's not needed
   const rightFields = [
     { label: t.mode, value: mode },
     { label: t.matchDuration, value: `${groupDuration} Min.` },
-    { label: t.break, value: `${pauseDuration} Min.` },
   ];
 
   // Calculate the longest label width for each column (including colon)
@@ -427,7 +439,7 @@ function renderParticipants(
   yPos += 4;
 
   // Teams nach Gruppe sortieren
-  const teamsByGroup: Map<string, typeof schedule.teams> = new Map();
+  const teamsByGroup = new Map<string, typeof schedule.teams>();
   schedule.teams.forEach(team => {
     const groupKey = team.group || 'Alle';
     if (!teamsByGroup.has(groupKey)) {
@@ -585,8 +597,8 @@ function renderGroupStage(
 
   // Table headers
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
-  if (showFieldColumn) headerRow.push(t.field);
-  if (hasMultipleGroups) headerRow.push(t.group);
+  if (showFieldColumn) {headerRow.push(t.field);}
+  if (hasMultipleGroups) {headerRow.push(t.group);}
   headerRow.push(t.home, t.result, t.away);
   if (refereeConfig && refereeConfig.mode !== 'none') {
     headerRow.push(t.referee);
@@ -596,8 +608,8 @@ function renderGroupStage(
   // Table data
   const data: RowInput[] = matches.map(match => {
     const row: CellInput[] = [match.matchNumber.toString(), match.time];
-    if (showFieldColumn) row.push(match.field.toString());
-    if (hasMultipleGroups) row.push(match.group || '-');
+    if (showFieldColumn) {row.push(match.field.toString());}
+    if (hasMultipleGroups) {row.push(match.group || '-');}
 
     // Show scores if includeScores is true and scores are available
     const resultColumn = includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
@@ -640,8 +652,8 @@ function renderGroupStage(
 
       styles[colIndex++] = { halign: 'center', cellWidth: 10 }; // Nr
       styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Zeit
-      if (showFieldColumn) styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Feld
-      if (hasMultipleGroups) styles[colIndex++] = { halign: 'center', cellWidth: 10 }; // Gr
+      if (showFieldColumn) {styles[colIndex++] = { halign: 'center', cellWidth: 15 };} // Feld
+      if (hasMultipleGroups) {styles[colIndex++] = { halign: 'center', cellWidth: 10 };} // Gr
       styles[colIndex++] = { halign: 'left' }; // Heim
       styles[colIndex++] = { halign: 'center', cellWidth: 25 }; // Ergebnis
       styles[colIndex++] = { halign: 'left' }; // Gast
@@ -729,7 +741,7 @@ function getSubtitleForFinalType(
   finalType: string | undefined,
   t: typeof TRANSLATIONS.de
 ): string | undefined {
-  if (!finalType) return undefined;
+  if (!finalType) {return undefined;}
 
   switch (finalType) {
     case 'thirdPlace':
@@ -770,7 +782,7 @@ function renderFinalsTable(
 
   // Table headers
   const headerRow: CellInput[] = [t.nr, t.timeHeader];
-  if (showFieldColumn) headerRow.push(t.field);
+  if (showFieldColumn) {headerRow.push(t.field);}
   headerRow.push(t.home, t.result, t.away);
   if (refereeConfig && refereeConfig.mode !== 'none') {
     headerRow.push(t.referee);
@@ -780,7 +792,7 @@ function renderFinalsTable(
   // Table data
   const data: RowInput[] = matches.map(match => {
     const row: CellInput[] = [match.matchNumber.toString(), match.time];
-    if (showFieldColumn) row.push(match.field.toString());
+    if (showFieldColumn) {row.push(match.field.toString());}
 
     // Show scores if includeScores is true and scores are available
     const resultColumn = includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
@@ -857,7 +869,7 @@ function renderGroupStandings(
 ): number {
   // Einzigartige Gruppen bestimmen
   const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
-  if (groups.length === 0) return yPos;
+  if (groups.length === 0) {return yPos;}
 
   // Standings-Quelle
   const currentStandings = standings || schedule.initialStandings;

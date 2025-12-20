@@ -54,3 +54,117 @@ select option {
   background: #0A1628;
   color: #FFFFFF;
 }
+
+/* Wizard Step Transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.wizard-step-container {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.save-notification {
+  animation: fadeInOut 2s ease-in-out;
+}
+
+/* ============================================
+   ACCESSIBILITY: Focus Indicators
+   ============================================ */
+
+/* Remove default outline but keep for keyboard users */
+*:focus {
+  outline: none;
+}
+
+/* Visible focus ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid #00E676;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Buttons and interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #00E676;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 230, 118, 0.2);
+}
+
+/* Cards and clickable containers */
+[role="button"]:focus-visible,
+.clickable:focus-visible {
+  outline: 2px solid #00E676;
+  outline-offset: 2px;
+}
+
+/* Skip link for screen readers */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #00E676;
+  color: #0A1628;
+  padding: 8px 16px;
+  z-index: 10000;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

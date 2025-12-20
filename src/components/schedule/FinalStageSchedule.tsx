@@ -51,7 +51,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const showFields = numberOfFields > 1;
 
   const getRefereeOptions = () => {
-    if (!refereeConfig) return [];
+    if (!refereeConfig) {return [];}
     const numberOfReferees = refereeConfig.mode === 'organizer'
       ? (refereeConfig.numberOfReferees || 2)
       : matches.length;
@@ -72,7 +72,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   const findFieldConflict = (matchId: string, fieldNumber: number): ScheduledMatch | null => {
     const targetMatch = matches.find(m => m.id === matchId);
-    if (!targetMatch) return null;
+    if (!targetMatch) {return null;}
     const fieldMatches = matches.filter(m => m.field === fieldNumber && m.id !== matchId);
     for (const match of fieldMatches) {
       const targetStart = targetMatch.startTime.getTime();
@@ -255,7 +255,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 {showFields && (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
                     {editable && onFieldChange ? (
-                      <select value={match.field || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); const conflict = findFieldConflict(match.id, fieldNum); if (conflict && !window.confirm(`⚠️ Zeitkonflikt erkannt!\n\nFeld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?`)) return; onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: '4px', border: `1px solid ${theme.colors.border}`, borderRadius: '4px', fontSize: '12px', fontWeight: theme.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: theme.colors.background, color: theme.colors.text.primary }}>
+                      <select value={match.field || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); const conflict = findFieldConflict(match.id, fieldNum); if (conflict && !window.confirm(`⚠️ Zeitkonflikt erkannt!\n\nFeld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?`)) {return;} onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: '4px', border: `1px solid ${theme.colors.border}`, borderRadius: '4px', fontSize: '12px', fontWeight: theme.fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: theme.colors.background, color: theme.colors.text.primary }}>
                         {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                       </select>
                     ) : (<span style={{ fontWeight: theme.fontWeights.semibold }}>{match.field || '-'}</span>)}
@@ -307,7 +307,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 <div style={mobileMetaItemStyle}>
                   <strong>Feld:</strong>
                   {editable && onFieldChange ? (
-                    <select value={match.field || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); const conflict = findFieldConflict(match.id, fieldNum); if (conflict && !window.confirm(`⚠️ Zeitkonflikt erkannt!\n\nFeld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?`)) return; onFieldChange(match.id, fieldNum); }} style={mobileSelectStyle}>
+                    <select value={match.field || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); const conflict = findFieldConflict(match.id, fieldNum); if (conflict && !window.confirm(`⚠️ Zeitkonflikt erkannt!\n\nFeld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\nDie Spiele überschneiden sich zeitlich.\n\nMöchtest du die Zuweisung trotzdem vornehmen?`)) {return;} onFieldChange(match.id, fieldNum); }} style={mobileSelectStyle}>
                       {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                     </select>
                   ) : (<span>{match.field || '-'}</span>)}
@@ -340,12 +340,12 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 };
 
 function getFinalMatchLabel(match: ScheduledMatch): string {
-  if (match.finalType === 'final') return '🏆 Finale';
-  if (match.finalType === 'thirdPlace') return '🥉 Spiel um Platz 3';
-  if (match.finalType === 'fifthSixth') return 'Spiel um Platz 5';
-  if (match.finalType === 'seventhEighth') return 'Spiel um Platz 7';
-  if (match.phase === 'semifinal') return 'Halbfinale';
-  if (match.phase === 'quarterfinal') return 'Viertelfinale';
-  if (match.label?.includes('Halbfinale')) return match.label;
+  if (match.finalType === 'final') {return '🏆 Finale';}
+  if (match.finalType === 'thirdPlace') {return '🥉 Spiel um Platz 3';}
+  if (match.finalType === 'fifthSixth') {return 'Spiel um Platz 5';}
+  if (match.finalType === 'seventhEighth') {return 'Spiel um Platz 7';}
+  if (match.phase === 'semifinal') {return 'Halbfinale';}
+  if (match.phase === 'quarterfinal') {return 'Viertelfinale';}
+  if (match.label?.includes('Halbfinale')) {return match.label;}
   return 'Finalspiel';
 }

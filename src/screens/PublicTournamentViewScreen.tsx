@@ -82,7 +82,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
 
   // Apply privacy filters
   const getFilteredSchedule = (): GeneratedSchedule | null => {
-    if (!schedule || !tournament) return null;
+    if (!schedule || !tournament) {return null;}
 
     // Filter scores if hideScoresForPublic is enabled
     if (tournament.hideScoresForPublic) {
@@ -109,7 +109,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
 
   // Filter standings if hideRankingsForPublic is enabled
   const getFilteredStandings = (): Standing[] => {
-    if (!tournament) return [];
+    if (!tournament) {return [];}
     return tournament.hideRankingsForPublic ? [] : currentStandings;
   };
 

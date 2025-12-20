@@ -9,7 +9,7 @@
  */
 
 import { Match, FinalsConfig } from '../types/tournament';
-import { generatePlayoffMatches as generatePlayoffMatchesFromPreset } from '../lib/playoffGenerator';
+import { generatePlayoffMatches as generatePlayoffMatchesFromPreset, GroupSizeInfo } from '../lib/playoffGenerator';
 import { generateFinalsMatchId } from './idGenerator';
 
 /**
@@ -53,13 +53,17 @@ interface ScheduledPlayoffMatch {
 /**
  * Generate playoff definitions based on FinalsConfig preset
  * NEW: Uses preset-based system from playoffGenerator
+ * @param numberOfGroups - Number of groups
+ * @param finalsConfig - Finals configuration
+ * @param groupSizes - Optional: Size of each group for dynamic placement matches
  */
 export function generatePlayoffDefinitions(
   numberOfGroups: number,
-  finalsConfig: FinalsConfig
+  finalsConfig: FinalsConfig,
+  groupSizes?: GroupSizeInfo
 ): PlayoffMatchDefinition[] {
   // Get playoff matches from the new preset-based generator
-  const playoffMatches = generatePlayoffMatchesFromPreset(numberOfGroups, finalsConfig);
+  const playoffMatches = generatePlayoffMatchesFromPreset(numberOfGroups, finalsConfig, groupSizes);
 
   // Convert to PlayoffMatchDefinition format
   const definitions: PlayoffMatchDefinition[] = playoffMatches.map(match => {
@@ -83,10 +87,10 @@ export function generatePlayoffDefinitions(
 
     // Determine finalType
     let finalType: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth' | undefined;
-    if (match.id === 'final') finalType = 'final';
-    else if (match.id === 'third-place') finalType = 'thirdPlace';
-    else if (match.id.includes('place56') || match.id === 'place56-direct') finalType = 'fifthSixth';
-    else if (match.id.includes('place78') || match.id === 'place78-direct') finalType = 'seventhEighth';
+    if (match.id === 'final') {finalType = 'final';}
+    else if (match.id === 'third-place') {finalType = 'thirdPlace';}
+    else if (match.id.includes('place56') || match.id === 'place56-direct') {finalType = 'fifthSixth';}
+    else if (match.id.includes('place78') || match.id === 'place78-direct') {finalType = 'seventhEighth';}
 
     return {
       id: match.id,
@@ -164,11 +168,11 @@ export function generatePlayoffSchedule(options: PlayoffScheduleOptions): Match[
   while (scheduledMatches.length < sortedDefinitions.length) {
     // Find matches that can be scheduled now (dependencies met)
     const readyMatches = sortedDefinitions.filter(def => {
-      if (completedMatchIds.has(def.id)) return false;
+      if (completedMatchIds.has(def.id)) {return false;}
       return def.dependencies.every(depId => completedMatchIds.has(depId));
     });
 
-    if (readyMatches.length === 0) break; // No more matches to schedule
+    if (readyMatches.length === 0) {break;} // No more matches to schedule
 
     // Group by parallelization capability
     const sequentialMatches: PlayoffMatchDefinition[] = [];
@@ -260,7 +264,7 @@ function topologicalSort(definitions: PlayoffMatchDefinition[]): PlayoffMatchDef
     if (temp.has(def.id)) {
       throw new Error('Circular dependency detected in playoff matches');
     }
-    if (visited.has(def.id)) return;
+    if (visited.has(def.id)) {return;}
 
     temp.add(def.id);
 

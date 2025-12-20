@@ -9,38 +9,90 @@ interface Step1Props {
   onTournamentTypeChange: (newType: TournamentType) => void;
 }
 
+// Reusable selection button component
+interface SelectionButtonProps {
+  isSelected: boolean;
+  onClick: () => void;
+  icon: string;
+  title: string;
+  subtitle: string;
+  details?: string[];
+  variant?: 'default' | 'warning';
+  layout?: 'center' | 'left';
+}
+
+const SelectionButton: React.FC<SelectionButtonProps> = ({
+  isSelected,
+  onClick,
+  icon,
+  title,
+  subtitle,
+  details,
+  variant = 'default',
+  layout = 'center',
+}) => {
+  const accentColor = variant === 'warning' ? theme.colors.warning : theme.colors.primary;
+  const bgColor = variant === 'warning' ? 'rgba(255,145,0,0.2)' : 'rgba(0,230,118,0.2)';
+
+  const buttonStyle: CSSProperties = {
+    padding: layout === 'center' ? '24px 20px' : '20px',
+    background: isSelected ? bgColor : 'rgba(0,0,0,0.2)',
+    border: isSelected ? `2px solid ${accentColor}` : '2px solid transparent',
+    borderRadius: theme.borderRadius.md,
+    textAlign: layout,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={buttonStyle}
+      onMouseEnter={(e) => {
+        if (!isSelected) {e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';}
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {e.currentTarget.style.borderColor = 'transparent';}
+      }}
+      role="radio"
+      aria-checked={isSelected}
+    >
+      <div style={{ fontSize: layout === 'center' ? '32px' : '24px', marginBottom: layout === 'center' ? '12px' : '8px' }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: layout === 'center' ? '16px' : '15px', fontWeight: '700', color: theme.colors.text.primary }}>
+        {title}
+      </div>
+      <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginTop: layout === 'center' ? '4px' : '6px', lineHeight: details ? '1.4' : 'normal' }}>
+        {details ? (
+          details.map((detail, i) => (
+            <span key={i}>
+              {i > 0 && <br />}
+              {detail}
+            </span>
+          ))
+        ) : (
+          subtitle
+        )}
+      </div>
+    </button>
+  );
+};
+
 export const Step1_SportAndType: React.FC<Step1Props> = ({
   formData,
   onUpdate,
   onTournamentTypeChange,
 }) => {
-  const sportButtonStyle = (isSelected: boolean): CSSProperties => ({
-    padding: '24px 20px',
-    background: isSelected ? 'rgba(0,230,118,0.2)' : 'rgba(0,0,0,0.2)',
-    border: isSelected ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-    borderRadius: theme.borderRadius.md,
-    textAlign: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  });
 
-  const typeButtonStyle = (isSelected: boolean, isBambini: boolean = false): CSSProperties => ({
-    padding: '20px',
-    background: isSelected
-      ? isBambini
-        ? 'rgba(255,145,0,0.2)'
-        : 'rgba(0,230,118,0.2)'
-      : 'rgba(0,0,0,0.2)',
-    border: isSelected
-      ? isBambini
-        ? `2px solid ${theme.colors.warning}`
-        : `2px solid ${theme.colors.primary}`
-      : '2px solid transparent',
-    borderRadius: theme.borderRadius.md,
-    textAlign: 'left',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  });
+  const labelStyle: CSSProperties = {
+    display: 'block',
+    marginBottom: '12px',
+    fontSize: theme.fontSizes.sm,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.fontWeights.medium,
+  };
 
   return (
     <Card>
@@ -50,135 +102,48 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
 
       {/* Sportart wählen */}
       <div style={{ marginBottom: '32px' }}>
-        <label
-          style={{
-            display: 'block',
-            marginBottom: '12px',
-            fontSize: theme.fontSizes.sm,
-            color: theme.colors.text.secondary,
-            fontWeight: theme.fontWeights.medium,
-          }}
-        >
-          Sportart
-        </label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <button
+        <label style={labelStyle}>Sportart</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} role="radiogroup" aria-label="Sportart auswählen">
+          <SelectionButton
+            isSelected={formData.sport === 'football'}
             onClick={() => onUpdate('sport', 'football')}
-            style={sportButtonStyle(formData.sport === 'football')}
-            onMouseEnter={(e) => {
-              if (formData.sport !== 'football')
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              if (formData.sport !== 'football') e.currentTarget.style.borderColor = 'transparent';
-            }}
-          >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>⚽</div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>
-              FUSSBALL
-            </div>
-            <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginTop: '4px' }}>
-              Hallenturnier
-            </div>
-          </button>
-
-          <button
+            icon="⚽"
+            title="FUSSBALL"
+            subtitle="Hallenturnier"
+          />
+          <SelectionButton
+            isSelected={formData.sport === 'other'}
             onClick={() => onUpdate('sport', 'other')}
-            style={sportButtonStyle(formData.sport === 'other')}
-            onMouseEnter={(e) => {
-              if (formData.sport !== 'other')
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              if (formData.sport !== 'other') e.currentTarget.style.borderColor = 'transparent';
-            }}
-          >
-            <div style={{ fontSize: '32px', marginBottom: '12px' }}>🏀</div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: theme.colors.text.primary }}>
-              SONSTIGES
-            </div>
-            <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginTop: '4px' }}>
-              eSports, Tennis, etc.
-            </div>
-          </button>
+            icon="🎯"
+            title="SONSTIGES"
+            subtitle="Handball, Basketball, etc."
+          />
         </div>
       </div>
 
       {/* Turniertyp wählen */}
       <div>
-        <label
-          style={{
-            display: 'block',
-            marginBottom: '12px',
-            fontSize: theme.fontSizes.sm,
-            color: theme.colors.text.secondary,
-            fontWeight: theme.fontWeights.medium,
-          }}
-        >
-          Turniertyp
-        </label>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <button
+        <label style={labelStyle}>Turniertyp</label>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} role="radiogroup" aria-label="Turniertyp auswählen">
+          <SelectionButton
+            isSelected={formData.tournamentType === 'classic'}
             onClick={() => onTournamentTypeChange('classic')}
-            style={typeButtonStyle(formData.tournamentType === 'classic')}
-            onMouseEnter={(e) => {
-              if (formData.tournamentType !== 'classic')
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              if (formData.tournamentType !== 'classic')
-                e.currentTarget.style.borderColor = 'transparent';
-            }}
-          >
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚽</div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: theme.colors.text.primary }}>
-              KLASSISCHES TURNIER
-            </div>
-            <div
-              style={{
-                fontSize: '12px',
-                color: theme.colors.text.secondary,
-                marginTop: '6px',
-                lineHeight: '1.4',
-              }}
-            >
-              • Tabellenplatzierung
-              <br />
-              • Finalrunden möglich
-              <br />• Normale Torzählung
-            </div>
-          </button>
-
-          <button
+            icon="🏆"
+            title="KLASSISCHES TURNIER"
+            subtitle=""
+            details={['• Tabellenplatzierung', '• Finalrunden möglich', '• Normale Torzählung']}
+            layout="left"
+          />
+          <SelectionButton
+            isSelected={formData.tournamentType === 'bambini'}
             onClick={() => onTournamentTypeChange('bambini')}
-            style={typeButtonStyle(formData.tournamentType === 'bambini', true)}
-            onMouseEnter={(e) => {
-              if (formData.tournamentType !== 'bambini')
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            }}
-            onMouseLeave={(e) => {
-              if (formData.tournamentType !== 'bambini')
-                e.currentTarget.style.borderColor = 'transparent';
-            }}
-          >
-            <div style={{ fontSize: '24px', marginBottom: '8px' }}>👶</div>
-            <div style={{ fontSize: '15px', fontWeight: '700', color: theme.colors.text.primary }}>
-              BAMBINI-TURNIER
-            </div>
-            <div
-              style={{
-                fontSize: '12px',
-                color: theme.colors.text.secondary,
-                marginTop: '6px',
-                lineHeight: '1.4',
-              }}
-            >
-              • Spielfreude im Fokus
-              <br />
-              • Ohne Tabellen/Ergebnisse
-              <br />• Nur Sieg/Unentsch./Nied.
-            </div>
-          </button>
+            icon="👶"
+            title="BAMBINI-TURNIER"
+            subtitle=""
+            details={['• Spielfreude im Fokus', '• Ohne Tabellen/Ergebnisse', '• Nur Sieg/Unentsch./Nied.']}
+            variant="warning"
+            layout="left"
+          />
         </div>
       </div>
 

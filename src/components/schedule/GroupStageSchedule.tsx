@@ -54,7 +54,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Generate referee options for dropdown (nur Nummern)
   const getRefereeOptions = () => {
-    if (!refereeConfig) return [];
+    if (!refereeConfig) {return [];}
 
     const numberOfReferees = refereeConfig.mode === 'organizer'
       ? (refereeConfig.numberOfReferees || 2)
@@ -79,7 +79,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   // Check if a field is already assigned to an overlapping match
   const findFieldConflict = (matchId: string, fieldNumber: number): ScheduledMatch | null => {
     const targetMatch = matches.find(m => m.id === matchId);
-    if (!targetMatch) return null;
+    if (!targetMatch) {return null;}
 
     // Find all matches on this field (excluding target match)
     const fieldMatches = matches.filter(m => m.field === fieldNumber && m.id !== matchId);
@@ -320,7 +320,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                               `Die Spiele überschneiden sich zeitlich.\n\n` +
                               `Möchtest du die Zuweisung trotzdem vornehmen?`
                             );
-                            if (!confirmed) return;
+                            if (!confirmed) {return;}
                           }
                           onFieldChange(match.id, fieldNum);
                         }}
@@ -434,7 +434,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                             `Die Spiele überschneiden sich zeitlich.\n\n` +
                             `Möchtest du die Zuweisung trotzdem vornehmen?`
                           );
-                          if (!confirmed) return;
+                          if (!confirmed) {return;}
                         }
                         onFieldChange(match.id, fieldNum);
                       }}

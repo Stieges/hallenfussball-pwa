@@ -24,7 +24,7 @@ function findOverlappingConflict(
   refereeNumber: number
 ): ScheduledMatch | null {
   const targetMatch = matches.find(m => m.id === targetMatchId);
-  if (!targetMatch) return null;
+  if (!targetMatch) {return null;}
 
   // Find all matches where this referee is assigned
   const refereeMatches = matches.filter(m => m.referee === refereeNumber && m.id !== targetMatchId);

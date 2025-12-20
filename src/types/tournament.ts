@@ -155,6 +155,10 @@ export interface Tournament {
   groupSystem?: GroupSystem;
   numberOfGroups?: number;
 
+  // DFB Schlüsselzahlen-System
+  useDFBKeys?: boolean; // Ob DFB-Schlüsselsystem verwendet werden soll
+  dfbKeyPattern?: string; // z.B. "1T06M" für 6 Teams
+
   // Gruppenphase Zeiten
   groupPhaseGameDuration: number; // Spieldauer in Gruppenphase (in Minuten)
   groupPhaseBreakDuration?: number; // Pause zwischen Spielen in Gruppenphase (in Minuten)
@@ -208,6 +212,7 @@ export interface Tournament {
   startTime?: string; // New: HH:mm format (24h)
   location: LocationDetails;
   organizer?: string; // Veranstalter-Name (optional)
+  contactInfo?: ContactInfo; // Kontaktinformationen (optional)
 
   // Step 4: Teams
   teams: Team[];
@@ -216,6 +221,9 @@ export interface Tournament {
   matches: Match[];
   createdAt: string;
   updatedAt: string;
+
+  // Wizard navigation state (for draft restoration)
+  lastVisitedStep?: number; // Last visited step in tournament creation wizard (1-5)
 }
 
 export interface Standing {
@@ -228,4 +236,15 @@ export interface Standing {
   goalsAgainst: number;
   goalDifference: number;
   points: number;
+}
+
+/**
+ * Kontaktinformationen für Turniere
+ * Wird später aus dem User-Bereich befüllt
+ */
+export interface ContactInfo {
+  name?: string;        // Ansprechpartner
+  email?: string;       // E-Mail
+  phone?: string;       // Telefon
+  website?: string;     // Website
 }

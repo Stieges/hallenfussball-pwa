@@ -167,8 +167,8 @@ const compareDirectMatches = (
   let bGoalsFor = 0;
   let aGoalsAgainst = 0;
   let bGoalsAgainst = 0;
-  let aWins = 0;
-  let bWins = 0;
+  let _aWins = 0;
+  let _bWins = 0;
 
   directMatches.forEach((match) => {
     const scoreA = match.scoreA!;
@@ -184,10 +184,10 @@ const compareDirectMatches = (
     bGoalsAgainst += aScore;
 
     if (aScore > bScore) {
-      aWins++;
+      _aWins++;
       aPoints += 3; // Assuming 3 points for win
     } else if (bScore > aScore) {
-      bWins++;
+      _bWins++;
       bPoints += 3;
     } else {
       aPoints += 1; // Draw

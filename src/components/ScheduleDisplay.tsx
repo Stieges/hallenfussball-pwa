@@ -19,6 +19,8 @@ import {
   GroupStageSchedule,
   FinalStageSchedule,
   GroupTables,
+  TournamentFooter,
+  ContactInfo,
 } from './schedule';
 
 interface ScheduleDisplayProps {
@@ -33,6 +35,8 @@ interface ScheduleDisplayProps {
   qrCodeUrl?: string;
   /** Logo URL */
   logoUrl?: string;
+  /** Kontaktinformationen (aus User-Profil) */
+  contactInfo?: ContactInfo;
   /** Allow editing referees */
   editable?: boolean;
   /** Callback when referee is changed */
@@ -56,6 +60,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   showQRCode = false,
   qrCodeUrl,
   logoUrl,
+  contactInfo,
   editable = false,
   onRefereeChange,
   onFieldChange,
@@ -74,7 +79,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
-    if (!groupPhase || !currentMatches) return groupPhase?.matches || [];
+    if (!groupPhase || !currentMatches) {return groupPhase?.matches || [];}
 
     return groupPhase.matches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
@@ -90,7 +95,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   }, [groupPhase, currentMatches]);
 
   const finalPhaseMatches = useMemo(() => {
-    if (!currentMatches) return finalMatches;
+    if (!currentMatches) {return finalMatches;}
 
     return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
@@ -172,6 +177,12 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onStartCorrection={onStartCorrection}
         />
       )}
+
+      {/* Tournament Footer with Organizer and Contact Info */}
+      <TournamentFooter
+        organizer={schedule.tournament.organizer}
+        contactInfo={contactInfo || schedule.tournament.contactInfo}
+      />
 
       {/* Global styles for responsive design */}
       <style>{`

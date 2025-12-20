@@ -122,7 +122,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
                   `Neues Ergebnis eingeben (Format: Heim:Gast)`,
                   `${currentMatch.homeScore}:${currentMatch.awayScore}`
                 );
-                if (!input) return;
+                if (!input) {return;}
                 const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
                 if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
                   alert('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
@@ -149,7 +149,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
                 `Neues Ergebnis eingeben (Format: Heim:Gast)`,
                 `${currentMatch.homeScore}:${currentMatch.awayScore}`
               );
-              if (!input) return;
+              if (!input) {return;}
               const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
               if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
                 alert('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
@@ -546,7 +546,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
       `Neue Spielzeit eingeben (Format: MM:SS)`,
       formatTime(elapsedSeconds)
     );
-    if (!input) return;
+    if (!input) {return;}
 
     const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
     if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {

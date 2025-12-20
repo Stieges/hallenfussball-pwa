@@ -322,7 +322,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={currentTournament.finalsConfig?.parallelSemifinals ?? true}
+                    checked={currentTournament.finalsConfig.parallelSemifinals ?? true}
                     onChange={(e) => {
                       handleFinalsConfigChange({
                         ...currentTournament.finalsConfig!,
@@ -340,7 +340,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                   <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
-                      checked={currentTournament.finalsConfig?.parallelQuarterfinals ?? true}
+                      checked={currentTournament.finalsConfig.parallelQuarterfinals ?? true}
                       onChange={(e) => {
                         handleFinalsConfigChange({
                           ...currentTournament.finalsConfig!,

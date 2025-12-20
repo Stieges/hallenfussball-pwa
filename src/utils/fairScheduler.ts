@@ -11,6 +11,7 @@
 import { Team, Match } from '../types/tournament';
 import { FairnessCalculator } from './FairnessCalculator';
 import { generateGroupStageMatchId } from './idGenerator';
+import { parseDFBMatches, getDFBPattern } from '../constants/dfbMatchPatterns';
 
 /**
  * Represents a time slot in the schedule
@@ -43,6 +44,8 @@ export interface GroupPhaseScheduleOptions {
   breakBetweenSlotsMinutes: number;
   minRestSlotsPerTeam: number; // e.g., 1 = no back-to-back matches
   startTime?: Date;
+  /** Optional: DFB pattern code to use (e.g., "1T06M" for 6 teams) */
+  dfbPatternCode?: string;
 }
 
 /**
@@ -91,7 +94,7 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
   const pairings: TeamPairing[] = [];
   const n = teams.length;
 
-  if (n < 2) return pairings;
+  if (n < 2) {return pairings;}
 
   // For odd number of teams, add a "bye" team
   const teamsWithBye: (Team | null)[] = n % 2 === 0 ? [...teams] : [...teams, null];
@@ -119,6 +122,34 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
     }
   }
 
+  return pairings;
+}
+
+/**
+ * Generate pairings from DFB pattern
+ * The DFB pattern defines exact match order and should be followed
+ */
+function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] {
+  const pattern = getDFBPattern(teams.length);
+  if (!pattern || pattern.code !== patternCode) {
+    console.warn(`[FairScheduler] DFB pattern ${patternCode} not found or doesn't match team count ${teams.length}, falling back to Circle Method`);
+    return generateRoundRobinPairings(teams);
+  }
+
+  const pairings: TeamPairing[] = [];
+  const dfbMatches = parseDFBMatches(pattern);
+
+  for (const { home, away } of dfbMatches) {
+    // DFB patterns use 1-based indices
+    const teamA = teams[home - 1];
+    const teamB = teams[away - 1];
+
+    if (teamA && teamB) {
+      pairings.push({ teamA, teamB });
+    }
+  }
+
+  console.log(`[FairScheduler] Generated ${pairings.length} pairings from DFB pattern ${patternCode}`);
   return pairings;
 }
 
@@ -152,7 +183,7 @@ function canTeamPlayInSlot(
   teamStates: Map<string, TeamScheduleState>
 ): boolean {
   const state = teamStates.get(teamId);
-  if (!state) return false;
+  if (!state) {return false;}
 
   // Check minimum rest period
   if (state.lastSlot !== -Infinity && slot - state.lastSlot < minRestSlots + 1) {
@@ -309,6 +340,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     breakBetweenSlotsMinutes,
     minRestSlotsPerTeam,
     startTime,
+    dfbPatternCode,
   } = options;
 
   // Pre-validation: Check constraints before attempting to schedule
@@ -331,9 +363,17 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   fairnessCalculator.bindTeamStates(teamStates);
 
   // Generate round-robin pairings for each group
+  // Use DFB patterns when specified, otherwise use Circle Method
   const groupPairings = new Map<string, TeamPairing[]>();
   groups.forEach((teams, groupId) => {
-    groupPairings.set(groupId, generateRoundRobinPairings(teams));
+    if (dfbPatternCode) {
+      // Use DFB pattern for scheduling (maintains official DFB order)
+      console.log(`[FairScheduler] Using DFB pattern ${dfbPatternCode} for group ${groupId}`);
+      groupPairings.set(groupId, generateDFBPairings(teams, dfbPatternCode));
+    } else {
+      // Use standard Circle Method
+      groupPairings.set(groupId, generateRoundRobinPairings(teams));
+    }
   });
 
   // Flatten all pairings with group info
@@ -353,6 +393,16 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
     minRestSlotsPerTeam
   });
 
+  // Track consecutive empty slots for smarter deadlock detection
+  let consecutiveEmptySlots = 0;
+  // Maximum empty slots before declaring deadlock:
+  // At least minRestSlotsPerTeam + 1 (teams need time to rest)
+  // Plus a buffer based on team count
+  const maxConsecutiveEmptySlots = Math.max(
+    minRestSlotsPerTeam + 2,
+    Math.ceil(allTeams.length / numberOfFields) + 1
+  );
+
   while (remainingPairings.length > 0) {
     let progressThisSlot = false; // Track if any match was placed this slot
 
@@ -369,7 +419,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
     // Try to schedule matches in available fields
     for (let field = 1; field <= numberOfFields; field++) {
-      if (currentSlot.matches.has(field)) continue; // Field occupied
+      if (currentSlot.matches.has(field)) {continue;} // Field occupied
 
       // Find best pairing for this slot and field
       // Strategy: Prioritize matches with teams that have had longest rest
@@ -382,7 +432,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
         // NOTE: pairing.teamB is guaranteed non-null here because BYE-pairings
         // are filtered out in generateRoundRobinPairings() at line 105
-        if (!pairing.teamB) continue; // Type guard for safety
+        if (!pairing.teamB) {continue;} // Type guard for safety
 
         const score = calculateFairnessScore(
           pairing.teamA.id,
@@ -426,7 +476,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
 
         // Type guard: pairing.teamB is non-null (BYE-pairings filtered earlier)
-        if (!pairing.teamB) continue;
+        if (!pairing.teamB) {continue;}
 
         const stateA = teamStates.get(pairing.teamA.id)!;
         const stateB = teamStates.get(pairing.teamB.id)!;
@@ -470,18 +520,28 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
       }
     }
 
-    // Stall detection: If no match was placed in this slot, we have a deadlock
+    // Stall detection: Track consecutive empty slots
+    // Empty slots are normal when teams need rest periods
     if (!progressThisSlot) {
-      console.error(
-        `[FairScheduler] DEADLOCK: No match could be placed in slot ${currentSlotIndex}.`,
-        `Remaining: ${remainingPairings.length} matches`
-      );
+      consecutiveEmptySlots++;
 
-      throw new Error(
-        `Spielplan konnte nicht vollständig erstellt werden. ` +
-        `${remainingPairings.length} Matches fehlen. ` +
-        `Bitte mehr Felder hinzufügen oder minRestSlotsPerTeam reduzieren.`
-      );
+      // Only throw if we've had too many consecutive empty slots
+      // This indicates a true deadlock, not just normal rest periods
+      if (consecutiveEmptySlots > maxConsecutiveEmptySlots) {
+        console.error(
+          `[FairScheduler] DEADLOCK: No match could be placed for ${consecutiveEmptySlots} consecutive slots.`,
+          `Remaining: ${remainingPairings.length} matches`
+        );
+
+        throw new Error(
+          `Spielplan konnte nicht vollständig erstellt werden. ` +
+          `${remainingPairings.length} Matches fehlen. ` +
+          `Bitte mehr Felder hinzufügen oder minRestSlotsPerTeam reduzieren.`
+        );
+      }
+    } else {
+      // Reset counter when we make progress
+      consecutiveEmptySlots = 0;
     }
 
     // Move to next slot

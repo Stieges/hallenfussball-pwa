@@ -69,7 +69,7 @@ export const PDFExportDialog = ({
         includeScores,
         includeStandings,
         // Only pass organizerName if it has a value, otherwise let pdfExporter use the fallback
-        ...(tournament.organizer && tournament.organizer.trim() ? { organizerName: tournament.organizer } : {}),
+        ...(tournament.organizer?.trim() ? { organizerName: tournament.organizer } : {}),
         hallName: getLocationName(tournament),
       });
 

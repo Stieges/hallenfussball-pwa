@@ -551,7 +551,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
       // Hole vorherigen Score
       const previousEvent = events[events.length - 1];
-      const { home, away } = previousEvent?.scoreAfter || { home: 0, away: 0 };
+      const { home, away } = previousEvent.scoreAfter || { home: 0, away: 0 };
 
       const updated = new Map(prev);
       updated.set(matchId, {
@@ -640,7 +640,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {
-    if (!lastFinishedMatchData) return;
+    if (!lastFinishedMatchData) {return;}
 
     // Setze selectedMatchId auf das letzte beendete Spiel
     setSelectedMatchId(lastFinishedMatchData.id);

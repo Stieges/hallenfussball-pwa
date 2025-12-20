@@ -12,3 +12,4 @@ export { FinalStageSchedule } from './FinalStageSchedule';
 export { GroupTables } from './GroupTables';
 export { CorrectionBanner } from './CorrectionBanner';
 export { MatchScoreCell } from './MatchScoreCell';
+export { TournamentFooter, type ContactInfo } from './TournamentFooter';

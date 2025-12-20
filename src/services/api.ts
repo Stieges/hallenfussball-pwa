@@ -123,7 +123,7 @@ const STORAGE_KEY = 'tournaments';
 function localStorageGetTournaments(): Tournament[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
+    if (!stored) {return [];}
 
     const tournaments = JSON.parse(stored) as Tournament[];
 

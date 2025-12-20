@@ -20,8 +20,8 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
   onCancel,
 }) => {
   const containerStyle: CSSProperties = {
-    background: '#FFF3CD',
-    border: '2px solid #FFC107',
+    background: theme.colors.correction.bg,
+    border: `2px solid ${theme.colors.correction.border}`,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
@@ -38,7 +38,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
   const titleStyle: CSSProperties = {
     fontSize: theme.fontSizes.lg,
     fontWeight: theme.fontWeights.bold,
-    color: '#856404',
+    color: theme.colors.correction.text,
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing.sm,
@@ -47,8 +47,8 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
   const closeButtonStyle: CSSProperties = {
     background: 'transparent',
     border: 'none',
-    color: '#856404',
-    fontSize: '24px',
+    color: theme.colors.correction.text,
+    fontSize: theme.fontSizes.xxl,
     cursor: 'pointer',
     padding: '0',
     width: '32px',
@@ -62,7 +62,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
 
   const contentStyle: CSSProperties = {
     fontSize: theme.fontSizes.md,
-    color: '#856404',
+    color: theme.colors.correction.text,
     lineHeight: '1.6',
   };
 
@@ -87,16 +87,22 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
 
   return (
     <>
-      <div style={containerStyle} className="correction-banner">
+      <div
+        style={containerStyle}
+        className="correction-banner"
+        role="alert"
+        aria-live="polite"
+      >
         <div style={headerStyle}>
           <div style={titleStyle}>
-            <span>⚠️</span>
+            <span aria-hidden="true">⚠️</span>
             <span>KORREKTURMODUS AKTIV</span>
           </div>
           <button
             style={closeButtonStyle}
             onClick={onCancel}
             title="Korrektur abbrechen"
+            aria-label="Korrektur abbrechen"
             className="correction-banner-close"
           >
             ×
@@ -110,7 +116,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
 
           <div style={warningListStyle}>
             <div style={listItemStyle}>
-              ⚠️ <strong>ACHTUNG:</strong> Änderungen beeinflussen Tabelle und ggf. Playoff-Paarungen
+              <span aria-hidden="true">⚠️</span> <strong>ACHTUNG:</strong> Änderungen beeinflussen Tabelle und ggf. Playoff-Paarungen
             </div>
             <div style={listItemStyle}>
               • Gruppentabelle wird neu berechnet
@@ -132,8 +138,8 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
       <style>{`
         @media (max-width: 767px) {
           .correction-banner {
-            padding: 12px !important;
-            font-size: 14px !important;
+            padding: ${theme.spacing.md} !important;
+            font-size: ${theme.fontSizes.md} !important;
           }
 
           .correction-banner-close {
@@ -144,7 +150,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
         }
 
         .correction-banner-close:hover {
-          background: rgba(133, 100, 4, 0.1);
+          background: ${theme.colors.correction.border};
         }
       `}</style>
     </>

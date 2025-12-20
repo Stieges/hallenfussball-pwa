@@ -31,7 +31,7 @@ export class FairnessCalculator {
    */
   recordAssignment(teamId: string): void {
     const state = this.teamStates.get(teamId);
-    if (!state) return;
+    if (!state) {return;}
 
     const newAvg = this.computeAvgRest(state.matchSlots);
     this.avgRestByTeam.set(teamId, newAvg);
@@ -54,10 +54,10 @@ export class FairnessCalculator {
   projectedAvgRest(teamId: string, slot: number): number {
     const cacheKey = `${teamId}|${slot}`;
     const cached = this.projectionCache.get(cacheKey);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {return cached;}
 
     const state = this.teamStates.get(teamId);
-    if (!state) return 0;
+    if (!state) {return 0;}
 
     const projectedSlots = [...state.matchSlots, slot].sort((a, b) => a - b);
     const projAvg = this.computeAvgRest(projectedSlots);
@@ -103,7 +103,7 @@ export class FairnessCalculator {
    * Compute average rest between consecutive slots
    */
   private computeAvgRest(sortedSlots: number[]): number {
-    if (sortedSlots.length < 2) return 0;
+    if (sortedSlots.length < 2) {return 0;}
     let sum = 0;
     for (let i = 1; i < sortedSlots.length; i++) {
       sum += sortedSlots[i] - sortedSlots[i - 1];

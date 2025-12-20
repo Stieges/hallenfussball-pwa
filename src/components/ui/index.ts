@@ -5,3 +5,4 @@ export { Input } from './Input';
 export { Select } from './Select';
 export { Icons } from './Icons';
 export { NumberStepper } from './NumberStepper';
+export { CollapsibleSection } from './CollapsibleSection';

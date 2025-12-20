@@ -9,11 +9,33 @@
  */
 
 import { CSSProperties } from 'react';
-import { Tournament } from '../types/tournament';
+import { Tournament, PlacementCriterion } from '../types/tournament';
 import { Card } from './ui';
 import { theme } from '../styles/theme';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
+
+/**
+ * Get short abbreviation for placement criteria
+ */
+function getPlacementAbbreviation(id: string): string {
+  const abbreviations: Record<string, string> = {
+    points: 'Pkt',
+    goalDifference: 'Diff',
+    goalsFor: 'Tore',
+    directComparison: 'DV',
+  };
+  return abbreviations[id] || id;
+}
+
+/**
+ * Format placement logic for compact display
+ */
+function formatPlacementLogic(placementLogic: PlacementCriterion[]): string {
+  const active = placementLogic.filter(p => p.enabled);
+  if (active.length === 0) {return 'Keine';}
+  return active.map(p => getPlacementAbbreviation(p.id)).join(' > ');
+}
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -38,18 +60,18 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
-    boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+    boxShadow: theme.shadows.md,
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: '16px',
+    marginBottom: theme.spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '18px',
+    fontSize: theme.fontSizes.xl,
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.text.primary,
     margin: 0,
@@ -57,41 +79,41 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const badgeStyle: CSSProperties = {
-    padding: '4px 10px',
+    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
     borderRadius: theme.borderRadius.sm,
-    fontSize: '11px',
+    fontSize: theme.fontSizes.xs,
     fontWeight: theme.fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    marginLeft: '12px',
+    marginLeft: theme.spacing.md,
   };
 
-  const getBadgeColor = () => {
+  const getBadgeColor = (): { background: string; color: string } => {
     if (tournament.status === 'draft') {
       return {
-        background: 'rgba(255,165,0,0.15)',
-        color: '#ff8c00',
+        background: theme.colors.status.draftBg,
+        color: theme.colors.status.draft,
       };
     }
     switch (categoryLabel) {
       case 'Läuft':
         return {
-          background: 'rgba(0,176,255,0.15)',
-          color: '#00b0ff',
+          background: theme.colors.status.liveBg,
+          color: theme.colors.status.live,
         };
       case 'Bevorstehend':
         return {
-          background: 'rgba(76,175,80,0.15)',
-          color: '#4caf50',
+          background: theme.colors.status.upcomingBg,
+          color: theme.colors.status.upcoming,
         };
       case 'Beendet':
         return {
-          background: 'rgba(158,158,158,0.15)',
-          color: '#9e9e9e',
+          background: theme.colors.status.finishedBg,
+          color: theme.colors.status.finished,
         };
       default:
         return {
-          background: 'rgba(0,0,0,0.05)',
+          background: theme.colors.surface,
           color: theme.colors.text.secondary,
         };
     }
@@ -99,17 +121,17 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
   const infoGridStyle: CSSProperties = {
     display: 'grid',
-    gap: '12px',
+    gap: theme.spacing.md,
   };
 
   const infoItemStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: theme.spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: '11px',
+    fontSize: theme.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     color: theme.colors.text.secondary,
@@ -117,26 +139,26 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: theme.fontSizes.md,
     color: theme.colors.text.primary,
     fontWeight: theme.fontWeights.medium,
   };
 
   const deleteButtonStyle: CSSProperties = {
-    marginTop: '12px',
+    marginTop: theme.spacing.md,
     width: '100%',
-    background: '#ef4444',
-    color: 'white',
+    background: theme.colors.error,
+    color: theme.colors.text.primary,
     border: 'none',
     borderRadius: theme.borderRadius.sm,
-    padding: '8px 12px',
-    fontSize: '13px',
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    fontSize: theme.fontSizes.sm,
     fontWeight: theme.fontWeights.bold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '6px',
+    gap: theme.spacing.sm,
     transition: 'all 0.2s ease',
   };
 
@@ -157,65 +179,104 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         }
       }}
     >
-      <div style={headerStyle}>
-        <h3 style={titleStyle}>{tournament.title}</h3>
-        {categoryLabel && (
-          <span style={{ ...badgeStyle, ...badgeColors }}>{categoryLabel}</span>
-        )}
-      </div>
-
-      <div style={infoGridStyle}>
-        <div style={infoItemStyle}>
-          <span style={labelStyle}>Datum & Uhrzeit</span>
-          <span style={valueStyle}>{formatTournamentDate(tournament)}</span>
+      <article
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        aria-label={`Turnier: ${tournament.title}, ${categoryLabel || 'Entwurf'}`}
+        onKeyDown={(e) => {
+          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+      >
+        <div style={headerStyle}>
+          <h3 style={titleStyle}>{tournament.title}</h3>
+          {(categoryLabel || tournament.status === 'draft') && (
+            <span
+              style={{ ...badgeStyle, ...badgeColors }}
+              aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
+            >
+              {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
+            </span>
+          )}
         </div>
 
-        <div style={infoItemStyle}>
-          <span style={labelStyle}>Ort</span>
-          <span style={valueStyle}>{getLocationName(tournament)}</span>
-        </div>
-
-        <div style={infoItemStyle}>
-          <span style={labelStyle}>Altersklasse</span>
-          <span style={valueStyle}>{tournament.ageClass}</span>
-        </div>
-
-        {tournament.status === 'draft' && (
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px 12px',
-              background: 'rgba(255,165,0,0.08)',
-              borderRadius: theme.borderRadius.sm,
-              fontSize: '12px',
-              color: theme.colors.text.secondary,
-            }}
-          >
-            Entwurf - Noch nicht veröffentlicht
+        <dl style={infoGridStyle}>
+          <div style={infoItemStyle}>
+            <dt style={labelStyle}>Datum & Uhrzeit</dt>
+            <dd style={{ ...valueStyle, margin: 0 }}>{formatTournamentDate(tournament)}</dd>
           </div>
-        )}
-      </div>
 
-      {/* Delete Button - Only show if onDelete is provided - At the bottom */}
-      {onDelete && (
-        <button
-          style={deleteButtonStyle}
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent card click
-            onDelete();
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#dc2626';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#ef4444';
-          }}
-          title="Turnier löschen"
-        >
-          <span>🗑️</span>
-          <span>Löschen</span>
-        </button>
-      )}
+          <div style={infoItemStyle}>
+            <dt style={labelStyle}>Ort</dt>
+            <dd style={{ ...valueStyle, margin: 0 }}>{getLocationName(tournament)}</dd>
+          </div>
+
+          <div style={infoItemStyle}>
+            <dt style={labelStyle}>Altersklasse</dt>
+            <dd style={{ ...valueStyle, margin: 0 }}>{tournament.ageClass}</dd>
+          </div>
+
+          {tournament.organizer && (
+            <div style={infoItemStyle}>
+              <dt style={labelStyle}>Veranstalter</dt>
+              <dd style={{ ...valueStyle, margin: 0 }}>{tournament.organizer}</dd>
+            </div>
+          )}
+
+          {tournament.placementLogic && tournament.placementLogic.length > 0 && (
+            <div style={infoItemStyle}>
+              <dt style={labelStyle}>Platzierung</dt>
+              <dd style={{
+                ...valueStyle,
+                margin: 0,
+                fontSize: theme.fontSizes.sm,
+                color: theme.colors.text.secondary,
+              }}>
+                {formatPlacementLogic(tournament.placementLogic)}
+              </dd>
+            </div>
+          )}
+
+          {tournament.status === 'draft' && (
+            <div
+              style={{
+                marginTop: theme.spacing.sm,
+                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                background: theme.colors.status.draftBg,
+                borderRadius: theme.borderRadius.sm,
+                fontSize: theme.fontSizes.sm,
+                color: theme.colors.text.secondary,
+              }}
+              role="status"
+            >
+              Entwurf - Noch nicht veröffentlicht
+            </div>
+          )}
+        </dl>
+
+        {/* Delete Button - Only show if onDelete is provided - At the bottom */}
+        {onDelete && (
+          <button
+            style={deleteButtonStyle}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent card click
+              onDelete();
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dc2626';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = theme.colors.error;
+            }}
+            aria-label={`Turnier "${tournament.title}" löschen`}
+          >
+            <span aria-hidden="true">🗑️</span>
+            <span>Löschen</span>
+          </button>
+        )}
+      </article>
     </Card>
   );
 };

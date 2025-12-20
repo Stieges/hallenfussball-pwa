@@ -9,7 +9,7 @@
  * 0 -> 'A', 1 -> 'B', ..., 25 -> 'Z', 26 -> 'AA', 27 -> 'AB', etc.
  */
 export function getGroupLabel(index: number): string {
-  if (index < 0) return '';
+  if (index < 0) {return '';}
 
   let label = '';
   let num = index;

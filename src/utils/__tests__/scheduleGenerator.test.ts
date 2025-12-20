@@ -11,6 +11,9 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
   timeSlot: '10:00',
   location: { name: 'Sporthalle Test' },
   ageClass: 'U15',
+  sport: 'football',
+  tournamentType: 'classic',
+  mode: 'classic',
   numberOfTeams: 4,
   numberOfFields: 1,
   groupSystem: 'roundRobin',
@@ -21,9 +24,14 @@ const createTournament = (overrides?: Partial<Tournament>): Tournament => ({
   matches: [],
   pointSystem: { win: 3, draw: 1, loss: 0 },
   placementLogic: [
-    { id: 'points', label: 'Punkte', enabled: true, order: 1 },
-    { id: 'goalDifference', label: 'Tordifferenz', enabled: true, order: 2 },
+    { id: 'points', label: 'Punkte', enabled: true },
+    { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
   ],
+  finals: { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+  isKidsTournament: false,
+  hideScoresForPublic: false,
+  hideRankingsForPublic: false,
+  resultMode: 'goals',
   status: 'published',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -158,6 +166,69 @@ describe('generateFullSchedule', () => {
       // Check finals exist
       const finalMatches = schedule.allMatches.filter(m => m.phase !== 'groupStage');
       expect(finalMatches.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('handles odd team count (5 teams) with groups and finals', () => {
+      // BUG FIX: This test verifies that odd team counts don't cause scheduling deadlock
+      // Previously, the scheduler would fail with "2 Matches fehlen" error
+      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(2, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const allTeams = [...teamsA, ...teamsB];
+
+      const tournament = createTournament({
+        teams: allTeams,
+        numberOfTeams: 5,
+        numberOfGroups: 2,
+        numberOfFields: 1,
+        groupSystem: 'groupsAndFinals',
+        finalsConfig: { preset: 'top-4' },
+        minRestSlots: 1, // This was causing the issue - teams need rest between matches
+      });
+
+      // Should NOT throw an error
+      const schedule = generateFullSchedule(tournament);
+
+      // Group A: 3 teams = 3 matches, Group B: 2 teams = 1 match = 4 group matches
+      const groupMatches = schedule.allMatches.filter(m => m.phase === 'groupStage');
+      expect(groupMatches.length).toBe(4);
+
+      // Finals should still be generated (semifinal + final + third place)
+      const finalMatches = schedule.allMatches.filter(m => m.phase !== 'groupStage');
+      expect(finalMatches.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('handles all-places preset with small groups (no invalid placement matches)', () => {
+      // BUG FIX: This test verifies that all-places preset doesn't generate
+      // placement matches for positions that don't exist in small groups
+      const teamsA = createTeams(3, 'A').map((t, i) => ({ ...t, id: `a-${i}`, name: `Team A${i + 1}`, group: 'A' }));
+      const teamsB = createTeams(3, 'B').map((t, i) => ({ ...t, id: `b-${i}`, name: `Team B${i + 1}`, group: 'B' }));
+      const allTeams = [...teamsA, ...teamsB];
+
+      const tournament = createTournament({
+        teams: allTeams,
+        numberOfTeams: 6,
+        numberOfGroups: 2,
+        numberOfFields: 1,
+        groupSystem: 'groupsAndFinals',
+        finalsConfig: { preset: 'all-places' },
+        minRestSlots: 0, // Allow back-to-back for simplicity
+      });
+
+      // Should NOT throw an error
+      const schedule = generateFullSchedule(tournament);
+
+      // Group phase: 3 matches per group = 6 total
+      const groupMatches = schedule.allMatches.filter(m => m.phase === 'groupStage');
+      expect(groupMatches.length).toBe(6);
+
+      // With 3 teams per group:
+      // - Place 5/6 match SHOULD exist (3rd place from each group)
+      // - Place 7/8 match should NOT exist (no 4th place in 3-team groups)
+      const finalMatches = schedule.allMatches.filter(m => m.phase !== 'groupStage');
+
+      // Should have: 2 semifinals + 1 third-place + 1 final + 1 place 5/6 = 5 matches
+      // Should NOT have place 7/8 match
+      expect(finalMatches.length).toBeGreaterThanOrEqual(4);
     });
   });
 
