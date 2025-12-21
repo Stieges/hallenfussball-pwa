@@ -1,3 +1,5 @@
+import { SportId } from '../config/sports/types';
+
 // Core Tournament Types
 export type Sport = 'football' | 'other';
 export type TournamentType = 'classic' | 'bambini';
@@ -187,6 +189,7 @@ export interface Tournament {
 
   // Step 1: Sport & Tournament Type
   sport: Sport;
+  sportId?: SportId; // New: Specific sport configuration ID (e.g., 'football-indoor', 'handball')
   tournamentType: TournamentType;
 
   // Step 2: Mode & System
