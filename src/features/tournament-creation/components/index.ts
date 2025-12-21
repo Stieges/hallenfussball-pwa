@@ -16,3 +16,4 @@ export { PointSystemPicker } from './PointSystemPicker';
 export { BambiniSettings } from './BambiniSettings';
 export { ValidationWarnings } from './ValidationWarnings';
 export { SmartConfig } from './SmartConfig';
+export { SportSelector } from './SportSelector';

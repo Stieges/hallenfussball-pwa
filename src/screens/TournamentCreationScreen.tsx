@@ -10,6 +10,7 @@ import { generateTournamentId } from '../utils/idGenerator';
 import { countMatchesWithResults } from '../utils/teamHelpers';
 import { theme } from '../styles/theme';
 import { useToast } from '../components/ui/Toast';
+import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
@@ -59,55 +60,56 @@ interface TournamentCreationScreenProps {
   quickEditMode?: boolean; // Schnellbearbeitung: Zeigt prominenten Speichern-Button
 }
 
-const getDefaultFormData = (): Partial<Tournament> => ({
-  sport: 'football',
-  tournamentType: 'classic',
-  mode: 'classic',
-  numberOfFields: 1,
-  numberOfTeams: 4,
-  groupSystem: 'roundRobin',
-  numberOfGroups: 2,
-  groupPhaseGameDuration: 10,
-  groupPhaseBreakDuration: 2,
-  finalRoundGameDuration: 10,
-  finalRoundBreakDuration: 2,
-  breakBetweenPhases: 5,
-  gamePeriods: 1,
-  halftimeBreak: 1,
-  placementLogic: [
-    { id: 'points', label: 'Punkte', enabled: true },
-    { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
-    { id: 'goalsFor', label: 'Erzielte Tore', enabled: true },
-    { id: 'directComparison', label: 'Direkter Vergleich', enabled: false },
-  ],
-  finals: {
-    final: false,
-    thirdPlace: false,
-    fifthSixth: false,
-    seventhEighth: false,
-  },
-  finalsConfig: {
-    preset: 'none',
-  },
-  refereeConfig: {
-    mode: 'none',
-  },
-  isKidsTournament: false,
-  hideScoresForPublic: false,
-  hideRankingsForPublic: false,
-  resultMode: 'goals',
-  pointSystem: {
-    win: 3,
-    draw: 1,
-    loss: 0,
-  },
-  title: '',
-  ageClass: 'U11',
-  date: new Date().toISOString().split('T')[0],
-  timeSlot: '09:00 - 16:00',
-  location: { name: '' },
-  teams: [],
-});
+const getDefaultFormData = (): Partial<Tournament> => {
+  const defaultConfig = getSportConfig(DEFAULT_SPORT_ID);
+
+  return {
+    sport: 'football',
+    sportId: DEFAULT_SPORT_ID,
+    tournamentType: 'classic',
+    mode: 'classic',
+    numberOfFields: defaultConfig.defaults.typicalFieldCount,
+    numberOfTeams: 4,
+    groupSystem: 'roundRobin',
+    numberOfGroups: 2,
+    groupPhaseGameDuration: defaultConfig.defaults.gameDuration,
+    groupPhaseBreakDuration: defaultConfig.defaults.breakDuration,
+    finalRoundGameDuration: defaultConfig.defaults.gameDuration,
+    finalRoundBreakDuration: defaultConfig.defaults.breakDuration,
+    breakBetweenPhases: 5,
+    gamePeriods: defaultConfig.defaults.periods,
+    halftimeBreak: defaultConfig.defaults.periodBreak,
+    placementLogic: [
+      { id: 'points', label: 'Punkte', enabled: true },
+      { id: 'goalDifference', label: `${defaultConfig.terminology.goal}differenz`, enabled: true },
+      { id: 'goalsFor', label: `Erzielte ${defaultConfig.terminology.goalPlural}`, enabled: true },
+      { id: 'directComparison', label: 'Direkter Vergleich', enabled: false },
+    ],
+    finals: {
+      final: false,
+      thirdPlace: false,
+      fifthSixth: false,
+      seventhEighth: false,
+    },
+    finalsConfig: {
+      preset: 'none',
+    },
+    refereeConfig: {
+      mode: 'none',
+    },
+    isKidsTournament: false,
+    hideScoresForPublic: false,
+    hideRankingsForPublic: false,
+    resultMode: 'goals',
+    pointSystem: defaultConfig.defaults.pointSystem,
+    title: '',
+    ageClass: 'U11',
+    date: new Date().toISOString().split('T')[0],
+    timeSlot: '09:00 - 16:00',
+    location: { name: '' },
+    teams: [],
+  };
+};
 
 export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> = ({
   onBack,
@@ -394,6 +396,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       id: formData.id || existingTournament?.id || generateTournamentId(),
       status: 'draft',
       sport: formData.sport || 'football',
+      sportId: formData.sportId || DEFAULT_SPORT_ID,
       tournamentType: formData.tournamentType || 'classic',
       mode: formData.mode || 'classic',
       numberOfFields: formData.numberOfFields || 1,

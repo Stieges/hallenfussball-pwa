@@ -2,14 +2,17 @@ import { CSSProperties } from 'react';
 import { Card } from '../../components/ui';
 import { TournamentType, Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
+import { SportId, getSportConfig, sportIdToLegacySport } from '../../config/sports';
+import { SportSelector } from './components';
 
 interface Step1Props {
   formData: Partial<Tournament>;
   onUpdate: <K extends keyof Tournament>(field: K, value: Tournament[K]) => void;
   onTournamentTypeChange: (newType: TournamentType) => void;
+  onSportChange?: (sportId: SportId) => void;
 }
 
-// Reusable selection button component
+// Reusable selection button component for tournament type
 interface SelectionButtonProps {
   isSelected: boolean;
   onClick: () => void;
@@ -84,7 +87,34 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
   formData,
   onUpdate,
   onTournamentTypeChange,
+  onSportChange,
 }) => {
+  // Determine current sportId (from new field or legacy conversion)
+  const currentSportId: SportId = formData.sportId ||
+    (formData.sport === 'football' ? 'football-indoor' : 'football-indoor');
+
+  const handleSportChange = (newSportId: SportId) => {
+    const config = getSportConfig(newSportId);
+
+    // Update sportId
+    onUpdate('sportId', newSportId);
+
+    // Update legacy sport field for backwards compatibility
+    onUpdate('sport', sportIdToLegacySport(newSportId));
+
+    // Apply sport-specific defaults
+    onUpdate('groupPhaseGameDuration', config.defaults.gameDuration);
+    onUpdate('groupPhaseBreakDuration', config.defaults.breakDuration);
+    onUpdate('numberOfFields', config.defaults.typicalFieldCount);
+    onUpdate('pointSystem', config.defaults.pointSystem);
+    onUpdate('gamePeriods', config.defaults.periods);
+    onUpdate('halftimeBreak', config.defaults.periodBreak);
+
+    // Call optional callback
+    if (onSportChange) {
+      onSportChange(newSportId);
+    }
+  };
 
   const labelStyle: CSSProperties = {
     display: 'block',
@@ -94,30 +124,59 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
     fontWeight: theme.fontWeights.medium,
   };
 
+  // Get current sport config for info display
+  const currentConfig = getSportConfig(currentSportId);
+
   return (
     <Card>
       <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
-        🏆 Sportart & Turniertyp
+        Sportart & Turniertyp
       </h2>
 
       {/* Sportart wählen */}
       <div style={{ marginBottom: '32px' }}>
         <label style={labelStyle}>Sportart</label>
-        <div className="sport-type-grid" style={{ display: 'grid', gap: '12px' }} role="radiogroup" aria-label="Sportart auswählen">
-          <SelectionButton
-            isSelected={formData.sport === 'football'}
-            onClick={() => onUpdate('sport', 'football')}
-            icon="⚽"
-            title="FUSSBALL"
-            subtitle="Hallenturnier"
-          />
-          <SelectionButton
-            isSelected={formData.sport === 'other'}
-            onClick={() => onUpdate('sport', 'other')}
-            icon="🎯"
-            title="SONSTIGES"
-            subtitle="Handball, Basketball, etc."
-          />
+        <SportSelector
+          selectedSportId={currentSportId}
+          onSportChange={handleSportChange}
+        />
+
+        {/* Info-Box mit aktuellen Defaults */}
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '12px 16px',
+            background: 'rgba(0,176,255,0.08)',
+            borderRadius: theme.borderRadius.md,
+            border: '1px solid rgba(0,176,255,0.2)',
+          }}
+        >
+          <div style={{
+            fontSize: theme.fontSizes.sm,
+            color: theme.colors.text.secondary,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '16px',
+          }}>
+            <span>
+              <strong style={{ color: theme.colors.text.primary }}>Spieldauer:</strong>{' '}
+              {currentConfig.defaults.gameDuration} Min.
+            </span>
+            <span>
+              <strong style={{ color: theme.colors.text.primary }}>Pause:</strong>{' '}
+              {currentConfig.defaults.breakDuration} Min.
+            </span>
+            {currentConfig.defaults.periods > 1 && (
+              <span>
+                <strong style={{ color: theme.colors.text.primary }}>{currentConfig.terminology.periodPlural}:</strong>{' '}
+                {currentConfig.defaults.periods}
+              </span>
+            )}
+            <span>
+              <strong style={{ color: theme.colors.text.primary }}>Punkte:</strong>{' '}
+              {currentConfig.defaults.pointSystem.win}-{currentConfig.defaults.pointSystem.draw}-{currentConfig.defaults.pointSystem.loss}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -131,7 +190,11 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
             icon="🏆"
             title="KLASSISCHES TURNIER"
             subtitle=""
-            details={['• Tabellenplatzierung', '• Finalrunden möglich', '• Normale Torzählung']}
+            details={[
+              '• Tabellenplatzierung',
+              '• Finalrunden möglich',
+              `• Normale ${currentConfig.terminology.goal}zählung`,
+            ]}
             layout="left"
           />
           <SelectionButton
@@ -166,7 +229,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
               marginBottom: '4px',
             }}
           >
-            💡 Bambini-Turnier
+            Bambini-Turnier
           </div>
           <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary }}>
             Bei Bambini-Turnieren werden Ergebnisse und Tabellen für Zuschauer standardmäßig
