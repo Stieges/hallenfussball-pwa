@@ -48,6 +48,7 @@ export const footballIndoorConfig: SportConfig = {
     typicalTeamSize: 6,
     typicalFieldCount: 2,
     minRestSlots: 1,
+    defaultFinalsPreset: 'top-4',
   },
 
   rules: {
@@ -148,6 +149,7 @@ export const footballOutdoorConfig: SportConfig = {
     typicalTeamSize: 11,
     typicalFieldCount: 1,
     minRestSlots: 2,
+    defaultFinalsPreset: 'top-4',
   },
 
   rules: {

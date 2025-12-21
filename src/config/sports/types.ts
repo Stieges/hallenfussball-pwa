@@ -103,6 +103,9 @@ export interface SportDefaults {
 
   /** Minimum rest slots between matches for a team */
   minRestSlots: number;
+
+  /** Default finals preset when using groups + finals */
+  defaultFinalsPreset: 'none' | 'final-only' | 'top-4' | 'top-8' | 'top-16' | 'all-places';
 }
 
 /**
