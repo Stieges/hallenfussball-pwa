@@ -20,6 +20,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    chunkSizeWarningLimit: 600, // Erhöht von 500KB auf 600KB
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks für besseres Caching
+          'react-vendor': ['react', 'react-dom'],
+          'pdf-vendor': ['jspdf', 'jspdf-autotable'],
+        },
+      },
+    },
   }
 })
