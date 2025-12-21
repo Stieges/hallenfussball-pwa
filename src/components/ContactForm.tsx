@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ContactInfo } from '../types/tournament';
 import { Input } from './ui';
 import { theme } from '../styles/theme';
@@ -14,7 +14,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 }) => {
   const [showExtended, setShowExtended] = useState(false);
 
-  const contactInfo: ContactInfo = value || {};
+  // Memoize to prevent useEffect from re-running on every render
+  const contactInfo: ContactInfo = useMemo(() => value || {}, [value]);
 
   // Auto-open wenn Daten vorhanden
   useEffect(() => {
@@ -26,7 +27,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
     ) {
       setShowExtended(true);
     }
-  }, [contactInfo]);
+  }, [contactInfo.name, contactInfo.email, contactInfo.phone, contactInfo.website]);
 
   const handleFieldChange = (field: keyof ContactInfo, fieldValue: string) => {
     onChange({

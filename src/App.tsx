@@ -6,10 +6,12 @@ import { TournamentManagementScreen } from './screens/TournamentManagementScreen
 import { PublicTournamentViewScreen } from './screens/PublicTournamentViewScreen';
 import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
+import { ToastProvider, useToast } from './components/ui/Toast';
 
 type ScreenType = 'dashboard' | 'create' | 'view' | 'public';
 
-function App() {
+function AppContent() {
+  const { showError } = useToast();
   const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
@@ -68,7 +70,7 @@ function App() {
         console.log(`[App] Tournament ${id} deleted successfully`);
       } catch (error) {
         console.error('[App] Failed to delete tournament:', error);
-        alert('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
       }
     }
   };
@@ -95,7 +97,7 @@ function App() {
       }
     } catch (error) {
       console.error('[App] Failed to import tournament:', error);
-      alert('Fehler beim Importieren des Turniers. Bitte versuche es erneut.');
+      showError('Fehler beim Importieren des Turniers. Bitte versuche es erneut.');
     }
   };
 
@@ -117,7 +119,7 @@ function App() {
       setScreen('create');
     } catch (error) {
       console.error('[App] Failed to open tournament in wizard:', error);
-      alert('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
+      showError('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
     }
   };
 
@@ -135,8 +137,8 @@ function App() {
           tournaments={tournaments}
           onCreateNew={() => setScreen('create')}
           onTournamentClick={handleTournamentClick}
-          onDeleteTournament={handleDeleteTournament}
-          onImportTournament={handleImportTournament}
+          onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
+          onImportTournament={(tournament) => void handleImportTournament(tournament)}
         />
       )}
 
@@ -164,7 +166,7 @@ function App() {
         <TournamentManagementScreen
           tournamentId={selectedTournament.id}
           onBack={() => setScreen('dashboard')}
-          onEditInWizard={handleEditInWizard}
+          onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
         />
       )}
 
@@ -172,6 +174,14 @@ function App() {
         <PublicTournamentViewScreen tournamentId={publicTournamentId} />
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
 

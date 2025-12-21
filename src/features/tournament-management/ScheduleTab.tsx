@@ -11,6 +11,7 @@
 
 import { useState, useEffect, CSSProperties } from 'react';
 import { Card } from '../../components/ui';
+import { useToast } from '../../components/ui/Toast';
 import { theme } from '../../styles/theme';
 import { Tournament, Standing, CorrectionEntry, CorrectionReasonType } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
@@ -22,6 +23,7 @@ import { useAppSettings, useUserProfile } from '../../hooks/useUserProfile';
 import { usePermissions } from '../../hooks/usePermissions';
 import { CorrectionReason } from '../../types/userProfile';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../utils/playoffResolver';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -49,6 +51,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { profile } = useUserProfile();
   // Permission check for corrections
   const { canCorrectResults } = usePermissions(tournament.id);
+  // Toast notifications
+  const { showWarning } = useToast();
 
   // Correction mode state
   const [correctionState, setCorrectionState] = useState<CorrectionState | null>(null);
@@ -64,7 +68,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // 2. Check liveMatches status if available
     try {
-      const stored = localStorage.getItem(`liveMatches-${tournament.id}`);
+      const stored = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
       if (stored) {
         const liveMatches = JSON.parse(stored);
         if (liveMatches[matchId]?.status === 'FINISHED') {
@@ -82,7 +86,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // MON-LIVE-INDICATOR-01: Get running match IDs from localStorage
   const getRunningMatchIds = (): Set<string> => {
     try {
-      const stored = localStorage.getItem(`liveMatches-${tournament.id}`);
+      const stored = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
       if (stored) {
         const liveMatches = JSON.parse(stored);
         const runningIds = Object.keys(liveMatches).filter(
@@ -122,7 +126,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // Also listen for storage events (when changed in another tab)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === `liveMatches-${tournament.id}`) {
+      if (e.key === STORAGE_KEYS.liveMatches(tournament.id)) {
         updateRunningMatches();
       }
     };
@@ -202,12 +206,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     // Block editing finished matches (if lock is enabled)
     // Corrections are handled via the CorrectionDialog, not inline editing
     if (appSettings.lockFinishedResults && isMatchFinished(matchId)) {
-      alert('⚠️ Dieses Spiel ist bereits beendet.\n\nVerwenden Sie den Button "Ergebnis korrigieren".');
+      showWarning('Dieses Spiel ist bereits beendet. Verwenden Sie "Ergebnis korrigieren".');
       return;
     }
 
     // Prüfe, ob das Spiel gerade live läuft
-    const liveMatchesData = localStorage.getItem(`liveMatches-${tournament.id}`);
+    const liveMatchesData = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
     if (liveMatchesData) {
       try {
         const liveMatches = JSON.parse(liveMatchesData);

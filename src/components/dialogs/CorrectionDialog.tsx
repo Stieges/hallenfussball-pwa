@@ -10,6 +10,7 @@
 
 import { useState, CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
+import { useToast } from '../ui/Toast';
 import { CorrectionReason, CORRECTION_REASONS } from '../../types/userProfile';
 
 interface CorrectionDialogProps {
@@ -35,6 +36,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   originalScoreA,
   originalScoreB,
 }) => {
+  const { showWarning } = useToast();
   const [newScoreA, setNewScoreA] = useState<string>(String(originalScoreA));
   const [newScoreB, setNewScoreB] = useState<string>(String(originalScoreB));
   const [reason, setReason] = useState<CorrectionReason>('input_error');
@@ -48,7 +50,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
     // Validate: Score must be different from original
     if (scoreA === originalScoreA && scoreB === originalScoreB) {
-      alert('Das neue Ergebnis muss sich vom ursprünglichen unterscheiden.');
+      showWarning('Das neue Ergebnis muss sich vom ursprünglichen unterscheiden.');
       return;
     }
 

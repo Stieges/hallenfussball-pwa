@@ -1,0 +1,126 @@
+/**
+ * ManagementTab Styles
+ *
+ * Responsive styles using CSS Media Queries instead of JS window.innerWidth.
+ * This ensures proper reactivity on window resize.
+ */
+
+.container {
+  padding: var(--spacing-lg);
+  background: var(--color-background);
+  min-height: calc(100vh - 200px);
+}
+
+.fieldSelector {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.fieldButton {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.fieldButton:hover {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.1));
+}
+
+.fieldButtonActive {
+  background: var(--color-primary);
+  color: var(--color-background);
+  border-color: var(--color-primary);
+}
+
+.fieldButtonActive:hover {
+  background: var(--color-primary-hover, #00b862);
+}
+
+.matchSelector {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.matchSelectorLabel {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.matchSelect {
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.matchSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 230, 118, 0.2);
+}
+
+.noMatches {
+  text-align: center;
+  padding: var(--spacing-xxl);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--spacing-md);
+  }
+
+  .fieldSelector {
+    padding: var(--spacing-sm);
+  }
+
+  .fieldButton {
+    padding: var(--spacing-md);
+    font-size: var(--font-size-lg);
+    min-width: 80px;
+    flex: 1 1 calc(50% - 4px);
+  }
+
+  .matchSelector {
+    padding: var(--spacing-sm);
+  }
+
+  .matchSelect {
+    font-size: var(--font-size-lg);
+  }
+
+  .noMatches {
+    padding: var(--spacing-lg);
+    font-size: var(--font-size-md);
+  }
+}
+
+/* Tablet Responsive Styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .fieldButton {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}

@@ -9,6 +9,7 @@ import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { generateTournamentId } from '../utils/idGenerator';
 import { countMatchesWithResults } from '../utils/teamHelpers';
 import { theme } from '../styles/theme';
+import { useToast } from '../components/ui/Toast';
 
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
@@ -114,6 +115,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   existingTournament,
   quickEditMode = false,
 }) => {
+  const { showSuccess, showWarning } = useToast();
+
   // Restore last visited step from existing tournament (draft restoration)
   const initialStep = existingTournament?.lastVisitedStep || 1;
   const initialVisitedSteps = new Set<number>();
@@ -502,8 +505,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     const tournament = createDraftTournament();
     defaultSaveTournament(tournament);
     lastSavedDataRef.current = JSON.stringify(formData);
-    // Show success feedback (optional: add toast notification later)
-    alert('Turnier als Entwurf gespeichert!');
+    showSuccess('Turnier als Entwurf gespeichert!');
   };
 
   const handleBackToDashboard = () => {
@@ -614,7 +616,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       for (let i = step; i < targetStep; i++) {
         const errors = validateStep(i);
         if (errors.length > 0) {
-          alert(`⚠️ Bitte fülle alle erforderlichen Felder aus:\n\n${errors.join('\n')}`);
+          showWarning(`Bitte fülle alle erforderlichen Felder aus: ${errors.join(', ')}`);
           break;
         }
       }

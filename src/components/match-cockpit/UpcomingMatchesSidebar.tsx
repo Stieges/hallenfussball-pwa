@@ -184,16 +184,16 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
           <Button
             variant="secondary"
             size={isMobile ? "md" : "sm"}
-            onClick={() => alert('Ansage-Text Feature kommt bald')}
-            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+            disabled
+            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto', opacity: 0.5, cursor: 'not-allowed' }}
           >
             Ansage-Text anzeigen
           </Button>
           <Button
             variant="secondary"
             size={isMobile ? "md" : "sm"}
-            onClick={() => alert('Hallenanzeige Feature kommt bald')}
-            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
+            disabled
+            style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto', opacity: 0.5, cursor: 'not-allowed' }}
           >
             Paarung auf Hallenanzeige
           </Button>

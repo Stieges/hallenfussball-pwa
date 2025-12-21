@@ -2,16 +2,29 @@
  * MonitorTab - Große Zuschauer-Ansicht (Monitor/Display)
  *
  * Features:
- * - Aktueller Spielstand (alle Felder)
- * - Nächstes Spiel
- * - Live-Tabellen
- * - Große, gut lesbare Darstellung für Projektor/TV
+ * - TV-optimierte Einzelspiel-Anzeige
+ * - Feld-Auswahl bei mehreren Feldern
+ * - Live-Timer mit Fortschrittsbalken
+ * - Tor-Animation
+ * - Vorschau nächstes Spiel
+ * - Tabellen-Anzeige wenn kein Spiel läuft
+ * - Vollbild-Modus mit Auto-Hide Controls
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useState, useMemo } from 'react';
 import { theme } from '../../styles/theme';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { useLiveMatches } from '../../hooks/useLiveMatches';
+import {
+  LiveMatchDisplay,
+  NoMatchDisplay,
+  FieldSelector,
+  FullscreenControls,
+  useFullscreen,
+  GoalAnimation,
+  NextMatchPreview,
+} from '../../components/monitor';
 
 interface MonitorTabProps {
   tournament: Tournament;
@@ -20,35 +33,104 @@ interface MonitorTabProps {
 }
 
 export const MonitorTab: React.FC<MonitorTabProps> = ({
+  tournament,
   schedule,
   currentStandings,
 }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const [selectedField, setSelectedField] = useState(1);
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
+  // Get live match data from localStorage
+  const {
+    runningMatches,
+    pausedMatches,
+    lastGoalEvent,
+    clearLastGoalEvent,
+    calculateElapsedSeconds,
+  } = useLiveMatches(tournament.id);
 
+  // All matches from schedule
+  const allMatches = useMemo(
+    () => schedule.phases.flatMap(phase => phase.matches),
+    [schedule.phases]
+  );
+
+  // Number of fields
+  const numberOfFields = tournament.numberOfFields || 1;
+
+  // Find running or paused match on selected field
+  const activeMatches = useMemo(
+    () => [...runningMatches, ...pausedMatches],
+    [runningMatches, pausedMatches]
+  );
+
+  const matchOnSelectedField = useMemo(
+    () => activeMatches.find(m => (m.field || 1) === selectedField),
+    [activeMatches, selectedField]
+  );
+
+  // Fields with running matches (for indicator dots)
+  const fieldsWithRunningMatches = useMemo(
+    () => new Set(runningMatches.map(m => m.field || 1)),
+    [runningMatches]
+  );
+
+  // Find next match (first without result)
+  const nextMatch = useMemo(() => {
+    const upcoming = allMatches.find(m =>
+      m.scoreA === undefined || m.scoreB === undefined
+    );
+    if (!upcoming) {return null;}
+
+    return {
+      id: upcoming.id,
+      number: upcoming.matchNumber || 0,
+      homeTeam: upcoming.homeTeam || 'TBD',
+      awayTeam: upcoming.awayTeam || 'TBD',
+      field: upcoming.field,
+      group: upcoming.group,
+      scheduledTime: upcoming.time,
+    };
+  }, [allMatches]);
+
+  // Calculate remaining seconds for current match
+  const currentMatchRemainingSeconds = useMemo(() => {
+    if (!matchOnSelectedField) {return 0;}
+    const elapsed = calculateElapsedSeconds(matchOnSelectedField);
+    return Math.max(0, matchOnSelectedField.durationSeconds - elapsed);
+  }, [matchOnSelectedField, calculateElapsedSeconds]);
+
+  // Whether to show standings (no running matches)
+  const showStandings = runningMatches.length === 0 && pausedMatches.length === 0;
+
+  // Check if tournament has groups
+  const hasGroups = schedule.teams.some((t) => t.group);
+
+  // Styles
   const containerStyle: CSSProperties = {
     minHeight: '100vh',
-    padding: theme.spacing.xxl,
+    height: isFullscreen ? '100vh' : 'auto',
+    overflow: isFullscreen ? 'hidden' : 'visible',
+    padding: isFullscreen ? 0 : theme.spacing.xxl,
     background: 'radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%)',
     color: theme.colors.text.primary,
     position: 'relative',
+    display: isFullscreen ? 'flex' : 'block',
+    flexDirection: 'column',
   };
 
   const contentWrapperStyle: CSSProperties = {
-    maxWidth: '1600px',
+    maxWidth: isFullscreen ? 'none' : '1600px',
+    width: '100%',
+    height: isFullscreen ? '100%' : 'auto',
     margin: '0 auto',
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xxl,
+    alignItems: 'center',
+    justifyContent: isFullscreen ? 'center' : 'flex-start',
+    gap: isFullscreen ? 0 : theme.spacing.xxl,
+    padding: isFullscreen ? theme.spacing.lg : 0,
+    flex: isFullscreen ? 1 : undefined,
   };
 
   const sectionStyle: CSSProperties = {
@@ -57,6 +139,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     padding: theme.spacing.xxl,
     border: `1px solid ${theme.colors.border}`,
     boxShadow: theme.shadows.lg,
+    width: '100%',
   };
 
   const sectionTitleStyle: CSSProperties = {
@@ -66,108 +149,80 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     marginBottom: theme.spacing.xl,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-  };
-
-  const placeholderStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    color: theme.colors.text.secondary,
     textAlign: 'center',
-    padding: theme.spacing.xxl,
-  };
-
-  // Hole alle Matches aus allen Phasen
-  const allMatches = schedule.phases.flatMap(phase => phase.matches);
-
-  // Finde aktuelle Spiele (haben Ergebnisse aber sind noch nicht beendet)
-  // Für jetzt: Spiele ohne Ergebnis als "bevorstehend", mit Ergebnis als "beendet"
-  const currentMatches = allMatches.filter(m =>
-    m.scoreA !== undefined && m.scoreB !== undefined &&
-    // Hier könnte später ein "status" Feld geprüft werden
-    false // Aktuell keine laufenden Spiele, da wir keinen Status haben
-  );
-
-  // Finde nächstes Spiel (erstes ohne Ergebnis)
-  const nextMatch = allMatches.find(m => m.scoreA === undefined || m.scoreB === undefined);
-
-  const hasGroups = schedule.teams.some((t) => t.group);
-
-  const fullscreenButtonStyle: CSSProperties = {
-    position: 'fixed',
-    top: theme.spacing.lg,
-    right: theme.spacing.lg,
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-    background: 'rgba(0, 230, 118, 0.15)',
-    border: `2px solid ${theme.colors.primary}`,
-    borderRadius: theme.borderRadius.md,
-    color: theme.colors.primary,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.bold,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    transition: 'all 0.2s',
-    zIndex: 1000,
   };
 
   return (
     <div style={containerStyle}>
-      {/* Fullscreen Button */}
-      <button
-        onClick={toggleFullscreen}
-        style={fullscreenButtonStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(0, 230, 118, 0.3)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(0, 230, 118, 0.15)';
-        }}
+      {/* Fullscreen Controls with Field Selector */}
+      <FullscreenControls
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
       >
-        {isFullscreen ? '🗙 Vollbild verlassen' : '⛶ Vollbild'}
-      </button>
+        {numberOfFields > 1 && (
+          <FieldSelector
+            numberOfFields={numberOfFields}
+            selectedField={selectedField}
+            onSelectField={setSelectedField}
+            fieldsWithRunningMatches={fieldsWithRunningMatches}
+            hidden={false}
+          />
+        )}
+      </FullscreenControls>
 
       <div style={contentWrapperStyle}>
-        {/* AKTUELLES SPIEL / AKTUELLE SPIELE */}
-        <section style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>Live Spielstand</h2>
-          {currentMatches.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: theme.spacing.xl }}>
-              {currentMatches.map((match) => (
-                <CurrentMatchCard key={match.id} match={match} />
-              ))}
-            </div>
-          ) : (
-            <div style={placeholderStyle}>
-              <p>Keine laufenden Spiele</p>
-              <p style={{ fontSize: theme.fontSizes.md, marginTop: theme.spacing.md, color: theme.colors.text.secondary }}>
-                (Wird angezeigt, sobald ein Spiel gestartet wird)
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* NÄCHSTES SPIEL */}
-        <section style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>Nächstes Spiel</h2>
-          <div style={placeholderStyle}>
-            {nextMatch ? (
-              <NextMatchCard match={nextMatch} />
+        {/* LIVE MATCH DISPLAY */}
+        {matchOnSelectedField ? (
+          <LiveMatchDisplay
+            match={matchOnSelectedField}
+            size={isFullscreen ? 'xl' : 'lg'}
+            fullscreen={isFullscreen}
+          />
+        ) : (
+          <>
+            {/* No active match - show placeholder or standings */}
+            {showStandings && hasGroups && !isFullscreen ? (
+              <section style={sectionStyle}>
+                <h2 style={sectionTitleStyle}>Tabellen</h2>
+                <StandingsDisplay standings={currentStandings} teams={schedule.teams} />
+              </section>
             ) : (
-              <p>Alle Spiele beendet</p>
+              <NoMatchDisplay
+                message={
+                  numberOfFields > 1
+                    ? `Kein Spiel auf Feld ${selectedField}`
+                    : 'Kein laufendes Spiel'
+                }
+                size={isFullscreen ? 'xl' : 'lg'}
+                fullscreen={isFullscreen}
+              />
             )}
-          </div>
-        </section>
+          </>
+        )}
 
-        {/* LIVE TABELLE(N) */}
-        {hasGroups && (
+        {/* NEXT MATCH SECTION (only if no active match and not in fullscreen) */}
+        {!matchOnSelectedField && nextMatch && !isFullscreen && (
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Tabellen</h2>
-            <div style={placeholderStyle}>
-              <StandingsDisplay standings={currentStandings} teams={schedule.teams} />
-            </div>
+            <h2 style={sectionTitleStyle}>Nächstes Spiel</h2>
+            <NextMatchCard match={nextMatch} />
           </section>
         )}
       </div>
+
+      {/* GOAL ANIMATION OVERLAY */}
+      <GoalAnimation
+        goalEvent={lastGoalEvent}
+        onAnimationComplete={clearLastGoalEvent}
+      />
+
+      {/* NEXT MATCH PREVIEW BANNER */}
+      {matchOnSelectedField && (
+        <NextMatchPreview
+          nextMatch={nextMatch}
+          currentMatchStatus={matchOnSelectedField.status}
+          remainingSeconds={currentMatchRemainingSeconds}
+        />
+      )}
     </div>
   );
 };
@@ -176,93 +231,16 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
 // SUB-COMPONENTS
 // ============================================================================
 
-interface CurrentMatchCardProps {
-  match: any;
-}
-
-const CurrentMatchCard: React.FC<CurrentMatchCardProps> = ({ match }) => {
-  const cardStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.2), rgba(0, 176, 255, 0.2))',
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xxl,
-    border: `3px solid ${theme.colors.primary}`,
-    boxShadow: '0 0 30px rgba(0, 230, 118, 0.3)',
-    animation: 'pulse 2s ease-in-out infinite',
-  };
-
-  const fieldStyle: CSSProperties = {
-    fontSize: '18px',
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.accent,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  };
-
-  const matchupStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.spacing.lg,
-    marginBottom: theme.spacing.md,
-  };
-
-  const teamNameStyle: CSSProperties = {
-    fontSize: '32px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
-    flex: 1,
-  };
-
-  const scoreStyle: CSSProperties = {
-    fontSize: '64px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
-    fontFamily: theme.fonts.heading,
-    minWidth: '80px',
-    textAlign: 'center',
-  };
-
-  const vsStyle: CSSProperties = {
-    fontSize: '24px',
-    color: theme.colors.text.secondary,
-    padding: `0 ${theme.spacing.md}`,
-  };
-
-  const metaStyle: CSSProperties = {
-    fontSize: '16px',
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: theme.spacing.md,
-  };
-
-  return (
-    <>
-      <div style={cardStyle}>
-        {match.field && <div style={fieldStyle}>⚽ Feld {match.field}</div>}
-        <div style={matchupStyle}>
-          <div style={{ ...teamNameStyle, textAlign: 'right' }}>{match.homeTeam}</div>
-          <div style={scoreStyle}>{match.scoreA ?? 0}</div>
-          <div style={vsStyle}>:</div>
-          <div style={scoreStyle}>{match.scoreB ?? 0}</div>
-          <div style={{ ...teamNameStyle, textAlign: 'left' }}>{match.awayTeam}</div>
-        </div>
-        <div style={metaStyle}>
-          {match.time} · Spiel {match.matchNumber}
-          {match.group && ` · Gruppe ${match.group}`}
-        </div>
-      </div>
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 30px rgba(0, 230, 118, 0.3); }
-          50% { box-shadow: 0 0 50px rgba(0, 230, 118, 0.6); }
-        }
-      `}</style>
-    </>
-  );
-};
-
 interface NextMatchCardProps {
-  match: any;
+  match: {
+    id: string;
+    number: number;
+    homeTeam: string;
+    awayTeam: string;
+    field?: number;
+    group?: string;
+    scheduledTime?: string;
+  };
 }
 
 const NextMatchCard: React.FC<NextMatchCardProps> = ({ match }) => {
@@ -271,6 +249,7 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match }) => {
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.xl,
     border: `2px solid ${theme.colors.primary}`,
+    textAlign: 'center',
   };
 
   const timeStyle: CSSProperties = {
@@ -284,25 +263,24 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match }) => {
     fontSize: '42px',
     fontWeight: theme.fontWeights.bold,
     color: theme.colors.text.primary,
-    textAlign: 'center',
   };
 
   const metaStyle: CSSProperties = {
     fontSize: '20px',
     color: theme.colors.text.secondary,
     marginTop: theme.spacing.md,
-    textAlign: 'center',
   };
 
   return (
     <div style={cardStyle}>
-      <div style={timeStyle}>{match.time}</div>
+      {match.scheduledTime && <div style={timeStyle}>{match.scheduledTime}</div>}
       <div style={teamsStyle}>
         {match.homeTeam} vs. {match.awayTeam}
       </div>
       <div style={metaStyle}>
-        Spiel {match.matchNumber} · {match.phase || 'Vorrunde'}
+        Spiel {match.number}
         {match.field && ` · Feld ${match.field}`}
+        {match.group && ` · Gruppe ${match.group}`}
       </div>
     </div>
   );
@@ -310,19 +288,16 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match }) => {
 
 interface StandingsDisplayProps {
   standings: Standing[];
-  teams: any[];
+  teams: { id: string; name: string; group?: string }[];
 }
 
 const StandingsDisplay: React.FC<StandingsDisplayProps> = ({ standings, teams }) => {
-  // Gruppiere Standings nach Gruppe
   const groups = new Set(teams.map((t) => t.group).filter(Boolean));
 
   if (groups.size === 0) {
-    // Keine Gruppen - Gesamttabelle
     return <StandingsTable standings={standings} title="Tabelle" />;
   }
 
-  // Mit Gruppen
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: theme.spacing.xl }}>
       {Array.from(groups)

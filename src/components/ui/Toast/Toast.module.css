@@ -1,0 +1,164 @@
+/**
+ * Toast Styles
+ *
+ * Animated toast notifications with type-specific colors.
+ * Uses CSS variables from global.css where possible.
+ */
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 8px);
+  padding: var(--spacing-md, 16px) var(--spacing-lg, 24px);
+  border-radius: var(--border-radius-md, 8px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.2);
+  color: #fff;
+  font-size: var(--font-size-md, 16px);
+  font-weight: var(--font-weight-medium, 500);
+  min-width: 300px;
+  max-width: 500px;
+  animation: slideIn 0.3s ease-out;
+  pointer-events: auto;
+}
+
+.toast.exiting {
+  animation: slideOut 0.3s ease-in forwards;
+}
+
+/* Type-specific colors */
+.success {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border-left: 4px solid #34D399;
+}
+
+.error {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  border-left: 4px solid #F87171;
+}
+
+.warning {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  border-left: 4px solid #FBBF24;
+  color: #000;
+}
+
+.info {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-left: 4px solid #60A5FA;
+}
+
+.icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.message {
+  flex: 1;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.actionButton {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--border-radius-sm, 4px);
+  color: inherit;
+  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.actionButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dismissButton {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 4px;
+  margin-left: var(--spacing-sm, 8px);
+  transition: opacity 0.2s ease;
+}
+
+.dismissButton:hover {
+  opacity: 1;
+}
+
+/* Warning type needs dark text for dismiss button too */
+.warning .dismissButton {
+  color: #000;
+}
+
+.warning .actionButton {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.2);
+  color: #000;
+}
+
+.warning .actionButton:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: fadeIn 0.15s ease-out;
+  }
+
+  .toast.exiting {
+    animation: fadeOut 0.15s ease-in forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .toast {
+    min-width: unset;
+    max-width: calc(100vw - 32px);
+    font-size: var(--font-size-sm, 14px);
+    padding: var(--spacing-sm, 8px) var(--spacing-md, 16px);
+  }
+}

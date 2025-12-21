@@ -8,6 +8,7 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { Button, Card } from '../ui';
+import { useToast } from '../ui/Toast';
 import { LiveMatch, MatchSummary, MatchStatus } from './MatchCockpit';
 
 interface CurrentMatchPanelProps {
@@ -44,6 +45,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onLoadNextMatch,
   onReopenLastMatch,
 }) => {
+  const { showWarning } = useToast();
   const isMobile = window.innerWidth < 768;
 
   const cardHeaderStyle: CSSProperties = {
@@ -125,7 +127,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
                 if (!input) {return;}
                 const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
                 if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-                  alert('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
+                  showWarning('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
                   return;
                 }
                 onManualEditResult(currentMatch.id, parts[0], parts[1]);
@@ -152,7 +154,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
               if (!input) {return;}
               const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
               if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-                alert('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
+                showWarning('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
                 return;
               }
               onManualEditResult(currentMatch.id, parts[0], parts[1]);
@@ -474,6 +476,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   onFinish,
   onAdjustTime,
 }) => {
+  const { showWarning, showInfo } = useToast();
   const isMobile = window.innerWidth < 768;
 
   const blockStyle: CSSProperties = {
@@ -550,7 +553,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
 
     const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
     if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-      alert('Ungültiges Format. Bitte z.B. 5:30 eingeben.');
+      showWarning('Ungültiges Format. Bitte z.B. 5:30 eingeben.');
       return;
     }
 
@@ -561,11 +564,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   const handleStartClick = () => {
     // Fall 1: Spiel ist pausiert → Warnung, dass Beenden-Button genutzt werden muss
     if (status === 'PAUSED') {
-      alert(
-        '⚠️ HINWEIS: Das Spiel ist pausiert.\n\n' +
-        'Um das Spiel fortzusetzen, nutzen Sie bitte den "Fortsetzen" Button.\n\n' +
-        'Der "Start" Button ist nur für den Spielbeginn gedacht.'
-      );
+      showInfo('Das Spiel ist pausiert. Bitte den "Fortsetzen" Button nutzen.', { duration: 5000 });
       return;
     }
 
