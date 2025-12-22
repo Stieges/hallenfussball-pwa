@@ -3,15 +3,21 @@
  *
  * Zeigt: Scoreboard, Timer, Controls, Events
  * Reine Präsentation - alle Daten über Props
+ *
+ * QW-001: Uses modal dialogs instead of window.prompt/confirm
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState } from 'react';
 import { theme } from '../../styles/theme';
 import { Button, Card } from '../ui';
 import { useToast } from '../ui/Toast';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { LiveMatch, MatchSummary, MatchStatus } from './MatchCockpit';
 import { TiebreakerBanner } from './TiebreakerBanner';
 import { PenaltyShootoutDialog } from './PenaltyShootoutDialog';
+import { EditScoreDialog } from './EditScoreDialog';
+import { EditTimeDialog } from './EditTimeDialog';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface CurrentMatchPanelProps {
   currentMatch: LiveMatch | null;
@@ -62,8 +68,13 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onForceFinish,
   onCancelTiebreaker,
 }) => {
-  const { showWarning } = useToast();
-  const isMobile = window.innerWidth < 768;
+  useToast();
+  const isMobile = useIsMobile();
+
+  // QW-001: Dialog states
+  const [showEditScoreDialog, setShowEditScoreDialog] = useState(false);
+  const [showEditTimeDialog, setShowEditTimeDialog] = useState(false);
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
 
   const cardHeaderStyle: CSSProperties = {
     display: 'flex',
@@ -128,7 +139,8 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
             onPause={onPause}
             onResume={onResume}
             onFinish={onFinish}
-            onAdjustTime={onAdjustTime}
+            onOpenTimeDialog={() => setShowEditTimeDialog(true)}
+            onOpenRestartConfirm={() => setShowRestartConfirm(true)}
           />
 
           {/* TIEBREAKER BANNER - shown when finals match ends in draw */}
@@ -156,19 +168,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
             <FinishPanel
               match={currentMatch}
               onResume={() => onStart(currentMatch.id)}
-              onEdit={() => {
-                const input = prompt(
-                  `Neues Ergebnis eingeben (Format: Heim:Gast)`,
-                  `${currentMatch.homeScore}:${currentMatch.awayScore}`
-                );
-                if (!input) {return;}
-                const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
-                if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-                  showWarning('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
-                  return;
-                }
-                onManualEditResult(currentMatch.id, parts[0], parts[1]);
-              }}
+              onEdit={() => setShowEditScoreDialog(true)}
               onNext={() => onLoadNextMatch(currentMatch.fieldId)}
             />
           )}
@@ -183,25 +183,55 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
               scoreAfter: e.scoreAfter
             }))}
             onUndo={() => onUndoLastEvent(currentMatch.id)}
-            onManualEdit={() => {
-              const input = prompt(
-                `Neues Ergebnis eingeben (Format: Heim:Gast)`,
-                `${currentMatch.homeScore}:${currentMatch.awayScore}`
-              );
-              if (!input) {return;}
-              const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
-              if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-                showWarning('Ungültiges Format. Bitte z.B. 3:2 eingeben.');
-                return;
-              }
-              onManualEditResult(currentMatch.id, parts[0], parts[1]);
-            }}
+            onManualEdit={() => setShowEditScoreDialog(true)}
           />
         </>
       ) : (
         <div style={{ padding: theme.spacing.xl, textAlign: 'center', color: theme.colors.text.secondary }}>
           Kein aktives Spiel vorhanden
         </div>
+      )}
+
+      {/* QW-001: Modal Dialogs */}
+      {showEditScoreDialog && currentMatch && (
+        <EditScoreDialog
+          homeTeamName={currentMatch.homeTeam.name}
+          awayTeamName={currentMatch.awayTeam.name}
+          currentHomeScore={currentMatch.homeScore}
+          currentAwayScore={currentMatch.awayScore}
+          onSubmit={(homeScore, awayScore) => {
+            onManualEditResult(currentMatch.id, homeScore, awayScore);
+            setShowEditScoreDialog(false);
+          }}
+          onCancel={() => setShowEditScoreDialog(false)}
+        />
+      )}
+
+      {showEditTimeDialog && currentMatch && (
+        <EditTimeDialog
+          currentElapsedSeconds={currentMatch.elapsedSeconds}
+          durationSeconds={currentMatch.durationSeconds}
+          onSubmit={(newElapsedSeconds) => {
+            onAdjustTime(currentMatch.id, newElapsedSeconds);
+            setShowEditTimeDialog(false);
+          }}
+          onCancel={() => setShowEditTimeDialog(false)}
+        />
+      )}
+
+      {showRestartConfirm && currentMatch && (
+        <ConfirmDialog
+          title="Spiel neu starten?"
+          message={`Achtung: Dieses Spiel wurde bereits beendet!\n\nMöchten Sie das Spiel wirklich neu starten?\n\nDabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.`}
+          confirmLabel="Neu starten"
+          cancelLabel="Abbrechen"
+          variant="danger"
+          onConfirm={() => {
+            onStart(currentMatch.id);
+            setShowRestartConfirm(false);
+          }}
+          onCancel={() => setShowRestartConfirm(false)}
+        />
       )}
     </Card>
   );
@@ -221,7 +251,7 @@ interface LastMatchBannerProps {
 }
 
 const LastMatchBanner: React.FC<LastMatchBannerProps> = ({ lastMatch, onReopen }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const bannerStyle: CSSProperties = {
     marginBottom: theme.spacing.md,
@@ -260,7 +290,7 @@ interface MatchMetaProps {
 }
 
 const MatchMeta: React.FC<MatchMetaProps> = ({ refereeName, matchId, durationSeconds }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const metaStyle: CSSProperties = {
     display: 'flex',
@@ -316,11 +346,12 @@ interface ScoreboardProps {
   onPause(matchId: string): void;
   onResume(matchId: string): void;
   onFinish(matchId: string): void;
-  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
+  onOpenTimeDialog(): void;
+  onOpenRestartConfirm(): void;
 }
 
-const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onResume, onFinish, onAdjustTime }) => {
-  const isMobile = window.innerWidth < 768;
+const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause, onResume, onFinish, onOpenTimeDialog, onOpenRestartConfirm }) => {
+  const isMobile = useIsMobile();
 
   const scoreboardStyle: CSSProperties = {
     marginTop: theme.spacing.sm,
@@ -341,11 +372,13 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             durationSeconds={match.durationSeconds}
             status={match.status}
             phaseLabel={match.phaseLabel}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onStart={() => onStart(match.id)}
             onPause={() => onPause(match.id)}
             onResume={() => onResume(match.id)}
             onFinish={() => onFinish(match.id)}
-            onAdjustTime={onAdjustTime}
+            onOpenTimeDialog={onOpenTimeDialog}
+            onOpenRestartConfirm={onOpenRestartConfirm}
           />
 
           {/* HOME TEAM */}
@@ -354,6 +387,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             team={match.homeTeam}
             score={match.homeScore}
             status={match.status}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
           />
 
@@ -363,6 +397,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             team={match.awayTeam}
             score={match.awayScore}
             status={match.status}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
           />
         </>
@@ -374,6 +409,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             team={match.homeTeam}
             score={match.homeScore}
             status={match.status}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onGoal={(delta) => onGoal(match.id, match.homeTeam.id, delta)}
           />
 
@@ -383,11 +419,13 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             durationSeconds={match.durationSeconds}
             status={match.status}
             phaseLabel={match.phaseLabel}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onStart={() => onStart(match.id)}
             onPause={() => onPause(match.id)}
             onResume={() => onResume(match.id)}
             onFinish={() => onFinish(match.id)}
-            onAdjustTime={onAdjustTime}
+            onOpenTimeDialog={onOpenTimeDialog}
+            onOpenRestartConfirm={onOpenRestartConfirm}
           />
 
           <TeamBlock
@@ -395,6 +433,7 @@ const Scoreboard: React.FC<ScoreboardProps> = ({ match, onGoal, onStart, onPause
             team={match.awayTeam}
             score={match.awayScore}
             status={match.status}
+            awaitingTiebreakerChoice={match.awaitingTiebreakerChoice}
             onGoal={(delta) => onGoal(match.id, match.awayTeam.id, delta)}
             align="right"
           />
@@ -409,12 +448,13 @@ interface TeamBlockProps {
   team: { id: string; name: string };
   score: number;
   status: MatchStatus;
+  awaitingTiebreakerChoice?: boolean;
   onGoal(delta: 1 | -1): void;
   align?: 'left' | 'right';
 }
 
-const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, status, onGoal, align = 'left' }) => {
-  const isMobile = window.innerWidth < 768;
+const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, status, awaitingTiebreakerChoice, onGoal, align = 'left' }) => {
+  const isMobile = useIsMobile();
 
   const blockStyle: CSSProperties = {
     padding: isMobile ? theme.spacing.lg : theme.spacing.md,
@@ -466,7 +506,7 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, status, onGoa
           size={isMobile ? "md" : "sm"}
           onClick={() => onGoal(1)}
           style={{ flex: isMobile ? '1' : '0 1 auto', minHeight: isMobile ? '48px' : 'auto' }}
-          disabled={status === 'FINISHED'}
+          disabled={status === 'FINISHED' || awaitingTiebreakerChoice}
         >
           Tor {team.name}
         </Button>
@@ -479,7 +519,7 @@ const TeamBlock: React.FC<TeamBlockProps> = ({ label, team, score, status, onGoa
             minHeight: isMobile ? '48px' : 'auto',
             padding: '6px'
           }}
-          disabled={score === 0 || status === 'FINISHED'}
+          disabled={score === 0 || status === 'FINISHED' || awaitingTiebreakerChoice}
         >
           −
         </Button>
@@ -494,27 +534,33 @@ interface CenterBlockProps {
   durationSeconds: number;
   status: MatchStatus;
   phaseLabel: string;
+  awaitingTiebreakerChoice?: boolean;
   onStart(): void;
   onPause(): void;
   onResume(): void;
   onFinish(): void;
-  onAdjustTime(matchId: string, newElapsedSeconds: number): void;
+  onOpenTimeDialog(): void;
+  onOpenRestartConfirm(): void;
 }
 
 const CenterBlock: React.FC<CenterBlockProps> = ({
-  matchId,
+  matchId: _matchId,
   elapsedSeconds,
   durationSeconds,
   status,
   phaseLabel,
+  awaitingTiebreakerChoice,
   onStart,
   onPause,
   onResume,
   onFinish,
-  onAdjustTime,
+  onOpenTimeDialog,
+  onOpenRestartConfirm,
 }) => {
-  const { showWarning, showInfo } = useToast();
-  const isMobile = window.innerWidth < 768;
+  // matchId is unused now that we use dialog callbacks
+  void _matchId;
+  const { showInfo } = useToast();
+  const isMobile = useIsMobile();
 
   const blockStyle: CSSProperties = {
     display: 'flex',
@@ -582,20 +628,8 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
   const minutes = Math.floor(durationSeconds / 60);
 
   const handleTimeClick = () => {
-    const input = prompt(
-      `Neue Spielzeit eingeben (Format: MM:SS)`,
-      formatTime(elapsedSeconds)
-    );
-    if (!input) {return;}
-
-    const parts = input.split(':').map((p) => parseInt(p.trim(), 10));
-    if (parts.length !== 2 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-      showWarning('Ungültiges Format. Bitte z.B. 5:30 eingeben.');
-      return;
-    }
-
-    const newElapsedSeconds = parts[0] * 60 + parts[1];
-    onAdjustTime(matchId, newElapsedSeconds);
+    // QW-001: Use dialog instead of prompt
+    onOpenTimeDialog();
   };
 
   const handleStartClick = () => {
@@ -605,17 +639,11 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
       return;
     }
 
-    // Fall 2: Spiel ist beendet → Warnung und Bestätigung für Neustart
+    // Fall 2: Spiel ist beendet → Bestätigungsdialog öffnen
     if (status === 'FINISHED') {
-      const confirmRestart = window.confirm(
-        '⚠️ ACHTUNG: Dieses Spiel wurde bereits beendet!\n\n' +
-        'Möchten Sie das Spiel wirklich neu starten?\n\n' +
-        'Dabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.'
-      );
-
-      if (!confirmRestart) {
-        return; // Abbrechen
-      }
+      // QW-001: Use dialog instead of window.confirm
+      onOpenRestartConfirm();
+      return;
     }
 
     // Normaler Start
@@ -651,7 +679,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
           variant="primary"
           size={isMobile ? "md" : "sm"}
           onClick={handleStartClick}
-          disabled={status === 'RUNNING'}
+          disabled={status === 'RUNNING' || awaitingTiebreakerChoice}
           style={{
             flex: isMobile ? '1 1 100%' : '0 1 auto',
             minHeight: isMobile ? '48px' : 'auto'
@@ -663,7 +691,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
           variant={status === 'PAUSED' ? 'primary' : 'secondary'}
           size={isMobile ? "md" : "sm"}
           onClick={handlePauseResumeClick}
-          disabled={status === 'NOT_STARTED' || status === 'FINISHED'}
+          disabled={status === 'NOT_STARTED' || status === 'FINISHED' || awaitingTiebreakerChoice}
           style={{
             flex: isMobile ? '1 1 calc(50% - 8px)' : '0 1 auto',
             minHeight: isMobile ? '48px' : 'auto'
@@ -675,7 +703,7 @@ const CenterBlock: React.FC<CenterBlockProps> = ({
           variant="danger"
           size={isMobile ? "md" : "sm"}
           onClick={onFinish}
-          disabled={status === 'FINISHED'}
+          disabled={status === 'FINISHED' || awaitingTiebreakerChoice}
           style={{
             flex: isMobile ? '1 1 calc(50% - 8px)' : '0 1 auto',
             minHeight: isMobile ? '48px' : 'auto'
@@ -696,7 +724,7 @@ interface FinishPanelProps {
 }
 
 const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdit, onNext }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const panelStyle: CSSProperties = {
     marginTop: theme.spacing.md,
@@ -787,7 +815,7 @@ interface EventsListProps {
 }
 
 const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManualEdit }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
     marginTop: theme.spacing.md,

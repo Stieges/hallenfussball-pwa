@@ -4,9 +4,10 @@
  * Zeigt die aktuellen Tabellenstände aller Gruppen
  */
 
-import { CSSProperties, useState, useEffect } from 'react';
+import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { Card } from '../../components/ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { GroupTables } from '../../components/schedule';
@@ -22,19 +23,8 @@ export const TableTab: React.FC<TableTabProps> = ({
   schedule,
   currentStandings,
 }) => {
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const hasGroups = tournament.teams.some(t => t.group);
-
-  // Detect mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const containerStyle: CSSProperties = {
     maxWidth: '1400px',

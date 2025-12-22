@@ -10,6 +10,7 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { Button } from '../ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { LiveMatch } from './MatchCockpit';
 
 interface TiebreakerBannerProps {
@@ -27,7 +28,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   onStartPenaltyShootout,
   onForceFinish,
 }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   // Determine which phase we're in and what options to show
   const isAfterOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';

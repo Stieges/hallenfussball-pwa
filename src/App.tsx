@@ -7,6 +7,7 @@ import { PublicTournamentViewScreen } from './screens/PublicTournamentViewScreen
 import { Tournament } from './types/tournament';
 import { theme } from './styles/theme';
 import { ToastProvider, useToast } from './components/ui/Toast';
+import { StorageWarningBanner } from './components/StorageWarningBanner';
 
 type ScreenType = 'dashboard' | 'create' | 'view' | 'public';
 
@@ -180,6 +181,7 @@ function AppContent() {
 function App() {
   return (
     <ToastProvider>
+      <StorageWarningBanner />
       <AppContent />
     </ToastProvider>
   );

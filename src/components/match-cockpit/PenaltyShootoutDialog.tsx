@@ -7,6 +7,7 @@
 import { CSSProperties, useState } from 'react';
 import { theme } from '../../styles/theme';
 import { Button } from '../ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { LiveMatch } from './MatchCockpit';
 
 interface PenaltyShootoutDialogProps {
@@ -24,7 +25,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const [awayScore, setAwayScore] = useState(match.penaltyScoreB || 0);
   const [error, setError] = useState<string | null>(null);
 
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const handleSubmit = () => {
     if (homeScore === awayScore) {

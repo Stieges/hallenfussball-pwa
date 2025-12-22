@@ -21,13 +21,12 @@ import {
 } from '../components/match-cockpit/MatchCockpit';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../utils/playoffResolver';
 import { STORAGE_KEYS } from '../constants/storage';
-import { useMultiTabSync, TabSyncMessage } from './useMultiTabSync';
+import { useMultiTabSync } from './useMultiTabSync';
+import { safeLocalStorageSet } from '../utils/storageCleanup';
 
 export interface UseLiveMatchManagementProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
-  /** Called when another tab is managing the same match */
-  onMultiTabConflict?: (message: TabSyncMessage) => void;
 }
 
 export interface UseLiveMatchManagementReturn {
@@ -89,14 +88,12 @@ function calculateRealTimeElapsed(match: LiveMatch): number {
 export function useLiveMatchManagement({
   tournament,
   onTournamentUpdate,
-  onMultiTabConflict,
 }: UseLiveMatchManagementProps): UseLiveMatchManagementReturn {
   const storageKey = STORAGE_KEYS.liveMatches(tournament.id);
 
-  // Multi-tab synchronization
+  // Multi-tab synchronization (broadcasts to other tabs, no conflict detection)
   const { announceMatchStarted, announceMatchFinished } = useMultiTabSync({
     tournamentId: tournament.id,
-    onConflict: onMultiTabConflict,
   });
 
   // Initialize from localStorage
@@ -118,16 +115,20 @@ export function useLiveMatchManagement({
   tournamentRef.current = tournament;
 
   // Persist to localStorage on changes
+  // BUG-CRIT-003 FIX: Use safe storage function with quota handling
   useEffect(() => {
     const obj = Object.fromEntries(liveMatches.entries());
-    localStorage.setItem(storageKey, JSON.stringify(obj));
+    const data = JSON.stringify(obj);
+    safeLocalStorageSet(storageKey, data);
   }, [liveMatches, storageKey]);
 
   // DEF-005: beforeunload handler for crash safety
+  // BUG-CRIT-003 FIX: Use safe storage function
   useEffect(() => {
     const handleBeforeUnload = () => {
       const obj = Object.fromEntries(liveMatches.entries());
-      localStorage.setItem(storageKey, JSON.stringify(obj));
+      const data = JSON.stringify(obj);
+      safeLocalStorageSet(storageKey, data);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -135,8 +136,11 @@ export function useLiveMatchManagement({
   }, [liveMatches, storageKey]);
 
   // Timer for running matches (DEF-005: Timestamp-based calculation)
+  // BUG-MOD-002 FIX: Added visibility change handler to save resources when tab is hidden
   useEffect(() => {
-    const interval = setInterval(() => {
+    let interval: number | null = null;
+
+    const updateTimers = () => {
       setLiveMatches(prev => {
         const updated = new Map(prev);
         let hasChanges = false;
@@ -158,9 +162,43 @@ export function useLiveMatchManagement({
 
         return hasChanges ? updated : prev;
       });
-    }, TIMER_INTERVAL_MS);
+    };
 
-    return () => clearInterval(interval);
+    const startTimer = () => {
+      if (interval === null) {
+        // Immediately update on start to sync after visibility change
+        updateTimers();
+        interval = window.setInterval(updateTimers, TIMER_INTERVAL_MS);
+      }
+    };
+
+    const stopTimer = () => {
+      if (interval !== null) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    // BUG-MOD-002: Pause timer when tab is hidden to save battery/CPU
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopTimer();
+      } else {
+        startTimer();
+      }
+    };
+
+    // Start timer if tab is visible
+    if (!document.hidden) {
+      startTimer();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   /**
@@ -447,6 +485,9 @@ export function useLiveMatchManagement({
           ...match,
           status: 'PAUSED' as MatchStatus,
           awaitingTiebreakerChoice: true,
+          // FIX: Stop timer when entering tiebreaker state
+          timerPausedAt: new Date().toISOString(),
+          timerElapsedSeconds: match.elapsedSeconds,
         });
         return updated;
       });
@@ -599,6 +640,8 @@ export function useLiveMatchManagement({
 
   /**
    * Record a goal
+   * BUG-CRIT-001 FIX: Tournament update moved to setTimeout to prevent race condition
+   * when goals are clicked rapidly in succession
    */
   const handleGoal = useCallback((matchId: string, teamId: string, delta: 1 | -1) => {
     setLiveMatches(prev => {
@@ -628,25 +671,27 @@ export function useLiveMatchManagement({
         },
       };
 
-      // Update tournament.matches
-      const updatedMatches = tournamentRef.current.matches.map(m => {
-        if (m.id === matchId) {
-          return {
-            ...m,
-            scoreA: newHomeScore,
-            scoreB: newAwayScore,
-          };
-        }
-        return m;
-      });
+      // BUG-CRIT-001 FIX: Update tournament.matches asynchronously AFTER liveMatches state is committed
+      // This prevents race conditions when goals are clicked rapidly
+      setTimeout(() => {
+        const currentTournament = tournamentRef.current;
+        const updatedMatches = currentTournament.matches.map(m => {
+          if (m.id === matchId) {
+            return {
+              ...m,
+              scoreA: newHomeScore,
+              scoreB: newAwayScore,
+            };
+          }
+          return m;
+        });
 
-      const updatedTournament = {
-        ...tournamentRef.current,
-        matches: updatedMatches,
-        updatedAt: new Date().toISOString(),
-      };
-
-      onTournamentUpdate(updatedTournament, false);
+        onTournamentUpdate({
+          ...currentTournament,
+          matches: updatedMatches,
+          updatedAt: new Date().toISOString(),
+        }, false);
+      }, 0);
 
       const updated = new Map(prev);
       updated.set(matchId, {
@@ -661,6 +706,7 @@ export function useLiveMatchManagement({
 
   /**
    * Undo last event
+   * BUG-CRIT-002 FIX: Properly handle all event types and sync with tournament
    */
   const handleUndoLastEvent = useCallback((matchId: string) => {
     setLiveMatches(prev => {
@@ -671,21 +717,56 @@ export function useLiveMatchManagement({
       }
 
       const events = [...match.events];
-      events.pop();
+      const removedEvent = events.pop();
 
-      const previousEvent = events[events.length - 1];
-      const { home, away } = previousEvent.scoreAfter || { home: 0, away: 0 };
+      // BUG-CRIT-002 FIX: Determine new score based on remaining events
+      let newHomeScore: number;
+      let newAwayScore: number;
+
+      if (events.length === 0) {
+        // No events left -> reset score to 0:0
+        newHomeScore = 0;
+        newAwayScore = 0;
+      } else {
+        // Get score from the last remaining event
+        const previousEvent = events[events.length - 1];
+        newHomeScore = previousEvent.scoreAfter.home ?? 0;
+        newAwayScore = previousEvent.scoreAfter.away ?? 0;
+      }
+
+      // BUG-CRIT-002 FIX: Also sync with tournament.matches
+      setTimeout(() => {
+        const currentTournament = tournamentRef.current;
+        const updatedMatches = currentTournament.matches.map(m => {
+          if (m.id === matchId) {
+            return {
+              ...m,
+              scoreA: newHomeScore,
+              scoreB: newAwayScore,
+            };
+          }
+          return m;
+        });
+
+        onTournamentUpdate({
+          ...currentTournament,
+          matches: updatedMatches,
+          updatedAt: new Date().toISOString(),
+        }, false);
+      }, 0);
+
+      console.log(`[Undo] Removed ${removedEvent?.type} event, score now ${newHomeScore}:${newAwayScore}`);
 
       const updated = new Map(prev);
       updated.set(matchId, {
         ...match,
-        homeScore: home,
-        awayScore: away,
+        homeScore: newHomeScore,
+        awayScore: newAwayScore,
         events,
       });
       return updated;
     });
-  }, []);
+  }, [onTournamentUpdate]);
 
   /**
    * Manually edit result

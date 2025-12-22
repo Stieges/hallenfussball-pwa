@@ -10,6 +10,8 @@
 
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { calculateMinutesUntil } from '../../utils/timeHelpers';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
 
@@ -155,7 +157,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   onForceFinish,
   onCancelTiebreaker,
 }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
     width: '100%',
@@ -259,6 +261,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
         <UpcomingMatchesSidebar
           upcomingMatches={upcomingMatches}
           highlightMinutesBefore={highlightNextMatchMinutesBefore}
+          fieldName={fieldName}
         />
       </main>
     </div>
@@ -275,7 +278,7 @@ interface StatusChipProps {
 }
 
 const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const chipStyle: CSSProperties = {
     padding: isMobile ? `8px ${theme.spacing.md}` : `6px ${theme.spacing.md}`,
@@ -326,7 +329,7 @@ interface WarningChipProps {
 }
 
 const WarningChip: React.FC<WarningChipProps> = ({ message }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const chipStyle: CSSProperties = {
     padding: isMobile ? `8px ${theme.spacing.md}` : `6px ${theme.spacing.md}`,
@@ -342,28 +345,4 @@ const WarningChip: React.FC<WarningChipProps> = ({ message }) => {
   return <div style={chipStyle}>{message}</div>;
 };
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Berechnet Minuten bis zu einer Uhrzeit (z.B. "14:30")
- * Reine Formatierungs-Logik, keine Geschäftslogik
- */
-function calculateMinutesUntil(timeString: string): number | null {
-  try {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const now = new Date();
-    const target = new Date();
-    target.setHours(hours, minutes, 0, 0);
-
-    if (target < now) {
-      target.setDate(target.getDate() + 1);
-    }
-
-    const diffMs = target.getTime() - now.getTime();
-    return Math.round(diffMs / 60000);
-  } catch {
-    return null;
-  }
-}
+// Note: calculateMinutesUntil is now imported from utils/timeHelpers.ts

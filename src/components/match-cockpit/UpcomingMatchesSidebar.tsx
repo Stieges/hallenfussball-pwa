@@ -8,18 +8,22 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { Button, Card } from '../ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { calculateMinutesUntil } from '../../utils/timeHelpers';
 import { MatchSummary } from './MatchCockpit';
 
 interface UpcomingMatchesSidebarProps {
   upcomingMatches: MatchSummary[];
   highlightMinutesBefore?: number;
+  fieldName?: string; // BUG-MOD-003 FIX: Pass field name for display
 }
 
 export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
   upcomingMatches,
   highlightMinutesBefore = 5,
+  fieldName,
 }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const cardHeaderStyle: CSSProperties = {
     marginBottom: isMobile ? theme.spacing.sm : theme.spacing.md,
@@ -46,7 +50,7 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <div style={cardTitleStyle}>Nächste Spiele – Feld 1</div>
+        <div style={cardTitleStyle}>Nächste Spiele{fieldName ? ` – ${fieldName}` : ''}</div>
         <div style={cardSubtitleStyle}>Für Stadionsprecher & Organisation</div>
       </div>
 
@@ -89,7 +93,7 @@ interface NextMatchCardProps {
 }
 
 const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHighlighted, isFirst }) => {
-  const isMobile = window.innerWidth < 768;
+  const isMobile = useIsMobile();
 
   const cardStyle: CSSProperties = {
     borderRadius: theme.borderRadius.lg,
@@ -203,28 +207,4 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
   );
 };
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-/**
- * Berechnet Minuten bis zu einer Uhrzeit (z.B. "14:30")
- * Reine Formatierungs-Logik, keine Geschäftslogik
- */
-function calculateMinutesUntil(timeString: string): number | null {
-  try {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const now = new Date();
-    const target = new Date();
-    target.setHours(hours, minutes, 0, 0);
-
-    if (target < now) {
-      target.setDate(target.getDate() + 1);
-    }
-
-    const diffMs = target.getTime() - now.getTime();
-    return Math.round(diffMs / 60000);
-  } catch {
-    return null;
-  }
-}
+// Note: calculateMinutesUntil is now imported from utils/timeHelpers.ts

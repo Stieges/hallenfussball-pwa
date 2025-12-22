@@ -24,6 +24,8 @@ interface ToastContextValue {
   showError: (message: string, options?: ToastOptions) => string;
   showWarning: (message: string, options?: ToastOptions) => string;
   showInfo: (message: string, options?: ToastOptions) => string;
+  /** QW-003: Show goal notification with undo button */
+  showGoalWithUndo: (teamName: string, onUndo: () => void) => string;
   dismiss: (id: string) => void;
   dismissAll: () => void;
 }
@@ -83,11 +85,30 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     [addToast]
   );
 
+  // QW-003: Special toast for goal notifications with undo button
+  const showGoalWithUndo = useCallback(
+    (teamName: string, onUndo: () => void) => {
+      const toastId = addToast('success', `Tor für ${teamName}!`, {
+        duration: 5000,
+        action: {
+          label: 'Rückgängig',
+          onClick: () => {
+            onUndo();
+            dismiss(toastId);
+          },
+        },
+      });
+      return toastId;
+    },
+    [addToast, dismiss]
+  );
+
   const value: ToastContextValue = {
     showSuccess,
     showError,
     showWarning,
     showInfo,
+    showGoalWithUndo,
     dismiss,
     dismissAll,
   };

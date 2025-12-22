@@ -1,13 +1,12 @@
 /**
  * useMultiTabSync Hook
  *
- * Provides multi-tab conflict detection for match management.
- * Uses BroadcastChannel API to sync state between browser tabs.
+ * Provides multi-tab synchronization for match management.
+ * Uses BroadcastChannel API to notify other tabs when matches change.
  *
  * Features:
- * - Broadcasts when a match starts being managed
- * - Warns when another tab starts managing the same match
- * - Cleans up when tab closes or match is no longer managed
+ * - Broadcasts when a match starts/finishes
+ * - Allows other tabs to react to state changes
  */
 
 import { useEffect, useRef, useCallback } from 'react';
@@ -22,7 +21,7 @@ export interface TabSyncMessage {
 
 export interface UseMultiTabSyncOptions {
   tournamentId: string;
-  onConflict?: (message: TabSyncMessage) => void;
+  onMessage?: (message: TabSyncMessage) => void;
 }
 
 export interface UseMultiTabSyncReturn {
@@ -41,7 +40,7 @@ const TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export function useMultiTabSync({
   tournamentId,
-  onConflict,
+  onMessage,
 }: UseMultiTabSyncOptions): UseMultiTabSyncReturn {
   const channelRef = useRef<BroadcastChannel | null>(null);
   const activeMatchIds = useRef<Set<string>>(new Set());
@@ -64,18 +63,11 @@ export function useMultiTabSync({
         // Ignore messages from this tab
         if (message.tabId === TAB_ID) {return;}
 
-        // Check for conflicts
-        if (
-          (message.type === 'MATCH_ACTIVE' || message.type === 'MATCH_STARTED') &&
-          activeMatchIds.current.has(message.matchId)
-        ) {
-          console.warn(`[MultiTabSync] Conflict detected: Match ${message.matchId} is active in another tab`);
-          onConflict?.(message);
-        }
+        // Notify listener if provided
+        onMessage?.(message);
       };
 
       // Announce our active matches when channel opens
-      // (in case another tab just opened)
       activeMatchIds.current.forEach((matchId) => {
         channel.postMessage({
           type: 'MATCH_ACTIVE',
@@ -101,7 +93,7 @@ export function useMultiTabSync({
     } catch (error) {
       console.error('[MultiTabSync] Failed to initialize BroadcastChannel:', error);
     }
-  }, [tournamentId, onConflict]);
+  }, [tournamentId, onMessage]);
 
   const announceActive = useCallback((matchId: string) => {
     activeMatchIds.current.add(matchId);

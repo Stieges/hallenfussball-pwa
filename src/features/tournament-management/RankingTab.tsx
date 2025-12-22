@@ -7,9 +7,10 @@
  * - Mit Playoffs: Playoff-Ergebnisse
  */
 
-import { CSSProperties, useState, useEffect } from 'react';
+import { CSSProperties, useState } from 'react';
 import { theme } from '../../styles/theme';
 import { Card } from '../../components/ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { calculateStandings } from '../../utils/calculations';
@@ -25,21 +26,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
   currentStandings,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const hasGroups = tournament.teams.some(t => t.group);
   const hasPlayoffs = tournament.finals && typeof tournament.finals === 'object' && 'enabled' in tournament.finals && tournament.finals.enabled;
-
-  // Detect mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
