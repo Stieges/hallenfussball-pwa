@@ -69,7 +69,8 @@ export interface UseLiveMatchManagementReturn {
   handleCancelTiebreaker: (matchId: string) => void;
 }
 
-const TIMER_INTERVAL_MS = 1000;
+// MF-002: Interval für Persistenz erhöht (Display wird jetzt lokal berechnet)
+const PERSIST_INTERVAL_MS = 5000;
 
 /**
  * Calculate the real-time elapsed seconds for a match.
@@ -83,6 +84,22 @@ function calculateRealTimeElapsed(match: LiveMatch): number {
   const startTime = new Date(match.timerStartTime).getTime();
   const runtimeSeconds = Math.floor((Date.now() - startTime) / 1000);
   return (match.timerElapsedSeconds || 0) + runtimeSeconds;
+}
+
+/**
+ * Helper: Check if a team reference is a placeholder (not a real team ID)
+ * BUG-FIX: Used for proper team resolution in finals
+ */
+function isPlaceholderTeamRef(teamRef: string): boolean {
+  return (
+    teamRef === 'TBD' ||
+    teamRef.includes('-winner') ||
+    teamRef.includes('-loser') ||
+    teamRef.startsWith('group-') ||
+    teamRef.startsWith('semi') ||
+    teamRef.startsWith('quarter') ||
+    teamRef.startsWith('final')
+  );
 }
 
 export function useLiveMatchManagement({
@@ -168,7 +185,7 @@ export function useLiveMatchManagement({
       if (interval === null) {
         // Immediately update on start to sync after visibility change
         updateTimers();
-        interval = window.setInterval(updateTimers, TIMER_INTERVAL_MS);
+        interval = window.setInterval(updateTimers, PERSIST_INTERVAL_MS);
       }
     };
 
@@ -203,6 +220,7 @@ export function useLiveMatchManagement({
 
   /**
    * Get or create LiveMatch data for a scheduled match
+   * BUG-FIX: Properly resolve team IDs and names for finals
    */
   const getLiveMatchData = useCallback((matchData: ScheduledMatch): LiveMatch => {
     const existing = liveMatches.get(matchData.id);
@@ -214,6 +232,25 @@ export function useLiveMatchManagement({
     const tiebreakerMode = tournamentRef.current.finalsConfig?.tiebreaker;
     const tiebreakerDuration = tournamentRef.current.finalsConfig?.tiebreakerDuration || 5;
 
+    // BUG-FIX: Resolve team IDs and names properly
+    // Use originalTeamA/B as actual IDs, and resolve names from tournament.teams
+    const homeId = matchData.originalTeamA || matchData.homeTeam;
+    const awayId = matchData.originalTeamB || matchData.awayTeam;
+
+    // Resolve team names from tournament
+    let homeName = matchData.homeTeam; // Display name (could be translated placeholder)
+    let awayName = matchData.awayTeam;
+
+    if (!isPlaceholderTeamRef(homeId)) {
+      const team = tournamentRef.current.teams.find(t => t.id === homeId);
+      if (team) {homeName = team.name;}
+    }
+
+    if (!isPlaceholderTeamRef(awayId)) {
+      const team = tournamentRef.current.teams.find(t => t.id === awayId);
+      if (team) {awayName = team.name;}
+    }
+
     const newMatch: LiveMatch = {
       id: matchData.id,
       number: matchData.matchNumber,
@@ -222,8 +259,8 @@ export function useLiveMatchManagement({
       scheduledKickoff: matchData.time,
       durationSeconds: (tournamentRef.current.groupPhaseGameDuration || tournamentRef.current.gameDuration || 10) * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
-      homeTeam: { id: matchData.homeTeam, name: matchData.homeTeam },
-      awayTeam: { id: matchData.awayTeam, name: matchData.awayTeam },
+      homeTeam: { id: homeId, name: homeName },
+      awayTeam: { id: awayId, name: awayName },
       homeScore: matchData.scoreA || 0,
       awayScore: matchData.scoreB || 0,
       status: 'NOT_STARTED' as MatchStatus,

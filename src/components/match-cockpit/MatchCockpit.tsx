@@ -11,7 +11,6 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { calculateMinutesUntil } from '../../utils/timeHelpers';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
 
@@ -92,6 +91,8 @@ export interface MatchSummary {
   fieldId: string;
   homeTeam: Team;
   awayTeam: Team;
+  /** Tournament phase for detecting phase changes (group → finals) */
+  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
 }
 
 export interface MatchCockpitProps {
@@ -211,7 +212,26 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   };
 
   const nextMatch = upcomingMatches[0];
-  const minutesUntilNext = nextMatch ? calculateMinutesUntil(nextMatch.scheduledKickoff) : null;
+
+  // Calculate remaining time in current match (for "prepare next match" warning)
+  const remainingMinutes = currentMatch?.status === 'RUNNING'
+    ? Math.max(0, Math.floor((currentMatch.durationSeconds - currentMatch.elapsedSeconds) / 60))
+    : null;
+
+  // Check if there's a phase change between current and next match
+  // (e.g., group stage → finals = don't show warning, teams have a longer break)
+  const isPhaseChange = currentMatch?.tournamentPhase && nextMatch.tournamentPhase
+    ? currentMatch.tournamentPhase !== nextMatch.tournamentPhase
+    : false;
+
+  // Show warning if:
+  // 1. Match is running AND remaining time <= threshold
+  // 2. AND no phase change (group → finals has a longer break)
+  const showRemainingTimeWarning =
+    remainingMinutes !== null &&
+    remainingMinutes <= highlightNextMatchMinutesBefore &&
+    nextMatch &&
+    !isPhaseChange;
 
   return (
     <div style={containerStyle}>
@@ -226,8 +246,9 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
             status={currentMatch?.status || 'NOT_STARTED'}
             phaseLabel={currentMatch?.phaseLabel || ''}
           />
-          {minutesUntilNext !== null && minutesUntilNext >= 0 && minutesUntilNext <= highlightNextMatchMinutesBefore && (
-            <WarningChip message={`In ${minutesUntilNext} Min: Nächstes Spiel`} />
+          {/* Show warning based on remaining time in current match (not scheduled time) */}
+          {showRemainingTimeWarning && (
+            <WarningChip message={`Noch ${remainingMinutes} Min – Nächstes Spiel vorbereiten!`} />
           )}
         </div>
       </header>
@@ -262,6 +283,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           upcomingMatches={upcomingMatches}
           highlightMinutesBefore={highlightNextMatchMinutesBefore}
           fieldName={fieldName}
+          highlightFirstMatch={showRemainingTimeWarning}
         />
       </main>
     </div>

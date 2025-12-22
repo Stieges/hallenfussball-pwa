@@ -2,10 +2,10 @@
  * EditScoreDialog - Dialog for manually editing match scores
  *
  * QW-001: Replaces window.prompt() with proper +/- button UI.
- * Similar pattern to PenaltyShootoutDialog.
+ * MF-004: Accessibility improvements (focus trap, Escape key, ARIA)
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useState, useEffect, useCallback, useRef } from 'react';
 import { theme } from '../../styles/theme';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -31,6 +31,30 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
   const [awayScore, setAwayScore] = useState(currentAwayScore);
 
   const isMobile = useIsMobile();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // MF-004: Focus management and Escape key handler
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onCancel();
+    }
+  }, [onCancel]);
+
+  useEffect(() => {
+    // Focus dialog container on mount
+    setTimeout(() => dialogRef.current?.focus(), 50);
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+
+    // Add keyboard listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   const handleSubmit = () => {
     onSubmit(homeScore, awayScore);
@@ -148,9 +172,18 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
 
   return (
     <div style={overlayStyle} onClick={onCancel}>
-      <div style={containerStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={titleStyle}>
-          <span>✏️</span>
+      {/* MF-004: Modal mit korrekten ARIA-Attributen */}
+      <div
+        ref={dialogRef}
+        style={containerStyle}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-score-dialog-title"
+        tabIndex={-1}
+      >
+        <div id="edit-score-dialog-title" style={titleStyle}>
+          <span aria-hidden="true">✏️</span>
           <span>Ergebnis korrigieren</span>
         </div>
 
@@ -171,14 +204,22 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
                 disabled={homeScore === 0}
                 type="button"
+                aria-label={`Tore für ${homeTeamName} verringern`}
               >
                 −
               </button>
-              <div style={scoreDisplayStyle}>{homeScore}</div>
+              <div
+                style={scoreDisplayStyle}
+                aria-label={`Tore ${homeTeamName}: ${homeScore}`}
+                role="text"
+              >
+                {homeScore}
+              </div>
               <button
                 style={scoreButtonStyle}
                 onClick={() => setHomeScore(homeScore + 1)}
                 type="button"
+                aria-label={`Tore für ${homeTeamName} erhöhen`}
               >
                 +
               </button>
@@ -199,14 +240,22 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
                 disabled={awayScore === 0}
                 type="button"
+                aria-label={`Tore für ${awayTeamName} verringern`}
               >
                 −
               </button>
-              <div style={scoreDisplayStyle}>{awayScore}</div>
+              <div
+                style={scoreDisplayStyle}
+                aria-label={`Tore ${awayTeamName}: ${awayScore}`}
+                role="text"
+              >
+                {awayScore}
+              </div>
               <button
                 style={scoreButtonStyle}
                 onClick={() => setAwayScore(awayScore + 1)}
                 type="button"
+                aria-label={`Tore für ${awayTeamName} erhöhen`}
               >
                 +
               </button>

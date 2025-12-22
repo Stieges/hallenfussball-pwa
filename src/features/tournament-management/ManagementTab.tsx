@@ -80,16 +80,57 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     cancelText: 'Abbrechen',
   });
 
-  // Convert ScheduledMatch to MatchSummary
-  const toMatchSummary = useCallback((sm: ScheduledMatch): MatchSummary => ({
-    id: sm.id,
-    number: sm.matchNumber,
-    phaseLabel: sm.label || (sm.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
-    scheduledKickoff: sm.time,
-    fieldId: `field-${sm.field}`,
-    homeTeam: { id: sm.homeTeam, name: sm.homeTeam },
-    awayTeam: { id: sm.awayTeam, name: sm.awayTeam },
-  }), []);
+  // Helper: Check if a team reference is a placeholder (not a real team ID)
+  const isPlaceholder = useCallback((teamRef: string): boolean => {
+    return (
+      teamRef === 'TBD' ||
+      teamRef.includes('-winner') ||
+      teamRef.includes('-loser') ||
+      teamRef.startsWith('group-') ||
+      teamRef.startsWith('semi') ||
+      teamRef.startsWith('quarter') ||
+      teamRef.startsWith('final')
+    );
+  }, []);
+
+  // Helper: Get team name from team ID
+  const getTeamName = useCallback((teamId: string): string | null => {
+    const team = schedule.teams.find(t => t.id === teamId);
+    return team?.name || null;
+  }, [schedule.teams]);
+
+  // Convert ScheduledMatch to MatchSummary with proper team resolution
+  // BUG-FIX: Use originalTeamA/B as IDs and resolve actual team names
+  const toMatchSummary = useCallback((sm: ScheduledMatch): MatchSummary => {
+    // Use original team references as IDs
+    const homeId = sm.originalTeamA || sm.homeTeam;
+    const awayId = sm.originalTeamB || sm.awayTeam;
+
+    // Resolve team names - prefer lookup from teams array if not a placeholder
+    let homeName = sm.homeTeam;
+    let awayName = sm.awayTeam;
+
+    if (!isPlaceholder(homeId)) {
+      const resolved = getTeamName(homeId);
+      if (resolved) {homeName = resolved;}
+    }
+
+    if (!isPlaceholder(awayId)) {
+      const resolved = getTeamName(awayId);
+      if (resolved) {awayName = resolved;}
+    }
+
+    return {
+      id: sm.id,
+      number: sm.matchNumber,
+      phaseLabel: sm.label || (sm.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
+      scheduledKickoff: sm.time,
+      fieldId: `field-${sm.field}`,
+      homeTeam: { id: homeId, name: homeName },
+      awayTeam: { id: awayId, name: awayName },
+      tournamentPhase: sm.phase, // For detecting phase changes
+    };
+  }, [isPlaceholder, getTeamName]);
 
   // Get matches for selected field
   const fieldMatches = useMemo(() =>
@@ -181,17 +222,32 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     setSelectedMatchId(newMatchId);
   }, [hasRunningMatch, handleFinish, switchMatchDialog]);
 
-  // Handler: Load next match
+  // Handler: Load next match on current field
+  // BUG-FIX: Improved logic - find next unplayed match on current field
   const handleLoadNextMatch = useCallback(() => {
+    // Find next unplayed match on current field after current match
     const currentIndex = fieldMatches.findIndex(m => m.id === currentMatchData?.id);
-    const nextMatch = fieldMatches
+    const nextMatchOnField = fieldMatches
       .slice(currentIndex + 1)
       .find(m => m.scoreA === undefined || m.scoreB === undefined);
 
-    if (nextMatch) {
-      setSelectedMatchId(nextMatch.id);
+    if (nextMatchOnField) {
+      setSelectedMatchId(nextMatchOnField.id);
+    } else {
+      // If no more matches on current field, find first unplayed match on any field
+      const firstUnplayedMatch = schedule.allMatches.find(
+        m => m.scoreA === undefined || m.scoreB === undefined
+      );
+      if (firstUnplayedMatch && firstUnplayedMatch.field !== selectedFieldNumber) {
+        // Switch to that field and select the match
+        setSelectedFieldNumber(firstUnplayedMatch.field);
+        setSelectedMatchId(firstUnplayedMatch.id);
+      } else {
+        // Reset selection to auto-select
+        setSelectedMatchId(null);
+      }
     }
-  }, [fieldMatches, currentMatchData]);
+  }, [fieldMatches, currentMatchData, schedule.allMatches, selectedFieldNumber]);
 
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {

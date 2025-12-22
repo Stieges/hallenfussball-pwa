@@ -10,15 +10,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Hinzugefügt
+- **MF-002: Timer-Performance** - Neuer `useMatchTimer` Hook für flüssige Timer-Updates ohne Re-Render-Kaskaden
+- **MF-004: Accessibility-Verbesserungen** - Semantische HTML-Struktur mit `<ul>/<li>`, ARIA-Attribute, Focus-Management und Escape-Key-Support für Dialoge
+- **Restzeit-basiertes Highlight** - Nächstes Spiel wird basierend auf verbleibender Spielzeit hervorgehoben (nicht geplante Anstoßzeit)
+- **Phasenwechsel-Erkennung** - Kein Highlight bei Phasenwechsel (Gruppen→Finals), da längere Pause
 - **Penalty Shootout Dialog** - Neuer Dialog für Elfmeterschießen bei Unentschieden in der Finalrunde
 - **Tiebreaker Banner** - Anzeige bei Spielen die einen Sieger benötigen
 - **Dashboard Echtzeit-Updates** - Dashboard aktualisiert sofort bei Turnier-Änderungen (via Storage Events)
 - **Default Finals-Preset** - Hallenfußball verwendet jetzt standardmäßig 'top-4' Finals
 
 ### Geändert
+- **CurrentMatchPanel Refactoring** - Aufgeteilt in kleinere Panel-Komponenten (TeamBlock, CenterBlock, Scoreboard, EventsList)
 - **Default Feldanzahl** - Hallenfußball verwendet jetzt standardmäßig 1 Feld (statt 2)
 
 ### Behoben
+- **BUG: Finals Team-Auflösung** - Finalspiele zeigen jetzt korrekt aufgelöste Teamnamen statt Platzhalter
+- **BUG: "Nächstes Spiel laden" Logik** - Sucht jetzt über alle Felder nach dem nächsten ungespielte Spiel
+- **BUG: Team-ID in Live-Match** - `useLiveMatchManagement` löst Team-IDs korrekt zu Namen auf
 - **BUG-001: Match ID Synchronisierung** - Kritischer Bug behoben, bei dem alle Finalspiele dieselbe ID wie das erste Gruppenspiel erhielten
   - Root Cause: `scheduleMatches()` setzte kein `slot` auf ScheduledMatch-Objekten
   - Fix: `slot: match.slot ?? match.round - 1` in scheduleGenerator.ts hinzugefügt

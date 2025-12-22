@@ -16,12 +16,15 @@ interface UpcomingMatchesSidebarProps {
   upcomingMatches: MatchSummary[];
   highlightMinutesBefore?: number;
   fieldName?: string; // BUG-MOD-003 FIX: Pass field name for display
+  /** Externally controlled highlight for first match (e.g., based on remaining time) */
+  highlightFirstMatch?: boolean;
 }
 
 export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
   upcomingMatches,
   highlightMinutesBefore = 5,
   fieldName,
+  highlightFirstMatch,
 }) => {
   const isMobile = useIsMobile();
 
@@ -62,8 +65,12 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
         ) : (
           upcomingMatches.map((match, index) => {
             const minutesUntil = calculateMinutesUntil(match.scheduledKickoff);
-            const isHighlighted =
-              index === 0 && minutesUntil !== null && minutesUntil >= 0 && minutesUntil <= highlightMinutesBefore;
+            // Use external highlight flag if provided, otherwise fall back to scheduled time
+            const isHighlighted = index === 0 && (
+              highlightFirstMatch !== undefined
+                ? highlightFirstMatch
+                : (minutesUntil !== null && minutesUntil >= 0 && minutesUntil <= highlightMinutesBefore)
+            );
 
             return (
               <NextMatchCard

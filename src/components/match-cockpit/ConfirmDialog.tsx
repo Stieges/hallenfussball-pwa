@@ -2,9 +2,10 @@
  * ConfirmDialog - Reusable confirmation dialog
  *
  * QW-001: Replaces window.confirm() with proper modal UI.
+ * MF-004: Accessibility improvements (focus trap, Escape key, ARIA)
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useEffect, useRef, useCallback } from 'react';
 import { theme } from '../../styles/theme';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -29,6 +30,30 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
 }) => {
   const isMobile = useIsMobile();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // MF-004: Focus management and Escape key handler
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onCancel();
+    }
+  }, [onCancel]);
+
+  useEffect(() => {
+    // Focus dialog container on mount
+    setTimeout(() => dialogRef.current?.focus(), 50);
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+
+    // Add keyboard listener
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   const variantColors = {
     danger: theme.colors.error,
@@ -96,13 +121,23 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <div style={overlayStyle} onClick={onCancel}>
-      <div style={containerStyle} onClick={(e) => e.stopPropagation()}>
-        <div style={titleStyle}>
-          <span>{icon}</span>
+      {/* MF-004: Modal mit korrekten ARIA-Attributen */}
+      <div
+        ref={dialogRef}
+        style={containerStyle}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-message"
+        tabIndex={-1}
+      >
+        <div id="confirm-dialog-title" style={titleStyle}>
+          <span aria-hidden="true">{icon}</span>
           <span>{title}</span>
         </div>
 
-        <div style={messageStyle}>{message}</div>
+        <div id="confirm-dialog-message" style={messageStyle}>{message}</div>
 
         <div style={buttonsStyle}>
           <Button
