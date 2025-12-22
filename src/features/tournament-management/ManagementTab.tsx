@@ -48,12 +48,19 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handlePause,
     handleResume,
     handleFinish,
+    handleForceFinish,
     handleGoal,
     handleUndoLastEvent,
     handleManualEditResult,
     handleAdjustTime,
     handleReopenMatch,
     hasRunningMatch,
+    // Tiebreaker handlers
+    handleStartOvertime,
+    handleStartGoldenGoal,
+    handleStartPenaltyShootout,
+    handleRecordPenaltyResult,
+    handleCancelTiebreaker,
   } = useLiveMatchManagement({ tournament, onTournamentUpdate });
 
   // Confirm dialogs
@@ -258,6 +265,13 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onAdjustTime={handleAdjustTime}
           onLoadNextMatch={handleLoadNextMatch}
           onReopenLastMatch={handleReopenLastMatch}
+          // Tiebreaker callbacks
+          onStartOvertime={handleStartOvertime}
+          onStartGoldenGoal={handleStartGoldenGoal}
+          onStartPenaltyShootout={handleStartPenaltyShootout}
+          onRecordPenaltyResult={handleRecordPenaltyResult}
+          onForceFinish={handleForceFinish}
+          onCancelTiebreaker={handleCancelTiebreaker}
         />
       ) : (
         <div className={styles.noMatches}>

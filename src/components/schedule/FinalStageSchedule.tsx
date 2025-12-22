@@ -23,8 +23,7 @@ interface FinalStageScheduleProps {
   onStartCorrection?: (matchId: string) => void;
   /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
   runningMatchIds?: Set<string>;
-  /** Permission: Can user correct results? */
-  canCorrectResults?: boolean;
+  // Note: Permission check is now handled in ScheduleTab
 }
 
 export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
@@ -39,7 +38,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   correctionMatchId,
   onStartCorrection,
   runningMatchIds,
-  canCorrectResults = true,
 }) => {
   if (matches.length === 0) {
     return (
@@ -274,7 +272,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     inCorrectionMode={correctionMatchId === match.id}
                     onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                     onStartCorrection={() => onStartCorrection?.(match.id)}
-                    canCorrectResults={canCorrectResults}
                   />
                 </td>
                 <td style={{
@@ -332,7 +329,6 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 inCorrectionMode={correctionMatchId === match.id}
                 onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
                 onStartCorrection={() => onStartCorrection?.(match.id)}
-                canCorrectResults={canCorrectResults}
               />
             </div>
             <div style={mobileMetaStyle}>

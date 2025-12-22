@@ -43,6 +43,9 @@ export interface MatchEvent {
   };
 }
 
+/** Current phase of play within a match */
+export type MatchPlayPhase = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+
 export interface LiveMatch {
   id: string;
   number: number;
@@ -63,6 +66,20 @@ export interface LiveMatch {
   timerStartTime?: string;
   timerPausedAt?: string;
   timerElapsedSeconds?: number;
+
+  // Tournament phase (groupStage, semifinal, final, etc.)
+  tournamentPhase?: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final';
+
+  // Tiebreaker fields for finals matches
+  playPhase?: MatchPlayPhase;           // Current phase: regular, overtime, goldenGoal, penalty
+  overtimeScoreA?: number;              // Goals in overtime (home)
+  overtimeScoreB?: number;              // Goals in overtime (away)
+  overtimeDurationSeconds?: number;     // Duration of overtime in seconds
+  overtimeElapsedSeconds?: number;      // Elapsed time in overtime
+  penaltyScoreA?: number;               // Penalty score (home)
+  penaltyScoreB?: number;               // Penalty score (away)
+  tiebreakerMode?: 'shootout' | 'overtime-then-shootout' | 'goldenGoal'; // From tournament config
+  awaitingTiebreakerChoice?: boolean;   // True when match ended in draw, waiting for tiebreaker
 }
 
 export interface MatchSummary {
@@ -99,6 +116,14 @@ export interface MatchCockpitProps {
 
   onLoadNextMatch(fieldId: string): void;
   onReopenLastMatch(fieldId: string): void;
+
+  // Tiebreaker callbacks
+  onStartOvertime?(matchId: string): void;
+  onStartGoldenGoal?(matchId: string): void;
+  onStartPenaltyShootout?(matchId: string): void;
+  onRecordPenaltyResult?(matchId: string, homeScore: number, awayScore: number): void;
+  onForceFinish?(matchId: string): void;
+  onCancelTiebreaker?(matchId: string): void;
 }
 
 // ============================================================================
@@ -122,6 +147,13 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   onAdjustTime,
   onLoadNextMatch,
   onReopenLastMatch,
+  // Tiebreaker callbacks
+  onStartOvertime,
+  onStartGoldenGoal,
+  onStartPenaltyShootout,
+  onRecordPenaltyResult,
+  onForceFinish,
+  onCancelTiebreaker,
 }) => {
   const isMobile = window.innerWidth < 768;
 
@@ -214,6 +246,13 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           onAdjustTime={onAdjustTime}
           onLoadNextMatch={onLoadNextMatch}
           onReopenLastMatch={onReopenLastMatch}
+          // Tiebreaker callbacks
+          onStartOvertime={onStartOvertime}
+          onStartGoldenGoal={onStartGoldenGoal}
+          onStartPenaltyShootout={onStartPenaltyShootout}
+          onRecordPenaltyResult={onRecordPenaltyResult}
+          onForceFinish={onForceFinish}
+          onCancelTiebreaker={onCancelTiebreaker}
         />
 
         {/* UPCOMING MATCHES SIDEBAR */}

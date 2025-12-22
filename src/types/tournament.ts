@@ -58,6 +58,15 @@ export type FinalsPreset =
   | 'all-places';    // Alle Plätze ausspielen
 
 /**
+ * Tiebreaker Mode for Finals
+ * How to resolve draws in knockout/finals matches
+ */
+export type TiebreakerMode =
+  | 'shootout'              // Direkt Strafstoßschießen
+  | 'overtime-then-shootout' // Verlängerung, dann Strafstoßschießen
+  | 'goldenGoal';           // Golden Goal (erstes Tor in Verlängerung gewinnt)
+
+/**
  * Finals Configuration
  * Replaces the old Finals boolean structure with preset-based system
  */
@@ -66,6 +75,8 @@ export interface FinalsConfig {
   parallelSemifinals?: boolean;      // Halbfinale gleichzeitig?
   parallelQuarterfinals?: boolean;   // Viertelfinale gleichzeitig?
   parallelRoundOf16?: boolean;       // Achtelfinale gleichzeitig?
+  tiebreaker?: TiebreakerMode;       // Entscheidung bei Unentschieden
+  tiebreakerDuration?: number;       // Dauer in Minuten (für Verlängerung/Golden Goal)
 }
 
 /**
@@ -130,6 +141,11 @@ export interface PlayoffConfig {
  */
 export type MatchStatus = 'scheduled' | 'running' | 'finished';
 
+/**
+ * How a finals match was decided (for display purposes)
+ */
+export type MatchDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
+
 export interface Match {
   id: string;
   round: number;
@@ -155,6 +171,13 @@ export interface Match {
   timerStartTime?: string;       // ISO timestamp when timer was started
   timerPausedAt?: string;        // ISO timestamp when timer was paused (undefined = running)
   timerElapsedSeconds?: number;  // Elapsed seconds before current run/pause
+
+  // Finals tiebreaker results (only for isFinal matches)
+  overtimeScoreA?: number;       // Ergebnis nach Verlängerung (Heim)
+  overtimeScoreB?: number;       // Ergebnis nach Verlängerung (Gast)
+  penaltyScoreA?: number;        // Strafstoß-Ergebnis (Heim, z.B. 4)
+  penaltyScoreB?: number;        // Strafstoß-Ergebnis (Gast, z.B. 3)
+  decidedBy?: MatchDecidedBy;    // Wie wurde das Spiel entschieden
 }
 
 /**

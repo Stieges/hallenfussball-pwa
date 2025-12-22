@@ -11,35 +11,60 @@ export const useTournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load tournaments function - extracted for reuse
+  const loadTournaments = async () => {
+    try {
+      const loaded = await api.getAllTournaments();
+
+      // Migration: Convert old string locations to LocationDetails
+      const migrated = migrateLocationsToStructured(loaded);
+
+      // Check if any tournaments were migrated
+      const hasChanges = migrated.some((_, idx) =>
+        typeof loaded[idx]?.location === 'string'
+      );
+
+      // If migrations occurred, save them back
+      if (hasChanges) {
+        console.log('[useTournaments] Migrating tournaments to structured location format');
+        await Promise.all(migrated.map(t => api.saveTournament(t)));
+      }
+
+      setTournaments(migrated);
+    } catch (error) {
+      console.error('Failed to load tournaments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load tournaments on mount
   useEffect(() => {
-    const loadTournaments = async () => {
-      try {
-        const loaded = await api.getAllTournaments();
+    loadTournaments();
+  }, []);
 
-        // Migration: Convert old string locations to LocationDetails
-        const migrated = migrateLocationsToStructured(loaded);
-
-        // Check if any tournaments were migrated
-        const hasChanges = migrated.some((_, idx) =>
-          typeof loaded[idx]?.location === 'string'
-        );
-
-        // If migrations occurred, save them back
-        if (hasChanges) {
-          console.log('[useTournaments] Migrating tournaments to structured location format');
-          await Promise.all(migrated.map(t => api.saveTournament(t)));
-        }
-
-        setTournaments(migrated);
-      } catch (error) {
-        console.error('Failed to load tournaments:', error);
-      } finally {
-        setLoading(false);
+  // Listen for localStorage changes (from TournamentManagementScreen or other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'tournaments') {
+        console.log('[useTournaments] Detected localStorage change, reloading...');
+        loadTournaments();
       }
     };
 
-    loadTournaments();
+    // Also listen for custom events (same-tab updates)
+    const handleTournamentUpdate = () => {
+      console.log('[useTournaments] Detected tournament update event, reloading...');
+      loadTournaments();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('tournament-updated', handleTournamentUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('tournament-updated', handleTournamentUpdate);
+    };
   }, []);
 
   // Save tournament

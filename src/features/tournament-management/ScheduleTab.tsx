@@ -83,6 +83,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     return true;
   };
 
+  // Helper: Resolve team ID to team name
+  const getTeamName = (teamId: string): string => {
+    const team = tournament.teams.find(t => t.id === teamId);
+    return team?.name || teamId; // Fallback to ID if team not found
+  };
+
   // MON-LIVE-INDICATOR-01: Get running match IDs from localStorage
   const getRunningMatchIds = (): Set<string> => {
     try {
@@ -140,6 +146,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Correction handlers
   const handleStartCorrection = (matchId: string) => {
+    // Check permission first - if not allowed, show warning
+    if (!canCorrectResults) {
+      showWarning('Sie haben keine Berechtigung, Ergebnisse nachträglich zu korrigieren.');
+      return;
+    }
+
     const match = tournament.matches.find(m => m.id === matchId);
     if (match?.scoreA === undefined || match.scoreB === undefined) {return;}
 
@@ -366,7 +378,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           correctionMatchId={correctionState?.matchId ?? null}
           onStartCorrection={handleStartCorrection}
           runningMatchIds={runningMatchIds}
-          canCorrectResults={canCorrectResults}
         />
 
         {/* Manuelle SR-Zuweisung (wenn SR aktiv) */}
@@ -392,8 +403,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           onClose={handleCancelCorrection}
           onConfirm={handleConfirmCorrection}
           matchLabel={`Spiel #${match.round}`}
-          teamA={match.teamA}
-          teamB={match.teamB}
+          teamA={getTeamName(match.teamA)}
+          teamB={getTeamName(match.teamB)}
           originalScoreA={correctionState.originalScoreA}
           originalScoreB={correctionState.originalScoreB}
         />

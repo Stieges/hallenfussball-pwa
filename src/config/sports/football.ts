@@ -46,7 +46,7 @@ export const footballIndoorConfig: SportConfig = {
     },
     allowDraw: true,
     typicalTeamSize: 6,
-    typicalFieldCount: 2,
+    typicalFieldCount: 1,
     minRestSlots: 1,
     defaultFinalsPreset: 'top-4',
   },
@@ -56,6 +56,8 @@ export const footballIndoorConfig: SportConfig = {
     canDrawInFinals: false,
     hasOvertime: false,
     hasShootout: true,
+    defaultTiebreaker: 'shootout',
+    defaultTiebreakerDuration: 5,
     isSetBased: false,
   },
 
@@ -158,6 +160,8 @@ export const footballOutdoorConfig: SportConfig = {
     hasOvertime: true,
     overtimeDuration: 10,
     hasShootout: true,
+    defaultTiebreaker: 'overtime-then-shootout',
+    defaultTiebreakerDuration: 10,
     isSetBased: false,
   },
 

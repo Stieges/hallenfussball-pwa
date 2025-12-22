@@ -103,6 +103,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             if (index !== -1) {
               tournaments[index] = updatedTournament;
               localStorage.setItem('tournaments', JSON.stringify(tournaments));
+              // Notify useTournaments hook about the change
+              window.dispatchEvent(new CustomEvent('tournament-updated'));
             }
           }
 
@@ -125,19 +127,20 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             phases: generatedSchedule.phases.map(phase => ({
               ...phase,
               matches: phase.matches.map((sm) => {
-                // FIX: Match by round + field + group/label instead of team names
+                // FIX: Match by slot + field + group/label instead of team names
                 // Team names can differ in format (technical placeholder vs display text)
+                // NOTE: Use slot (time slot index) NOT round or matchNumber (they are different!)
                 const tournamentMatch = updatedTournament.matches.find(m => {
-                  // For group stage: match by round + field + group
+                  // For group stage: match by slot + field + group
                   if (sm.group && m.group) {
-                    return m.round === sm.matchNumber && m.field === sm.field && m.group === sm.group;
+                    return m.slot === sm.slot && m.field === sm.field && m.group === sm.group;
                   }
-                  // For playoffs: match by round + field + label (more reliable than team names)
+                  // For playoffs: match by label (most reliable for finals)
                   if (sm.label && m.label) {
                     return m.label === sm.label;
                   }
-                  // Fallback: match by round + field (may not be unique, but better than team names)
-                  return m.round === sm.matchNumber && m.field === sm.field;
+                  // Fallback: match by slot + field (should be unique)
+                  return m.slot === sm.slot && m.field === sm.field;
                 });
                 if (tournamentMatch) {
                   return { ...sm, id: tournamentMatch.id };
@@ -175,6 +178,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       if (index !== -1) {
         tournaments[index] = updatedTournament;
         localStorage.setItem('tournaments', JSON.stringify(tournaments));
+        // Notify useTournaments hook about the change (for Dashboard refresh)
+        window.dispatchEvent(new CustomEvent('tournament-updated'));
       }
     }
 
@@ -195,19 +200,20 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         phases: generatedSchedule.phases.map(phase => ({
           ...phase,
           matches: phase.matches.map((sm) => {
-            // FIX: Match by round + field + group/label instead of team names
+            // FIX: Match by slot + field + group/label instead of team names
             // Team names can differ in format (technical placeholder vs display text)
+            // NOTE: Use slot (time slot index) NOT round or matchNumber (they are different!)
             const tournamentMatch = updatedTournament.matches.find(m => {
-              // For group stage: match by round + field + group
+              // For group stage: match by slot + field + group
               if (sm.group && m.group) {
-                return m.round === sm.matchNumber && m.field === sm.field && m.group === sm.group;
+                return m.slot === sm.slot && m.field === sm.field && m.group === sm.group;
               }
-              // For playoffs: match by round + field + label (more reliable than team names)
+              // For playoffs: match by label (most reliable for finals)
               if (sm.label && m.label) {
                 return m.label === sm.label;
               }
-              // Fallback: match by round + field (may not be unique, but better than team names)
-              return m.round === sm.matchNumber && m.field === sm.field;
+              // Fallback: match by slot + field (should be unique)
+              return m.slot === sm.slot && m.field === sm.field;
             });
             if (tournamentMatch) {
               return { ...sm, id: tournamentMatch.id };

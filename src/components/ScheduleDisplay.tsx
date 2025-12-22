@@ -53,8 +53,7 @@ interface ScheduleDisplayProps {
   onStartCorrection?: (matchId: string) => void;
   /** MON-LIVE-INDICATOR-01: Set of match IDs that are currently running */
   runningMatchIds?: Set<string>;
-  /** Permission: Can user correct results? (hides correction button if false) */
-  canCorrectResults?: boolean;
+  // Note: Permission check is now handled in ScheduleTab
 }
 
 export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
@@ -73,7 +72,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   correctionMatchId,
   onStartCorrection,
   runningMatchIds,
-  canCorrectResults = true, // Default: allow corrections (for backward compatibility)
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -199,7 +197,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
-          canCorrectResults={canCorrectResults}
         />
       )}
 
@@ -225,7 +222,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
-          canCorrectResults={canCorrectResults}
         />
       )}
 

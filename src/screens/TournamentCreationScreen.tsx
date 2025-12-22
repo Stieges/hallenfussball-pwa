@@ -218,12 +218,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         });
       }
 
-      // When switching to groupsAndFinals, apply sport-specific default finals preset
+      // When switching to groupsAndFinals, apply sport-specific default finals preset and tiebreaker
       if (field === 'groupSystem' && value === 'groupsAndFinals') {
         const sportConfig = getSportConfig(prev.sportId || DEFAULT_SPORT_ID);
         updated.finalsConfig = {
           ...prev.finalsConfig,
           preset: sportConfig.defaults.defaultFinalsPreset,
+          tiebreaker: sportConfig.rules.defaultTiebreaker,
+          tiebreakerDuration: sportConfig.rules.defaultTiebreakerDuration,
         };
       }
 

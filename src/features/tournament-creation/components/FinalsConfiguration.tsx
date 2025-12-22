@@ -1,7 +1,8 @@
 import { CSSProperties, useState } from 'react';
 import { theme } from '../../../styles/theme';
-import { Tournament, FinalsPreset, FinalsConfig } from '../../../types/tournament';
+import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
+import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
 
 interface FinalsConfigurationProps {
   formData: Partial<Tournament>;
@@ -40,6 +41,29 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
     };
     onUpdate('finalsConfig', newConfig);
   };
+
+  const handleTiebreakerChange = (tiebreaker: TiebreakerMode) => {
+    const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
+      preset: formData.finalsConfig?.preset || 'none',
+      tiebreaker,
+    };
+    onUpdate('finalsConfig', newConfig);
+  };
+
+  const handleTiebreakerDurationChange = (duration: number) => {
+    const newConfig: FinalsConfig = {
+      ...formData.finalsConfig,
+      preset: formData.finalsConfig?.preset || 'none',
+      tiebreakerDuration: duration,
+    };
+    onUpdate('finalsConfig', newConfig);
+  };
+
+  // Get sport config for defaults
+  const sportConfig = getSportConfig(formData.sportId || DEFAULT_SPORT_ID);
+  const currentTiebreaker = formData.finalsConfig?.tiebreaker || sportConfig.rules.defaultTiebreaker || 'shootout';
+  const currentDuration = formData.finalsConfig?.tiebreakerDuration || sportConfig.rules.defaultTiebreakerDuration || 5;
 
   const renderOption = (option: FinalsOption, isRecommended: boolean) => {
     const isSelected = currentPreset === option.preset;
@@ -245,6 +269,104 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '12px', lineHeight: '1.4' }}>
             Bei mehreren Feldern können Spiele gleichzeitig stattfinden
           </p>
+        </div>
+      )}
+
+      {/* Tiebreaker Options - only show when finals are enabled */}
+      {currentPreset && currentPreset !== 'none' && (
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          background: 'rgba(0,176,255,0.08)',
+          borderRadius: theme.borderRadius.md,
+          border: '1px solid rgba(0,176,255,0.2)'
+        }}>
+          <h4 style={{
+            color: theme.colors.secondary,
+            fontSize: '13px',
+            margin: '0 0 12px 0',
+            fontWeight: theme.fontWeights.semibold
+          }}>
+            ⚖️ Bei Unentschieden
+          </h4>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="tiebreaker"
+                checked={currentTiebreaker === 'shootout'}
+                onChange={() => handleTiebreakerChange('shootout')}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.secondary }}
+              />
+              <div>
+                <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                  Direkt Strafstoßschießen
+                </span>
+                <span style={{ color: theme.colors.text.secondary, fontSize: '11px', marginLeft: '8px' }}>
+                  (privates Turnier)
+                </span>
+              </div>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="tiebreaker"
+                checked={currentTiebreaker === 'overtime-then-shootout'}
+                onChange={() => handleTiebreakerChange('overtime-then-shootout')}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.secondary }}
+              />
+              <div>
+                <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                  Verlängerung, dann Strafstoßschießen
+                </span>
+                <span style={{ color: theme.colors.text.secondary, fontSize: '11px', marginLeft: '8px' }}>
+                  (offiziell)
+                </span>
+              </div>
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="tiebreaker"
+                checked={currentTiebreaker === 'goldenGoal'}
+                onChange={() => handleTiebreakerChange('goldenGoal')}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: theme.colors.secondary }}
+              />
+              <span style={{ color: theme.colors.text.primary, fontSize: '13px' }}>
+                Golden Goal
+              </span>
+            </label>
+          </div>
+
+          {/* Duration input for overtime/golden goal */}
+          {(currentTiebreaker === 'overtime-then-shootout' || currentTiebreaker === 'goldenGoal') && (
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ color: theme.colors.text.secondary, fontSize: '13px' }}>
+                {currentTiebreaker === 'goldenGoal' ? 'Golden Goal-Zeit:' : 'Verlängerung:'}
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={15}
+                value={currentDuration}
+                onChange={(e) => handleTiebreakerDurationChange(parseInt(e.target.value) || 5)}
+                style={{
+                  width: '60px',
+                  padding: '6px 10px',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.sm,
+                  color: theme.colors.text.primary,
+                  fontSize: '14px',
+                  textAlign: 'center',
+                }}
+              />
+              <span style={{ color: theme.colors.text.secondary, fontSize: '13px' }}>Minuten</span>
+            </div>
+          )}
         </div>
       )}
     </div>

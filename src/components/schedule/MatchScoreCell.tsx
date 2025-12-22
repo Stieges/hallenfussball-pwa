@@ -10,8 +10,7 @@ interface MatchScoreCellProps {
   inCorrectionMode: boolean;
   onScoreChange: (scoreA: number, scoreB: number) => void;
   onStartCorrection: () => void;
-  /** Permission: Can user correct results? If false, hide correction button */
-  canCorrectResults?: boolean;
+  // Note: Permission check is now handled in the parent component (ScheduleTab)
 }
 
 export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
@@ -23,7 +22,6 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   inCorrectionMode,
   onScoreChange,
   onStartCorrection,
-  canCorrectResults = true,
 }) => {
   // Local state for partial score entry - allows user to fill one field at a time
   const [localScoreA, setLocalScoreA] = useState<string>(scoreA !== undefined ? String(scoreA) : '');
@@ -51,8 +49,10 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       onScoreChange(parseInt(localScoreA), parseInt(value));
     }
   };
-  // State 1: Finished match - read-only with correction button
-  if (isFinished && !inCorrectionMode && !editable) {
+  // State 1: Finished match - ALWAYS read-only with correction button
+  // BUG FIX: Beendete Spiele dürfen nicht direkt bearbeitet werden, auch wenn editable=true
+  // Der CorrectionDialog muss verwendet werden, um Ergebnisse zu korrigieren
+  if (isFinished && !inCorrectionMode) {
     const containerStyle: CSSProperties = {
       display: 'flex',
       flexDirection: 'column',
@@ -86,19 +86,17 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
               : '___ : ___'
             }
           </span>
-          {/* Only show correction button if user has permission */}
-          {canCorrectResults && (
-            <button
-              style={buttonStyle}
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartCorrection();
-              }}
-              className="correction-button"
-            >
-              Ergebnis korrigieren
-            </button>
-          )}
+          {/* Correction button always visible - permission check happens in handler */}
+          <button
+            style={buttonStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartCorrection();
+            }}
+            className="correction-button"
+          >
+            Ergebnis korrigieren
+          </button>
         </div>
 
         <style>{`

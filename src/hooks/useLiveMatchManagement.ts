@@ -41,8 +41,10 @@ export interface UseLiveMatchManagementReturn {
   handlePause: (matchId: string) => void;
   /** Resume a paused match */
   handleResume: (matchId: string) => void;
-  /** Finish a match */
+  /** Finish a match (with tiebreaker check) */
   handleFinish: (matchId: string) => void;
+  /** Force finish a match (skip tiebreaker check) */
+  handleForceFinish: (matchId: string) => void;
   /** Record a goal */
   handleGoal: (matchId: string, teamId: string, delta: 1 | -1) => void;
   /** Undo last event */
@@ -55,6 +57,17 @@ export interface UseLiveMatchManagementReturn {
   handleReopenMatch: (matchData: ScheduledMatch) => void;
   /** Check if any match is currently running */
   hasRunningMatch: () => LiveMatch | undefined;
+  // Tiebreaker handlers
+  /** Start overtime (Verlängerung) */
+  handleStartOvertime: (matchId: string) => void;
+  /** Start golden goal */
+  handleStartGoldenGoal: (matchId: string) => void;
+  /** Start penalty shootout */
+  handleStartPenaltyShootout: (matchId: string) => void;
+  /** Record penalty result and finish */
+  handleRecordPenaltyResult: (matchId: string, homeScore: number, awayScore: number) => void;
+  /** Cancel tiebreaker and finish as draw */
+  handleCancelTiebreaker: (matchId: string) => void;
 }
 
 const TIMER_INTERVAL_MS = 1000;
@@ -159,6 +172,10 @@ export function useLiveMatchManagement({
       return existing;
     }
 
+    // Get tiebreaker config from tournament
+    const tiebreakerMode = tournamentRef.current.finalsConfig?.tiebreaker;
+    const tiebreakerDuration = tournamentRef.current.finalsConfig?.tiebreakerDuration || 5;
+
     const newMatch: LiveMatch = {
       id: matchData.id,
       number: matchData.matchNumber,
@@ -174,6 +191,11 @@ export function useLiveMatchManagement({
       status: 'NOT_STARTED' as MatchStatus,
       elapsedSeconds: 0,
       events: [],
+      // Tiebreaker fields
+      tournamentPhase: matchData.phase,
+      playPhase: 'regular',
+      tiebreakerMode: tiebreakerMode,
+      overtimeDurationSeconds: tiebreakerDuration * 60,
     };
 
     // Save immediately
@@ -302,25 +324,63 @@ export function useLiveMatchManagement({
   }, []);
 
   /**
-   * Finish a match
+   * Check if a match is a finals match (not group stage)
    */
-  const handleFinish = useCallback((matchId: string) => {
+  const isFinalsMatch = (match: LiveMatch): boolean => {
+    return match.tournamentPhase !== undefined && match.tournamentPhase !== 'groupStage';
+  };
+
+  /**
+   * Check if match ended in a draw and needs tiebreaker
+   */
+  const needsTiebreaker = (match: LiveMatch): boolean => {
+    if (!isFinalsMatch(match)) {return false;}
+    if (!match.tiebreakerMode) {return false;} // No tiebreaker configured
+    if (match.playPhase === 'penalty') {return false;} // Already in penalty shootout
+
+    // Check if current phase ended in draw
+    if (match.playPhase === 'regular' || match.playPhase === undefined) {
+      return match.homeScore === match.awayScore;
+    }
+    if (match.playPhase === 'overtime' || match.playPhase === 'goldenGoal') {
+      // Overtime/Golden Goal ended in draw - need penalty shootout
+      const totalHomeScore = match.homeScore + (match.overtimeScoreA || 0);
+      const totalAwayScore = match.awayScore + (match.overtimeScoreB || 0);
+      return totalHomeScore === totalAwayScore;
+    }
+    return false;
+  };
+
+  /**
+   * Internal function to actually finish a match
+   */
+  const finishMatchInternal = useCallback((matchId: string, decidedBy: 'regular' | 'overtime' | 'goldenGoal' | 'penalty' = 'regular') => {
     setLiveMatches(prev => {
       const match = prev.get(matchId);
       if (!match) {
-        console.error('handleFinish: Match not found:', matchId);
+        console.error('finishMatchInternal: Match not found:', matchId);
         return prev;
       }
+
+      // Calculate final scores including overtime
+      const finalHomeScore = match.homeScore + (match.overtimeScoreA || 0);
+      const finalAwayScore = match.awayScore + (match.overtimeScoreB || 0);
 
       // Update tournament.matches with TL-RESULT-LOCK-01: matchStatus
       const updatedMatches = tournamentRef.current.matches.map(m => {
         if (m.id === matchId) {
           return {
             ...m,
-            scoreA: match.homeScore,
-            scoreB: match.awayScore,
+            scoreA: finalHomeScore,
+            scoreB: finalAwayScore,
             matchStatus: 'finished' as const,
             finishedAt: new Date().toISOString(),
+            // Tiebreaker info
+            overtimeScoreA: match.overtimeScoreA,
+            overtimeScoreB: match.overtimeScoreB,
+            penaltyScoreA: match.penaltyScoreA,
+            penaltyScoreB: match.penaltyScoreB,
+            decidedBy: decidedBy,
           };
         }
         return m;
@@ -353,9 +413,12 @@ export function useLiveMatchManagement({
       const updated = new Map(prev);
       updated.set(matchId, {
         ...match,
+        homeScore: finalHomeScore,
+        awayScore: finalAwayScore,
         status: 'FINISHED' as MatchStatus,
         elapsedSeconds: match.durationSeconds,
         events: [...match.events, event],
+        awaitingTiebreakerChoice: false,
       });
 
       return updated;
@@ -364,6 +427,175 @@ export function useLiveMatchManagement({
     // Announce to other tabs
     announceMatchFinished(matchId);
   }, [onTournamentUpdate, announceMatchFinished]);
+
+  /**
+   * Finish a match - checks for finals draw and prompts tiebreaker if needed
+   */
+  const handleFinish = useCallback((matchId: string) => {
+    const match = liveMatches.get(matchId);
+    if (!match) {
+      console.error('handleFinish: Match not found:', matchId);
+      return;
+    }
+
+    // Check if finals match ended in draw
+    if (needsTiebreaker(match)) {
+      console.log('⚖️ Finals match ended in draw - awaiting tiebreaker choice');
+      setLiveMatches(prev => {
+        const updated = new Map(prev);
+        updated.set(matchId, {
+          ...match,
+          status: 'PAUSED' as MatchStatus,
+          awaitingTiebreakerChoice: true,
+        });
+        return updated;
+      });
+      return;
+    }
+
+    // Determine how match was decided
+    let decidedBy: 'regular' | 'overtime' | 'goldenGoal' | 'penalty' = 'regular';
+    if (match.playPhase === 'overtime') {decidedBy = 'overtime';}
+    if (match.playPhase === 'goldenGoal') {decidedBy = 'goldenGoal';}
+    if (match.playPhase === 'penalty') {decidedBy = 'penalty';}
+
+    finishMatchInternal(matchId, decidedBy);
+  }, [liveMatches, finishMatchInternal]);
+
+  /**
+   * Force finish a match (skip tiebreaker check)
+   */
+  const handleForceFinish = useCallback((matchId: string) => {
+    finishMatchInternal(matchId, 'regular');
+  }, [finishMatchInternal]);
+
+  /**
+   * Start overtime (Verlängerung)
+   */
+  const handleStartOvertime = useCallback((matchId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleStartOvertime: Match not found:', matchId);
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'RUNNING' as MatchStatus,
+        playPhase: 'overtime',
+        overtimeScoreA: 0,
+        overtimeScoreB: 0,
+        overtimeElapsedSeconds: 0,
+        timerStartTime: new Date().toISOString(),
+        timerElapsedSeconds: 0,
+        elapsedSeconds: 0,
+        durationSeconds: match.overtimeDurationSeconds || 5 * 60,
+        awaitingTiebreakerChoice: false,
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Start golden goal
+   */
+  const handleStartGoldenGoal = useCallback((matchId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleStartGoldenGoal: Match not found:', matchId);
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'RUNNING' as MatchStatus,
+        playPhase: 'goldenGoal',
+        overtimeScoreA: 0,
+        overtimeScoreB: 0,
+        overtimeElapsedSeconds: 0,
+        timerStartTime: new Date().toISOString(),
+        timerElapsedSeconds: 0,
+        elapsedSeconds: 0,
+        durationSeconds: match.overtimeDurationSeconds || 5 * 60,
+        awaitingTiebreakerChoice: false,
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Start penalty shootout (just changes phase, no timer)
+   */
+  const handleStartPenaltyShootout = useCallback((matchId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleStartPenaltyShootout: Match not found:', matchId);
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'PAUSED' as MatchStatus, // No timer running for penalties
+        playPhase: 'penalty',
+        penaltyScoreA: 0,
+        penaltyScoreB: 0,
+        awaitingTiebreakerChoice: false,
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Record penalty shootout result and finish match
+   */
+  const handleRecordPenaltyResult = useCallback((
+    matchId: string,
+    homeScore: number,
+    awayScore: number
+  ) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleRecordPenaltyResult: Match not found:', matchId);
+        return prev;
+      }
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        penaltyScoreA: homeScore,
+        penaltyScoreB: awayScore,
+      });
+      return updated;
+    });
+
+    // Finish the match with penalty decision
+    finishMatchInternal(matchId, 'penalty');
+  }, [finishMatchInternal]);
+
+  /**
+   * Cancel tiebreaker choice and go back to normal finish
+   */
+  const handleCancelTiebreaker = useCallback((matchId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {return prev;}
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        awaitingTiebreakerChoice: false,
+        status: 'FINISHED' as MatchStatus,
+      });
+      return updated;
+    });
+  }, []);
 
   /**
    * Record a goal
@@ -585,11 +817,18 @@ export function useLiveMatchManagement({
     handlePause,
     handleResume,
     handleFinish,
+    handleForceFinish,
     handleGoal,
     handleUndoLastEvent,
     handleManualEditResult,
     handleAdjustTime,
     handleReopenMatch,
     hasRunningMatch,
+    // Tiebreaker handlers
+    handleStartOvertime,
+    handleStartGoldenGoal,
+    handleStartPenaltyShootout,
+    handleRecordPenaltyResult,
+    handleCancelTiebreaker,
   };
 }

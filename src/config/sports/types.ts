@@ -109,6 +109,15 @@ export interface SportDefaults {
 }
 
 /**
+ * Tiebreaker Mode for Finals (also exported from tournament.ts)
+ * How to resolve draws in knockout/finals matches
+ */
+export type SportTiebreakerMode =
+  | 'shootout'              // Direkt Strafstoßschießen
+  | 'overtime-then-shootout' // Verlängerung, dann Strafstoßschießen
+  | 'goldenGoal';           // Golden Goal (erstes Tor in Verlängerung gewinnt)
+
+/**
  * Sport Rules
  */
 export interface SportRules {
@@ -126,6 +135,12 @@ export interface SportRules {
 
   /** Has penalty shootout / free throws? */
   hasShootout: boolean;
+
+  /** Default tiebreaker mode for finals */
+  defaultTiebreaker?: SportTiebreakerMode;
+
+  /** Default duration for tiebreaker (overtime/golden goal) in minutes */
+  defaultTiebreakerDuration?: number;
 
   /** Is set-based scoring? (e.g., Volleyball) */
   isSetBased: boolean;

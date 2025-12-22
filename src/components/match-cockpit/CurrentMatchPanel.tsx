@@ -10,6 +10,8 @@ import { theme } from '../../styles/theme';
 import { Button, Card } from '../ui';
 import { useToast } from '../ui/Toast';
 import { LiveMatch, MatchSummary, MatchStatus } from './MatchCockpit';
+import { TiebreakerBanner } from './TiebreakerBanner';
+import { PenaltyShootoutDialog } from './PenaltyShootoutDialog';
 
 interface CurrentMatchPanelProps {
   currentMatch: LiveMatch | null;
@@ -29,6 +31,14 @@ interface CurrentMatchPanelProps {
   onAdjustTime(matchId: string, newElapsedSeconds: number): void;
   onLoadNextMatch(fieldId: string): void;
   onReopenLastMatch(fieldId: string): void;
+
+  // Tiebreaker callbacks
+  onStartOvertime?(matchId: string): void;
+  onStartGoldenGoal?(matchId: string): void;
+  onStartPenaltyShootout?(matchId: string): void;
+  onRecordPenaltyResult?(matchId: string, homeScore: number, awayScore: number): void;
+  onForceFinish?(matchId: string): void;
+  onCancelTiebreaker?(matchId: string): void;
 }
 
 export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
@@ -44,6 +54,13 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onAdjustTime,
   onLoadNextMatch,
   onReopenLastMatch,
+  // Tiebreaker callbacks
+  onStartOvertime,
+  onStartGoldenGoal,
+  onStartPenaltyShootout,
+  onRecordPenaltyResult,
+  onForceFinish,
+  onCancelTiebreaker,
 }) => {
   const { showWarning } = useToast();
   const isMobile = window.innerWidth < 768;
@@ -113,6 +130,26 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
             onFinish={onFinish}
             onAdjustTime={onAdjustTime}
           />
+
+          {/* TIEBREAKER BANNER - shown when finals match ends in draw */}
+          {currentMatch.awaitingTiebreakerChoice && onStartOvertime && onStartGoldenGoal && onStartPenaltyShootout && onForceFinish && (
+            <TiebreakerBanner
+              match={currentMatch}
+              onStartOvertime={onStartOvertime}
+              onStartGoldenGoal={onStartGoldenGoal}
+              onStartPenaltyShootout={onStartPenaltyShootout}
+              onForceFinish={onForceFinish}
+            />
+          )}
+
+          {/* PENALTY SHOOTOUT DIALOG - shown during penalty phase */}
+          {currentMatch.playPhase === 'penalty' && onRecordPenaltyResult && onCancelTiebreaker && (
+            <PenaltyShootoutDialog
+              match={currentMatch}
+              onSubmit={onRecordPenaltyResult}
+              onCancel={onCancelTiebreaker}
+            />
+          )}
 
           {/* FINISH PANEL */}
           {currentMatch.status === 'FINISHED' && (

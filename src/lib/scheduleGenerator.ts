@@ -456,6 +456,9 @@ function scheduleMatches(
         startTime: matchStartTime,
         endTime: matchEndTime,
         duration: totalMatchDuration,
+        // FIX: Add slot for proper match ID synchronization
+        // Without this, slot-based matching fails and all matches with same field could get same ID
+        slot: match.slot ?? match.round - 1,
       });
     });
 
