@@ -1,7 +1,8 @@
 # Hallenfussball-PWA - Manuelle Testfälle
 
 **Erstellt am:** 15. Dezember 2025
-**Version:** 1.0.0
+**Aktualisiert am:** 22. Dezember 2025
+**Version:** 1.1.0
 
 ---
 
@@ -17,6 +18,7 @@
 8. [PDF-Export](#8-pdf-export)
 9. [Edge Cases & Fehlerszenarien](#9-edge-cases--fehlerszenarien)
 10. [Menschliche Fehler](#10-menschliche-fehler)
+11. [Bug-Fix Validierung](#11-bug-fix-validierung)
 
 ---
 
@@ -567,8 +569,85 @@ test('complete tournament flow', async ({ page }) => {
 
 ---
 
+## 11. Bug-Fix Validierung
+
+### TC-11.1: Match ID Synchronisierung (BUG-001)
+**Vorbedingung:** Turnier mit Gruppen + Finale erstellt
+**Schritte:**
+1. Erstelle Turnier mit 4 Teams, 2 Gruppen, Top-4 Finals
+2. Gib erstes Gruppenergebnis ein (z.B. 0:1)
+3. Prüfe Finalspiele im Spielplan
+
+**Erwartetes Ergebnis:**
+- Finalspiele zeigen NICHT das gleiche Ergebnis wie das erste Gruppenspiel
+- Finalspiele zeigen Platzhalter ("1. Gruppe A vs 1. Gruppe B")
+- Jedes Spiel hat eine eindeutige ID
+
+**Regression-Test für:** `scheduleGenerator.ts` slot-Property Fix
+
+---
+
+### TC-11.2: CorrectionDialog Teamnamen (BUG-002)
+**Vorbedingung:** Turnier mit eingegebenem Ergebnis
+**Schritte:**
+1. Öffne Spielplan-Tab
+2. Klicke "Ergebnis korrigieren" bei einem beendeten Spiel
+3. Prüfe die Anzeige im Dialog
+
+**Erwartetes Ergebnis:**
+- Dialog zeigt Teamnamen (z.B. "FC Bayern vs TSV 1860")
+- Dialog zeigt NICHT Team-IDs (z.B. "team-1 vs team-3")
+
+**Regression-Test für:** `ScheduleTab.tsx` getTeamName() Helper
+
+---
+
+### TC-11.3: Ergebnis-Bearbeitung gesperrt (BUG-003)
+**Vorbedingung:** Turnier mit beendetem Spiel
+**Schritte:**
+1. Öffne Spielplan-Tab
+2. Versuche das beendete Spiel direkt zu bearbeiten (Klick auf Ergebnisfeld)
+
+**Erwartetes Ergebnis:**
+- Direktes Bearbeiten ist NICHT möglich
+- Nur Button "Ergebnis korrigieren" ist verfügbar
+- Bei Klick auf "Ergebnis korrigieren" öffnet sich der CorrectionDialog
+
+**Regression-Test für:** `MatchScoreCell.tsx` read-only Mode für beendete Spiele
+
+---
+
+### TC-11.4: Dashboard Echtzeit-Update (BUG-004)
+**Schritte:**
+1. Öffne Dashboard
+2. Öffne Turnier in neuem Tab
+3. Ändere Turnierdatum in den Metadaten
+4. Wechsle zurück zum Dashboard-Tab
+
+**Erwartetes Ergebnis:**
+- Dashboard zeigt sofort das neue Datum
+- Kein manuelles Neuladen erforderlich
+
+**Regression-Test für:** `useTournaments.ts` Event Listener
+
+---
+
+### TC-11.5: Default Feldanzahl
+**Schritte:**
+1. Erstelle neues Turnier
+2. Wähle Sportart "Hallenfußball"
+3. Prüfe voreingestellte Feldanzahl
+
+**Erwartetes Ergebnis:**
+- Feldanzahl ist auf 1 voreingestellt (nicht 2)
+
+**Regression-Test für:** `football.ts` typicalFieldCount
+
+---
+
 ## Changelog
 
 | Version | Datum | Änderungen |
 |---------|-------|------------|
+| 1.1.0 | 22.12.2025 | Bug-Fix Testfälle hinzugefügt (TC-11.x) |
 | 1.0.0 | 15.12.2025 | Initiale Erstellung |
