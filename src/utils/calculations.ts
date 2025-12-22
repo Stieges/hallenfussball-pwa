@@ -226,3 +226,219 @@ const compareDirectMatches = (
 export const getQualifiedTeams = (standings: Standing[], count: number): Team[] => {
   return standings.slice(0, count).map((s) => s.team);
 };
+
+// ============================================================================
+// FINALS PLACEMENT CALCULATION
+// ============================================================================
+
+export interface FinalPlacement {
+  rank: number;
+  team: Team;
+  decidedBy: 'playoff' | 'groupStage';
+  matchLabel?: string; // e.g., "Finale", "Spiel um Platz 3"
+}
+
+export interface FinalsPlacementResult {
+  placements: FinalPlacement[];
+  allFinalsCompleted: boolean;
+  completedFinalsCount: number;
+  totalFinalsCount: number;
+  playoffStatus: 'not-started' | 'in-progress' | 'completed';
+}
+
+/**
+ * Determine the winner of a finals match considering overtime and penalties
+ */
+const getMatchWinner = (match: Match): { winner: string; loser: string } | null => {
+  if (match.scoreA === undefined || match.scoreB === undefined) {
+    return null; // Match not finished
+  }
+
+  let winnerTeam: string;
+  let loserTeam: string;
+
+  // Check if decided by penalties
+  if (match.decidedBy === 'penalty' && match.penaltyScoreA !== undefined && match.penaltyScoreB !== undefined) {
+    if (match.penaltyScoreA > match.penaltyScoreB) {
+      winnerTeam = match.teamA;
+      loserTeam = match.teamB;
+    } else {
+      winnerTeam = match.teamB;
+      loserTeam = match.teamA;
+    }
+  }
+  // Check if decided by overtime/golden goal
+  else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
+           match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
+    const totalA = match.scoreA + match.overtimeScoreA;
+    const totalB = match.scoreB + match.overtimeScoreB;
+    if (totalA > totalB) {
+      winnerTeam = match.teamA;
+      loserTeam = match.teamB;
+    } else {
+      winnerTeam = match.teamB;
+      loserTeam = match.teamA;
+    }
+  }
+  // Regular time decision
+  else if (match.scoreA > match.scoreB) {
+    winnerTeam = match.teamA;
+    loserTeam = match.teamB;
+  } else if (match.scoreB > match.scoreA) {
+    winnerTeam = match.teamB;
+    loserTeam = match.teamA;
+  } else {
+    // Draw in finals without tiebreaker - shouldn't happen, but handle gracefully
+    return null;
+  }
+
+  return { winner: winnerTeam, loser: loserTeam };
+};
+
+/**
+ * Calculate final placements based on playoff results
+ *
+ * This function determines actual placements from finals matches:
+ * - Finale → 1st and 2nd place
+ * - Spiel um Platz 3 → 3rd and 4th place
+ * - Spiel um Platz 5 → 5th and 6th place
+ * - Spiel um Platz 7 → 7th and 8th place
+ *
+ * Teams not participating in playoffs get their placement from group standings.
+ */
+export const calculateFinalsPlacement = (
+  teams: Team[],
+  matches: Match[],
+  _groupStandings: Standing[]
+): FinalsPlacementResult => {
+  const finalsMatches = matches.filter(m => m.isFinal);
+
+  if (finalsMatches.length === 0) {
+    return {
+      placements: [],
+      allFinalsCompleted: false,
+      completedFinalsCount: 0,
+      totalFinalsCount: 0,
+      playoffStatus: 'not-started',
+    };
+  }
+
+  const completedFinals = finalsMatches.filter(
+    m => m.scoreA !== undefined && m.scoreB !== undefined
+  );
+
+  const placements: FinalPlacement[] = [];
+  const placedTeamIds = new Set<string>();
+
+  // Helper to find team by name or ID
+  const findTeam = (nameOrId: string): Team | undefined => {
+    return teams.find(t => t.name === nameOrId || t.id === nameOrId);
+  };
+
+  // Process finals matches by finalType priority
+  const finalTypeToRanks: Record<string, [number, number]> = {
+    'final': [1, 2],
+    'thirdPlace': [3, 4],
+    'fifthSixth': [5, 6],
+    'seventhEighth': [7, 8],
+  };
+
+  const finalTypeLabels: Record<string, string> = {
+    'final': 'Finale',
+    'thirdPlace': 'Spiel um Platz 3',
+    'fifthSixth': 'Spiel um Platz 5',
+    'seventhEighth': 'Spiel um Platz 7',
+  };
+
+  // Process each finalType
+  for (const [finalType, [winnerRank, loserRank]] of Object.entries(finalTypeToRanks)) {
+    const match = completedFinals.find(m => m.finalType === finalType);
+
+    if (match) {
+      const result = getMatchWinner(match);
+      if (result) {
+        const winnerTeam = findTeam(result.winner);
+        const loserTeam = findTeam(result.loser);
+
+        if (winnerTeam && !placedTeamIds.has(winnerTeam.id)) {
+          placements.push({
+            rank: winnerRank,
+            team: winnerTeam,
+            decidedBy: 'playoff',
+            matchLabel: finalTypeLabels[finalType],
+          });
+          placedTeamIds.add(winnerTeam.id);
+        }
+
+        if (loserTeam && !placedTeamIds.has(loserTeam.id)) {
+          placements.push({
+            rank: loserRank,
+            team: loserTeam,
+            decidedBy: 'playoff',
+            matchLabel: finalTypeLabels[finalType],
+          });
+          placedTeamIds.add(loserTeam.id);
+        }
+      }
+    }
+  }
+
+  // Sort placements by rank
+  placements.sort((a, b) => a.rank - b.rank);
+
+  // Determine playoff status
+  let playoffStatus: 'not-started' | 'in-progress' | 'completed';
+  if (completedFinals.length === 0) {
+    playoffStatus = 'not-started';
+  } else if (completedFinals.length === finalsMatches.length) {
+    playoffStatus = 'completed';
+  } else {
+    playoffStatus = 'in-progress';
+  }
+
+  return {
+    placements,
+    allFinalsCompleted: completedFinals.length === finalsMatches.length,
+    completedFinalsCount: completedFinals.length,
+    totalFinalsCount: finalsMatches.length,
+    playoffStatus,
+  };
+};
+
+/**
+ * Merge finals placements with group standings for complete ranking
+ *
+ * Returns a unified ranking where:
+ * 1. Playoff-decided placements come first (in rank order)
+ * 2. Remaining teams are added from group standings
+ */
+export const getMergedFinalRanking = (
+  teams: Team[],
+  matches: Match[],
+  groupStandings: Standing[],
+  _tournament: Tournament
+): { ranking: FinalPlacement[]; finalsResult: FinalsPlacementResult } => {
+  const finalsResult = calculateFinalsPlacement(teams, matches, groupStandings);
+  const ranking: FinalPlacement[] = [...finalsResult.placements];
+  const placedTeamIds = new Set(ranking.map(p => p.team.id));
+
+  // Find the next rank to assign
+  let nextRank = ranking.length > 0
+    ? Math.max(...ranking.map(p => p.rank)) + 1
+    : 1;
+
+  // Add remaining teams from group standings
+  for (const standing of groupStandings) {
+    if (!placedTeamIds.has(standing.team.id)) {
+      ranking.push({
+        rank: nextRank,
+        team: standing.team,
+        decidedBy: 'groupStage',
+      });
+      placedTeamIds.add(standing.team.id);
+      nextRank++;
+    }
+  }
+
+  return { ranking, finalsResult };
+};

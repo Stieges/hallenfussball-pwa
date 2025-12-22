@@ -4,16 +4,19 @@
  * Zeigt die Endplatzierung basierend auf:
  * - Gruppenturniere: Gruppensieger, dann best platzierte
  * - Jeder-gegen-Jeden: Finale Tabelle
- * - Mit Playoffs: Playoff-Ergebnisse
+ * - Mit Playoffs: Playoff-Ergebnisse (Finale, Platz 3, Platz 5, etc.)
  */
 
-import { CSSProperties, useState } from 'react';
+import React, { CSSProperties, useState, useMemo } from 'react';
 import { theme } from '../../styles/theme';
 import { Card } from '../../components/ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
-import { calculateStandings } from '../../utils/calculations';
+import {
+  calculateStandings,
+  getMergedFinalRanking,
+} from '../../utils/calculations';
 
 interface RankingTabProps {
   tournament: Tournament;
@@ -23,13 +26,29 @@ interface RankingTabProps {
 
 export const RankingTab: React.FC<RankingTabProps> = ({
   tournament,
+  schedule: _schedule,
   currentStandings,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = useIsMobile();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const hasGroups = tournament.teams.some(t => t.group);
-  const hasPlayoffs = tournament.finals && typeof tournament.finals === 'object' && 'enabled' in tournament.finals && tournament.finals.enabled;
+  const hasPlayoffs: boolean = Boolean(
+    tournament.finals &&
+    typeof tournament.finals === 'object' &&
+    'enabled' in tournament.finals &&
+    tournament.finals.enabled
+  );
+
+  // Calculate merged ranking with finals placements
+  const { ranking: mergedRanking, finalsResult } = useMemo(() => {
+    return getMergedFinalRanking(
+      tournament.teams,
+      tournament.matches,
+      currentStandings,
+      tournament
+    );
+  }, [tournament.teams, tournament.matches, currentStandings, tournament]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -119,11 +138,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     zIndex: 1000,
   };
 
-  // Berechne finale Platzierung
-  const getFinalRanking = (): Standing[] => {
+  // Berechne finale Platzierung (Legacy-Funktion für Fallback)
+  const getGroupBasedRanking = (): Standing[] => {
     if (!hasGroups) {
       // Jeder-gegen-Jeden: Verwende die bereits sortierten currentStandings
-      // (calculateStandings verwendet bereits tournament.placementLogic)
       return currentStandings;
     }
 
@@ -161,7 +179,6 @@ export const RankingTab: React.FC<RankingTabProps> = ({
       });
 
       // Sortiere Teams auf gleicher Position nach Platzierungslogik
-      // (vergleiche nur gruppenübergreifend, nicht innerhalb der Gruppe)
       const sortedTeamsAtPosition = [...teamsAtPosition].sort((a, b) => {
         const enabledCriteria = tournament.placementLogic.filter(c => c.enabled);
 
@@ -200,7 +217,59 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     return ranking;
   };
 
-  const finalRanking = getFinalRanking();
+  // Use merged ranking if playoffs exist, otherwise fall back to group-based ranking
+  const finalRanking = hasPlayoffs ? mergedRanking : getGroupBasedRanking().map((standing, index) => ({
+    rank: index + 1,
+    team: standing.team,
+    decidedBy: 'groupStage' as const,
+  }));
+
+  // Get standings map for displaying stats
+  const standingsMap = useMemo(() => {
+    const map = new Map<string, Standing>();
+    currentStandings.forEach(s => {
+      map.set(s.team.id, s);
+      map.set(s.team.name, s);
+    });
+    return map;
+  }, [currentStandings]);
+
+  // Helper to get standing for a team
+  const getStanding = (team: { id: string; name: string }): Standing | undefined => {
+    return standingsMap.get(team.id) || standingsMap.get(team.name);
+  };
+
+  // Get playoff status info
+  const getPlayoffStatusInfo = () => {
+    if (!hasPlayoffs) {return null;}
+
+    const { playoffStatus, completedFinalsCount, totalFinalsCount } = finalsResult;
+
+    if (playoffStatus === 'not-started') {
+      return {
+        icon: '⏳',
+        text: 'Playoffs noch nicht gestartet',
+        color: theme.colors.text.secondary,
+        bgColor: 'rgba(100, 100, 100, 0.1)',
+      };
+    } else if (playoffStatus === 'in-progress') {
+      return {
+        icon: '🏃',
+        text: `Playoffs laufen (${completedFinalsCount}/${totalFinalsCount} Spiele)`,
+        color: theme.colors.warning,
+        bgColor: 'rgba(255, 145, 0, 0.1)',
+      };
+    } else {
+      return {
+        icon: '✅',
+        text: 'Turnier abgeschlossen',
+        color: theme.colors.primary,
+        bgColor: 'rgba(0, 230, 118, 0.1)',
+      };
+    }
+  };
+
+  const playoffStatusInfo = getPlayoffStatusInfo();
 
   return (
     <div style={containerStyle}>
@@ -252,16 +321,29 @@ export const RankingTab: React.FC<RankingTabProps> = ({
             </div>
           </div>
 
-          {hasPlayoffs ? (
+          {/* Playoff Status Banner */}
+          {playoffStatusInfo && (
             <div style={{
-              textAlign: 'center' as const,
-              color: theme.colors.text.secondary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: theme.spacing.sm,
               marginBottom: theme.spacing.lg,
-              fontSize: theme.fontSizes.sm,
+              padding: isMobile ? theme.spacing.sm : theme.spacing.md,
+              background: playoffStatusInfo.bgColor,
+              borderRadius: theme.borderRadius.md,
+              border: `1px solid ${playoffStatusInfo.color}40`,
             }}>
-              ℹ️ Die finale Platzierung wird nach Abschluss der Playoffs aktualisiert
+              <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
+              <span style={{
+                fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md,
+                color: playoffStatusInfo.color,
+                fontWeight: theme.fontWeights.semibold,
+              }}>
+                {playoffStatusInfo.text}
+              </span>
             </div>
-          ) : null}
+          )}
 
           {/* Desktop Table View */}
           {!isMobile && (
@@ -270,6 +352,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                 <tr>
                   <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Platz</th>
                   <th style={thStyle}>Team</th>
+                  {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>Entschieden durch</th>}
                   {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Gruppe</th>}
                   <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>Sp</th>
                   <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>S</th>
@@ -281,9 +364,9 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {finalRanking.map((standing, index) => {
-                  const rank = index + 1;
-                  const goalDiff = standing.goalsFor - standing.goalsAgainst;
+                {finalRanking.map((placement) => {
+                  const standing = getStanding(placement.team);
+                  const goalDiff = standing ? standing.goalsFor - standing.goalsAgainst : 0;
 
                   // Prüfe, welche Kriterien in der Platzierungslogik aktiv sind
                   const enabledCriteria = tournament.placementLogic.filter(c => c.enabled && c.id !== 'directComparison');
@@ -294,20 +377,46 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                   const highlightGoalsAgainst = enabledCriteria.some(c => c.id === 'goalsAgainst');
 
                   return (
-                    <tr key={`${standing.team.id}-${standing.team.group || 'nogroup'}`}>
+                    <tr key={`${placement.team.id}-${placement.rank}`}>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <div style={medalStyle(rank)}>{rank}</div>
+                        <div style={medalStyle(placement.rank)}>{placement.rank}</div>
                       </td>
                       <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
-                        {standing.team.name}
+                        {placement.team.name}
                       </td>
+                      {hasPlayoffs && (
+                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                          {placement.decidedBy === 'playoff' ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '2px 8px',
+                              background: 'rgba(0, 230, 118, 0.15)',
+                              borderRadius: '12px',
+                              fontSize: theme.fontSizes.xs,
+                              color: theme.colors.primary,
+                              fontWeight: theme.fontWeights.semibold,
+                            }}>
+                              🏆 {placement.matchLabel || 'Playoff'}
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: theme.fontSizes.xs,
+                              color: theme.colors.text.secondary,
+                            }}>
+                              Gruppenphase
+                            </span>
+                          )}
+                        </td>
+                      )}
                       {hasGroups && (
                         <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
-                          {standing.team.group || '-'}
+                          {placement.team.group || '-'}
                         </td>
                       )}
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {standing.played}
+                        {standing?.played ?? '-'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{
@@ -316,14 +425,14 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           background: highlightWins ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightWins ? '4px' : '0',
                         }}>
-                          {standing.won}
+                          {standing?.won ?? '-'}
                         </span>
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {standing.drawn}
+                        {standing?.drawn ?? '-'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        {standing.lost}
+                        {standing?.lost ?? '-'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{
@@ -332,7 +441,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           background: (highlightGoalsFor || highlightGoalsAgainst) ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: (highlightGoalsFor || highlightGoalsAgainst) ? '4px' : '0',
                         }}>
-                          {standing.goalsFor}:{standing.goalsAgainst}
+                          {standing ? `${standing.goalsFor}:${standing.goalsAgainst}` : '-'}
                         </span>
                       </td>
                       <td style={{
@@ -346,7 +455,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightGoalDiff ? '4px' : '0',
                         }}>
-                          {goalDiff > 0 ? '+' : ''}{goalDiff}
+                          {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
                         </span>
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -357,7 +466,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightPoints ? '4px' : '0',
                         }}>
-                          {standing.points}
+                          {standing?.points ?? '-'}
                         </span>
                       </td>
                     </tr>
@@ -380,10 +489,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {finalRanking.map((standing, index) => {
-                  const rank = index + 1;
-                  const goalDiff = standing.goalsFor - standing.goalsAgainst;
-                  const teamKey = `${standing.team.id}-${standing.team.group || 'nogroup'}`;
+                {finalRanking.map((placement) => {
+                  const standing = getStanding(placement.team);
+                  const goalDiff = standing ? standing.goalsFor - standing.goalsAgainst : 0;
+                  const teamKey = `${placement.team.id}-${placement.rank}`;
                   const isExpanded = expandedRows.has(teamKey);
 
                   // Prüfe, welche Kriterien in der Platzierungslogik aktiv sind
@@ -392,22 +501,33 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                   const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');
 
                   return (
-                    <>
+                    <React.Fragment key={teamKey}>
                       <tr
-                        key={teamKey}
                         onClick={() => toggleRowExpansion(teamKey)}
                         style={{ cursor: 'pointer' }}
                       >
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
-                          <div style={medalStyle(rank)}>{rank}</div>
+                          <div style={medalStyle(placement.rank)}>{placement.rank}</div>
                         </td>
                         <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold, fontSize: '14px' }}>
-                          {standing.team.name}
-                          {hasGroups && standing.team.group && (
-                            <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>
-                              Gr. {standing.team.group}
+                          {placement.team.name}
+                          {/* Show playoff badge or group info */}
+                          {placement.decidedBy === 'playoff' ? (
+                            <div style={{
+                              fontSize: '10px',
+                              color: theme.colors.primary,
+                              marginTop: '2px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                            }}>
+                              🏆 {placement.matchLabel || 'Playoff'}
                             </div>
-                          )}
+                          ) : hasGroups && placement.team.group ? (
+                            <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>
+                              Gr. {placement.team.group}
+                            </div>
+                          ) : null}
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
                           <span style={{
@@ -417,7 +537,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                             background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                             borderRadius: highlightPoints ? '4px' : '0',
                           }}>
-                            {standing.points}
+                            {standing?.points ?? '-'}
                           </span>
                         </td>
                         <td style={{
@@ -432,7 +552,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                             background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                             borderRadius: highlightGoalDiff ? '4px' : '0',
                           }}>
-                            {goalDiff > 0 ? '+' : ''}{goalDiff}
+                            {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
                           </span>
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
@@ -441,7 +561,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           </span>
                         </td>
                       </tr>
-                      {isExpanded && (
+                      {isExpanded && standing && (
                         <tr key={`${teamKey}-details`}>
                           <td colSpan={5} style={{
                             padding: '12px',
@@ -494,7 +614,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>

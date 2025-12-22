@@ -18,6 +18,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **Tiebreaker Banner** - Anzeige bei Spielen die einen Sieger benötigen
 - **Dashboard Echtzeit-Updates** - Dashboard aktualisiert sofort bei Turnier-Änderungen (via Storage Events)
 - **Default Finals-Preset** - Hallenfußball verwendet jetzt standardmäßig 'top-4' Finals
+- **Finals-Platzierung in RankingTab** - Endplatzierung berücksichtigt jetzt Playoff-Ergebnisse:
+  - Neue Utility-Funktionen: `calculateFinalsPlacement()`, `getMergedFinalRanking()`
+  - Unterstützt alle Finals-Modi: Finale, Spiel um Platz 3/5/7, Verlängerung, Elfmeter
+  - Status-Banner zeigt Playoff-Fortschritt (nicht gestartet, läuft, abgeschlossen)
+  - "Entschieden durch" Spalte zeigt ob Platzierung durch Playoff oder Gruppenphase bestimmt wurde
+  - Desktop und Mobile Views aktualisiert
 
 ### Geändert
 - **CurrentMatchPanel Refactoring** - Aufgeteilt in kleinere Panel-Komponenten (TeamBlock, CenterBlock, Scoreboard, EventsList)
