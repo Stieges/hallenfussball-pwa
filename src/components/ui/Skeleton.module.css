@@ -1,0 +1,83 @@
+/* Skeleton Loading Component Styles */
+
+.skeleton {
+  background-color: var(--color-surface, rgba(255, 255, 255, 0.05));
+  display: block;
+}
+
+/* Shape Variants */
+.text {
+  border-radius: var(--border-radius-sm, 4px);
+  margin-bottom: 8px;
+}
+
+.text:last-child {
+  margin-bottom: 0;
+}
+
+.circular {
+  border-radius: 50%;
+}
+
+.rectangular {
+  border-radius: 0;
+}
+
+.rounded {
+  border-radius: var(--border-radius-md, 8px);
+}
+
+/* Text Container for multiple lines */
+.textContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Shimmer Animation */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface, rgba(255, 255, 255, 0.05)) 0%,
+    var(--color-surface-hover, rgba(255, 255, 255, 0.1)) 50%,
+    var(--color-surface, rgba(255, 255, 255, 0.05)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Pulse Animation */
+.pulse {
+  animation: pulse 2s cubic-bezier(0.2, 0, 0, 1) infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Reduced Motion: Disable animations */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer,
+  .pulse {
+    animation: none;
+    background: var(--color-surface, rgba(255, 255, 255, 0.05));
+    background-size: 100% 100%;
+  }
+}

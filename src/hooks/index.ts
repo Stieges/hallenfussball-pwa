@@ -11,6 +11,8 @@ export { useFormPersistence } from './useFormPersistence'
 
 // Timer & Animation
 export { useMatchTimer } from './useMatchTimer'
+export { useShake } from './useShake'
+export { useListAnimation, useFadeIn } from './useListAnimation'
 
 // User Interaction
 export { useDebounce, useDebouncedCallback } from './useDebounce'
@@ -33,3 +35,6 @@ export { useTournaments } from './useTournaments'
 export { useSportConfig } from './useSportConfig'
 export { useUserProfile } from './useUserProfile'
 export { usePermissions } from './usePermissions'
+
+// Theming & Corporate Colors
+export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
