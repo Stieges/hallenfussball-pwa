@@ -13,7 +13,7 @@
   border: 1px solid rgba(0, 176, 255, 0.3);
   border-radius: var(--border-radius-md);
   color: var(--color-text-primary, #fff);
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -50,7 +50,7 @@
 
 .inputLabel {
   display: block;
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
   margin-bottom: 8px;
 }
@@ -89,7 +89,7 @@
   border: none;
   border-radius: var(--border-radius-sm);
   color: #000;
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   font-weight: 600;
   cursor: pointer;
   margin-left: auto;
@@ -238,7 +238,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   font-weight: 600;
   color: var(--color-warning, #ff9100);
   margin-bottom: 4px;
@@ -313,7 +313,7 @@
 }
 
 .constraintLabel {
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   color: var(--color-text-primary, #fff);
   flex: 1;
 }
@@ -324,7 +324,7 @@
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
   border-radius: var(--border-radius-sm);
   color: var(--color-text-primary, #fff);
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
   min-width: 70px;
   cursor: pointer;
 }

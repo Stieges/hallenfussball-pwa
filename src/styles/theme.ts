@@ -1,3 +1,10 @@
+import {
+  fontFamilies,
+  fontSizes as typographyFontSizes,
+  lineHeights,
+  typography,
+} from './typography';
+
 export const theme = {
   colors: {
     background: '#0A1628',
@@ -78,14 +85,20 @@ export const theme = {
     xxl: '48px', // 6x (was 32px)
   },
 
+  // Typography - MD3 Type Scale (from typography.ts)
+  typography,
+  fontFamilies,
+  lineHeights,
+
+  // Legacy fontSizes (mapped to typography tokens for backward compatibility)
   fontSizes: {
-    xs: '11px',
-    sm: '12px',
-    md: '14px',
-    lg: '16px',
-    xl: '18px',
-    xxl: '24px',
-    xxxl: '32px',
+    xs: typographyFontSizes.labelSmall,    // 11px
+    sm: typographyFontSizes.labelMedium,   // 12px
+    md: typographyFontSizes.bodyMedium,    // 14px
+    lg: typographyFontSizes.bodyLarge,     // 16px
+    xl: typographyFontSizes.titleLarge,    // 18px
+    xxl: typographyFontSizes.headlineLarge, // 24px
+    xxxl: typographyFontSizes.displaySmall, // 28px
   },
 
   fontWeights: {
@@ -96,8 +109,10 @@ export const theme = {
   },
 
   fonts: {
-    heading: '"Bebas Neue", sans-serif',
-    body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    display: fontFamilies.display,
+    heading: fontFamilies.heading,
+    body: fontFamilies.body,
+    mono: fontFamilies.mono,
   },
 
   // Responsive breakpoints

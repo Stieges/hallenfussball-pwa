@@ -90,7 +90,7 @@
   padding: 8px;
   text-align: left;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
 }
 
 @media (max-width: 768px) {
@@ -128,7 +128,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  font-size: 13px;
+  font-size: var(--font-size-label-lg);
 }
 
 .detailItem {
