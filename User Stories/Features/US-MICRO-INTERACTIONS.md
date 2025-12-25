@@ -6,8 +6,9 @@
 |------|------|
 | **ID** | US-MICRO-INTERACTIONS |
 | **Priorität** | High |
-| **Status** | Open |
+| **Status** | Done ✅ |
 | **Erstellt** | 2025-12-25 |
+| **Abgeschlossen** | 2025-12-25 |
 | **Kategorie** | UX / Design System |
 | **Impact** | Hoch - Nutzererlebnis & Professionalität |
 | **Aufwand** | 8-12 Stunden |

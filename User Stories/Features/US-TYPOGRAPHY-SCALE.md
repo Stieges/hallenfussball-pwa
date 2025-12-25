@@ -6,8 +6,9 @@
 |------|------|
 | **ID** | US-TYPOGRAPHY-SCALE |
 | **Priorität** | High |
-| **Status** | Open |
+| **Status** | Done ✅ |
 | **Erstellt** | 2025-12-25 |
+| **Abgeschlossen** | 2025-12-25 |
 | **Kategorie** | Design System |
 | **Impact** | Hoch - Visuelle Hierarchie & Lesbarkeit |
 | **Aufwand** | 6-8 Stunden |

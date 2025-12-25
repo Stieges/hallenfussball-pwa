@@ -6,8 +6,9 @@
 |------|------|
 | **ID** | US-8PT-GRID |
 | **Priorität** | High |
-| **Status** | Open |
+| **Status** | Done ✅ |
 | **Erstellt** | 2025-12-25 |
+| **Abgeschlossen** | 2025-12-25 |
 | **Kategorie** | Design System |
 | **Impact** | Hoch - Visuelle Konsistenz |
 | **Aufwand** | 4-6 Stunden |

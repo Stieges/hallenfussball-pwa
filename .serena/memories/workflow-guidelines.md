@@ -60,6 +60,33 @@ npm run build       # Build prüfen
 - `ComponentName` - [Beschreibung]
 ```
 
+## User Story Status Management
+
+**WICHTIG:** Wenn eine User Story umgesetzt wird, IMMER den Status in der entsprechenden `.md` Datei aktualisieren!
+
+### Status-Werte
+| Status | Bedeutung |
+|--------|-----------|
+| `Open` | Noch nicht begonnen |
+| `In Progress (~X%)` | In Arbeit mit geschätztem Fortschritt |
+| `Done ✅` | Vollständig umgesetzt |
+| `On Hold` | Pausiert |
+
+### Nach jeder Umsetzung
+1. User Story Datei öffnen: `User Stories/Features/US-XXX.md`
+2. Status-Feld aktualisieren
+3. Bei "Done": Datum hinzufügen (`Abgeschlossen: YYYY-MM-DD`)
+4. Bei "In Progress": Prozent-Schätzung anpassen
+5. Restaufwand in Klammern aktualisieren
+
+### Beispiel
+```markdown
+| **Status** | Done ✅ |
+| **Abgeschlossen** | 2025-12-25 |
+```
+
+---
+
 ## Git Workflow
 
 ### Commit-Nachricht

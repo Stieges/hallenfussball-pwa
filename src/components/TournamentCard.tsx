@@ -6,14 +6,28 @@
  * - Datum (Beginn)
  * - Ort
  * - Altersklasse
+ * - Modus (Jeder gegen Jeden / Gruppen + Finale)
  */
 
 import { CSSProperties } from 'react';
-import { Tournament, PlacementCriterion } from '../types/tournament';
+import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
 import { Card, Icons } from './ui';
 import { theme } from '../styles/theme';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
+
+/**
+ * Get display name for tournament system
+ */
+function getGroupSystemLabel(groupSystem?: GroupSystem): string {
+  switch (groupSystem) {
+    case 'groupsAndFinals':
+      return 'Gruppen + Finale';
+    case 'roundRobin':
+    default:
+      return 'Jeder gegen Jeden';
+  }
+}
 
 /**
  * Get short abbreviation for placement criteria
@@ -242,6 +256,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           <div style={infoItemStyle}>
             <dt style={labelStyle}>Altersklasse</dt>
             <dd style={{ ...valueStyle, margin: 0 }}>{tournament.ageClass}</dd>
+          </div>
+
+          <div style={infoItemStyle}>
+            <dt style={labelStyle}>Modus</dt>
+            <dd style={{ ...valueStyle, margin: 0 }}>{getGroupSystemLabel(tournament.groupSystem)}</dd>
           </div>
 
           {tournament.organizer && (

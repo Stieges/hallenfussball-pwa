@@ -6,11 +6,11 @@
 |------|------|
 | **ID** | US-DESIGN-TOKENS |
 | **Priorität** | High |
-| **Status** | Open |
+| **Status** | In Progress (~60%) |
 | **Erstellt** | 2025-12-25 |
 | **Kategorie** | Design System / Architektur |
 | **Impact** | Hoch - Grundlage für konsistentes Design |
-| **Aufwand** | 8-12 Stunden |
+| **Aufwand** | 8-12 Stunden (Restaufwand: 4-6h) |
 
 ---
 

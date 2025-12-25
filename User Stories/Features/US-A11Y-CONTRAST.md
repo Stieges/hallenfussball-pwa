@@ -6,11 +6,11 @@
 |------|------|
 | **ID** | US-A11Y-CONTRAST |
 | **Priorität** | High |
-| **Status** | Open |
+| **Status** | In Progress (~70%) |
 | **Erstellt** | 2025-12-25 |
 | **Kategorie** | Accessibility / Design System |
 | **Impact** | Hoch - Barrierefreiheit & Rechtskonformität |
-| **Aufwand** | 4-6 Stunden |
+| **Aufwand** | 4-6 Stunden (Restaufwand: 1-2h) |
 
 ---
 
