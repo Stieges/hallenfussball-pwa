@@ -1,89 +1,102 @@
+/**
+ * Theme Object
+ *
+ * Legacy theme object that re-exports values from the design tokens system.
+ * This file exists for backwards compatibility with existing components.
+ *
+ * For new code, prefer importing directly from `@/design-tokens`:
+ *
+ * @example
+ * ```typescript
+ * // Preferred (new code)
+ * import { colors, spacing, typography } from '@/design-tokens';
+ *
+ * // Legacy (existing code - still works)
+ * import { theme } from '@/styles/theme';
+ * ```
+ *
+ * @deprecated Prefer importing from `@/design-tokens` directly
+ */
+
 import {
+  colors,
+  spacingLegacy,
+  radiiLegacy,
+  shadows,
+  gradients,
   fontFamilies,
-  fontSizes as typographyFontSizes,
+  fontSizes,
+  fontWeights,
   lineHeights,
   typography,
-} from './typography';
+  breakpoints,
+  mediaQueries,
+} from '../design-tokens';
+
+// =============================================================================
+// Legacy Theme Object
+// =============================================================================
 
 export const theme = {
   colors: {
-    background: '#0A1628',
-    surface: 'rgba(255,255,255,0.05)',
-    surfaceHover: 'rgba(255,255,255,0.08)',
-    surfaceDark: 'rgba(0,0,0,0.3)', // For score containers, input backgrounds
-    primary: '#00E676',
-    primaryDark: '#00C853',
-    secondary: '#00B0FF',
-    accent: '#FFD700',
-    warning: '#FF9100',
-    error: '#FF5252',
-    success: '#4CAF50',
+    background: colors.background,
+    surface: colors.surface,
+    surfaceHover: colors.surfaceHover,
+    surfaceDark: colors.surfaceDark,
+    primary: colors.primary,
+    primaryDark: colors.primaryDark,
+    secondary: colors.secondary,
+    accent: colors.accent,
+    warning: colors.warning,
+    error: colors.error,
+    success: colors.success,
     text: {
-      primary: '#FFFFFF',
-      secondary: '#A3B8D4', // WCAG AA 5.1:1 on surface (was #8BA3C7 ~3.8:1)
-      muted: 'rgba(255,255,255,0.5)',
-      placeholder: '#9DB2CC', // WCAG AA 4.7:1 on surface (was #9575CD)
+      primary: colors.textPrimary,
+      secondary: colors.textSecondary,
+      muted: colors.textMuted,
+      placeholder: colors.textPlaceholder,
     },
-    border: 'rgba(255,255,255,0.1)',
-    borderActive: 'rgba(0,230,118,0.3)',
-    // Status colors for tournament badges
+    border: colors.border,
+    borderActive: colors.borderActive,
     status: {
-      live: '#00B0FF',
-      liveBg: 'rgba(0,176,255,0.15)',
-      liveRowBg: 'rgba(0,176,255,0.08)', // Subtle row highlight for running matches
-      upcoming: '#4CAF50',
-      upcomingBg: 'rgba(76,175,80,0.15)',
-      finished: '#9E9E9E',
-      finishedBg: 'rgba(158,158,158,0.15)',
-      draft: '#FF9100',
-      draftBg: 'rgba(255,145,0,0.15)',
-      external: '#9575CD',
-      externalBg: 'rgba(149,117,205,0.15)',
+      live: colors.statusLive,
+      liveBg: colors.statusLiveBg,
+      liveRowBg: colors.statusLiveRowBg,
+      upcoming: colors.statusUpcoming,
+      upcomingBg: colors.statusUpcomingBg,
+      finished: colors.statusFinished,
+      finishedBg: colors.statusFinishedBg,
+      draft: colors.statusDraft,
+      draftBg: colors.statusDraftBg,
+      external: colors.statusExternal,
+      externalBg: colors.statusExternalBg,
     },
-    // Correction/Warning banner (dark theme compatible)
     correction: {
-      bg: 'rgba(255,145,0,0.12)',
-      border: 'rgba(255,145,0,0.4)',
-      text: '#FFB74D',
-      icon: '#FF9100',
+      bg: colors.correctionBg,
+      border: colors.correctionBorder,
+      text: colors.correctionText,
+      icon: colors.correctionIcon,
     },
-    // Medal colors (for rankings)
     medal: {
-      gold: '#FFD700',
-      silver: '#C0C0C0',
-      bronze: '#CD7F32',
+      gold: colors.medalGold,
+      silver: colors.medalSilver,
+      bronze: colors.medalBronze,
     },
   },
 
   gradients: {
-    primary: 'linear-gradient(135deg, #00E676, #00B0FF)',
-    surface: 'linear-gradient(135deg, rgba(0,230,118,0.1), rgba(0,176,255,0.1))',
-    card: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05))',
+    primary: gradients.primary,
+    surface: gradients.surface,
+    card: gradients.card,
   },
 
-  shadows: {
-    sm: '0 2px 4px rgba(0,0,0,0.2)',
-    md: '0 4px 12px rgba(0,0,0,0.3)',
-    lg: '0 8px 24px rgba(0,0,0,0.4)',
-  },
+  shadows,
 
   // 8pt Grid System - All values are multiples of 8px (or 4px half-unit)
-  borderRadius: {
-    sm: '4px',   // 0.5x (half-unit for subtle rounding)
-    md: '8px',   // 1x
-    lg: '16px',  // 2x
-    xl: '24px',  // 3x
-  },
+  borderRadius: radiiLegacy,
 
   // 8pt Grid Spacing Scale
-  spacing: {
-    xs: '4px',   // 0.5x (half-unit for tight spacing)
-    sm: '8px',   // 1x
-    md: '16px',  // 2x (was 12px - primary change for 8pt compliance)
-    lg: '24px',  // 3x (was 16px)
-    xl: '32px',  // 4x (was 24px)
-    xxl: '48px', // 6x (was 32px)
-  },
+  spacing: spacingLegacy,
 
   // Typography - MD3 Type Scale (from typography.ts)
   typography,
@@ -92,20 +105,20 @@ export const theme = {
 
   // Legacy fontSizes (mapped to typography tokens for backward compatibility)
   fontSizes: {
-    xs: typographyFontSizes.labelSmall,    // 11px
-    sm: typographyFontSizes.labelMedium,   // 12px
-    md: typographyFontSizes.bodyMedium,    // 14px
-    lg: typographyFontSizes.bodyLarge,     // 16px
-    xl: typographyFontSizes.titleLarge,    // 18px
-    xxl: typographyFontSizes.headlineLarge, // 24px
-    xxxl: typographyFontSizes.displaySmall, // 28px
+    xs: fontSizes.labelSmall,     // 11px
+    sm: fontSizes.labelMedium,    // 12px
+    md: fontSizes.bodyMedium,     // 14px
+    lg: fontSizes.bodyLarge,      // 16px
+    xl: fontSizes.titleLarge,     // 18px
+    xxl: fontSizes.headlineLarge, // 24px
+    xxxl: fontSizes.displaySmall, // 28px
   },
 
   fontWeights: {
-    normal: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
+    normal: String(fontWeights.normal),
+    medium: String(fontWeights.medium),
+    semibold: String(fontWeights.semibold),
+    bold: String(fontWeights.bold),
   },
 
   fonts: {
@@ -116,21 +129,35 @@ export const theme = {
   },
 
   // Responsive breakpoints
-  breakpoints: {
-    mobile: '480px',   // Small phones
-    tablet: '768px',   // Tablets and large phones
-    desktop: '1024px', // Desktops
-    wide: '1280px',    // Wide screens
-  },
+  breakpoints,
 
   // Media query helpers (for use in CSS modules)
   media: {
-    mobile: '@media (max-width: 480px)',
-    tablet: '@media (min-width: 481px) and (max-width: 768px)',
-    tabletUp: '@media (min-width: 481px)',
-    desktop: '@media (min-width: 769px)',
-    wide: '@media (min-width: 1024px)',
+    mobile: mediaQueries.mobile,
+    tablet: mediaQueries.tablet,
+    tabletUp: mediaQueries.tabletUp,
+    desktop: mediaQueries.desktop,
+    wide: mediaQueries.wide,
   },
 } as const;
 
 export type Theme = typeof theme;
+
+// =============================================================================
+// Re-export design tokens for convenience
+// =============================================================================
+
+export {
+  colors,
+  spacing,
+  radii,
+  shadows,
+  gradients,
+  typography,
+  fontFamilies,
+  fontSizes,
+  fontWeights,
+  lineHeights,
+  breakpoints,
+  mediaQueries,
+} from '../design-tokens';
