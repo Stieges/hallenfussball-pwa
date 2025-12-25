@@ -64,10 +64,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.lg,
+    marginTop: theme.spacing.xl, // Space below badge
+    marginBottom: theme.spacing.md,
   };
 
   const titleStyle: CSSProperties = {
@@ -75,7 +73,16 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: theme.fontWeights.semibold,
     color: theme.colors.text.primary,
     margin: 0,
-    flex: 1,
+    paddingRight: '120px', // Space for badge(s)
+  };
+
+  const badgeContainerStyle: CSSProperties = {
+    position: 'absolute',
+    top: theme.spacing.md,
+    right: theme.spacing.md,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
   };
 
   const badgeStyle: CSSProperties = {
@@ -85,7 +92,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: theme.fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    marginLeft: theme.spacing.md,
+    whiteSpace: 'nowrap',
   };
 
   const getBadgeColor = (): { background: string; color: string } => {
@@ -171,7 +178,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: theme.fontWeights.medium,
     background: theme.colors.status.externalBg,
     color: theme.colors.status.external,
-    marginLeft: theme.spacing.sm,
+    whiteSpace: 'nowrap',
   };
 
   return (
@@ -200,23 +207,25 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           }
         }}
       >
+        {/* Badge container - absolute positioned top-right */}
+        <div style={badgeContainerStyle}>
+          {tournament.isExternal && tournament.externalSource && (
+            <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
+              {tournament.externalSource}
+            </span>
+          )}
+          {(categoryLabel || tournament.status === 'draft') && (
+            <span
+              style={{ ...badgeStyle, ...badgeColors }}
+              aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
+            >
+              {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
+            </span>
+          )}
+        </div>
+
         <div style={headerStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            {tournament.isExternal && tournament.externalSource && (
-              <span style={externalBadgeStyle} aria-label={tournament.externalSource}>
-                {tournament.externalSource}
-              </span>
-            )}
-            {(categoryLabel || tournament.status === 'draft') && (
-              <span
-                style={{ ...badgeStyle, ...badgeColors }}
-                aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
-              >
-                {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
-              </span>
-            )}
-          </div>
         </div>
 
         <dl style={infoGridStyle}>
