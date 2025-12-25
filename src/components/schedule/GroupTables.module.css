@@ -69,7 +69,7 @@
 .tableTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #00E676;
+  color: var(--color-primary);
   margin-bottom: 16px;
 }
 
@@ -136,7 +136,7 @@
 }
 
 .detailLabel {
-  color: #8BA3C7;
+  color: var(--color-text-secondary);
   font-size: 11px;
   margin-bottom: 4px;
 }
