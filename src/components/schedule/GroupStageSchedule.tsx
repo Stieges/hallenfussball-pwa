@@ -6,9 +6,10 @@
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
-import { RefereeConfig } from '../../types/tournament';
+import { RefereeConfig, Tournament } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';
+import { getGroupShortCode } from '../../utils/displayNames';
 
 interface GroupStageScheduleProps {
   matches: ScheduledMatch[];
@@ -24,6 +25,8 @@ interface GroupStageScheduleProps {
   onStartCorrection?: (matchId: string) => void;
   /** MON-LIVE-INDICATOR-01: IDs of matches that are currently running */
   runningMatchIds?: Set<string>;
+  /** Tournament data for group name resolution */
+  tournament?: Tournament;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -40,6 +43,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   correctionMatchId,
   onStartCorrection,
   runningMatchIds,
+  tournament,
 }) => {
   if (matches.length === 0) {
     return (
@@ -299,7 +303,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 <td style={tdStyle}>{match.time}</td>
                 {hasGroups && (
                   <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
-                    {match.group || '-'}
+                    {match.group ? getGroupShortCode(match.group, tournament) : '-'}
                   </td>
                 )}
                 <td style={tdStyle}>{match.homeTeam}</td>
@@ -408,7 +412,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               {hasGroups && (
                 <div style={mobileMetaItemStyle}>
                   <strong>Gruppe:</strong>
-                  <span>{match.group || '-'}</span>
+                  <span>{match.group ? getGroupShortCode(match.group, tournament) : '-'}</span>
                 </div>
               )}
               {showReferees && (

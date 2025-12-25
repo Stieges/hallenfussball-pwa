@@ -12,6 +12,12 @@ export interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   variant?: 'warning' | 'danger';
+  // Optional third button (e.g., "Verwerfen" between Cancel and Confirm)
+  secondaryAction?: {
+    text: string;
+    onClick: () => void;
+    variant?: 'secondary' | 'danger';
+  };
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -23,9 +29,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmText = 'Bestätigen',
   cancelText = 'Abbrechen',
   variant = 'warning',
+  secondaryAction,
 }) => {
   const handleConfirm = () => {
     onConfirm();
+    onClose();
+  };
+
+  const handleSecondaryAction = () => {
+    secondaryAction?.onClick();
     onClose();
   };
 
@@ -42,6 +54,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     gap: theme.spacing.md,
     justifyContent: 'flex-end',
     marginTop: theme.spacing.xl,
+    flexWrap: 'wrap' as const,
   };
 
   return (
@@ -63,6 +76,16 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         >
           {cancelText}
         </Button>
+
+        {secondaryAction && (
+          <Button
+            variant={secondaryAction.variant === 'danger' ? 'danger' : 'secondary'}
+            size="md"
+            onClick={handleSecondaryAction}
+          >
+            {secondaryAction.text}
+          </Button>
+        )}
 
         <Button
           variant={variant === 'danger' ? 'danger' : 'primary'}

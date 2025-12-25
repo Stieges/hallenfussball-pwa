@@ -4,16 +4,19 @@
 
 import { CSSProperties } from 'react';
 import { theme } from '../../styles/theme';
-import { Standing } from '../../types/tournament';
+import { Standing, Tournament } from '../../types/tournament';
+import { getGroupDisplayName } from '../../utils/displayNames';
 
 interface ParticipantsAndGroupsProps {
   teams: Array<{ id: string; name: string; group?: string }>;
   standings: Standing[];
+  tournament?: Tournament;
 }
 
 export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   teams,
   standings,
+  tournament,
 }) => {
   const groupStandings = getGroupStandings(standings, teams);
 
@@ -86,7 +89,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
       <div style={groupsGridStyle}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <div key={group} style={groupBoxStyle}>
-            {showGroupTitles && <h3 style={groupTitleStyle}>Gruppe {group}</h3>}
+            {showGroupTitles && <h3 style={groupTitleStyle}>{getGroupDisplayName(group, tournament)}</h3>}
             <ul style={teamListStyle}>
               {groupTeams.map((standing) => (
                 <li key={standing.team.id} style={teamItemStyle}>

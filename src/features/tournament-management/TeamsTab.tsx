@@ -25,6 +25,7 @@ import {
   getRemovedTeams,
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
+import { getGroupDisplayName } from '../../utils/displayNames';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -322,7 +323,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       <span style={teamNameStyle}>{team.name}</span>
                       {team.group && (
                         <span style={badgeStyle(theme.colors.primary, 'rgba(33, 150, 243, 0.15)')}>
-                          Gruppe {team.group}
+                          {getGroupDisplayName(team.group, tournament)}
                         </span>
                       )}
                       {analysis.matchesWithResults > 0 && (

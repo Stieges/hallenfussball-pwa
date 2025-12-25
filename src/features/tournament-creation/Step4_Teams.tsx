@@ -2,6 +2,7 @@ import { Card, Button, Input, Icons } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { generateGroupLabels } from '../../utils/groupHelpers';
+import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -111,6 +112,26 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     ? analyzeGroupDistribution(teams, groupLabels)
     : [];
 
+  // Prüft ob ein Team ein Duplikat ist (= ein vorheriges Team hat denselben Namen)
+  const isTeamDuplicate = (teamId: string, teamName: string | undefined): boolean => {
+    if (!teamName?.trim()) return false;
+    const normalizedName = teamName.trim().toLowerCase();
+    const teamIndex = teams.findIndex(t => t.id === teamId);
+    return teams.slice(0, teamIndex).some(t =>
+      t.name?.trim().toLowerCase() === normalizedName
+    );
+  };
+
+  // Prüft ob ein Team ein Original ist (= ein späteres Team hat denselben Namen)
+  const isTeamOriginal = (teamId: string, teamName: string | undefined): boolean => {
+    if (!teamName?.trim()) return false;
+    const normalizedName = teamName.trim().toLowerCase();
+    const teamIndex = teams.findIndex(t => t.id === teamId);
+    return teams.slice(teamIndex + 1).some(t =>
+      t.name?.trim().toLowerCase() === normalizedName
+    );
+  };
+
   // Auto-Generierung: Teams basierend auf numberOfTeams erstellen
   const handleGenerateTeams = () => {
     const newTeams: Team[] = [];
@@ -136,7 +157,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   return (
     <Card>
       <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
-        👥 Teams
+        Teams
       </h2>
 
       <div className={styles.buttonRow}>
@@ -174,57 +195,73 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             border: `1px dashed ${theme.colors.border}`,
           }}
         >
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>👥</div>
           <p style={{ color: theme.colors.text.secondary, margin: 0 }}>
             Noch keine Teams hinzugefügt
           </p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {teams.map((team, index) => (
-            <div key={team.id} className={styles.teamRow}>
-              {/* Main row: Badge + Name + Delete */}
-              <div className={styles.teamRowMain}>
-                <div className={styles.teamBadge}>
-                  {index + 1}
-                </div>
+          {teams.map((team, index) => {
+            const isDuplicate = isTeamDuplicate(team.id, team.name);
+            const isOriginal = isTeamOriginal(team.id, team.name);
+            const hasError = isDuplicate || isOriginal;
+            return (
+              <div key={team.id} className={styles.teamRow}>
+                {/* Main row: Badge + Name + Delete */}
+                <div className={styles.teamRowMain}>
+                  <div className={styles.teamBadge}>
+                    {index + 1}
+                  </div>
 
-                <div className={styles.teamNameInput}>
-                  <Input
-                    value={team.name}
-                    onChange={(v) => onUpdateTeam(team.id, { name: v })}
-                    placeholder="Teamname eingeben"
-                  />
-                </div>
+                  <div className={styles.teamNameInput}>
+                    <Input
+                      value={team.name}
+                      onChange={(v) => onUpdateTeam(team.id, { name: v })}
+                      placeholder="Teamname eingeben"
+                      error={hasError}
+                    />
+                    {hasError && (
+                      <p style={{
+                        margin: `${theme.spacing.xs} 0 0 0`,
+                        color: theme.colors.error,
+                        fontSize: theme.fontSizes.xs,
+                      }}>
+                        Dieser Name wird bereits verwendet
+                      </p>
+                    )}
+                  </div>
 
-                <button
-                  onClick={() => onRemoveTeam(team.id)}
-                  className={styles.deleteButton}
-                  aria-label={`Team ${team.name} löschen`}
-                >
-                  <Icons.Trash size={18} />
-                </button>
-              </div>
-
-              {/* Secondary row: Group selector (only on mobile, inline on desktop via CSS) */}
-              {canAssignGroups && (
-                <div className={styles.teamRowSecondary}>
-                  <span className={styles.groupLabel}>Gruppe:</span>
-                  <select
-                    value={team.group || ''}
-                    onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
-                    className={styles.groupSelect}
-                    aria-label={`Gruppe für ${team.name}`}
+                  <button
+                    onClick={() => onRemoveTeam(team.id)}
+                    className={styles.deleteButton}
+                    aria-label={`Team ${team.name} löschen`}
                   >
-                    <option value="">Keine Gruppe</option>
-                    {groupLabels.map(label => (
-                      <option key={label} value={label}>Gruppe {label}</option>
-                    ))}
-                  </select>
+                    <Icons.Trash size={18} />
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Secondary row: Group selector (only on mobile, inline on desktop via CSS) */}
+                {canAssignGroups && (
+                  <div className={styles.teamRowSecondary}>
+                    <span className={styles.groupLabel}>Gruppe:</span>
+                    <select
+                      value={team.group || ''}
+                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
+                      className={styles.groupSelect}
+                      aria-label={`Gruppe für ${team.name}`}
+                    >
+                      <option value="">Keine Gruppe</option>
+                      {(formData.groups || groupLabels.map(id => ({ id }))).map(group => (
+                        <option key={group.id} value={group.id}>
+                          {getGroupDisplayName(group)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -285,7 +322,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     fontSize: '12px',
                     marginTop: '4px',
                   }}>
-                    💡 {warning.action}
+                    {warning.action}
                   </div>
                 )}
               </div>
@@ -305,7 +342,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           }}
         >
           <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary }}>
-            💡 {teams.length} Team{teams.length !== 1 ? 's' : ''} hinzugefügt
+            {teams.length} Team{teams.length !== 1 ? 's' : ''} hinzugefügt
             {canAssignGroups && ` • Gruppen können jetzt zugewiesen werden`}
           </div>
         </div>

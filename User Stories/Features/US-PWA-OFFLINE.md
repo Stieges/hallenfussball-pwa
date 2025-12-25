@@ -2,11 +2,14 @@
 
 ## Übersicht
 
-**ID:** US-PWA-OFFLINE
-**Priorität:** High
-**Status:** Draft
-**Erstellt:** 2025-12-22
-**Feature-Referenz:** Top 5 Analyse
+| Feld | Wert |
+|------|------|
+| **ID** | US-PWA-OFFLINE |
+| **Priorität** | High |
+| **Status** | In Progress (Phase 1+2 Done) |
+| **Erstellt** | 2025-12-22 |
+| **Kategorie** | PWA |
+| **Impact** | Hoch |
 
 ---
 

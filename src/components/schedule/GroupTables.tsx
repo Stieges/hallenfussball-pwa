@@ -7,6 +7,7 @@
 import { CSSProperties, useState } from 'react';
 import { theme } from '../../styles/theme';
 import { Standing, Tournament } from '../../types/tournament';
+import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './GroupTables.module.css';
 
 interface GroupTablesProps {
@@ -53,7 +54,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
           <StandingsTable
             key={group}
             standings={groupTeams}
-            title={`Gruppe ${group}`}
+            title={getGroupDisplayName(group, tournament)}
             tournament={tournament}
           />
         ))}
@@ -98,6 +99,8 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
     border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borderRadius.md,
     padding: '16px',
+    minWidth: 0,
+    overflow: 'hidden',
   };
 
   const titleStyle: CSSProperties = {
@@ -129,7 +132,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   };
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
-  const enabledCriteria = tournament?.placementLogic.filter(c => c.enabled && c.id !== 'directComparison') || [];
+  const enabledCriteria = tournament?.placementLogic?.filter(c => c.enabled && c.id !== 'directComparison') || [];
   const highlightPoints = enabledCriteria.some(c => c.id === 'points');
   const highlightWins = enabledCriteria.some(c => c.id === 'wins');
   const highlightGoalDiff = enabledCriteria.some(c => c.id === 'goalDifference');
@@ -141,7 +144,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
       <h3 style={titleStyle}>{title}</h3>
 
       {/* Desktop Table View - hidden on mobile via CSS */}
-      <div className="desktop-view">
+      <div className="desktop-view" style={{ overflowX: 'auto' }}>
         <table style={tableStyle}>
           <thead>
             <tr>

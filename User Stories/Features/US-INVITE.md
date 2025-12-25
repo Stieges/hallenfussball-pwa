@@ -2,10 +2,14 @@
 
 ## Übersicht
 
-**ID:** US-INVITE
-**Priorität:** High
-**Status:** Draft
-**Erstellt:** 2025-12-20
+| Feld | Wert |
+|------|------|
+| **ID** | US-INVITE |
+| **Priorität** | High |
+| **Status** | Draft |
+| **Erstellt** | 2025-12-20 |
+| **Kategorie** | Admin |
+| **Impact** | Sehr Hoch |
 
 ---
 

@@ -10,7 +10,7 @@
 
 import { CSSProperties } from 'react';
 import { Tournament, PlacementCriterion } from '../types/tournament';
-import { Card } from './ui';
+import { Card, Icons } from './ui';
 import { theme } from '../styles/theme';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
@@ -147,13 +147,13 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const deleteButtonStyle: CSSProperties = {
     marginTop: theme.spacing.md,
     width: '100%',
-    background: theme.colors.error,
-    color: theme.colors.text.primary,
-    border: 'none',
+    background: 'transparent',
+    color: theme.colors.text.secondary,
+    border: `1px solid ${theme.colors.border}`,
     borderRadius: theme.borderRadius.sm,
     padding: `${theme.spacing.sm} ${theme.spacing.md}`,
     fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: theme.fontWeights.medium,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -282,14 +282,18 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               onDelete();
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#dc2626';
+              e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)';
+              e.currentTarget.style.borderColor = theme.colors.error;
+              e.currentTarget.style.color = theme.colors.error;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = theme.colors.error;
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.text.secondary;
             }}
             aria-label={`Turnier "${tournament.title}" löschen`}
           >
-            <span aria-hidden="true">🗑️</span>
+            <Icons.Trash size={16} />
             <span>Löschen</span>
           </button>
         )}

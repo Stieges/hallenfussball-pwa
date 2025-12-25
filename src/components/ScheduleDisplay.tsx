@@ -155,10 +155,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [finalMatches, currentMatches, schedule.teams]);
 
-  // Container Style (A4-ähnlich, responsive)
+  // Container Style - full width, parent controls maxWidth
   const containerStyle: CSSProperties = {
-    maxWidth: '1200px',
-    margin: '0 auto',
+    width: '100%',
     padding: '40px 20px',
     background: theme.colors.background,
     fontFamily: theme.fonts.body,
@@ -179,6 +178,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <ParticipantsAndGroups
           teams={schedule.teams}
           standings={standings}
+          tournament={{ groups: schedule.tournament.groups } as any}
         />
       )}
 
@@ -197,6 +197,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
+          tournament={{ groups: schedule.tournament.groups } as any}
         />
       )}
 
@@ -205,6 +206,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <GroupTables
           standings={standings}
           teams={schedule.teams}
+          tournament={{ groups: schedule.tournament.groups } as any}
         />
       )}
 

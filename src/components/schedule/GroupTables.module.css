@@ -10,12 +10,18 @@
 /* Desktop: 2 columns for 2 groups */
 @media (min-width: 769px) {
   .tablesGrid.twoGroups {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tablesGrid.manyGroups {
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   }
+}
+
+/* Ensure tables don't overflow their grid cell */
+.tablesGrid > * {
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Table wrapper */

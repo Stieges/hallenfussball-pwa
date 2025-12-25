@@ -165,7 +165,7 @@ export const ValidationWarnings: React.FC<ValidationWarningsProps> = ({ formData
             <div>{issue.message}</div>
             {issue.suggestion && (
               <div style={{ marginTop: '4px', opacity: 0.8, fontSize: '12px' }}>
-                <span aria-hidden="true">💡</span> {issue.suggestion}
+                {issue.suggestion}
               </div>
             )}
           </div>

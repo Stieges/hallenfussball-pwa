@@ -136,7 +136,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   const containerStyle: CSSProperties = {
-    maxWidth: '1400px',
+    maxWidth: '1600px',
     margin: '0 auto',
     padding: '24px',
   };
@@ -284,7 +284,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
          currentTournament.finalsConfig.preset !== 'none' && (
           <div className="finals-config-box" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: theme.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
             <h3 style={{ color: theme.colors.accent, fontSize: '14px', margin: '0 0 12px 0', fontWeight: theme.fontWeights.semibold }}>
-              🏆 Finalrunden-Einstellungen
+              Finalrunden-Einstellungen
             </h3>
             <p style={{ fontSize: '13px', color: theme.colors.text.secondary, margin: '0 0 12px 0' }}>
               Preset: <strong>{

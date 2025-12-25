@@ -258,7 +258,6 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
     <div style={containerStyle}>
       <h3 style={headerStyle}>Platzierungslogik</h3>
       <p style={helpTextStyle}>
-        <span aria-hidden="true">💡</span>
         <span>Ziehe die Kriterien per Drag & Drop oder nutze die Pfeiltasten</span>
       </p>
       <DndContext

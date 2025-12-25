@@ -2,6 +2,57 @@
 
 Vollständige Schnellreferenz für die Codebase mit allen Features und deren Implementierung.
 
+## 📑 Inhaltsverzeichnis
+
+1. [⚡ Performance Optimierungen](#-performance-optimierungen)
+2. [🏗️ Architektur-Übersicht](#️-architektur-übersicht)
+3. [🔄 Variable Datenfelder](#-variable-datenfelder-nie-hart-codieren)
+4. [🪝 Custom Hooks](#-custom-hooks)
+5. [🌍 Context & State Management](#-context--state-management)
+6. [📁 Datei-Struktur & Verantwortlichkeiten](#-datei-struktur--verantwortlichkeiten)
+7. [🧪 Testing & Quality Assurance](#-testing--quality-assurance)
+8. [📊 Wichtige Enums & Constants](#-wichtige-enums--constants)
+9. [📝 Implementierte Features](#-implementierte-features)
+
+---
+
+## ⚡ Performance Optimierungen
+
+### Lazy Loading (Screens)
+
+**Datei**: `/src/App.tsx` (Zeilen 9-55)
+
+Alle Haupt-Screens werden mit `React.lazy()` geladen für bessere initiale Ladezeit:
+
+```typescript
+const DashboardScreen = lazy(() =>
+  import('./screens/DashboardScreen').then(m => ({ default: m.DashboardScreen }))
+);
+const TournamentCreationScreen = lazy(() =>
+  import('./screens/TournamentCreationScreen').then(m => ({ default: m.TournamentCreationScreen }))
+);
+const TournamentManagementScreen = lazy(() =>
+  import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen }))
+);
+const PublicTournamentViewScreen = lazy(() =>
+  import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen }))
+);
+```
+
+**ScreenLoader Fallback** (Zeilen 24-55):
+- Animierter Spinner während des Ladens
+- Konsistentes Design mit Theme-Farben
+
+**Build-Output (Code Splitting aktiv)**:
+| Chunk | Größe |
+|-------|-------|
+| DashboardScreen | 30.89 kB |
+| TournamentCreationScreen | 39.52 kB |
+| TournamentManagementScreen | 149.02 kB |
+| PublicTournamentViewScreen | 3.11 kB |
+
+---
+
 ## 🏗️ Architektur-Übersicht
 
 ### Core-Flow: Turniererstellung → Spielplan → PDF Export
@@ -102,6 +153,117 @@ Vollständige Schnellreferenz für die Codebase mit allen Features und deren Imp
 
 ---
 
+## 🪝 Custom Hooks
+
+### Zentrale Exports: `/src/hooks/index.ts`
+
+Alle Custom Hooks werden zentral exportiert für einfachen Import:
+
+```typescript
+import { useDebounce, useClickOutside, usePrevious } from '../hooks';
+```
+
+### `/src/hooks/useDebounce.ts` - Input Debouncing
+
+**Zweck**: Verzögert Wertänderungen für Performance-Optimierung (z.B. Sucheingaben)
+
+```typescript
+// Hook: Debounced Value
+const debouncedSearch = useDebounce(searchTerm, 300);
+
+// Hook: Debounced Callback
+const debouncedSave = useDebouncedCallback((value) => save(value), 500);
+```
+
+**Exports**:
+- `useDebounce<T>(value, delay)` - Gibt verzögerten Wert zurück
+- `useDebouncedCallback(callback, delay)` - Gibt verzögerte Funktion zurück
+
+### `/src/hooks/useClickOutside.ts` - Außenklick-Erkennung
+
+**Zweck**: Schließt Modals/Dropdowns bei Klick außerhalb
+
+```typescript
+const ref = useRef<HTMLDivElement>(null);
+useClickOutside(ref, () => setIsOpen(false));
+```
+
+**Exports**:
+- `useClickOutside(ref, handler)` - Einzelne Ref
+- `useClickOutsideMultiple(refs, handler)` - Mehrere Refs
+
+### `/src/hooks/usePrevious.ts` - Vorherigen Wert tracken
+
+**Zweck**: Zugriff auf vorherigen State/Props-Wert
+
+```typescript
+const prevCount = usePrevious(count);
+// Bei count=5 nach count=3: prevCount === 3
+```
+
+**Exports**:
+- `usePrevious<T>(value)` - Gibt vorherigen Wert zurück
+- `usePreviousDistinct<T>(value, compare?)` - Nur bei tatsächlicher Änderung
+
+---
+
+## 🌍 Context & State Management
+
+### `/src/contexts/TournamentContext.tsx` - Globaler Tournament State
+
+**Zweck**: Zentrales State Management für Tournament-Daten mit Reducer-Pattern
+
+**State Interface**:
+```typescript
+interface TournamentState {
+  tournament: Tournament | null;
+  isLoading: boolean;
+  error: string | null;
+  isDirty: boolean;
+  lastSaved: string | null;
+}
+```
+
+**Verfügbare Actions**:
+| Action | Beschreibung |
+|--------|--------------|
+| `LOAD_TOURNAMENT` | Lädt Tournament in State |
+| `UPDATE_TOURNAMENT` | Aktualisiert Tournament-Metadaten |
+| `UPDATE_MATCH` | Aktualisiert einzelnes Match |
+| `UPDATE_SCORE` | Setzt Spielergebnis |
+| `UPDATE_TEAM` | Aktualisiert Team-Daten |
+| `ADD_TEAM` / `REMOVE_TEAM` | Team-Verwaltung |
+| `MARK_DIRTY` / `MARK_SAVED` | Speicherstatus |
+
+**Haupt-Hook**: `useTournament()`
+```typescript
+const {
+  tournament,
+  updateScore,
+  updateMatch,
+  save,
+  isDirty
+} = useTournament();
+```
+
+**Selector Hooks** (Performance-optimiert):
+- `useTournamentMeta()` - Nur Metadaten (verhindert Re-Renders bei Match-Updates)
+- `useMatch(matchId)` - Einzelnes Match mit Update-Funktion
+- `useTeams()` - Teams mit CRUD-Funktionen
+
+**Verwendung**:
+```typescript
+// Provider in App.tsx
+<TournamentProvider initialTournament={tournament}>
+  <TournamentManagementScreen />
+</TournamentProvider>
+
+// Consumer in beliebiger Komponente
+const { tournament, updateScore } = useTournament();
+```
+
+---
+
 ## 📁 Datei-Struktur & Verantwortlichkeiten
 
 ### `/src/components/ui/NumberStepper.tsx` - Mobile-freundliche Zahleneingabe
@@ -181,36 +343,80 @@ Vollständige Schnellreferenz für die Codebase mit allen Features und deren Imp
 
 ---
 
-### `/src/lib/scheduleGenerator.ts` - Hauptlogik Spielplan-Generierung
-**Zweck**: Kombiniert Gruppenphase + Playoffs zu komplettem Zeitplan mit Uhrzeiten + Schiedsrichter-Zuweisung
+### 📦 Schedule Generator Module (Modulares System)
 
-**Wichtige Funktionen:**
-- `generateFullSchedule(tournament)` - **Hauptfunktion**: Generiert kompletten Schedule
-  - Zeile 134-158: Gruppenphase mit Fair Scheduler
-  - Zeile 162-214: Finalrunde schedulen (mit durchgehender matchNumber!)
-  - Zeile 236-254: **Berechnung startMatchNumber** für Finalrunde
-  - Zeile 263-265: **Schiedsrichter-Zuweisung** über assignReferees()
-  - Zeile 268-269: Split back into group stage and finals (mit referee assignments)
-  - Zeile 271-330: Erstellt Phasen (groupStage, roundOf16, quarterfinal, semifinal, final)
-- `scheduleMatches(matches, startTime, ..., startMatchNumber)` - Weist Uhrzeiten zu
-  - Zeile 384: **matchNumber beginnt bei startMatchNumber** (nicht mehr bei 1!)
-  - Zeile 373-444: Sortiert Matches nach Slot, gruppiert nach Slot, scheduliert jeden Slot
-- `resolveTeamName(teamId, teamMap, locale)` - Übersetzt Team-IDs
-  - Zeile 486-495: Prüft teamMap, sonst translatePlaceholder
-- `translatePlaceholder(placeholder, locale)` - Übersetzt Playoff-Platzhalter
-  - Zeile 500-628: **Übersetzungstabelle DE/EN**
-  - Unterstützt: group-x-1st, semi1-winner, semi1-loser, qf1-winner, r16-1-winner
+Das Schedule-Generation-System wurde in 4 spezialisierte Module aufgeteilt für bessere Wartbarkeit:
 
-**Wichtige Übersetzungen (Deutsch):**
-- `'semi1-winner'` → `'Sieger HF 1'`
-- `'semi1-loser'` → `'Verlierer HF 1'`
-- `'qf1-winner'` → `'Sieger VF 1'`
-- `'r16-1-winner'` → `'Sieger AF 1'`
+| Modul | Zweck | Exports |
+|-------|-------|---------|
+| `scheduleTypes.ts` | Type Definitions | `ScheduledMatch`, `SchedulePhase`, `GeneratedSchedule` |
+| `scheduleHelpers.ts` | Utility-Funktionen | `parseStartTime`, `formatTime`, `scheduleMatches`, `translatePlaceholder` |
+| `scheduleRenderer.ts` | Export & Print | `formatScheduleForPrint`, `exportScheduleAsCSV`, `calculateScheduleStats` |
+| `scheduleGenerator.ts` | Haupt-Orchestration | `generateFullSchedule` (re-exports alle Types) |
+
+---
+
+### `/src/lib/scheduleTypes.ts` - Type Definitions
+**Exports:**
+- `ScheduledMatch` - Komplettes Match mit Zeit, Teams, Referee
+- `SchedulePhase` - Gruppenphase/Finalrunde mit Matches
+- `GeneratedSchedule` - Komplettes Turnier-Schedule
+- `SchedulePhaseType` - Union: 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final'
+
+---
+
+### `/src/lib/scheduleHelpers.ts` - Utility-Funktionen
+
+**Time Utilities:**
+- `parseStartTime(date, timeSlot)` - Parst ISO/German-Datum + Uhrzeit
+- `addMinutes(date, minutes)` - Addiert Minuten zu Date
+- `formatTime(date)` - Formatiert Date zu "HH:MM"
+- `calculateTotalMatchDuration(gameDuration, periods, halftimeBreak)` - Berechnet Gesamt-Matchdauer
+
+**Match Scheduling:**
+- `scheduleMatches(options)` - Scheduliert Matches mit Zeiten
+  - Sortiert nach Slot/Round
+  - Gruppiert Matches nach Slots
+  - Berechnet Start/End-Zeiten
+
+**Team Name Resolution:**
+- `resolveTeamName(teamId, teamMap, locale, groups?)` - Löst Team-Namen auf
+- `translatePlaceholder(placeholder, locale, groups?)` - Übersetzt Playoff-Platzhalter
+  - Unterstützt Custom-Gruppennamen aus `groups`
+  - **Deutsche Übersetzungen**: `semi1-winner` → "Sieger HF 1", `qf1-winner` → "Sieger VF 1"
+
+---
+
+### `/src/lib/scheduleRenderer.ts` - Export & Print
+
+**Print Formatting:**
+- `formatScheduleForPrint(schedule)` - Generiert HTML für Druckansicht
+  - Returns: `{ header, matchList, standingsTable }`
+
+**CSV Export:**
+- `exportScheduleAsCSV(schedule)` - Exportiert als CSV-String
+  - Format: Nr, Zeit, Feld, Heim, Gast, Gruppe, Phase, Ergebnis
+
+**Statistics:**
+- `calculateScheduleStats(schedule)` - Berechnet Schedule-Statistiken
+  - Returns: `ScheduleStats { totalMatches, groupStageMatches, finalMatches, averageMatchDuration, matchesPerField }`
+
+---
+
+### `/src/lib/scheduleGenerator.ts` - Haupt-Orchestration
+**Zweck**: Kombiniert Gruppenphase + Playoffs zu komplettem Zeitplan
+
+**Hauptfunktion:**
+- `generateFullSchedule(tournament, locale?)` - **Entry Point**
+  - Generiert Gruppenphase mit Fair Scheduler
+  - Generiert Playoffs mit Playoff Scheduler
+  - Weist Schiedsrichter zu (falls konfiguriert)
+  - Erstellt Phasen-Gruppierung
 
 **Return Type:**
 ```typescript
 GeneratedSchedule {
-  tournament: { id, title, date, location, ageClass },
+  tournament: { id, title, date, location, ageClass, organizer?, contactInfo?, groups?, fields? },
   allMatches: ScheduledMatch[],
   phases: SchedulePhase[],
   startTime: Date,
@@ -222,6 +428,13 @@ GeneratedSchedule {
   refereeConfig?: RefereeConfig
 }
 ```
+
+**Interne Funktionen:**
+- `generateMatches(tournament, startTime)` - Generiert Group + Final Matches
+- `generateGroupStageMatches(tournament, startTime)` - Round-Robin pro Gruppe
+- `generateFinalMatches(tournament, groupMatches, startTime)` - Playoff-Matches
+- `scheduleFinalMatches(...)` - Scheduliert Finals mit korrekter startMatchNumber
+- `createPhases(allMatches, groupStageCount)` - Gruppiert nach Turnier-Phase
 
 ---
 
@@ -637,6 +850,66 @@ function mapToLiveMatch(scheduledMatch: ScheduledMatch, liveData: LiveData): Liv
    - Große Anzeige für Publikum
    - Zeigt aktuelle Tabellen und Ergebnisse
 
+---
+
+### 📦 MonitorTab Extrahierte Komponenten
+
+Die MonitorTab-Logik wurde in wiederverwendbare Komponenten extrahiert:
+
+| Komponente | Pfad | Zweck |
+|------------|------|-------|
+| `NextMatchCard` | `components/NextMatchCard.tsx` | Nächstes Spiel mit Countdown |
+| `StandingsDisplay` | `components/StandingsDisplay.tsx` | Tabellen-Anzeige für Monitor |
+
+---
+
+#### `/src/features/tournament-management/components/NextMatchCard.tsx`
+**Zweck**: Zeigt das nächste anstehende Spiel mit Countdown und Meta-Infos
+
+**Interface:**
+```typescript
+interface NextMatchInfo {
+  match: ScheduledMatch;
+  metaStyle?: CSSProperties;
+}
+
+interface NextMatchCardProps {
+  match: ScheduledMatch;
+  metaStyle?: CSSProperties;
+}
+```
+
+**Features:**
+- Spielnummer und Uhrzeit
+- Heim vs. Auswärts Team
+- Feld-Anzeige
+- Optional: Schiedsrichter
+- Responsive Design für große Displays
+
+---
+
+#### `/src/features/tournament-management/components/StandingsDisplay.tsx`
+**Zweck**: Wiederverwendbare Tabellen-Anzeige für Monitor-Modus
+
+**Interface:**
+```typescript
+interface StandingsDisplayProps {
+  standings: Standing[];
+  title?: string;
+}
+
+interface StandingsTableProps {
+  standings: Standing[];
+}
+```
+
+**Features:**
+- Kompakte Tabellen-Darstellung (Pl, Team, Sp, S, U, N, Tore, Diff, Pkt)
+- Optimiert für große Bildschirme
+- Konsistentes Styling mit Theme
+
+---
+
 **LiveMatch State Management:**
 ```typescript
 // ManagementTab.tsx
@@ -902,6 +1175,152 @@ schedule.teams.forEach(team => {
 ### Problem: "semi1-loser" wird nicht übersetzt
 **Check**: scheduleGenerator.ts Zeile 500-628 - Übersetzungstabelle
 **Check**: Platzhalter ist in TRANSLATIONS.de vorhanden
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+### Testing Stack
+
+| Tool | Zweck | Konfiguration |
+|------|-------|---------------|
+| **Vitest** | Unit & Integration Tests | `vitest.config.ts` |
+| **React Testing Library** | Component Tests | `src/test/setup.ts` |
+| **Husky** | Pre-commit Hooks | `.husky/pre-commit` |
+| **ESLint** | Static Code Analysis | `eslint.config.js` |
+| **GitHub Actions** | CI/CD Pipeline | `.github/workflows/ci.yml` |
+
+---
+
+### `/vitest.config.ts` - Test-Konfiguration
+
+```typescript
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.ts',
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/', 'src/test/']
+    }
+  }
+});
+```
+
+---
+
+### `/src/test/setup.ts` - Test Setup
+
+**Konfiguriert:**
+- `@testing-library/jest-dom` für erweiterte Matcher
+- Globale Test-Utilities
+
+---
+
+### `/src/test/testUtils.tsx` - Custom Render
+
+Wrapper für Tests mit Providern (Toast, Context, etc.):
+
+```typescript
+const AllProviders = ({ children }: { children: React.ReactNode }) => (
+  <ToastProvider>
+    {children}
+  </ToastProvider>
+);
+
+export const renderWithProviders = (ui: React.ReactElement) =>
+  render(ui, { wrapper: AllProviders });
+```
+
+---
+
+### `/src/test/factories.ts` - Test Data Factories
+
+Factory-Funktionen für konsistente Test-Daten:
+
+```typescript
+export const createMockTournament = (overrides?: Partial<Tournament>): Tournament => ({
+  id: 'test-tournament-1',
+  title: 'Test Turnier',
+  // ... defaults
+  ...overrides
+});
+
+export const createMockMatch = (overrides?: Partial<Match>): Match => ({ ... });
+export const createMockTeam = (overrides?: Partial<Team>): Team => ({ ... });
+```
+
+---
+
+### CI/CD Pipeline
+
+**`.github/workflows/ci.yml`**:
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --run --reporter=verbose
+      - run: npm run build
+```
+
+**Trigger:**
+- Push auf `main` oder `develop`
+- Pull Requests gegen `main` oder `develop`
+
+**Steps:**
+1. Checkout Code
+2. Node.js 20 Setup mit npm Cache
+3. Dependencies installieren (`npm ci`)
+4. ESLint ausführen
+5. Tests ausführen (non-watch mode)
+6. Production Build erstellen
+7. Build-Artefakte hochladen (7 Tage Retention)
+
+---
+
+### Pre-Commit Hooks (Husky)
+
+**`.husky/pre-commit`**:
+```bash
+npx lint-staged
+npm run test -- --run
+```
+
+**Workflow:**
+1. `lint-staged` führt ESLint auf geänderten Dateien aus
+2. Tests werden im Single-Run-Modus ausgeführt
+3. Commit wird nur bei Erfolg durchgeführt
+
+---
+
+### Test-Befehle
+
+| Befehl | Beschreibung |
+|--------|--------------|
+| `npm test` | Startet Vitest im Watch-Modus |
+| `npm test -- --run` | Single Run (für CI) |
+| `npm test -- --coverage` | Mit Coverage-Report |
+| `npm run lint` | ESLint ausführen |
+| `npm run lint -- --fix` | ESLint mit Auto-Fix |
 
 ---
 
@@ -1206,5 +1625,5 @@ const containerStyle: CSSProperties = {
 
 ---
 
-**Last Updated**: 2025-11-29
-**Version**: 2.3 (Tournament Management + Mobile-First Responsive Design)
+**Last Updated**: 2025-12-25
+**Version**: 2.4 (Performance Optimierungen + Testing Infrastructure + Modulares Schedule-System)

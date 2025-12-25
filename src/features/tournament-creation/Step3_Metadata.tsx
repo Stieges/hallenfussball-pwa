@@ -14,7 +14,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
   return (
     <Card>
       <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
-        📋 Stammdaten
+        Stammdaten
       </h2>
 
       <Input

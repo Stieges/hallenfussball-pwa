@@ -17,6 +17,7 @@ import {
   calculateStandings,
   getMergedFinalRanking,
 } from '../../utils/calculations';
+import { getGroupShortCode } from '../../utils/displayNames';
 
 interface RankingTabProps {
   tournament: Tournament;
@@ -254,7 +255,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
       };
     } else if (playoffStatus === 'in-progress') {
       return {
-        icon: '🏃',
+        icon: '▶',
         text: `Playoffs laufen (${completedFinalsCount}/${totalFinalsCount} Spiele)`,
         color: theme.colors.warning,
         bgColor: 'rgba(255, 145, 0, 0.1)',
@@ -280,7 +281,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
 
       <Card>
         <div style={{ padding: isMobile ? theme.spacing.md : theme.spacing.lg }}>
-          <h2 style={titleStyle}>🏆 Finale Platzierung</h2>
+          <h2 style={titleStyle}>Finale Platzierung</h2>
 
           {/* Platzierungslogik Anzeige */}
           <div style={{
@@ -296,7 +297,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
               color: theme.colors.primary,
               marginBottom: '6px',
             }}>
-              📋 Platzierungslogik:
+              Platzierungslogik:
             </div>
             <div style={{
               fontSize: isMobile ? '12px' : theme.fontSizes.sm,
@@ -398,7 +399,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               color: theme.colors.primary,
                               fontWeight: theme.fontWeights.semibold,
                             }}>
-                              🏆 {placement.matchLabel || 'Playoff'}
+                              {placement.matchLabel || 'Playoff'}
                             </span>
                           ) : (
                             <span style={{
@@ -412,7 +413,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       )}
                       {hasGroups && (
                         <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
-                          {placement.team.group || '-'}
+                          {placement.team.group ? getGroupShortCode(placement.team.group, tournament) : '-'}
                         </td>
                       )}
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -521,11 +522,11 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               alignItems: 'center',
                               gap: '2px',
                             }}>
-                              🏆 {placement.matchLabel || 'Playoff'}
+                              {placement.matchLabel || 'Playoff'}
                             </div>
                           ) : hasGroups && placement.team.group ? (
                             <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>
-                              Gr. {placement.team.group}
+                              {getGroupShortCode(placement.team.group, tournament)}
                             </div>
                           ) : null}
                         </td>

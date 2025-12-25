@@ -147,8 +147,8 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
           fontSize: '12px',
           color: theme.colors.text.secondary
         }}>
-          <span>📋 Gruppenphase: {groupPhaseMatches} Spiele (~{Math.floor(groupPhaseMinutes / 60)}h {groupPhaseMinutes % 60}min)</span>
-          <span>🏆 Finalrunde: {finalsMatches} Spiele (~{Math.floor(finalsMinutes / 60)}h {finalsMinutes % 60}min)</span>
+          <span>Gruppenphase: {groupPhaseMatches} Spiele (~{Math.floor(groupPhaseMinutes / 60)}h {groupPhaseMinutes % 60}min)</span>
+          <span>Finalrunde: {finalsMatches} Spiele (~{Math.floor(finalsMinutes / 60)}h {finalsMinutes % 60}min)</span>
         </div>
       )}
 

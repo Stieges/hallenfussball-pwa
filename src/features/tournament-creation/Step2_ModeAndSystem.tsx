@@ -210,7 +210,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Zeitplanung"
-            icon="⏱️"
             defaultOpen={true}
           >
             {/* Smart Config */}
@@ -246,7 +245,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Tabellenregeln"
-            icon="📊"
             badge={getPlacementSummary()}
             defaultOpen={false}
           >
@@ -273,7 +271,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           {canUseGroups && (
             <CollapsibleSection
               title="Finalrunde"
-              icon="🏆"
               variant="primary"
               defaultOpen={false}
             >
@@ -289,7 +286,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Schiedsrichter"
-            icon="👨‍⚖️"
             badge={getRefereeSummary()}
             defaultOpen={false}
           >
@@ -304,7 +300,6 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Sonderregeln"
-            icon="⚙️"
             defaultOpen={false}
           >
             <BambiniSettings

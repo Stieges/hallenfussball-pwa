@@ -2,10 +2,14 @@
 
 ## Übersicht
 
-**ID:** US-USER-PROFILE
-**Priorität:** High
-**Status:** Draft
-**Erstellt:** 2025-12-20
+| Feld | Wert |
+|------|------|
+| **ID** | US-USER-PROFILE |
+| **Priorität** | Medium |
+| **Status** | Draft |
+| **Erstellt** | 2025-12-20 |
+| **Kategorie** | Admin |
+| **Impact** | Mittel |
 
 ---
 

@@ -14,6 +14,8 @@ interface InputProps {
   required?: boolean;
   list?: string;
   style?: CSSProperties;
+  /** Zeigt einen Fehlerzustand an (roter Rahmen) */
+  error?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -29,6 +31,7 @@ export const Input: React.FC<InputProps> = ({
   required = false,
   list,
   style = {},
+  error = false,
 }) => {
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -47,7 +50,7 @@ export const Input: React.FC<InputProps> = ({
   const inputStyles: CSSProperties = {
     padding: `${theme.spacing.md} ${theme.spacing.lg}`,
     background: 'rgba(0,0,0,0.3)',
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${error ? theme.colors.error : theme.colors.border}`,
     borderRadius: theme.borderRadius.md,
     color: theme.colors.text.primary,
     fontSize: theme.fontSizes.md,
@@ -78,10 +81,12 @@ export const Input: React.FC<InputProps> = ({
         list={list}
         style={inputStyles}
         onFocus={(e) => {
-          e.target.style.borderColor = theme.colors.primary;
+          if (!error) {
+            e.target.style.borderColor = theme.colors.primary;
+          }
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = theme.colors.border;
+          e.target.style.borderColor = error ? theme.colors.error : theme.colors.border;
         }}
       />
     </div>

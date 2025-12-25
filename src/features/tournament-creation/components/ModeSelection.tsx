@@ -10,7 +10,6 @@ interface ModeSelectionProps {
 interface ModeButtonProps {
   isSelected: boolean;
   onClick: () => void;
-  icon: string;
   title: string;
   subtitle: string;
   disabled?: boolean;
@@ -20,7 +19,6 @@ interface ModeButtonProps {
 const ModeButton: React.FC<ModeButtonProps> = ({
   isSelected,
   onClick,
-  icon,
   title,
   subtitle,
   disabled = false,
@@ -67,9 +65,6 @@ const ModeButton: React.FC<ModeButtonProps> = ({
           {badge}
         </span>
       )}
-      <div style={{ fontSize: '24px', marginBottom: '8px' }}>
-        {icon}
-      </div>
       <div style={{ fontSize: '15px', fontWeight: '700', color: disabled ? theme.colors.text.secondary : theme.colors.text.primary }}>
         {title}
       </div>
@@ -99,14 +94,12 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
         <ModeButton
           isSelected={selectedMode === 'classic'}
           onClick={() => onModeChange('classic')}
-          icon="⚽"
           title="Klassisches Hallenturnier"
           subtitle="Gruppen + Finalrunde"
         />
         <ModeButton
           isSelected={selectedMode === 'miniFussball'}
           onClick={() => onModeChange('miniFussball')}
-          icon="🎯"
           title="Mini-Fußball / Funino"
           subtitle="Feldrotation, mehrere Felder"
           disabled={true}

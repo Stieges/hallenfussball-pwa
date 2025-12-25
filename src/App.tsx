@@ -1,14 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTournaments } from './hooks/useTournaments';
-import { TournamentCreationScreen } from './screens/TournamentCreationScreen';
-import { DashboardScreen } from './screens/DashboardScreen';
-import { TournamentManagementScreen } from './screens/TournamentManagementScreen';
-import { PublicTournamentViewScreen } from './screens/PublicTournamentViewScreen';
-import { Tournament } from './types/tournament';
+import { Tournament, TournamentStatus } from './types/tournament';
 import { theme } from './styles/theme';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
+
+// Lazy load screens for better initial load performance
+const DashboardScreen = lazy(() =>
+  import('./screens/DashboardScreen').then(m => ({ default: m.DashboardScreen }))
+);
+const TournamentCreationScreen = lazy(() =>
+  import('./screens/TournamentCreationScreen').then(m => ({ default: m.TournamentCreationScreen }))
+);
+const TournamentManagementScreen = lazy(() =>
+  import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen }))
+);
+const PublicTournamentViewScreen = lazy(() =>
+  import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen }))
+);
+
+// Loading fallback component
+const ScreenLoader = () => (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      background: theme.colors.background,
+      color: theme.colors.text.primary,
+    }}
+  >
+    <div style={{ textAlign: 'center' }}>
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          border: `3px solid ${theme.colors.border}`,
+          borderTopColor: theme.colors.primary,
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '0 auto 16px',
+        }}
+      />
+      <div>Lade...</div>
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  </div>
+);
 
 type ScreenType = 'dashboard' | 'create' | 'view' | 'public';
 
@@ -19,6 +63,7 @@ function AppContent() {
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
+  const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
   // Parse URL on mount to detect public tournament view
   useEffect(() => {
@@ -106,6 +151,10 @@ function AppContent() {
   // Handler for editing a published tournament in the wizard
   const handleEditInWizard = async (tournament: Tournament, targetStep?: number) => {
     try {
+      // "Erweiterte Bearbeitung" is only available for published tournaments
+      // SettingsTab already sets status to 'draft', so we always restore to 'published'
+      originalStatusRef.current = 'published';
+
       // Update lastVisitedStep if targetStep is provided
       const tournamentToEdit = targetStep
         ? { ...tournament, lastVisitedStep: targetStep }
@@ -113,7 +162,7 @@ function AppContent() {
 
       // Save the tournament with draft status (already set by SettingsTab)
       await saveTournament(tournamentToEdit);
-      console.log(`[App] Tournament "${tournament.title}" opened in wizard at step ${targetStep || 1}`);
+      console.log(`[App] Tournament "${tournament.title}" opened in wizard at step ${targetStep || 1} (original status: ${originalStatusRef.current})`);
 
       // Enable quick edit mode and navigate to create screen
       setQuickEditMode(true);
@@ -134,47 +183,63 @@ function AppContent() {
         fontFamily: theme.fonts.body,
       }}
     >
-      {screen === 'dashboard' && (
-        <DashboardScreen
-          tournaments={tournaments}
-          onCreateNew={() => setScreen('create')}
-          onTournamentClick={handleTournamentClick}
-          onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
-          onImportTournament={(tournament) => void handleImportTournament(tournament)}
-        />
-      )}
+      <Suspense fallback={<ScreenLoader />}>
+        {screen === 'dashboard' && (
+          <DashboardScreen
+            tournaments={tournaments}
+            onCreateNew={() => setScreen('create')}
+            onTournamentClick={handleTournamentClick}
+            onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
+            onImportTournament={(tournament) => void handleImportTournament(tournament)}
+          />
+        )}
 
-      {screen === 'create' && (
-        <TournamentCreationScreen
-          onBack={() => {
-            setSelectedTournament(null); // Clear selection when going back
-            setQuickEditMode(false); // Reset quick edit mode
-            setScreen('dashboard');
-          }}
-          onSave={async (tournament) => {
-            await saveTournament(tournament);
-            setSelectedTournament(null); // Clear selection after save
-            setQuickEditMode(false); // Reset quick edit mode
-            // Small delay to ensure state updates propagate
-            await new Promise(resolve => setTimeout(resolve, 200));
-            setScreen('dashboard');
-          }}
-          existingTournament={selectedTournament || undefined}
-          quickEditMode={quickEditMode}
-        />
-      )}
+        {screen === 'create' && (
+          <TournamentCreationScreen
+            onBack={() => {
+              // If in quickEditMode and user cancels, restore original status
+              if (quickEditMode && selectedTournament && originalStatusRef.current) {
+                const restoredTournament: Tournament = {
+                  ...selectedTournament,
+                  status: originalStatusRef.current,
+                  updatedAt: new Date().toISOString(),
+                };
+                // Fire-and-forget: Don't await, just trigger the save
+                saveTournament(restoredTournament)
+                  .then(() => console.log(`[App] Tournament status restored to "${originalStatusRef.current}"`))
+                  .catch((err) => console.error('[App] Failed to restore tournament status:', err));
+              }
+              originalStatusRef.current = null; // Reset ref
+              setSelectedTournament(null); // Clear selection when going back
+              setQuickEditMode(false); // Reset quick edit mode
+              setScreen('dashboard');
+            }}
+            onSave={async (tournament) => {
+              await saveTournament(tournament);
+              originalStatusRef.current = null; // Reset ref after successful save
+              setSelectedTournament(null); // Clear selection after save
+              setQuickEditMode(false); // Reset quick edit mode
+              // Small delay to ensure state updates propagate
+              await new Promise(resolve => setTimeout(resolve, 200));
+              setScreen('dashboard');
+            }}
+            existingTournament={selectedTournament || undefined}
+            quickEditMode={quickEditMode}
+          />
+        )}
 
-      {screen === 'view' && selectedTournament && (
-        <TournamentManagementScreen
-          tournamentId={selectedTournament.id}
-          onBack={() => setScreen('dashboard')}
-          onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
-        />
-      )}
+        {screen === 'view' && selectedTournament && (
+          <TournamentManagementScreen
+            tournamentId={selectedTournament.id}
+            onBack={() => setScreen('dashboard')}
+            onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
+          />
+        )}
 
-      {screen === 'public' && publicTournamentId && (
-        <PublicTournamentViewScreen tournamentId={publicTournamentId} />
-      )}
+        {screen === 'public' && publicTournamentId && (
+          <PublicTournamentViewScreen tournamentId={publicTournamentId} />
+        )}
+      </Suspense>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import autoTable, { RowInput, CellInput } from 'jspdf-autotable';
 import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
 import { Standing, RefereeConfig } from '../types/tournament';
 import { getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
+import { getGroupDisplayName, getGroupShortCode } from '../utils/displayNames';
 
 // ============================================================================
 // STYLE CONFIGURATION (matching HTML reference)
@@ -191,7 +192,8 @@ export async function exportScheduleToPDF(
       schedule.refereeConfig,
       schedule.numberOfFields,
       includeScores,
-      yPos
+      yPos,
+      schedule.tournament
     );
   }
 
@@ -518,7 +520,7 @@ function renderParticipants(
     doc.setFontSize(PDF_STYLE.fonts.table);
     doc.setTextColor(...PDF_STYLE.colors.textMain);
     doc.setFont('helvetica', 'bold');
-    const leftTitle = leftGroup !== 'Alle' ? `Gruppe ${leftGroup}` : 'Teilnehmer';
+    const leftTitle = leftGroup !== 'Alle' ? getGroupDisplayName(leftGroup, schedule.tournament) : 'Teilnehmer';
     doc.text(leftTitle, leftX + boxPadding, currentY);
     currentY += titleHeight - 2;
 
@@ -543,7 +545,7 @@ function renderParticipants(
       doc.setFontSize(PDF_STYLE.fonts.table);
       doc.setTextColor(...PDF_STYLE.colors.textMain);
       doc.setFont('helvetica', 'bold');
-      const rightTitle = rightGroup !== 'Alle' ? `Gruppe ${rightGroup}` : 'Teilnehmer';
+      const rightTitle = rightGroup !== 'Alle' ? getGroupDisplayName(rightGroup, schedule.tournament) : 'Teilnehmer';
       doc.text(rightTitle, rightX + boxPadding, currentY);
       currentY += titleHeight - 2;
 
@@ -576,7 +578,8 @@ function renderGroupStage(
   refereeConfig: RefereeConfig | undefined,
   numberOfFields: number,
   includeScores: boolean,
-  yPos: number
+  yPos: number,
+  tournament: GeneratedSchedule['tournament']
 ): number {
   // Platz für Titel
   yPos = ensureSpace(doc, yPos, 10);
@@ -609,7 +612,7 @@ function renderGroupStage(
   const data: RowInput[] = matches.map(match => {
     const row: CellInput[] = [match.matchNumber.toString(), match.time];
     if (showFieldColumn) {row.push(match.field.toString());}
-    if (hasMultipleGroups) {row.push(match.group || '-');}
+    if (hasMultipleGroups) {row.push(match.group ? getGroupShortCode(match.group, tournament) : '-');}
 
     // Show scores if includeScores is true and scores are available
     const resultColumn = includeScores && (match.scoreA !== undefined && match.scoreB !== undefined)
@@ -868,7 +871,7 @@ function renderGroupStandings(
   yPos: number
 ): number {
   // Einzigartige Gruppen bestimmen
-  const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter(Boolean))).sort();
+  const groups = Array.from(new Set(schedule.teams.map(t => t.group).filter((g): g is string => Boolean(g)))).sort();
   if (groups.length === 0) {return yPos;}
 
   // Standings-Quelle
@@ -882,7 +885,7 @@ function renderGroupStandings(
     doc.setFontSize(PDF_STYLE.fonts.groupTitle);
     doc.setTextColor(...PDF_STYLE.colors.textMain);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${t.standings} – Gruppe ${group}`, PDF_STYLE.spacing.pageMargin.left, yPos);
+    doc.text(`${t.standings} – ${getGroupDisplayName(group, schedule.tournament)}`, PDF_STYLE.spacing.pageMargin.left, yPos);
     yPos += 2;
 
     const groupTeams = schedule.teams.filter(t => t.group === group);
@@ -947,14 +950,14 @@ function renderGroupStandings(
       },
       columnStyles: {
         0: { halign: 'center', cellWidth: 8 },  // Pos
-        1: { halign: 'left', cellWidth: 40 },   // Team
+        1: { halign: 'left', cellWidth: 37 },   // Team
         2: { halign: 'center', cellWidth: 8 },  // Sp
         3: { halign: 'center', cellWidth: 7 },  // S
         4: { halign: 'center', cellWidth: 7 },  // U
         5: { halign: 'center', cellWidth: 7 },  // N
         6: { halign: 'center', cellWidth: 12 }, // Tore
         7: { halign: 'center', cellWidth: 10 }, // Diff
-        8: { halign: 'center', cellWidth: 8 },  // Pkt
+        8: { halign: 'center', cellWidth: 11 }, // Pkt (breiter für "Pkt")
       },
     });
 
@@ -1049,14 +1052,14 @@ function renderFinalRanking(
     },
     columnStyles: {
       0: { halign: 'center', cellWidth: 8 },  // Pos
-      1: { halign: 'left', cellWidth: 40 },   // Team
+      1: { halign: 'left', cellWidth: 37 },   // Team
       2: { halign: 'center', cellWidth: 8 },  // Sp
       3: { halign: 'center', cellWidth: 7 },  // S
       4: { halign: 'center', cellWidth: 7 },  // U
       5: { halign: 'center', cellWidth: 7 },  // N
       6: { halign: 'center', cellWidth: 12 }, // Tore
       7: { halign: 'center', cellWidth: 10 }, // Diff
-      8: { halign: 'center', cellWidth: 8 },  // Pkt
+      8: { halign: 'center', cellWidth: 11 }, // Pkt (breiter für "Pkt")
     },
   });
 

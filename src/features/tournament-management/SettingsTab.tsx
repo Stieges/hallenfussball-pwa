@@ -168,11 +168,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       if (!confirmLeave) {return;}
     }
 
+    // Wizard-Step-Namen (US-GROUPS-AND-FIELDS: 6 Steps statt 5)
     const stepNames: Record<number, string> = {
-      1: 'Teams',
-      2: 'Spielmodus',
-      3: 'Zeiten & Felder',
-      4: 'Vorschau',
+      1: 'Stammdaten',
+      2: 'Sportart',
+      3: 'Spielmodus',
+      4: 'Gruppen & Felder',
+      5: 'Teams',
+      6: 'Übersicht',
     };
 
     const confirmWizard = window.confirm(
@@ -457,7 +460,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   <button
-                    onClick={() => handleEditInWizard(1)}
+                    onClick={() => handleEditInWizard(5)}
                     style={{
                       padding: '10px 16px',
                       borderRadius: theme.borderRadius.md,
@@ -473,7 +476,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     Teams bearbeiten
                   </button>
                   <button
-                    onClick={() => handleEditInWizard(2)}
+                    onClick={() => handleEditInWizard(3)}
                     style={{
                       padding: '10px 16px',
                       borderRadius: theme.borderRadius.md,
@@ -489,7 +492,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     Spielmodus ändern
                   </button>
                   <button
-                    onClick={() => handleEditInWizard(3)}
+                    onClick={() => handleEditInWizard(4)}
                     style={{
                       padding: '10px 16px',
                       borderRadius: theme.borderRadius.md,
@@ -502,7 +505,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       border: 'none',
                     }}
                   >
-                    Zeiten & Felder
+                    Gruppen & Felder
                   </button>
                 </div>
               </div>

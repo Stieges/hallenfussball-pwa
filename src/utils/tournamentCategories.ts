@@ -1,14 +1,14 @@
 /**
  * Tournament Category Helpers
  *
- * Kategorisiert Turniere basierend auf Status und Zeitpunkt:
- * 1. Aktuell laufende Turniere - published + datum ist heute + aktuelle Zeit > Startzeit
+ * Kategorisiert Turniere basierend auf Status, Spielstand und Zeitpunkt:
+ * 1. Aktuell laufende Turniere - published + datum ist heute + aktuelle Zeit > Startzeit + nicht alle Spiele beendet
  * 2. Bevorstehende Turniere - published + Datum+Zeit in der Zukunft
- * 3. Beendete Turniere - published + Datum+Zeit in der Vergangenheit
+ * 3. Beendete Turniere - published + (alle Spiele beendet ODER manuell beendet ODER Datum in Vergangenheit)
  * 4. Gespeicherte Turniere - draft status
  */
 
-import { Tournament } from '../types/tournament';
+import { Tournament, Match } from '../types/tournament';
 
 export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft';
 
@@ -49,11 +49,67 @@ function getTournamentDateTime(tournament: Tournament): Date | null {
 }
 
 /**
+ * Check if a match has a valid result
+ */
+function matchHasResult(match: Match): boolean {
+  return typeof match.scoreA === 'number' && typeof match.scoreB === 'number';
+}
+
+/**
+ * Check if tournament is completed based on match results
+ * A tournament is completed when:
+ * 1. manuallyCompleted flag is set, OR
+ * 2. All matches have results (group matches + final if configured)
+ */
+export function isTournamentCompleted(tournament: Tournament): boolean {
+  // Manual override takes precedence
+  if (tournament.manuallyCompleted) {
+    return true;
+  }
+
+  // No matches = not completed
+  if (!tournament.matches || tournament.matches.length === 0) {
+    return false;
+  }
+
+  // Check all group matches
+  const groupMatches = tournament.matches.filter(m => !m.isFinal);
+  const allGroupMatchesComplete = groupMatches.every(matchHasResult);
+
+  if (!allGroupMatchesComplete) {
+    return false;
+  }
+
+  // Check finals if configured
+  const finalMatches = tournament.matches.filter(m => m.isFinal);
+
+  if (finalMatches.length === 0) {
+    // No finals configured - tournament complete when all group matches done
+    return true;
+  }
+
+  // Find the decisive final match (the actual final or 3rd place if that's the last)
+  const finalMatch = finalMatches.find(m => m.finalType === 'final');
+
+  // The tournament is complete when the final has a result
+  if (finalMatch && matchHasResult(finalMatch)) {
+    return true;
+  }
+
+  // Alternative: All configured finals complete
+  const allFinalsComplete = finalMatches.every(matchHasResult);
+  return allFinalsComplete;
+}
+
+/**
  * Check if tournament is currently running
- * Running = datum ist heute UND aktuelle Zeit > Startzeit
+ * Running = datum ist heute UND aktuelle Zeit > Startzeit UND nicht beendet
  */
 function isTournamentRunning(tournament: Tournament, now: Date): boolean {
   if (tournament.status !== 'published') {return false;}
+
+  // If tournament is completed (all matches done or manually marked), it's not running
+  if (isTournamentCompleted(tournament)) {return false;}
 
   const tournamentDate = getTournamentDateTime(tournament);
   if (!tournamentDate) {return false;}
@@ -86,18 +142,17 @@ function isTournamentUpcoming(tournament: Tournament, now: Date): boolean {
 }
 
 /**
- * Check if tournament is finished (past date/time)
+ * Check if tournament is finished
+ * Finished = completed (all matches done OR manually marked) OR date in past
  */
 function isTournamentFinished(tournament: Tournament, now: Date): boolean {
   if (tournament.status !== 'published') {return false;}
 
+  // Primary: Check if tournament is completed (match-based or manual)
+  if (isTournamentCompleted(tournament)) {return true;}
+
   const tournamentDate = getTournamentDateTime(tournament);
   if (!tournamentDate) {return false;}
-
-  // Tournament is finished if:
-  // 1. Date is in the past (not today)
-  // 2. OR date is today but we're running (activity present) - but not finished yet
-  // For simplicity: finished = date+time < now AND not running
 
   const nowDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const tournamentDateOnly = new Date(
@@ -106,14 +161,8 @@ function isTournamentFinished(tournament: Tournament, now: Date): boolean {
     tournamentDate.getDate()
   );
 
-  // If date is in the past (before today), it's finished
+  // Fallback: If date is in the past (before today), it's finished
   if (tournamentDateOnly < nowDateOnly) {return true;}
-
-  // If date is today, check if it's running
-  if (tournamentDateOnly.getTime() === nowDateOnly.getTime()) {
-    // Not finished if still running
-    return !isTournamentRunning(tournament, now);
-  }
 
   return false;
 }

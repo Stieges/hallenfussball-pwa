@@ -110,6 +110,35 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
 
   const hasNames = refereeConfig?.refereeNames && Object.keys(refereeConfig.refereeNames).length > 0;
 
+  // Prüft ob ein Schiedsrichter ein Duplikat ist (= ein vorheriger SR hat denselben Namen)
+  const isRefereeDuplicate = (refNumber: number, refName: string | undefined): boolean => {
+    if (!refName?.trim()) return false;
+    if (!refereeConfig?.refereeNames) return false;
+    const normalizedName = refName.trim().toLowerCase();
+    // Prüfe ob ein vorheriger Schiedsrichter (1 bis refNumber-1) denselben Namen hat
+    for (let i = 1; i < refNumber; i++) {
+      if (refereeConfig.refereeNames[i]?.trim().toLowerCase() === normalizedName) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Prüft ob ein Schiedsrichter ein Original ist (= ein späterer SR hat denselben Namen)
+  const isRefereeOriginal = (refNumber: number, refName: string | undefined): boolean => {
+    if (!refName?.trim()) return false;
+    if (!refereeConfig?.refereeNames) return false;
+    const normalizedName = refName.trim().toLowerCase();
+    const totalRefs = refereeConfig.numberOfReferees || 2;
+    // Prüfe ob ein späterer Schiedsrichter (refNumber+1 bis totalRefs) denselben Namen hat
+    for (let i = refNumber + 1; i <= totalRefs; i++) {
+      if (refereeConfig.refereeNames[i]?.trim().toLowerCase() === normalizedName) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   return (
     <div style={containerStyle}>
       <h3 style={{
@@ -182,16 +211,33 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                 Schiedsrichter-Namen
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Array.from({ length: refereeConfig.numberOfReferees || 2 }, (_, i) => i + 1).map((refNumber) => (
-                  <Input
-                    key={refNumber}
-                    label={`SR ${refNumber}`}
-                    type="text"
-                    value={refereeConfig.refereeNames?.[refNumber] || ''}
-                    onChange={(v) => handleNameChange(refNumber, v)}
-                    placeholder={`Name von Schiedsrichter ${refNumber}`}
-                  />
-                ))}
+                {Array.from({ length: refereeConfig.numberOfReferees || 2 }, (_, i) => i + 1).map((refNumber) => {
+                  const refName = refereeConfig.refereeNames?.[refNumber] || '';
+                  const isDuplicate = isRefereeDuplicate(refNumber, refName);
+                  const isOriginal = isRefereeOriginal(refNumber, refName);
+                  const hasError = isDuplicate || isOriginal;
+                  return (
+                    <div key={refNumber}>
+                      <Input
+                        label={`SR ${refNumber}`}
+                        type="text"
+                        value={refName}
+                        onChange={(v) => handleNameChange(refNumber, v)}
+                        placeholder={`Name von Schiedsrichter ${refNumber}`}
+                        error={hasError}
+                      />
+                      {hasError && (
+                        <p style={{
+                          margin: `${theme.spacing.xs} 0 0 0`,
+                          color: theme.colors.error,
+                          fontSize: '11px',
+                        }}>
+                          Dieser Name wird bereits verwendet
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               <p style={{ fontSize: '11px', color: theme.colors.text.secondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
                 Die Namen erscheinen später im Spielplan statt "SR1", "SR2", etc.

@@ -2,6 +2,7 @@ import { Card, Button, Icons } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { theme } from '../../styles/theme';
 import { getFullLocationAddress } from '../../utils/locationHelpers';
+import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './Step5_Overview.module.css';
 
 interface Step5Props {
@@ -13,7 +14,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
   return (
     <Card>
       <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
-        ✅ Zusammenfassung
+        Zusammenfassung
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -34,7 +35,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Veranstalter
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
-              🏢 {formData.organizer}
+              {formData.organizer}
             </div>
           </div>
         )}
@@ -46,7 +47,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Sportart
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.primary }}>
-              {formData.sport === 'football' ? '⚽ Fußball' : '🏀 Sonstiges'}
+              {formData.sport === 'football' ? 'Fußball' : 'Sonstiges'}
             </div>
           </div>
           <div className={styles.infoBox}>
@@ -54,7 +55,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Turniertyp
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: formData.tournamentType === 'bambini' ? theme.colors.warning : theme.colors.primary }}>
-              {formData.tournamentType === 'bambini' ? '👶 Bambini' : '⚽ Klassisch'}
+              {formData.tournamentType === 'bambini' ? 'Bambini' : 'Klassisch'}
             </div>
           </div>
         </div>
@@ -74,7 +75,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Modus
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.secondary }}>
-              {formData.mode === 'classic' ? '⚽ Klassisch' : '🎯 Mini-Fußball'}
+              {formData.mode === 'classic' ? 'Klassisch' : 'Mini-Fußball'}
             </div>
           </div>
         </div>
@@ -86,7 +87,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Datum
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
-              📅 {formData.date || '-'}
+              {formData.date || '-'}
             </div>
           </div>
           <div className={styles.infoBox}>
@@ -94,7 +95,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Ort
             </div>
             <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
-              📍 {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
+              {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
             </div>
           </div>
         </div>
@@ -105,14 +106,14 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
             Teams
           </div>
           <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
-            👥 {formData.teams?.length || 0} Teams
+            {formData.teams?.length || 0} Teams
           </div>
           {formData.teams && formData.teams.length > 0 && (
             <div className={styles.teamsContainer}>
               {formData.teams.map((team) => (
                 <div key={team.id} className={styles.teamBadge}>
                   {team.name}
-                  {team.group && ` (Gruppe ${team.group})`}
+                  {team.group && ` (${getGroupDisplayName(team.group, formData as Tournament)})`}
                 </div>
               ))}
             </div>

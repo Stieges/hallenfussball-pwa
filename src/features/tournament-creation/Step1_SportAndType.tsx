@@ -16,7 +16,7 @@ interface Step1Props {
 interface SelectionButtonProps {
   isSelected: boolean;
   onClick: () => void;
-  icon: string;
+  icon?: string;
   title: string;
   subtitle: string;
   details?: string[];
@@ -27,7 +27,6 @@ interface SelectionButtonProps {
 const SelectionButton: React.FC<SelectionButtonProps> = ({
   isSelected,
   onClick,
-  icon,
   title,
   subtitle,
   details,
@@ -61,9 +60,6 @@ const SelectionButton: React.FC<SelectionButtonProps> = ({
       role="radio"
       aria-checked={isSelected}
     >
-      <div style={{ fontSize: layout === 'center' ? '32px' : '24px', marginBottom: layout === 'center' ? '12px' : '8px' }}>
-        {icon}
-      </div>
       <div style={{ fontSize: layout === 'center' ? '16px' : '15px', fontWeight: '700', color: theme.colors.text.primary }}>
         {title}
       </div>
@@ -187,8 +183,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
           <SelectionButton
             isSelected={formData.tournamentType === 'classic'}
             onClick={() => onTournamentTypeChange('classic')}
-            icon="🏆"
-            title="KLASSISCHES TURNIER"
+            title="Klassisches Turnier"
             subtitle=""
             details={[
               '• Tabellenplatzierung',
@@ -200,10 +195,9 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
           <SelectionButton
             isSelected={formData.tournamentType === 'bambini'}
             onClick={() => onTournamentTypeChange('bambini')}
-            icon="👶"
-            title="BAMBINI-TURNIER"
+            title="Bambini-Turnier"
             subtitle=""
-            details={['• Spielfreude im Fokus', '• Ohne Tabellen/Ergebnisse', '• Nur Sieg/Unentsch./Nied.']}
+            details={['• Ergebnisneutral', '• Ohne Tabellen/Platzierungen', '• Nur Sieg/Unentsch./Nied.']}
             variant="warning"
             layout="left"
           />

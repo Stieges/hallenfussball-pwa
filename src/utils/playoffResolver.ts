@@ -49,6 +49,117 @@ export const needsPlayoffResolution = (tournament: Tournament): boolean => {
 };
 
 /**
+ * Check if resolved playoff teams still match current standings
+ * Returns true if re-resolution is needed (teams have changed)
+ */
+export const needsPlayoffReResolution = (tournament: Tournament): boolean => {
+  // Only check if all group matches are complete
+  if (!areAllGroupMatchesCompleted(tournament)) {
+    return false;
+  }
+
+  const playoffMatches = (tournament.matches || []).filter((m) => m.isFinal);
+
+  // Only check matches with resolved team IDs (not placeholders)
+  const groupBasedPlayoffs = playoffMatches.filter((match) => {
+    // If teamA is a real team ID (not placeholder), it was resolved
+    const teamAResolved = match.teamA && !isPlaceholder(match.teamA);
+    const teamBResolved = match.teamB && !isPlaceholder(match.teamB);
+
+    return teamAResolved || teamBResolved;
+  });
+
+  if (groupBasedPlayoffs.length === 0) {
+    return false;
+  }
+
+  // Calculate current standings
+  const currentStandings = calculateAllGroupStandings(tournament);
+
+  // Check each resolved match to see if teams still match standings
+  for (const match of groupBasedPlayoffs) {
+    // We need to check what the match SHOULD have based on the playoff bracket
+    // For now, we parse the match ID to determine the expected placement
+    // Match IDs like "semi1", "semi2" indicate semifinal matchups
+
+    // Get expected teams from standings based on typical bracket:
+    // semi1: Group A 2nd vs Group B 1st
+    // semi2: Group A 1st vs Group B 2nd
+    const expectedTeams = getExpectedTeamsForMatch(match, currentStandings, tournament);
+
+    if (expectedTeams) {
+      const currentTeamA = match.teamA;
+      const currentTeamB = match.teamB;
+
+      // If resolved teams don't match expected teams, re-resolution is needed
+      if (currentTeamA !== expectedTeams.teamA || currentTeamB !== expectedTeams.teamB) {
+        console.log(`[PlayoffResolver] Re-resolution needed: Match ${match.id} has ${currentTeamA} vs ${currentTeamB}, expected ${expectedTeams.teamA} vs ${expectedTeams.teamB}`);
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Get expected teams for a playoff match based on current standings
+ *
+ * Matches the bracket structure from playoffGenerator.ts:
+ * - semi1: group-a-2nd vs group-b-1st
+ * - semi2: group-a-1st vs group-b-2nd
+ */
+function getExpectedTeamsForMatch(
+  match: { id: string; teamA: string; teamB: string },
+  standings: Record<string, { teamId: string; position: number }[]>,
+  _tournament: Tournament
+): { teamA: string; teamB: string } | null {
+  // Get group keys (sorted alphabetically: A, B, ...)
+  const groups = Object.keys(standings).sort();
+  if (groups.length < 2) return null;
+
+  const groupA = groups[0]; // 'A'
+  const groupB = groups[1]; // 'B'
+
+  // Match the bracket structure from playoffGenerator.ts
+  if (match.id === 'semi1' || match.id.includes('semi1')) {
+    // semi1: group-a-2nd (home) vs group-b-1st (away)
+    // Matching: { id: 'semi1', home: 'group-a-2nd', away: 'group-b-1st' }
+    const teamA = standings[groupA]?.[1]?.teamId; // 2nd place from Group A (index 1)
+    const teamB = standings[groupB]?.[0]?.teamId; // 1st place from Group B (index 0)
+    if (teamA && teamB) return { teamA, teamB };
+  }
+
+  if (match.id === 'semi2' || match.id.includes('semi2')) {
+    // semi2: group-a-1st (home) vs group-b-2nd (away)
+    // Matching: { id: 'semi2', home: 'group-a-1st', away: 'group-b-2nd' }
+    const teamA = standings[groupA]?.[0]?.teamId; // 1st place from Group A (index 0)
+    const teamB = standings[groupB]?.[1]?.teamId; // 2nd place from Group B (index 1)
+    if (teamA && teamB) return { teamA, teamB };
+  }
+
+  // Place matches for direct group positions
+  if (match.id === 'place56-direct' || match.id.includes('place56')) {
+    // 3rd place teams
+    const teamA = standings[groupA]?.[2]?.teamId; // 3rd place from Group A
+    const teamB = standings[groupB]?.[2]?.teamId; // 3rd place from Group B
+    if (teamA && teamB) return { teamA, teamB };
+  }
+
+  if (match.id === 'place78-direct' || match.id.includes('place78')) {
+    // 4th place teams
+    const teamA = standings[groupA]?.[3]?.teamId; // 4th place from Group A
+    const teamB = standings[groupB]?.[3]?.teamId; // 4th place from Group B
+    if (teamA && teamB) return { teamA, teamB };
+  }
+
+  // Final and third-place matches depend on semifinal results,
+  // so we can't re-resolve them based on group standings alone
+  // These are handled by bracket placeholder resolution (semi1-winner, semi2-winner, etc.)
+  return null;
+}
+
+/**
  * Check if a team reference is a placeholder (group-based or bracket-based)
  */
 const isPlaceholder = (teamRef: string): boolean => {
@@ -328,8 +439,77 @@ const resolveBestSecondFromStandings = (
 };
 
 /**
+ * Re-resolve playoff pairings when standings have changed
+ * This function directly updates playoff matches based on current standings
+ */
+export const reResolvePlayoffPairings = (
+  tournament: Tournament
+): PlayoffResolutionResult => {
+  // Calculate current standings
+  const groupStandings = calculateAllGroupStandings(tournament);
+
+  const updatedMatchIds: string[] = [];
+  let updatedCount = 0;
+
+  const updatedMatches = (tournament.matches || []).map((match) => {
+    if (!match.isFinal) {
+      return match;
+    }
+
+    // Get expected teams for this match based on current standings
+    const expectedTeams = getExpectedTeamsForMatch(
+      { id: match.id, teamA: match.teamA, teamB: match.teamB },
+      groupStandings,
+      tournament
+    );
+
+    if (!expectedTeams) {
+      return match; // Can't determine expected teams for this match type
+    }
+
+    // Check if update is needed
+    const needsUpdate =
+      match.teamA !== expectedTeams.teamA ||
+      match.teamB !== expectedTeams.teamB;
+
+    if (needsUpdate) {
+      console.log(`[PlayoffResolver] Re-resolving ${match.id}: ${match.teamA}/${match.teamB} → ${expectedTeams.teamA}/${expectedTeams.teamB}`);
+      updatedMatchIds.push(match.id);
+      updatedCount++;
+      return {
+        ...match,
+        teamA: expectedTeams.teamA,
+        teamB: expectedTeams.teamB,
+        // Clear scores when teams change (the match hasn't been played with new teams)
+        scoreA: undefined,
+        scoreB: undefined
+      };
+    }
+
+    return match;
+  });
+
+  // Update tournament with re-resolved matches
+  tournament.matches = updatedMatches;
+
+  return {
+    wasResolved: updatedCount > 0,
+    updatedMatches: updatedCount,
+    message: updatedCount > 0
+      ? `${updatedCount} Playoff-Spiele wurden neu aufgelöst`
+      : 'Keine Playoff-Spiele mussten neu aufgelöst werden',
+    updatedMatchIds,
+  };
+};
+
+/**
  * Hook to automatically check and resolve playoffs after match completion
  * Call this function after saving any match result (group or playoff)
+ *
+ * IMPORTANT: Playoffs are resolved ONCE when all group matches are completed.
+ * After that, they are NEVER automatically re-resolved to avoid confusing users
+ * with constantly changing pairings. If a correction is needed, use manual
+ * re-resolution via forceReResolvePlayoffs().
  *
  * @param tournament Current tournament state
  * @returns Resolution result if triggered, null if not needed
@@ -342,13 +522,39 @@ export const autoResolvePlayoffsIfReady = (
     return null;
   }
 
-  // Only try if resolution is needed
+  // Only resolve if there are still placeholders (first-time resolution)
+  // Once resolved, playoffs are FINAL and won't change automatically
   if (!needsPlayoffResolution(tournament)) {
     return null;
   }
 
-  // Trigger automatic resolution
+  console.log('[PlayoffResolver] All group matches complete - resolving playoffs');
   return resolvePlayoffPairings(tournament);
+};
+
+/**
+ * Force re-resolution of playoff pairings (manual override)
+ *
+ * Use this function when:
+ * - A group match result was corrected after playoffs were resolved
+ * - The user explicitly wants to update playoff pairings based on new standings
+ *
+ * WARNING: This will reset any scores entered for affected playoff matches!
+ */
+export const forceReResolvePlayoffs = (
+  tournament: Tournament
+): PlayoffResolutionResult => {
+  if (!areAllGroupMatchesCompleted(tournament)) {
+    return {
+      wasResolved: false,
+      updatedMatches: 0,
+      message: 'Gruppenphase ist noch nicht abgeschlossen',
+      updatedMatchIds: [],
+    };
+  }
+
+  console.log('[PlayoffResolver] Forced re-resolution triggered by user');
+  return reResolvePlayoffPairings(tournament);
 };
 
 /**

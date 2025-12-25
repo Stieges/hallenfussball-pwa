@@ -6,3 +6,9 @@ export { Select } from './Select';
 export { Icons } from './Icons';
 export { NumberStepper } from './NumberStepper';
 export { CollapsibleSection } from './CollapsibleSection';
+
+// US-GROUPS-AND-FIELDS: Gekapselte Anzeige-Komponenten
+export { GroupDisplay } from './GroupDisplay';
+export type { GroupDisplayVariant } from './GroupDisplay';
+export { FieldDisplay } from './FieldDisplay';
+export type { FieldDisplayVariant } from './FieldDisplay';

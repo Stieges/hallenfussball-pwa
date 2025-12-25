@@ -111,4 +111,24 @@ export const Icons = {
       <path d="M6 9H2v4h4M14 9h4v4h-4M10 16v2M7 18h6M10 2v8a3 3 0 01-3 3 3 3 0 003 3 3 3 0 003-3 3 3 0 01-3-3V2" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+
+  Play: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M6 4l10 6-10 6V4z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
+  Calendar: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="4" width="16" height="14" rx="2" stroke={color} strokeWidth="2" />
+      <path d="M2 8h16M6 2v4M14 2v4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  Save: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M5 2h8l4 4v11a1 1 0 01-1 1H5a1 1 0 01-1-1V3a1 1 0 011-1z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 2v5h6V2M7 18v-5h6v5" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
 };

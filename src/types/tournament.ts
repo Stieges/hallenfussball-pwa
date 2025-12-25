@@ -18,6 +18,28 @@ export interface Team {
 }
 
 /**
+ * US-GROUPS-AND-FIELDS: Strukturierte Gruppenkonfiguration
+ * Ermöglicht benutzerdefinierte Gruppennamen und Feld-Zuordnungen
+ */
+export interface TournamentGroup {
+  id: string;                    // 'A', 'B', 'C' (von generateGroupLabels)
+  customName?: string;           // z.B. "Löwen" statt "Gruppe A"
+  shortCode?: string;            // z.B. "LÖ" (max 3 Zeichen, für kompakte Anzeigen)
+  allowedFieldIds?: string[];    // z.B. ['field-1', 'field-2'] - welche Felder diese Gruppe nutzen darf
+}
+
+/**
+ * US-GROUPS-AND-FIELDS: Strukturierte Feldkonfiguration
+ * Ermöglicht benutzerdefinierte Feldnamen
+ */
+export interface TournamentField {
+  id: string;              // 'field-1', 'field-2', etc.
+  defaultName: string;     // "Feld 1" (unveränderlich, als Fallback)
+  customName?: string;     // z.B. "Halle Nord"
+  shortCode?: string;      // z.B. "HN" (max 3 Zeichen)
+}
+
+/**
  * Structured location data for tournaments
  * Prepared for international scaling and backend migration
  */
@@ -256,6 +278,10 @@ export interface Tournament {
   // Field assignments (manual overrides for automatic field distribution)
   fieldAssignments?: Record<string, number>; // matchId → fieldNumber
 
+  // US-GROUPS-AND-FIELDS: Strukturierte Gruppen- und Feldkonfiguration
+  groups?: TournamentGroup[];    // Gruppenkonfiguration mit Namen und Feld-Zuordnung
+  fields?: TournamentField[];    // Feldkonfiguration mit benutzerdefinierten Namen
+
   // Legacy fields (will be migrated)
   finals: Finals;
   playoffConfig?: PlayoffConfig;
@@ -291,6 +317,10 @@ export interface Tournament {
 
   // Wizard navigation state (for draft restoration)
   lastVisitedStep?: number; // Last visited step in tournament creation wizard (1-5)
+
+  // Manual completion override
+  manuallyCompleted?: boolean; // Turnier manuell als beendet markiert (z.B. Abbruch)
+  completedAt?: string;        // ISO timestamp wann Turnier beendet wurde
 }
 
 export interface Standing {

@@ -399,8 +399,8 @@ function isPlaceholderTeam(teamName: string): boolean {
 }
 
 function getFinalMatchLabel(match: ScheduledMatch): string {
-  if (match.finalType === 'final') {return '🏆 Finale';}
-  if (match.finalType === 'thirdPlace') {return '🥉 Spiel um Platz 3';}
+  if (match.finalType === 'final') {return 'Finale';}
+  if (match.finalType === 'thirdPlace') {return 'Spiel um Platz 3';}
   if (match.finalType === 'fifthSixth') {return 'Spiel um Platz 5';}
   if (match.finalType === 'seventhEighth') {return 'Spiel um Platz 7';}
   if (match.phase === 'semifinal') {return 'Halbfinale';}
