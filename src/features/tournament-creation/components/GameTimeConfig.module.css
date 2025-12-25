@@ -33,6 +33,6 @@
 /* On mobile, make halftime full width */
 @media (max-width: 480px) {
   .halftimeSection {
-    margin-top: 12px;
+    margin-top: 16px;
   }
 }

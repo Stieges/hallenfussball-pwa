@@ -13,9 +13,9 @@ export const theme = {
     success: '#4CAF50',
     text: {
       primary: '#FFFFFF',
-      secondary: '#8BA3C7',
+      secondary: '#A3B8D4', // WCAG AA 5.1:1 on surface (was #8BA3C7 ~3.8:1)
       muted: 'rgba(255,255,255,0.5)',
-      placeholder: '#9575CD', // For unresolved playoff placeholders
+      placeholder: '#9DB2CC', // WCAG AA 4.7:1 on surface (was #9575CD)
     },
     border: 'rgba(255,255,255,0.1)',
     borderActive: 'rgba(0,230,118,0.3)',
@@ -60,20 +60,22 @@ export const theme = {
     lg: '0 8px 24px rgba(0,0,0,0.4)',
   },
 
+  // 8pt Grid System - All values are multiples of 8px (or 4px half-unit)
   borderRadius: {
-    sm: '8px',
-    md: '12px',
-    lg: '16px',
-    xl: '20px',
+    sm: '4px',   // 0.5x (half-unit for subtle rounding)
+    md: '8px',   // 1x
+    lg: '16px',  // 2x
+    xl: '24px',  // 3x
   },
 
+  // 8pt Grid Spacing Scale
   spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '12px',
-    lg: '16px',
-    xl: '24px',
-    xxl: '32px',
+    xs: '4px',   // 0.5x (half-unit for tight spacing)
+    sm: '8px',   // 1x
+    md: '16px',  // 2x (was 12px - primary change for 8pt compliance)
+    lg: '24px',  // 3x (was 16px)
+    xl: '32px',  // 4x (was 24px)
+    xxl: '48px', // 6x (was 32px)
   },
 
   fontSizes: {

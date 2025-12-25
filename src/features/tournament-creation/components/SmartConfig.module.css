@@ -8,10 +8,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
   border: 1px solid rgba(0, 176, 255, 0.3);
-  border-radius: var(--border-radius-md, 10px);
+  border-radius: var(--border-radius-md);
   color: var(--color-text-primary, #fff);
   font-size: 13px;
   font-weight: 500;
@@ -37,11 +37,11 @@
 }
 
 .panel {
-  margin-top: 12px;
+  margin-top: 16px;
   padding: 16px;
   background: rgba(0, 176, 255, 0.05);
   border: 1px solid rgba(0, 176, 255, 0.2);
-  border-radius: var(--border-radius-md, 10px);
+  border-radius: var(--border-radius-md);
 }
 
 .inputGroup {
@@ -58,15 +58,15 @@
 .inputRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .hoursInput {
-  padding: 10px 14px;
+  padding: 8px 16px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   color: var(--color-text-primary, #fff);
   font-size: 14px;
   width: 80px;
@@ -87,7 +87,7 @@
   padding: 8px 16px;
   background: var(--color-secondary, #00b0ff);
   border: none;
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   color: #000;
   font-size: 13px;
   font-weight: 600;
@@ -107,23 +107,23 @@
 
 .resultCard {
   margin-top: 16px;
-  padding: 14px;
+  padding: 16px;
   background: rgba(0, 230, 118, 0.1);
   border: 1px solid rgba(0, 230, 118, 0.3);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 .resultTitle {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-primary, #00e676);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .statItem {
@@ -142,8 +142,8 @@
 }
 
 .resultFooter {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid rgba(0, 230, 118, 0.2);
   display: flex;
   justify-content: space-between;
@@ -154,12 +154,12 @@
 }
 
 .applyButton {
-  margin-top: 12px;
+  margin-top: 16px;
   width: 100%;
-  padding: 12px;
+  padding: 16px;
   background: var(--color-primary, #00e676);
   border: none;
-  border-radius: var(--border-radius-md, 10px);
+  border-radius: var(--border-radius-md);
   color: #000;
   font-size: 14px;
   font-weight: 600;
@@ -177,7 +177,7 @@
 }
 
 .warningText {
-  margin-top: 12px;
+  margin-top: 16px;
   font-size: 12px;
   color: var(--color-warning, #ff9100);
   line-height: 1.4;
@@ -188,12 +188,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 16px;
+  padding: 8px 16px;
   margin-bottom: 16px;
   background: rgba(0, 230, 118, 0.08);
   border: 1px solid rgba(0, 230, 118, 0.2);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   flex-wrap: wrap;
 }
 
@@ -203,10 +203,10 @@
 }
 
 .quickApplyButton {
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: rgba(0, 230, 118, 0.2);
   border: 1px solid rgba(0, 230, 118, 0.4);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   color: var(--color-primary, #00e676);
   font-size: 12px;
   font-weight: 600;
@@ -228,16 +228,16 @@
 /* Constraints Section */
 .constraintsSection {
   margin-top: 16px;
-  padding: 12px;
+  padding: 16px;
   background: rgba(255, 152, 0, 0.08);
   border: 1px solid rgba(255, 152, 0, 0.25);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 .constraintsHeader {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   font-weight: 600;
   color: var(--color-warning, #ff9100);
@@ -247,7 +247,7 @@
 .constraintsHint {
   font-size: 11px;
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
 }
 
 .constraintsList {
@@ -259,10 +259,10 @@
 .constraintRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: var(--border-radius-sm, 6px);
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
   transition: background 0.15s;
 }
 
@@ -322,7 +322,7 @@
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   color: var(--color-text-primary, #fff);
   font-size: 13px;
   min-width: 70px;

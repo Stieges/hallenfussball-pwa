@@ -17,31 +17,31 @@
 }
 
 .panelSuccess {
-  padding: 14px;
+  padding: 16px;
   background: rgba(0, 230, 118, 0.1);
   border: 1px solid rgba(0, 230, 118, 0.3);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 .panelWarning {
-  padding: 12px;
+  padding: 16px;
   background: rgba(255, 145, 0, 0.1);
   border: 1px solid rgba(255, 145, 0, 0.2);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 .panelError {
-  padding: 12px;
+  padding: 16px;
   background: rgba(255, 61, 87, 0.1);
   border: 1px solid rgba(255, 61, 87, 0.2);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 .panelInfo {
-  padding: 12px;
+  padding: 16px;
   background: rgba(0, 176, 255, 0.1);
   border: 1px solid rgba(0, 176, 255, 0.2);
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
 }
 
 /* Headers */
@@ -64,22 +64,22 @@
   margin-bottom: 16px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .description {
   font-size: 12px;
   color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
   line-height: 1.4;
-  margin: 8px 0 0 30px;
+  margin: 8px 0 0 32px;
 }
 
 /* Grid Layouts */
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .statsGridThree {
@@ -91,7 +91,7 @@
 .statsGridTwo {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 /* Stat Items */
@@ -120,10 +120,10 @@
 
 /* Buttons */
 .buttonPrimary {
-  padding: 12px;
+  padding: 16px;
   background: var(--color-primary, #00e676);
   border: none;
-  border-radius: var(--border-radius-md, 10px);
+  border-radius: var(--border-radius-md);
   color: #000;
   font-size: 14px;
   font-weight: 600;
@@ -166,10 +166,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
   border: 1px solid rgba(0, 176, 255, 0.3);
-  border-radius: var(--border-radius-md, 10px);
+  border-radius: var(--border-radius-md);
   color: var(--color-text-primary, #fff);
   font-size: 13px;
   font-weight: 500;
@@ -191,10 +191,10 @@
 
 /* Inputs */
 .inputNumber {
-  padding: 10px 14px;
+  padding: 8px 16px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
-  border-radius: var(--border-radius-sm, 6px);
+  border-radius: var(--border-radius-sm);
   color: var(--color-text-primary, #fff);
   font-size: 14px;
   width: 80px;
@@ -210,7 +210,7 @@
 .checkboxLabel {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   cursor: pointer;
 }
 
@@ -225,9 +225,9 @@
 .warningMessage {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  border-radius: var(--border-radius-sm, 6px);
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -254,7 +254,7 @@
 .flexRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .flexColumn {
@@ -277,8 +277,8 @@
 
 /* Separator */
 .separator {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid rgba(0, 230, 118, 0.2);
 }
 

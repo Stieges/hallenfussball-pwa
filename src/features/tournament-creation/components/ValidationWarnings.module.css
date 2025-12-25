@@ -10,9 +10,9 @@
 .warningItem {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  border-radius: var(--border-radius-sm, 6px);
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
   font-size: 13px;
   line-height: 1.4;
 }

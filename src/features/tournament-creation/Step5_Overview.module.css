@@ -17,12 +17,12 @@
 .infoBox {
   padding: 16px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
+  border-radius: var(--border-radius-lg);
 }
 
 /* Teams container with wrap */
 .teamsContainer {
-  margin-top: 12px;
+  margin-top: 16px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -30,10 +30,10 @@
 
 /* Team badge */
 .teamBadge {
-  padding: 6px 12px;
+  padding: 8px 16px;
   background: rgba(0, 230, 118, 0.1);
   border: 1px solid rgba(0, 230, 118, 0.3);
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   font-size: 14px;
   color: #FFFFFF;
 }

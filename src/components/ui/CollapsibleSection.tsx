@@ -56,8 +56,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '12px 16px',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
     background: variantStyles.headerBg,
     cursor: 'pointer',
     userSelect: 'none',
@@ -73,23 +73,23 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   };
 
   const badgeStyle: CSSProperties = {
-    padding: '2px 8px',
-    fontSize: '11px',
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    fontSize: theme.fontSizes.xs,
     fontWeight: theme.fontWeights.medium,
     background: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: '12px',
+    borderRadius: theme.borderRadius.lg,
     color: theme.colors.text.secondary,
   };
 
   const chevronStyle: CSSProperties = {
-    fontSize: '12px',
+    fontSize: theme.fontSizes.sm,
     color: theme.colors.text.secondary,
     transition: 'transform 0.2s',
     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
   };
 
   const contentStyle: CSSProperties = {
-    padding: isOpen ? '16px' : '0 16px',
+    padding: isOpen ? theme.spacing.md : `0 ${theme.spacing.md}`,
     maxHeight: isOpen ? '2000px' : '0',
     overflow: 'hidden',
     transition: 'all 0.3s ease-in-out',

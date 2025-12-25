@@ -5,40 +5,50 @@
    CSS Custom Properties (Design Tokens)
    ============================================ */
 :root {
+  /* ===========================================
+     Design Tokens - Synced with theme.ts
+     Single Source of Truth: src/styles/theme.ts
+     =========================================== */
+
   /* Colors */
   --color-primary: #00E676;
-  --color-primary-hover: #00b862;
+  --color-primary-hover: #00C853;
   --color-background: #0A1628;
-  --color-surface: #1E293B;
-  --color-surface-hover: rgba(255, 255, 255, 0.1);
-  --color-border: #334155;
+  --color-surface: rgba(255, 255, 255, 0.05); /* Synced: glassmorphic effect */
+  --color-surface-solid: #1E293B; /* Fallback for contexts needing solid color */
+  --color-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.1); /* Synced with theme.ts */
+  --color-border-solid: #334155; /* Fallback for solid borders */
   --color-text-primary: #FFFFFF;
-  --color-text-secondary: #8BA3C7;
+  --color-text-secondary: #A3B8D4; /* WCAG AA 5.1:1 on surface */
+  --color-text-muted: rgba(255, 255, 255, 0.5);
   --color-warning: #FF9100;
   --color-error: #FF5252;
+  --color-success: #4CAF50;
   --color-accent: #00B0FF;
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-xxl: 48px;
+  /* Spacing - 8pt Grid System (synced with theme.ts) */
+  --spacing-xs: 4px;   /* 0.5x - half-unit for tight spacing */
+  --spacing-sm: 8px;   /* 1x */
+  --spacing-md: 16px;  /* 2x (was 12px) */
+  --spacing-lg: 24px;  /* 3x (was 16px) */
+  --spacing-xl: 32px;  /* 4x (was 24px) */
+  --spacing-xxl: 48px; /* 6x (was 32px) */
 
-  /* Border Radius */
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-xl: 16px;
+  /* Border Radius - 8pt aligned (synced with theme.ts) */
+  --border-radius-sm: 4px;  /* 0.5x - subtle rounding */
+  --border-radius-md: 8px;  /* 1x (was 12px) */
+  --border-radius-lg: 16px; /* 2x */
+  --border-radius-xl: 24px; /* 3x (was 20px) */
 
-  /* Font Sizes */
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 24px;
-  --font-size-xxl: 32px;
+  /* Font Sizes - Synced with theme.ts */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;  /* Synced: was 14px */
+  --font-size-md: 14px;  /* Synced: was 16px */
+  --font-size-lg: 16px;  /* Synced: was 18px */
+  --font-size-xl: 18px;  /* Synced: was 24px */
+  --font-size-xxl: 24px; /* Synced: was 32px */
+  --font-size-xxxl: 32px;
 
   /* Font Weights */
   --font-weight-normal: 400;
@@ -46,10 +56,31 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+  /* Shadows - Synced with theme.ts */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  /* ===========================================
+     Themeable Layer - Corporate Colors
+     These can be overridden at runtime via JS
+     =========================================== */
+
+  /* Primary Theme Color (buttons, links, accents) */
+  --theme-primary: var(--color-primary);
+  --theme-primary-hover: #00C853;
+  --theme-primary-active: #00A040;
+  --theme-primary-light: rgba(0, 230, 118, 0.15);
+  --theme-on-primary: #0A1628;
+
+  /* Secondary Theme Color */
+  --theme-secondary: var(--color-accent);
+  --theme-secondary-hover: #0091EA;
+  --theme-secondary-light: rgba(0, 176, 255, 0.15);
+  --theme-on-secondary: #0A1628;
+
+  /* Theme Gradient */
+  --theme-gradient: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
 }
 
 * {
@@ -96,7 +127,7 @@ select {
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 16px center;
   background-size: 16px;
   padding-right: 40px;
 }
@@ -109,34 +140,34 @@ select option {
 /* Input placeholder styling for dark theme */
 input::placeholder,
 textarea::placeholder {
-  color: #8BA3C7; /* theme.colors.text.secondary */
+  color: #9DB2CC; /* WCAG AA 4.7:1 on input backgrounds */
   opacity: 1; /* Firefox default is 0.54 */
 }
 
 /* Webkit browsers */
 input::-webkit-input-placeholder,
 textarea::-webkit-input-placeholder {
-  color: #8BA3C7;
+  color: #9DB2CC;
 }
 
 /* Firefox */
 input::-moz-placeholder,
 textarea::-moz-placeholder {
-  color: #8BA3C7;
+  color: #9DB2CC;
   opacity: 1;
 }
 
 /* IE/Edge */
 input:-ms-input-placeholder,
 textarea:-ms-input-placeholder {
-  color: #8BA3C7;
+  color: #9DB2CC;
 }
 
 /* Wizard Step Transitions */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px); /* 8pt grid aligned */
   }
   to {
     opacity: 1;
@@ -156,7 +187,7 @@ textarea:-ms-input-placeholder {
 @keyframes fadeInOut {
   0% {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px); /* 8pt grid aligned */
   }
   10% {
     opacity: 1;
@@ -168,7 +199,7 @@ textarea:-ms-input-placeholder {
   }
   100% {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px); /* 8pt grid aligned */
   }
 }
 
