@@ -14,7 +14,15 @@ export interface MatchEvent {
   id: string;
   time: number;
   type: string;
-  payload: any;
+  payload: {
+    teamId?: string;
+    teamName?: string;
+    direction?: 'INC' | 'DEC';
+    newHomeScore?: number;
+    newAwayScore?: number;
+    toStatus?: string;
+    to?: string;
+  };
   scoreAfter: { home: number; away: number };
 }
 

@@ -340,7 +340,7 @@ function getUpcomingMatches(): MatchSummary[] {
   ];
 }
 
-function createEvent(match: LiveMatch, type: MatchEvent['type'], payload: any): MatchEvent {
+function createEvent(match: LiveMatch, type: MatchEvent['type'], payload: MatchEvent['payload']): MatchEvent {
   return {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
     matchId: match.id,
