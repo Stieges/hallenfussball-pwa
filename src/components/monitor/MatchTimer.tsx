@@ -135,7 +135,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
       ? colors.error
       : isPaused
         ? colors.warning
-        : '#ffffff',
+        : colors.textPrimary,
     textShadow: isOvertime || isPaused
       ? `0 0 20px ${isOvertime ? colors.error : colors.warning}`
       : '0 2px 8px rgba(0, 0, 0, 0.4)',

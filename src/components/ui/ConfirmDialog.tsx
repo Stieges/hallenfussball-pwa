@@ -75,19 +75,19 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       icon: '⚠️',
       accent: colors.warning,
       confirmBg: colors.warning,
-      confirmHover: '#e68a00',
+      confirmHover: colors.warningHover,
     },
     danger: {
       icon: '🚨',
       accent: colors.error,
       confirmBg: colors.error,
-      confirmHover: '#cc0000',
+      confirmHover: colors.errorHover,
     },
     info: {
       icon: 'ℹ️',
       accent: colors.primary,
       confirmBg: colors.primary,
-      confirmHover: '#00b862',
+      confirmHover: colors.primaryHover,
     },
   };
 
@@ -192,7 +192,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     ...buttonBaseStyle,
     backgroundColor: variantConfig.confirmBg,
     border: `1px solid ${variantConfig.confirmBg}`,
-    color: '#000',
+    color: colors.onWarning,
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {

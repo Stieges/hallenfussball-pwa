@@ -213,7 +213,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     cursor: 'pointer',
     fontWeight: fontWeights.medium,
     background: variant === 'edit' ? colors.surface : 'rgba(244, 67, 54, 0.1)',
-    color: variant === 'edit' ? colors.textPrimary : '#F44336',
+    color: variant === 'edit' ? colors.textPrimary : colors.error,
     transition: 'all 0.2s ease',
   });
 
@@ -245,7 +245,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {/* Error Message */}
       {error && (
         <Card style={{ background: 'rgba(244, 67, 54, 0.1)', marginBottom: spacing.lg }}>
-          <div style={{ color: '#F44336', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ color: colors.error, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>❌</span>
             <span>{error}</span>
             <button
@@ -327,7 +327,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         </span>
                       )}
                       {analysis.matchesWithResults > 0 && (
-                        <span style={badgeStyle('#4CAF50', 'rgba(76, 175, 80, 0.15)')}>
+                        <span style={badgeStyle(colors.success, colors.successLight)}>
                           {analysis.matchesWithResults} Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
                         </span>
                       )}
@@ -428,7 +428,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                   borderRadius: borderRadius.sm,
                   marginTop: '12px',
                 }}>
-                  <p style={{ margin: 0, color: '#FF9800', fontSize: fontSizes.sm }}>
+                  <p style={{ margin: 0, color: colors.warning, fontSize: fontSizes.sm }}>
                     ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
                   </p>
                 </div>
@@ -442,7 +442,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               <Button
                 variant="primary"
                 onClick={handleConfirmDelete}
-                style={{ background: '#F44336' }}
+                style={{ background: colors.error }}
               >
                 {deleteConfirmTeam.analysis.matchesWithResults > 0
                   ? 'Als entfernt markieren'

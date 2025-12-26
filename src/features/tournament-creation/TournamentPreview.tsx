@@ -206,7 +206,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             style={{
               padding: '6px 12px',
               background: 'rgba(255,215,0,0.9)',
-              color: '#000',
+              color: colors.onWarning,
               borderRadius: borderRadius.sm,
               fontSize: '12px',
               fontWeight: fontWeights.bold,

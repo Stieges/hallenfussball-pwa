@@ -255,7 +255,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     gap: spacing.xs,
     padding: `${spacing.xs} ${spacing.sm}`,
     background: isDirty ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)',
-    color: isDirty ? '#FF9800' : '#4CAF50',
+    color: isDirty ? colors.warning : colors.success,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.medium,
@@ -456,7 +456,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <p style={{ margin: '0 0 12px 0', color: colors.textSecondary, fontSize: fontSizes.sm }}>
                   Wähle den Bereich, den du bearbeiten möchtest. Nach dem Speichern kommst du direkt zurück.
                 </p>
-                <p style={{ margin: '0 0 16px 0', color: '#FF9800', fontSize: fontSizes.xs, fontWeight: fontWeights.medium }}>
+                <p style={{ margin: '0 0 16px 0', color: colors.warning, fontSize: fontSizes.xs, fontWeight: fontWeights.medium }}>
                   Achtung: Der Spielplan wird neu generiert und alle Ergebnisse gehen verloren!
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -469,8 +469,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
-                      background: '#FF9800',
-                      color: 'white',
+                      background: colors.warning,
+                      color: colors.onWarning,
                       border: 'none',
                     }}
                   >
@@ -485,8 +485,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
-                      background: '#FF9800',
-                      color: 'white',
+                      background: colors.warning,
+                      color: colors.onWarning,
                       border: 'none',
                     }}
                   >
@@ -501,8 +501,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
-                      background: '#FF9800',
-                      color: 'white',
+                      background: colors.warning,
+                      color: colors.onWarning,
                       border: 'none',
                     }}
                   >

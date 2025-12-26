@@ -120,7 +120,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     border: '1px solid rgba(244, 67, 54, 0.4)',
                     borderRadius: borderRadius.sm,
                     padding: `${spacing.sm} ${spacing.md}`,
-                    color: '#F44336',
+                    color: colors.error,
                     fontSize: fontSizes.sm,
                     fontWeight: fontWeights.medium,
                     cursor: 'pointer',

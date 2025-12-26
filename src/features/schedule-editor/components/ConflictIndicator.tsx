@@ -106,7 +106,7 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
       height: '20px',
       padding: `0 ${spacing.xs}`,
       backgroundColor: isError ? colors.error : colors.warning,
-      color: isError ? '#fff' : '#000',
+      color: isError ? colors.onError : colors.onWarning,
       borderRadius: '10px',
       fontSize: fontSizes.xs,
       fontWeight: fontWeights.bold,

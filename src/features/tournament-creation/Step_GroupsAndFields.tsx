@@ -507,7 +507,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                             style={{ display: 'none' }}
                           />
                           {isAllowed && (
-                            <span style={{ color: '#fff', fontSize: '20px', fontWeight: 'bold' }}>✓</span>
+                            <span style={{ color: colors.textPrimary, fontSize: '20px', fontWeight: 'bold' }}>✓</span>
                           )}
                         </label>
                       </div>

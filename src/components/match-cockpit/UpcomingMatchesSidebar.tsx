@@ -125,7 +125,7 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
     fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: '#fef3c7',
+    color: colors.correctionText,
     background: `${colors.warning}20`,
     borderRadius: '999px',
     padding: isMobile ? `6px ${spacing.md}` : `3px ${spacing.sm}`,

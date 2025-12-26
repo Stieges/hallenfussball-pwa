@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { borderRadius, fontFamilies, fontWeights, spacing } from '../../design-tokens';
+import { borderRadius, colors, fontFamilies, fontWeights, spacing } from '../../design-tokens';
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 
 export interface GoalAnimationProps {
@@ -146,7 +146,7 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
   const goalTextStyle: CSSProperties = {
     fontSize: 'clamp(40px, 6vw, 72px)',
     fontWeight: fontWeights.bold,
-    color: '#000',
+    color: colors.onPrimary,
     fontFamily: fontFamilies.heading,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
@@ -156,14 +156,14 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
   const teamNameStyle: CSSProperties = {
     fontSize: 'clamp(20px, 3vw, 32px)',
     fontWeight: fontWeights.bold,
-    color: '#000',
+    color: colors.onPrimary,
     opacity: 0.9,
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: 'clamp(28px, 4vw, 48px)',
     fontWeight: fontWeights.bold,
-    color: '#000',
+    color: colors.onPrimary,
     fontFamily: fontFamilies.heading,
     marginTop: spacing.xs,
   };

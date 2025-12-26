@@ -768,7 +768,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           <Button
             variant="primary"
             onClick={handlePublish}
-            style={{ background: '#4CAF50' }}
+            style={{ background: colors.success }}
           >
             Speichern & Zurück
           </Button>

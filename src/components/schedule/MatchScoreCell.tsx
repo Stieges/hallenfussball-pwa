@@ -134,14 +134,14 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       width: '40px',
       padding: '4px',
       border: inCorrectionMode
-        ? `2px solid #FFC107` // Warning border in correction mode
+        ? `2px solid ${colors.warning}`
         : `1px solid ${colors.border}`,
       borderRadius: '4px',
       fontSize: '13px',
       fontWeight: fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode
-        ? '#FFF3CD' // Light yellow background in correction mode
+        ? colors.warningLight
         : colors.background,
       color: colors.textPrimary,
     };

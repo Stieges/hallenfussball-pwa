@@ -116,7 +116,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               background: colors.primary,
               border: 'none',
               borderRadius: borderRadius.sm,
-              color: '#000',
+              color: colors.onPrimary,
               fontSize: '14px',
               fontWeight: fontWeights.semibold,
               cursor: 'pointer',

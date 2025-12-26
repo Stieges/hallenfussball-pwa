@@ -185,7 +185,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const teamNameStyle: CSSProperties = {
     fontSize: currentSize.teamName,
     fontWeight: fontWeights.bold,
-    color: '#ffffff',
+    color: colors.textPrimary,
     fontFamily: fontFamilies.heading,
     lineHeight: 1.15,
     wordBreak: 'break-word',
@@ -392,7 +392,7 @@ export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
   const messageStyle: CSSProperties = {
     fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : size === 'lg' ? '28px' : '20px',
     fontWeight: fontWeights.semibold,
-    color: '#ffffff',
+    color: colors.textPrimary,
     textAlign: 'center',
     textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
   };

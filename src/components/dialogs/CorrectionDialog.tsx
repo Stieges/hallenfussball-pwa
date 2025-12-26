@@ -78,7 +78,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     maxWidth: '450px',
     width: '100%',
     boxShadow: shadows.lg,
-    border: `2px solid #FFC107`,
+    border: `2px solid ${colors.warning}`,
   };
 
   const headerStyle: CSSProperties = {
@@ -188,7 +188,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     backgroundColor: 'rgba(255, 193, 7, 0.15)',
     borderRadius: borderRadius.md,
     fontSize: fontSizes.sm,
-    color: '#FFC107',
+    color: colors.warning,
     marginBottom: spacing.lg,
   };
 
@@ -217,9 +217,9 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
   const confirmButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: '#FFC107',
+    backgroundColor: colors.warning,
     border: 'none',
-    color: '#000',
+    color: colors.onWarning,
   };
 
   return (

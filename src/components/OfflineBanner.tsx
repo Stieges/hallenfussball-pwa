@@ -49,7 +49,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     alignItems: 'center',
     gap: '8px',
     backgroundColor: getBackgroundColor(),
-    color: '#000',
+    color: colors.onWarning,
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.medium,
     boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.2)',

@@ -115,8 +115,8 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     borderRadius: '50%',
     fontWeight: fontWeights.bold,
     fontSize: isMobile ? '12px' : fontSizes.md,
-    background: rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : colors.surface,
-    color: rank <= 3 ? '#000' : colors.textPrimary,
+    background: rank === 1 ? colors.medalGold : rank === 2 ? colors.medalSilver : rank === 3 ? colors.medalBronze : colors.surface,
+    color: rank <= 3 ? colors.onWarning : colors.textPrimary,
   });
 
   const fullscreenButtonStyle: CSSProperties = {

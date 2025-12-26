@@ -596,7 +596,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          background: '#FF9800',
+          background: colors.warning,
           display: 'inline-block',
         }} title="Ungespeicherte Änderungen" />
       )}
