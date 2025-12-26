@@ -109,7 +109,7 @@ function calculateMatchElapsedSeconds(match: LiveMatch): number {
   }
 
   if (match.status === 'PAUSED' || !match.timerStartTime) {
-    return match.timerElapsedSeconds || match.elapsedSeconds ?? 0;
+    return (match.timerElapsedSeconds ?? match.elapsedSeconds) ?? 0;
   }
 
   // RUNNING: Calculate from timestamp

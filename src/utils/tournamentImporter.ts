@@ -522,8 +522,8 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   // Check match count distribution
   const matchCounts = new Map<string, number>();
   for (const match of matches) {
-    matchCounts.set(match.teamA, (matchCounts.get(match.teamA) || 0) + 1);
-    matchCounts.set(match.teamB, (matchCounts.get(match.teamB) || 0) + 1);
+    matchCounts.set(match.teamA, (matchCounts.get(match.teamA) ?? 0) + 1);
+    matchCounts.set(match.teamB, (matchCounts.get(match.teamB) ?? 0) + 1);
   }
 
   const counts = Array.from(matchCounts.values());

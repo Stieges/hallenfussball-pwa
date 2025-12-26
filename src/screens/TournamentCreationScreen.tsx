@@ -255,6 +255,59 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     setTimeout(() => setShowSaveNotification(false), 2000); // Hide after 2 seconds
   }, []);
 
+  // Create draft tournament object from current form data
+  const createDraftTournament = (): Tournament => {
+    return {
+      id: formData.id || existingTournament?.id || generateTournamentId(),
+      status: 'draft',
+      sport: formData.sport ?? 'football',
+      sportId: formData.sportId || DEFAULT_SPORT_ID,
+      tournamentType: formData.tournamentType ?? 'classic',
+      mode: formData.mode ?? 'classic',
+      numberOfFields: formData.numberOfFields ?? 1,
+      numberOfTeams: formData.numberOfTeams ?? 4,
+      groupSystem: formData.groupSystem,
+      numberOfGroups: formData.numberOfGroups,
+      groupPhaseGameDuration: formData.groupPhaseGameDuration ?? 10,
+      groupPhaseBreakDuration: formData.groupPhaseBreakDuration,
+      finalRoundGameDuration: formData.finalRoundGameDuration,
+      finalRoundBreakDuration: formData.finalRoundBreakDuration,
+      breakBetweenPhases: formData.breakBetweenPhases,
+      gamePeriods: formData.gamePeriods,
+      halftimeBreak: formData.halftimeBreak,
+      // Legacy support
+      gameDuration: formData.gameDuration ?? formData.groupPhaseGameDuration ?? 10,
+      breakDuration: formData.breakDuration ?? formData.groupPhaseBreakDuration,
+      roundLogic: formData.roundLogic,
+      numberOfRounds: formData.numberOfRounds,
+      placementLogic: formData.placementLogic ?? [],
+      finals: formData.finals ?? { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+      finalsConfig: formData.finalsConfig,
+      refereeConfig: formData.refereeConfig ?? { mode: 'none' },
+      isKidsTournament: formData.isKidsTournament || false,
+      hideScoresForPublic: formData.hideScoresForPublic || false,
+      hideRankingsForPublic: formData.hideRankingsForPublic || false,
+      resultMode: formData.resultMode ?? 'goals',
+      pointSystem: formData.pointSystem ?? { win: 3, draw: 1, loss: 0 },
+      title: formData.title ?? 'Unbenanntes Turnier',
+      ageClass: formData.ageClass ?? 'U11',
+      date: formData.date || new Date().toISOString().split('T')[0],
+      timeSlot: formData.timeSlot ?? '',
+      startDate: formData.startDate, // New field for date picker
+      startTime: formData.startTime, // New field for time picker
+      location: formData.location ?? { name: '' },
+      organizer: formData.organizer, // Veranstalter-Name
+      contactInfo: formData.contactInfo, // Kontaktinformationen
+      groups: formData.groups, // US-GROUPS-AND-FIELDS: Custom Gruppennamen
+      fields: formData.fields, // US-GROUPS-AND-FIELDS: Custom Feldnamen
+      teams: formData.teams ?? [],
+      matches: [], // Wird später vom Fair Scheduler generiert
+      createdAt: existingTournament?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastVisitedStep: step, // Save current step for wizard restoration
+    };
+  };
+
   // Helper function to save as draft
   // IMPORTANT: Always use defaultSaveTournament for autosave, not saveTournament!
   // saveTournament might be mapped to onSave which triggers navigation back to dashboard
@@ -405,58 +458,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       'teams',
       formData.teams?.map((t) => (t.id === id ? { ...t, ...updates } : t)) || []
     );
-  };
-
-  const createDraftTournament = (): Tournament => {
-    return {
-      id: formData.id || existingTournament?.id || generateTournamentId(),
-      status: 'draft',
-      sport: formData.sport ?? 'football',
-      sportId: formData.sportId || DEFAULT_SPORT_ID,
-      tournamentType: formData.tournamentType ?? 'classic',
-      mode: formData.mode ?? 'classic',
-      numberOfFields: formData.numberOfFields ?? 1,
-      numberOfTeams: formData.numberOfTeams ?? 4,
-      groupSystem: formData.groupSystem,
-      numberOfGroups: formData.numberOfGroups,
-      groupPhaseGameDuration: formData.groupPhaseGameDuration ?? 10,
-      groupPhaseBreakDuration: formData.groupPhaseBreakDuration,
-      finalRoundGameDuration: formData.finalRoundGameDuration,
-      finalRoundBreakDuration: formData.finalRoundBreakDuration,
-      breakBetweenPhases: formData.breakBetweenPhases,
-      gamePeriods: formData.gamePeriods,
-      halftimeBreak: formData.halftimeBreak,
-      // Legacy support
-      gameDuration: formData.gameDuration || formData.groupPhaseGameDuration ?? 10,
-      breakDuration: formData.breakDuration || formData.groupPhaseBreakDuration,
-      roundLogic: formData.roundLogic,
-      numberOfRounds: formData.numberOfRounds,
-      placementLogic: formData.placementLogic ?? [],
-      finals: formData.finals ?? { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
-      finalsConfig: formData.finalsConfig,
-      refereeConfig: formData.refereeConfig ?? { mode: 'none' },
-      isKidsTournament: formData.isKidsTournament || false,
-      hideScoresForPublic: formData.hideScoresForPublic || false,
-      hideRankingsForPublic: formData.hideRankingsForPublic || false,
-      resultMode: formData.resultMode ?? 'goals',
-      pointSystem: formData.pointSystem ?? { win: 3, draw: 1, loss: 0 },
-      title: formData.title ?? 'Unbenanntes Turnier',
-      ageClass: formData.ageClass ?? 'U11',
-      date: formData.date || new Date().toISOString().split('T')[0],
-      timeSlot: formData.timeSlot ?? '',
-      startDate: formData.startDate, // New field for date picker
-      startTime: formData.startTime, // New field for time picker
-      location: formData.location ?? { name: '' },
-      organizer: formData.organizer, // Veranstalter-Name
-      contactInfo: formData.contactInfo, // Kontaktinformationen
-      groups: formData.groups, // US-GROUPS-AND-FIELDS: Custom Gruppennamen
-      fields: formData.fields, // US-GROUPS-AND-FIELDS: Custom Feldnamen
-      teams: formData.teams ?? [],
-      matches: [], // Wird später vom Fair Scheduler generiert
-      createdAt: existingTournament?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastVisitedStep: step, // Save current step for wizard restoration
-    };
   };
 
   const handlePreview = () => {

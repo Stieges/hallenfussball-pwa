@@ -116,7 +116,7 @@ export function useMatchConflicts(
 
     for (const conflict of conflicts) {
       for (const matchId of conflict.matchIds) {
-        const existing = map.get(matchId) || [];
+        const existing = map.get(matchId) ?? [];
         // Avoid duplicates
         if (!existing.some(c => c.id === conflict.id)) {
           map.set(matchId, [...existing, conflict]);
@@ -152,7 +152,7 @@ export function useMatchConflicts(
   // Get conflicts for a specific match
   const getMatchConflicts = useCallback(
     (matchId: string): ScheduleConflict[] => {
-      return conflictsByMatch.get(matchId) || [];
+      return conflictsByMatch.get(matchId) ?? [];
     },
     [conflictsByMatch]
   );
@@ -168,7 +168,7 @@ export function useMatchConflicts(
   // Check if match has error-level conflicts
   const matchHasErrors = useCallback(
     (matchId: string): boolean => {
-      const matchConflicts = conflictsByMatch.get(matchId) || [];
+      const matchConflicts = conflictsByMatch.get(matchId) ?? [];
       return matchConflicts.some(c => c.severity === 'error');
     },
     [conflictsByMatch]

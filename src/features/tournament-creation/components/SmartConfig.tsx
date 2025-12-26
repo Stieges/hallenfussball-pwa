@@ -30,7 +30,9 @@ function loadStoredConfig(): StoredConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      // Type assertion: localStorage data was written by saveStoredConfig with StoredConfig type
+      const parsed = JSON.parse(stored) as Partial<StoredConfig>;
+      return { lastHours: 4, ...parsed };
     }
   } catch {
     // Ignore parse errors

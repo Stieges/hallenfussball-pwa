@@ -22,7 +22,7 @@ const PatternInfoPanel: React.FC<{ pattern: DFBMatchPattern }> = ({ pattern }) =
     round.some(match => match.includes('BYE'))
   );
 
-  const matchesPerRound = pattern.rounds[0]?.filter(m => !m.includes('BYE')).length || 0;
+  const matchesPerRound = pattern.rounds[0]?.filter(m => !m.includes('BYE')).length ?? 0;
 
   return (
     <div className={styles.infoPanel} role="region" aria-label="Musterdetails">
@@ -53,7 +53,7 @@ const PatternInfoPanel: React.FC<{ pattern: DFBMatchPattern }> = ({ pattern }) =
       )}
 
       <div className={styles.patternCode}>
-        <strong>Schlüssel:</strong> {pattern.code} = {pattern.days || 1} Tag, {pattern.teams} Mannschaften
+        <strong>Schlüssel:</strong> {pattern.code} = {pattern.days ?? 1} Tag, {pattern.teams} Mannschaften
         {pattern.subgroups ? `, ${pattern.subgroups} Untergruppen` : ''}
       </div>
     </div>

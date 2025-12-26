@@ -203,7 +203,7 @@ export function detectFieldOverlaps(
   for (const match of matches) {
     if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') {continue;}
 
-    const existing = matchesByField.get(match.field) || [];
+    const existing = matchesByField.get(match.field) ?? [];
     existing.push(match);
     matchesByField.set(match.field, existing);
   }
@@ -267,7 +267,7 @@ export function detectBreakViolations(
     if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') {continue;}
 
     for (const teamId of [match.teamA, match.teamB]) {
-      const existing = matchesByTeam.get(teamId) || [];
+      const existing = matchesByTeam.get(teamId) ?? [];
       existing.push(match);
       matchesByTeam.set(teamId, existing);
     }
@@ -416,7 +416,7 @@ export function groupConflictsByType(
   const grouped = new Map<ConflictType, ScheduleConflict[]>();
 
   for (const conflict of conflicts) {
-    const existing = grouped.get(conflict.type) || [];
+    const existing = grouped.get(conflict.type) ?? [];
     existing.push(conflict);
     grouped.set(conflict.type, existing);
   }

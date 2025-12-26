@@ -521,7 +521,7 @@ export function redistributeFields(
     if (!match.scheduledTime) {continue;}
 
     const timeKey = new Date(match.scheduledTime).toISOString();
-    const existing = matchesByTime.get(timeKey) || [];
+    const existing = matchesByTime.get(timeKey) ?? [];
     existing.push(match);
     matchesByTime.set(timeKey, existing);
   }

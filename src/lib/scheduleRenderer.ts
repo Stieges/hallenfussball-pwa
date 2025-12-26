@@ -235,7 +235,7 @@ export function calculateScheduleStats(schedule: GeneratedSchedule): ScheduleSta
 
   // Matches per Field
   schedule.allMatches.forEach((match) => {
-    stats.matchesPerField[match.field] = (stats.matchesPerField[match.field] || 0) + 1
+    stats.matchesPerField[match.field] = (stats.matchesPerField[match.field] ?? 0) + 1
   })
 
   return stats

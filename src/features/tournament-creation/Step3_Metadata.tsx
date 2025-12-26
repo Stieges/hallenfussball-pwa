@@ -42,7 +42,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
       />
 
       <LocationForm
-        value={formData.location || { name: '' }}
+        value={formData.location ?? { name: '' }}
         onChange={(location) => onUpdate('location', location)}
         required
       />
@@ -56,7 +56,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         <Input
           label="Startdatum"
           type="date"
-          value={formData.startDate || formData.date ?? ''}
+          value={(formData.startDate ?? formData.date) ?? ''}
           onChange={(v) => {
             onUpdate('startDate', v);
             // Keep legacy field in sync

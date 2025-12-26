@@ -62,8 +62,8 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
 
   // Get sport config for defaults
   const sportConfig = getSportConfig(formData.sportId || DEFAULT_SPORT_ID);
-  const currentTiebreaker = formData.finalsConfig?.tiebreaker || sportConfig.rules.defaultTiebreaker ?? 'shootout';
-  const currentDuration = formData.finalsConfig?.tiebreakerDuration || sportConfig.rules.defaultTiebreakerDuration ?? 5;
+  const currentTiebreaker = formData.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker ?? 'shootout';
+  const currentDuration = formData.finalsConfig?.tiebreakerDuration ?? sportConfig.rules.defaultTiebreakerDuration ?? 5;
 
   const renderOption = (option: FinalsOption, isRecommended: boolean) => {
     const isSelected = currentPreset === option.preset;

@@ -22,7 +22,7 @@ export interface PlayoffResolutionResult {
  * Check if all group phase matches are completed
  */
 export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => {
-  const groupMatches = (tournament.matches || []).filter(
+  const groupMatches = (tournament.matches ?? []).filter(
     (m) => !m.isFinal && m.group !== undefined
   );
 
@@ -39,7 +39,7 @@ export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => 
  * Check if playoff matches need resolution (have placeholder team references)
  */
 export const needsPlayoffResolution = (tournament: Tournament): boolean => {
-  const playoffMatches = (tournament.matches || []).filter((m) => m.isFinal);
+  const playoffMatches = (tournament.matches ?? []).filter((m) => m.isFinal);
 
   return playoffMatches.some(
     (match) =>
@@ -58,7 +58,7 @@ export const needsPlayoffReResolution = (tournament: Tournament): boolean => {
     return false;
   }
 
-  const playoffMatches = (tournament.matches || []).filter((m) => m.isFinal);
+  const playoffMatches = (tournament.matches ?? []).filter((m) => m.isFinal);
 
   // Only check matches with resolved team IDs (not placeholders)
   const groupBasedPlayoffs = playoffMatches.filter((match) => {

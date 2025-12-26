@@ -99,7 +99,7 @@ export function generatePlayoffDefinitions(
       teamBSource: match.away,
       finalType,
       parallelMode,
-      dependencies: match.dependsOn || [],
+      dependencies: match.dependsOn ?? [],
     };
   });
 

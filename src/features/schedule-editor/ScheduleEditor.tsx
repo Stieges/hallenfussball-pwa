@@ -199,7 +199,7 @@ function groupMatchesByTimeSlot(
     // Find matches for this time
     for (const match of matches) {
       if (formatTime(match.scheduledTime) === time) {
-        const fieldId = match.field || 1;
+        const fieldId = match.field ?? 1;
         fieldsMap.set(fieldId, match);
       }
     }
@@ -333,7 +333,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   const conflictResult = useMatchConflicts({
     matches: tournament.matches,
     teams: tournament.teams,
-    matchDurationMinutes: tournament.groupPhaseGameDuration || tournament.gameDuration || 10,
+    matchDurationMinutes: tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 10,
     minBreakMinutes: tournament.groupPhaseBreakDuration || 2,
     checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
     checkFieldConflicts: true,
@@ -352,7 +352,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       if (!sourceMatch) {return;}
 
       const sourceTime = sourceMatch.scheduledTime;
-      const sourceField = sourceMatch.field || 1;
+      const sourceField = sourceMatch.field ?? 1;
 
       // Check if target slot already has a match (for swapping)
       const targetMatch = tournament.matches.find(

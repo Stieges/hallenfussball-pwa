@@ -63,9 +63,9 @@ export function generateFullSchedule(
     startTime,
     numberOfFields: tournament.numberOfFields,
     gameDuration: tournament.groupPhaseGameDuration,
-    breakDuration: tournament.groupPhaseBreakDuration || 0,
-    gamePeriods: tournament.gamePeriods || 1,
-    halftimeBreak: tournament.halftimeBreak || 0,
+    breakDuration: tournament.groupPhaseBreakDuration ?? 0,
+    gamePeriods: tournament.gamePeriods ?? 1,
+    halftimeBreak: tournament.halftimeBreak ?? 0,
     phase: 'groupStage',
     teamMap,
     locale,
@@ -173,7 +173,7 @@ function generateGroupStageMatches(tournament: Tournament, startTime: Date): Mat
     groups: groupsMap,
     numberOfFields: tournament.numberOfFields,
     slotDurationMinutes: tournament.groupPhaseGameDuration,
-    breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration || 0,
+    breakBetweenSlotsMinutes: tournament.groupPhaseBreakDuration ?? 0,
     minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
     startTime,
     dfbPatternCode: tournament.useDFBKeys ? tournament.dfbKeyPattern : undefined,
@@ -185,7 +185,7 @@ function generateFinalMatches(
   groupStageMatches: Match[],
   startTime: Date
 ): Match[] {
-  const numberOfGroups = tournament.numberOfGroups || 2
+  const numberOfGroups = tournament.numberOfGroups ?? 2
 
   // Calculate group sizes
   const groupSizes: GroupSizeInfo = {}
@@ -207,7 +207,7 @@ function generateFinalMatches(
       : -1
 
   const slotDuration =
-    tournament.groupPhaseGameDuration + (tournament.groupPhaseBreakDuration || 0)
+    tournament.groupPhaseGameDuration + (tournament.groupPhaseBreakDuration ?? 0)
   const breakSlots = tournament.breakBetweenPhases
     ? Math.ceil(tournament.breakBetweenPhases / slotDuration)
     : 1
@@ -218,9 +218,9 @@ function generateFinalMatches(
   return generatePlayoffSchedule({
     playoffDefinitions,
     numberOfFields: tournament.numberOfFields,
-    slotDurationMinutes: tournament.finalRoundGameDuration || tournament.groupPhaseGameDuration,
+    slotDurationMinutes: tournament.finalRoundGameDuration ?? tournament.groupPhaseGameDuration,
     breakBetweenSlotsMinutes:
-      tournament.finalRoundBreakDuration || tournament.groupPhaseBreakDuration || 0,
+      tournament.finalRoundBreakDuration ?? tournament.groupPhaseBreakDuration ?? 0,
     minRestSlotsPerTeam: tournament.minRestSlots ?? 1,
     startSlot: playoffStartSlot,
     startTime: playoffStartTime,
@@ -244,8 +244,8 @@ function scheduleFinalMatches(
     return []
   }
 
-  const groupStageEnd = scheduledGroupStage[scheduledGroupStage.length - 1]?.endTime || startTime
-  const breakBetweenPhases = tournament.breakBetweenPhases || 0
+  const groupStageEnd = scheduledGroupStage[scheduledGroupStage.length - 1]?.endTime ?? startTime
+  const breakBetweenPhases = tournament.breakBetweenPhases ?? 0
   const finalStartTime = addMinutes(groupStageEnd, breakBetweenPhases)
 
   const startMatchNumber =
@@ -257,10 +257,10 @@ function scheduleFinalMatches(
     matches: finalMatches,
     startTime: finalStartTime,
     numberOfFields: tournament.numberOfFields,
-    gameDuration: tournament.finalRoundGameDuration || tournament.groupPhaseGameDuration,
-    breakDuration: tournament.finalRoundBreakDuration || tournament.groupPhaseBreakDuration || 0,
-    gamePeriods: tournament.gamePeriods || 1,
-    halftimeBreak: tournament.halftimeBreak || 0,
+    gameDuration: tournament.finalRoundGameDuration ?? tournament.groupPhaseGameDuration,
+    breakDuration: tournament.finalRoundBreakDuration ?? tournament.groupPhaseBreakDuration ?? 0,
+    gamePeriods: tournament.gamePeriods ?? 1,
+    halftimeBreak: tournament.halftimeBreak ?? 0,
     phase: 'final',
     teamMap,
     locale,

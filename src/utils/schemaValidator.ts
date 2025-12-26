@@ -17,6 +17,11 @@ const evaluateExpression = (
   // Dynamic property access for schema-driven validation
   const varValue = config[expression.var as keyof TournamentConfiguration];
 
+  // Handle undefined values for comparison operators
+  if (varValue === undefined) {
+    return expression.op === '=' ? expression.value === undefined : false;
+  }
+
   switch (expression.op) {
     case '=':
       return varValue === expression.value;

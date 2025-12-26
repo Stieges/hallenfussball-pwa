@@ -106,7 +106,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
             Teams
           </div>
           <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
-            {formData.teams?.length || 0} Teams
+            {formData.teams?.length ?? 0} Teams
           </div>
           {formData.teams && formData.teams.length > 0 && (
             <div className={styles.teamsContainer}>

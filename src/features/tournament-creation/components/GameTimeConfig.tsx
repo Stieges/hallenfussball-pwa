@@ -77,7 +77,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
               mode="stepper"
             />
             <p style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
-              Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods || 1))} Min. unterteilt
+              Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods ?? 1))} Min. unterteilt
             </p>
           </div>
         )}

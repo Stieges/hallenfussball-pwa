@@ -392,6 +392,28 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     showSuccess(`Spiele ${match1.round} und ${match2.round} getauscht`);
   }, [tournament, onTournamentUpdate, showSuccess, saveToHistory]);
 
+  // Actually apply the changes (called after conflict resolution)
+  const applyChanges = useCallback((updatedTournament: Tournament) => {
+    updatedTournament.updatedAt = new Date().toISOString();
+
+    // IMPORTANT: Manual edits should NEVER trigger schedule regeneration!
+    // Regeneration would overwrite the user's intentional changes.
+    // Regeneration is only needed for structural changes (add/remove teams, change settings).
+    const needsRegeneration = false;
+
+    onTournamentUpdate(updatedTournament, needsRegeneration);
+
+    setIsEditing(false);
+    setPendingChanges({
+      refereeAssignments: {},
+      fieldAssignments: {},
+    });
+    setShowConflictDialog(false);
+    setDetectedConflicts([]);
+
+    showSuccess('Spielplan-Änderungen gespeichert');
+  }, [onTournamentUpdate, showSuccess]);
+
   // Apply pending changes and check for conflicts
   const handleSaveChanges = useCallback(() => {
     // Build updated tournament with pending changes
@@ -471,28 +493,6 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     // No conflicts - save directly
     applyChanges(updatedTournament);
   }, [tournament, pendingChanges, applyChanges]);
-
-  // Actually apply the changes (called after conflict resolution)
-  const applyChanges = useCallback((updatedTournament: Tournament) => {
-    updatedTournament.updatedAt = new Date().toISOString();
-
-    // IMPORTANT: Manual edits should NEVER trigger schedule regeneration!
-    // Regeneration would overwrite the user's intentional changes.
-    // Regeneration is only needed for structural changes (add/remove teams, change settings).
-    const needsRegeneration = false;
-
-    onTournamentUpdate(updatedTournament, needsRegeneration);
-
-    setIsEditing(false);
-    setPendingChanges({
-      refereeAssignments: {},
-      fieldAssignments: {},
-    });
-    setShowConflictDialog(false);
-    setDetectedConflicts([]);
-
-    showSuccess('Spielplan-Änderungen gespeichert');
-  }, [onTournamentUpdate, showSuccess]);
 
   // Handle conflict dialog - save anyway
   const handleSaveWithConflicts = useCallback(() => {

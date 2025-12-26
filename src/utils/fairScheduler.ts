@@ -247,8 +247,8 @@ function calculateFairnessScore(
   }
 
   // Favor fair field distribution
-  const fieldCountA = stateA.fieldCounts.get(field) || 0;
-  const fieldCountB = stateB.fieldCounts.get(field) || 0;
+  const fieldCountA = stateA.fieldCounts.get(field) ?? 0;
+  const fieldCountB = stateB.fieldCounts.get(field) ?? 0;
   const totalMatchesA = stateA.matchSlots.length;
   const totalMatchesB = stateB.matchSlots.length;
 
@@ -495,12 +495,12 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         // Update team states (reuse stateA/stateB from above)
         stateA.matchSlots.push(currentSlotIndex);
         stateA.lastSlot = currentSlotIndex;
-        stateA.fieldCounts.set(field, (stateA.fieldCounts.get(field) || 0) + 1);
+        stateA.fieldCounts.set(field, (stateA.fieldCounts.get(field) ?? 0) + 1);
         stateA.homeCount++; // Team A is home
 
         stateB.matchSlots.push(currentSlotIndex);
         stateB.lastSlot = currentSlotIndex;
-        stateB.fieldCounts.set(field, (stateB.fieldCounts.get(field) || 0) + 1);
+        stateB.fieldCounts.set(field, (stateB.fieldCounts.get(field) ?? 0) + 1);
         stateB.awayCount++; // Team B is away
 
         // Update FairnessCalculator caches after assignment
@@ -624,7 +624,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
     }
     teamMatchSlots.get(match.teamA)!.push(slot);
     const fieldCountsA = teamFieldCounts.get(match.teamA)!;
-    fieldCountsA.set(field, (fieldCountsA.get(field) || 0) + 1);
+    fieldCountsA.set(field, (fieldCountsA.get(field) ?? 0) + 1);
     teamHomeAway.get(match.teamA)!.home++;
 
     // Team B (Away)
@@ -635,7 +635,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
     }
     teamMatchSlots.get(match.teamB)!.push(slot);
     const fieldCountsB = teamFieldCounts.get(match.teamB)!;
-    fieldCountsB.set(field, (fieldCountsB.get(field) || 0) + 1);
+    fieldCountsB.set(field, (fieldCountsB.get(field) ?? 0) + 1);
     teamHomeAway.get(match.teamB)!.away++;
   }
 
@@ -666,7 +666,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
     globalAvgSum += avgRest;
     globalCount++;
 
-    const homeAway = teamHomeAway.get(teamId) || { home: 0, away: 0 };
+    const homeAway = teamHomeAway.get(teamId) ?? { home: 0, away: 0 };
 
     teamStats.push({
       teamId,
@@ -676,7 +676,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
       maxRest,
       avgRest,
       restVariance,
-      fieldDistribution: teamFieldCounts.get(teamId) || new Map(),
+      fieldDistribution: teamFieldCounts.get(teamId) ?? new Map(),
       homeCount: homeAway.home,
       awayCount: homeAway.away,
       homeAwayBalance: Math.abs(homeAway.home - homeAway.away),
@@ -687,7 +687,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
   const globalAvgRest = globalCount > 0 ? globalAvgSum / globalCount : 0;
   const totalVariance = teamStats.reduce((sum, stat) => {
     return sum + Math.pow(stat.avgRest - globalAvgRest, 2);
-  }, 0) / (teamStats.length || 1);
+  }, 0) / (teamStats.length ?? 1);
 
   return {
     teamStats,

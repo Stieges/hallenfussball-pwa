@@ -78,7 +78,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   }
   matches.forEach(match => {
     if (match.referee) {
-      refereeWorkload[match.referee] = (refereeWorkload[match.referee] || 0) + 1;
+      refereeWorkload[match.referee] = (refereeWorkload[match.referee] ?? 0) + 1;
     }
   });
 

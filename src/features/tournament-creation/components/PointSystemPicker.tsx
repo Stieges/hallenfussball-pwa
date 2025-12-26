@@ -26,7 +26,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   formData,
   onUpdate,
 }) => {
-  const currentPoints = formData.pointSystem || { win: 3, draw: 1, loss: 0 };
+  const currentPoints = formData.pointSystem ?? { win: 3, draw: 1, loss: 0 };
 
   // Determine if current values match a preset or are custom
   const isCustom = useMemo(() => {

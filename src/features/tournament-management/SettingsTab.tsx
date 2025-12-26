@@ -44,8 +44,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     ageClass: tournament.ageClass,
     location: tournament.location,
     contactInfo: tournament.contactInfo,
-    startDate: tournament.startDate || tournament.date,
-    startTime: tournament.startTime || tournament.timeSlot,
+    startDate: tournament.startDate ?? tournament.date,
+    startTime: tournament.startTime ?? tournament.timeSlot,
   });
 
   // Sync formData wenn sich tournament ändert (nach Speichern)
@@ -56,8 +56,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ageClass: tournament.ageClass,
       location: tournament.location,
       contactInfo: tournament.contactInfo,
-      startDate: tournament.startDate || tournament.date,
-      startTime: tournament.startTime || tournament.timeSlot,
+      startDate: tournament.startDate ?? tournament.date,
+      startTime: tournament.startTime ?? tournament.timeSlot,
     });
   }, [tournament]);
 
@@ -66,21 +66,21 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const originalData = {
       title: tournament.title ?? '',
       organizer: tournament.organizer ?? '',
-      ageClass: tournament.ageClass || DEFAULT_VALUES.ageClass,
+      ageClass: tournament.ageClass ?? DEFAULT_VALUES.ageClass,
       locationName: tournament.location.name ?? '',
       locationCity: tournament.location.city ?? '',
       locationStreet: tournament.location.street ?? '',
       contactName: tournament.contactInfo?.name ?? '',
       contactPhone: tournament.contactInfo?.phone ?? '',
       contactEmail: tournament.contactInfo?.email ?? '',
-      startDate: tournament.startDate || tournament.date ?? '',
-      startTime: tournament.startTime || tournament.timeSlot ?? '',
+      startDate: (tournament.startDate ?? tournament.date) ?? '',
+      startTime: (tournament.startTime ?? tournament.timeSlot) ?? '',
     };
 
     const currentData = {
       title: formData.title ?? '',
       organizer: formData.organizer ?? '',
-      ageClass: formData.ageClass || DEFAULT_VALUES.ageClass,
+      ageClass: formData.ageClass ?? DEFAULT_VALUES.ageClass,
       locationName: formData.location?.name ?? '',
       locationCity: formData.location?.city ?? '',
       locationStreet: formData.location?.street ?? '',
@@ -122,16 +122,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const handleSave = () => {
     const updatedTournament: Tournament = {
       ...tournament,
-      title: formData.title || tournament.title,
+      title: formData.title ?? tournament.title,
       organizer: formData.organizer,
-      ageClass: formData.ageClass || tournament.ageClass,
-      location: formData.location || tournament.location,
+      ageClass: formData.ageClass ?? tournament.ageClass,
+      location: formData.location ?? tournament.location,
       contactInfo: formData.contactInfo,
       startDate: formData.startDate,
       startTime: formData.startTime,
       // Legacy-Felder synchron halten
-      date: formData.startDate || tournament.date,
-      timeSlot: formData.startTime || tournament.timeSlot,
+      date: formData.startDate ?? tournament.date,
+      timeSlot: formData.startTime ?? tournament.timeSlot,
       updatedAt: new Date().toISOString(),
     };
 
@@ -153,8 +153,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       ageClass: tournament.ageClass,
       location: tournament.location,
       contactInfo: tournament.contactInfo,
-      startDate: tournament.startDate || tournament.date,
-      startTime: tournament.startTime || tournament.timeSlot,
+      startDate: tournament.startDate ?? tournament.date,
+      startTime: tournament.startTime ?? tournament.timeSlot,
     });
   };
 
@@ -355,7 +355,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
               <Select
                 label="Altersklasse"
-                value={formData.ageClass || DEFAULT_VALUES.ageClass}
+                value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
                 onChange={(v) => handleUpdate('ageClass', v)}
                 options={getAgeClassOptions(tournament.sport ?? 'football')}
                 style={{ marginTop: '16px' }}
