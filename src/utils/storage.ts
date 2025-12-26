@@ -7,7 +7,11 @@ export const storage = {
   getTournaments: (): Tournament[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      if (!data) {return [];}
+      // Type assertion: localStorage data was written by saveTournament with Tournament[] type
+      const parsed: unknown = JSON.parse(data);
+      if (!Array.isArray(parsed)) {return [];}
+      return parsed as Tournament[];
     } catch (error) {
       console.error('Error loading tournaments:', error);
       return [];

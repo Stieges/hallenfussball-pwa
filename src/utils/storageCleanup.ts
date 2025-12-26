@@ -14,7 +14,8 @@ export function getLocalStorageSize(): number {
   let total = 0;
   for (const key in localStorage) {
     if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-      total += localStorage[key].length * 2; // UTF-16 = 2 bytes per char
+      const value = localStorage.getItem(key);
+      total += (value?.length ?? 0) * 2; // UTF-16 = 2 bytes per char
     }
   }
   return total;
@@ -45,14 +46,15 @@ export function cleanupOldLiveMatches(currentKey: string): boolean {
       try {
         const data = localStorage.getItem(key);
         if (data) {
-          const parsed = JSON.parse(data);
-          const entries = Object.values(parsed);
+          const parsed: unknown = JSON.parse(data);
+          if (typeof parsed !== 'object' || parsed === null) {continue;}
+          const entries = Object.values(parsed as Record<string, unknown>);
 
           // Find the oldest timestamp in this dataset
           let oldestTimestamp = Date.now();
-          entries.forEach((match: any) => {
-            if (match.timerStartTime) {
-              const ts = new Date(match.timerStartTime).getTime();
+          entries.forEach((match) => {
+            if (match && typeof match === 'object' && 'timerStartTime' in match) {
+              const ts = new Date(String(match.timerStartTime)).getTime();
               if (ts < oldestTimestamp) {oldestTimestamp = ts;}
             }
           });

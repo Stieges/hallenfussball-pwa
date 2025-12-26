@@ -17,7 +17,8 @@ export function useUserProfile() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        // Type assertion: stored data matches Partial<UserProfile> structure
+        const parsed = JSON.parse(stored) as Partial<UserProfile>;
         // Merge mit Defaults für neue Felder
         return { ...getDefaultUserProfile(), ...parsed };
       }

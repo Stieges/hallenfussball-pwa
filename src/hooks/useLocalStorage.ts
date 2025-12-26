@@ -8,7 +8,9 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (!item) {return initialValue;}
+      // Type assertion: caller is responsible for ensuring stored data matches type T
+      return JSON.parse(item) as T;
     } catch (error) {
       console.error(`Error loading localStorage key "${key}":`, error);
       return initialValue;

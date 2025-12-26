@@ -14,7 +14,8 @@ const evaluateExpression = (
   expression: ConditionExpression,
   config: TournamentConfiguration
 ): boolean => {
-  const varValue = (config as any)[expression.var];
+  // Dynamic property access for schema-driven validation
+  const varValue = config[expression.var as keyof TournamentConfiguration];
 
   switch (expression.op) {
     case '=':

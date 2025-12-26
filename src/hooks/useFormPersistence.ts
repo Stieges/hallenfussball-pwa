@@ -36,9 +36,10 @@ export function useFormPersistence<T>({
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed: unknown = JSON.parse(stored);
         if (parsed && typeof parsed === 'object' && 'data' in parsed) {
-          return parsed;
+          // Type assertion: validated structure matches expected format
+          return parsed as { data: T; timestamp: number };
         }
       }
     } catch {
