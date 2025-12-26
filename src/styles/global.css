@@ -6,6 +6,16 @@
    ============================================ */
 :root {
   /* ===========================================
+     Color Scheme - Browser Native Controls
+     Tells browser to render native elements (date pickers,
+     scrollbars, checkboxes) in dark mode.
+     For theme switching: change via JS with
+     document.documentElement.style.colorScheme = 'light'
+     See: https://developer.mozilla.org/en-US/docs/Web/CSS/color-scheme
+     =========================================== */
+  color-scheme: dark;
+
+  /* ===========================================
      Design Tokens - Synced with theme.ts
      Single Source of Truth: src/styles/theme.ts
      =========================================== */
