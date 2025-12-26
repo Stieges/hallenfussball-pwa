@@ -2,7 +2,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { generateQRCode } from '../../utils/qrCodeGenerator';
 import {
   shareUrl,
@@ -79,24 +79,24 @@ export const ShareDialog = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xl,
+    gap: spacing.xl,
   };
 
   const qrSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const qrImageStyle: CSSProperties = {
     width: '100%',
     maxWidth: '220px',
     aspectRatio: '1 / 1',
-    borderRadius: theme.borderRadius.md,
-    border: `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.md,
+    border: `1px solid ${colors.border}`,
     background: '#FFFFFF',
-    padding: theme.spacing.md,
+    padding: spacing.md,
   };
 
   const qrPlaceholderStyle: CSSProperties = {
@@ -104,35 +104,35 @@ export const ShareDialog = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: theme.colors.text.muted,
-    fontSize: theme.fontSizes.sm,
+    color: colors.textMuted,
+    fontSize: fontSizes.sm,
   };
 
   const qrCaptionStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
     textAlign: 'center',
   };
 
   const urlSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.fontWeights.medium,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.medium,
   };
 
   const urlInputStyle: CSSProperties = {
     width: '100%',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    border: `1px solid ${theme.colors.border}`,
-    background: theme.colors.surface,
-    color: theme.colors.text.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    border: `1px solid ${colors.border}`,
+    background: colors.surface,
+    color: colors.textPrimary,
     fontSize: '13px',
     fontFamily: 'monospace',
     cursor: 'text',
@@ -142,17 +142,17 @@ export const ShareDialog = ({
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const feedbackStyle: CSSProperties = {
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    background: theme.colors.primary,
-    color: theme.colors.background,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    background: colors.primary,
+    color: colors.background,
     textAlign: 'center',
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.medium,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.medium,
     animation: 'fadeIn 0.2s ease-out',
   };
 

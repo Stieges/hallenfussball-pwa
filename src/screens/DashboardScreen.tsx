@@ -13,7 +13,7 @@ import { Tournament } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
 import { Button } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
 import { categorizeTournaments, CategorizedTournaments } from '../utils/tournamentCategories';
 import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
@@ -54,10 +54,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontFamily: theme.fonts.heading,
-    fontSize: isMobile ? theme.fontSizes.xxl : theme.fontSizes.xxxl,
+    fontFamily: fontFamilies.heading,
+    fontSize: isMobile ? fontSizes.xxl : fontSizes.xxxl,
     margin: 0,
-    background: theme.gradients.primary,
+    background: gradients.primary,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
   };
@@ -68,8 +68,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const sectionHeaderStyle: CSSProperties = {
     fontSize: isMobile ? '18px' : '24px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     marginBottom: isMobile ? '12px' : '20px',
     display: 'flex',
     alignItems: 'center',
@@ -86,9 +86,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     padding: '40px 20px',
     textAlign: 'center',
     background: 'rgba(0,0,0,0.02)',
-    borderRadius: theme.borderRadius.md,
-    border: `1px dashed ${theme.colors.border}`,
-    color: theme.colors.text.secondary,
+    borderRadius: borderRadius.md,
+    border: `1px dashed ${colors.border}`,
+    color: colors.textSecondary,
     fontSize: '14px',
   };
 
@@ -105,9 +105,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       ? {
           ...sectionStyle,
           padding: isMobile ? '16px' : '24px',
-          background: `linear-gradient(135deg, ${theme.colors.status.liveBg} 0%, transparent 100%)`,
-          borderRadius: theme.borderRadius.lg,
-          border: `1px solid ${theme.colors.status.live}40`,
+          background: `linear-gradient(135deg, ${colors.statusLiveBg} 0%, transparent 100%)`,
+          borderRadius: borderRadius.lg,
+          border: `1px solid ${colors.statusLive}40`,
         }
       : sectionStyle;
 
@@ -117,7 +117,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <h2 style={sectionHeaderStyle}>
             <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
             {title}
-            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: theme.colors.text.secondary }}>
+            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
               ({tournaments.length})
             </span>
           </h2>
@@ -131,7 +131,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <h2 style={sectionHeaderStyle}>
           <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
           {title}
-          <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: theme.colors.text.secondary }}>
+          <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
             ({tournaments.length})
           </span>
         </h2>
@@ -157,7 +157,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <h1 style={titleStyle}>{getAppTitle()}</h1>
         <div style={{
           display: 'flex',
-          gap: isMobile ? theme.spacing.sm : theme.spacing.md,
+          gap: isMobile ? spacing.sm : spacing.md,
           flexDirection: isMobile ? 'column' : 'row',
           width: isMobile ? '100%' : 'auto',
         }}>
@@ -166,9 +166,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             onClick={() => setShowImportDialog(true)}
             icon={<Icons.Upload />}
             style={{
-              padding: isMobile ? `${theme.spacing.sm} ${theme.spacing.md}` : `${theme.spacing.md} ${theme.spacing.lg}`,
-              fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md,
-              fontWeight: theme.fontWeights.medium,
+              padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
+              fontSize: isMobile ? fontSizes.sm : fontSizes.md,
+              fontWeight: fontWeights.medium,
             }}
           >
             Importieren
@@ -177,9 +177,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             variant="primary"
             onClick={onCreateNew}
             style={{
-              padding: isMobile ? `${theme.spacing.sm} ${theme.spacing.md}` : `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md,
-              fontWeight: theme.fontWeights.bold,
+              padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.xl}`,
+              fontSize: isMobile ? fontSizes.sm : fontSizes.md,
+              fontWeight: fontWeights.bold,
             }}
           >
             + Neues Turnier
@@ -193,18 +193,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           style={{
             padding: isMobile ? '40px 16px' : '60px 20px',
             textAlign: 'center',
-            background: theme.colors.surface,
-            borderRadius: theme.borderRadius.lg,
-            border: `1px solid ${theme.colors.border}`,
+            background: colors.surface,
+            borderRadius: borderRadius.lg,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <div style={{ marginBottom: '16px', opacity: 0.6 }}>
-            <Icons.Trophy size={isMobile ? 40 : 48} color={theme.colors.text.secondary} />
+            <Icons.Trophy size={isMobile ? 40 : 48} color={colors.textSecondary} />
           </div>
-          <h2 style={{ fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.xl, marginBottom: '8px' }}>
+          <h2 style={{ fontSize: isMobile ? fontSizes.lg : fontSizes.xl, marginBottom: '8px' }}>
             Noch keine Turniere
           </h2>
-          <p style={{ color: theme.colors.text.secondary, marginBottom: '24px', fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md }}>
+          <p style={{ color: colors.textSecondary, marginBottom: '24px', fontSize: isMobile ? fontSizes.sm : fontSizes.md }}>
             Erstelle dein erstes Turnier mit dem Button oben
           </p>
         </div>
@@ -216,7 +216,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* 1. Aktuell laufende Turniere - NO DELETE, HIGHLIGHTED */}
           {renderSection(
             'Aktuell laufende Turniere',
-            <Icons.Play size={22} color={theme.colors.status.live} />,
+            <Icons.Play size={22} color={colors.statusLive} />,
             categorized.running,
             'Läuft',
             'Keine laufenden Turniere',
@@ -227,7 +227,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* 2. Bevorstehende Turniere - ALLOW DELETE */}
           {renderSection(
             'Bevorstehende Turniere',
-            <Icons.Calendar size={22} color={theme.colors.status.upcoming} />,
+            <Icons.Calendar size={22} color={colors.statusUpcoming} />,
             categorized.upcoming,
             'Bevorstehend',
             'Keine bevorstehenden Turniere',
@@ -237,7 +237,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* 3. Beendete Turniere - ALLOW DELETE */}
           {renderSection(
             'Beendete Turniere',
-            <Icons.Check size={22} color={theme.colors.status.finished} />,
+            <Icons.Check size={22} color={colors.statusFinished} />,
             categorized.finished,
             'Beendet',
             'Keine beendeten Turniere',
@@ -247,7 +247,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* 4. Gespeicherte Turniere (Entwürfe) - ALLOW DELETE */}
           {renderSection(
             'Gespeicherte Turniere',
-            <Icons.Save size={22} color={theme.colors.status.draft} />,
+            <Icons.Save size={22} color={colors.statusDraft} />,
             categorized.draft,
             'Entwurf',
             'Keine gespeicherten Entwürfe',

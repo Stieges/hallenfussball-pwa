@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontSizes, spacing } from '../../../design-tokens';
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { MatchSummary } from '../MatchCockpit';
@@ -21,24 +21,24 @@ export const LastMatchBanner: React.FC<LastMatchBannerProps> = ({ lastMatch, onR
   const isMobile = useIsMobile();
 
   const bannerStyle: CSSProperties = {
-    marginBottom: theme.spacing.md,
-    padding: theme.spacing.md,
-    borderRadius: isMobile ? theme.borderRadius.lg : '999px',
-    border: `1px dashed ${theme.colors.border}`,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: isMobile ? borderRadius.lg : '999px',
+    border: `1px dashed ${colors.border}`,
     background: 'rgba(15, 23, 42, 0.9)',
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     alignItems: isMobile ? 'flex-start' : 'center',
     justifyContent: 'space-between',
-    gap: theme.spacing.sm,
-    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
+    gap: spacing.sm,
+    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
   };
 
   return (
     <div style={bannerStyle}>
-      <div style={{ color: theme.colors.text.secondary }}>
+      <div style={{ color: colors.textSecondary }}>
         Letztes Spiel:{' '}
-        <strong style={{ color: theme.colors.text.primary }}>
+        <strong style={{ color: colors.textPrimary }}>
           Spiel {lastMatch.match.number}: {lastMatch.match.homeTeam.name} {lastMatch.homeScore} :{' '}
           {lastMatch.awayScore} {lastMatch.match.awayTeam.name}
         </strong>

@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
-import { theme } from '../../styles/theme';
-
+import { colors, fontSizes, spacing } from '../../design-tokens';
 export interface ConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -42,18 +41,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const messageStyle = {
-    fontSize: theme.fontSizes.md,
+    fontSize: fontSizes.md,
     lineHeight: '1.6',
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xl,
+    color: colors.textPrimary,
+    marginBottom: spacing.xl,
     whiteSpace: 'pre-line' as const,
   };
 
   const buttonContainerStyle = {
     display: 'flex',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     justifyContent: 'flex-end',
-    marginTop: theme.spacing.xl,
+    marginTop: spacing.xl,
     flexWrap: 'wrap' as const,
   };
 

@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, gradients, shadows, spacing } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
 
 export interface DialogProps {
@@ -64,16 +64,16 @@ export const Dialog = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: theme.spacing.lg,
+    padding: spacing.lg,
     overflowY: 'auto',
   };
 
   const modalStyle: CSSProperties = {
-    background: theme.gradients.card,
+    background: gradients.card,
     backdropFilter: 'blur(20px)',
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.lg,
-    boxShadow: theme.shadows.lg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.lg,
+    boxShadow: shadows.lg,
     width: '100%',
     maxWidth: maxWidth,
     maxHeight: '90vh',
@@ -86,14 +86,14 @@ export const Dialog = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-    borderBottom: `1px solid ${theme.colors.border}`,
+    padding: spacing.xl,
+    borderBottom: `1px solid ${colors.border}`,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     margin: 0,
   };
 
@@ -101,17 +101,17 @@ export const Dialog = ({
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    padding: theme.spacing.sm,
+    padding: spacing.sm,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: borderRadius.sm,
     transition: 'background-color 0.2s',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   const contentStyle: CSSProperties = {
-    padding: theme.spacing.xl,
+    padding: spacing.xl,
   };
 
   const dialog = (
@@ -124,7 +124,7 @@ export const Dialog = ({
             onClick={onClose}
             aria-label="Schließen"
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.surfaceHover;
+              e.currentTarget.style.backgroundColor = colors.surfaceHover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';

@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import { CSSProperties } from 'react';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, spacing } from '../design-tokens';
 import { Tournament } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
 import { Standing } from '../types/tournament';
@@ -298,10 +298,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       <div style={loadingStyle}>
         {loadingError ? (
           <div>
-            <div style={{ ...loadingTextStyle, color: theme.colors.error, marginBottom: '16px' }}>
+            <div style={{ ...loadingTextStyle, color: colors.error, marginBottom: '16px' }}>
               ❌ Fehler beim Laden
             </div>
-            <div style={{ fontSize: theme.fontSizes.md, color: theme.colors.text.secondary }}>
+            <div style={{ fontSize: fontSizes.md, color: colors.textSecondary }}>
               {loadingError}
             </div>
             {onBack && (
@@ -310,12 +310,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
                 style={{
                   marginTop: '24px',
                   padding: '12px 24px',
-                  background: theme.colors.primary,
+                  background: colors.primary,
                   color: 'white',
                   border: 'none',
-                  borderRadius: theme.borderRadius.md,
+                  borderRadius: borderRadius.md,
                   cursor: 'pointer',
-                  fontSize: theme.fontSizes.md,
+                  fontSize: fontSizes.md,
                 }}
               >
                 Zurück zum Dashboard
@@ -331,28 +331,28 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   const containerStyle: CSSProperties = {
     minHeight: '100vh',
-    background: theme.colors.background,
+    background: colors.background,
     display: 'flex',
     flexDirection: 'column',
   };
 
   const headerStyle: CSSProperties = {
-    padding: theme.spacing.lg,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    background: theme.colors.surface,
+    padding: spacing.lg,
+    borderBottom: `1px solid ${colors.border}`,
+    background: colors.surface,
     position: 'relative',
   };
 
   const backButtonStyle: CSSProperties = {
     position: 'absolute',
-    left: theme.spacing.lg,
+    left: spacing.lg,
     top: '50%',
     transform: 'translateY(-50%)',
-    padding: theme.spacing.sm,
+    padding: spacing.sm,
     background: 'transparent',
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.md,
-    color: theme.colors.text.primary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    color: colors.textPrimary,
     fontSize: '20px',
     cursor: 'pointer',
     display: 'flex',
@@ -364,25 +364,25 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xxl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
     marginLeft: onBack ? '50px' : '0',
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
     marginLeft: onBack ? '50px' : '0',
   };
 
   const tabBarStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.xs,
-    padding: `0 ${theme.spacing.lg}`,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    background: theme.colors.surface,
+    gap: spacing.xs,
+    padding: `0 ${spacing.lg}`,
+    borderBottom: `1px solid ${colors.border}`,
+    background: colors.surface,
     overflowX: 'auto',
     WebkitOverflowScrolling: 'touch',
     scrollbarWidth: 'none', // Firefox
@@ -517,10 +517,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       {showDirtyWarning && (
         <div style={overlayStyle}>
           <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: theme.colors.text.primary }}>
+            <h3 style={{ margin: '0 0 16px 0', color: colors.textPrimary }}>
               Ungespeicherte Änderungen
             </h3>
-            <p style={{ margin: '0 0 24px 0', color: theme.colors.text.secondary }}>
+            <p style={{ margin: '0 0 24px 0', color: colors.textSecondary }}>
               Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden.
               Möchtest du die Änderungen verwerfen?
             </p>
@@ -558,21 +558,21 @@ interface TabButtonProps {
 
 const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty }) => {
   const buttonStyle: CSSProperties = {
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    padding: `${spacing.md} ${spacing.lg}`,
     background: 'transparent',
     border: 'none',
-    borderBottom: isActive ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
-    color: isActive ? theme.colors.primary : theme.colors.text.secondary,
-    fontSize: theme.fontSizes.md,
-    fontWeight: isActive ? theme.fontWeights.semibold : theme.fontWeights.normal,
+    borderBottom: isActive ? `3px solid ${colors.primary}` : '3px solid transparent',
+    color: isActive ? colors.primary : colors.textSecondary,
+    fontSize: fontSizes.md,
+    fontWeight: isActive ? fontWeights.semibold : fontWeights.normal,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    fontFamily: theme.fonts.body,
+    fontFamily: fontFamilies.body,
   };
 
   const hoverStyle: CSSProperties = {
     ...buttonStyle,
-    color: theme.colors.primary,
+    color: colors.primary,
   };
 
   const [isHovered, setIsHovered] = useState(false);
@@ -608,12 +608,12 @@ const loadingStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: theme.colors.background,
+  background: colors.background,
 };
 
 const loadingTextStyle: CSSProperties = {
-  fontSize: theme.fontSizes.xl,
-  color: theme.colors.text.secondary,
+  fontSize: fontSizes.xl,
+  color: colors.textSecondary,
 };
 
 // TOUR-EDIT-META: Dialog Styles
@@ -631,22 +631,22 @@ const overlayStyle: CSSProperties = {
 };
 
 const dialogStyle: CSSProperties = {
-  background: theme.colors.surface,
-  borderRadius: theme.borderRadius.lg,
-  padding: theme.spacing.xl,
+  background: colors.surface,
+  borderRadius: borderRadius.lg,
+  padding: spacing.xl,
   maxWidth: '400px',
   width: '90%',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
 };
 
 const dialogButtonStyle = (variant: 'secondary' | 'danger'): CSSProperties => ({
-  padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-  border: variant === 'secondary' ? `1px solid ${theme.colors.border}` : 'none',
-  borderRadius: theme.borderRadius.md,
-  fontSize: theme.fontSizes.md,
-  fontWeight: theme.fontWeights.semibold,
+  padding: `${spacing.sm} ${spacing.lg}`,
+  border: variant === 'secondary' ? `1px solid ${colors.border}` : 'none',
+  borderRadius: borderRadius.md,
+  fontSize: fontSizes.md,
+  fontWeight: fontWeights.semibold,
   cursor: 'pointer',
-  background: variant === 'danger' ? theme.colors.error : 'transparent',
-  color: variant === 'danger' ? 'white' : theme.colors.text.secondary,
+  background: variant === 'danger' ? colors.error : 'transparent',
+  color: variant === 'danger' ? 'white' : colors.textSecondary,
   transition: 'all 0.2s ease',
 });

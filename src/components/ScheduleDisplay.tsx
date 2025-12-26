@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useMemo } from 'react';
-import { theme } from '../styles/theme';
+import { colors, fontFamilies } from '../design-tokens';
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
 import { Standing, Match } from '../types/tournament';
 import {
@@ -22,6 +22,12 @@ import {
   TournamentFooter,
   ContactInfo,
 } from './schedule';
+
+// Pending changes during edit mode
+interface PendingChanges {
+  refereeAssignments: Record<string, number | null>;
+  fieldAssignments: Record<string, number>;
+}
 
 interface ScheduleDisplayProps {
   schedule: GeneratedSchedule;
@@ -39,6 +45,10 @@ interface ScheduleDisplayProps {
   contactInfo?: ContactInfo;
   /** Allow editing referees */
   editable?: boolean;
+  /** Is the schedule currently being edited (edit mode active) */
+  editingSchedule?: boolean;
+  /** Pending changes during edit mode (not yet saved) */
+  pendingChanges?: PendingChanges;
   /** Callback when referee is changed */
   onRefereeChange?: (matchId: string, refereeNumber: number | null) => void;
   /** Callback when field is changed */
@@ -53,6 +63,8 @@ interface ScheduleDisplayProps {
   onStartCorrection?: (matchId: string) => void;
   /** MON-LIVE-INDICATOR-01: Set of match IDs that are currently running */
   runningMatchIds?: Set<string>;
+  /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
+  onMatchSwap?: (matchId1: string, matchId2: string) => void;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -65,6 +77,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   logoUrl,
   contactInfo,
   editable = false,
+  editingSchedule = false,
+  pendingChanges,
   onRefereeChange,
   onFieldChange,
   onScoreChange,
@@ -72,6 +86,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   correctionMatchId,
   onStartCorrection,
   runningMatchIds,
+  onMatchSwap,
 }) => {
   const standings = currentStandings || schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -159,9 +174,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   const containerStyle: CSSProperties = {
     width: '100%',
     padding: '40px 20px',
-    background: theme.colors.background,
-    fontFamily: theme.fonts.body,
-    color: theme.colors.text.primary,
+    background: colors.background,
+    fontFamily: fontFamilies.body,
+    color: colors.textPrimary,
   };
 
   return (
@@ -190,6 +205,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
           editable={editable}
+          editingSchedule={editingSchedule}
+          pendingChanges={pendingChanges}
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
@@ -198,6 +215,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
           tournament={{ groups: schedule.tournament.groups } as any}
+          onMatchSwap={onMatchSwap}
         />
       )}
 
@@ -217,6 +235,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
           editable={editable}
+          editingSchedule={editingSchedule}
+          pendingChanges={pendingChanges}
           onRefereeChange={onRefereeChange}
           onFieldChange={onFieldChange}
           onScoreChange={onScoreChange}
@@ -224,6 +244,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
+          onMatchSwap={onMatchSwap}
         />
       )}
 

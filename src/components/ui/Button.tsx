@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactNode, useState, useEffect } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../../design-tokens';
 import { transitions } from '../../styles/motion';
 
 interface ButtonProps {
@@ -70,13 +70,13 @@ export const Button: React.FC<ButtonProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     border: 'none',
-    borderRadius: theme.borderRadius.md,
-    fontWeight: theme.fontWeights.bold,
+    borderRadius: borderRadius.md,
+    fontWeight: fontWeights.bold,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     transition: `all 0.2s ease, ${transitions.buttonPress}`,
-    fontFamily: theme.fonts.body,
+    fontFamily: fontFamilies.body,
     width: fullWidth ? '100%' : 'auto',
     opacity: isDisabled ? 0.5 : 1,
     transform: isPressed ? 'scale(0.97)' : 'scale(1)',
@@ -84,36 +84,36 @@ export const Button: React.FC<ButtonProps> = ({
 
   const sizeStyles: Record<string, CSSProperties> = {
     sm: {
-      padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-      fontSize: theme.fontSizes.sm,
+      padding: `${spacing.sm} ${spacing.md}`,
+      fontSize: fontSizes.sm,
     },
     md: {
-      padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-      fontSize: theme.fontSizes.md,
+      padding: `${spacing.md} ${spacing.lg}`,
+      fontSize: fontSizes.md,
     },
     lg: {
-      padding: `${theme.spacing.lg} ${theme.spacing.xl}`,
-      fontSize: theme.fontSizes.lg,
+      padding: `${spacing.lg} ${spacing.xl}`,
+      fontSize: fontSizes.lg,
     },
   };
 
   const variantStyles: Record<string, CSSProperties> = {
     primary: {
-      background: theme.gradients.primary,
-      color: theme.colors.background,
+      background: gradients.primary,
+      color: colors.background,
     },
     secondary: {
-      background: theme.colors.surface,
-      color: theme.colors.text.primary,
-      border: `1px solid ${theme.colors.border}`,
+      background: colors.surface,
+      color: colors.textPrimary,
+      border: `1px solid ${colors.border}`,
     },
     ghost: {
       background: 'transparent',
-      color: theme.colors.text.secondary,
+      color: colors.textSecondary,
     },
     danger: {
-      background: theme.colors.error,
-      color: theme.colors.text.primary,
+      background: colors.error,
+      color: colors.textPrimary,
     },
   };
 

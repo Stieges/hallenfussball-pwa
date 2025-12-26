@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../../components/ui';
-import { theme } from '../../../styles/theme';
+import { colors, fontFamilies } from '../../../design-tokens';
 import { PlacementCriterion } from '../../../types/tournament';
 
 interface PlacementLogicEditorProps {
@@ -84,13 +84,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
     gap: '2px',
     padding: '4px',
     cursor: 'grab',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   const arrowButtonStyle = (disabled: boolean): CSSProperties => ({
     background: 'none',
     border: 'none',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
     cursor: disabled ? 'not-allowed' : 'pointer',
     padding: '2px',
     opacity: disabled ? 0.3 : 1,
@@ -101,10 +101,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   const toggleButtonStyle: CSSProperties = {
     padding: '6px 12px',
-    background: criterion.enabled ? theme.colors.primary : 'rgba(255,255,255,0.1)',
+    background: criterion.enabled ? colors.primary : 'rgba(255,255,255,0.1)',
     border: 'none',
     borderRadius: '6px',
-    color: criterion.enabled ? theme.colors.background : theme.colors.text.secondary,
+    color: criterion.enabled ? colors.background : colors.textSecondary,
     fontSize: '12px',
     fontWeight: 600,
     cursor: 'pointer',
@@ -164,9 +164,9 @@ const SortableItem: React.FC<SortableItemProps> = ({
         {/* Position Number */}
         <span
           style={{
-            fontFamily: theme.fonts.heading,
+            fontFamily: fontFamilies.heading,
             fontSize: '18px',
-            color: theme.colors.primary,
+            color: colors.primary,
             minWidth: '24px',
             textAlign: 'center',
           }}
@@ -176,7 +176,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </span>
 
         {/* Label */}
-        <span style={{ flex: 1, color: theme.colors.text.primary, fontSize: '14px' }}>
+        <span style={{ flex: 1, color: colors.textPrimary, fontSize: '14px' }}>
           {criterion.label}
         </span>
 
@@ -240,14 +240,14 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    color: theme.colors.primary,
+    color: colors.primary,
     fontSize: '14px',
     margin: '0 0 8px 0',
   };
 
   const helpTextStyle: CSSProperties = {
     fontSize: '12px',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',

@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties, useState, useEffect, useCallback, useRef } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -73,27 +73,27 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: theme.spacing.md,
+    padding: spacing.md,
   };
 
   const containerStyle: CSSProperties = {
     width: '100%',
     maxWidth: '500px',
-    padding: isMobile ? theme.spacing.lg : theme.spacing.xl,
-    borderRadius: theme.borderRadius.lg,
-    border: `2px solid ${theme.colors.warning}`,
+    padding: isMobile ? spacing.lg : spacing.xl,
+    borderRadius: borderRadius.lg,
+    border: `2px solid ${colors.warning}`,
     background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(200, 140, 20, 0.1))',
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.warning,
-    marginBottom: theme.spacing.md,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.warning,
+    marginBottom: spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     justifyContent: 'center',
   };
 
@@ -101,21 +101,21 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isMobile ? theme.spacing.md : theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
+    gap: isMobile ? spacing.md : spacing.xl,
+    marginBottom: spacing.lg,
   };
 
   const teamScoreBlockStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     textAlign: 'center',
     maxWidth: '140px',
   };
@@ -123,18 +123,18 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
   const scoreControlsStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const scoreButtonStyle: CSSProperties = {
     width: isMobile ? '56px' : '44px',
     height: isMobile ? '56px' : '44px',
     borderRadius: '50%',
-    border: `2px solid ${theme.colors.border}`,
+    border: `2px solid ${colors.border}`,
     background: 'rgba(255, 255, 255, 0.1)',
-    color: theme.colors.text.primary,
-    fontSize: isMobile ? theme.fontSizes.xl : theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.bold,
+    color: colors.textPrimary,
+    fontSize: isMobile ? fontSizes.xl : fontSizes.lg,
+    fontWeight: fontWeights.bold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -144,29 +144,29 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
 
   const scoreDisplayStyle: CSSProperties = {
     fontSize: isMobile ? '56px' : '48px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     minWidth: isMobile ? '70px' : '60px',
     textAlign: 'center',
   };
 
   const colonStyle: CSSProperties = {
     fontSize: isMobile ? '36px' : '32px',
-    color: theme.colors.text.secondary,
-    fontWeight: theme.fontWeights.bold,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.bold,
   };
 
   const currentScoreStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
   };
 
   const buttonsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     justifyContent: 'center',
   };
 

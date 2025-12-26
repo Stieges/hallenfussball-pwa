@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors } from '../../../design-tokens';
 import { SportId, SportConfig, getAvailableSports } from '../../../config/sports';
 
 interface SportSelectorProps {
@@ -31,8 +31,8 @@ const SportCard: React.FC<SportCardProps> = ({
   const cardStyle: CSSProperties = {
     padding: '24px 20px',
     background: isSelected ? 'rgba(0,230,118,0.2)' : 'rgba(0,0,0,0.2)',
-    border: isSelected ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-    borderRadius: theme.borderRadius.md,
+    border: isSelected ? `2px solid ${colors.primary}` : '2px solid transparent',
+    borderRadius: borderRadius.md,
     textAlign: 'center',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s',
@@ -79,14 +79,14 @@ const SportCard: React.FC<SportCardProps> = ({
       <div style={{
         fontSize: '16px',
         fontWeight: '700',
-        color: theme.colors.text.primary,
+        color: colors.textPrimary,
         textTransform: 'uppercase',
       }}>
         {sport.name}
       </div>
       <div style={{
         fontSize: '12px',
-        color: theme.colors.text.secondary,
+        color: colors.textSecondary,
         marginTop: '4px',
       }}>
         {getSubtitle()}

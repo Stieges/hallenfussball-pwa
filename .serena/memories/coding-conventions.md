@@ -79,18 +79,59 @@ function MyComponent() {
 ### Priorität
 1. CSS Modules (`.module.css`) für komplexe Styles
 2. Inline styles für einfache/dynamische Styles
-3. Theme-System nutzen: `theme.colors.primary`, `theme.spacing.md`
+3. **Design Tokens nutzen** (siehe unten)
 
-### Theme-Verwendung
+### ⚠️ WICHTIG: Design Tokens verwenden
+
+**Alle Farben, Abstände, Schriftgrößen etc. MÜSSEN über Design Tokens definiert werden.**
+
 ```typescript
-import { theme } from '../styles/theme'
+// ✅ RICHTIG: Direkt aus design-tokens importieren
+import { colors, spacing, fontSizes, borderRadius } from '../design-tokens';
 
 const style = {
-  color: theme.colors.text.primary,
-  padding: theme.spacing.md,
-  borderRadius: theme.borderRadius.md,
-}
+  color: colors.textPrimary,
+  padding: spacing.md,
+  fontSize: fontSizes.md,
+  borderRadius: borderRadius.md,
+};
 ```
+
+```typescript
+// ❌ FALSCH: Hardcoded Werte
+const style = {
+  color: '#ffffff',        // ❌ Hardcoded
+  padding: '16px',         // ❌ Hardcoded
+  fontSize: '14px',        // ❌ Hardcoded
+  borderRadius: '8px',     // ❌ Hardcoded
+};
+```
+
+```typescript
+// ⚠️ VERALTET: theme.ts (nur für Legacy-Code)
+import { theme } from '../styles/theme';  // ⚠️ Deprecated
+```
+
+### Verfügbare Design Tokens
+
+| Token | Import | Beispiel |
+|-------|--------|----------|
+| Farben | `colors` | `colors.primary`, `colors.surface`, `colors.textPrimary` |
+| Abstände | `spacing` | `spacing.xs` (4px), `spacing.sm` (8px), `spacing.md` (16px) |
+| Schriftgrößen | `fontSizes` | `fontSizes.sm` (12px), `fontSizes.md` (14px), `fontSizes.lg` (16px) |
+| Border Radius | `borderRadius` | `borderRadius.sm` (4px), `borderRadius.md` (8px) |
+| Schatten | `shadows` | `shadows.sm`, `shadows.md`, `shadows.lg` |
+| Animationen | `durations`, `easings` | `durations.fast`, `easings.standard` |
+
+### 8pt Grid System
+
+Alle Abstände basieren auf dem 8pt Grid:
+- `spacing.xs` = 4px (Halb-Einheit)
+- `spacing.sm` = 8px (1×)
+- `spacing.md` = 16px (2×)
+- `spacing.lg` = 24px (3×)
+- `spacing.xl` = 32px (4×)
+- `spacing.xxl` = 48px (6×)
 
 ## Verbotene Patterns
 

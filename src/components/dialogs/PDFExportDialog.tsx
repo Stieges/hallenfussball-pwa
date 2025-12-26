@@ -1,7 +1,7 @@
 import { useState, CSSProperties } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { Standing, Tournament } from '../../types/tournament';
@@ -88,35 +88,35 @@ export const PDFExportDialog = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xl,
+    gap: spacing.xl,
   };
 
   const optionsSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.lg,
+    gap: spacing.lg,
   };
 
   const radioGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.fontWeights.medium,
-    marginBottom: theme.spacing.sm,
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.medium,
+    marginBottom: spacing.sm,
   };
 
   const radioOptionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     padding: '14px 16px',
-    borderRadius: theme.borderRadius.sm,
-    border: `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.sm,
+    border: `1px solid ${colors.border}`,
     cursor: 'pointer',
     transition: 'all 0.2s',
     minHeight: '60px',
@@ -127,29 +127,29 @@ export const PDFExportDialog = ({
     height: '22px',
     minWidth: '22px',
     cursor: 'pointer',
-    accentColor: theme.colors.primary,
+    accentColor: colors.primary,
   };
 
   const radioLabelTextStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
     cursor: 'pointer',
     flex: 1,
   };
 
   const radioDescStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.muted,
-    marginTop: theme.spacing.xs,
+    fontSize: fontSizes.sm,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   };
 
   const checkboxSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     padding: '14px 16px',
-    borderRadius: theme.borderRadius.sm,
-    border: `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.sm,
+    border: `1px solid ${colors.border}`,
     cursor: 'pointer',
     minHeight: '60px',
   };
@@ -157,16 +157,16 @@ export const PDFExportDialog = ({
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const errorStyle: CSSProperties = {
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
     background: 'rgba(255, 82, 82, 0.1)',
-    border: `1px solid ${theme.colors.error}`,
-    color: theme.colors.error,
-    fontSize: theme.fontSizes.sm,
+    border: `1px solid ${colors.error}`,
+    color: colors.error,
+    fontSize: fontSizes.sm,
   };
 
   return (
@@ -181,7 +181,7 @@ export const PDFExportDialog = ({
               <label
                 style={{
                   ...radioOptionStyle,
-                  borderColor: includeScores ? theme.colors.primary : theme.colors.border,
+                  borderColor: includeScores ? colors.primary : colors.border,
                   background: includeScores ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
                 }}
               >
@@ -201,7 +201,7 @@ export const PDFExportDialog = ({
               <label
                 style={{
                   ...radioOptionStyle,
-                  borderColor: !includeScores ? theme.colors.primary : theme.colors.border,
+                  borderColor: !includeScores ? colors.primary : colors.border,
                   background: !includeScores ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
                 }}
               >
@@ -224,7 +224,7 @@ export const PDFExportDialog = ({
           <label
             style={{
               ...checkboxSectionStyle,
-              borderColor: includeStandings ? theme.colors.primary : theme.colors.border,
+              borderColor: includeStandings ? colors.primary : colors.border,
               background: includeStandings ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
             }}
           >

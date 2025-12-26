@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties, useState, useEffect, useCallback, useRef } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -95,55 +95,55 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: theme.spacing.md,
+    padding: spacing.md,
   };
 
   const containerStyle: CSSProperties = {
     width: '100%',
     maxWidth: '400px',
-    padding: isMobile ? theme.spacing.lg : theme.spacing.xl,
-    borderRadius: theme.borderRadius.lg,
-    border: `2px solid ${theme.colors.secondary}`,
+    padding: isMobile ? spacing.lg : spacing.xl,
+    borderRadius: borderRadius.lg,
+    border: `2px solid ${colors.secondary}`,
     background: 'linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 120, 200, 0.1))',
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.secondary,
-    marginBottom: theme.spacing.md,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.secondary,
+    marginBottom: spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     justifyContent: 'center',
   };
 
   const currentTimeStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
   };
 
   const timeInputContainerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   };
 
   const timeBlockStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   };
@@ -152,18 +152,18 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const timeButtonStyle: CSSProperties = {
     width: isMobile ? '56px' : '48px',
     height: isMobile ? '44px' : '36px',
-    borderRadius: theme.borderRadius.md,
-    border: `2px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.md,
+    border: `2px solid ${colors.border}`,
     background: 'rgba(255, 255, 255, 0.1)',
-    color: theme.colors.text.primary,
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.md,
-    fontWeight: theme.fontWeights.bold,
+    color: colors.textPrimary,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
+    fontWeight: fontWeights.bold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -173,8 +173,8 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
 
   const timeDisplayStyle: CSSProperties = {
     fontSize: isMobile ? '48px' : '40px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     fontFamily: 'ui-monospace, monospace',
     minWidth: isMobile ? '70px' : '60px',
     textAlign: 'center',
@@ -182,22 +182,22 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
 
   const colonStyle: CSSProperties = {
     fontSize: isMobile ? '40px' : '36px',
-    color: theme.colors.text.secondary,
-    fontWeight: theme.fontWeights.bold,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.bold,
     alignSelf: 'center',
   };
 
   const durationInfoStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
   };
 
   const buttonsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     justifyContent: 'center',
   };
 

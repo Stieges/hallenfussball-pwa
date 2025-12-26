@@ -10,7 +10,7 @@ import { useTournaments } from '../hooks/useTournaments';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { generateTournamentId } from '../utils/idGenerator';
 import { countMatchesWithResults } from '../utils/teamHelpers';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, shadows, spacing } from '../design-tokens';
 import { useToast } from '../components/ui/Toast';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 
@@ -40,14 +40,14 @@ const StepLoadingFallback: React.FC = () => (
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '200px',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   }}>
     <div style={{ textAlign: 'center' }}>
       <div style={{
         width: '40px',
         height: '40px',
-        border: `3px solid ${theme.colors.border}`,
-        borderTopColor: theme.colors.primary,
+        border: `3px solid ${colors.border}`,
+        borderTopColor: colors.primary,
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
         margin: '0 auto 12px',
@@ -764,13 +764,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           marginBottom: '16px',
           background: 'rgba(76, 175, 80, 0.1)',
           border: '1px solid rgba(76, 175, 80, 0.3)',
-          borderRadius: theme.borderRadius.md,
+          borderRadius: borderRadius.md,
         }}>
           <div>
-            <span style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+            <span style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
               Schnellbearbeitung
             </span>
-            <span style={{ marginLeft: '8px', color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+            <span style={{ marginLeft: '8px', color: colors.textSecondary, fontSize: fontSizes.sm }}>
               Änderungen vornehmen und speichern
             </span>
           </div>
@@ -788,15 +788,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         onClick={handleBackToDashboard}
         style={{
           marginBottom: '24px',
-          padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+          padding: `${spacing.sm} ${spacing.md}`,
           background: 'transparent',
           border: 'none',
-          color: theme.colors.text.secondary,
-          fontSize: theme.fontSizes.md,
+          color: colors.textSecondary,
+          fontSize: fontSizes.md,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: theme.spacing.sm,
+          gap: spacing.sm,
         }}
       >
         <Icons.ChevronLeft />
@@ -805,10 +805,10 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       <h1
         style={{
-          fontFamily: theme.fonts.heading,
-          fontSize: theme.fontSizes.xxxl,
+          fontFamily: fontFamilies.heading,
+          fontSize: fontSizes.xxxl,
           marginBottom: '32px',
-          background: theme.gradients.primary,
+          background: gradients.primary,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}
@@ -881,7 +881,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                 padding: '16px',
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: borderRadius.md,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -892,8 +892,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <h3
                     style={{
                       margin: '0 0 8px 0',
-                      fontSize: theme.fontSizes.lg,
-                      fontWeight: theme.fontWeights.semibold,
+                      fontSize: fontSizes.lg,
+                      fontWeight: fontWeights.semibold,
                       color: 'rgb(239, 68, 68)',
                     }}
                   >
@@ -902,8 +902,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <p
                     style={{
                       margin: '0 0 12px 0',
-                      fontSize: theme.fontSizes.md,
-                      color: theme.colors.text.primary,
+                      fontSize: fontSizes.md,
+                      color: colors.textPrimary,
                       lineHeight: '1.5',
                     }}
                   >
@@ -912,13 +912,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <button
                     onClick={() => setScheduleError(null)}
                     style={{
-                      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                      padding: `${spacing.xs} ${spacing.sm}`,
                       background: 'rgba(239, 68, 68, 0.2)',
                       border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: theme.borderRadius.sm,
-                      color: theme.colors.text.primary,
-                      fontSize: theme.fontSizes.sm,
-                      fontWeight: theme.fontWeights.medium,
+                      borderRadius: borderRadius.sm,
+                      color: colors.textPrimary,
+                      fontSize: fontSizes.sm,
+                      fontWeight: fontWeights.medium,
                       cursor: 'pointer',
                     }}
                   >
@@ -940,7 +940,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                 padding: '16px',
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: borderRadius.md,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -951,8 +951,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <h3
                     style={{
                       margin: '0 0 8px 0',
-                      fontSize: theme.fontSizes.lg,
-                      fontWeight: theme.fontWeights.semibold,
+                      fontSize: fontSizes.lg,
+                      fontWeight: fontWeights.semibold,
                       color: 'rgb(239, 68, 68)',
                     }}
                   >
@@ -961,8 +961,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <p
                     style={{
                       margin: '0 0 12px 0',
-                      fontSize: theme.fontSizes.md,
-                      color: theme.colors.text.primary,
+                      fontSize: fontSizes.md,
+                      color: colors.textPrimary,
                       lineHeight: '1.5',
                     }}
                   >
@@ -971,13 +971,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <button
                     onClick={() => setScheduleError(null)}
                     style={{
-                      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                      padding: `${spacing.xs} ${spacing.sm}`,
                       background: 'rgba(239, 68, 68, 0.2)',
                       border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: theme.borderRadius.sm,
-                      color: theme.colors.text.primary,
-                      fontSize: theme.fontSizes.sm,
-                      fontWeight: theme.fontWeights.medium,
+                      borderRadius: borderRadius.sm,
+                      color: colors.textPrimary,
+                      fontSize: fontSizes.sm,
+                      fontWeight: fontWeights.medium,
                       cursor: 'pointer',
                     }}
                   >
@@ -1019,7 +1019,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               Zurück
             </Button>
 
-            <div style={{ display: 'flex', gap: theme.spacing.md }}>
+            <div style={{ display: 'flex', gap: spacing.md }}>
               {/* Speichern-Button - nur ab Step 2 anzeigen wenn grundlegende Daten vorhanden */}
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
@@ -1056,11 +1056,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             right: '24px',
             padding: '12px 16px',
             background: 'rgba(0, 230, 118, 0.9)',
-            borderRadius: theme.borderRadius.sm,
-            color: theme.colors.background,
-            fontSize: theme.fontSizes.sm,
-            fontWeight: theme.fontWeights.medium,
-            boxShadow: theme.shadows.lg,
+            borderRadius: borderRadius.sm,
+            color: colors.background,
+            fontSize: fontSizes.sm,
+            fontWeight: fontWeights.medium,
+            boxShadow: shadows.lg,
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',

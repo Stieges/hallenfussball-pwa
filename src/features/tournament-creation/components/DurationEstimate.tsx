@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontWeights } from '../../../design-tokens';
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
 
@@ -102,7 +102,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
       : isWarning
         ? 'rgba(255,145,0,0.1)'
         : 'rgba(0,176,255,0.08)',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: borderRadius.md,
     border: `1px solid ${
       isCritical
         ? 'rgba(255,82,82,0.3)'
@@ -113,10 +113,10 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   };
 
   const titleColor = isCritical
-    ? theme.colors.error
+    ? colors.error
     : isWarning
-      ? theme.colors.warning
-      : theme.colors.text.primary;
+      ? colors.warning
+      : colors.textPrimary;
 
   return (
     <div style={containerStyle}>
@@ -128,11 +128,11 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
           <span style={{
             color: titleColor,
             fontSize: '14px',
-            fontWeight: theme.fontWeights.semibold,
+            fontWeight: fontWeights.semibold,
           }}>
             Geschätzte Turnierdauer: {hours > 0 ? `${hours}h ` : ''}{minutes}min
           </span>
-          <span style={{ color: theme.colors.text.secondary, fontSize: '13px', marginLeft: '8px' }}>
+          <span style={{ color: colors.textSecondary, fontSize: '13px', marginLeft: '8px' }}>
             ({groupPhaseMatches + finalsMatches} Spiele, {fields} {fields === 1 ? 'Feld' : 'Felder'})
           </span>
         </div>
@@ -145,7 +145,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
           gap: '16px',
           marginTop: '8px',
           fontSize: '12px',
-          color: theme.colors.text.secondary
+          color: colors.textSecondary
         }}>
           <span>Gruppenphase: {groupPhaseMatches} Spiele (~{Math.floor(groupPhaseMinutes / 60)}h {groupPhaseMinutes % 60}min)</span>
           <span>Finalrunde: {finalsMatches} Spiele (~{Math.floor(finalsMinutes / 60)}h {finalsMinutes % 60}min)</span>
@@ -153,12 +153,12 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
       )}
 
       {isCritical && (
-        <p style={{ fontSize: '12px', color: theme.colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
+        <p style={{ fontSize: '12px', color: colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
           Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {Math.ceil(fields * (totalMinutes / 360))} Felder oder Spieldauer auf {Math.max(5, groupGameDuration - 3)} Min reduzieren.
         </p>
       )}
       {isWarning && !isCritical && (
-        <p style={{ fontSize: '12px', color: theme.colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
+        <p style={{ fontSize: '12px', color: colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
           Tipp: Mit {fields + 1} Feldern ca. {Math.round((totalMinutes / (fields + 1)) / 60 * 10) / 10}h oder mit {Math.max(5, groupGameDuration - 2)} Min Spieldauer verkürzt sich die Dauer.
         </p>
       )}

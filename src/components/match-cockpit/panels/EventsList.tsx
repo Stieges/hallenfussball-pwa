@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatTime } from '../utils/matchPanelUtils';
@@ -28,12 +28,12 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    borderTop: `1px dashed ${theme.colors.border}`,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTop: `1px dashed ${colors.border}`,
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const headerStyle: CSSProperties = {
@@ -41,21 +41,21 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
     alignItems: isMobile ? 'stretch' : 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   // MF-004: Semantic list styles (ul without default styling)
   const listStyle: CSSProperties = {
     maxHeight: isMobile ? '200px' : '140px',
     overflowY: 'auto',
-    paddingRight: theme.spacing.xs,
+    paddingRight: spacing.xs,
     listStyle: 'none',
     margin: 0,
     padding: 0,
@@ -64,7 +64,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
 
   const getEventItemStyle = (eventType: string): CSSProperties => {
     let backgroundColor: string = 'transparent';
-    let borderColor: string = theme.colors.border;
+    let borderColor: string = colors.border;
 
     if (eventType === 'GOAL') {
       backgroundColor = 'rgba(0, 230, 118, 0.05)';
@@ -81,20 +81,20 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'baseline',
-      gap: theme.spacing.sm,
-      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-      fontSize: theme.fontSizes.sm,
+      gap: spacing.sm,
+      padding: `${spacing.xs} ${spacing.sm}`,
+      fontSize: fontSizes.sm,
       borderBottom: `1px dashed ${borderColor}`,
       backgroundColor,
-      borderRadius: theme.borderRadius.sm,
+      borderRadius: borderRadius.sm,
       marginBottom: '2px',
     };
   };
 
   const timeStyle: CSSProperties = {
     fontFamily: 'ui-monospace, monospace',
-    color: theme.colors.text.secondary,
-    fontSize: theme.fontSizes.xs,
+    color: colors.textSecondary,
+    fontSize: fontSizes.xs,
     minWidth: '54px',
   };
 
@@ -103,9 +103,9 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   };
 
   const scoreStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
-    fontSize: theme.fontSizes.xs,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    fontSize: fontSizes.xs,
   };
 
   const getEventDescription = (event: MatchEvent) => {
@@ -143,7 +143,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: theme.spacing.xs,
+          gap: spacing.xs,
           width: isMobile ? '100%' : 'auto'
         }}>
           <Button

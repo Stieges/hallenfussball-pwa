@@ -4,24 +4,24 @@
  * Legacy theme object that re-exports values from the design tokens system.
  * This file exists for backwards compatibility with existing components.
  *
- * For new code, prefer importing directly from `@/design-tokens`:
+ * For new code, prefer importing directly from `../design-tokens`:
  *
  * @example
  * ```typescript
  * // Preferred (new code)
- * import { colors, spacing, typography } from '@/design-tokens';
+ * import { colors, spacing, typography } from '../design-tokens';
  *
  * // Legacy (existing code - still works)
- * import { theme } from '@/styles/theme';
+ * import { theme } from '../styles/theme';
  * ```
  *
- * @deprecated Prefer importing from `@/design-tokens` directly
+ * @deprecated Prefer importing from `../design-tokens` directly
  */
 
 import {
   colors,
-  spacingLegacy,
-  radiiLegacy,
+  spacing,
+  radii,
   shadows,
   gradients,
   fontFamilies,
@@ -92,28 +92,19 @@ export const theme = {
 
   shadows,
 
-  // 8pt Grid System - All values are multiples of 8px (or 4px half-unit)
-  borderRadius: radiiLegacy,
+  // 8pt Grid System - directly from design tokens
+  borderRadius: radii,
+  spacing,
 
-  // 8pt Grid Spacing Scale
-  spacing: spacingLegacy,
-
-  // Typography - MD3 Type Scale (from typography.ts)
+  // Typography - MD3 Type Scale
   typography,
   fontFamilies,
   lineHeights,
 
-  // Legacy fontSizes (mapped to typography tokens for backward compatibility)
-  fontSizes: {
-    xs: fontSizes.labelSmall,     // 11px
-    sm: fontSizes.labelMedium,    // 12px
-    md: fontSizes.bodyMedium,     // 14px
-    lg: fontSizes.bodyLarge,      // 16px
-    xl: fontSizes.titleLarge,     // 18px
-    xxl: fontSizes.headlineLarge, // 24px
-    xxxl: fontSizes.displaySmall, // 28px
-  },
+  // Font sizes with legacy naming (xs, sm, md, lg, xl, xxl, xxxl)
+  fontSizes,
 
+  // Font weights (converted to strings for CSS compatibility)
   fontWeights: {
     normal: String(fontWeights.normal),
     medium: String(fontWeights.medium),

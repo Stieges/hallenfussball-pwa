@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontWeights } from '../../design-tokens';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
 
@@ -26,7 +26,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
 
   const containerStyle: CSSProperties = {
     marginBottom: '32px',
-    borderBottom: `2px solid ${theme.colors.primary}`,
+    borderBottom: `2px solid ${colors.primary}`,
     paddingBottom: '24px',
   };
 
@@ -39,8 +39,8 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
 
   const titleStyle: CSSProperties = {
     fontSize: '32px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
     margin: 0,
     textAlign: 'center',
     flex: 1,
@@ -60,7 +60,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
 
   const subtitleStyle: CSSProperties = {
     fontSize: '14px',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: '16px',
   };
@@ -71,18 +71,18 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
     gap: '12px',
     padding: '16px',
     background: 'rgba(37, 99, 235, 0.05)',
-    borderRadius: theme.borderRadius.md,
-    border: `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.md,
+    border: `1px solid ${colors.border}`,
   };
 
   const metaItemStyle: CSSProperties = {
     fontSize: '13px',
-    color: theme.colors.text.primary,
+    color: colors.textPrimary,
     wordBreak: 'break-word', // Umbrechen bei langen Wörtern
   };
 
   const metaLabelStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.semibold,
+    fontWeight: fontWeights.semibold,
     marginRight: '8px',
   };
 
@@ -96,7 +96,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
         {qrCodeUrl && (
           <div style={{ textAlign: 'center' }}>
             <img src={qrCodeUrl} alt="QR Code" style={qrCodeStyle} />
-            <div style={{ fontSize: '10px', color: theme.colors.text.secondary, marginTop: '4px' }}>
+            <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '4px' }}>
               Live Ergebnisse
             </div>
           </div>

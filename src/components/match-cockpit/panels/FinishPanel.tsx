@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { LiveMatch } from '../MatchCockpit';
@@ -19,34 +19,34 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdi
   const isMobile = useIsMobile();
 
   const panelStyle: CSSProperties = {
-    marginTop: theme.spacing.md,
-    padding: isMobile ? theme.spacing.lg : theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    border: `1px dashed ${theme.colors.border}`,
+    marginTop: spacing.md,
+    padding: isMobile ? spacing.lg : spacing.md,
+    borderRadius: borderRadius.lg,
+    border: `1px dashed ${colors.border}`,
     background: 'rgba(15, 23, 42, 0.95)',
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? theme.spacing.sm : '6px',
+    gap: isMobile ? spacing.sm : '6px',
   };
 
   const titleStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
   };
 
   const summaryStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    color: colors.textSecondary,
   };
 
   const controlsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   };
 
   return (
@@ -54,12 +54,12 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdi
       <div style={titleStyle}>Spiel beendet – Ergebnis prüfen</div>
       <div style={summaryStyle}>
         <div>
-          <strong style={{ color: theme.colors.text.primary }}>{match.homeTeam.name}</strong> vs.{' '}
-          <strong style={{ color: theme.colors.text.primary }}>{match.awayTeam.name}</strong>
+          <strong style={{ color: colors.textPrimary }}>{match.homeTeam.name}</strong> vs.{' '}
+          <strong style={{ color: colors.textPrimary }}>{match.awayTeam.name}</strong>
         </div>
         <div>
           Endstand:{' '}
-          <strong style={{ color: theme.colors.text.primary }}>
+          <strong style={{ color: colors.textPrimary }}>
             {match.homeScore} : {match.awayScore}
           </strong>
         </div>

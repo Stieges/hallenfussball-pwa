@@ -13,7 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { colors, fontWeights } from '../../design-tokens';
 import { ContactInfo } from '../../types/tournament';
 
 // Re-export for convenience
@@ -46,7 +46,7 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
   const containerStyle: CSSProperties = {
     marginTop: '40px',
     paddingTop: '24px',
-    borderTop: `2px solid ${theme.colors.primary}`,
+    borderTop: `2px solid ${colors.primary}`,
   };
 
   const contentStyle: CSSProperties = {
@@ -65,8 +65,8 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
 
   const labelStyle: CSSProperties = {
     fontSize: '12px',
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.secondary,
+    fontWeight: fontWeights.semibold,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     marginBottom: '8px',
@@ -74,12 +74,12 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
 
   const valueStyle: CSSProperties = {
     fontSize: '14px',
-    color: theme.colors.text.primary,
+    color: colors.textPrimary,
     lineHeight: 1.6,
   };
 
   const linkStyle: CSSProperties = {
-    color: theme.colors.primary,
+    color: colors.primary,
     textDecoration: 'none',
   };
 

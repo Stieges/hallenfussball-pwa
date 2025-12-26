@@ -1,6 +1,5 @@
 import { CSSProperties, ReactNode, useState } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 interface CollapsibleSectionProps {
   title: string;
   children: ReactNode;
@@ -36,7 +35,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         };
       default:
         return {
-          border: theme.colors.border,
+          border: colors.border,
           bg: 'transparent',
           headerBg: 'rgba(255, 255, 255, 0.03)',
         };
@@ -48,7 +47,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const containerStyle: CSSProperties = {
     marginTop: '16px',
     border: `1px solid ${variantStyles.border}`,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: borderRadius.md,
     overflow: 'hidden',
     background: variantStyles.bg,
   };
@@ -56,8 +55,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing.md,
+    gap: spacing.sm,
+    padding: spacing.md,
     background: variantStyles.headerBg,
     cursor: 'pointer',
     userSelect: 'none',
@@ -66,30 +65,30 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   const titleStyle: CSSProperties = {
     flex: 1,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     margin: 0,
   };
 
   const badgeStyle: CSSProperties = {
-    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-    fontSize: theme.fontSizes.xs,
-    fontWeight: theme.fontWeights.medium,
+    padding: `${spacing.xs} ${spacing.sm}`,
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.medium,
     background: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: theme.borderRadius.lg,
-    color: theme.colors.text.secondary,
+    borderRadius: borderRadius.lg,
+    color: colors.textSecondary,
   };
 
   const chevronStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     transition: 'transform 0.2s',
     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
   };
 
   const contentStyle: CSSProperties = {
-    padding: isOpen ? theme.spacing.md : `0 ${theme.spacing.md}`,
+    padding: isOpen ? spacing.md : `0 ${spacing.md}`,
     maxHeight: isOpen ? '2000px' : '0',
     overflow: 'hidden',
     transition: 'all 0.3s ease-in-out',

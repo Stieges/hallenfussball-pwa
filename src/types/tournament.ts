@@ -156,12 +156,14 @@ export interface PlayoffConfig {
 }
 
 /**
- * Match Status for TL-RESULT-LOCK-01
+ * Match Status for TL-RESULT-LOCK-01 (extended for US-SCHEDULE-EDITOR)
  * - scheduled: Match not yet started
+ * - waiting: Waiting for previous match to complete (dependency)
  * - running: Match currently in progress
  * - finished: Match completed, results locked
+ * - skipped: Match skipped (e.g., team withdrew)
  */
-export type MatchStatus = 'scheduled' | 'running' | 'finished';
+export type MatchStatus = 'scheduled' | 'waiting' | 'running' | 'finished' | 'skipped';
 
 /**
  * How a finals match was decided (for display purposes)
@@ -200,6 +202,10 @@ export interface Match {
   penaltyScoreA?: number;        // Strafstoß-Ergebnis (Heim, z.B. 4)
   penaltyScoreB?: number;        // Strafstoß-Ergebnis (Gast, z.B. 3)
   decidedBy?: MatchDecidedBy;    // Wie wurde das Spiel entschieden
+
+  // US-SCHEDULE-EDITOR: Skipped match support
+  skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
+  skippedAt?: string;            // ISO timestamp when match was skipped
 }
 
 /**

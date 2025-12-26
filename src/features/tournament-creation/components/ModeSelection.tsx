@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights } from '../../../design-tokens';
 import { TournamentMode } from '../../../types/tournament';
 
 interface ModeSelectionProps {
@@ -31,8 +31,8 @@ const ModeButton: React.FC<ModeButtonProps> = ({
       : isSelected
         ? 'rgba(0,230,118,0.2)'
         : 'rgba(0,0,0,0.2)',
-    border: isSelected ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-    borderRadius: theme.borderRadius.md,
+    border: isSelected ? `2px solid ${colors.primary}` : '2px solid transparent',
+    borderRadius: borderRadius.md,
     textAlign: 'left',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s',
@@ -57,18 +57,18 @@ const ModeButton: React.FC<ModeButtonProps> = ({
           border: '1px solid rgba(0,176,255,0.4)',
           borderRadius: '12px',
           fontSize: '10px',
-          fontWeight: theme.fontWeights.semibold,
-          color: theme.colors.secondary,
+          fontWeight: fontWeights.semibold,
+          color: colors.secondary,
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}>
           {badge}
         </span>
       )}
-      <div style={{ fontSize: '15px', fontWeight: '700', color: disabled ? theme.colors.text.secondary : theme.colors.text.primary }}>
+      <div style={{ fontSize: '15px', fontWeight: '700', color: disabled ? colors.textSecondary : colors.textPrimary }}>
         {title}
       </div>
-      <div style={{ fontSize: '12px', color: theme.colors.text.secondary, marginTop: '4px' }}>
+      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '4px' }}>
         {subtitle}
       </div>
     </button>
@@ -84,9 +84,9 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
       <label style={{
         display: 'block',
         marginBottom: '12px',
-        fontSize: theme.fontSizes.sm,
-        color: theme.colors.text.secondary,
-        fontWeight: theme.fontWeights.medium
+        fontSize: fontSizes.sm,
+        color: colors.textSecondary,
+        fontWeight: fontWeights.medium
       }}>
         Turniermodus
       </label>

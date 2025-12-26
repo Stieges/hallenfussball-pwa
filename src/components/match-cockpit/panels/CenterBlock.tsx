@@ -6,7 +6,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
 import { Button } from '../../ui';
 import { useToast } from '../../ui/Toast';
 import { useIsMobile } from '../../../hooks/useIsMobile';
@@ -58,40 +58,40 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: isMobile ? theme.spacing.md : theme.spacing.sm,
-    padding: isMobile ? theme.spacing.lg : theme.spacing.sm,
+    gap: isMobile ? spacing.md : spacing.sm,
+    padding: isMobile ? spacing.lg : spacing.sm,
     background: isMobile ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.9))' : 'transparent',
-    border: isMobile ? `1px solid ${theme.colors.border}` : 'none',
-    borderRadius: isMobile ? theme.borderRadius.lg : '0',
+    border: isMobile ? `1px solid ${colors.border}` : 'none',
+    borderRadius: isMobile ? borderRadius.lg : '0',
   };
 
   // MF-004: Button-Style für Timer (statt div)
   const timerButtonStyle: CSSProperties = {
     fontFamily: 'ui-monospace, monospace',
     fontSize: isMobile ? '40px' : '26px',
-    fontWeight: theme.fontWeights.semibold,
-    padding: isMobile ? `${theme.spacing.md} ${theme.spacing.lg}` : `6px ${theme.spacing.md}`,
+    fontWeight: fontWeights.semibold,
+    padding: isMobile ? `${spacing.md} ${spacing.lg}` : `6px ${spacing.md}`,
     borderRadius: '999px',
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${colors.border}`,
     background: 'radial-gradient(circle at top, rgba(15, 23, 42, 0.98), #020617)',
-    boxShadow: `0 0 25px ${theme.colors.primary}40`,
+    boxShadow: `0 0 25px ${colors.primary}40`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minHeight: isMobile ? '60px' : 'auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: theme.colors.text.primary,
+    color: colors.textPrimary,
   };
 
   const phaseLabelStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    color: colors.textSecondary,
   };
 
   const statusPillStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.xs,
-    padding: isMobile ? `8px ${theme.spacing.md}` : `4px ${theme.spacing.sm}`,
+    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
+    padding: isMobile ? `8px ${spacing.md}` : `4px ${spacing.sm}`,
     borderRadius: '999px',
     display: 'inline-flex',
     alignItems: 'center',
@@ -113,8 +113,8 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
   const controlsStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: isMobile ? theme.spacing.md : theme.spacing.sm,
-    marginTop: theme.spacing.sm,
+    gap: isMobile ? spacing.md : spacing.sm,
+    marginTop: spacing.sm,
     justifyContent: 'center',
     width: isMobile ? '100%' : 'auto',
   };

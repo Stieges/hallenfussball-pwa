@@ -8,7 +8,7 @@
  */
 
 import React, { CSSProperties, useState, useMemo } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Card } from '../../components/ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
@@ -78,33 +78,33 @@ export const RankingTab: React.FC<RankingTabProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.xl : theme.fontSizes.xxl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
+    fontSize: isMobile ? fontSizes.xl : fontSizes.xxl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
     textAlign: 'center',
   };
 
   const rankingTableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: isMobile ? '14px' : theme.fontSizes.md,
+    fontSize: isMobile ? '14px' : fontSizes.md,
   };
 
   const thStyle: CSSProperties = {
-    background: theme.colors.primary,
-    color: theme.colors.background,
+    background: colors.primary,
+    color: colors.background,
     padding: isMobile ? '8px 6px' : '12px 16px',
     textAlign: 'left',
-    fontWeight: theme.fontWeights.semibold,
-    borderBottom: `2px solid ${theme.colors.border}`,
-    fontSize: isMobile ? '12px' : theme.fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    borderBottom: `2px solid ${colors.border}`,
+    fontSize: isMobile ? '12px' : fontSizes.md,
   };
 
   const tdStyle: CSSProperties = {
     padding: isMobile ? '10px 6px' : '12px 16px',
-    borderBottom: `1px solid ${theme.colors.border}`,
-    color: theme.colors.text.primary,
+    borderBottom: `1px solid ${colors.border}`,
+    color: colors.textPrimary,
   };
 
   const medalStyle = (rank: number): CSSProperties => ({
@@ -114,27 +114,27 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     width: isMobile ? '28px' : '32px',
     height: isMobile ? '28px' : '32px',
     borderRadius: '50%',
-    fontWeight: theme.fontWeights.bold,
-    fontSize: isMobile ? '12px' : theme.fontSizes.md,
-    background: rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : theme.colors.surface,
-    color: rank <= 3 ? '#000' : theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    fontSize: isMobile ? '12px' : fontSizes.md,
+    background: rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : colors.surface,
+    color: rank <= 3 ? '#000' : colors.textPrimary,
   });
 
   const fullscreenButtonStyle: CSSProperties = {
     position: 'fixed',
-    top: isMobile ? theme.spacing.sm : theme.spacing.lg,
-    right: isMobile ? theme.spacing.sm : theme.spacing.lg,
-    padding: isMobile ? `${theme.spacing.sm} ${theme.spacing.md}` : `${theme.spacing.md} ${theme.spacing.lg}`,
+    top: isMobile ? spacing.sm : spacing.lg,
+    right: isMobile ? spacing.sm : spacing.lg,
+    padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
     background: 'rgba(0, 230, 118, 0.15)',
-    border: `1px solid ${theme.colors.primary}`,
-    borderRadius: theme.borderRadius.lg,
-    color: theme.colors.primary,
-    fontSize: isMobile ? '12px' : theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
+    border: `1px solid ${colors.primary}`,
+    borderRadius: borderRadius.lg,
+    color: colors.primary,
+    fontSize: isMobile ? '12px' : fontSizes.md,
+    fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     transition: 'all 0.2s ease',
     zIndex: 1000,
   };
@@ -250,21 +250,21 @@ export const RankingTab: React.FC<RankingTabProps> = ({
       return {
         icon: '⏳',
         text: 'Playoffs noch nicht gestartet',
-        color: theme.colors.text.secondary,
+        color: colors.textSecondary,
         bgColor: 'rgba(100, 100, 100, 0.1)',
       };
     } else if (playoffStatus === 'in-progress') {
       return {
         icon: '▶',
         text: `Playoffs laufen (${completedFinalsCount}/${totalFinalsCount} Spiele)`,
-        color: theme.colors.warning,
+        color: colors.warning,
         bgColor: 'rgba(255, 145, 0, 0.1)',
       };
     } else {
       return {
         icon: '✅',
         text: 'Turnier abgeschlossen',
-        color: theme.colors.primary,
+        color: colors.primary,
         bgColor: 'rgba(0, 230, 118, 0.1)',
       };
     }
@@ -280,28 +280,28 @@ export const RankingTab: React.FC<RankingTabProps> = ({
       </button>
 
       <Card>
-        <div style={{ padding: isMobile ? theme.spacing.md : theme.spacing.lg }}>
+        <div style={{ padding: isMobile ? spacing.md : spacing.lg }}>
           <h2 style={titleStyle}>Finale Platzierung</h2>
 
           {/* Platzierungslogik Anzeige */}
           <div style={{
-            marginBottom: theme.spacing.lg,
-            padding: isMobile ? theme.spacing.sm : theme.spacing.md,
+            marginBottom: spacing.lg,
+            padding: isMobile ? spacing.sm : spacing.md,
             background: 'rgba(0, 230, 118, 0.08)',
-            borderRadius: theme.borderRadius.md,
-            border: `1px solid ${theme.colors.primary}40`,
+            borderRadius: borderRadius.md,
+            border: `1px solid ${colors.primary}40`,
           }}>
             <div style={{
-              fontSize: isMobile ? '13px' : theme.fontSizes.sm,
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.primary,
+              fontSize: isMobile ? '13px' : fontSizes.sm,
+              fontWeight: fontWeights.semibold,
+              color: colors.primary,
               marginBottom: '6px',
             }}>
               Platzierungslogik:
             </div>
             <div style={{
-              fontSize: isMobile ? '12px' : theme.fontSizes.sm,
-              color: theme.colors.text.secondary,
+              fontSize: isMobile ? '12px' : fontSizes.sm,
+              color: colors.textSecondary,
               display: 'flex',
               flexWrap: 'wrap',
               gap: '4px',
@@ -311,11 +311,11 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                 .filter(c => c.enabled)
                 .map((criterion, index) => (
                   <span key={criterion.id}>
-                    <strong style={{ color: theme.colors.text.primary }}>
+                    <strong style={{ color: colors.textPrimary }}>
                       {index + 1}. {criterion.label}
                     </strong>
                     {index < tournament.placementLogic.filter(c => c.enabled).length - 1 && (
-                      <span style={{ margin: '0 4px', color: theme.colors.primary }}>→</span>
+                      <span style={{ margin: '0 4px', color: colors.primary }}>→</span>
                     )}
                   </span>
                 ))}
@@ -328,18 +328,18 @@ export const RankingTab: React.FC<RankingTabProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: theme.spacing.sm,
-              marginBottom: theme.spacing.lg,
-              padding: isMobile ? theme.spacing.sm : theme.spacing.md,
+              gap: spacing.sm,
+              marginBottom: spacing.lg,
+              padding: isMobile ? spacing.sm : spacing.md,
               background: playoffStatusInfo.bgColor,
-              borderRadius: theme.borderRadius.md,
+              borderRadius: borderRadius.md,
               border: `1px solid ${playoffStatusInfo.color}40`,
             }}>
               <span style={{ fontSize: isMobile ? '16px' : '20px' }}>{playoffStatusInfo.icon}</span>
               <span style={{
-                fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.md,
+                fontSize: isMobile ? fontSizes.sm : fontSizes.md,
                 color: playoffStatusInfo.color,
-                fontWeight: theme.fontWeights.semibold,
+                fontWeight: fontWeights.semibold,
               }}>
                 {playoffStatusInfo.text}
               </span>
@@ -382,7 +382,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <div style={medalStyle(placement.rank)}>{placement.rank}</div>
                       </td>
-                      <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
+                      <td style={{ ...tdStyle, fontWeight: fontWeights.semibold }}>
                         {placement.team.name}
                       </td>
                       {hasPlayoffs && (
@@ -395,16 +395,16 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               padding: '2px 8px',
                               background: 'rgba(0, 230, 118, 0.15)',
                               borderRadius: '12px',
-                              fontSize: theme.fontSizes.xs,
-                              color: theme.colors.primary,
-                              fontWeight: theme.fontWeights.semibold,
+                              fontSize: fontSizes.xs,
+                              color: colors.primary,
+                              fontWeight: fontWeights.semibold,
                             }}>
                               {placement.matchLabel || 'Playoff'}
                             </span>
                           ) : (
                             <span style={{
-                              fontSize: theme.fontSizes.xs,
-                              color: theme.colors.text.secondary,
+                              fontSize: fontSizes.xs,
+                              color: colors.textSecondary,
                             }}>
                               Gruppenphase
                             </span>
@@ -412,7 +412,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         </td>
                       )}
                       {hasGroups && (
-                        <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
+                        <td style={{ ...tdStyle, textAlign: 'center', fontWeight: fontWeights.semibold }}>
                           {placement.team.group ? getGroupShortCode(placement.team.group, tournament) : '-'}
                         </td>
                       )}
@@ -421,7 +421,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{
-                          fontWeight: highlightWins ? theme.fontWeights.bold : theme.fontWeights.normal,
+                          fontWeight: highlightWins ? fontWeights.bold : fontWeights.normal,
                           padding: highlightWins ? '2px 8px' : '0',
                           background: highlightWins ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightWins ? '4px' : '0',
@@ -437,7 +437,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{
-                          fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? theme.fontWeights.bold : theme.fontWeights.normal,
+                          fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? fontWeights.bold : fontWeights.normal,
                           padding: (highlightGoalsFor || highlightGoalsAgainst) ? '2px 8px' : '0',
                           background: (highlightGoalsFor || highlightGoalsAgainst) ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: (highlightGoalsFor || highlightGoalsAgainst) ? '4px' : '0',
@@ -448,10 +448,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       <td style={{
                         ...tdStyle,
                         textAlign: 'center',
-                        color: goalDiff > 0 ? theme.colors.primary : goalDiff < 0 ? theme.colors.error : theme.colors.text.secondary,
+                        color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
                       }}>
                         <span style={{
-                          fontWeight: highlightGoalDiff ? theme.fontWeights.bold : theme.fontWeights.semibold,
+                          fontWeight: highlightGoalDiff ? fontWeights.bold : fontWeights.semibold,
                           padding: highlightGoalDiff ? '2px 8px' : '0',
                           background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightGoalDiff ? '4px' : '0',
@@ -461,8 +461,8 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         <span style={{
-                          fontWeight: theme.fontWeights.bold,
-                          fontSize: theme.fontSizes.lg,
+                          fontWeight: fontWeights.bold,
+                          fontSize: fontSizes.lg,
                           padding: highlightPoints ? '2px 8px' : '0',
                           background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
                           borderRadius: highlightPoints ? '4px' : '0',
@@ -510,13 +510,13 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
                           <div style={medalStyle(placement.rank)}>{placement.rank}</div>
                         </td>
-                        <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold, fontSize: '14px' }}>
+                        <td style={{ ...tdStyle, fontWeight: fontWeights.semibold, fontSize: '14px' }}>
                           {placement.team.name}
                           {/* Show playoff badge or group info */}
                           {placement.decidedBy === 'playoff' ? (
                             <div style={{
                               fontSize: '10px',
-                              color: theme.colors.primary,
+                              color: colors.primary,
                               marginTop: '2px',
                               display: 'flex',
                               alignItems: 'center',
@@ -525,14 +525,14 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               {placement.matchLabel || 'Playoff'}
                             </div>
                           ) : hasGroups && placement.team.group ? (
-                            <div style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '2px' }}>
                               {getGroupShortCode(placement.team.group, tournament)}
                             </div>
                           ) : null}
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
                           <span style={{
-                            fontWeight: theme.fontWeights.bold,
+                            fontWeight: fontWeights.bold,
                             fontSize: '15px',
                             padding: highlightPoints ? '2px 6px' : '0',
                             background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
@@ -544,10 +544,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         <td style={{
                           ...tdStyle,
                           textAlign: 'center',
-                          color: goalDiff > 0 ? theme.colors.primary : goalDiff < 0 ? theme.colors.error : theme.colors.text.secondary,
+                          color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
                         }}>
                           <span style={{
-                            fontWeight: theme.fontWeights.semibold,
+                            fontWeight: fontWeights.semibold,
                             fontSize: '14px',
                             padding: highlightGoalDiff ? '2px 6px' : '0',
                             background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
@@ -557,7 +557,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           </span>
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
-                          <span style={{ fontSize: '16px', color: theme.colors.primary }}>
+                          <span style={{ fontSize: '16px', color: colors.primary }}>
                             {isExpanded ? '▼' : '▶'}
                           </span>
                         </td>
@@ -567,7 +567,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                           <td colSpan={5} style={{
                             padding: '12px',
                             background: 'rgba(0, 230, 118, 0.05)',
-                            borderBottom: `1px solid ${theme.colors.border}`,
+                            borderBottom: `1px solid ${colors.border}`,
                           }}>
                             <div style={{
                               display: 'grid',
@@ -576,38 +576,38 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               fontSize: '13px',
                             }}>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Spiele</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Spiele</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.played}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Siege</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Siege</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.won}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Unent.</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Unent.</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.drawn}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Niederl.</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Niederl.</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.lost}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Tore geschossen</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore geschossen</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.goalsFor}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: theme.colors.text.secondary, fontSize: '11px', marginBottom: '4px' }}>Tore kassiert</div>
-                                <div style={{ fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore kassiert</div>
+                                <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.goalsAgainst}
                                 </div>
                               </div>
@@ -626,9 +626,9 @@ export const RankingTab: React.FC<RankingTabProps> = ({
           {finalRanking.length === 0 && (
             <div style={{
               textAlign: 'center',
-              padding: isMobile ? theme.spacing.lg : theme.spacing.xxl,
-              color: theme.colors.text.secondary,
-              fontSize: isMobile ? '14px' : theme.fontSizes.lg,
+              padding: isMobile ? spacing.lg : spacing.xxl,
+              color: colors.textSecondary,
+              fontSize: isMobile ? '14px' : fontSizes.lg,
             }}>
               Noch keine Ergebnisse vorhanden.
               <br />

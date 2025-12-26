@@ -1,6 +1,5 @@
 import { CSSProperties } from 'react';
-import { theme } from '../styles/theme';
-
+import { borderRadius, colors, fontSizes, fontWeights, gradients } from '../design-tokens';
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
@@ -37,16 +36,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const isClickableStep = clickable && onStepClick && (isVisited || isCurrent);
 
     return {
-      fontSize: theme.fontSizes.xs,
-      fontWeight: isCurrent ? theme.fontWeights.bold : theme.fontWeights.semibold,
+      fontSize: fontSizes.xs,
+      fontWeight: isCurrent ? fontWeights.bold : fontWeights.semibold,
       color:
         currentStep > stepNum
-          ? theme.colors.primary
+          ? colors.primary
           : isCurrent
-          ? theme.colors.text.primary
+          ? colors.textPrimary
           : hasErrors
-          ? theme.colors.error
-          : theme.colors.text.secondary,
+          ? colors.error
+          : colors.textSecondary,
       transition: 'all 0.3s ease',
       cursor: isClickableStep ? 'pointer' : 'default',
       position: 'relative',
@@ -79,7 +78,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     width: '6px',
     height: '6px',
     borderRadius: '50%',
-    background: theme.colors.error,
+    background: colors.error,
     display: 'inline-block',
     marginLeft: '2px',
   };
@@ -127,7 +126,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         style={{
           height: '4px',
           background: 'rgba(255,255,255,0.1)',
-          borderRadius: theme.borderRadius.sm,
+          borderRadius: borderRadius.sm,
           overflow: 'hidden',
         }}
       >
@@ -135,7 +134,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           style={{
             width: `${(currentStep / totalSteps) * 100}%`,
             height: '100%',
-            background: theme.gradients.primary,
+            background: gradients.primary,
             transition: 'width 0.3s ease',
           }}
         />

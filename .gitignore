@@ -39,3 +39,6 @@ mcp-adesso-analyzer/
 **/credentials.json
 **/*secret*
 **/*apikey*
+
+# Interne Dokumentation (nicht öffentlich)
+docs/

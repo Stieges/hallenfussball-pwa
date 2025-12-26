@@ -2,6 +2,26 @@
 
 Single source of truth for all design values in the Hallenfussball PWA.
 
+---
+
+## ⚠️ WICHTIG: Verbindliche Richtlinie
+
+**Alle Styling-Werte MÜSSEN über Design Tokens definiert werden.**
+
+```typescript
+// ✅ RICHTIG
+import { colors, spacing, fontSizes } from '../design-tokens';
+
+// ❌ VERBOTEN - Keine hardcoded Werte!
+padding: '16px'     // → spacing.md
+color: '#00d46a'    // → colors.primary
+fontSize: '14px'    // → fontSizes.md
+```
+
+**Bei Code-Reviews:** PRs mit hardcoded Styling-Werten werden abgelehnt.
+
+---
+
 ## Overview
 
 Design tokens are the visual design atoms of the design system - specifically, they are named entities that store visual design attributes. We use tokens in place of hard-coded values (such as hex values for color or pixel values for spacing) in order to maintain a scalable and consistent visual system.
@@ -34,18 +54,14 @@ const style = {
 };
 ```
 
-### Legacy: Theme Object
+### ⚠️ Veraltet: Theme Object
 
-For backwards compatibility, the theme object is still available:
+Das theme-Objekt existiert nur noch für Legacy-Kompatibilität.
+**Nicht für neuen Code verwenden!**
 
 ```typescript
-import { theme } from '@/styles/theme';
-
-// Legacy usage
-const style = {
-  color: theme.colors.primary,
-  padding: theme.spacing.md,
-};
+// ❌ VERALTET - Nicht mehr verwenden
+import { theme } from '../styles/theme';
 ```
 
 ## Token Reference

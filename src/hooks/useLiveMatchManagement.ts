@@ -67,6 +67,11 @@ export interface UseLiveMatchManagementReturn {
   handleRecordPenaltyResult: (matchId: string, homeScore: number, awayScore: number) => void;
   /** Cancel tiebreaker and finish as draw */
   handleCancelTiebreaker: (matchId: string) => void;
+  // US-SCHEDULE-EDITOR: Skip match handlers
+  /** Skip a match (e.g., team withdrew) */
+  handleSkipMatch: (matchId: string, reason: string) => void;
+  /** Restore a skipped match */
+  handleUnskipMatch: (matchId: string) => void;
 }
 
 // MF-002: Interval für Persistenz erhöht (Display wird jetzt lokal berechnet)
@@ -676,6 +681,88 @@ export function useLiveMatchManagement({
   }, []);
 
   /**
+   * US-SCHEDULE-EDITOR: Skip a match (e.g., team withdrew or match cancelled)
+   */
+  const handleSkipMatch = useCallback((matchId: string, reason: string) => {
+    // Update tournament.matches with skipped status
+    const updatedMatches = tournamentRef.current.matches.map(m => {
+      if (m.id === matchId) {
+        return {
+          ...m,
+          matchStatus: 'skipped' as const,
+          skippedReason: reason,
+          skippedAt: new Date().toISOString(),
+        };
+      }
+      return m;
+    });
+
+    const updatedTournament = {
+      ...tournamentRef.current,
+      matches: updatedMatches,
+      updatedAt: new Date().toISOString(),
+    };
+
+    onTournamentUpdate(updatedTournament, false);
+
+    // Also update liveMatches if it exists
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {return prev;}
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'FINISHED' as MatchStatus, // Use FINISHED since LiveMatch doesn't have SKIPPED
+      });
+      return updated;
+    });
+
+    console.log(`[SkipMatch] Match ${matchId} skipped: ${reason}`);
+  }, [onTournamentUpdate]);
+
+  /**
+   * US-SCHEDULE-EDITOR: Restore a skipped match back to scheduled
+   */
+  const handleUnskipMatch = useCallback((matchId: string) => {
+    // Update tournament.matches - restore to scheduled
+    const updatedMatches = tournamentRef.current.matches.map(m => {
+      if (m.id === matchId) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { skippedReason, skippedAt, ...rest } = m;
+        return {
+          ...rest,
+          matchStatus: 'scheduled' as const,
+        };
+      }
+      return m;
+    });
+
+    const updatedTournament = {
+      ...tournamentRef.current,
+      matches: updatedMatches,
+      updatedAt: new Date().toISOString(),
+    };
+
+    onTournamentUpdate(updatedTournament, false);
+
+    // Also update liveMatches if it exists
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {return prev;}
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        status: 'NOT_STARTED' as MatchStatus,
+      });
+      return updated;
+    });
+
+    console.log(`[UnskipMatch] Match ${matchId} restored to scheduled`);
+  }, [onTournamentUpdate]);
+
+  /**
    * Record a goal
    * BUG-CRIT-001 FIX: Tournament update moved to setTimeout to prevent race condition
    * when goals are clicked rapidly in succession
@@ -948,5 +1035,8 @@ export function useLiveMatchManagement({
     handleStartPenaltyShootout,
     handleRecordPenaltyResult,
     handleCancelTiebreaker,
+    // US-SCHEDULE-EDITOR: Skip match handlers
+    handleSkipMatch,
+    handleUnskipMatch,
   };
 }

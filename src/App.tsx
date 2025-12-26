@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
-import { theme } from './styles/theme';
+import { colors, fontFamilies } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
@@ -28,8 +28,8 @@ const ScreenLoader = () => (
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      background: theme.colors.background,
-      color: theme.colors.text.primary,
+      background: colors.background,
+      color: colors.textPrimary,
     }}
   >
     <div style={{ textAlign: 'center' }}>
@@ -37,8 +37,8 @@ const ScreenLoader = () => (
         style={{
           width: 40,
           height: 40,
-          border: `3px solid ${theme.colors.border}`,
-          borderTopColor: theme.colors.primary,
+          border: `3px solid ${colors.border}`,
+          borderTopColor: colors.primary,
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           margin: '0 auto 16px',
@@ -85,8 +85,8 @@ function AppContent() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          background: theme.colors.background,
-          color: theme.colors.text.primary,
+          background: colors.background,
+          color: colors.textPrimary,
         }}
       >
         <div>Lade Turniere...</div>
@@ -178,9 +178,9 @@ function AppContent() {
     <div
       style={{
         minHeight: '100vh',
-        background: theme.colors.background,
-        color: theme.colors.text.primary,
-        fontFamily: theme.fonts.body,
+        background: colors.background,
+        color: colors.textPrimary,
+        fontFamily: fontFamilies.body,
       }}
     >
       <Suspense fallback={<ScreenLoader />}>

@@ -1,6 +1,6 @@
 import { Card, Button, Icons } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { colors, fontSizes, fontWeights } from '../../design-tokens';
 import { getFullLocationAddress } from '../../utils/locationHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './Step5_Overview.module.css';
@@ -13,17 +13,17 @@ interface Step5Props {
 export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
   return (
     <Card>
-      <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
+      <h2 style={{ color: colors.textPrimary, fontSize: fontSizes.xl, margin: '0 0 24px 0' }}>
         Zusammenfassung
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Turniername */}
         <div className={styles.infoBox}>
-          <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+          <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
             Turniername
           </div>
-          <div style={{ fontSize: theme.fontSizes.xl, fontWeight: theme.fontWeights.bold, color: theme.colors.text.primary }}>
+          <div style={{ fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.textPrimary }}>
             {formData.title || '(nicht angegeben)'}
           </div>
         </div>
@@ -31,10 +31,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Veranstalter (if provided) */}
         {formData.organizer && (
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Veranstalter
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
               {formData.organizer}
             </div>
           </div>
@@ -43,18 +43,18 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Sportart & Typ */}
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Sportart
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.primary }}>
               {formData.sport === 'football' ? 'Fußball' : 'Sonstiges'}
             </div>
           </div>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Turniertyp
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: formData.tournamentType === 'bambini' ? theme.colors.warning : theme.colors.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: formData.tournamentType === 'bambini' ? colors.warning : colors.primary }}>
               {formData.tournamentType === 'bambini' ? 'Bambini' : 'Klassisch'}
             </div>
           </div>
@@ -63,18 +63,18 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Modus & System */}
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Altersklasse
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.primary }}>
               {formData.ageClass}
             </div>
           </div>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Modus
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.secondary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.secondary }}>
               {formData.mode === 'classic' ? 'Klassisch' : 'Mini-Fußball'}
             </div>
           </div>
@@ -83,18 +83,18 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Datum & Ort */}
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Datum
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
               {formData.date || '-'}
             </div>
           </div>
           <div className={styles.infoBox}>
-            <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '4px' }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '4px' }}>
               Ort
             </div>
-            <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+            <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
               {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
             </div>
           </div>
@@ -102,10 +102,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
 
         {/* Teams */}
         <div className={styles.infoBox}>
-          <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary, marginBottom: '8px' }}>
+          <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary, marginBottom: '8px' }}>
             Teams
           </div>
-          <div style={{ fontSize: theme.fontSizes.lg, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+          <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
             {formData.teams?.length || 0} Teams
           </div>
           {formData.teams && formData.teams.length > 0 && (

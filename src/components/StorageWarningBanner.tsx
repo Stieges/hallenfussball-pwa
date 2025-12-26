@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, CSSProperties } from 'react';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../design-tokens';
 import { checkStorageHealth } from '../utils/storageCleanup';
 
 export const StorageWarningBanner: React.FC = () => {
@@ -43,15 +43,15 @@ export const StorageWarningBanner: React.FC = () => {
     top: 0,
     left: 0,
     right: 0,
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-    background: theme.colors.error,
+    padding: `${spacing.md} ${spacing.lg}`,
+    background: colors.error,
     color: 'white',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     zIndex: 9999,
-    fontSize: theme.fontSizes.sm,
+    fontSize: fontSizes.sm,
     boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
   };
 
@@ -68,11 +68,11 @@ export const StorageWarningBanner: React.FC = () => {
     background: 'rgba(255,255,255,0.2)',
     border: '1px solid rgba(255,255,255,0.5)',
     color: 'white',
-    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    borderRadius: theme.borderRadius.sm,
+    padding: `${spacing.xs} ${spacing.md}`,
+    borderRadius: borderRadius.sm,
     cursor: 'pointer',
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
     transition: 'background 0.2s',
     flexShrink: 0,
   };

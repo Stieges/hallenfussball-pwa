@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontFamilies, fontWeights, shadows, spacing } from '../../design-tokens';
 import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
 import { MatchTimer } from './MatchTimer';
 
@@ -34,26 +34,26 @@ function getStatusInfo(status: MatchStatus): { label: string; color: string; bgC
     case 'RUNNING':
       return {
         label: 'LIVE',
-        color: theme.colors.status.live,
+        color: colors.statusLive,
         bgColor: 'rgba(0, 230, 118, 0.2)',
       };
     case 'PAUSED':
       return {
         label: 'PAUSE',
-        color: theme.colors.warning,
+        color: colors.warning,
         bgColor: 'rgba(255, 145, 0, 0.2)',
       };
     case 'FINISHED':
       return {
         label: 'BEENDET',
-        color: theme.colors.text.secondary,
+        color: colors.textSecondary,
         bgColor: 'rgba(255, 255, 255, 0.1)',
       };
     case 'NOT_STARTED':
     default:
       return {
         label: 'WARTET',
-        color: theme.colors.text.secondary,
+        color: colors.textSecondary,
         bgColor: 'rgba(255, 255, 255, 0.1)',
       };
   }
@@ -76,7 +76,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
       score: '90px',
       separator: '48px',
       info: '18px',
-      padding: theme.spacing.xl,
+      padding: spacing.xl,
       timerMaxWidth: '400px',
     },
     lg: {
@@ -84,7 +84,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
       score: '130px',
       separator: '64px',
       info: '24px',
-      padding: theme.spacing.xxl,
+      padding: spacing.xxl,
       timerMaxWidth: '550px',
     },
     xl: {
@@ -110,13 +110,13 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
       : isRunning
         ? 'linear-gradient(180deg, rgba(0, 230, 118, 0.12) 0%, rgba(0, 100, 50, 0.08) 50%, rgba(15, 23, 42, 0.9) 100%)'
         : 'linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%)',
-    borderRadius: fullscreen ? 0 : theme.borderRadius.xl,
-    border: fullscreen ? 'none' : `4px solid ${isRunning ? theme.colors.primary : theme.colors.border}`,
+    borderRadius: fullscreen ? 0 : borderRadius.xl,
+    border: fullscreen ? 'none' : `4px solid ${isRunning ? colors.primary : colors.border}`,
     boxShadow: fullscreen
       ? 'none'
       : isRunning
         ? '0 0 60px rgba(0, 230, 118, 0.3), inset 0 0 40px rgba(0, 230, 118, 0.05)'
-        : theme.shadows.lg,
+        : shadows.lg,
     animation: isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
     minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : size === 'lg' ? '55vh' : '40vh',
     height: fullscreen ? '100%' : 'auto',
@@ -130,36 +130,36 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginBottom: size === 'xl' ? theme.spacing.xxl : theme.spacing.xl,
+    gap: spacing.sm,
+    marginBottom: size === 'xl' ? spacing.xxl : spacing.xl,
   };
 
   const fieldInfoStyle: CSSProperties = {
     fontSize: currentSize.info,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.accent,
+    fontWeight: fontWeights.semibold,
+    color: colors.accent,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   };
 
   const groupInfoStyle: CSSProperties = {
     fontSize: currentSize.info,
-    fontWeight: theme.fontWeights.medium,
-    color: theme.colors.text.secondary,
+    fontWeight: fontWeights.medium,
+    color: colors.textSecondary,
   };
 
   const statusBadgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     padding: size === 'xl'
-      ? `${theme.spacing.sm} ${theme.spacing.xl}`
-      : `${theme.spacing.xs} ${theme.spacing.md}`,
-    borderRadius: theme.borderRadius.md,
+      ? `${spacing.sm} ${spacing.xl}`
+      : `${spacing.xs} ${spacing.md}`,
+    borderRadius: borderRadius.md,
     backgroundColor: statusInfo.bgColor,
     color: statusInfo.color,
     fontSize: size === 'xl' ? '20px' : size === 'lg' ? '16px' : '14px',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
@@ -170,8 +170,8 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    gap: theme.spacing.xl,
-    marginBottom: size === 'xl' ? theme.spacing.xxl : theme.spacing.xl,
+    gap: spacing.xl,
+    marginBottom: size === 'xl' ? spacing.xxl : spacing.xl,
   };
 
   const teamContainerStyle = (side: 'home' | 'away'): CSSProperties => ({
@@ -179,14 +179,14 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: side === 'home' ? 'flex-end' : 'flex-start',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   });
 
   const teamNameStyle: CSSProperties = {
     fontSize: currentSize.teamName,
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     color: '#ffffff',
-    fontFamily: theme.fonts.heading,
+    fontFamily: fontFamilies.heading,
     lineHeight: 1.15,
     wordBreak: 'break-word',
     maxWidth: '100%',
@@ -198,16 +198,16 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: size === 'xl' ? theme.spacing.xl : theme.spacing.lg,
-    padding: size === 'xl' ? `0 ${theme.spacing.xxl}` : `0 ${theme.spacing.xl}`,
+    gap: size === 'xl' ? spacing.xl : spacing.lg,
+    padding: size === 'xl' ? `0 ${spacing.xxl}` : `0 ${spacing.xl}`,
     flexShrink: 0,
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: currentSize.score,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
-    fontFamily: theme.fonts.heading,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
+    fontFamily: fontFamilies.heading,
     minWidth: size === 'xl' ? '160px' : size === 'lg' ? '100px' : '70px',
     textAlign: 'center',
     textShadow: isRunning
@@ -218,15 +218,15 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
 
   const separatorStyle: CSSProperties = {
     fontSize: currentSize.separator,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     opacity: 0.8,
   };
 
   const timerContainerStyle: CSSProperties = {
     width: '100%',
     maxWidth: currentSize.timerMaxWidth,
-    marginTop: size === 'xl' ? theme.spacing.xxl : theme.spacing.xl,
+    marginTop: size === 'xl' ? spacing.xxl : spacing.xl,
   };
 
   const liveDotStyle: CSSProperties = {
@@ -296,9 +296,9 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         {/* Referee info */}
         {match.refereeName && (
           <div style={{
-            marginTop: theme.spacing.xl,
+            marginTop: spacing.xl,
             fontSize: currentSize.info,
-            color: theme.colors.text.secondary,
+            color: colors.textSecondary,
           }}>
             Schiedsrichter: {match.refereeName}
           </div>
@@ -369,29 +369,29 @@ export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: fullscreen ? 'clamp(32px, 4vw, 64px)' : size === 'xl' ? '64px' : theme.spacing.xxl,
+    padding: fullscreen ? 'clamp(32px, 4vw, 64px)' : size === 'xl' ? '64px' : spacing.xxl,
     background: fullscreen
       ? 'transparent'
       : 'linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-    borderRadius: fullscreen ? 0 : theme.borderRadius.xl,
-    border: fullscreen ? 'none' : `3px solid ${theme.colors.border}`,
+    borderRadius: fullscreen ? 0 : borderRadius.xl,
+    border: fullscreen ? 'none' : `3px solid ${colors.border}`,
     minHeight: fullscreen ? '100%' : size === 'xl' ? '50vh' : size === 'lg' ? '35vh' : '25vh',
     height: fullscreen ? '100%' : 'auto',
     width: '100%',
     maxWidth: fullscreen ? 'none' : size === 'xl' ? '1200px' : '1000px',
     margin: '0 auto',
-    boxShadow: fullscreen ? 'none' : theme.shadows.lg,
+    boxShadow: fullscreen ? 'none' : shadows.lg,
   };
 
   const iconStyle: CSSProperties = {
     fontSize: size === 'xl' ? '100px' : size === 'lg' ? '72px' : '48px',
-    marginBottom: theme.spacing.xl,
+    marginBottom: spacing.xl,
     opacity: 0.6,
   };
 
   const messageStyle: CSSProperties = {
     fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : size === 'lg' ? '28px' : '20px',
-    fontWeight: theme.fontWeights.semibold,
+    fontWeight: fontWeights.semibold,
     color: '#ffffff',
     textAlign: 'center',
     textShadow: '0 2px 8px rgba(0, 0, 0, 0.4)',
@@ -400,7 +400,7 @@ export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
   const subMessageStyle: CSSProperties = {
     fontSize: size === 'xl' ? 'clamp(18px, 2vw, 24px)' : size === 'lg' ? '18px' : '14px',
     color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: theme.spacing.lg,
+    marginTop: spacing.lg,
     textAlign: 'center',
   };
 

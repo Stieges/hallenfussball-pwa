@@ -1,6 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontWeights } from '../../design-tokens';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -61,15 +60,15 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
     };
 
     const scoreStyle: CSSProperties = {
-      fontWeight: theme.fontWeights.bold,
+      fontWeight: fontWeights.bold,
       fontSize: '14px',
     };
 
     const buttonStyle: CSSProperties = {
       background: 'transparent',
-      border: `1px solid ${theme.colors.border}`,
-      borderRadius: theme.borderRadius.sm,
-      color: theme.colors.text.secondary,
+      border: `1px solid ${colors.border}`,
+      borderRadius: borderRadius.sm,
+      color: colors.textSecondary,
       fontSize: '11px',
       padding: '3px 8px',
       cursor: 'pointer',
@@ -101,9 +100,9 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
         <style>{`
           .correction-button:hover {
-            background: ${theme.colors.primary};
+            background: ${colors.primary};
             color: white;
-            border-color: ${theme.colors.primary};
+            border-color: ${colors.primary};
           }
 
           @media (max-width: 767px) {
@@ -136,15 +135,15 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       padding: '4px',
       border: inCorrectionMode
         ? `2px solid #FFC107` // Warning border in correction mode
-        : `1px solid ${theme.colors.border}`,
+        : `1px solid ${colors.border}`,
       borderRadius: '4px',
       fontSize: '13px',
-      fontWeight: theme.fontWeights.bold,
+      fontWeight: fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode
         ? '#FFF3CD' // Light yellow background in correction mode
-        : theme.colors.background,
-      color: theme.colors.text.primary,
+        : colors.background,
+      color: colors.textPrimary,
     };
 
     const iconStyle: CSSProperties = {

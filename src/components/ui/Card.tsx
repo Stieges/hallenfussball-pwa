@@ -1,6 +1,5 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, gradients, shadows, spacing } from '../../design-tokens';
 interface CardProps {
   children: ReactNode;
   style?: CSSProperties;
@@ -19,12 +18,12 @@ export const Card: React.FC<CardProps> = ({
   onMouseLeave,
 }) => {
   const cardStyles: CSSProperties = {
-    background: theme.gradients.card,
+    background: gradients.card,
     backdropFilter: 'blur(10px)',
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    boxShadow: theme.shadows.md,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    boxShadow: shadows.md,
     ...style,
   };
 

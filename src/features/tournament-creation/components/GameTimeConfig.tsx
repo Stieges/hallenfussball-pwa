@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { NumberStepper, Select } from '../../../components/ui';
-import { theme } from '../../../styles/theme';
+import { borderRadius, colors, fontWeights } from '../../../design-tokens';
 import { Tournament } from '../../../types/tournament';
 import { GAME_PERIODS_OPTIONS, DEFAULT_VALUES } from '../../../constants/tournamentOptions';
 import styles from './GameTimeConfig.module.css';
@@ -22,15 +22,15 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
     marginTop: '16px',
     padding: '16px',
     background: isGroupPhase ? 'rgba(0,230,118,0.05)' : 'rgba(255,215,0,0.08)',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: borderRadius.md,
     border: `1px solid ${isGroupPhase ? 'rgba(0,230,118,0.15)' : 'rgba(255,215,0,0.3)'}`,
   };
 
   const headerStyle: CSSProperties = {
-    color: isGroupPhase ? theme.colors.primary : theme.colors.accent,
+    color: isGroupPhase ? colors.primary : colors.accent,
     fontSize: '13px',
     margin: '0 0 12px 0',
-    fontWeight: theme.fontWeights.semibold,
+    fontWeight: fontWeights.semibold,
   };
 
   if (isGroupPhase) {
@@ -76,7 +76,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
               suffix="Min"
               mode="stepper"
             />
-            <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
+            <p style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
               Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods || 1))} Min. unterteilt
             </p>
           </div>
@@ -120,7 +120,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           mode="stepper"
         />
       </div>
-      <p style={{ fontSize: '11px', color: theme.colors.text.secondary, marginTop: '8px', lineHeight: '1.4' }}>
+      <p style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
         Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde
       </p>
     </div>

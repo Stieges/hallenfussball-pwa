@@ -1,6 +1,5 @@
 import React, { Component, ReactNode } from 'react';
-import { theme } from '../styles/theme';
-
+import { borderRadius, colors, fontSizes, fontWeights } from '../design-tokens';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -60,7 +59,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
       margin: '16px 0',
       background: 'rgba(255, 61, 87, 0.1)',
       border: '1px solid rgba(255, 61, 87, 0.3)',
-      borderRadius: theme.borderRadius.md,
+      borderRadius: borderRadius.md,
     }}
     role="alert"
   >
@@ -72,9 +71,9 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
         <h3
           style={{
             margin: '0 0 8px 0',
-            fontSize: theme.fontSizes.lg,
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.error,
+            fontSize: fontSizes.lg,
+            fontWeight: fontWeights.semibold,
+            color: colors.error,
           }}
         >
           Etwas ist schiefgelaufen
@@ -82,8 +81,8 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
         <p
           style={{
             margin: '0 0 16px 0',
-            fontSize: theme.fontSizes.md,
-            color: theme.colors.text.secondary,
+            fontSize: fontSizes.md,
+            color: colors.textSecondary,
             lineHeight: '1.5',
           }}
         >
@@ -96,9 +95,9 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               margin: '0 0 16px 0',
               padding: '12px',
               background: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: theme.borderRadius.sm,
+              borderRadius: borderRadius.sm,
               fontSize: '12px',
-              color: theme.colors.text.secondary,
+              color: colors.textSecondary,
               overflow: 'auto',
               maxHeight: '120px',
             }}
@@ -113,12 +112,12 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             onClick={onReset}
             style={{
               padding: '8px 16px',
-              background: theme.colors.primary,
+              background: colors.primary,
               border: 'none',
-              borderRadius: theme.borderRadius.sm,
+              borderRadius: borderRadius.sm,
               color: '#000',
               fontSize: '14px',
-              fontWeight: theme.fontWeights.semibold,
+              fontWeight: fontWeights.semibold,
               cursor: 'pointer',
             }}
           >
@@ -129,11 +128,11 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             style={{
               padding: '8px 16px',
               background: 'rgba(255, 255, 255, 0.1)',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.sm,
-              color: theme.colors.text.primary,
+              border: `1px solid ${colors.border}`,
+              borderRadius: borderRadius.sm,
+              color: colors.textPrimary,
               fontSize: '14px',
-              fontWeight: theme.fontWeights.medium,
+              fontWeight: fontWeights.medium,
               cursor: 'pointer',
             }}
           >

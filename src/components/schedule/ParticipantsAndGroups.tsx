@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontWeights } from '../../design-tokens';
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
 
@@ -42,8 +42,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const titleStyle: CSSProperties = {
     fontSize: '18px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
     marginBottom: '16px',
   };
 
@@ -55,15 +55,15 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const groupBoxStyle: CSSProperties = {
     padding: '16px',
-    background: theme.colors.background,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.md,
+    background: colors.background,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
   };
 
   const groupTitleStyle: CSSProperties = {
     fontSize: '14px',
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.semibold,
+    color: colors.primary,
     marginBottom: '12px',
   };
 
@@ -76,8 +76,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   const teamItemStyle: CSSProperties = {
     padding: '6px 0',
     fontSize: '13px',
-    color: theme.colors.text.primary,
-    borderBottom: `1px solid ${theme.colors.border}`,
+    color: colors.textPrimary,
+    borderBottom: `1px solid ${colors.border}`,
   };
 
   // Special case: Only 1 group - hide group title

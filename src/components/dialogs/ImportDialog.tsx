@@ -9,7 +9,7 @@ import { useState, useRef, CSSProperties, DragEvent } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, spacing } from '../../design-tokens';
 import { Tournament, ImportValidationResult } from '../../types/tournament';
 import { validateAndParseTournamentImport, detectImportFormat } from '../../utils/tournamentImporter';
 import { formatTournamentDate } from '../../utils/tournamentCategories';
@@ -123,7 +123,7 @@ export const ImportDialog = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xl,
+    gap: spacing.xl,
   };
 
   const getStepTitle = (): string => {
@@ -368,9 +368,9 @@ const SelectStep = ({
   onButtonClick,
 }: SelectStepProps) => {
   const dropZoneStyle: CSSProperties = {
-    border: `2px dashed ${isDragging ? theme.colors.primary : theme.colors.border}`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.xxl,
+    border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
+    borderRadius: borderRadius.md,
+    padding: spacing.xxl,
     textAlign: 'center',
     background: isDragging ? 'rgba(0,230,118,0.1)' : 'transparent',
     transition: 'all 0.2s ease',
@@ -379,22 +379,22 @@ const SelectStep = ({
 
   const iconStyle: CSSProperties = {
     fontSize: '48px',
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
   };
 
   const hintStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.md,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   };
 
   const errorStyle: CSSProperties = {
-    padding: theme.spacing.md,
+    padding: spacing.md,
     background: 'rgba(255,82,82,0.15)',
-    border: `1px solid ${theme.colors.error}`,
-    borderRadius: theme.borderRadius.sm,
-    color: theme.colors.error,
-    fontSize: theme.fontSizes.sm,
+    border: `1px solid ${colors.error}`,
+    borderRadius: borderRadius.sm,
+    color: colors.error,
+    fontSize: fontSizes.sm,
   };
 
   return (
@@ -409,7 +409,7 @@ const SelectStep = ({
         <div style={iconStyle}>
           {isDragging ? '📂' : '📁'}
         </div>
-        <p style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.md, margin: 0 }}>
+        <p style={{ color: colors.textPrimary, fontSize: fontSizes.md, margin: 0 }}>
           {isDragging ? 'Datei hier ablegen' : 'Datei hierher ziehen oder klicken'}
         </p>
         <p style={hintStyle}>
@@ -426,7 +426,7 @@ const SelectStep = ({
       />
 
       {selectedFile && !error && (
-        <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary }}>
+        <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
           Ausgewählt: {selectedFile.name}
         </div>
       )}
@@ -449,19 +449,19 @@ const SelectStep = ({
 
       {/* Template Downloads */}
       <div style={{
-        marginTop: theme.spacing.lg,
-        paddingTop: theme.spacing.lg,
-        borderTop: `1px solid ${theme.colors.border}`,
+        marginTop: spacing.lg,
+        paddingTop: spacing.lg,
+        borderTop: `1px solid ${colors.border}`,
       }}>
         <p style={{
-          fontSize: theme.fontSizes.sm,
-          color: theme.colors.text.secondary,
-          margin: `0 0 ${theme.spacing.md} 0`,
+          fontSize: fontSizes.sm,
+          color: colors.textSecondary,
+          margin: `0 0 ${spacing.md} 0`,
           textAlign: 'center',
         }}>
           Vorlage herunterladen:
         </p>
-        <div style={{ display: 'flex', gap: theme.spacing.md }}>
+        <div style={{ display: 'flex', gap: spacing.md }}>
           <Button
             variant="secondary"
             size="sm"
@@ -482,9 +482,9 @@ const SelectStep = ({
           </Button>
         </div>
         <p style={{
-          fontSize: theme.fontSizes.xs,
-          color: theme.colors.text.muted,
-          margin: `${theme.spacing.sm} 0 0 0`,
+          fontSize: fontSizes.xs,
+          color: colors.textMuted,
+          margin: `${spacing.sm} 0 0 0`,
           textAlign: 'center',
           lineHeight: '1.4',
         }}>
@@ -506,27 +506,27 @@ const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps) => {
   const warningsContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     maxHeight: '300px',
     overflowY: 'auto',
   };
 
   const warningItemStyle = (severity: 'info' | 'warning'): CSSProperties => ({
-    padding: theme.spacing.md,
+    padding: spacing.md,
     background: severity === 'warning' ? 'rgba(255,145,0,0.15)' : 'rgba(0,176,255,0.1)',
     border: `1px solid ${severity === 'warning' ? 'rgba(255,145,0,0.4)' : 'rgba(0,176,255,0.3)'}`,
-    borderRadius: theme.borderRadius.sm,
-    fontSize: theme.fontSizes.sm,
-    color: severity === 'warning' ? theme.colors.warning : theme.colors.secondary,
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.sm,
+    color: severity === 'warning' ? colors.warning : colors.secondary,
     display: 'flex',
     alignItems: 'flex-start',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   });
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.md,
+    gap: spacing.md,
+    marginTop: spacing.md,
   };
 
   const infoWarnings = warnings.filter(w => w.severity === 'info');
@@ -534,7 +534,7 @@ const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps) => {
 
   return (
     <>
-      <p style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm, margin: 0 }}>
+      <p style={{ color: colors.textSecondary, fontSize: fontSizes.sm, margin: 0 }}>
         Beim Import wurden folgende Hinweise festgestellt:
       </p>
 
@@ -573,45 +573,45 @@ interface PreviewStepProps {
 
 const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
   const previewContainerStyle: CSSProperties = {
-    background: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    border: `1px solid ${theme.colors.border}`,
+    background: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    border: `1px solid ${colors.border}`,
   };
 
   const previewGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const previewItemStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
   };
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.md,
+    gap: spacing.md,
+    marginTop: spacing.md,
   };
 
   return (
     <>
       <div style={previewContainerStyle}>
-        <h3 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.lg, margin: `0 0 ${theme.spacing.lg} 0` }}>
+        <h3 style={{ color: colors.textPrimary, fontSize: fontSizes.lg, margin: `0 0 ${spacing.lg} 0` }}>
           {tournament.title}
         </h3>
 
@@ -638,7 +638,7 @@ const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
           </div>
           <div style={previewItemStyle}>
             <span style={labelStyle}>Quelle</span>
-            <span style={{ ...valueStyle, color: theme.colors.status.external }}>
+            <span style={{ ...valueStyle, color: colors.statusExternal }}>
               {tournament.externalSource}
             </span>
           </div>
@@ -665,23 +665,23 @@ interface SuccessStepProps {
 const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
   const successContainerStyle: CSSProperties = {
     textAlign: 'center',
-    padding: theme.spacing.xl,
+    padding: spacing.xl,
   };
 
   const iconStyle: CSSProperties = {
     fontSize: '64px',
-    marginBottom: theme.spacing.lg,
+    marginBottom: spacing.lg,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    fontSize: fontSizes.lg,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   };
 
   const subMessageStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
   };
 
   return (

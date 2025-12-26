@@ -11,7 +11,7 @@
 import { CSSProperties, useState } from 'react';
 import { ScheduledMatch } from '../lib/scheduleGenerator';
 import { RefereeConfig } from '../types/tournament';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontWeights } from '../design-tokens';
 import { Select, Button } from './ui';
 
 /**
@@ -168,7 +168,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     marginTop: '24px',
     padding: '20px',
     background: 'rgba(255,215,0,0.05)',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: borderRadius.md,
     border: '1px solid rgba(255,215,0,0.2)',
   };
 
@@ -183,8 +183,8 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 
   const titleStyle: CSSProperties = {
     fontSize: '16px',
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.accent,
+    fontWeight: fontWeights.semibold,
+    color: colors.accent,
     margin: 0,
     display: 'flex',
     alignItems: 'center',
@@ -205,9 +205,9 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 
   const refereeCardStyle = (): CSSProperties => ({
     padding: '12px',
-    background: theme.colors.background,
-    border: `2px solid ${theme.colors.accent}`,
-    borderRadius: theme.borderRadius.md,
+    background: colors.background,
+    border: `2px solid ${colors.accent}`,
+    borderRadius: borderRadius.md,
     textAlign: 'center',
     cursor: 'grab',
     transition: 'all 0.2s ease',
@@ -236,23 +236,23 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     padding: '12px',
     background: dragOverMatch === matchId
       ? 'rgba(255,215,0,0.2)'
-      : theme.colors.background,
+      : colors.background,
     border: `1px solid ${dragOverMatch === matchId
-      ? theme.colors.accent
-      : theme.colors.border}`,
-    borderRadius: theme.borderRadius.sm,
+      ? colors.accent
+      : colors.border}`,
+    borderRadius: borderRadius.sm,
     transition: 'all 0.2s ease',
   });
 
   const matchNumberStyle: CSSProperties = {
     fontSize: '14px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
   };
 
   const matchInfoStyle: CSSProperties = {
     fontSize: '13px',
-    color: theme.colors.text.primary,
+    color: colors.textPrimary,
   };
 
   return (
@@ -264,7 +264,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
             🟨 Manuelle Schiedsrichter-Zuweisung
           </h3>
           {isCollapsed && (
-            <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '4px 0 0 24px' }}>
+            <p style={{ fontSize: '12px', color: colors.textSecondary, margin: '4px 0 0 24px' }}>
               Klicken zum Aufklappen
             </p>
           )}
@@ -288,7 +288,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       {/* Referee Drag Source */}
       {refereeConfig.mode === 'organizer' && (
         <>
-          <p style={{ fontSize: '13px', fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary, marginBottom: '12px' }}>
+          <p style={{ fontSize: '13px', fontWeight: fontWeights.semibold, color: colors.textPrimary, marginBottom: '12px' }}>
             Verfügbare Schiedsrichter:
           </p>
           <div style={refereeGridStyle}>
@@ -303,10 +303,10 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                   ...(draggedReferee === refNum ? refereeCardDraggingStyle : {}),
                 }}
               >
-                <div style={{ fontSize: '14px', fontWeight: theme.fontWeights.bold, marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', fontWeight: fontWeights.bold, marginBottom: '4px' }}>
                   {refereeConfig.refereeNames?.[refNum] || `SR ${refNum}`}
                 </div>
-                <div style={{ fontSize: '11px', color: theme.colors.text.secondary }}>
+                <div style={{ fontSize: '11px', color: colors.textSecondary }}>
                   {refereeWorkload[refNum] || 0} Spiele
                 </div>
               </div>
@@ -316,7 +316,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       )}
 
       {/* Matches List with Dropzones */}
-      <p style={{ fontSize: '13px', fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary, marginTop: '24px', marginBottom: '12px' }}>
+      <p style={{ fontSize: '13px', fontWeight: fontWeights.semibold, color: colors.textPrimary, marginTop: '24px', marginBottom: '12px' }}>
         Spiele:
       </p>
       <div style={matchesListStyle}>
@@ -332,10 +332,10 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
               #{match.matchNumber}
             </div>
             <div style={matchInfoStyle}>
-              <div style={{ fontWeight: theme.fontWeights.semibold }}>
+              <div style={{ fontWeight: fontWeights.semibold }}>
                 {match.homeTeam} - {match.awayTeam}
               </div>
-              <div style={{ fontSize: '11px', color: theme.colors.text.secondary }}>
+              <div style={{ fontSize: '11px', color: colors.textSecondary }}>
                 {match.time} • Feld {match.field}
               </div>
             </div>
@@ -384,15 +384,15 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
           width: 8px;
         }
         .referee-assignment-editor::-webkit-scrollbar-track {
-          background: ${theme.colors.border};
+          background: ${colors.border};
           border-radius: 4px;
         }
         .referee-assignment-editor::-webkit-scrollbar-thumb {
-          background: ${theme.colors.primary};
+          background: ${colors.primary};
           border-radius: 4px;
         }
         .referee-assignment-editor::-webkit-scrollbar-thumb:hover {
-          background: ${theme.colors.secondary};
+          background: ${colors.secondary};
         }
       `}</style>
     </div>

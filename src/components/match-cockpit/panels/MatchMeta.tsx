@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../../styles/theme';
+import { colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
 export interface MatchMetaProps {
@@ -18,26 +18,26 @@ export const MatchMeta: React.FC<MatchMetaProps> = ({ refereeName, matchId, dura
   const metaStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     alignItems: 'center',
-    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.md,
+    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
   };
 
   const metaItemStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: isMobile ? `6px ${theme.spacing.sm}` : `4px ${theme.spacing.sm}`,
+    padding: isMobile ? `6px ${spacing.sm}` : `4px ${spacing.sm}`,
     borderRadius: '999px',
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${colors.border}`,
     background: 'rgba(15, 23, 42, 0.65)',
   };
 
   const labelStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.medium,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.medium,
+    color: colors.textPrimary,
   };
 
   const minutes = Math.round(durationSeconds / 60);

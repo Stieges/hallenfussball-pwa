@@ -9,7 +9,7 @@
  */
 
 import { useState, CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../../design-tokens';
 import { useToast } from '../ui/Toast';
 import { CorrectionReason, CORRECTION_REASONS } from '../../types/userProfile';
 
@@ -68,142 +68,142 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: theme.spacing.lg,
+    padding: spacing.lg,
   };
 
   const dialogStyle: CSSProperties = {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
     maxWidth: '450px',
     width: '100%',
-    boxShadow: theme.shadows.lg,
+    boxShadow: shadows.lg,
     border: `2px solid #FFC107`,
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
+    gap: spacing.md,
+    marginBottom: spacing.xl,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     margin: 0,
   };
 
   const sectionStyle: CSSProperties = {
-    marginBottom: theme.spacing.lg,
+    marginBottom: spacing.lg,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
     display: 'block',
   };
 
   const matchInfoStyle: CSSProperties = {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
   };
 
   const matchLabelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
   };
 
   const teamsStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   };
 
   const originalScoreStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.md,
+    color: colors.textSecondary,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const scoreInputContainerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.lg,
+    gap: spacing.lg,
   };
 
   const scoreInputStyle: CSSProperties = {
     width: '80px',
-    padding: theme.spacing.md,
-    border: `2px solid ${theme.colors.primary}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
+    padding: spacing.md,
+    border: `2px solid ${colors.primary}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
     textAlign: 'center',
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.primary,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
   };
 
   const separatorStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
   };
 
   const selectStyle: CSSProperties = {
     width: '100%',
-    padding: theme.spacing.md,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.primary,
+    padding: spacing.md,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.md,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
     cursor: 'pointer',
   };
 
   const textareaStyle: CSSProperties = {
     width: '100%',
-    padding: theme.spacing.md,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.primary,
+    padding: spacing.md,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.md,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
     minHeight: '60px',
     resize: 'vertical',
     fontFamily: 'inherit',
   };
 
   const warningStyle: CSSProperties = {
-    padding: theme.spacing.md,
+    padding: spacing.md,
     backgroundColor: 'rgba(255, 193, 7, 0.15)',
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.sm,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.sm,
     color: '#FFC107',
-    marginBottom: theme.spacing.lg,
+    marginBottom: spacing.lg,
   };
 
   const buttonContainerStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.xl,
+    gap: spacing.md,
+    marginTop: spacing.xl,
   };
 
   const buttonBaseStyle: CSSProperties = {
     flex: 1,
-    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
+    padding: `${spacing.md} ${spacing.lg}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
   };
@@ -211,8 +211,8 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: 'transparent',
-    border: `1px solid ${theme.colors.border}`,
-    color: theme.colors.text.secondary,
+    border: `1px solid ${colors.border}`,
+    color: colors.textSecondary,
   };
 
   const confirmButtonStyle: CSSProperties = {

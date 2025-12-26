@@ -2,7 +2,7 @@
  * Utility functions for match panel components
  */
 
-import { theme } from '../../../styles/theme';
+import { colors } from '../../../design-tokens';
 import { MatchStatus } from '../MatchCockpit';
 
 /**
@@ -40,12 +40,12 @@ export function getStatusLabel(status: MatchStatus): string {
 export function getStatusColor(status: MatchStatus): string {
   switch (status) {
     case 'RUNNING':
-      return theme.colors.primary;
+      return colors.primary;
     case 'PAUSED':
-      return theme.colors.warning;
+      return colors.warning;
     case 'FINISHED':
-      return theme.colors.text.secondary;
+      return colors.textSecondary;
     default:
-      return theme.colors.text.secondary;
+      return colors.textSecondary;
   }
 }

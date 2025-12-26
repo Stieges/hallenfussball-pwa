@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, fontFamilies, fontWeights, spacing } from '../../design-tokens';
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 
 export interface GoalAnimationProps {
@@ -128,10 +128,10 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     padding: 'clamp(24px, 4vw, 48px)',
     background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.97) 0%, rgba(0, 180, 90, 0.97) 100%)',
-    borderRadius: theme.borderRadius.xl,
+    borderRadius: borderRadius.xl,
     boxShadow: '0 0 100px rgba(0, 230, 118, 0.7), 0 20px 60px rgba(0, 0, 0, 0.5)',
     transformOrigin: isHomeSide ? 'left center' : 'right center',
     maxWidth: 'clamp(300px, 30vw, 450px)',
@@ -144,9 +144,9 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
 
   const goalTextStyle: CSSProperties = {
     fontSize: 'clamp(40px, 6vw, 72px)',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     color: '#000',
-    fontFamily: theme.fonts.heading,
+    fontFamily: fontFamilies.heading,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     textShadow: '2px 2px 4px rgba(255, 255, 255, 0.3)',
@@ -154,17 +154,17 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
 
   const teamNameStyle: CSSProperties = {
     fontSize: 'clamp(20px, 3vw, 32px)',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     color: '#000',
     opacity: 0.9,
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: 'clamp(28px, 4vw, 48px)',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     color: '#000',
-    fontFamily: theme.fonts.heading,
-    marginTop: theme.spacing.xs,
+    fontFamily: fontFamilies.heading,
+    marginTop: spacing.xs,
   };
 
   return (

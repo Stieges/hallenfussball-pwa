@@ -16,7 +16,7 @@
 import { useState, useEffect, useMemo, CSSProperties } from 'react';
 import { Card, Input, Select } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
@@ -196,8 +196,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   // Styles
   const containerStyle: CSSProperties = {
-    padding: theme.spacing.lg,
-    background: theme.colors.background,
+    padding: spacing.lg,
+    background: colors.background,
     minHeight: 'calc(100vh - 200px)',
   };
 
@@ -210,54 +210,54 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: spacing.lg,
     flexWrap: 'wrap',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     margin: 0,
   };
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const buttonStyle = (variant: 'primary' | 'secondary' | 'danger'): CSSProperties => ({
-    padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
+    padding: `${spacing.sm} ${spacing.lg}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
     cursor: variant === 'primary' && !isDirty ? 'not-allowed' : 'pointer',
     opacity: variant === 'primary' && !isDirty ? 0.5 : 1,
     transition: 'all 0.2s ease',
     background:
       variant === 'primary'
-        ? theme.colors.primary
+        ? colors.primary
         : variant === 'danger'
-          ? theme.colors.error
+          ? colors.error
           : 'transparent',
     color:
       variant === 'primary' || variant === 'danger'
         ? 'white'
-        : theme.colors.text.secondary,
-    border: variant === 'secondary' ? `1px solid ${theme.colors.border}` : 'none',
+        : colors.textSecondary,
+    border: variant === 'secondary' ? `1px solid ${colors.border}` : 'none',
   });
 
   const dirtyIndicatorStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: theme.spacing.xs,
-    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    gap: spacing.xs,
+    padding: `${spacing.xs} ${spacing.sm}`,
     background: isDirty ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)',
     color: isDirty ? '#FF9800' : '#4CAF50',
-    borderRadius: theme.borderRadius.sm,
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
   };
 
   const toggleIconStyle: CSSProperties = {
@@ -270,13 +270,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: theme.spacing.lg,
-    background: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    border: `1px solid ${theme.colors.border}`,
+    padding: spacing.lg,
+    background: colors.surface,
+    borderRadius: borderRadius.md,
+    border: `1px solid ${colors.border}`,
     cursor: 'pointer',
     userSelect: 'none',
-    marginBottom: isFormCollapsed ? '0' : theme.spacing.lg,
+    marginBottom: isFormCollapsed ? '0' : spacing.lg,
   };
 
   return (
@@ -293,7 +293,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               Metadaten bearbeiten
             </h2>
             {isFormCollapsed && (
-              <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '4px 0 0 24px' }}>
+              <p style={{ fontSize: '12px', color: colors.textSecondary, margin: '4px 0 0 24px' }}>
                 Turniername, Ort, Datum & Zeit anpassen • Klicken zum Aufklappen
               </p>
             )}
@@ -308,8 +308,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <>
             {/* Header mit Buttons */}
             <div style={headerStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
-                <h3 style={{ ...titleStyle, fontSize: theme.fontSizes.lg }}>Einstellungen</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md }}>
+                <h3 style={{ ...titleStyle, fontSize: fontSizes.lg }}>Einstellungen</h3>
               </div>
               <div style={buttonGroupStyle}>
                 <button
@@ -333,7 +333,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
             {/* Formular */}
             <Card>
-              <h3 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.lg, margin: '0 0 24px 0' }}>
+              <h3 style={{ color: colors.textPrimary, fontSize: fontSizes.lg, margin: '0 0 24px 0' }}>
                 Stammdaten
               </h3>
 
@@ -362,8 +362,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               />
             </Card>
 
-            <Card style={{ marginTop: theme.spacing.lg }}>
-              <h3 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.lg, margin: '0 0 24px 0' }}>
+            <Card style={{ marginTop: spacing.lg }}>
+              <h3 style={{ color: colors.textPrimary, fontSize: fontSizes.lg, margin: '0 0 24px 0' }}>
                 Ort & Kontakt
               </h3>
 
@@ -381,8 +381,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </div>
             </Card>
 
-            <Card style={{ marginTop: theme.spacing.lg }}>
-              <h3 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.lg, margin: '0 0 24px 0' }}>
+            <Card style={{ marginTop: spacing.lg }}>
+              <h3 style={{ color: colors.textPrimary, fontSize: fontSizes.lg, margin: '0 0 24px 0' }}>
                 Datum & Zeit
               </h3>
 
@@ -419,18 +419,18 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </Card>
 
             {/* Info-Box für nicht-editierbare Felder */}
-            <Card style={{ marginTop: theme.spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md }}>
+            <Card style={{ marginTop: spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
                 <span style={{ fontSize: '24px' }}>ℹ️</span>
                 <div>
-                  <h4 style={{ margin: '0 0 8px 0', color: theme.colors.text.primary }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: colors.textPrimary }}>
                     Nicht änderbare Einstellungen
                   </h4>
-                  <p style={{ margin: 0, color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+                  <p style={{ margin: 0, color: colors.textSecondary, fontSize: fontSizes.sm }}>
                     Die folgenden Einstellungen können nach Veröffentlichung nicht mehr geändert werden,
                     da sie den Spielplan beeinflussen würden:
                   </p>
-                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: colors.textSecondary, fontSize: fontSizes.sm }}>
                     <li>Anzahl Teams ({tournament.numberOfTeams})</li>
                     <li>Anzahl Gruppen ({tournament.numberOfGroups})</li>
                     <li>Anzahl Felder ({tournament.numberOfFields})</li>
@@ -445,17 +445,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
         {/* Wizard-Bearbeitung Buttons - IMMER SICHTBAR */}
         {onEditInWizard && (
-          <Card style={{ marginTop: theme.spacing.lg, background: 'rgba(255, 152, 0, 0.08)', border: `1px solid rgba(255, 152, 0, 0.3)` }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md }}>
+          <Card style={{ marginTop: spacing.lg, background: 'rgba(255, 152, 0, 0.08)', border: `1px solid rgba(255, 152, 0, 0.3)` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
               <span style={{ fontSize: '24px' }}>⚠️</span>
               <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 8px 0', color: theme.colors.text.primary }}>
+                <h4 style={{ margin: '0 0 8px 0', color: colors.textPrimary }}>
                   Erweiterte Bearbeitung
                 </h4>
-                <p style={{ margin: '0 0 12px 0', color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+                <p style={{ margin: '0 0 12px 0', color: colors.textSecondary, fontSize: fontSizes.sm }}>
                   Wähle den Bereich, den du bearbeiten möchtest. Nach dem Speichern kommst du direkt zurück.
                 </p>
-                <p style={{ margin: '0 0 16px 0', color: '#FF9800', fontSize: theme.fontSizes.xs, fontWeight: theme.fontWeights.medium }}>
+                <p style={{ margin: '0 0 16px 0', color: '#FF9800', fontSize: fontSizes.xs, fontWeight: fontWeights.medium }}>
                   Achtung: Der Spielplan wird neu generiert und alle Ergebnisse gehen verloren!
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -463,9 +463,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     onClick={() => handleEditInWizard(5)}
                     style={{
                       padding: '10px 16px',
-                      borderRadius: theme.borderRadius.md,
-                      fontSize: theme.fontSizes.sm,
-                      fontWeight: theme.fontWeights.semibold,
+                      borderRadius: borderRadius.md,
+                      fontSize: fontSizes.sm,
+                      fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       background: '#FF9800',
@@ -479,9 +479,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     onClick={() => handleEditInWizard(3)}
                     style={{
                       padding: '10px 16px',
-                      borderRadius: theme.borderRadius.md,
-                      fontSize: theme.fontSizes.sm,
-                      fontWeight: theme.fontWeights.semibold,
+                      borderRadius: borderRadius.md,
+                      fontSize: fontSizes.sm,
+                      fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       background: '#FF9800',
@@ -495,9 +495,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                     onClick={() => handleEditInWizard(4)}
                     style={{
                       padding: '10px 16px',
-                      borderRadius: theme.borderRadius.md,
-                      fontSize: theme.fontSizes.sm,
-                      fontWeight: theme.fontWeights.semibold,
+                      borderRadius: borderRadius.md,
+                      fontSize: fontSizes.sm,
+                      fontWeight: fontWeights.semibold,
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                       background: '#FF9800',

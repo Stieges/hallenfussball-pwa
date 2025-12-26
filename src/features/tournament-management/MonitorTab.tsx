@@ -12,7 +12,7 @@
  */
 
 import { CSSProperties, useState, useMemo } from 'react'
-import { theme } from '../../styles/theme'
+import { borderRadius, colors, fontWeights, shadows, spacing } from '../../design-tokens';
 import { Tournament, Standing } from '../../types/tournament'
 import { GeneratedSchedule } from '../../lib/scheduleGenerator'
 import { useLiveMatches } from '../../hooks/useLiveMatches'
@@ -113,9 +113,9 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     minHeight: '100vh',
     height: isFullscreen ? '100vh' : 'auto',
     overflow: isFullscreen ? 'hidden' : 'visible',
-    padding: isFullscreen ? 0 : theme.spacing.xxl,
+    padding: isFullscreen ? 0 : spacing.xxl,
     background: 'radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%)',
-    color: theme.colors.text.primary,
+    color: colors.textPrimary,
     position: 'relative',
     display: isFullscreen ? 'flex' : 'block',
     flexDirection: 'column',
@@ -130,25 +130,25 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: isFullscreen ? 'center' : 'flex-start',
-    gap: isFullscreen ? 0 : theme.spacing.xxl,
-    padding: isFullscreen ? theme.spacing.lg : 0,
+    gap: isFullscreen ? 0 : spacing.xxl,
+    padding: isFullscreen ? spacing.lg : 0,
     flex: isFullscreen ? 1 : undefined,
   }
 
   const sectionStyle: CSSProperties = {
     background: 'rgba(15, 23, 42, 0.9)',
-    borderRadius: theme.borderRadius.xl,
-    padding: theme.spacing.xxl,
-    border: `1px solid ${theme.colors.border}`,
-    boxShadow: theme.shadows.lg,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xxl,
+    border: `1px solid ${colors.border}`,
+    boxShadow: shadows.lg,
     width: '100%',
   }
 
   const sectionTitleStyle: CSSProperties = {
     fontSize: '36px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
+    marginBottom: spacing.xl,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     textAlign: 'center',

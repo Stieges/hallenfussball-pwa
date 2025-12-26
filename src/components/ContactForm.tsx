@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ContactInfo } from '../types/tournament';
 import { Input } from './ui';
-import { theme } from '../styles/theme';
-
+import { borderRadius, colors } from '../design-tokens';
 interface ContactFormProps {
   value: ContactInfo;
   onChange: (contactInfo: ContactInfo) => void;
@@ -48,7 +47,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         style={{
           background: 'none',
           border: 'none',
-          color: theme.colors.primary,
+          color: colors.primary,
           cursor: 'pointer',
           fontSize: '13px',
           padding: '8px 0',
@@ -61,7 +60,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         <span>
           Kontaktdaten (optional)
           {hasContactInfo && !showExtended && (
-            <span style={{ color: theme.colors.success, marginLeft: '8px' }}>✓</span>
+            <span style={{ color: colors.success, marginLeft: '8px' }}>✓</span>
           )}
         </span>
       </button>
@@ -73,8 +72,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             marginTop: '12px',
             padding: '16px',
             background: 'rgba(37, 99, 235, 0.05)',
-            borderRadius: theme.borderRadius.md,
-            border: `1px solid ${theme.colors.border}`,
+            borderRadius: borderRadius.md,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <Input
@@ -113,7 +112,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           <p
             style={{
               fontSize: '11px',
-              color: theme.colors.text.secondary,
+              color: colors.textSecondary,
               marginTop: '12px',
               marginBottom: 0,
             }}

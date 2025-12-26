@@ -11,8 +11,7 @@
 
 import { CSSProperties } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { theme } from '../styles/theme';
-
+import { colors, fontSizes, fontWeights } from '../design-tokens';
 interface OfflineBannerProps {
   /** Optional: Number of pending changes waiting to sync (Phase 3) */
   pendingSyncCount?: number;
@@ -30,11 +29,11 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
 
   const getBackgroundColor = (): string => {
     if (isOnline && wasOffline) {
-      return theme.colors.success; // Green for reconnected
+      return colors.success; // Green for reconnected
     } else if (isOnline && pendingSyncCount > 0) {
-      return theme.colors.secondary; // Blue for syncing
+      return colors.secondary; // Blue for syncing
     }
-    return theme.colors.warning; // Orange for offline
+    return colors.warning; // Orange for offline
   };
 
   const bannerStyle: CSSProperties = {
@@ -51,8 +50,8 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     gap: '8px',
     backgroundColor: getBackgroundColor(),
     color: '#000',
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
     boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.2)',
     animation: 'slideUp 0.3s ease-out',
   };
@@ -61,7 +60,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     background: 'rgba(0, 0, 0, 0.2)',
     borderRadius: '12px',
     padding: '2px 10px',
-    fontSize: theme.fontSizes.xs,
+    fontSize: fontSizes.xs,
   };
 
   // Offline state

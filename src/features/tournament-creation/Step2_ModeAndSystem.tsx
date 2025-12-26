@@ -1,6 +1,6 @@
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
@@ -79,8 +79,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   return (
     <Card>
       <h2 style={{
-        color: theme.colors.text.primary,
-        fontSize: theme.fontSizes.xl,
+        color: colors.textPrimary,
+        fontSize: fontSizes.xl,
         margin: '0 0 24px 0'
       }}>
         Modus & Spielsystem
@@ -89,26 +89,26 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
       {/* TOUR-EDIT-STRUCTURE: Warning banner when structure is locked */}
       {structureFieldsLocked && (
         <div style={{
-          background: theme.colors.correction.bg,
-          border: `2px solid ${theme.colors.correction.border}`,
-          borderRadius: theme.borderRadius.md,
-          padding: theme.spacing.md,
-          marginBottom: theme.spacing.lg,
+          background: colors.correctionBg,
+          border: `2px solid ${colors.correctionBorder}`,
+          borderRadius: borderRadius.md,
+          padding: spacing.md,
+          marginBottom: spacing.lg,
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.sm }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.sm }}>
             <span style={{ fontSize: '20px' }}>🔒</span>
             <div style={{ flex: 1 }}>
               <div style={{
-                color: theme.colors.correction.text,
-                fontWeight: theme.fontWeights.semibold,
+                color: colors.correctionText,
+                fontWeight: fontWeights.semibold,
                 marginBottom: '4px'
               }}>
                 Strukturänderungen gesperrt
               </div>
               <div style={{
-                color: theme.colors.text.secondary,
-                fontSize: theme.fontSizes.sm,
-                marginBottom: theme.spacing.md
+                color: colors.textSecondary,
+                fontSize: fontSizes.sm,
+                marginBottom: spacing.md
               }}>
                 Das Turnier hat bereits Ergebnisse. Anzahl Teams, Felder und Gruppen können nicht mehr geändert werden.
               </div>
@@ -118,15 +118,15 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                   style={{
                     background: 'rgba(244, 67, 54, 0.15)',
                     border: '1px solid rgba(244, 67, 54, 0.4)',
-                    borderRadius: theme.borderRadius.sm,
-                    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                    borderRadius: borderRadius.sm,
+                    padding: `${spacing.sm} ${spacing.md}`,
                     color: '#F44336',
-                    fontSize: theme.fontSizes.sm,
-                    fontWeight: theme.fontWeights.medium,
+                    fontSize: fontSizes.sm,
+                    fontWeight: fontWeights.medium,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: theme.spacing.xs,
+                    gap: spacing.xs,
                   }}
                 >
                   <span>🔄</span> Turnier zurücksetzen
@@ -316,20 +316,20 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           padding: '32px',
           textAlign: 'center',
           background: 'rgba(0,176,255,0.08)',
-          borderRadius: theme.borderRadius.md,
+          borderRadius: borderRadius.md,
           border: '1px solid rgba(0,176,255,0.2)',
           marginTop: '16px',
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
           <h3 style={{
-            color: theme.colors.text.primary,
+            color: colors.textPrimary,
             fontSize: '18px',
             margin: '0 0 8px 0'
           }}>
             Mini-Fußball / Funino
           </h3>
           <p style={{
-            color: theme.colors.text.secondary,
+            color: colors.textSecondary,
             fontSize: '14px',
             margin: '0 0 16px 0',
             lineHeight: '1.5'
@@ -344,8 +344,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             border: '1px solid rgba(0,176,255,0.4)',
             borderRadius: '16px',
             fontSize: '12px',
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.secondary,
+            fontWeight: fontWeights.semibold,
+            color: colors.secondary,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
           }}>

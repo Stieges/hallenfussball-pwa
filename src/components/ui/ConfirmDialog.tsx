@@ -6,8 +6,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 export interface ConfirmDialogProps {
@@ -73,25 +72,25 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const variantColors = {
     warning: {
       icon: '⚠️',
-      accent: theme.colors.warning,
-      confirmBg: theme.colors.warning,
+      accent: colors.warning,
+      confirmBg: colors.warning,
       confirmHover: '#e68a00',
     },
     danger: {
       icon: '🚨',
-      accent: theme.colors.error,
-      confirmBg: theme.colors.error,
+      accent: colors.error,
+      confirmBg: colors.error,
       confirmHover: '#cc0000',
     },
     info: {
       icon: 'ℹ️',
-      accent: theme.colors.primary,
-      confirmBg: theme.colors.primary,
+      accent: colors.primary,
+      confirmBg: colors.primary,
       confirmHover: '#00b862',
     },
   };
 
-  const colors = variantColors[variant];
+  const variantConfig = variantColors[variant];
 
   const overlayStyle: CSSProperties = {
     position: 'fixed',
@@ -104,15 +103,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10000,
-    padding: theme.spacing.lg,
+    padding: spacing.lg,
     animation: 'fadeIn 0.15s ease-out',
   };
 
   const dialogStyle: CSSProperties = {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.lg,
-    border: `2px solid ${colors.accent}`,
-    boxShadow: `0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px ${colors.accent}40`,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    border: `2px solid ${variantConfig.accent}`,
+    boxShadow: `0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px ${variantConfig.accent}40`,
     maxWidth: '480px',
     width: '100%',
     animation: 'slideIn 0.2s ease-out',
@@ -122,10 +121,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    backgroundColor: `${colors.accent}15`,
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: `${variantConfig.accent}15`,
   };
 
   const iconStyle: CSSProperties = {
@@ -133,48 +132,48 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
     margin: 0,
   };
 
   const bodyStyle: CSSProperties = {
-    padding: theme.spacing.lg,
+    padding: spacing.lg,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
     lineHeight: 1.6,
     whiteSpace: 'pre-line',
     margin: 0,
   };
 
   const detailsStyle: CSSProperties = {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
+    marginTop: spacing.md,
+    padding: spacing.md,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: theme.borderRadius.sm,
-    fontSize: theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.sm,
+    color: colors.textSecondary,
     fontFamily: 'monospace',
   };
 
   const footerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: theme.spacing.md,
-    padding: theme.spacing.lg,
-    borderTop: `1px solid ${theme.colors.border}`,
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderTop: `1px solid ${colors.border}`,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   };
 
   const buttonBaseStyle: CSSProperties = {
-    padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
-    borderRadius: theme.borderRadius.md,
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
+    padding: `${spacing.sm} ${spacing.xl}`,
+    borderRadius: borderRadius.md,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minWidth: '120px',
@@ -184,14 +183,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: 'transparent',
-    border: `1px solid ${theme.colors.border}`,
-    color: theme.colors.text.primary,
+    border: `1px solid ${colors.border}`,
+    color: colors.textPrimary,
   };
 
   const confirmButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
-    backgroundColor: colors.confirmBg,
-    border: `1px solid ${colors.confirmBg}`,
+    backgroundColor: variantConfig.confirmBg,
+    border: `1px solid ${variantConfig.confirmBg}`,
     color: '#000',
   };
 
@@ -212,7 +211,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       >
         <div ref={dialogRef} style={dialogStyle}>
           <div style={headerStyle}>
-            <span style={iconStyle}>{colors.icon}</span>
+            <span style={iconStyle}>{variantConfig.icon}</span>
             <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>
           </div>
 
@@ -239,10 +238,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               style={confirmButtonStyle}
               onClick={onConfirm}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.confirmHover;
+                e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = colors.confirmBg;
+                e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
               }}
             >
               {confirmText}

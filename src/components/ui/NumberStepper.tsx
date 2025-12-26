@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Button } from './Button';
 
 interface NumberStepperProps {
@@ -59,31 +59,31 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+    color: colors.textPrimary,
   };
 
   const controlsStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const displayStyle: CSSProperties = {
     flex: 1,
     textAlign: 'center',
-    fontSize: theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    padding: `${spacing.sm} ${spacing.md}`,
     background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: theme.borderRadius.md,
-    border: `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.md,
+    border: `1px solid ${colors.border}`,
     minWidth: '80px',
   };
 
@@ -98,7 +98,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
   const sliderContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const sliderStyle: CSSProperties = {
@@ -106,7 +106,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
     height: '8px',
     borderRadius: '4px',
     outline: 'none',
-    background: `linear-gradient(to right, ${theme.colors.primary} 0%, ${theme.colors.primary} ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+    background: `linear-gradient(to right, ${colors.primary} 0%, ${colors.primary} ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) ${((value - min) / (max - min)) * 100}%, rgba(255,255,255,0.1) 100%)`,
     WebkitAppearance: 'none',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
@@ -119,18 +119,18 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: ${theme.colors.primary};
+      background: ${colors.primary};
       cursor: ${disabled ? 'not-allowed' : 'pointer'};
-      border: 3px solid ${theme.colors.background};
+      border: 3px solid ${colors.background};
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
     input[type='range']::-moz-range-thumb {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background: ${theme.colors.primary};
+      background: ${colors.primary};
       cursor: ${disabled ? 'not-allowed' : 'pointer'};
-      border: 3px solid ${theme.colors.background};
+      border: 3px solid ${colors.background};
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
   `;
@@ -138,8 +138,8 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
   const rangeInfoStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
   };
 
   return (
@@ -187,7 +187,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
           />
           <div style={rangeInfoStyle}>
             <span>{min}{suffix && ` ${suffix}`}</span>
-            <span style={{ fontSize: theme.fontSizes.md, fontWeight: theme.fontWeights.semibold, color: theme.colors.text.primary }}>
+            <span style={{ fontSize: fontSizes.md, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
               {value}{suffix && ` ${suffix}`}
             </span>
             <span>{max}{suffix && ` ${suffix}`}</span>

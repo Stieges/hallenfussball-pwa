@@ -1,8 +1,7 @@
 import React, { CSSProperties } from 'react';
 import { TournamentField, Tournament } from '../../types/tournament';
 import { getFieldDisplayName, getFieldShortCode } from '../../utils/displayNames';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontSizes, spacing } from '../../design-tokens';
 export type FieldDisplayVariant = 'full' | 'badge' | 'short';
 
 interface FieldDisplayProps {
@@ -55,11 +54,11 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-            borderRadius: theme.borderRadius.sm,
-            backgroundColor: theme.colors.accent + '20',
-            color: theme.colors.accent,
-            fontSize: theme.fontSizes.sm,
+            padding: `${spacing.xs} ${spacing.sm}`,
+            borderRadius: borderRadius.sm,
+            backgroundColor: colors.accent + '20',
+            color: colors.accent,
+            fontSize: fontSizes.sm,
             fontWeight: 600,
             minWidth: '2rem',
             ...style,

@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Button, Card } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { calculateMinutesUntil } from '../../utils/timeHelpers';
@@ -29,25 +29,25 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
   const isMobile = useIsMobile();
 
   const cardHeaderStyle: CSSProperties = {
-    marginBottom: isMobile ? theme.spacing.sm : theme.spacing.md,
+    marginBottom: isMobile ? spacing.sm : spacing.md,
   };
 
   const cardTitleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     marginBottom: '2px',
   };
 
   const cardSubtitleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.xs : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
+    color: colors.textSecondary,
   };
 
   const matchesContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   return (
@@ -59,7 +59,7 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
 
       <div style={matchesContainerStyle}>
         {upcomingMatches.length === 0 ? (
-          <div style={{ padding: theme.spacing.lg, textAlign: 'center', color: theme.colors.text.secondary }}>
+          <div style={{ padding: spacing.lg, textAlign: 'center', color: colors.textSecondary }}>
             Keine anstehenden Spiele
           </div>
         ) : (
@@ -103,35 +103,35 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
   const isMobile = useIsMobile();
 
   const cardStyle: CSSProperties = {
-    borderRadius: theme.borderRadius.lg,
-    padding: isMobile ? theme.spacing.lg : theme.spacing.md,
-    border: isHighlighted ? `1px solid ${theme.colors.warning}` : `1px solid ${theme.colors.border}`,
+    borderRadius: borderRadius.lg,
+    padding: isMobile ? spacing.lg : spacing.md,
+    border: isHighlighted ? `1px solid ${colors.warning}` : `1px solid ${colors.border}`,
     background: 'radial-gradient(circle at top left, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.96))',
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? theme.spacing.sm : theme.spacing.xs,
+    gap: isMobile ? spacing.sm : spacing.xs,
     position: 'relative',
     overflow: 'hidden',
-    boxShadow: isHighlighted ? `0 10px 30px ${theme.colors.warning}35` : 'none',
+    boxShadow: isHighlighted ? `0 10px 30px ${colors.warning}35` : 'none',
   };
 
   const glowStyle: CSSProperties = {
     position: 'absolute',
     inset: '-40%',
-    background: `radial-gradient(circle at 10% 0, ${theme.colors.warning}40, transparent 55%)`,
+    background: `radial-gradient(circle at 10% 0, ${colors.warning}40, transparent 55%)`,
     pointerEvents: 'none',
     opacity: isHighlighted ? 0.5 : 0,
   };
 
   const pillStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.xs,
+    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     color: '#fef3c7',
-    background: `${theme.colors.warning}20`,
+    background: `${colors.warning}20`,
     borderRadius: '999px',
-    padding: isMobile ? `6px ${theme.spacing.md}` : `3px ${theme.spacing.sm}`,
-    border: `1px solid ${theme.colors.warning}80`,
+    padding: isMobile ? `6px ${spacing.md}` : `3px ${spacing.sm}`,
+    border: `1px solid ${colors.warning}80`,
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
@@ -139,27 +139,27 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
   };
 
   const timeStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.sm : theme.fontSizes.xs,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
+    color: colors.textSecondary,
   };
 
   const teamsStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
   };
 
   const metaStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    color: colors.textSecondary,
   };
 
   const actionsStyle: CSSProperties = {
-    marginTop: theme.spacing.xs,
+    marginTop: spacing.xs,
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: 'wrap',
-    gap: isMobile ? theme.spacing.sm : '6px',
+    gap: isMobile ? spacing.sm : '6px',
   };
 
   const getTimeLabel = () => {

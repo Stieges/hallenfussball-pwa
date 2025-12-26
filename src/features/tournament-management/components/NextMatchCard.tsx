@@ -2,7 +2,7 @@
  * NextMatchCard - Zeigt das nächste anstehende Spiel
  */
 import { CSSProperties } from 'react'
-import { theme } from '../../../styles/theme'
+import { borderRadius, colors, fontWeights, spacing } from '../../../design-tokens';
 import { Tournament } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
 
@@ -24,29 +24,29 @@ interface NextMatchCardProps {
 export const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, tournament }) => {
   const cardStyle: CSSProperties = {
     background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    border: `2px solid ${theme.colors.primary}`,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    border: `2px solid ${colors.primary}`,
     textAlign: 'center',
   }
 
   const timeStyle: CSSProperties = {
     fontSize: '28px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
-    marginBottom: theme.spacing.md,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
+    marginBottom: spacing.md,
   }
 
   const teamsStyle: CSSProperties = {
     fontSize: '42px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
   }
 
   const metaStyle: CSSProperties = {
     fontSize: '20px',
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.md,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
   }
 
   return (

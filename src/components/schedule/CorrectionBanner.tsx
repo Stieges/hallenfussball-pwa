@@ -1,6 +1,5 @@
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 export interface CorrectionBannerProps {
   matchId: string;
   matchLabel: string;
@@ -20,11 +19,11 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
   onCancel,
 }) => {
   const containerStyle: CSSProperties = {
-    background: theme.colors.correction.bg,
-    border: `2px solid ${theme.colors.correction.border}`,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
+    background: colors.correctionBg,
+    border: `2px solid ${colors.correctionBorder}`,
+    borderRadius: borderRadius.md,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
     position: 'relative',
   };
 
@@ -32,23 +31,23 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.lg,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.correction.text,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.bold,
+    color: colors.correctionText,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const closeButtonStyle: CSSProperties = {
     background: 'transparent',
     border: 'none',
-    color: theme.colors.correction.text,
-    fontSize: theme.fontSizes.xxl,
+    color: colors.correctionText,
+    fontSize: fontSizes.xxl,
     cursor: 'pointer',
     padding: '0',
     width: '32px',
@@ -56,33 +55,33 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: borderRadius.sm,
     transition: 'background 0.2s ease',
   };
 
   const contentStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.correction.text,
+    fontSize: fontSizes.md,
+    color: colors.correctionText,
     lineHeight: '1.6',
   };
 
   const matchInfoStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.semibold,
-    marginBottom: theme.spacing.sm,
+    fontWeight: fontWeights.semibold,
+    marginBottom: spacing.sm,
   };
 
   const warningListStyle: CSSProperties = {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-    paddingLeft: theme.spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    paddingLeft: spacing.lg,
   };
 
   const listItemStyle: CSSProperties = {
-    marginBottom: theme.spacing.xs,
+    marginBottom: spacing.xs,
   };
 
   const originalScoreStyle: CSSProperties = {
-    fontWeight: theme.fontWeights.semibold,
+    fontWeight: fontWeights.semibold,
   };
 
   return (
@@ -138,8 +137,8 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
       <style>{`
         @media (max-width: 767px) {
           .correction-banner {
-            padding: ${theme.spacing.md} !important;
-            font-size: ${theme.fontSizes.md} !important;
+            padding: ${spacing.md} !important;
+            font-size: ${fontSizes.md} !important;
           }
 
           .correction-banner-close {
@@ -150,7 +149,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
         }
 
         .correction-banner-close:hover {
-          background: ${theme.colors.correction.border};
+          background: ${colors.correctionBorder};
         }
       `}</style>
     </>

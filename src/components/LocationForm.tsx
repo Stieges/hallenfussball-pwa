@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LocationDetails } from '../types/tournament';
 import { Input } from './ui';
-import { theme } from '../styles/theme';
+import { borderRadius, colors } from '../design-tokens';
 import { getUniqueLocations } from '../utils/locationHelpers';
 import { useTournaments } from '../hooks/useTournaments';
 
@@ -92,7 +92,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
         style={{
           background: 'none',
           border: 'none',
-          color: theme.colors.primary,
+          color: colors.primary,
           cursor: 'pointer',
           fontSize: '13px',
           padding: '8px 0',
@@ -113,8 +113,8 @@ export const LocationForm: React.FC<LocationFormProps> = ({
             marginTop: '12px',
             padding: '16px',
             background: 'rgba(37, 99, 235, 0.05)',
-            borderRadius: theme.borderRadius.md,
-            border: `1px solid ${theme.colors.border}`,
+            borderRadius: borderRadius.md,
+            border: `1px solid ${colors.border}`,
           }}
         >
           <Input
@@ -157,7 +157,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           <p
             style={{
               fontSize: '11px',
-              color: theme.colors.text.secondary,
+              color: colors.textSecondary,
               marginTop: '12px',
               marginBottom: 0,
             }}

@@ -1,6 +1,6 @@
 import { Card, Button, Input, Icons } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './Step4_Teams.module.css';
@@ -156,7 +156,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
 
   return (
     <Card>
-      <h2 style={{ color: theme.colors.text.primary, fontSize: theme.fontSizes.xl, margin: '0 0 24px 0' }}>
+      <h2 style={{ color: colors.textPrimary, fontSize: fontSizes.xl, margin: '0 0 24px 0' }}>
         Teams
       </h2>
 
@@ -191,11 +191,11 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             padding: '40px 20px',
             textAlign: 'center',
             background: 'rgba(0,0,0,0.2)',
-            borderRadius: theme.borderRadius.md,
-            border: `1px dashed ${theme.colors.border}`,
+            borderRadius: borderRadius.md,
+            border: `1px dashed ${colors.border}`,
           }}
         >
-          <p style={{ color: theme.colors.text.secondary, margin: 0 }}>
+          <p style={{ color: colors.textSecondary, margin: 0 }}>
             Noch keine Teams hinzugefügt
           </p>
         </div>
@@ -222,9 +222,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     />
                     {hasError && (
                       <p style={{
-                        margin: `${theme.spacing.xs} 0 0 0`,
-                        color: theme.colors.error,
-                        fontSize: theme.fontSizes.xs,
+                        margin: `${spacing.xs} 0 0 0`,
+                        color: colors.error,
+                        fontSize: fontSizes.xs,
                       }}>
                         Dieser Name wird bereits verwendet
                       </p>
@@ -287,7 +287,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   : warning.type === 'warning'
                     ? 'rgba(255,145,0,0.1)'
                     : 'rgba(0,176,255,0.08)',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: borderRadius.md,
                 border: `1px solid ${
                   warning.type === 'error'
                     ? 'rgba(255,82,82,0.3)'
@@ -307,18 +307,18 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               <div style={{ flex: 1 }}>
                 <div style={{
                   color: warning.type === 'error'
-                    ? theme.colors.error
+                    ? colors.error
                     : warning.type === 'warning'
-                      ? theme.colors.warning
-                      : theme.colors.text.primary,
-                  fontSize: theme.fontSizes.sm,
-                  fontWeight: theme.fontWeights.medium,
+                      ? colors.warning
+                      : colors.textPrimary,
+                  fontSize: fontSizes.sm,
+                  fontWeight: fontWeights.medium,
                 }}>
                   {warning.message}
                 </div>
                 {warning.action && (
                   <div style={{
-                    color: theme.colors.text.secondary,
+                    color: colors.textSecondary,
                     fontSize: '12px',
                     marginTop: '4px',
                   }}>
@@ -337,11 +337,11 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             marginTop: '16px',
             padding: '12px',
             background: 'rgba(0,176,255,0.1)',
-            borderRadius: theme.borderRadius.md,
+            borderRadius: borderRadius.md,
             border: '1px solid rgba(0,176,255,0.3)',
           }}
         >
-          <div style={{ fontSize: theme.fontSizes.sm, color: theme.colors.text.secondary }}>
+          <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
             {teams.length} Team{teams.length !== 1 ? 's' : ''} hinzugefügt
             {canAssignGroups && ` • Gruppen können jetzt zugewiesen werden`}
           </div>

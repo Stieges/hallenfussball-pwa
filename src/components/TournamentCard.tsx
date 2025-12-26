@@ -12,7 +12,7 @@
 import { CSSProperties } from 'react';
 import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
 import { Card, Icons } from './ui';
-import { theme } from '../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../design-tokens';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 
@@ -67,43 +67,43 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${colors.border}`,
     position: 'relative',
   };
 
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
-    boxShadow: theme.shadows.md,
+    boxShadow: shadows.md,
   };
 
   const headerStyle: CSSProperties = {
-    marginTop: theme.spacing.xl, // Space below badge
-    marginBottom: theme.spacing.md,
+    marginTop: spacing.xl, // Space below badge
+    marginBottom: spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     margin: 0,
     paddingRight: '120px', // Space for badge(s)
   };
 
   const badgeContainerStyle: CSSProperties = {
     position: 'absolute',
-    top: theme.spacing.md,
-    right: theme.spacing.md,
+    top: spacing.md,
+    right: spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const badgeStyle: CSSProperties = {
-    padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-    borderRadius: theme.borderRadius.sm,
-    fontSize: theme.fontSizes.xs,
-    fontWeight: theme.fontWeights.bold,
+    padding: `${spacing.xs} ${spacing.md}`,
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.xs,
+    fontWeight: fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     whiteSpace: 'nowrap',
@@ -112,86 +112,86 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const getBadgeColor = (): { background: string; color: string } => {
     if (tournament.status === 'draft') {
       return {
-        background: theme.colors.status.draftBg,
-        color: theme.colors.status.draft,
+        background: colors.statusDraftBg,
+        color: colors.statusDraft,
       };
     }
     switch (categoryLabel) {
       case 'Läuft':
         return {
-          background: theme.colors.status.liveBg,
-          color: theme.colors.status.live,
+          background: colors.statusLiveBg,
+          color: colors.statusLive,
         };
       case 'Bevorstehend':
         return {
-          background: theme.colors.status.upcomingBg,
-          color: theme.colors.status.upcoming,
+          background: colors.statusUpcomingBg,
+          color: colors.statusUpcoming,
         };
       case 'Beendet':
         return {
-          background: theme.colors.status.finishedBg,
-          color: theme.colors.status.finished,
+          background: colors.statusFinishedBg,
+          color: colors.statusFinished,
         };
       default:
         return {
-          background: theme.colors.surface,
-          color: theme.colors.text.secondary,
+          background: colors.surface,
+          color: colors.textSecondary,
         };
     }
   };
 
   const infoGridStyle: CSSProperties = {
     display: 'grid',
-    gap: theme.spacing.md,
+    gap: spacing.md,
   };
 
   const infoItemStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.xs,
+    gap: spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xs,
+    fontSize: fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    color: theme.colors.text.secondary,
-    fontWeight: theme.fontWeights.medium,
+    color: colors.textSecondary,
+    fontWeight: fontWeights.medium,
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    color: theme.colors.text.primary,
-    fontWeight: theme.fontWeights.medium,
+    fontSize: fontSizes.md,
+    color: colors.textPrimary,
+    fontWeight: fontWeights.medium,
   };
 
   const deleteButtonStyle: CSSProperties = {
-    marginTop: theme.spacing.md,
+    marginTop: spacing.md,
     width: '100%',
     background: 'transparent',
-    color: theme.colors.text.secondary,
-    border: `1px solid ${theme.colors.border}`,
-    borderRadius: theme.borderRadius.sm,
-    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-    fontSize: theme.fontSizes.sm,
-    fontWeight: theme.fontWeights.medium,
+    color: colors.textSecondary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.sm,
+    padding: `${spacing.sm} ${spacing.md}`,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     transition: 'all 0.2s ease',
   };
 
   const badgeColors = getBadgeColor();
 
   const externalBadgeStyle: CSSProperties = {
-    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-    borderRadius: theme.borderRadius.sm,
+    padding: `${spacing.xs} ${spacing.sm}`,
+    borderRadius: borderRadius.sm,
     fontSize: '10px',
-    fontWeight: theme.fontWeights.medium,
-    background: theme.colors.status.externalBg,
-    color: theme.colors.status.external,
+    fontWeight: fontWeights.medium,
+    background: colors.statusExternalBg,
+    color: colors.statusExternal,
     whiteSpace: 'nowrap',
   };
 
@@ -276,8 +276,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               <dd style={{
                 ...valueStyle,
                 margin: 0,
-                fontSize: theme.fontSizes.sm,
-                color: theme.colors.text.secondary,
+                fontSize: fontSizes.sm,
+                color: colors.textSecondary,
               }}>
                 {formatPlacementLogic(tournament.placementLogic)}
               </dd>
@@ -287,12 +287,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           {tournament.status === 'draft' && (
             <div
               style={{
-                marginTop: theme.spacing.sm,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                background: theme.colors.status.draftBg,
-                borderRadius: theme.borderRadius.sm,
-                fontSize: theme.fontSizes.sm,
-                color: theme.colors.text.secondary,
+                marginTop: spacing.sm,
+                padding: `${spacing.sm} ${spacing.md}`,
+                background: colors.statusDraftBg,
+                borderRadius: borderRadius.sm,
+                fontSize: fontSizes.sm,
+                color: colors.textSecondary,
               }}
               role="status"
             >
@@ -311,13 +311,13 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)';
-              e.currentTarget.style.borderColor = theme.colors.error;
-              e.currentTarget.style.color = theme.colors.error;
+              e.currentTarget.style.borderColor = colors.error;
+              e.currentTarget.style.color = colors.error;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.color = theme.colors.text.secondary;
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.color = colors.textSecondary;
             }}
             aria-label={`Turnier "${tournament.title}" löschen`}
           >

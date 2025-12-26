@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties, useEffect, useRef, useCallback } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -56,9 +56,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   }, [handleKeyDown]);
 
   const variantColors = {
-    danger: theme.colors.error,
-    warning: theme.colors.warning,
-    info: theme.colors.secondary,
+    danger: colors.error,
+    warning: colors.warning,
+    info: colors.secondary,
   };
 
   const variantIcons = {
@@ -81,41 +81,41 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: theme.spacing.md,
+    padding: spacing.md,
   };
 
   const containerStyle: CSSProperties = {
     width: '100%',
     maxWidth: '440px',
-    padding: isMobile ? theme.spacing.lg : theme.spacing.xl,
-    borderRadius: theme.borderRadius.lg,
+    padding: isMobile ? spacing.lg : spacing.xl,
+    borderRadius: borderRadius.lg,
     border: `2px solid ${color}`,
     background: `linear-gradient(135deg, ${color}20, ${color}10)`,
-    backgroundColor: theme.colors.background,
+    backgroundColor: colors.background,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.lg : theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
     color: color,
-    marginBottom: theme.spacing.md,
+    marginBottom: spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: isMobile ? theme.fontSizes.md : theme.fontSizes.sm,
-    color: theme.colors.text.secondary,
+    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    color: colors.textSecondary,
     lineHeight: 1.6,
-    marginBottom: theme.spacing.lg,
+    marginBottom: spacing.lg,
     whiteSpace: 'pre-line',
   };
 
   const buttonsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
     justifyContent: 'flex-end',
   };
 

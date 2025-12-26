@@ -1,15 +1,40 @@
 /**
  * GroupStageSchedule - Displays group stage matches in MeinTurnierplan style
  * Fully responsive with table view for desktop and card view for mobile
+ *
+ * US-SCHEDULE-EDITOR: Now supports Drag & Drop for match swapping in edit mode
  */
 
-import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
+import { CSSProperties, useState, useMemo, useEffect } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  DragStartEvent,
+  DragEndEvent,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { colors, fontWeights, borderRadius } from '../../design-tokens';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';
 import { getGroupShortCode } from '../../utils/displayNames';
+
+// Pending changes during edit mode
+interface PendingChanges {
+  refereeAssignments: Record<string, number | null>;
+  fieldAssignments: Record<string, number>;
+}
 
 interface GroupStageScheduleProps {
   matches: ScheduledMatch[];
@@ -20,6 +45,10 @@ interface GroupStageScheduleProps {
   onFieldChange?: (matchId: string, fieldNumber: number) => void;
   onScoreChange?: (matchId: string, scoreA: number, scoreB: number) => void;
   editable?: boolean;
+  /** Is the schedule currently being edited (edit mode active) */
+  editingSchedule?: boolean;
+  /** Pending changes during edit mode (not yet saved) */
+  pendingChanges?: PendingChanges;
   finishedMatches?: Set<string>;
   correctionMatchId?: string | null;
   onStartCorrection?: (matchId: string) => void;
@@ -27,6 +56,8 @@ interface GroupStageScheduleProps {
   runningMatchIds?: Set<string>;
   /** Tournament data for group name resolution */
   tournament?: Tournament;
+  /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
+  onMatchSwap?: (matchId1: string, matchId2: string) => void;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -39,18 +70,91 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onFieldChange,
   onScoreChange,
   editable = false,
+  editingSchedule = false,
+  pendingChanges,
   finishedMatches,
   correctionMatchId,
   onStartCorrection,
   runningMatchIds,
   tournament,
+  onMatchSwap,
 }) => {
+  // DnD State
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // Local display order - tracks visual order of matches (reorders on drag)
+  const [displayOrder, setDisplayOrder] = useState<string[]>(() =>
+    matches.map(m => m.id)
+  );
+
+  // Sync displayOrder when matches change (e.g., when not in edit mode or on save/reset)
+  useEffect(() => {
+    // Only reset if we're not editing (to preserve drag order during edit)
+    if (!editingSchedule) {
+      setDisplayOrder(matches.map(m => m.id));
+    }
+  }, [matches, editingSchedule]);
+
+  // Also reset when entering edit mode (start fresh from current order)
+  useEffect(() => {
+    if (editingSchedule) {
+      setDisplayOrder(matches.map(m => m.id));
+    }
+  }, [editingSchedule]); // Only trigger on editingSchedule change
+
+  // DnD Sensors - require 8px movement before drag starts
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // Handle drag start
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  // Handle drag end - swap matches visually and notify parent
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const sourceMatchId = active.id as string;
+    const targetMatchId = over.id as string;
+
+    // Immediately update visual order using arrayMove
+    setDisplayOrder(prevOrder => {
+      const oldIndex = prevOrder.indexOf(sourceMatchId);
+      const newIndex = prevOrder.indexOf(targetMatchId);
+      if (oldIndex === -1 || newIndex === -1) return prevOrder;
+      return arrayMove(prevOrder, oldIndex, newIndex);
+    });
+
+    // Call the swap handler to persist change
+    if (onMatchSwap) {
+      onMatchSwap(sourceMatchId, targetMatchId);
+    }
+  };
+
+  // Sort matches by displayOrder for rendering
+  const sortedMatches = useMemo(() => {
+    const orderMap = new Map(displayOrder.map((id, index) => [id, index]));
+    return [...matches].sort((a, b) => {
+      const indexA = orderMap.get(a.id) ?? Infinity;
+      const indexB = orderMap.get(b.id) ?? Infinity;
+      return indexA - indexB;
+    });
+  }, [matches, displayOrder]);
   if (matches.length === 0) {
     return (
       <div style={{
         textAlign: 'center',
         padding: '40px 20px',
-        color: theme.colors.text.secondary,
+        color: colors.textSecondary,
         fontSize: '15px'
       }}>
         Keine Spiele vorhanden
@@ -85,30 +189,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     return options;
   };
 
-  // Check if a field is already assigned to an overlapping match
-  const findFieldConflict = (matchId: string, fieldNumber: number): ScheduledMatch | null => {
-    const targetMatch = matches.find(m => m.id === matchId);
-    if (!targetMatch) {return null;}
-
-    // Find all matches on this field (excluding target match)
-    const fieldMatches = matches.filter(m => m.field === fieldNumber && m.id !== matchId);
-
-    // Check for time overlaps
-    for (const match of fieldMatches) {
-      const targetStart = targetMatch.startTime.getTime();
-      const targetEnd = targetMatch.endTime.getTime();
-      const matchStart = match.startTime.getTime();
-      const matchEnd = match.endTime.getTime();
-
-      // Overlap occurs if: (start1 < end2) AND (start2 < end1)
-      if (targetStart < matchEnd && matchStart < targetEnd) {
-        return match;
-      }
-    }
-
-    return null;
-  };
-
   const refereeOptions = getRefereeOptions();
   const fieldOptions = getFieldOptions();
 
@@ -119,8 +199,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const titleStyle: CSSProperties = {
     fontSize: '18px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
     marginBottom: '16px',
   };
 
@@ -132,31 +212,31 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   };
 
   const thStyle: CSSProperties = {
-    background: theme.colors.primary,
-    color: theme.colors.background,
+    background: colors.primary,
+    color: colors.background,
     padding: '10px 8px',
     textAlign: 'left',
-    fontWeight: theme.fontWeights.semibold,
-    borderBottom: `2px solid ${theme.colors.border}`,
+    fontWeight: fontWeights.semibold,
+    borderBottom: `2px solid ${colors.border}`,
   };
 
   const tdStyle: CSSProperties = {
     padding: '8px',
-    borderBottom: `1px solid ${theme.colors.border}`,
-    color: theme.colors.text.primary,
+    borderBottom: `1px solid ${colors.border}`,
+    color: colors.textPrimary,
   };
 
   const resultCellStyle: CSSProperties = {
     ...tdStyle,
     textAlign: 'center',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     minWidth: '60px',
   };
 
   // Mobile Card Styles
   const mobileCardStyle: CSSProperties = {
-    backgroundColor: theme.colors.background,
-    border: `1px solid ${theme.colors.border}`,
+    backgroundColor: colors.background,
+    border: `1px solid ${colors.border}`,
     borderRadius: '8px',
     padding: '16px',
     marginBottom: '12px',
@@ -169,18 +249,18 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     alignItems: 'center',
     marginBottom: '12px',
     paddingBottom: '8px',
-    borderBottom: `1px solid ${theme.colors.border}`,
+    borderBottom: `1px solid ${colors.border}`,
   };
 
   const mobileMatchNumberStyle: CSSProperties = {
     fontSize: '16px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.primary,
+    fontWeight: fontWeights.bold,
+    color: colors.primary,
   };
 
   const mobileTimeStyle: CSSProperties = {
     fontSize: '14px',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   const mobileTeamsContainerStyle: CSSProperties = {
@@ -189,8 +269,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const mobileTeamStyle: CSSProperties = {
     fontSize: '15px',
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
     marginBottom: '8px',
   };
 
@@ -200,7 +280,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     padding: '12px',
-    backgroundColor: theme.colors.surfaceDark,
+    backgroundColor: colors.surfaceDark,
     borderRadius: '6px',
     marginBottom: '12px',
   };
@@ -210,7 +290,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     gap: '16px',
     flexWrap: 'wrap',
     fontSize: '13px',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   const mobileMetaItemStyle: CSSProperties = {
@@ -221,54 +301,150 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const mobileSelectStyle: CSSProperties = {
     padding: '8px 12px',
-    border: `1px solid ${theme.colors.border}`,
+    border: `1px solid ${colors.border}`,
     borderRadius: '4px',
     fontSize: '14px',
-    fontWeight: theme.fontWeights.semibold,
+    fontWeight: fontWeights.semibold,
     cursor: 'pointer',
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text.primary,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
     minHeight: '44px',
   };
 
-  return (
-    <div style={containerStyle} className="group-stage-schedule">
-      <h2 style={titleStyle}>
-        {hasGroups ? 'Vorrunde' : 'Spielplan'}
-      </h2>
+  // Get active match for drag overlay
+  const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
 
-      {/* Desktop Table View */}
-      <div className="desktop-view" style={{ overflowX: 'auto' }}>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
-              {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
-              <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
-              {hasGroups && <th style={{ ...thStyle, width: '40px' }}>Gr</th>}
-              <th style={thStyle}>Heim</th>
-              <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
-              <th style={thStyle}>Gast</th>
-              {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {matches.map((match) => {
-              const isRunning = runningMatchIds?.has(match.id);
-              const rowStyle = isRunning ? { backgroundColor: theme.colors.status.liveRowBg } : {};
-              return (
-              <tr key={match.id} style={rowStyle}>
-                <td style={{ ...tdStyle, fontWeight: theme.fontWeights.semibold }}>
+  // ============================================================================
+  // SortableRow Component - uses useSortable for smooth animations
+  // Drag listeners are only attached to the drag handle, not the entire row
+  // ============================================================================
+  interface SortableRowRenderProps {
+    attributes: ReturnType<typeof useSortable>['attributes'];
+    listeners: ReturnType<typeof useSortable>['listeners'];
+    canDrag: boolean;
+    isDragging: boolean;
+  }
+
+  const SortableRow: React.FC<{
+    match: ScheduledMatch;
+    children: (props: SortableRowRenderProps) => React.ReactNode;
+  }> = ({ match, children }) => {
+    const isRunning = runningMatchIds?.has(match.id);
+    const isFinished = finishedMatches?.has(match.id);
+
+    // Can only drag scheduled matches (not running or finished)
+    const canDrag = !!(editingSchedule && onMatchSwap && !isRunning && !isFinished);
+
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+      isOver,
+    } = useSortable({
+      id: match.id,
+      disabled: !canDrag,
+    });
+
+    // Apply transform and transition for smooth animations
+    const style: CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      ...(isRunning ? { backgroundColor: colors.statusLiveRowBg } : {}),
+      ...(editingSchedule && canDrag ? {
+        outline: `2px solid ${colors.primary}`,
+        outlineOffset: '-1px',
+      } : {}),
+      // When THIS row is being dragged: show as placeholder
+      ...(isDragging ? {
+        opacity: 0.4,
+        backgroundColor: 'rgba(0, 176, 255, 0.1)',
+        outline: `2px dashed ${colors.primary}`,
+        outlineOffset: '-1px',
+        zIndex: 0,
+      } : {}),
+      // When another row is dragged OVER this one: highlight as drop target
+      ...(isOver && !isDragging ? {
+        backgroundColor: 'rgba(0, 176, 255, 0.25)',
+        outline: `3px solid ${colors.primary}`,
+        outlineOffset: '-1px',
+        boxShadow: `0 0 12px rgba(0, 176, 255, 0.4)`,
+      } : {}),
+    };
+
+    return (
+      <tr ref={setNodeRef} style={style}>
+        {children({ attributes, listeners, canDrag, isDragging })}
+      </tr>
+    );
+  };
+
+  // Render table content (used both in normal view and drag overlay)
+  const renderTableContent = () => (
+    <table style={tableStyle}>
+      <thead>
+        <tr>
+          {editingSchedule && <th style={{ ...thStyle, width: '30px' }}></th>}
+          <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
+          {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
+          <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
+          {hasGroups && <th style={{ ...thStyle, width: '40px' }}>Gr</th>}
+          <th style={thStyle}>Heim</th>
+          <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
+          <th style={thStyle}>Gast</th>
+          {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {sortedMatches.map((match) => {
+          const isRunning = runningMatchIds?.has(match.id);
+
+          return (
+            <SortableRow key={match.id} match={match}>
+              {({ attributes, listeners, canDrag, isDragging }) => (
+                <>
+                {/* Drag handle column - only in edit mode */}
+                {editingSchedule && (
+                  <td
+                    style={{
+                      ...tdStyle,
+                      textAlign: 'center',
+                      width: '30px',
+                      cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                      color: canDrag ? colors.primary : colors.textMuted,
+                      touchAction: 'none', // Prevents scroll while dragging
+                    }}
+                    {...(canDrag ? { ...attributes, ...listeners } : {})}
+                  >
+                    {canDrag ? '⋮⋮' : '🔒'}
+                  </td>
+                )}
+                <td style={{ ...tdStyle, fontWeight: fontWeights.semibold }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{match.matchNumber}</span>
                     {isRunning && <LiveBadge compact />}
                   </div>
                 </td>
-                {showReferees && (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
-                    {editable && onRefereeChange ? (
+                {showReferees && (() => {
+                  // Get displayed value - pending change takes priority
+                  const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+                  const displayedRef = hasPendingRef
+                    ? pendingChanges?.refereeAssignments[match.id]
+                    : match.referee;
+                  const isPendingChange = hasPendingRef;
+
+                  return (
+                  <td style={{
+                    ...tdStyle,
+                    textAlign: 'center',
+                    padding: editingSchedule ? '4px' : '8px',
+                    backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                  }}>
+                    {editingSchedule && onRefereeChange ? (
                       <select
-                        value={match.referee || ''}
+                        value={displayedRef ?? ''}
                         onChange={(e) => {
                           const value = e.target.value;
                           onRefereeChange(match.id, value ? parseInt(value) : null);
@@ -276,14 +452,14 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                         style={{
                           width: '100%',
                           padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
+                          border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
                           borderRadius: '4px',
                           fontSize: '12px',
-                          fontWeight: theme.fontWeights.semibold,
+                          fontWeight: fontWeights.semibold,
                           textAlign: 'center',
                           cursor: 'pointer',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
+                          backgroundColor: colors.background,
+                          color: colors.textPrimary,
                         }}
                       >
                         <option value="">-</option>
@@ -294,15 +470,22 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                         ))}
                       </select>
                     ) : (
-                      <span style={{ fontWeight: theme.fontWeights.semibold }}>
-                        {match.referee || '-'}
+                      <span style={{ fontWeight: fontWeights.semibold }}>
+                        {displayedRef ?? '-'}
                       </span>
                     )}
                   </td>
-                )}
-                <td style={tdStyle}>{match.time}</td>
+                  );
+                })()}
+                <td style={{
+                  ...tdStyle,
+                  color: isDragging ? colors.textMuted : undefined,
+                  fontStyle: isDragging ? 'italic' : undefined,
+                }}>
+                  {isDragging ? '↕️' : match.time}
+                </td>
                 {hasGroups && (
-                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: theme.fontWeights.semibold }}>
+                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: fontWeights.semibold }}>
                     {match.group ? getGroupShortCode(match.group, tournament) : '-'}
                   </td>
                 )}
@@ -320,36 +503,40 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   />
                 </td>
                 <td style={tdStyle}>{match.awayTeam}</td>
-                {showFields && (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editable ? '4px' : '8px' }}>
-                    {editable && onFieldChange ? (
+                {showFields && (() => {
+                  // Get displayed value - pending change takes priority
+                  const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+                  const displayedField = hasPendingField
+                    ? pendingChanges?.fieldAssignments[match.id]
+                    : match.field;
+                  const isPendingChange = hasPendingField;
+
+                  return (
+                  <td style={{
+                    ...tdStyle,
+                    textAlign: 'center',
+                    padding: editingSchedule ? '4px' : '8px',
+                    backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                  }}>
+                    {editingSchedule && onFieldChange ? (
                       <select
-                        value={match.field || 1}
+                        value={displayedField || 1}
                         onChange={(e) => {
                           const fieldNum = parseInt(e.target.value);
-                          const conflict = findFieldConflict(match.id, fieldNum);
-                          if (conflict) {
-                            const confirmed = window.confirm(
-                              `⚠️ Zeitkonflikt erkannt!\n\n` +
-                              `Feld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\n` +
-                              `Die Spiele überschneiden sich zeitlich.\n\n` +
-                              `Möchtest du die Zuweisung trotzdem vornehmen?`
-                            );
-                            if (!confirmed) {return;}
-                          }
+                          // In edit mode, no confirmation - conflicts are checked on save
                           onFieldChange(match.id, fieldNum);
                         }}
                         style={{
                           width: '100%',
                           padding: '4px',
-                          border: `1px solid ${theme.colors.border}`,
+                          border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
                           borderRadius: '4px',
                           fontSize: '12px',
-                          fontWeight: theme.fontWeights.semibold,
+                          fontWeight: fontWeights.semibold,
                           textAlign: 'center',
                           cursor: 'pointer',
-                          backgroundColor: theme.colors.background,
-                          color: theme.colors.text.primary,
+                          backgroundColor: colors.background,
+                          color: colors.textPrimary,
                         }}
                       >
                         {fieldOptions.map(opt => (
@@ -359,22 +546,95 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                         ))}
                       </select>
                     ) : (
-                      <span style={{ fontWeight: theme.fontWeights.semibold }}>
-                        {match.field || '-'}
+                      <span style={{ fontWeight: fontWeights.semibold }}>
+                        {displayedField || '-'}
                       </span>
                     )}
                   </td>
+                  );
+                })()}
+                </>
+              )}
+            </SortableRow>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
+  return (
+    <div style={containerStyle} className="group-stage-schedule">
+      <h2 style={titleStyle}>
+        {hasGroups ? 'Vorrunde' : 'Spielplan'}
+      </h2>
+
+      {/* Desktop Table View with DnD */}
+      {editingSchedule && onMatchSwap ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="desktop-view" style={{ overflowX: 'auto' }}>
+            <SortableContext
+              items={sortedMatches.map(m => m.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {renderTableContent()}
+            </SortableContext>
+          </div>
+
+          {/* Drag Overlay - OUTSIDE scrollable container to prevent offset issues */}
+          <DragOverlay dropAnimation={null}>
+            {activeMatch && (
+              <div style={{
+                backgroundColor: colors.surface,
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                borderRadius: borderRadius.md,
+                border: `3px solid ${colors.primary}`,
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                minWidth: '400px',
+                maxWidth: '600px',
+                cursor: 'grabbing',
+                transform: 'translate(-50%, -50%)', // Center on cursor
+              }}>
+                <span style={{ color: colors.primary, fontSize: '18px' }}>⋮⋮</span>
+                <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
+                  #{activeMatch.matchNumber}
+                </span>
+                <span style={{ color: colors.textSecondary }}>{activeMatch.time}</span>
+                <span style={{ fontWeight: fontWeights.semibold, flex: 1 }}>
+                  {activeMatch.homeTeam} <span style={{ color: colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                </span>
+                {hasGroups && (
+                  <span style={{
+                    backgroundColor: colors.primary,
+                    color: colors.background,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: fontWeights.semibold,
+                  }}>
+                    {activeMatch.group ? getGroupShortCode(activeMatch.group, tournament) : '-'}
+                  </span>
                 )}
-              </tr>
-            );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        <div className="desktop-view" style={{ overflowX: 'auto' }}>
+          {renderTableContent()}
+        </div>
+      )}
 
       {/* Mobile Card View */}
       <div className="mobile-view">
-        {matches.map((match) => {
+        {sortedMatches.map((match) => {
           const isRunning = runningMatchIds?.has(match.id);
           return (
           <div key={match.id} style={mobileCardStyle}>
@@ -415,17 +675,32 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   <span>{match.group ? getGroupShortCode(match.group, tournament) : '-'}</span>
                 </div>
               )}
-              {showReferees && (
-                <div style={mobileMetaItemStyle}>
+              {showReferees && (() => {
+                const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+                const displayedRef = hasPendingRef
+                  ? pendingChanges?.refereeAssignments[match.id]
+                  : match.referee;
+                const isPendingChange = hasPendingRef;
+
+                return (
+                <div style={{
+                  ...mobileMetaItemStyle,
+                  backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                  padding: isPendingChange ? '4px 8px' : undefined,
+                  borderRadius: isPendingChange ? '4px' : undefined,
+                }}>
                   <strong>SR:</strong>
-                  {editable && onRefereeChange ? (
+                  {editingSchedule && onRefereeChange ? (
                     <select
-                      value={match.referee || ''}
+                      value={displayedRef ?? ''}
                       onChange={(e) => {
                         const value = e.target.value;
                         onRefereeChange(match.id, value ? parseInt(value) : null);
                       }}
-                      style={mobileSelectStyle}
+                      style={{
+                        ...mobileSelectStyle,
+                        border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
+                      }}
                     >
                       <option value="">-</option>
                       {refereeOptions.map(opt => (
@@ -435,31 +710,38 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                       ))}
                     </select>
                   ) : (
-                    <span>{match.referee || '-'}</span>
+                    <span>{displayedRef ?? '-'}</span>
                   )}
                 </div>
-              )}
-              {showFields && (
-                <div style={mobileMetaItemStyle}>
+                );
+              })()}
+              {showFields && (() => {
+                const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+                const displayedField = hasPendingField
+                  ? pendingChanges?.fieldAssignments[match.id]
+                  : match.field;
+                const isPendingChange = hasPendingField;
+
+                return (
+                <div style={{
+                  ...mobileMetaItemStyle,
+                  backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                  padding: isPendingChange ? '4px 8px' : undefined,
+                  borderRadius: isPendingChange ? '4px' : undefined,
+                }}>
                   <strong>Feld:</strong>
-                  {editable && onFieldChange ? (
+                  {editingSchedule && onFieldChange ? (
                     <select
-                      value={match.field || 1}
+                      value={displayedField || 1}
                       onChange={(e) => {
                         const fieldNum = parseInt(e.target.value);
-                        const conflict = findFieldConflict(match.id, fieldNum);
-                        if (conflict) {
-                          const confirmed = window.confirm(
-                            `⚠️ Zeitkonflikt erkannt!\n\n` +
-                            `Feld ${fieldNum} ist bereits für Spiel #${conflict.matchNumber} (${conflict.time}) belegt.\n\n` +
-                            `Die Spiele überschneiden sich zeitlich.\n\n` +
-                            `Möchtest du die Zuweisung trotzdem vornehmen?`
-                          );
-                          if (!confirmed) {return;}
-                        }
+                        // In edit mode, no confirmation - conflicts are checked on save
                         onFieldChange(match.id, fieldNum);
                       }}
-                      style={mobileSelectStyle}
+                      style={{
+                        ...mobileSelectStyle,
+                        border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
+                      }}
                     >
                       {fieldOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>
@@ -468,10 +750,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                       ))}
                     </select>
                   ) : (
-                    <span>{match.field || '-'}</span>
+                    <span>{displayedField || '-'}</span>
                   )}
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
           );

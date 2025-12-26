@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Input, CollapsibleSection } from '../../components/ui';
 import { Tournament, TournamentGroup, TournamentField } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, spacing } from '../../design-tokens';
 import { createDefaultGroups, createDefaultFields } from '../../utils/displayNames';
 
 interface StepGroupsAndFieldsProps {
@@ -181,16 +181,16 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
   const hasGroups = formData.groupSystem === 'groupsAndFinals';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.lg }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.lg }}>
       {/* Info-Box oben */}
       <Card style={{
-        backgroundColor: theme.colors.surface,
-        border: `1px solid ${theme.colors.border}`,
+        backgroundColor: colors.surface,
+        border: `1px solid ${colors.border}`,
       }}>
         <p style={{
           margin: 0,
-          color: theme.colors.text.secondary,
-          fontSize: theme.fontSizes.sm,
+          color: colors.textSecondary,
+          fontSize: fontSizes.sm,
           lineHeight: 1.5,
         }}>
           Dieser Schritt ist optional. Du kannst direkt auf "Weiter" klicken –
@@ -205,16 +205,16 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
         defaultOpen={false}
       >
         <p style={{
-          margin: `0 0 ${theme.spacing.sm} 0`,
-          color: theme.colors.text.secondary,
-          fontSize: theme.fontSizes.sm,
+          margin: `0 0 ${spacing.sm} 0`,
+          color: colors.textSecondary,
+          fontSize: fontSizes.sm,
         }}>
           Gib deinen Spielfeldern eigene Namen (z.B. "Halle Nord", "Platz 1").
         </p>
         <p style={{
-          margin: `0 0 ${theme.spacing.md} 0`,
-          color: theme.colors.text.secondary,
-          fontSize: theme.fontSizes.xs,
+          margin: `0 0 ${spacing.md} 0`,
+          color: colors.textSecondary,
+          fontSize: fontSizes.xs,
           opacity: 0.8,
         }}>
           Das Kürzel (max. 3 Zeichen) wird in kompakten Ansichten wie dem PDF-Export verwendet.
@@ -226,24 +226,24 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
           style={{
             display: 'grid',
             gridTemplateColumns: '80px 1fr 80px',
-            gap: theme.spacing.md,
-            marginBottom: theme.spacing.sm,
-            paddingBottom: theme.spacing.sm,
-            borderBottom: `1px solid ${theme.colors.border}`,
+            gap: spacing.md,
+            marginBottom: spacing.sm,
+            paddingBottom: spacing.sm,
+            borderBottom: `1px solid ${colors.border}`,
           }}
         >
-          <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500 }}>
+          <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500 }}>
             Standard
           </span>
-          <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500 }}>
+          <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500 }}>
             Eigener Name
           </span>
-          <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500, textAlign: 'center' }}>
+          <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500, textAlign: 'center' }}>
             Kürzel
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
           {fields.map((field) => {
             const isDuplicate = isFieldDuplicate(field.id, field.customName);
             const isOriginal = isFieldOriginal(field.id, field.customName);
@@ -255,13 +255,13 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '80px 1fr 80px',
-                    gap: theme.spacing.md,
+                    gap: spacing.md,
                     alignItems: 'center',
                   }}
                 >
                   <span style={{
-                    color: theme.colors.text.secondary,
-                    fontSize: theme.fontSizes.sm,
+                    color: colors.textSecondary,
+                    fontSize: fontSizes.sm,
                   }}>
                     {field.defaultName}
                   </span>
@@ -282,9 +282,9 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                 </div>
                 {hasError && (
                   <p style={{
-                    margin: `${theme.spacing.xs} 0 0 88px`,
-                    color: theme.colors.error,
-                    fontSize: theme.fontSizes.xs,
+                    margin: `${spacing.xs} 0 0 88px`,
+                    color: colors.error,
+                    fontSize: fontSizes.xs,
                   }}>
                     Dieser Name wird bereits verwendet
                   </p>
@@ -302,16 +302,16 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
           defaultOpen={false}
         >
           <p style={{
-            margin: `0 0 ${theme.spacing.sm} 0`,
-            color: theme.colors.text.secondary,
-            fontSize: theme.fontSizes.sm,
+            margin: `0 0 ${spacing.sm} 0`,
+            color: colors.textSecondary,
+            fontSize: fontSizes.sm,
           }}>
             Gib deinen Gruppen eigene Namen (z.B. "Löwen", "Tiger").
           </p>
           <p style={{
-            margin: `0 0 ${theme.spacing.md} 0`,
-            color: theme.colors.text.secondary,
-            fontSize: theme.fontSizes.xs,
+            margin: `0 0 ${spacing.md} 0`,
+            color: colors.textSecondary,
+            fontSize: fontSizes.xs,
             opacity: 0.8,
           }}>
             Das Kürzel (max. 3 Zeichen) wird in kompakten Ansichten wie dem PDF-Export verwendet.
@@ -323,24 +323,24 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
             style={{
               display: 'grid',
               gridTemplateColumns: '80px 1fr 80px',
-              gap: theme.spacing.md,
-              marginBottom: theme.spacing.sm,
-              paddingBottom: theme.spacing.sm,
-              borderBottom: `1px solid ${theme.colors.border}`,
+              gap: spacing.md,
+              marginBottom: spacing.sm,
+              paddingBottom: spacing.sm,
+              borderBottom: `1px solid ${colors.border}`,
             }}
           >
-            <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500 }}>
+            <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500 }}>
               Standard
             </span>
-            <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500 }}>
+            <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500 }}>
               Eigener Name
             </span>
-            <span style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.xs, fontWeight: 500, textAlign: 'center' }}>
+            <span style={{ color: colors.textSecondary, fontSize: fontSizes.xs, fontWeight: 500, textAlign: 'center' }}>
               Kürzel
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.md }}>
             {groups.map((group) => {
               const isDuplicate = isGroupDuplicate(group.id, group.customName);
               const isOriginal = isGroupOriginal(group.id, group.customName);
@@ -352,13 +352,13 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '80px 1fr 80px',
-                      gap: theme.spacing.md,
+                      gap: spacing.md,
                       alignItems: 'center',
                     }}
                   >
                     <span style={{
-                      color: theme.colors.text.secondary,
-                      fontSize: theme.fontSizes.sm,
+                      color: colors.textSecondary,
+                      fontSize: fontSizes.sm,
                     }}>
                       Gruppe {group.id}
                     </span>
@@ -379,9 +379,9 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   </div>
                   {hasError && (
                     <p style={{
-                      margin: `${theme.spacing.xs} 0 0 88px`,
-                      color: theme.colors.error,
-                      fontSize: theme.fontSizes.xs,
+                      margin: `${spacing.xs} 0 0 88px`,
+                      color: colors.error,
+                      fontSize: fontSizes.xs,
                     }}>
                       Dieser Name wird bereits verwendet
                     </p>
@@ -400,27 +400,27 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
           defaultOpen={false}
         >
           <p style={{
-            margin: `0 0 ${theme.spacing.md} 0`,
-            color: theme.colors.text.secondary,
-            fontSize: theme.fontSizes.sm,
+            margin: `0 0 ${spacing.md} 0`,
+            color: colors.textSecondary,
+            fontSize: fontSizes.sm,
           }}>
             Optional: Lege fest, auf welchen Feldern jede Gruppe spielen darf.
             Standardmäßig können alle Gruppen auf allen Feldern spielen.
           </p>
 
           {/* Matrix-Darstellung */}
-          <div className="matrix-container" style={{ borderRadius: theme.borderRadius.md, overflow: 'hidden' }}>
+          <div className="matrix-container" style={{ borderRadius: borderRadius.md, overflow: 'hidden' }}>
             {/* Header */}
             <div
               className="matrix-header"
               style={{
                 display: 'grid',
                 gridTemplateColumns: `100px repeat(${fields.length}, 1fr)`,
-                gap: theme.spacing.sm,
+                gap: spacing.sm,
                 alignItems: 'center',
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                padding: `${spacing.sm} ${spacing.md}`,
                 backgroundColor: 'rgba(255,255,255,0.05)',
-                borderBottom: `1px solid ${theme.colors.border}`,
+                borderBottom: `1px solid ${colors.border}`,
               }}
             >
               <div></div>
@@ -429,8 +429,8 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   key={field.id}
                   style={{
                     textAlign: 'center',
-                    fontSize: theme.fontSizes.sm,
-                    color: theme.colors.text.secondary,
+                    fontSize: fontSizes.sm,
+                    color: colors.textSecondary,
                     fontWeight: 600,
                   }}
                 >
@@ -451,16 +451,16 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   style={{
                     display: 'grid',
                     gridTemplateColumns: `100px repeat(${fields.length}, 1fr)`,
-                    gap: theme.spacing.sm,
+                    gap: spacing.sm,
                     alignItems: 'center',
-                    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+                    padding: `${spacing.sm} ${spacing.md}`,
                     backgroundColor: isEvenRow ? 'transparent' : 'rgba(255,255,255,0.03)',
                     transition: 'background-color 0.15s ease',
                   }}
                 >
                   <div style={{
-                    fontSize: theme.fontSizes.sm,
-                    color: theme.colors.text.primary,
+                    fontSize: fontSizes.sm,
+                    color: colors.textPrimary,
                     fontWeight: 500,
                   }}>
                     {group.customName || `Gruppe ${group.id}`}
@@ -485,15 +485,15 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                             justifyContent: 'center',
                             width: '40px',
                             height: '40px',
-                            borderRadius: theme.borderRadius.md,
+                            borderRadius: borderRadius.md,
                             backgroundColor: isAllowed
-                              ? theme.colors.primary
+                              ? colors.primary
                               : 'rgba(255,255,255,0.05)',
-                            border: `2px solid ${isAllowed ? theme.colors.primary : 'rgba(255,255,255,0.2)'}`,
+                            border: `2px solid ${isAllowed ? colors.primary : 'rgba(255,255,255,0.2)'}`,
                             cursor: isOnlyOne ? 'not-allowed' : 'pointer',
                             opacity: isOnlyOne ? 0.5 : 1,
                             transition: 'all 0.2s ease',
-                            boxShadow: isAllowed ? `0 2px 8px ${theme.colors.primary}40` : 'none',
+                            boxShadow: isAllowed ? `0 2px 8px ${colors.primary}40` : 'none',
                           }}
                           title={isOnlyOne ? 'Mindestens ein Feld muss zugewiesen sein' : undefined}
                         >
@@ -519,17 +519,17 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
           {/* Kapazitäts-Warnungen */}
           {capacityWarnings.length > 0 && (
             <div style={{
-              marginTop: theme.spacing.md,
-              padding: theme.spacing.md,
-              backgroundColor: theme.colors.warning + '20',
-              borderRadius: theme.borderRadius.md,
-              border: `1px solid ${theme.colors.warning}`,
+              marginTop: spacing.md,
+              padding: spacing.md,
+              backgroundColor: colors.warning + '20',
+              borderRadius: borderRadius.md,
+              border: `1px solid ${colors.warning}`,
             }}>
               {capacityWarnings.map((warning, i) => (
                 <p key={i} style={{
-                  margin: i > 0 ? `${theme.spacing.xs} 0 0 0` : 0,
-                  color: theme.colors.warning,
-                  fontSize: theme.fontSizes.sm,
+                  margin: i > 0 ? `${spacing.xs} 0 0 0` : 0,
+                  color: colors.warning,
+                  fontSize: fontSizes.sm,
                 }}>
                   ⚠️ {warning}
                 </p>
@@ -540,9 +540,9 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
           {/* Info wenn Standard-Zuordnung */}
           {isDefaultAssignment && (
             <p style={{
-              marginTop: theme.spacing.md,
-              color: theme.colors.success,
-              fontSize: theme.fontSizes.sm,
+              marginTop: spacing.md,
+              color: colors.success,
+              fontSize: fontSizes.sm,
             }}>
               ✓ Alle Gruppen können auf allen Feldern spielen – optimale Spielplan-Verteilung
             </p>
@@ -553,13 +553,13 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
       {/* Info für roundRobin */}
       {!hasGroups && fields.length > 1 && (
         <Card style={{
-          backgroundColor: theme.colors.secondary + '10',
-          border: `1px solid ${theme.colors.secondary}30`,
+          backgroundColor: colors.secondary + '10',
+          border: `1px solid ${colors.secondary}30`,
         }}>
           <p style={{
             margin: 0,
-            color: theme.colors.secondary,
-            fontSize: theme.fontSizes.sm,
+            color: colors.secondary,
+            fontSize: fontSizes.sm,
           }}>
             ℹ️ Bei Jeder-gegen-Jeden werden alle Spiele automatisch auf die verfügbaren Felder verteilt.
           </p>

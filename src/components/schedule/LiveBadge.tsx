@@ -6,8 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { theme } from '../../styles/theme';
-
+import { borderRadius, colors, fontWeights } from '../../design-tokens';
 interface LiveBadgeProps {
   /** Optional compact mode for smaller displays */
   compact?: boolean;
@@ -24,12 +23,12 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
     alignItems: 'center',
     gap: compact ? '3px' : '5px',
     padding: compact ? '2px 6px' : '3px 8px',
-    background: theme.colors.status.liveBg,
-    border: `1px solid ${theme.colors.status.live}`,
-    borderRadius: theme.borderRadius.sm,
+    background: colors.statusLiveBg,
+    border: `1px solid ${colors.statusLive}`,
+    borderRadius: borderRadius.sm,
     fontSize: compact ? '10px' : '11px',
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.status.live,
+    fontWeight: fontWeights.bold,
+    color: colors.statusLive,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     animation: 'livePulse 2s ease-in-out infinite',
@@ -40,7 +39,7 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
     width: compact ? '5px' : '6px',
     height: compact ? '5px' : '6px',
     borderRadius: '50%',
-    background: theme.colors.status.live,
+    background: colors.statusLive,
     animation: 'liveDot 1s ease-in-out infinite',
   };
 

@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useState, useEffect } from 'react';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontFamilies, fontWeights } from '../../design-tokens';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 
 export interface MatchTimerProps {
@@ -129,15 +129,15 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
 
   const timeStyle: CSSProperties = {
     fontSize: currentSize.time,
-    fontWeight: theme.fontWeights.bold,
-    fontFamily: theme.fonts.heading,
+    fontWeight: fontWeights.bold,
+    fontFamily: fontFamilies.heading,
     color: isOvertime
-      ? theme.colors.error
+      ? colors.error
       : isPaused
-        ? theme.colors.warning
+        ? colors.warning
         : '#ffffff',
     textShadow: isOvertime || isPaused
-      ? `0 0 20px ${isOvertime ? theme.colors.error : theme.colors.warning}`
+      ? `0 0 20px ${isOvertime ? colors.error : colors.warning}`
       : '0 2px 8px rgba(0, 0, 0, 0.4)',
     animation: isPaused ? 'timerPause 1.5s ease-in-out infinite' : undefined,
     letterSpacing: '0.02em',
@@ -145,13 +145,13 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
 
   const separatorStyle: CSSProperties = {
     fontSize: currentSize.time,
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     color: 'rgba(255, 255, 255, 0.6)',
   };
 
   const totalTimeStyle: CSSProperties = {
     fontSize: currentSize.time,
-    fontWeight: theme.fontWeights.medium,
+    fontWeight: fontWeights.medium,
     color: 'rgba(255, 255, 255, 0.5)',
   };
 
@@ -169,31 +169,31 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     height: '100%',
     width: `${progressPercent}%`,
     background: isOvertime
-      ? `linear-gradient(90deg, ${theme.colors.error} 0%, #ff6b6b 100%)`
+      ? `linear-gradient(90deg, ${colors.error} 0%, #ff6b6b 100%)`
       : isNearEnd
-        ? `linear-gradient(90deg, ${theme.colors.error} 0%, #ff6b6b 100%)`
-        : `linear-gradient(90deg, ${theme.colors.primary} 0%, #4ade80 100%)`,
+        ? `linear-gradient(90deg, ${colors.error} 0%, #ff6b6b 100%)`
+        : `linear-gradient(90deg, ${colors.primary} 0%, #4ade80 100%)`,
     borderRadius: currentSize.progress,
     transition: 'width 0.5s linear',
     boxShadow: isNearEnd || isOvertime
-      ? `0 0 12px ${theme.colors.error}`
-      : `0 0 10px ${theme.colors.primary}`,
+      ? `0 0 12px ${colors.error}`
+      : `0 0 10px ${colors.primary}`,
     animation: isNearEnd ? 'progressPulse 1s ease-in-out infinite' : undefined,
   };
 
   const statusBadgeStyle: CSSProperties = {
     padding: size === 'xl' ? '8px 20px' : '6px 14px',
-    borderRadius: theme.borderRadius.md,
+    borderRadius: borderRadius.md,
     fontSize: size === 'xl' ? '18px' : size === 'lg' ? '14px' : '12px',
-    fontWeight: theme.fontWeights.bold,
+    fontWeight: fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     backgroundColor: isPaused
       ? 'rgba(255,145,0,0.25)'
       : 'rgba(0,230,118,0.25)',
     color: isPaused
-      ? theme.colors.warning
-      : theme.colors.primary,
+      ? colors.warning
+      : colors.primary,
     boxShadow: isPaused
       ? `0 0 15px rgba(255,145,0,0.3)`
       : `0 0 15px rgba(0,230,118,0.3)`,
@@ -220,7 +220,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
         )}
 
         {isOvertime && !isPaused && (
-          <div style={{ ...statusBadgeStyle, backgroundColor: 'rgba(255,82,82,0.2)', color: theme.colors.error }}>
+          <div style={{ ...statusBadgeStyle, backgroundColor: 'rgba(255,82,82,0.2)', color: colors.error }}>
             Nachspielzeit
           </div>
         )}

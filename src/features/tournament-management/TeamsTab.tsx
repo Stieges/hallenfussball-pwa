@@ -14,7 +14,7 @@
 import { useState, CSSProperties } from 'react';
 import { Card, Input, Button } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
-import { theme } from '../../styles/theme';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -157,63 +157,63 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // ============================================================================
 
   const containerStyle: CSSProperties = {
-    padding: theme.spacing.lg,
-    background: theme.colors.background,
+    padding: spacing.lg,
+    background: colors.background,
     minHeight: 'calc(100vh - 200px)',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: theme.fontSizes.xl,
-    fontWeight: theme.fontWeights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   };
 
   const teamRowStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottom: `1px solid ${theme.colors.border}`,
-    gap: theme.spacing.md,
+    padding: spacing.md,
+    borderBottom: `1px solid ${colors.border}`,
+    gap: spacing.md,
   };
 
   const teamInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: spacing.md,
     flex: 1,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: theme.fontSizes.md,
-    fontWeight: theme.fontWeights.semibold,
-    color: theme.colors.text.primary,
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
   };
 
   const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
     fontSize: '11px',
     padding: '2px 8px',
-    borderRadius: theme.borderRadius.sm,
+    borderRadius: borderRadius.sm,
     background: bgColor,
     color: color,
-    fontWeight: theme.fontWeights.medium,
+    fontWeight: fontWeights.medium,
   });
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: theme.spacing.sm,
+    gap: spacing.sm,
   };
 
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
-    fontSize: theme.fontSizes.sm,
-    borderRadius: theme.borderRadius.sm,
+    fontSize: fontSizes.sm,
+    borderRadius: borderRadius.sm,
     border: 'none',
     cursor: 'pointer',
-    fontWeight: theme.fontWeights.medium,
-    background: variant === 'edit' ? theme.colors.surface : 'rgba(244, 67, 54, 0.1)',
-    color: variant === 'edit' ? theme.colors.text.primary : '#F44336',
+    fontWeight: fontWeights.medium,
+    background: variant === 'edit' ? colors.surface : 'rgba(244, 67, 54, 0.1)',
+    color: variant === 'edit' ? colors.textPrimary : '#F44336',
     transition: 'all 0.2s ease',
   });
 
@@ -231,7 +231,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const removedTeamNameStyle: CSSProperties = {
     ...teamNameStyle,
     textDecoration: 'line-through',
-    color: theme.colors.text.secondary,
+    color: colors.textSecondary,
   };
 
   // ============================================================================
@@ -244,7 +244,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Error Message */}
       {error && (
-        <Card style={{ background: 'rgba(244, 67, 54, 0.1)', marginBottom: theme.spacing.lg }}>
+        <Card style={{ background: 'rgba(244, 67, 54, 0.1)', marginBottom: spacing.lg }}>
           <div style={{ color: '#F44336', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>❌</span>
             <span>{error}</span>
@@ -259,14 +259,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       )}
 
       {/* Info Box */}
-      <Card style={{ marginBottom: theme.spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: theme.spacing.md }}>
+      <Card style={{ marginBottom: spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
           <span style={{ fontSize: '24px' }}>ℹ️</span>
           <div>
-            <h4 style={{ margin: '0 0 8px 0', color: theme.colors.text.primary }}>
+            <h4 style={{ margin: '0 0 8px 0', color: colors.textPrimary }}>
               Team-Bearbeitung
             </h4>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: colors.textSecondary, fontSize: fontSizes.sm }}>
               <li><strong>Umbenennen:</strong> Jederzeit möglich (z.B. für Rechtschreibkorrekturen)</li>
               <li><strong>Löschen ohne Ergebnisse:</strong> Team und alle Spiele werden entfernt</li>
               <li><strong>Löschen mit Ergebnissen:</strong> Spiele mit Ergebnissen bleiben erhalten</li>
@@ -277,12 +277,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Active Teams */}
       <Card>
-        <h3 style={{ color: theme.colors.text.primary, margin: '0 0 16px 0' }}>
+        <h3 style={{ color: colors.textPrimary, margin: '0 0 16px 0' }}>
           Aktive Teams ({activeTeams.length})
         </h3>
 
         {activeTeams.length === 0 ? (
-          <p style={{ color: theme.colors.text.secondary, fontStyle: 'italic' }}>
+          <p style={{ color: colors.textSecondary, fontStyle: 'italic' }}>
             Keine aktiven Teams vorhanden.
           </p>
         ) : (
@@ -322,7 +322,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <div style={teamInfoStyle}>
                       <span style={teamNameStyle}>{team.name}</span>
                       {team.group && (
-                        <span style={badgeStyle(theme.colors.primary, 'rgba(33, 150, 243, 0.15)')}>
+                        <span style={badgeStyle(colors.primary, 'rgba(33, 150, 243, 0.15)')}>
                           {getGroupDisplayName(team.group, tournament)}
                         </span>
                       )}
@@ -332,7 +332,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         </span>
                       )}
                       {analysis.matchesWithoutResults > 0 && (
-                        <span style={badgeStyle(theme.colors.text.secondary, 'rgba(0,0,0,0.08)')}>
+                        <span style={badgeStyle(colors.textSecondary, 'rgba(0,0,0,0.08)')}>
                           {analysis.matchesWithoutResults} geplant
                         </span>
                       )}
@@ -361,11 +361,11 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Removed Teams */}
       {removedTeams.length > 0 && (
-        <Card style={{ marginTop: theme.spacing.lg }}>
-          <h3 style={{ color: theme.colors.text.secondary, margin: '0 0 16px 0' }}>
+        <Card style={{ marginTop: spacing.lg }}>
+          <h3 style={{ color: colors.textSecondary, margin: '0 0 16px 0' }}>
             Entfernte Teams ({removedTeams.length})
           </h3>
-          <p style={{ color: theme.colors.text.secondary, fontSize: theme.fontSizes.sm, marginBottom: '16px' }}>
+          <p style={{ color: colors.textSecondary, fontSize: fontSizes.sm, marginBottom: '16px' }}>
             Diese Teams wurden entfernt, aber ihre historischen Ergebnisse sind noch im Spielplan sichtbar.
           </p>
 
@@ -377,12 +377,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <div style={teamInfoStyle}>
                   <span style={removedTeamNameStyle}>{team.name}</span>
                   {analysis.matchesWithResults > 0 && (
-                    <span style={badgeStyle(theme.colors.text.secondary, 'rgba(0,0,0,0.08)')}>
+                    <span style={badgeStyle(colors.textSecondary, 'rgba(0,0,0,0.08)')}>
                       {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
                     </span>
                   )}
                   {team.removedAt && (
-                    <span style={{ fontSize: '11px', color: theme.colors.text.secondary }}>
+                    <span style={{ fontSize: '11px', color: colors.textSecondary }}>
                       Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
                     </span>
                   )}
@@ -390,12 +390,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <button
                   style={{
                     padding: '6px 12px',
-                    fontSize: theme.fontSizes.sm,
-                    borderRadius: theme.borderRadius.sm,
-                    border: `1px solid ${theme.colors.border}`,
+                    fontSize: fontSizes.sm,
+                    borderRadius: borderRadius.sm,
+                    border: `1px solid ${colors.border}`,
                     cursor: 'pointer',
                     background: 'transparent',
-                    color: theme.colors.text.secondary,
+                    color: colors.textSecondary,
                   }}
                   onClick={() => handleRestoreTeam(team.id)}
                 >
@@ -411,24 +411,24 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {deleteConfirmTeam && (
         <div style={overlayStyle}>
           <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: theme.colors.text.primary }}>
+            <h3 style={{ margin: '0 0 16px 0', color: colors.textPrimary }}>
               Team löschen?
             </h3>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ color: theme.colors.text.secondary, margin: '0 0 12px 0' }}>
+              <p style={{ color: colors.textSecondary, margin: '0 0 12px 0' }}>
                 {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
                   `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
               </p>
 
               {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
                 <div style={{
-                  padding: theme.spacing.md,
+                  padding: spacing.md,
                   background: 'rgba(255, 152, 0, 0.1)',
-                  borderRadius: theme.borderRadius.sm,
+                  borderRadius: borderRadius.sm,
                   marginTop: '12px',
                 }}>
-                  <p style={{ margin: 0, color: '#FF9800', fontSize: theme.fontSizes.sm }}>
+                  <p style={{ margin: 0, color: '#FF9800', fontSize: fontSizes.sm }}>
                     ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
                   </p>
                 </div>
@@ -474,9 +474,9 @@ const overlayStyle: CSSProperties = {
 };
 
 const dialogStyle: CSSProperties = {
-  background: theme.colors.surface,
-  borderRadius: theme.borderRadius.lg,
-  padding: theme.spacing.xl,
+  background: colors.surface,
+  borderRadius: borderRadius.lg,
+  padding: spacing.xl,
   maxWidth: '500px',
   width: '90%',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
