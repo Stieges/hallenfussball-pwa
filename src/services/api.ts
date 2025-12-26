@@ -130,8 +130,8 @@ function localStorageGetTournaments(): Tournament[] {
     // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder
     return tournaments.map(t => ({
       ...t,
-      status: t.status || 'published',
-      refereeConfig: t.refereeConfig || { mode: 'none' },
+      status: t.status ?? 'published',
+      refereeConfig: t.refereeConfig ?? { mode: 'none' },
       isExternal: t.isExternal || false,
     }));
   } catch (error) {

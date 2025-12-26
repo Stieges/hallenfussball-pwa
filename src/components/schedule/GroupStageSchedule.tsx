@@ -121,7 +121,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {return;}
 
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
@@ -130,7 +130,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
-      if (oldIndex === -1 || newIndex === -1) return prevOrder;
+      if (oldIndex === -1 || newIndex === -1) {return prevOrder;}
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
 
@@ -431,7 +431,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   // Get displayed value - pending change takes priority
                   const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
                   const displayedRef = hasPendingRef
-                    ? pendingChanges?.refereeAssignments[match.id]
+                    ? pendingChanges.refereeAssignments[match.id]
                     : match.referee;
                   const isPendingChange = hasPendingRef;
 
@@ -507,7 +507,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   // Get displayed value - pending change takes priority
                   const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
                   const displayedField = hasPendingField
-                    ? pendingChanges?.fieldAssignments[match.id]
+                    ? pendingChanges.fieldAssignments[match.id]
                     : match.field;
                   const isPendingChange = hasPendingField;
 
@@ -678,7 +678,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               {showReferees && (() => {
                 const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
                 const displayedRef = hasPendingRef
-                  ? pendingChanges?.refereeAssignments[match.id]
+                  ? pendingChanges.refereeAssignments[match.id]
                   : match.referee;
                 const isPendingChange = hasPendingRef;
 
@@ -718,7 +718,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               {showFields && (() => {
                 const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
                 const displayedField = hasPendingField
-                  ? pendingChanges?.fieldAssignments[match.id]
+                  ? pendingChanges.fieldAssignments[match.id]
                   : match.field;
                 const isPendingChange = hasPendingField;
 

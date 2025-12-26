@@ -20,7 +20,7 @@ export function formatDateGerman(isoDate: string | undefined): string {
  * Gibt den Hallen-Namen zurück
  */
 export function getLocationName(tournament: { location?: LocationDetails }): string {
-  return tournament.location?.name || '';
+  return tournament.location?.name ?? '';
 }
 
 /**

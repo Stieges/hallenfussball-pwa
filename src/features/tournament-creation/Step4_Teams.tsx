@@ -100,10 +100,10 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   onRemoveTeam,
   onUpdateTeam,
 }) => {
-  const teams = formData.teams || [];
+  const teams = formData.teams ?? [];
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
-  const numberOfTeams = formData.numberOfTeams || 4;
-  const numberOfGroups = formData.numberOfGroups || 2;
+  const numberOfTeams = formData.numberOfTeams ?? 4;
+  const numberOfGroups = formData.numberOfGroups ?? 2;
   const needsMoreTeams = teams.length < numberOfTeams;
   const groupLabels = generateGroupLabels(numberOfGroups);
 
@@ -114,21 +114,21 @@ export const Step4_Teams: React.FC<Step4Props> = ({
 
   // Prüft ob ein Team ein Duplikat ist (= ein vorheriges Team hat denselben Namen)
   const isTeamDuplicate = (teamId: string, teamName: string | undefined): boolean => {
-    if (!teamName?.trim()) return false;
+    if (!teamName?.trim()) {return false;}
     const normalizedName = teamName.trim().toLowerCase();
     const teamIndex = teams.findIndex(t => t.id === teamId);
     return teams.slice(0, teamIndex).some(t =>
-      t.name?.trim().toLowerCase() === normalizedName
+      t.name.trim().toLowerCase() === normalizedName
     );
   };
 
   // Prüft ob ein Team ein Original ist (= ein späteres Team hat denselben Namen)
   const isTeamOriginal = (teamId: string, teamName: string | undefined): boolean => {
-    if (!teamName?.trim()) return false;
+    if (!teamName?.trim()) {return false;}
     const normalizedName = teamName.trim().toLowerCase();
     const teamIndex = teams.findIndex(t => t.id === teamId);
     return teams.slice(teamIndex + 1).some(t =>
-      t.name?.trim().toLowerCase() === normalizedName
+      t.name.trim().toLowerCase() === normalizedName
     );
   };
 
@@ -175,7 +175,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           </Button>
         )}
 
-        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups || 0) > 1 && (
+        {canAssignGroups && teams.length > 0 && (formData.numberOfGroups ?? 0) > 1 && (
           <Button
             onClick={handleAutoAssignGroups}
             variant="secondary"
@@ -245,8 +245,8 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   <div className={styles.teamRowSecondary}>
                     <span className={styles.groupLabel}>Gruppe:</span>
                     <select
-                      value={team.group || ''}
-                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
+                      value={team.group ?? ''}
+                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value ?? undefined })}
                       className={styles.groupSelect}
                       aria-label={`Gruppe für ${team.name}`}
                     >

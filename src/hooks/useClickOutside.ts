@@ -27,7 +27,7 @@ export function useClickOutside<T extends HTMLElement>(
   enabled = true
 ): void {
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {return}
 
     const listener = (event: MouseEvent | TouchEvent) => {
       const el = ref.current
@@ -72,7 +72,7 @@ export function useClickOutsideMultiple<T extends HTMLElement>(
   enabled = true
 ): void {
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {return}
 
     const listener = (event: MouseEvent | TouchEvent) => {
       // Check if click is inside any of the referenced elements

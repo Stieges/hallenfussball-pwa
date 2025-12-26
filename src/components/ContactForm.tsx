@@ -14,7 +14,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const [showExtended, setShowExtended] = useState(false);
 
   // Memoize to prevent useEffect from re-running on every render
-  const contactInfo: ContactInfo = useMemo(() => value || {}, [value]);
+  const contactInfo: ContactInfo = useMemo(() => value ?? {}, [value]);
 
   // Auto-open wenn Daten vorhanden
   useEffect(() => {
@@ -31,7 +31,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const handleFieldChange = (field: keyof ContactInfo, fieldValue: string) => {
     onChange({
       ...contactInfo,
-      [field]: fieldValue || undefined, // Remove empty strings
+      [field]: fieldValue ?? undefined, // Remove empty strings
     });
   };
 
@@ -78,7 +78,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
         >
           <Input
             label="Ansprechpartner"
-            value={contactInfo.name || ''}
+            value={contactInfo.name ?? ''}
             onChange={(v) => handleFieldChange('name', v)}
             placeholder="z.B. Max Mustermann"
           />
@@ -86,7 +86,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           <Input
             label="E-Mail"
             type="email"
-            value={contactInfo.email || ''}
+            value={contactInfo.email ?? ''}
             onChange={(v) => handleFieldChange('email', v)}
             placeholder="z.B. turnier@tsv-waging.de"
             style={{ marginTop: '16px' }}
@@ -95,7 +95,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           <Input
             label="Telefon"
             type="tel"
-            value={contactInfo.phone || ''}
+            value={contactInfo.phone ?? ''}
             onChange={(v) => handleFieldChange('phone', v)}
             placeholder="z.B. +49 8681 12345"
             style={{ marginTop: '16px' }}
@@ -103,7 +103,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
 
           <Input
             label="Website"
-            value={contactInfo.website || ''}
+            value={contactInfo.website ?? ''}
             onChange={(v) => handleFieldChange('website', v)}
             placeholder="z.B. www.tsv-waging.de"
             style={{ marginTop: '16px' }}

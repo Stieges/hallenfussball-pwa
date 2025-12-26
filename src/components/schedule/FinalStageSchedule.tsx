@@ -109,7 +109,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {return;}
 
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
@@ -118,7 +118,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
-      if (oldIndex === -1 || newIndex === -1) return prevOrder;
+      if (oldIndex === -1 || newIndex === -1) {return prevOrder;}
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
 
@@ -409,7 +409,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               </td>
                 {showReferees && (() => {
                   const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-                  const displayedRef = hasPendingRef ? pendingChanges?.refereeAssignments[match.id] : match.referee;
+                  const displayedRef = hasPendingRef ? pendingChanges.refereeAssignments[match.id] : match.referee;
                   const isPendingChange = hasPendingRef;
                   return (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? '4px' : '8px', backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined }}>
@@ -456,7 +456,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 </td>
                 {showFields && (() => {
                   const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-                  const displayedField = hasPendingField ? pendingChanges?.fieldAssignments[match.id] : match.field;
+                  const displayedField = hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field;
                   const isPendingChange = hasPendingField;
                   return (
                   <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? '4px' : '8px', backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined }}>
@@ -577,7 +577,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
             <div style={mobileMetaStyle}>
               {showReferees && (() => {
                 const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-                const displayedRef = hasPendingRef ? pendingChanges?.refereeAssignments[match.id] : match.referee;
+                const displayedRef = hasPendingRef ? pendingChanges.refereeAssignments[match.id] : match.referee;
                 const isPendingChange = hasPendingRef;
                 return (
                 <div style={{ ...mobileMetaItemStyle, backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined, padding: isPendingChange ? '4px 8px' : undefined, borderRadius: isPendingChange ? '4px' : undefined }}>
@@ -593,7 +593,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               })()}
               {showFields && (() => {
                 const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-                const displayedField = hasPendingField ? pendingChanges?.fieldAssignments[match.id] : match.field;
+                const displayedField = hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field;
                 const isPendingChange = hasPendingField;
                 return (
                 <div style={{ ...mobileMetaItemStyle, backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined, padding: isPendingChange ? '4px 8px' : undefined, borderRadius: isPendingChange ? '4px' : undefined }}>

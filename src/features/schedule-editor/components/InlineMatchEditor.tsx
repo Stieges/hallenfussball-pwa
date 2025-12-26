@@ -231,7 +231,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
 
   // Current values
   const currentReferee = match.referee;
-  const currentField = match.field || 1;
+  const currentField = match.field ?? 1;
 
   // Check if current values have conflicts
   const currentRefereeOption = refereeOptions.find(o => o.value === currentReferee);
@@ -260,14 +260,14 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
           <div style={fieldGroupStyle}>
             <span style={labelStyle}>SR:</span>
             <span style={{ fontSize: fontSizes.sm }}>
-              {currentRefereeOption?.label || '—'}
+              {currentRefereeOption?.label ?? '—'}
             </span>
           </div>
         )}
         <div style={fieldGroupStyle}>
           <span style={labelStyle}>Feld:</span>
           <span style={{ fontSize: fontSizes.sm }}>
-            {currentFieldOption?.label || `Feld ${currentField}`}
+            {currentFieldOption?.label ?? `Feld ${currentField}`}
           </span>
         </div>
       </div>
@@ -407,7 +407,7 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
           color: showConflict ? colors.error : colors.textSecondary,
         }}
       >
-        {currentOption?.label || '—'}
+        {currentOption?.label ?? '—'}
       </span>
     );
   }

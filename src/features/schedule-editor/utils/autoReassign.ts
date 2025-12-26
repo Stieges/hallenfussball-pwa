@@ -38,7 +38,7 @@ function calculateRefereeWorkloads(
   const workloads = new Map<number, RefereeWorkload>();
 
   // Initialize all referees
-  const numReferees = refereeConfig.numberOfReferees || 0;
+  const numReferees = refereeConfig.numberOfReferees ?? 0;
   for (let i = 1; i <= numReferees; i++) {
     workloads.set(i, {
       refereeId: i,
@@ -76,7 +76,7 @@ function calculateRefereeWorkloads(
 
     for (const matchId of workload.matchIds) {
       const match = matches.find(m => m.id === matchId);
-      if (!match?.scheduledTime) continue;
+      if (!match?.scheduledTime) {continue;}
 
       const matchTime = new Date(match.scheduledTime).getTime();
 
@@ -106,27 +106,27 @@ function findBestReferee(
   workloads: Map<number, RefereeWorkload>,
   excludeReferees: number[] = []
 ): number | null {
-  const numReferees = refereeConfig.numberOfReferees || 0;
-  if (numReferees === 0) return null;
+  const numReferees = refereeConfig.numberOfReferees ?? 0;
+  if (numReferees === 0) {return null;}
 
   const maxConsecutive = refereeConfig.maxConsecutiveMatches ?? 2;
   const candidates: { id: number; score: number }[] = [];
 
   for (let refId = 1; refId <= numReferees; refId++) {
-    if (excludeReferees.includes(refId)) continue;
+    if (excludeReferees.includes(refId)) {continue;}
 
     const workload = workloads.get(refId);
-    if (!workload) continue;
+    if (!workload) {continue;}
 
     // Check for time conflicts
     const hasConflict = checkRefereeTimeConflict(refId, match, matches);
-    if (hasConflict) continue;
+    if (hasConflict) {continue;}
 
     // Check consecutive match limit
     if (maxConsecutive > 0 && workload.consecutiveMatches >= maxConsecutive) {
       // Check if this would extend consecutive matches
       const wouldExtend = wouldExtendConsecutive(refId, match, matches);
-      if (wouldExtend) continue;
+      if (wouldExtend) {continue;}
     }
 
     // Calculate fairness score (lower is better)
@@ -139,7 +139,7 @@ function findBestReferee(
     candidates.push({ id: refId, score });
   }
 
-  if (candidates.length === 0) return null;
+  if (candidates.length === 0) {return null;}
 
   // Sort by score (lower = better)
   candidates.sort((a, b) => a.score - b.score);
@@ -155,16 +155,16 @@ function checkRefereeTimeConflict(
   match: Match,
   allMatches: Match[]
 ): boolean {
-  if (!match.scheduledTime) return false;
+  if (!match.scheduledTime) {return false;}
 
   const matchTime = new Date(match.scheduledTime).getTime();
   const matchDuration = 15 * 60 * 1000; // Assume 15 min matches
 
   for (const other of allMatches) {
-    if (other.id === match.id) continue;
-    if (other.referee !== refereeId) continue;
-    if (other.matchStatus === 'skipped' || other.matchStatus === 'finished') continue;
-    if (!other.scheduledTime) continue;
+    if (other.id === match.id) {continue;}
+    if (other.referee !== refereeId) {continue;}
+    if (other.matchStatus === 'skipped' || other.matchStatus === 'finished') {continue;}
+    if (!other.scheduledTime) {continue;}
 
     const otherTime = new Date(other.scheduledTime).getTime();
     const otherEnd = otherTime + matchDuration;
@@ -187,17 +187,17 @@ function wouldExtendConsecutive(
   match: Match,
   allMatches: Match[]
 ): boolean {
-  if (!match.scheduledTime) return false;
+  if (!match.scheduledTime) {return false;}
 
   const matchTime = new Date(match.scheduledTime).getTime();
   const threshold = 30 * 60 * 1000; // 30 minutes
 
   // Check if ref has a match within 30 min before or after
   for (const other of allMatches) {
-    if (other.id === match.id) continue;
-    if (other.referee !== refereeId) continue;
-    if (other.matchStatus === 'skipped') continue;
-    if (!other.scheduledTime) continue;
+    if (other.id === match.id) {continue;}
+    if (other.referee !== refereeId) {continue;}
+    if (other.matchStatus === 'skipped') {continue;}
+    if (!other.scheduledTime) {continue;}
 
     const otherTime = new Date(other.scheduledTime).getTime();
     if (Math.abs(matchTime - otherTime) <= threshold) {
@@ -230,7 +230,7 @@ export function autoReassignReferees(
   }
 
   const changes: MatchChange[] = [];
-  const excludeMatchIds = new Set(options.excludeMatchIds || []);
+  const excludeMatchIds = new Set(options.excludeMatchIds ?? []);
 
   // Get matches that need referee assignment
   const matchesNeedingRef = matches.filter(m =>
@@ -322,7 +322,7 @@ export function redistributeAfterSkip(
 
   // Find the skipped match
   const skippedMatch = matches.find(m => m.id === skippedMatchId);
-  if (!skippedMatch || !skippedMatch.referee) {
+  if (!skippedMatch?.referee) {
     return {
       success: true,
       changes: [],
@@ -414,19 +414,19 @@ export function balanceRefereeWorkloads(
     const overWorkload = workloads.get(overRef)!;
 
     for (const underRef of underloaded) {
-      if (overWorkload.assignedMatches <= targetPerRef) break;
+      if (overWorkload.assignedMatches <= targetPerRef) {break;}
 
       const underWorkload = workloads.get(underRef)!;
-      if (underWorkload.assignedMatches >= targetPerRef) continue;
+      if (underWorkload.assignedMatches >= targetPerRef) {continue;}
 
       // Find a match to transfer
       for (const matchId of [...overWorkload.matchIds]) {
         const match = matches.find(m => m.id === matchId);
-        if (!match) continue;
+        if (!match) {continue;}
 
         // Check if underloaded ref can take this match
         const hasConflict = checkRefereeTimeConflict(underRef, match, matches);
-        if (hasConflict) continue;
+        if (hasConflict) {continue;}
 
         // Transfer
         changes.push({
@@ -517,8 +517,8 @@ export function redistributeFields(
   const matchesByTime = new Map<string, Match[]>();
 
   for (const match of matches) {
-    if (match.matchStatus === 'skipped' || match.matchStatus === 'finished') continue;
-    if (!match.scheduledTime) continue;
+    if (match.matchStatus === 'skipped' || match.matchStatus === 'finished') {continue;}
+    if (!match.scheduledTime) {continue;}
 
     const timeKey = new Date(match.scheduledTime).toISOString();
     const existing = matchesByTime.get(timeKey) || [];
@@ -529,7 +529,7 @@ export function redistributeFields(
   // For each time slot, distribute matches across fields
   for (const [, matchesInSlot] of matchesByTime) {
     // Sort by original field to maintain some consistency
-    matchesInSlot.sort((a, b) => (a.field || 1) - (b.field || 1));
+    matchesInSlot.sort((a, b) => (a.field ?? 1) - (b.field ?? 1));
 
     // Assign fields 1, 2, 3, ... in order
     matchesInSlot.forEach((match, index) => {

@@ -21,8 +21,8 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const [homeScore, setHomeScore] = useState(match.penaltyScoreA || 0);
-  const [awayScore, setAwayScore] = useState(match.penaltyScoreB || 0);
+  const [homeScore, setHomeScore] = useState(match.penaltyScoreA ?? 0);
+  const [awayScore, setAwayScore] = useState(match.penaltyScoreB ?? 0);
   const [error, setError] = useState<string | null>(null);
 
   const isMobile = useIsMobile();
@@ -136,8 +136,8 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   };
 
   // Calculate total scores for display
-  const totalHomeScore = match.homeScore + (match.overtimeScoreA || 0);
-  const totalAwayScore = match.awayScore + (match.overtimeScoreB || 0);
+  const totalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
+  const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
 
   return (
     <div style={containerStyle}>

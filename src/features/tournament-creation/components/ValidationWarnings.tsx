@@ -18,10 +18,10 @@ interface ValidationIssue {
 function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  const teams = formData.numberOfTeams || 4;
-  const fields = formData.numberOfFields || 1;
-  const groups = formData.numberOfGroups || 2;
-  const groupSystem = formData.groupSystem || 'roundRobin';
+  const teams = formData.numberOfTeams ?? 4;
+  const fields = formData.numberOfFields ?? 1;
+  const groups = formData.numberOfGroups ?? 2;
+  const groupSystem = formData.groupSystem ?? 'roundRobin';
   const gameDuration = formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration;
   const breakDuration = formData.groupPhaseBreakDuration ?? DEFAULT_VALUES.groupPhaseBreakDuration;
 

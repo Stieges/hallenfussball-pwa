@@ -57,7 +57,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       return;
     }
 
-    const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments || {}) };
+    const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments ?? {}) };
 
     if (refereeNumber === null) {
       delete manualAssignments[matchId];
@@ -297,11 +297,11 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             </p>
 
             {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
-            {currentTournament.finalsConfig.preset === 'top-8' && (currentTournament.numberOfGroups || 2) < 4 && (
+            {currentTournament.finalsConfig.preset === 'top-8' && (currentTournament.numberOfGroups ?? 2) < 4 && (
               <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(255,165,0,0.12)', borderRadius: borderRadius.sm, border: '1px solid rgba(255,165,0,0.3)' }}>
                 <p style={{ fontSize: '11px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ⚠️ <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
-                  Mit {currentTournament.numberOfGroups || 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
+                  Mit {currentTournament.numberOfGroups ?? 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
                 </p>
               </div>
             )}
@@ -311,8 +311,8 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,176,255,0.12)', borderRadius: borderRadius.sm, border: '1px solid rgba(0,176,255,0.3)' }}>
                 <p style={{ fontSize: '11px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ℹ️ <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
-                  {(currentTournament.numberOfGroups || 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
-                  {(currentTournament.numberOfGroups || 2) >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
+                  {(currentTournament.numberOfGroups ?? 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
+                  {(currentTournament.numberOfGroups ?? 2) >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
                 </p>
               </div>
             )}

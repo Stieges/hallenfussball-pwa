@@ -119,7 +119,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
-    if (!groupPhase || !currentMatches) {return groupPhase?.matches || [];}
+    if (!groupPhase || !currentMatches) {return groupPhase?.matches ?? [];}
 
     return groupPhase.matches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);

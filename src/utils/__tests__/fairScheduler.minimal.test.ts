@@ -90,7 +90,6 @@ describe('Fair Scheduler - Critical Tests', () => {
     // NOTE: Current baseline after Session 2 (FairnessCalculator) is ~5-10s (O(n²))
     // Before Session 2, this was ~30-35s (O(n³))
     expect(duration).toBeLessThan(45000); // 45s generous timeout
-    console.log(`[Performance Baseline] 64 teams completed in ${duration}ms`);
   }, 60000); // 60s timeout for this test
 
   // NOTE: 128 teams test skipped - algorithm has issues with very large tournaments
@@ -114,6 +113,5 @@ describe('Fair Scheduler - Critical Tests', () => {
     // 128 teams = 128 * 127 / 2 = 8128 matches
     expect(matches.length).toBe(8128);
     expect(duration).toBeLessThan(120000); // 2 minutes generous timeout
-    console.log(`[Stress Test] 128 teams completed in ${duration}ms`);
   }, 180000); // 3 minutes timeout for this test
 });

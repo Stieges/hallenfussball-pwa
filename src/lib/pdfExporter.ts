@@ -150,7 +150,7 @@ export async function exportScheduleToPDF(
     locale = 'de',
     includeStandings = true,
     includeScores = false,
-    organizerName = schedule.tournament.organizer || '',
+    organizerName = schedule.tournament.organizer ?? '',
     hallName = getLocationName(schedule.tournament),
   } = options;
 
@@ -278,7 +278,7 @@ function renderMetaBox(
 
   // Get duration values from first group stage match
   const firstGroupMatch = schedule.phases.find(p => p.name === 'groupStage')?.matches[0];
-  const groupDuration = firstGroupMatch?.duration || 10;
+  const groupDuration = firstGroupMatch?.duration ?? 10;
 
   const startTime = schedule.startTime.toLocaleTimeString('de-DE', {
     hour: '2-digit',
@@ -443,7 +443,7 @@ function renderParticipants(
   // Teams nach Gruppe sortieren
   const teamsByGroup = new Map<string, typeof schedule.teams>();
   schedule.teams.forEach(team => {
-    const groupKey = team.group || 'Alle';
+    const groupKey = team.group ?? 'Alle';
     if (!teamsByGroup.has(groupKey)) {
       teamsByGroup.set(groupKey, []);
     }

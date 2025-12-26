@@ -13,7 +13,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
   onUpdate,
 }) => {
   const refereeConfig = formData.refereeConfig;
-  const mode = refereeConfig?.mode || 'none';
+  const mode = refereeConfig?.mode ?? 'none';
   const showFinalsOptions = mode === 'teams' && formData.groupSystem === 'groupsAndFinals';
 
   const handleModeChange = (newMode: string) => {
@@ -42,7 +42,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
     if (field === 'numberOfReferees' && refereeConfig?.refereeNames) {
       const updatedNames: Record<number, string> = {};
       for (let i = 1; i <= value; i++) {
-        updatedNames[i] = refereeConfig.refereeNames[i] || '';
+        updatedNames[i] = refereeConfig.refereeNames[i] ?? '';
       }
       newConfig.refereeNames = updatedNames;
     }
@@ -51,7 +51,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
   };
 
   const handleNamesToggle = (enabled: boolean) => {
-    const numberOfRefs = refereeConfig?.numberOfReferees || 2;
+    const numberOfRefs = refereeConfig?.numberOfReferees ?? 2;
 
     if (enabled) {
       const names: Record<number, string> = {};
@@ -65,14 +65,14 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
       } as RefereeConfig);
     } else {
       // Remove names but keep other config
-      const { refereeNames: _refereeNames, ...rest } = refereeConfig || {};
+      const { refereeNames: _refereeNames, ...rest } = refereeConfig ?? {};
       onUpdate('refereeConfig', rest as RefereeConfig);
     }
   };
 
   const handleNameChange = (refNumber: number, name: string) => {
     const updatedNames = {
-      ...(refereeConfig?.refereeNames || {}),
+      ...(refereeConfig?.refereeNames ?? {}),
       [refNumber]: name,
     };
     onUpdate('refereeConfig', {
@@ -112,12 +112,12 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
 
   // Prüft ob ein Schiedsrichter ein Duplikat ist (= ein vorheriger SR hat denselben Namen)
   const isRefereeDuplicate = (refNumber: number, refName: string | undefined): boolean => {
-    if (!refName?.trim()) return false;
-    if (!refereeConfig?.refereeNames) return false;
+    if (!refName?.trim()) {return false;}
+    if (!refereeConfig?.refereeNames) {return false;}
     const normalizedName = refName.trim().toLowerCase();
     // Prüfe ob ein vorheriger Schiedsrichter (1 bis refNumber-1) denselben Namen hat
     for (let i = 1; i < refNumber; i++) {
-      if (refereeConfig.refereeNames[i]?.trim().toLowerCase() === normalizedName) {
+      if (refereeConfig.refereeNames[i].trim().toLowerCase() === normalizedName) {
         return true;
       }
     }
@@ -126,13 +126,13 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
 
   // Prüft ob ein Schiedsrichter ein Original ist (= ein späterer SR hat denselben Namen)
   const isRefereeOriginal = (refNumber: number, refName: string | undefined): boolean => {
-    if (!refName?.trim()) return false;
-    if (!refereeConfig?.refereeNames) return false;
+    if (!refName?.trim()) {return false;}
+    if (!refereeConfig?.refereeNames) {return false;}
     const normalizedName = refName.trim().toLowerCase();
-    const totalRefs = refereeConfig.numberOfReferees || 2;
+    const totalRefs = refereeConfig.numberOfReferees ?? 2;
     // Prüfe ob ein späterer Schiedsrichter (refNumber+1 bis totalRefs) denselben Namen hat
     for (let i = refNumber + 1; i <= totalRefs; i++) {
-      if (refereeConfig.refereeNames[i]?.trim().toLowerCase() === normalizedName) {
+      if (refereeConfig.refereeNames[i].trim().toLowerCase() === normalizedName) {
         return true;
       }
     }
@@ -171,7 +171,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           <div className="referee-grid" style={{ display: 'grid', gap: '16px', marginBottom: '16px' }}>
             <NumberStepper
               label="Anzahl Schiedsrichter"
-              value={refereeConfig?.numberOfReferees || 2}
+              value={refereeConfig?.numberOfReferees ?? 2}
               onChange={(v) => handleNumberChange('numberOfReferees', v)}
               min={1}
               max={20}
@@ -179,7 +179,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
             />
             <NumberStepper
               label="Max. zusammenhängende Partien"
-              value={refereeConfig?.maxConsecutiveMatches || 1}
+              value={refereeConfig?.maxConsecutiveMatches ?? 1}
               onChange={(v) => handleNumberChange('maxConsecutiveMatches', v)}
               min={1}
               max={5}
@@ -211,8 +211,8 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                 Schiedsrichter-Namen
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {Array.from({ length: refereeConfig.numberOfReferees || 2 }, (_, i) => i + 1).map((refNumber) => {
-                  const refName = refereeConfig.refereeNames?.[refNumber] || '';
+                {Array.from({ length: refereeConfig.numberOfReferees ?? 2 }, (_, i) => i + 1).map((refNumber) => {
+                  const refName = refereeConfig.refereeNames?.[refNumber] ?? '';
                   const isDuplicate = isRefereeDuplicate(refNumber, refName);
                   const isOriginal = isRefereeOriginal(refNumber, refName);
                   const hasError = isDuplicate || isOriginal;
@@ -252,7 +252,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
         <div style={{ marginTop: '16px' }}>
           <Select
             label="Schiedsrichter in Finalphase"
-            value={refereeConfig?.finalsRefereeMode || 'none'}
+            value={refereeConfig?.finalsRefereeMode ?? 'none'}
             onChange={handleFinalsRefereeMode}
             options={[
               { value: 'none', label: 'Keine SR in Finalphase' },

@@ -82,7 +82,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     const upcoming = allMatches.find(
       (m) => m.scoreA === undefined || m.scoreB === undefined
     )
-    if (!upcoming) return null
+    if (!upcoming) {return null}
 
     return {
       id: upcoming.id,
@@ -97,7 +97,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
 
   // Calculate remaining seconds for current match
   const currentMatchRemainingSeconds = useMemo(() => {
-    if (!matchOnSelectedField) return 0
+    if (!matchOnSelectedField) {return 0}
     const elapsed = calculateElapsedSeconds(matchOnSelectedField)
     return Math.max(0, matchOnSelectedField.durationSeconds - elapsed)
   }, [matchOnSelectedField, calculateElapsedSeconds])

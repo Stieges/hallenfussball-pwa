@@ -106,7 +106,7 @@ export function useMatchConflicts(
 
   // Detect all conflicts (memoized)
   const conflicts = useMemo(() => {
-    if (!enabled || matches.length === 0) return [];
+    if (!enabled || matches.length === 0) {return [];}
     return detectAllConflicts(matches, teams, config);
   }, [matches, teams, config, enabled]);
 
@@ -133,8 +133,8 @@ export function useMatchConflicts(
     let warnings = 0;
 
     for (const conflict of conflicts) {
-      if (conflict.severity === 'error') errors++;
-      else if (conflict.severity === 'warning') warnings++;
+      if (conflict.severity === 'error') {errors++;}
+      else if (conflict.severity === 'warning') {warnings++;}
     }
 
     return { errorCount: errors, warningCount: warnings };
@@ -143,7 +143,7 @@ export function useMatchConflicts(
   // Validate a proposed change
   const validateChange = useCallback(
     (change: MatchChange): ScheduleConflict[] => {
-      if (!enabled) return [];
+      if (!enabled) {return [];}
       return validateMatchChange(matches, teams, change, config);
     },
     [matches, teams, config, enabled]
@@ -160,7 +160,7 @@ export function useMatchConflicts(
   // Check if match has any conflicts
   const matchHasConflicts = useCallback(
     (matchId: string): boolean => {
-      return (conflictsByMatch.get(matchId)?.length || 0) > 0;
+      return (conflictsByMatch.get(matchId)?.length ?? 0) > 0;
     },
     [conflictsByMatch]
   );
@@ -213,16 +213,16 @@ export function useMatchConflictsFromTournament(
   };
 
   const result = useMatchConflicts({
-    matches: tournament?.matches || [],
-    teams: tournament?.teams || [],
-    matchDurationMinutes: tournament?.groupPhaseGameDuration || tournament?.gameDuration || 10,
-    minBreakMinutes: tournament?.groupPhaseBreakDuration || tournament?.breakDuration || 2,
+    matches: tournament?.matches ?? [],
+    teams: tournament?.teams ?? [],
+    matchDurationMinutes: tournament?.groupPhaseGameDuration || tournament?.gameDuration ?? 10,
+    minBreakMinutes: tournament?.groupPhaseBreakDuration || tournament?.breakDuration ?? 2,
     checkRefereeConflicts: tournament?.refereeConfig?.mode !== 'none',
     checkFieldConflicts: true,
     enabled: enabled && tournament !== null,
   });
 
-  if (!tournament) return emptyResult;
+  if (!tournament) {return emptyResult;}
   return result;
 }
 

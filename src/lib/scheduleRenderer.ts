@@ -197,7 +197,7 @@ export function exportScheduleAsCSV(schedule: GeneratedSchedule): string {
   let csv = 'Nr.,Zeit,Feld,Heim,Gast,Gruppe,Phase,Ergebnis\n'
 
   schedule.allMatches.forEach((match) => {
-    csv += `${match.matchNumber},${match.time},${match.field},"${match.homeTeam}","${match.awayTeam}",${match.group || ''},${match.phase},\n`
+    csv += `${match.matchNumber},${match.time},${match.field},"${match.homeTeam}","${match.awayTeam}",${match.group ?? ''},${match.phase},\n`
   })
 
   return csv

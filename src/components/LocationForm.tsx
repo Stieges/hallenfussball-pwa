@@ -68,7 +68,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
       <div style={{ position: 'relative' }}>
         <Input
           label="Veranstaltungsort"
-          value={locationDetails.name || ''}
+          value={locationDetails.name ?? ''}
           onChange={handleNameChange}
           placeholder="z.B. Sporthalle Waging"
           required={required}
@@ -119,7 +119,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
         >
           <Input
             label="Straße & Hausnummer"
-            value={locationDetails.street || ''}
+            value={locationDetails.street ?? ''}
             onChange={(v) => handleFieldChange('street', v)}
             placeholder="z.B. Mozartstraße 9"
           />
@@ -134,13 +134,13 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           >
             <Input
               label="PLZ"
-              value={locationDetails.postalCode || ''}
+              value={locationDetails.postalCode ?? ''}
               onChange={(v) => handleFieldChange('postalCode', v)}
               placeholder="z.B. 83329"
             />
             <Input
               label="Stadt/Ort"
-              value={locationDetails.city || ''}
+              value={locationDetails.city ?? ''}
               onChange={(v) => handleFieldChange('city', v)}
               placeholder="z.B. Waging am See"
             />
@@ -148,7 +148,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
 
           <Input
             label="Land"
-            value={locationDetails.country || ''}
+            value={locationDetails.country ?? ''}
             onChange={(v) => handleFieldChange('country', v)}
             placeholder="z.B. Deutschland"
             style={{ marginTop: '16px' }}

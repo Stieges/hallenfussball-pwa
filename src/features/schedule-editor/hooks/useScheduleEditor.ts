@@ -64,8 +64,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         redoStack: [],
       };
 
-    case 'UNDO':
-      if (state.undoStack.length === 0) return state;
+    case 'UNDO': {
+      if (state.undoStack.length === 0) {return state;}
       const undoChanges = state.undoStack[state.undoStack.length - 1];
       return {
         ...state,
@@ -76,9 +76,10 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         ),
         isDirty: state.undoStack.length > 1,
       };
+    }
 
-    case 'REDO':
-      if (state.redoStack.length === 0) return state;
+    case 'REDO': {
+      if (state.redoStack.length === 0) {return state;}
       const redoChanges = state.redoStack[state.redoStack.length - 1];
       return {
         ...state,
@@ -87,6 +88,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         pendingChanges: [...state.pendingChanges, ...redoChanges],
         isDirty: true,
       };
+    }
 
     case 'SAVE_CHANGES':
       return {
@@ -189,7 +191,7 @@ export function useScheduleEditor(
 
   // Get selected match
   const selectedMatch = useMemo(() => {
-    if (!state.selectedMatchId) return null;
+    if (!state.selectedMatchId) {return null;}
     return tournament.matches.find(m => m.id === state.selectedMatchId) || null;
   }, [state.selectedMatchId, tournament.matches]);
 
@@ -244,7 +246,7 @@ export function useScheduleEditor(
 
   const updateMatchTime = useCallback((matchId: string, newTime: Date | string) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) return;
+    if (!match) {return;}
 
     const change = createChange(matchId, 'scheduledTime', match.scheduledTime, newTime);
     dispatch({ type: 'ADD_CHANGE', payload: change });
@@ -265,7 +267,7 @@ export function useScheduleEditor(
 
   const updateMatchField = useCallback((matchId: string, fieldId: number) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) return;
+    if (!match) {return;}
 
     const change = createChange(matchId, 'field', match.field, fieldId);
     dispatch({ type: 'ADD_CHANGE', payload: change });
@@ -284,7 +286,7 @@ export function useScheduleEditor(
 
   const updateMatchReferee = useCallback((matchId: string, refereeId: number | undefined) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) return;
+    if (!match) {return;}
 
     const change = createChange(matchId, 'referee', match.referee, refereeId);
     dispatch({ type: 'ADD_CHANGE', payload: change });
@@ -303,7 +305,7 @@ export function useScheduleEditor(
 
   const skipMatch = useCallback((matchId: string, reason: string) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) return;
+    if (!match) {return;}
 
     const change = createChange(matchId, 'matchStatus', match.matchStatus, 'skipped');
     dispatch({ type: 'ADD_CHANGE', payload: change });
@@ -329,14 +331,14 @@ export function useScheduleEditor(
 
   const unskipMatch = useCallback((matchId: string) => {
     const match = tournament.matches.find(m => m.id === matchId);
-    if (!match) return;
+    if (!match) {return;}
 
     const change = createChange(matchId, 'matchStatus', match.matchStatus, 'scheduled');
     dispatch({ type: 'ADD_CHANGE', payload: change });
 
     // Apply change - remove skipped fields
     const updatedMatches = tournament.matches.map(m => {
-      if (m.id !== matchId) return m;
+      if (m.id !== matchId) {return m;}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { skippedReason, skippedAt, ...rest } = m;
       return { ...rest, matchStatus: 'scheduled' as const };

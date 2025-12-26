@@ -68,7 +68,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   }
 
   const numberOfReferees = refereeConfig.mode === 'organizer'
-    ? (refereeConfig.numberOfReferees || 2)
+    ? (refereeConfig.numberOfReferees ?? 2)
     : matches.length; // Teams mode: each team can be referee
 
   // Calculate referee workload
@@ -91,7 +91,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     if (refereeConfig.mode === 'organizer') {
       for (let i = 1; i <= numberOfReferees; i++) {
         const name = refereeConfig.refereeNames?.[i] || `SR ${i}`;
-        const count = refereeWorkload[i] || 0;
+        const count = refereeWorkload[i] ?? 0;
         options.push({
           value: i.toString(),
           label: `${name} (${count} Spiele)`
@@ -100,7 +100,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     } else if (refereeConfig.mode === 'teams') {
       // Teams mode: show team numbers
       for (let i = 1; i <= numberOfReferees; i++) {
-        const count = refereeWorkload[i] || 0;
+        const count = refereeWorkload[i] ?? 0;
         options.push({
           value: i.toString(),
           label: `Team ${i} (${count} Spiele)`
@@ -307,7 +307,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                   {refereeConfig.refereeNames?.[refNum] || `SR ${refNum}`}
                 </div>
                 <div style={{ fontSize: '11px', color: colors.textSecondary }}>
-                  {refereeWorkload[refNum] || 0} Spiele
+                  {refereeWorkload[refNum] ?? 0} Spiele
                 </div>
               </div>
             ))}
@@ -341,7 +341,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
             </div>
             <Select
               label=""
-              value={match.referee?.toString() || ''}
+              value={match.referee?.toString() ?? ''}
               onChange={(value) => {
                 const refNum = value ? parseInt(value) : null;
 

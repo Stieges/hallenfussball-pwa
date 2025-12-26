@@ -102,7 +102,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Undo: Restore previous state
   const handleUndo = useCallback(() => {
-    if (undoStackRef.current.length === 0) return;
+    if (undoStackRef.current.length === 0) {return;}
 
     // Save current state to redo stack
     redoStackRef.current.push({
@@ -122,7 +122,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Redo: Restore next state
   const handleRedo = useCallback(() => {
-    if (redoStackRef.current.length === 0) return;
+    if (redoStackRef.current.length === 0) {return;}
 
     // Save current state to undo stack
     undoStackRef.current.push({
@@ -154,7 +154,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Keyboard shortcuts for undo/redo (only in edit mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditing) return;
+      if (!isEditing) {return;}
 
       // Ctrl+Z or Cmd+Z for undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
@@ -174,7 +174,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Handle redistribution of SR (keeps times fixed)
   const handleRedistributeSR = useCallback(() => {
-    if (!isEditing) return;
+    if (!isEditing) {return;}
 
     // Save to history first
     saveToHistory();
@@ -210,7 +210,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
   // Handle redistribution of fields (keeps times fixed)
   const handleRedistributeFields = useCallback(() => {
-    if (!isEditing) return;
+    if (!isEditing) {return;}
 
     // Save to history first
     saveToHistory();
@@ -449,10 +449,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // Check for conflicts BEFORE saving
     const conflictConfig: ConflictDetectionConfig = {
-      matchDurationMinutes: tournament.groupPhaseGameDuration || 10,
-      minBreakMinutes: tournament.groupPhaseBreakDuration || 0,
+      matchDurationMinutes: tournament.groupPhaseGameDuration ?? 10,
+      minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,
       checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
-      checkFieldConflicts: (tournament.numberOfFields || 1) > 1,
+      checkFieldConflicts: (tournament.numberOfFields ?? 1) > 1,
     };
     const conflicts = detectAllConflicts(
       updatedTournament.matches,
@@ -591,18 +591,17 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       newScoreB,
       reasonType: reason as CorrectionReasonType,
       note,
-      userName: profile.name || 'Unbekannt',
+      userName: profile.name ?? 'Unbekannt',
     };
 
     // Log correction to console
-    console.log('[Correction]', correctionEntry);
 
     // Update tournament matches with correction history
     const updatedMatches = tournament.matches.map(m => {
       if (m.id !== correctionState.matchId) {return m;}
 
       // Add correction to history
-      const existingHistory = m.correctionHistory || [];
+      const existingHistory = m.correctionHistory ?? [];
       return {
         ...m,
         scoreA: newScoreA,
@@ -668,14 +667,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     // FIX: Auto-resolve playoff pairings after group match completion
     const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
     if (playoffResolution?.wasResolved) {
-      console.log('✅ Playoff-Paarungen automatisch aufgelöst:', playoffResolution);
       onTournamentUpdate(updatedTournament, false);
     }
 
     // FIX: Also resolve bracket placeholders after playoff matches (e.g., semi → final)
     const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
     if (bracketResolution?.wasResolved) {
-      console.log('✅ Bracket-Paarungen automatisch aufgelöst:', bracketResolution);
       onTournamentUpdate(updatedTournament, false);
     }
   };
@@ -700,7 +697,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         return;
       }
 
-      const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments || {}) };
+      const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments ?? {}) };
 
       if (refereeNumber === null) {
         delete manualAssignments[matchId];

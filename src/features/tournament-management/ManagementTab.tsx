@@ -96,7 +96,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Helper: Get team name from team ID
   const getTeamName = useCallback((teamId: string): string | null => {
     const team = schedule.teams.find(t => t.id === teamId);
-    return team?.name || null;
+    return team?.name ?? null;
   }, [schedule.teams]);
 
   // Convert ScheduledMatch to MatchSummary with proper team resolution
@@ -171,8 +171,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const lastFinishedMatch = useMemo(() =>
     lastFinishedMatchData ? {
       match: toMatchSummary(lastFinishedMatchData),
-      homeScore: lastFinishedMatchData.scoreA || 0,
-      awayScore: lastFinishedMatchData.scoreB || 0,
+      homeScore: lastFinishedMatchData.scoreA ?? 0,
+      awayScore: lastFinishedMatchData.scoreB ?? 0,
     } : null,
     [lastFinishedMatchData, toMatchSummary]
   );
@@ -289,8 +289,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </label>
         <select
           className={styles.matchSelect}
-          value={selectedMatchId || ''}
-          onChange={(e) => handleMatchSelectionChange(e.target.value || null)}
+          value={selectedMatchId ?? ''}
+          onChange={(e) => handleMatchSelectionChange(e.target.value ?? null)}
         >
           <option value="">Automatisch (nächstes Spiel)</option>
           {fieldMatches.map(match => (

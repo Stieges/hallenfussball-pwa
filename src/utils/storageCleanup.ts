@@ -67,7 +67,6 @@ export function cleanupOldLiveMatches(currentKey: string): boolean {
         // Corrupt data - can be deleted
         localStorage.removeItem(key);
         cleaned = true;
-        console.log(`[storageCleanup] Removed corrupt data: ${key}`);
       }
     }
   }
@@ -83,7 +82,6 @@ export function cleanupOldLiveMatches(currentKey: string): boolean {
       break;
     }
 
-    console.log(`[storageCleanup] Removing old liveMatches: ${item.key}`);
     localStorage.removeItem(item.key);
     cleaned = true;
   }
@@ -163,7 +161,6 @@ export function safeLocalStorageSet(key: string, data: string): boolean {
         // Retry after cleanup
         try {
           localStorage.setItem(key, data);
-          console.log('[storageCleanup] Successfully saved after cleanup');
           return true;
         } catch {
           // Still full - dispatch warning

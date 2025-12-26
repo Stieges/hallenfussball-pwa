@@ -69,7 +69,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     const mode = formData.refereeConfig?.mode;
     if (mode === 'none') {return 'Keine';}
     if (mode === 'organizer') {
-      const count = formData.refereeConfig?.numberOfReferees || 0;
+      const count = formData.refereeConfig?.numberOfReferees ?? 0;
       return `${count} SR`;
     }
     if (mode === 'teams') {return 'Teams stellen SR';}
@@ -139,7 +139,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
 
       {/* Tournament Mode Selection */}
       <ModeSelection
-        selectedMode={formData.mode || 'classic'}
+        selectedMode={formData.mode ?? 'classic'}
         onModeChange={(mode) => onUpdate('mode', mode)}
       />
 
@@ -153,7 +153,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             {/* Group System Select */}
             <Select
               label="Grundsystem"
-              value={formData.groupSystem || 'roundRobin'}
+              value={formData.groupSystem ?? 'roundRobin'}
               onChange={(v) => onUpdate('groupSystem', v as GroupSystem)}
               options={GROUP_SYSTEM_OPTIONS}
               disabled={structureFieldsLocked}
@@ -169,7 +169,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
               <NumberStepper
                 label="Anzahl Teams"
-                value={formData.numberOfTeams || 4}
+                value={formData.numberOfTeams ?? 4}
                 onChange={handleTeamCountChange}
                 min={2}
                 max={24}
@@ -179,7 +179,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               {canUseGroups && (
                 <NumberStepper
                   label="Anzahl Gruppen"
-                  value={formData.numberOfGroups || 2}
+                  value={formData.numberOfGroups ?? 2}
                   onChange={(v) => onUpdate('numberOfGroups', v)}
                   min={2}
                   max={8}
@@ -189,7 +189,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               )}
               <NumberStepper
                 label={`Anzahl ${formData.sport === 'other' ? 'Spielflächen' : 'Felder'}`}
-                value={formData.numberOfFields || 1}
+                value={formData.numberOfFields ?? 1}
                 onChange={(v) => onUpdate('numberOfFields', v)}
                 min={1}
                 max={10}

@@ -64,31 +64,31 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Dirty-State berechnen
   const isDirty = useMemo(() => {
     const originalData = {
-      title: tournament.title || '',
-      organizer: tournament.organizer || '',
+      title: tournament.title ?? '',
+      organizer: tournament.organizer ?? '',
       ageClass: tournament.ageClass || DEFAULT_VALUES.ageClass,
-      locationName: tournament.location.name || '',
-      locationCity: tournament.location.city || '',
-      locationStreet: tournament.location.street || '',
-      contactName: tournament.contactInfo?.name || '',
-      contactPhone: tournament.contactInfo?.phone || '',
-      contactEmail: tournament.contactInfo?.email || '',
-      startDate: tournament.startDate || tournament.date || '',
-      startTime: tournament.startTime || tournament.timeSlot || '',
+      locationName: tournament.location.name ?? '',
+      locationCity: tournament.location.city ?? '',
+      locationStreet: tournament.location.street ?? '',
+      contactName: tournament.contactInfo?.name ?? '',
+      contactPhone: tournament.contactInfo?.phone ?? '',
+      contactEmail: tournament.contactInfo?.email ?? '',
+      startDate: tournament.startDate || tournament.date ?? '',
+      startTime: tournament.startTime || tournament.timeSlot ?? '',
     };
 
     const currentData = {
-      title: formData.title || '',
-      organizer: formData.organizer || '',
+      title: formData.title ?? '',
+      organizer: formData.organizer ?? '',
       ageClass: formData.ageClass || DEFAULT_VALUES.ageClass,
-      locationName: formData.location?.name || '',
-      locationCity: formData.location?.city || '',
-      locationStreet: formData.location?.street || '',
-      contactName: formData.contactInfo?.name || '',
-      contactPhone: formData.contactInfo?.phone || '',
-      contactEmail: formData.contactInfo?.email || '',
-      startDate: formData.startDate || '',
-      startTime: formData.startTime || '',
+      locationName: formData.location?.name ?? '',
+      locationCity: formData.location?.city ?? '',
+      locationStreet: formData.location?.street ?? '',
+      contactName: formData.contactInfo?.name ?? '',
+      contactPhone: formData.contactInfo?.phone ?? '',
+      contactEmail: formData.contactInfo?.email ?? '',
+      startDate: formData.startDate ?? '',
+      startTime: formData.startTime ?? '',
     };
 
     return JSON.stringify(originalData) !== JSON.stringify(currentData);
@@ -179,7 +179,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     };
 
     const confirmWizard = window.confirm(
-      `Möchtest du "${stepNames[targetStep] || 'Wizard'}" bearbeiten?\n\n` +
+      `Möchtest du "${stepNames[targetStep] ?? 'Wizard'}" bearbeiten?\n\n` +
       'Der Spielplan wird dabei neu generiert und alle bisherigen Ergebnisse gehen verloren!'
     );
 
@@ -339,7 +339,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
               <Input
                 label="Turniername"
-                value={formData.title || ''}
+                value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
                 placeholder="z.B. TSV Waging Hallencup 2025"
                 required
@@ -347,7 +347,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
               <Input
                 label="Veranstalter (optional)"
-                value={formData.organizer || ''}
+                value={formData.organizer ?? ''}
                 onChange={(v) => handleUpdate('organizer', v)}
                 placeholder="z.B. TSV Waging e.V."
                 style={{ marginTop: '16px' }}
@@ -357,7 +357,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 label="Altersklasse"
                 value={formData.ageClass || DEFAULT_VALUES.ageClass}
                 onChange={(v) => handleUpdate('ageClass', v)}
-                options={getAgeClassOptions(tournament.sport || 'football')}
+                options={getAgeClassOptions(tournament.sport ?? 'football')}
                 style={{ marginTop: '16px' }}
               />
             </Card>
@@ -368,14 +368,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               </h3>
 
               <LocationForm
-                value={formData.location || { name: '' }}
+                value={formData.location ?? { name: '' }}
                 onChange={(location) => handleUpdate('location', location)}
                 required
               />
 
               <div style={{ marginTop: '24px' }}>
                 <ContactForm
-                  value={formData.contactInfo || {}}
+                  value={formData.contactInfo ?? {}}
                   onChange={(contactInfo) => handleUpdate('contactInfo', contactInfo)}
                 />
               </div>
@@ -390,14 +390,14 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <Input
                   label="Startdatum"
                   type="date"
-                  value={formData.startDate || ''}
+                  value={formData.startDate ?? ''}
                   onChange={(v) => handleUpdate('startDate', v)}
                   required
                 />
                 <Input
                   label="Startzeit"
                   type="time"
-                  value={formData.startTime || ''}
+                  value={formData.startTime ?? ''}
                   onChange={(v) => handleUpdate('startTime', v)}
                   placeholder="z.B. 09:00"
                   required

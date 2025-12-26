@@ -32,8 +32,8 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
 
   // Determine which phase we're in and what options to show
   const isAfterOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
-  const tiebreakerMode = match.tiebreakerMode || 'shootout';
-  const overtimeMinutes = Math.round((match.overtimeDurationSeconds || 300) / 60);
+  const tiebreakerMode = match.tiebreakerMode ?? 'shootout';
+  const overtimeMinutes = Math.round((match.overtimeDurationSeconds ?? 300) / 60);
 
   const containerStyle: CSSProperties = {
     marginTop: spacing.md,
@@ -91,8 +91,8 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   };
 
   const getScore = () => {
-    const totalHome = match.homeScore + (match.overtimeScoreA || 0);
-    const totalAway = match.awayScore + (match.overtimeScoreB || 0);
+    const totalHome = match.homeScore + (match.overtimeScoreA ?? 0);
+    const totalAway = match.awayScore + (match.overtimeScoreB ?? 0);
     return `${totalHome} : ${totalAway}`;
   };
 

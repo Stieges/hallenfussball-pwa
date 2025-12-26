@@ -26,7 +26,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
     if (formData.groups && formData.groups.length > 0) {
       return formData.groups;
     }
-    const count = formData.numberOfGroups || 2;
+    const count = formData.numberOfGroups ?? 2;
     return createDefaultGroups(count);
   });
 
@@ -35,13 +35,13 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
     if (formData.fields && formData.fields.length > 0) {
       return formData.fields;
     }
-    const count = formData.numberOfFields || 1;
+    const count = formData.numberOfFields ?? 1;
     return createDefaultFields(count);
   });
 
   // Sync bei Änderung der Gruppen-/Feldanzahl im vorherigen Step
   useEffect(() => {
-    const targetGroupCount = formData.numberOfGroups || 2;
+    const targetGroupCount = formData.numberOfGroups ?? 2;
     if (groups.length !== targetGroupCount) {
       // Behalte bestehende Konfiguration, füge neue hinzu oder entferne überschüssige
       if (groups.length < targetGroupCount) {
@@ -57,7 +57,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
   }, [formData.numberOfGroups]);
 
   useEffect(() => {
-    const targetFieldCount = formData.numberOfFields || 1;
+    const targetFieldCount = formData.numberOfFields ?? 1;
     if (fields.length !== targetFieldCount) {
       if (fields.length < targetFieldCount) {
         const newFields = createDefaultFields(targetFieldCount);
@@ -98,7 +98,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
   const toggleFieldForGroup = (groupId: string, fieldId: string) => {
     setGroups(prev =>
       prev.map(g => {
-        if (g.id !== groupId) return g;
+        if (g.id !== groupId) {return g;}
 
         const currentAllowed = g.allowedFieldIds || fields.map(f => f.id);
         const isCurrentlyAllowed = currentAllowed.includes(fieldId);
@@ -128,8 +128,8 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
     groups.forEach(group => {
       const allowedFields = group.allowedFieldIds || fields.map(f => f.id);
-      if (allowedFields.length === 1 && (formData.numberOfTeams || 0) > 4) {
-        const groupName = group.customName || `Gruppe ${group.id}`;
+      if (allowedFields.length === 1 && (formData.numberOfTeams ?? 0) > 4) {
+        const groupName = group.customName ?? `Gruppe ${group.id}`;
         warnings.push(`${groupName} hat nur 1 Feld - bei vielen Teams kann es eng werden`);
       }
     });
@@ -139,7 +139,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
   // Prüft ob ein Feld ein Duplikat ist (= ein vorheriges Feld hat denselben Namen)
   const isFieldDuplicate = (fieldId: string, customName: string | undefined): boolean => {
-    if (!customName?.trim()) return false;
+    if (!customName?.trim()) {return false;}
     const normalizedName = customName.trim().toLowerCase();
     const fieldIndex = fields.findIndex(f => f.id === fieldId);
     return fields.slice(0, fieldIndex).some(f =>
@@ -149,7 +149,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
   // Prüft ob ein Feld ein Original ist (= ein späteres Feld hat denselben Namen)
   const isFieldOriginal = (fieldId: string, customName: string | undefined): boolean => {
-    if (!customName?.trim()) return false;
+    if (!customName?.trim()) {return false;}
     const normalizedName = customName.trim().toLowerCase();
     const fieldIndex = fields.findIndex(f => f.id === fieldId);
     return fields.slice(fieldIndex + 1).some(f =>
@@ -159,7 +159,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
   // Prüft ob eine Gruppe ein Duplikat ist (= eine vorherige Gruppe hat denselben Namen)
   const isGroupDuplicate = (groupId: string, customName: string | undefined): boolean => {
-    if (!customName?.trim()) return false;
+    if (!customName?.trim()) {return false;}
     const normalizedName = customName.trim().toLowerCase();
     const groupIndex = groups.findIndex(g => g.id === groupId);
     return groups.slice(0, groupIndex).some(g =>
@@ -169,7 +169,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
   // Prüft ob eine Gruppe ein Original ist (= eine spätere Gruppe hat denselben Namen)
   const isGroupOriginal = (groupId: string, customName: string | undefined): boolean => {
-    if (!customName?.trim()) return false;
+    if (!customName?.trim()) {return false;}
     const normalizedName = customName.trim().toLowerCase();
     const groupIndex = groups.findIndex(g => g.id === groupId);
     return groups.slice(groupIndex + 1).some(g =>
@@ -268,14 +268,14 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   <div style={{ position: 'relative' }}>
                     <Input
                       placeholder={`z.B. Halle Nord`}
-                      value={field.customName || ''}
-                      onChange={(value) => updateField(field.id, { customName: value || undefined })}
+                      value={field.customName ?? ''}
+                      onChange={(value) => updateField(field.id, { customName: value ?? undefined })}
                       error={hasError}
                     />
                   </div>
                   <Input
                     placeholder="HN"
-                    value={field.shortCode || ''}
+                    value={field.shortCode ?? ''}
                     onChange={(value) => updateField(field.id, { shortCode: value.slice(0, 3).toUpperCase() || undefined })}
                     style={{ width: '80px', textAlign: 'center' }}
                   />
@@ -365,14 +365,14 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                     <div style={{ position: 'relative' }}>
                       <Input
                         placeholder={`z.B. Löwen`}
-                        value={group.customName || ''}
-                        onChange={(value) => updateGroup(group.id, { customName: value || undefined })}
+                        value={group.customName ?? ''}
+                        onChange={(value) => updateGroup(group.id, { customName: value ?? undefined })}
                         error={hasError}
                       />
                     </div>
                     <Input
                       placeholder="LÖ"
-                      value={group.shortCode || ''}
+                      value={group.shortCode ?? ''}
                       onChange={(value) => updateGroup(group.id, { shortCode: value.slice(0, 3).toUpperCase() || undefined })}
                       style={{ width: '80px', textAlign: 'center' }}
                     />
@@ -463,7 +463,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                     color: colors.textPrimary,
                     fontWeight: 500,
                   }}>
-                    {group.customName || `Gruppe ${group.id}`}
+                    {group.customName ?? `Gruppe ${group.id}`}
                   </div>
                   {fields.map(field => {
                     const isAllowed = allowedFields.includes(field.id);

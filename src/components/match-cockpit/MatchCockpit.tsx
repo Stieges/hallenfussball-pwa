@@ -244,7 +244,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
         <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusChip
             status={currentMatch?.status || 'NOT_STARTED'}
-            phaseLabel={currentMatch?.phaseLabel || ''}
+            phaseLabel={currentMatch?.phaseLabel ?? ''}
           />
           {/* Show warning based on remaining time in current match (not scheduled time) */}
           {showRemainingTimeWarning && (

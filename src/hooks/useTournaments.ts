@@ -26,7 +26,6 @@ export const useTournaments = () => {
 
       // If migrations occurred, save them back
       if (hasChanges) {
-        console.log('[useTournaments] Migrating tournaments to structured location format');
         await Promise.all(migrated.map(t => api.saveTournament(t)));
       }
 
@@ -47,14 +46,12 @@ export const useTournaments = () => {
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'tournaments') {
-        console.log('[useTournaments] Detected localStorage change, reloading...');
         loadTournaments();
       }
     };
 
     // Also listen for custom events (same-tab updates)
     const handleTournamentUpdate = () => {
-      console.log('[useTournaments] Detected tournament update event, reloading...');
       loadTournaments();
     };
 

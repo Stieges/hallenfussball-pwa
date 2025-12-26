@@ -159,7 +159,7 @@ const statItemStyle: React.CSSProperties = {
 // ============================================================================
 
 function formatTime(date: Date | string | undefined): string {
-  if (!date) return '--:--';
+  if (!date) {return '--:--';}
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -254,7 +254,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Undo: Restore previous state
   const handleUndo = useCallback(() => {
-    if (undoStackRef.current.length === 0) return;
+    if (undoStackRef.current.length === 0) {return;}
 
     // Save current state to redo stack
     redoStackRef.current.push({
@@ -274,7 +274,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Redo: Restore next state
   const handleRedo = useCallback(() => {
-    if (redoStackRef.current.length === 0) return;
+    if (redoStackRef.current.length === 0) {return;}
 
     // Save current state to undo stack
     undoStackRef.current.push({
@@ -301,10 +301,10 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Filter matches by phase
   const filteredMatches = useMemo(() => {
-    if (phase === 'all') return tournament.matches;
+    if (phase === 'all') {return tournament.matches;}
     return tournament.matches.filter(m => {
-      if (phase === 'group') return !m.isFinal;
-      if (phase === 'finals') return m.isFinal;
+      if (phase === 'group') {return !m.isFinal;}
+      if (phase === 'finals') {return m.isFinal;}
       return true;
     });
   }, [tournament.matches, phase]);
@@ -349,7 +349,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
       // Find the source match to get its original position
       const sourceMatch = tournament.matches.find(m => m.id === matchId);
-      if (!sourceMatch) return;
+      if (!sourceMatch) {return;}
 
       const sourceTime = sourceMatch.scheduledTime;
       const sourceField = sourceMatch.field || 1;
@@ -496,7 +496,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   // Toggle mode (only used when NOT in external control mode)
   const handleToggleMode = useCallback(() => {
     // Don't toggle if parent controls the mode
-    if (externalEditMode !== undefined) return;
+    if (externalEditMode !== undefined) {return;}
 
     if (state.mode === 'edit') {
       // Clear local history when exiting edit mode

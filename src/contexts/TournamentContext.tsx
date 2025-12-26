@@ -59,7 +59,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
       }
 
     case 'UPDATE_TOURNAMENT':
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       return {
         ...state,
         tournament: {
@@ -71,7 +71,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
       }
 
     case 'UPDATE_MATCH': {
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       const { matchId, updates } = action.payload
       const updatedMatches = state.tournament.matches.map((match) =>
         match.id === matchId ? { ...match, ...updates } : match
@@ -88,7 +88,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
     }
 
     case 'UPDATE_SCORE': {
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       const { matchId, scoreA, scoreB } = action.payload
       const updatedMatches = state.tournament.matches.map((match) =>
         match.id === matchId ? { ...match, scoreA, scoreB } : match
@@ -105,7 +105,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
     }
 
     case 'UPDATE_TEAM': {
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       const { teamId, updates } = action.payload
       const updatedTeams = state.tournament.teams.map((team) =>
         team.id === teamId ? { ...team, ...updates } : team
@@ -122,7 +122,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
     }
 
     case 'ADD_TEAM':
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       return {
         ...state,
         tournament: {
@@ -134,7 +134,7 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
       }
 
     case 'REMOVE_TEAM':
-      if (!state.tournament) return state
+      if (!state.tournament) {return state}
       return {
         ...state,
         tournament: {
@@ -264,7 +264,7 @@ export function TournamentProvider({
   }, [])
 
   const save = useCallback(async () => {
-    if (!state.tournament) return
+    if (!state.tournament) {return}
 
     try {
       if (onSave) {

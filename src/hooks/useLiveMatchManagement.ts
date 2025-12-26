@@ -88,7 +88,7 @@ function calculateRealTimeElapsed(match: LiveMatch): number {
   }
   const startTime = new Date(match.timerStartTime).getTime();
   const runtimeSeconds = Math.floor((Date.now() - startTime) / 1000);
-  return (match.timerElapsedSeconds || 0) + runtimeSeconds;
+  return (match.timerElapsedSeconds ?? 0) + runtimeSeconds;
 }
 
 /**
@@ -172,7 +172,7 @@ export function useLiveMatchManagement({
             const startTime = new Date(match.timerStartTime).getTime();
             const now = Date.now();
             const runtimeSeconds = Math.floor((now - startTime) / 1000);
-            const totalElapsed = (match.timerElapsedSeconds || 0) + runtimeSeconds;
+            const totalElapsed = (match.timerElapsedSeconds ?? 0) + runtimeSeconds;
 
             updated.set(matchId, {
               ...match,
@@ -235,7 +235,7 @@ export function useLiveMatchManagement({
 
     // Get tiebreaker config from tournament
     const tiebreakerMode = tournamentRef.current.finalsConfig?.tiebreaker;
-    const tiebreakerDuration = tournamentRef.current.finalsConfig?.tiebreakerDuration || 5;
+    const tiebreakerDuration = tournamentRef.current.finalsConfig?.tiebreakerDuration ?? 5;
 
     // BUG-FIX: Resolve team IDs and names properly
     // Use originalTeamA/B as actual IDs, and resolve names from tournament.teams
@@ -262,12 +262,12 @@ export function useLiveMatchManagement({
       phaseLabel: matchData.label || (matchData.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       fieldId: `field-${matchData.field}`,
       scheduledKickoff: matchData.time,
-      durationSeconds: (tournamentRef.current.groupPhaseGameDuration || tournamentRef.current.gameDuration || 10) * 60,
+      durationSeconds: (tournamentRef.current.groupPhaseGameDuration || tournamentRef.current.gameDuration ?? 10) * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
       homeTeam: { id: homeId, name: homeName },
       awayTeam: { id: awayId, name: awayName },
-      homeScore: matchData.scoreA || 0,
-      awayScore: matchData.scoreB || 0,
+      homeScore: matchData.scoreA ?? 0,
+      awayScore: matchData.scoreB ?? 0,
       status: 'NOT_STARTED' as MatchStatus,
       elapsedSeconds: 0,
       events: [],
@@ -339,7 +339,7 @@ export function useLiveMatchManagement({
         ...match,
         status: 'RUNNING' as MatchStatus,
         timerStartTime: new Date().toISOString(),
-        timerElapsedSeconds: match.elapsedSeconds || 0,
+        timerElapsedSeconds: match.elapsedSeconds ?? 0,
         timerPausedAt: undefined,
         events: [...match.events, event],
       });
@@ -424,8 +424,8 @@ export function useLiveMatchManagement({
     }
     if (match.playPhase === 'overtime' || match.playPhase === 'goldenGoal') {
       // Overtime/Golden Goal ended in draw - need penalty shootout
-      const totalHomeScore = match.homeScore + (match.overtimeScoreA || 0);
-      const totalAwayScore = match.awayScore + (match.overtimeScoreB || 0);
+      const totalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
+      const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
       return totalHomeScore === totalAwayScore;
     }
     return false;
@@ -443,8 +443,8 @@ export function useLiveMatchManagement({
       }
 
       // Calculate final scores including overtime
-      const finalHomeScore = match.homeScore + (match.overtimeScoreA || 0);
-      const finalAwayScore = match.awayScore + (match.overtimeScoreB || 0);
+      const finalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
+      const finalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
 
       // Update tournament.matches with TL-RESULT-LOCK-01: matchStatus
       const updatedMatches = tournamentRef.current.matches.map(m => {
@@ -477,14 +477,12 @@ export function useLiveMatchManagement({
       // Auto-resolve playoffs if ready
       const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
       if (playoffResolution?.wasResolved) {
-        console.log('✅ Playoff-Paarungen automatisch aufgelöst:', playoffResolution);
         onTournamentUpdate(updatedTournament, false);
       }
 
       // Resolve bracket placeholders after playoff matches
       const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
       if (bracketResolution?.wasResolved) {
-        console.log('✅ Bracket-Paarungen automatisch aufgelöst:', bracketResolution);
         onTournamentUpdate(updatedTournament, false);
       }
 
@@ -520,7 +518,6 @@ export function useLiveMatchManagement({
 
     // Check if finals match ended in draw
     if (needsTiebreaker(match)) {
-      console.log('⚖️ Finals match ended in draw - awaiting tiebreaker choice');
       setLiveMatches(prev => {
         const updated = new Map(prev);
         updated.set(matchId, {
@@ -574,7 +571,7 @@ export function useLiveMatchManagement({
         timerStartTime: new Date().toISOString(),
         timerElapsedSeconds: 0,
         elapsedSeconds: 0,
-        durationSeconds: match.overtimeDurationSeconds || 5 * 60,
+        durationSeconds: match.overtimeDurationSeconds ?? 5 * 60,
         awaitingTiebreakerChoice: false,
       });
       return updated;
@@ -603,7 +600,7 @@ export function useLiveMatchManagement({
         timerStartTime: new Date().toISOString(),
         timerElapsedSeconds: 0,
         elapsedSeconds: 0,
-        durationSeconds: match.overtimeDurationSeconds || 5 * 60,
+        durationSeconds: match.overtimeDurationSeconds ?? 5 * 60,
         awaitingTiebreakerChoice: false,
       });
       return updated;
@@ -718,7 +715,6 @@ export function useLiveMatchManagement({
       return updated;
     });
 
-    console.log(`[SkipMatch] Match ${matchId} skipped: ${reason}`);
   }, [onTournamentUpdate]);
 
   /**
@@ -759,7 +755,6 @@ export function useLiveMatchManagement({
       return updated;
     });
 
-    console.log(`[UnskipMatch] Match ${matchId} restored to scheduled`);
   }, [onTournamentUpdate]);
 
   /**
@@ -841,7 +836,7 @@ export function useLiveMatchManagement({
       }
 
       const events = [...match.events];
-      const removedEvent = events.pop();
+      events.pop(); // Remove last event
 
       // BUG-CRIT-002 FIX: Determine new score based on remaining events
       let newHomeScore: number;
@@ -879,7 +874,6 @@ export function useLiveMatchManagement({
         }, false);
       }, 0);
 
-      console.log(`[Undo] Removed ${removedEvent?.type} event, score now ${newHomeScore}:${newAwayScore}`);
 
       const updated = new Map(prev);
       updated.set(matchId, {
@@ -938,7 +932,7 @@ export function useLiveMatchManagement({
             scoreA: newHomeScore,
             scoreB: newAwayScore,
             ...(correctionEntry ? {
-              correctionHistory: [...(m.correctionHistory || []), correctionEntry],
+              correctionHistory: [...(m.correctionHistory ?? []), correctionEntry],
             } : {}),
           };
         }
@@ -997,12 +991,12 @@ export function useLiveMatchManagement({
       phaseLabel: matchData.label || (matchData.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       fieldId: `field-${matchData.field}`,
       scheduledKickoff: matchData.time,
-      durationSeconds: (tournamentRef.current.groupPhaseGameDuration || tournamentRef.current.gameDuration || 10) * 60,
+      durationSeconds: (tournamentRef.current.groupPhaseGameDuration || tournamentRef.current.gameDuration ?? 10) * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
       homeTeam: { id: matchData.homeTeam, name: matchData.homeTeam },
       awayTeam: { id: matchData.awayTeam, name: matchData.awayTeam },
-      homeScore: matchData.scoreA || 0,
-      awayScore: matchData.scoreB || 0,
+      homeScore: matchData.scoreA ?? 0,
+      awayScore: matchData.scoreB ?? 0,
       status: 'PAUSED' as MatchStatus,
       elapsedSeconds: 0,
       events: [],

@@ -78,7 +78,7 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
 }) => {
   const [showDetails, setShowDetails] = useState(false);
 
-  if (conflicts.length === 0) return null;
+  if (conflicts.length === 0) {return null;}
 
   const errorCount = conflicts.filter(c => c.severity === 'error').length;
   const warningCount = conflicts.filter(c => c.severity === 'warning').length;

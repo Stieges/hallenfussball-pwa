@@ -109,14 +109,14 @@ function calculateMatchElapsedSeconds(match: LiveMatch): number {
   }
 
   if (match.status === 'PAUSED' || !match.timerStartTime) {
-    return match.timerElapsedSeconds || match.elapsedSeconds || 0;
+    return match.timerElapsedSeconds || match.elapsedSeconds ?? 0;
   }
 
   // RUNNING: Calculate from timestamp
   const startTime = new Date(match.timerStartTime).getTime();
   const now = Date.now();
   const runtimeSeconds = Math.floor((now - startTime) / 1000);
-  return (match.timerElapsedSeconds || 0) + runtimeSeconds;
+  return (match.timerElapsedSeconds ?? 0) + runtimeSeconds;
 }
 
 export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
@@ -153,7 +153,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
    */
   const markAllGoalsAsSeen = useCallback((matches: Map<string, LiveMatch>) => {
     for (const [, match] of matches) {
-      const events = match.events || [];
+      const events = match.events ?? [];
       for (const event of events) {
         if (event.type === 'GOAL') {
           seenGoalIds.current.add(event.id);
@@ -173,7 +173,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       // Only detect goals from RUNNING matches
       if (match.status !== 'RUNNING') {
         // Still mark events as seen to avoid triggering when match resumes
-        const events = match.events || [];
+        const events = match.events ?? [];
         for (const event of events) {
           if (event.type === 'GOAL') {
             seenGoalIds.current.add(event.id);
@@ -182,7 +182,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
         continue;
       }
 
-      const events = match.events || [];
+      const events = match.events ?? [];
 
       // Find goal events we haven't seen yet
       for (const event of events) {
@@ -198,7 +198,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
 
           return {
             matchId: match.id,
-            teamId: event.payload.teamId || '',
+            teamId: event.payload.teamId ?? '',
             teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
             side: isHome ? 'home' : 'away',
             timestamp: Date.now(),

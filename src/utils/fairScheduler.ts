@@ -149,7 +149,6 @@ function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] 
     }
   }
 
-  console.log(`[FairScheduler] Generated ${pairings.length} pairings from DFB pattern ${patternCode}`);
   return pairings;
 }
 
@@ -368,7 +367,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
   groups.forEach((teams, groupId) => {
     if (dfbPatternCode) {
       // Use DFB pattern for scheduling (maintains official DFB order)
-      console.log(`[FairScheduler] Using DFB pattern ${dfbPatternCode} for group ${groupId}`);
       groupPairings.set(groupId, generateDFBPairings(teams, dfbPatternCode));
     } else {
       // Use standard Circle Method
@@ -386,12 +384,6 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
   // Schedule matches using greedy algorithm with fairness heuristic
   const remainingPairings = [...allPairings];
-
-  console.log('[FairScheduler] Starting scheduling:', {
-    totalPairings: allPairings.length,
-    numberOfFields,
-    minRestSlotsPerTeam
-  });
 
   // Track consecutive empty slots for smarter deadlock detection
   let consecutiveEmptySlots = 0;

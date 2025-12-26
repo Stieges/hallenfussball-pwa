@@ -124,7 +124,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const { showSuccess, showWarning } = useToast();
 
   // Restore last visited step from existing tournament (draft restoration)
-  const initialStep = existingTournament?.lastVisitedStep || 1;
+  const initialStep = existingTournament?.lastVisitedStep ?? 1;
   const initialVisitedSteps = new Set<number>();
 
   // Bei bestehendem Turnier (das Daten hat) alle Schritte als besucht markieren
@@ -205,11 +205,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       matches: resetMatches,
       updatedAt: new Date().toISOString(),
     }));
-
-    // Trigger save
-    setTimeout(() => {
-      console.log('[TournamentCreation] Tournament reset - results cleared');
-    }, 100);
   }, [formData.matches]);
 
   const updateForm = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
@@ -277,7 +272,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       }
 
       lastSavedDataRef.current = JSON.stringify(formData);
-      console.log('[TournamentCreation] Autosave:', tournament.id);
 
       // Show save confirmation notification
       showSaveConfirmation();
@@ -295,7 +289,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Autosave before changing step
     if (hasUnsavedChanges()) {
       saveAsDraft();
-      console.log('[TournamentCreation] Autosave on step change');
     }
 
     // Reset generated schedule when navigating TO step 6 (Overview)
@@ -316,7 +309,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     const interval = setInterval(() => {
       if (hasUnsavedChanges()) {
         saveAsDraft();
-        console.log('[TournamentCreation] Periodic autosave triggered');
       }
     }, 10000); // 10 seconds
 
@@ -328,7 +320,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasUnsavedChanges()) {
         saveAsDraft();
-        console.log('[TournamentCreation] Autosave on tab close');
 
         // Show browser warning (optional)
         event.preventDefault();
@@ -400,9 +391,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const addTeam = () => {
     const newTeam = {
       id: `team-${Date.now()}`,
-      name: `Team ${(formData.teams?.length || 0) + 1}`,
+      name: `Team ${(formData.teams?.length ?? 0) + 1}`,
     };
-    updateForm('teams', [...(formData.teams || []), newTeam]);
+    updateForm('teams', [...(formData.teams ?? []), newTeam]);
   };
 
   const removeTeam = (id: string) => {
@@ -420,15 +411,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     return {
       id: formData.id || existingTournament?.id || generateTournamentId(),
       status: 'draft',
-      sport: formData.sport || 'football',
+      sport: formData.sport ?? 'football',
       sportId: formData.sportId || DEFAULT_SPORT_ID,
-      tournamentType: formData.tournamentType || 'classic',
-      mode: formData.mode || 'classic',
-      numberOfFields: formData.numberOfFields || 1,
-      numberOfTeams: formData.numberOfTeams || 4,
+      tournamentType: formData.tournamentType ?? 'classic',
+      mode: formData.mode ?? 'classic',
+      numberOfFields: formData.numberOfFields ?? 1,
+      numberOfTeams: formData.numberOfTeams ?? 4,
       groupSystem: formData.groupSystem,
       numberOfGroups: formData.numberOfGroups,
-      groupPhaseGameDuration: formData.groupPhaseGameDuration || 10,
+      groupPhaseGameDuration: formData.groupPhaseGameDuration ?? 10,
       groupPhaseBreakDuration: formData.groupPhaseBreakDuration,
       finalRoundGameDuration: formData.finalRoundGameDuration,
       finalRoundBreakDuration: formData.finalRoundBreakDuration,
@@ -436,31 +427,31 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       gamePeriods: formData.gamePeriods,
       halftimeBreak: formData.halftimeBreak,
       // Legacy support
-      gameDuration: formData.gameDuration || formData.groupPhaseGameDuration || 10,
+      gameDuration: formData.gameDuration || formData.groupPhaseGameDuration ?? 10,
       breakDuration: formData.breakDuration || formData.groupPhaseBreakDuration,
       roundLogic: formData.roundLogic,
       numberOfRounds: formData.numberOfRounds,
-      placementLogic: formData.placementLogic || [],
-      finals: formData.finals || { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
+      placementLogic: formData.placementLogic ?? [],
+      finals: formData.finals ?? { final: false, thirdPlace: false, fifthSixth: false, seventhEighth: false },
       finalsConfig: formData.finalsConfig,
-      refereeConfig: formData.refereeConfig || { mode: 'none' },
+      refereeConfig: formData.refereeConfig ?? { mode: 'none' },
       isKidsTournament: formData.isKidsTournament || false,
       hideScoresForPublic: formData.hideScoresForPublic || false,
       hideRankingsForPublic: formData.hideRankingsForPublic || false,
-      resultMode: formData.resultMode || 'goals',
-      pointSystem: formData.pointSystem || { win: 3, draw: 1, loss: 0 },
-      title: formData.title || 'Unbenanntes Turnier',
-      ageClass: formData.ageClass || 'U11',
+      resultMode: formData.resultMode ?? 'goals',
+      pointSystem: formData.pointSystem ?? { win: 3, draw: 1, loss: 0 },
+      title: formData.title ?? 'Unbenanntes Turnier',
+      ageClass: formData.ageClass ?? 'U11',
       date: formData.date || new Date().toISOString().split('T')[0],
-      timeSlot: formData.timeSlot || '',
+      timeSlot: formData.timeSlot ?? '',
       startDate: formData.startDate, // New field for date picker
       startTime: formData.startTime, // New field for time picker
-      location: formData.location || { name: '' },
+      location: formData.location ?? { name: '' },
       organizer: formData.organizer, // Veranstalter-Name
       contactInfo: formData.contactInfo, // Kontaktinformationen
       groups: formData.groups, // US-GROUPS-AND-FIELDS: Custom Gruppennamen
       fields: formData.fields, // US-GROUPS-AND-FIELDS: Custom Feldnamen
-      teams: formData.teams || [],
+      teams: formData.teams ?? [],
       matches: [], // Wird später vom Fair Scheduler generiert
       createdAt: existingTournament?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -565,7 +556,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const handleSaveAndGoBack = () => {
     const tournament = createDraftTournament();
     saveTournament(tournament);
-    console.log('[TournamentCreation] Draft saved on back:', tournament.id);
     setShowSaveDialog(false);
     onBack();
   };
@@ -593,24 +583,24 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       case 2:
         return formData.sport && formData.tournamentType;
       case 3: {
-        if (!formData.mode) return false;
+        if (!formData.mode) {return false;}
         // Schiedsrichter-Duplikate prüfen
         if (formData.refereeConfig?.refereeNames) {
-          if (hasDuplicates(Object.values(formData.refereeConfig.refereeNames))) return false;
+          if (hasDuplicates(Object.values(formData.refereeConfig.refereeNames))) {return false;}
         }
         return true;
       }
       case 4: {
         // Feldnamen-Duplikate prüfen
-        if (formData.fields && hasDuplicates(formData.fields.map(f => f.customName))) return false;
+        if (formData.fields && hasDuplicates(formData.fields.map(f => f.customName))) {return false;}
         // Gruppennamen-Duplikate prüfen
-        if (formData.groups && hasDuplicates(formData.groups.map(g => g.customName))) return false;
+        if (formData.groups && hasDuplicates(formData.groups.map(g => g.customName))) {return false;}
         return true;
       }
       case 5: {
-        if ((formData.teams?.length || 0) < 2) return false;
+        if ((formData.teams?.length ?? 0) < 2) {return false;}
         // Team-Duplikate prüfen
-        if (formData.teams && hasDuplicates(formData.teams.map(t => t.name))) return false;
+        if (formData.teams && hasDuplicates(formData.teams.map(t => t.name))) {return false;}
         return true;
       }
       default:
@@ -626,7 +616,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     const seen = new Set<string>();
     const duplicates = new Set<string>();
     names.forEach(name => {
-      if (seen.has(name)) duplicates.add(name);
+      if (seen.has(name)) {duplicates.add(name);}
       seen.add(name);
     });
     return duplicates;
@@ -673,7 +663,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         }
         break;
       case 5: // Teams
-        if ((formData.teams?.length || 0) < 2) {
+        if ((formData.teams?.length ?? 0) < 2) {
           errors.push('Mindestens 2 Teams erforderlich');
         }
         // Team-Namen Duplikate prüfen
@@ -730,7 +720,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Auto-save before navigation
     if (hasUnsavedChanges()) {
       saveAsDraft();
-      console.log('[TournamentCreation] Autosave on ProgressBar navigation');
     }
 
     // Update visited steps

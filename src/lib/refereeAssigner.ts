@@ -78,8 +78,8 @@ function applyManualAssignments<T extends MatchLike>(matches: T[], config: Refer
  * 4. Balance total matches per referee
  */
 function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: RefereeConfig): T[] {
-  const numberOfReferees = config.numberOfReferees || 2;
-  const maxConsecutive = config.maxConsecutiveMatches || 1;
+  const numberOfReferees = config.numberOfReferees ?? 2;
+  const maxConsecutive = config.maxConsecutiveMatches ?? 1;
 
   // Skip matches that already have manual assignments
   const matchesToAssign = matches.filter(m => m.referee === undefined);
@@ -205,7 +205,7 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
 
   matchesByField.forEach((fieldMatches) => {
     // Sort by time slot
-    const sortedMatches = [...fieldMatches].sort((a, b) => (a.slot || 0) - (b.slot || 0));
+    const sortedMatches = [...fieldMatches].sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
 
     for (let i = 0; i < sortedMatches.length; i++) {
       const match = sortedMatches[i];

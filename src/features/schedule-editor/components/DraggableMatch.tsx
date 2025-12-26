@@ -48,7 +48,7 @@ function getTeamName(teamId: string, teams: Team[]): string {
 }
 
 function formatTime(date: Date | string | undefined): string {
-  if (!date) return '--:--';
+  if (!date) {return '--:--';}
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }

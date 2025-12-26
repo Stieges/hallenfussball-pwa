@@ -185,11 +185,11 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
   const [lockBreakDuration, setLockBreakDuration] = useState(false);
 
   // Constraint values (use current form values as defaults)
-  const [constraintTeams, setConstraintTeams] = useState(formData.numberOfTeams || 6);
-  const [constraintGroups, setConstraintGroups] = useState(formData.numberOfGroups || 2);
-  const [constraintFields, setConstraintFields] = useState(formData.numberOfFields || 1);
-  const [constraintGameDuration, setConstraintGameDuration] = useState(formData.groupPhaseGameDuration || 10);
-  const [constraintBreakDuration, setConstraintBreakDuration] = useState(formData.groupPhaseBreakDuration || 2);
+  const [constraintTeams, setConstraintTeams] = useState(formData.numberOfTeams ?? 6);
+  const [constraintGroups, setConstraintGroups] = useState(formData.numberOfGroups ?? 2);
+  const [constraintFields, setConstraintFields] = useState(formData.numberOfFields ?? 1);
+  const [constraintGameDuration, setConstraintGameDuration] = useState(formData.groupPhaseGameDuration ?? 10);
+  const [constraintBreakDuration, setConstraintBreakDuration] = useState(formData.groupPhaseBreakDuration ?? 2);
 
   // Check if using groups mode
   const usesGroups = formData.groupSystem === 'groupsAndFinals';
@@ -199,11 +199,11 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
 
   // Sync constraint values with formData when it changes (falls noch nicht manuell geändert)
   useEffect(() => {
-    setConstraintTeams(formData.numberOfTeams || 6);
-    setConstraintGroups(formData.numberOfGroups || 2);
-    setConstraintFields(formData.numberOfFields || 1);
-    setConstraintGameDuration(formData.groupPhaseGameDuration || 10);
-    setConstraintBreakDuration(formData.groupPhaseBreakDuration || 2);
+    setConstraintTeams(formData.numberOfTeams ?? 6);
+    setConstraintGroups(formData.numberOfGroups ?? 2);
+    setConstraintFields(formData.numberOfFields ?? 1);
+    setConstraintGameDuration(formData.groupPhaseGameDuration ?? 10);
+    setConstraintBreakDuration(formData.groupPhaseBreakDuration ?? 2);
   }, [formData.numberOfTeams, formData.numberOfGroups, formData.numberOfFields, formData.groupPhaseGameDuration, formData.groupPhaseBreakDuration]);
 
   // Save hours and constraints to localStorage when changed
@@ -233,7 +233,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
   const handleCalculate = () => {
     const constraints = getConstraints();
     // Verwende fixierte Teams wenn gesetzt, sonst aktuelle formData
-    const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams || 6);
+    const teamsToUse = lockTeams ? constraintTeams : (formData.numberOfTeams ?? 6);
     const result = calculateRecommendation(availableHours, teamsToUse, constraints);
 
     if (result.constraintsImpossible) {
@@ -524,7 +524,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
             </>
           )}
 
-          {recommendation && recommendation.teams < (formData.numberOfTeams || 6) && (
+          {recommendation && recommendation.teams < (formData.numberOfTeams ?? 6) && (
             <p className={styles.warningText} role="alert">
               <span aria-hidden="true">⚠️</span> {formData.numberOfTeams} Teams passen nicht in {availableHours}h.
               Alternative: {recommendation.teams} Teams oder mehr Zeit/Felder einplanen.

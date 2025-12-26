@@ -203,7 +203,7 @@ const emptyStateStyle: React.CSSProperties = {
 // ============================================================================
 
 function formatTime(date: Date | string | undefined): string {
-  if (!date) return '--:--';
+  if (!date) {return '--:--';}
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -247,15 +247,15 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
     let errors = 0;
     let warnings = 0;
     for (const conflict of conflicts) {
-      if (conflict.severity === 'error') errors++;
-      else warnings++;
+      if (conflict.severity === 'error') {errors++;}
+      else {warnings++;}
     }
     return { errorCount: errors, warningCount: warnings };
   }, [conflicts]);
 
   const hasErrors = errorCount > 0;
 
-  if (!isOpen) return null;
+  if (!isOpen) {return null;}
 
   return (
     <div style={overlayStyle} onClick={onClose}>
@@ -331,7 +331,7 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
                         <div style={conflictMatchesStyle}>
                           {conflict.matchIds.map(matchId => {
                             const match = matches.find(m => m.id === matchId);
-                            if (!match) return null;
+                            if (!match) {return null;}
                             return (
                               <span key={matchId} style={matchBadgeStyle}>
                                 {formatTime(match.scheduledTime)} - Feld {match.field}

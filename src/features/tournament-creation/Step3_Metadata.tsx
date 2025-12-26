@@ -19,7 +19,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
 
       <Input
         label="Turniername"
-        value={formData.title || ''}
+        value={formData.title ?? ''}
         onChange={(v) => onUpdate('title', v)}
         placeholder="z.B. TSV Waging Hallencup 2025"
         required
@@ -27,7 +27,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
 
       <Input
         label="Veranstalter (optional)"
-        value={formData.organizer || ''}
+        value={formData.organizer ?? ''}
         onChange={(v) => onUpdate('organizer', v)}
         placeholder="z.B. TSV Waging e.V."
         style={{ marginTop: '16px' }}
@@ -37,7 +37,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         label="Altersklasse"
         value={formData.ageClass || DEFAULT_VALUES.ageClass}
         onChange={(v) => onUpdate('ageClass', v)}
-        options={getAgeClassOptions(formData.sport || 'football')}
+        options={getAgeClassOptions(formData.sport ?? 'football')}
         style={{ marginTop: '16px' }}
       />
 
@@ -48,7 +48,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
       />
 
       <ContactForm
-        value={formData.contactInfo || {}}
+        value={formData.contactInfo ?? {}}
         onChange={(contactInfo) => onUpdate('contactInfo', contactInfo)}
       />
 
@@ -56,7 +56,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         <Input
           label="Startdatum"
           type="date"
-          value={formData.startDate || formData.date || ''}
+          value={formData.startDate || formData.date ?? ''}
           onChange={(v) => {
             onUpdate('startDate', v);
             // Keep legacy field in sync
@@ -67,7 +67,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         <Input
           label="Startzeit"
           type="time"
-          value={formData.startTime || ''}
+          value={formData.startTime ?? ''}
           onChange={(v) => {
             onUpdate('startTime', v);
             // Keep legacy field in sync (simple format)

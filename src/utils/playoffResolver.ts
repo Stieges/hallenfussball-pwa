@@ -93,7 +93,6 @@ export const needsPlayoffReResolution = (tournament: Tournament): boolean => {
 
       // If resolved teams don't match expected teams, re-resolution is needed
       if (currentTeamA !== expectedTeams.teamA || currentTeamB !== expectedTeams.teamB) {
-        console.log(`[PlayoffResolver] Re-resolution needed: Match ${match.id} has ${currentTeamA} vs ${currentTeamB}, expected ${expectedTeams.teamA} vs ${expectedTeams.teamB}`);
         return true;
       }
     }
@@ -116,7 +115,7 @@ function getExpectedTeamsForMatch(
 ): { teamA: string; teamB: string } | null {
   // Get group keys (sorted alphabetically: A, B, ...)
   const groups = Object.keys(standings).sort();
-  if (groups.length < 2) return null;
+  if (groups.length < 2) {return null;}
 
   const groupA = groups[0]; // 'A'
   const groupB = groups[1]; // 'B'
@@ -125,32 +124,32 @@ function getExpectedTeamsForMatch(
   if (match.id === 'semi1' || match.id.includes('semi1')) {
     // semi1: group-a-2nd (home) vs group-b-1st (away)
     // Matching: { id: 'semi1', home: 'group-a-2nd', away: 'group-b-1st' }
-    const teamA = standings[groupA]?.[1]?.teamId; // 2nd place from Group A (index 1)
-    const teamB = standings[groupB]?.[0]?.teamId; // 1st place from Group B (index 0)
-    if (teamA && teamB) return { teamA, teamB };
+    const teamA = standings[groupA][1]?.teamId; // 2nd place from Group A (index 1)
+    const teamB = standings[groupB][0]?.teamId; // 1st place from Group B (index 0)
+    if (teamA && teamB) {return { teamA, teamB };}
   }
 
   if (match.id === 'semi2' || match.id.includes('semi2')) {
     // semi2: group-a-1st (home) vs group-b-2nd (away)
     // Matching: { id: 'semi2', home: 'group-a-1st', away: 'group-b-2nd' }
-    const teamA = standings[groupA]?.[0]?.teamId; // 1st place from Group A (index 0)
-    const teamB = standings[groupB]?.[1]?.teamId; // 2nd place from Group B (index 1)
-    if (teamA && teamB) return { teamA, teamB };
+    const teamA = standings[groupA][0]?.teamId; // 1st place from Group A (index 0)
+    const teamB = standings[groupB][1]?.teamId; // 2nd place from Group B (index 1)
+    if (teamA && teamB) {return { teamA, teamB };}
   }
 
   // Place matches for direct group positions
   if (match.id === 'place56-direct' || match.id.includes('place56')) {
     // 3rd place teams
-    const teamA = standings[groupA]?.[2]?.teamId; // 3rd place from Group A
-    const teamB = standings[groupB]?.[2]?.teamId; // 3rd place from Group B
-    if (teamA && teamB) return { teamA, teamB };
+    const teamA = standings[groupA][2]?.teamId; // 3rd place from Group A
+    const teamB = standings[groupB][2]?.teamId; // 3rd place from Group B
+    if (teamA && teamB) {return { teamA, teamB };}
   }
 
   if (match.id === 'place78-direct' || match.id.includes('place78')) {
     // 4th place teams
-    const teamA = standings[groupA]?.[3]?.teamId; // 4th place from Group A
-    const teamB = standings[groupB]?.[3]?.teamId; // 4th place from Group B
-    if (teamA && teamB) return { teamA, teamB };
+    const teamA = standings[groupA][3]?.teamId; // 4th place from Group A
+    const teamB = standings[groupB][3]?.teamId; // 4th place from Group B
+    if (teamA && teamB) {return { teamA, teamB };}
   }
 
   // Final and third-place matches depend on semifinal results,
@@ -473,7 +472,6 @@ export const reResolvePlayoffPairings = (
       match.teamB !== expectedTeams.teamB;
 
     if (needsUpdate) {
-      console.log(`[PlayoffResolver] Re-resolving ${match.id}: ${match.teamA}/${match.teamB} → ${expectedTeams.teamA}/${expectedTeams.teamB}`);
       updatedMatchIds.push(match.id);
       updatedCount++;
       return {
@@ -528,7 +526,6 @@ export const autoResolvePlayoffsIfReady = (
     return null;
   }
 
-  console.log('[PlayoffResolver] All group matches complete - resolving playoffs');
   return resolvePlayoffPairings(tournament);
 };
 
@@ -553,7 +550,6 @@ export const forceReResolvePlayoffs = (
     };
   }
 
-  console.log('[PlayoffResolver] Forced re-resolution triggered by user');
   return reResolvePlayoffPairings(tournament);
 };
 

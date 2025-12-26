@@ -44,10 +44,10 @@ const calculateFinalsMatches = (preset: FinalsPreset, numberOfGroups: number): n
 };
 
 export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) => {
-  const teams = formData.numberOfTeams || 4;
-  const fields = formData.numberOfFields || 1;
-  const numberOfGroups = formData.numberOfGroups || 2;
-  const groupSystem = formData.groupSystem || 'roundRobin';
+  const teams = formData.numberOfTeams ?? 4;
+  const fields = formData.numberOfFields ?? 1;
+  const numberOfGroups = formData.numberOfGroups ?? 2;
+  const groupSystem = formData.groupSystem ?? 'roundRobin';
 
   // Group phase timing
   const groupGameDuration = formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration;
@@ -72,7 +72,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   }
 
   // Calculate finals matches
-  const finalsPreset = formData.finalsConfig?.preset || 'none';
+  const finalsPreset = formData.finalsConfig?.preset ?? 'none';
   const finalsMatches = groupSystem === 'groupsAndFinals'
     ? calculateFinalsMatches(finalsPreset, numberOfGroups)
     : 0;

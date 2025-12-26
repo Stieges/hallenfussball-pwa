@@ -24,8 +24,8 @@ import {
  * Parse a date from various formats (Date object, ISO string, or undefined)
  */
 function parseMatchTime(time: Date | string | undefined): Date | null {
-  if (!time) return null;
-  if (time instanceof Date) return time;
+  if (!time) {return null;}
+  if (time instanceof Date) {return time;}
   return new Date(time);
 }
 
@@ -85,19 +85,19 @@ export function detectTeamConflicts(
   for (let i = 0; i < activeMatches.length; i++) {
     const match1 = activeMatches[i];
     const time1 = parseMatchTime(match1.scheduledTime);
-    if (!time1) continue;
+    if (!time1) {continue;}
 
     const end1 = addMinutes(time1, matchDurationMinutes);
 
     for (let j = i + 1; j < activeMatches.length; j++) {
       const match2 = activeMatches[j];
       const time2 = parseMatchTime(match2.scheduledTime);
-      if (!time2) continue;
+      if (!time2) {continue;}
 
       const end2 = addMinutes(time2, matchDurationMinutes);
 
       // Check if times overlap
-      if (!doTimesOverlap(time1, end1, time2, end2)) continue;
+      if (!doTimesOverlap(time1, end1, time2, end2)) {continue;}
 
       // Check for shared teams
       const sharedTeamIds = [match1.teamA, match1.teamB].filter(
@@ -149,17 +149,17 @@ export function detectRefereeConflicts(
   for (let i = 0; i < matchesWithReferees.length; i++) {
     const match1 = matchesWithReferees[i];
     const time1 = parseMatchTime(match1.scheduledTime);
-    if (!time1) continue;
+    if (!time1) {continue;}
 
     const end1 = addMinutes(time1, matchDurationMinutes);
 
     for (let j = i + 1; j < matchesWithReferees.length; j++) {
       const match2 = matchesWithReferees[j];
       const time2 = parseMatchTime(match2.scheduledTime);
-      if (!time2) continue;
+      if (!time2) {continue;}
 
       // Same referee?
-      if (match1.referee !== match2.referee) continue;
+      if (match1.referee !== match2.referee) {continue;}
 
       const end2 = addMinutes(time2, matchDurationMinutes);
 
@@ -201,7 +201,7 @@ export function detectFieldOverlaps(
   // Group matches by field
   const matchesByField = new Map<number, Match[]>();
   for (const match of matches) {
-    if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') continue;
+    if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') {continue;}
 
     const existing = matchesByField.get(match.field) || [];
     existing.push(match);
@@ -213,14 +213,14 @@ export function detectFieldOverlaps(
     for (let i = 0; i < fieldMatches.length; i++) {
       const match1 = fieldMatches[i];
       const time1 = parseMatchTime(match1.scheduledTime);
-      if (!time1) continue;
+      if (!time1) {continue;}
 
       const end1 = addMinutes(time1, matchDurationMinutes);
 
       for (let j = i + 1; j < fieldMatches.length; j++) {
         const match2 = fieldMatches[j];
         const time2 = parseMatchTime(match2.scheduledTime);
-        if (!time2) continue;
+        if (!time2) {continue;}
 
         const end2 = addMinutes(time2, matchDurationMinutes);
 
@@ -264,7 +264,7 @@ export function detectBreakViolations(
   const matchesByTeam = new Map<string, Match[]>();
 
   for (const match of matches) {
-    if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') continue;
+    if (match.matchStatus === 'finished' || match.matchStatus === 'skipped') {continue;}
 
     for (const teamId of [match.teamA, match.teamB]) {
       const existing = matchesByTeam.get(teamId) || [];
@@ -279,7 +279,7 @@ export function detectBreakViolations(
     const sortedMatches = [...teamMatches].sort((a, b) => {
       const timeA = parseMatchTime(a.scheduledTime);
       const timeB = parseMatchTime(b.scheduledTime);
-      if (!timeA || !timeB) return 0;
+      if (!timeA || !timeB) {return 0;}
       return timeA.getTime() - timeB.getTime();
     });
 
@@ -289,7 +289,7 @@ export function detectBreakViolations(
 
       const time1 = parseMatchTime(match1.scheduledTime);
       const time2 = parseMatchTime(match2.scheduledTime);
-      if (!time1 || !time2) continue;
+      if (!time1 || !time2) {continue;}
 
       const end1 = addMinutes(time1, matchDurationMinutes);
       const breakMinutes = getMinutesBetween(end1, time2);
@@ -379,7 +379,7 @@ export function validateMatchChange(
 ): ScheduleConflict[] {
   // Create a copy of matches with the proposed change applied
   const updatedMatches = matches.map(m => {
-    if (m.id !== change.matchId) return m;
+    if (m.id !== change.matchId) {return m;}
     return { ...m, [change.field]: change.newValue };
   });
 

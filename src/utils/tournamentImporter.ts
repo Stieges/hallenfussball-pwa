@@ -115,13 +115,13 @@ function parseJSONTournament(content: string): ImportValidationResult {
   // Create ID mappings for teams and matches
   const teamIdMap = new Map<string, string>();
   const teams: Team[] = (json.teams as Array<Record<string, unknown>>).map((t, index) => {
-    const oldId = String(t.id || `imported-${index}`);
+    const oldId = String(t.id ?? `imported-${index}`);
     const newId = generateUniqueId();
     teamIdMap.set(oldId, newId);
 
     return {
       id: newId,
-      name: String(t.name || `Team ${index + 1}`),
+      name: String(t.name ?? `Team ${index + 1}`),
       group: t.group ? String(t.group) : undefined,
     };
   });
@@ -174,13 +174,13 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
   // Determine number of groups
   const groups = new Set(teams.filter(t => t.group).map(t => t.group));
-  const numberOfGroups = groups.size || 1;
+  const numberOfGroups = groups.size ?? 1;
 
   // Parse location object
   const locationData = json.location as Record<string, unknown> | undefined;
   const location = locationData && typeof locationData === 'object'
     ? {
-        name: String(locationData.name || 'Importierter Ort'),
+        name: String(locationData.name ?? 'Importierter Ort'),
         street: locationData.street ? String(locationData.street) : undefined,
         postalCode: locationData.postalCode ? String(locationData.postalCode) : undefined,
         city: locationData.city ? String(locationData.city) : undefined,
@@ -305,9 +305,9 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
     // Step 3: Metadata
     title: String(json.title),
-    ageClass: String(json.ageClass || 'Herren'),
+    ageClass: String(json.ageClass ?? 'Herren'),
     date: String(json.date || new Date().toISOString().split('T')[0]),
-    timeSlot: String(json.timeSlot || '09:00'),
+    timeSlot: String(json.timeSlot ?? '09:00'),
     startDate: json.startDate ? String(json.startDate) : json.date ? String(json.date) : new Date().toISOString().split('T')[0],
     startTime: json.startTime ? String(json.startTime) : json.timeSlot ? String(json.timeSlot) : '09:00',
     location,
@@ -406,7 +406,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
 
   // Determine groups
   const groups = new Set(teams.filter(t => t.group).map(t => t.group));
-  const numberOfGroups = groups.size || 1;
+  const numberOfGroups = groups.size ?? 1;
 
   // Create tournament with teams only (no matches)
   const tournament: Tournament = {

@@ -15,13 +15,13 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
 }) => {
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
-  const numberOfGroups = formData.numberOfGroups || 2;
-  const numberOfFields = formData.numberOfFields || 1;
+  const numberOfGroups = formData.numberOfGroups ?? 2;
+  const numberOfFields = formData.numberOfFields ?? 1;
   const finalsOptions = getFinalsOptions(numberOfGroups);
   const recommendedOptions = finalsOptions.filter(opt => opt.category === 'recommended');
   const possibleOptions = finalsOptions.filter(opt => opt.category === 'possible');
 
-  const currentPreset = formData.finalsConfig?.preset || 'none';
+  const currentPreset = formData.finalsConfig?.preset ?? 'none';
 
   const handlePresetChange = (preset: FinalsPreset) => {
     const newConfig: FinalsConfig = {
@@ -45,7 +45,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   const handleTiebreakerChange = (tiebreaker: TiebreakerMode) => {
     const newConfig: FinalsConfig = {
       ...formData.finalsConfig,
-      preset: formData.finalsConfig?.preset || 'none',
+      preset: formData.finalsConfig?.preset ?? 'none',
       tiebreaker,
     };
     onUpdate('finalsConfig', newConfig);
@@ -54,7 +54,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   const handleTiebreakerDurationChange = (duration: number) => {
     const newConfig: FinalsConfig = {
       ...formData.finalsConfig,
-      preset: formData.finalsConfig?.preset || 'none',
+      preset: formData.finalsConfig?.preset ?? 'none',
       tiebreakerDuration: duration,
     };
     onUpdate('finalsConfig', newConfig);
@@ -62,8 +62,8 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
 
   // Get sport config for defaults
   const sportConfig = getSportConfig(formData.sportId || DEFAULT_SPORT_ID);
-  const currentTiebreaker = formData.finalsConfig?.tiebreaker || sportConfig.rules.defaultTiebreaker || 'shootout';
-  const currentDuration = formData.finalsConfig?.tiebreakerDuration || sportConfig.rules.defaultTiebreakerDuration || 5;
+  const currentTiebreaker = formData.finalsConfig?.tiebreaker || sportConfig.rules.defaultTiebreaker ?? 'shootout';
+  const currentDuration = formData.finalsConfig?.tiebreakerDuration || sportConfig.rules.defaultTiebreakerDuration ?? 5;
 
   const renderOption = (option: FinalsOption, isRecommended: boolean) => {
     const isSelected = currentPreset === option.preset;

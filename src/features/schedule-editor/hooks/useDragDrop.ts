@@ -64,7 +64,7 @@ export function createSlotId(time: string, fieldId: number): string {
  */
 export function parseSlotId(slotId: string): { time: string; fieldId: number } | null {
   const match = slotId.match(/^slot-(.+)-(\d+)$/);
-  if (!match) return null;
+  if (!match) {return null;}
   return {
     time: match[1],
     fieldId: parseInt(match[2], 10),
@@ -98,7 +98,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
 
   // Handle drag start
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    if (!enabled) return;
+    if (!enabled) {return;}
     const { active } = event;
     setActiveId(active.id as string);
   }, [enabled]);
@@ -110,8 +110,8 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     setActiveId(null);
     setOverId(null);
 
-    if (!over || !active) return;
-    if (active.id === over.id) return;
+    if (!over || !active) {return;}
+    if (active.id === over.id) {return;}
 
     const matchId = active.id as string;
     const slotId = over.id as string;
@@ -134,7 +134,6 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
 
     // Validate if drop is allowed
     if (validateDrop && !validateDrop(matchId, targetSlot)) {
-      console.log('Drop not allowed:', matchId, targetSlot);
       return;
     }
 

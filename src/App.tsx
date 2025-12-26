@@ -114,7 +114,6 @@ function AppContent() {
     if (confirmed) {
       try {
         await deleteTournament(id);
-        console.log(`[App] Tournament ${id} deleted successfully`);
       } catch (error) {
         console.error('[App] Failed to delete tournament:', error);
         showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
@@ -129,7 +128,6 @@ function AppContent() {
       if (hasMatches) {
         // Complete import → Just save and stay in dashboard
         await saveTournament(tournament);
-        console.log(`[App] Tournament "${tournament.title}" imported (complete) - staying in dashboard`);
         // Dashboard will auto-refresh via useTournaments hook
       } else {
         // Partial import → Open wizard at Step 2 to generate schedule
@@ -138,7 +136,6 @@ function AppContent() {
           lastVisitedStep: 2, // Go to Mode/System step
         };
         await saveTournament(tournamentWithStep);
-        console.log(`[App] Tournament "${tournament.title}" imported (teams only) - opening wizard`);
         setSelectedTournament(tournamentWithStep);
         setScreen('create');
       }
@@ -162,7 +159,6 @@ function AppContent() {
 
       // Save the tournament with draft status (already set by SettingsTab)
       await saveTournament(tournamentToEdit);
-      console.log(`[App] Tournament "${tournament.title}" opened in wizard at step ${targetStep || 1} (original status: ${originalStatusRef.current})`);
 
       // Enable quick edit mode and navigate to create screen
       setQuickEditMode(true);
@@ -206,7 +202,6 @@ function AppContent() {
                 };
                 // Fire-and-forget: Don't await, just trigger the save
                 saveTournament(restoredTournament)
-                  .then(() => console.log(`[App] Tournament status restored to "${originalStatusRef.current}"`))
                   .catch((err) => console.error('[App] Failed to restore tournament status:', err));
               }
               originalStatusRef.current = null; // Reset ref

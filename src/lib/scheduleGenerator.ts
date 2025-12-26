@@ -147,13 +147,6 @@ function generateMatches(
     ((tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
       (tournament.finals && Object.values(tournament.finals).some(Boolean)))
 
-  console.log('[ScheduleGenerator] Playoff check:', {
-    groupSystem: tournament.groupSystem,
-    finalsConfig: tournament.finalsConfig,
-    finals: tournament.finals,
-    shouldGeneratePlayoffs,
-  })
-
   if (shouldGeneratePlayoffs) {
     finalMatches = generateFinalMatches(tournament, groupStageMatches, startTime)
   }
@@ -206,8 +199,6 @@ function generateFinalMatches(
   const playoffDefinitions = tournament.finalsConfig
     ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig, groupSizes)
     : generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals)
-
-  console.log('[ScheduleGenerator] Generated playoff definitions:', playoffDefinitions)
 
   // Calculate start slot
   const lastGroupSlot =
