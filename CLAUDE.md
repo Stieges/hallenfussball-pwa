@@ -6,9 +6,11 @@ Diese Datei gibt Claude (und anderen KI-Assistenten) den vollständigen Kontext 
 
 ## Vision & Mission
 
-**Vision:** Die beste Turnierverwaltungs-App für Hallenfußball und Indoor-Sportarten im deutschsprachigen Raum.
+**Vision:** Die weltweit beste Turnierverwaltungs-App für alle Sportarten - von Hallenfußball bis Basketball, von lokalen Vereinsturnieren bis zu internationalen Events.
 
-**Mission:** Vereinen und Veranstaltern eine professionelle, einfach zu bedienende Lösung bieten, die:
+**Ursprung:** Gestartet mit Hallenfußball im deutschsprachigen Raum, aber die Architektur ist von Anfang an sportarten-agnostisch und internationalisierbar designed.
+
+**Mission:** Vereinen und Veranstaltern weltweit eine professionelle, einfach zu bedienende Lösung bieten, die:
 - Turnierorganisation von Stunden auf Minuten reduziert
 - Live-Ergebnisse für Fans/Eltern in Echtzeit bereitstellt
 - Sponsoren messbare Reichweite liefert
@@ -70,11 +72,13 @@ Diese Datei gibt Claude (und anderen KI-Assistenten) den vollständigen Kontext 
 - [ ] Push-Notifications
 - [ ] Freemium-Modell (Free + Pro-Tier)
 
-### Phase 4: Ecosystem
+### Phase 4: Ecosystem & Scale
 - [ ] Förderverein-Spenden-Widget
-- [ ] Multi-Sport-Unterstützung (Handball, Basketball)
+- [ ] Volle Multi-Sport-Unterstützung (Handball, Basketball, Volleyball, Hockey...)
+- [ ] Internationalisierung (i18n) - Englisch, Spanisch, Französisch...
 - [ ] Verbands-Integration
 - [ ] API für Drittanbieter
+- [ ] White-Label für große Organisationen
 
 ---
 
