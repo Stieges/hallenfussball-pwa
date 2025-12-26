@@ -215,8 +215,8 @@ export function useMatchConflictsFromTournament(
   const result = useMatchConflicts({
     matches: tournament?.matches ?? [],
     teams: tournament?.teams ?? [],
-    matchDurationMinutes: tournament?.groupPhaseGameDuration || tournament?.gameDuration ?? 10,
-    minBreakMinutes: tournament?.groupPhaseBreakDuration || tournament?.breakDuration ?? 2,
+    matchDurationMinutes: (tournament?.groupPhaseGameDuration ?? tournament?.gameDuration) ?? 10,
+    minBreakMinutes: (tournament?.groupPhaseBreakDuration ?? tournament?.breakDuration) ?? 2,
     checkRefereeConflicts: tournament?.refereeConfig?.mode !== 'none',
     checkFieldConflicts: true,
     enabled: enabled && tournament !== null,

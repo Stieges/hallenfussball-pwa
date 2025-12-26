@@ -36,7 +36,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
         preset.draw === currentPoints.draw &&
         preset.loss === currentPoints.loss
     );
-  }, [currentPoints]);
+  }, [currentPoints.win, currentPoints.draw, currentPoints.loss]);
 
   const handlePresetClick = (preset: Preset) => {
     const newSystem: PointSystem = {

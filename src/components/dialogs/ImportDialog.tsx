@@ -96,14 +96,14 @@ export const ImportDialog = ({
 
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      processFile(files[0]);
+      void processFile(files[0]);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      processFile(files[0]);
+      void processFile(files[0]);
     }
   };
 

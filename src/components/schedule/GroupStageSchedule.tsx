@@ -100,7 +100,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     if (editingSchedule) {
       setDisplayOrder(matches.map(m => m.id));
     }
-  }, [editingSchedule]); // Only trigger on editingSchedule change
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when entering edit mode, not when matches change
+  }, [editingSchedule]);
 
   // DnD Sensors - require 8px movement before drag starts
   const sensors = useSensors(

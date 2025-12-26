@@ -80,7 +80,7 @@ export function useCorporateColors(): UseCorporateColorsResult {
         setIsLoading(false)
       }
     }
-    init()
+    void init()
   }, [])
 
   // Feature gating
@@ -262,7 +262,7 @@ export function useCurrentThemeColors(): CorporateColors {
         // Use defaults
       }
     }
-    loadColors()
+    void loadColors()
   }, [])
 
   return colors

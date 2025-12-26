@@ -68,7 +68,9 @@ export function useMultiTabSync({
       };
 
       // Announce our active matches when channel opens
-      activeMatchIds.current.forEach((matchId) => {
+      // Copy ref value to variable for cleanup function (React hooks rule)
+      const currentActiveMatchIds = activeMatchIds.current;
+      currentActiveMatchIds.forEach((matchId) => {
         channel.postMessage({
           type: 'MATCH_ACTIVE',
           matchId,
@@ -79,7 +81,7 @@ export function useMultiTabSync({
 
       return () => {
         // Announce we're leaving
-        activeMatchIds.current.forEach((matchId) => {
+        currentActiveMatchIds.forEach((matchId) => {
           channel.postMessage({
             type: 'MATCH_INACTIVE',
             matchId,

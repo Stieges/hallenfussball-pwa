@@ -102,7 +102,7 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
 
     const handlePopState = () => {
       if (document.fullscreenElement) {
-        document.exitFullscreen();
+        void document.exitFullscreen();
       }
     };
 

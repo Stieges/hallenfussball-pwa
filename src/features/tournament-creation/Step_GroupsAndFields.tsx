@@ -54,6 +54,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
         setGroups(prev => prev.slice(0, targetGroupCount));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only sync when formData changes, not local state
   }, [formData.numberOfGroups]);
 
   useEffect(() => {
@@ -69,16 +70,17 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
         setFields(prev => prev.slice(0, targetFieldCount));
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only sync when formData changes, not local state
   }, [formData.numberOfFields]);
 
   // Sync zu formData
   useEffect(() => {
     onUpdate('groups', groups);
-  }, [groups]);
+  }, [groups, onUpdate]);
 
   useEffect(() => {
     onUpdate('fields', fields);
-  }, [fields]);
+  }, [fields, onUpdate]);
 
   // Handler für Gruppenänderungen
   const updateGroup = (groupId: string, updates: Partial<TournamentGroup>) => {

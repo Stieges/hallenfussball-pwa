@@ -201,7 +201,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       if (!confirmed) {return;}
     }
 
-    hookHandleStart(matchId);
+    void hookHandleStart(matchId);
   }, [liveMatches, hookHandleStart, startWithResultDialog]);
 
   // Handler: Match selection change with warning for running match

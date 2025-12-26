@@ -39,20 +39,20 @@ export const useTournaments = () => {
 
   // Load tournaments on mount
   useEffect(() => {
-    loadTournaments();
+    void loadTournaments();
   }, []);
 
   // Listen for localStorage changes (from TournamentManagementScreen or other tabs)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'tournaments') {
-        loadTournaments();
+        void loadTournaments();
       }
     };
 
     // Also listen for custom events (same-tab updates)
     const handleTournamentUpdate = () => {
-      loadTournaments();
+      void loadTournaments();
     };
 
     window.addEventListener('storage', handleStorageChange);

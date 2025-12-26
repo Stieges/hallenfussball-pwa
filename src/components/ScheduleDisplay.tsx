@@ -111,12 +111,6 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     );
   };
 
-  // Helper: Get team name from team ID
-  const getTeamName = (teamId: string): string | null => {
-    const team = schedule.teams.find(t => t.id === teamId);
-    return team?.name || null;
-  };
-
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
     if (!groupPhase || !currentMatches) {return groupPhase?.matches ?? [];}
@@ -150,17 +144,17 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
         // Check if teamA was resolved (no longer a placeholder)
         if (currentMatch.teamA && !isPlaceholder(currentMatch.teamA)) {
-          const teamName = getTeamName(currentMatch.teamA);
-          if (teamName) {
-            updated.homeTeam = teamName;
+          const teamA = schedule.teams.find(t => t.id === currentMatch.teamA);
+          if (teamA?.name) {
+            updated.homeTeam = teamA.name;
           }
         }
 
         // Check if teamB was resolved (no longer a placeholder)
         if (currentMatch.teamB && !isPlaceholder(currentMatch.teamB)) {
-          const teamName = getTeamName(currentMatch.teamB);
-          if (teamName) {
-            updated.awayTeam = teamName;
+          const teamB = schedule.teams.find(t => t.id === currentMatch.teamB);
+          if (teamB?.name) {
+            updated.awayTeam = teamB.name;
           }
         }
 

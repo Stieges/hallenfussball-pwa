@@ -49,14 +49,14 @@ export const RankingTab: React.FC<RankingTabProps> = ({
       currentStandings,
       tournament
     );
-  }, [tournament.teams, tournament.matches, currentStandings, tournament]);
+  }, [currentStandings, tournament]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      void document.documentElement.requestFullscreen();
       setIsFullscreen(true);
     } else {
-      document.exitFullscreen();
+      void document.exitFullscreen();
       setIsFullscreen(false);
     }
   };

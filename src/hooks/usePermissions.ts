@@ -114,7 +114,7 @@ export function usePermissions(tournamentId: string) {
    * Check if user can correct results
    */
   const canCorrectResults = useMemo(
-    () => hasPermission('correct_results'),
+    () => permissions.includes('correct_results'),
     [permissions]
   );
 
@@ -122,7 +122,7 @@ export function usePermissions(tournamentId: string) {
    * Check if user can enter scores (any field)
    */
   const canEnterScores = useMemo(
-    () => hasPermission('enter_score') || hasPermission('enter_score_all_fields'),
+    () => permissions.includes('enter_score') || permissions.includes('enter_score_all_fields'),
     [permissions]
   );
 
@@ -130,7 +130,7 @@ export function usePermissions(tournamentId: string) {
    * Check if user can assign referees
    */
   const canAssignReferees = useMemo(
-    () => hasPermission('assign_referees'),
+    () => permissions.includes('assign_referees'),
     [permissions]
   );
 
@@ -138,7 +138,7 @@ export function usePermissions(tournamentId: string) {
    * Check if user can edit tournament settings
    */
   const canEditTournament = useMemo(
-    () => hasPermission('edit_tournament'),
+    () => permissions.includes('edit_tournament'),
     [permissions]
   );
 

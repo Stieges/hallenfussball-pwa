@@ -335,6 +335,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       clearInterval(interval);
       window.removeEventListener('storage', handleStorageChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getRunningMatchIds uses tournament.id which is already in deps
   }, [tournament.id]);
 
   // Reset pending changes and history when exiting edit mode
@@ -469,7 +470,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // No conflicts - save directly
     applyChanges(updatedTournament);
-  }, [tournament, pendingChanges]);
+  }, [tournament, pendingChanges, applyChanges]);
 
   // Actually apply the changes (called after conflict resolution)
   const applyChanges = useCallback((updatedTournament: Tournament) => {
@@ -491,7 +492,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     setDetectedConflicts([]);
 
     showSuccess('Spielplan-Änderungen gespeichert');
-  }, [onTournamentUpdate, pendingChanges, showSuccess]);
+  }, [onTournamentUpdate, showSuccess]);
 
   // Handle conflict dialog - save anyway
   const handleSaveWithConflicts = useCallback(() => {

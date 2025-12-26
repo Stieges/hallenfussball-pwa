@@ -264,7 +264,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     const tournament = createDraftTournament();
 
     try {
-      defaultSaveTournament(tournament);
+      void defaultSaveTournament(tournament);
 
       // Update formData with the generated ID to prevent creating multiple drafts
       if (!formData.id && tournament.id) {
@@ -282,7 +282,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         console.error('[TournamentCreation] Failed to save draft:', error);
       }
     }
-  }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation]);
+  }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation, createDraftTournament]);
 
   // Helper function to change step with autosave
   const handleStepChange = useCallback((newStep: number) => {
@@ -509,7 +509,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         referee: scheduledMatch.referee,
       }));
 
-      saveTournament(tournament);
+      void saveTournament(tournament);
       onBack();
     } catch (error) {
       // Capture error and display to user
@@ -524,7 +524,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   const handleSaveDraft = () => {
     const tournament = createDraftTournament();
-    defaultSaveTournament(tournament);
+    void defaultSaveTournament(tournament);
     lastSavedDataRef.current = JSON.stringify(formData);
     showSuccess('Turnier als Entwurf gespeichert!');
   };
@@ -555,7 +555,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // Dialog handlers: Save draft and go back
   const handleSaveAndGoBack = () => {
     const tournament = createDraftTournament();
-    saveTournament(tournament);
+    void saveTournament(tournament);
     setShowSaveDialog(false);
     onBack();
   };
@@ -734,7 +734,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
     // Navigate
     setStep(targetStep);
-  }, [canNavigateToStep, step, validateStep, hasUnsavedChanges, saveAsDraft]);
+  }, [canNavigateToStep, step, validateStep, hasUnsavedChanges, saveAsDraft, showWarning]);
 
   // Dynamic width: wider for preview, narrower for wizard steps
   const isShowingPreview = step === 6 && generatedSchedule;

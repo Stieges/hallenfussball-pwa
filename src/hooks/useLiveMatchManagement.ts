@@ -540,6 +540,7 @@ export function useLiveMatchManagement({
     if (match.playPhase === 'penalty') {decidedBy = 'penalty';}
 
     finishMatchInternal(matchId, decidedBy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- needsTiebreaker is a pure function, doesn't need to be in deps
   }, [liveMatches, finishMatchInternal]);
 
   /**

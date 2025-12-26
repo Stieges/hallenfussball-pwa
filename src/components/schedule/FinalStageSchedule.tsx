@@ -93,6 +93,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     if (editingSchedule) {
       setDisplayOrder(matches.map(m => m.id));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when entering edit mode, not when matches change
   }, [editingSchedule]);
 
   // DnD Sensors
