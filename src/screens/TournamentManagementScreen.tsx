@@ -61,6 +61,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           return;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
         const tournaments: Tournament[] = JSON.parse(stored);
 
         const found = tournaments.find((t) => t.id === tournamentId);
@@ -68,6 +69,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         if (found) {
           // MIGRATION: Generate matches if empty (for old tournaments)
           let updatedTournament = found;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy localStorage data
           if (!found.matches || found.matches.length === 0) {
 
             // Generate schedule to get matches
@@ -119,6 +121,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             ...generatedSchedule,
             allMatches: generatedSchedule.allMatches.map((sm, index) => {
               const tournamentMatch = updatedTournament.matches[index];
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
               if (tournamentMatch) {
                 return { ...sm, id: tournamentMatch.id };
               }
@@ -173,6 +176,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     // Persist to localStorage (später Backend)
     const stored = localStorage.getItem('tournaments');
     if (stored) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
       const tournaments: Tournament[] = JSON.parse(stored);
       const index = tournaments.findIndex((t) => t.id === updatedTournament.id);
       if (index !== -1) {
@@ -192,6 +196,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         ...generatedSchedule,
         allMatches: generatedSchedule.allMatches.map((sm, index) => {
           const tournamentMatch = updatedTournament.matches[index];
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
           if (tournamentMatch) {
             return { ...sm, id: tournamentMatch.id };
           }

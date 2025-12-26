@@ -68,7 +68,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
       <div style={{ position: 'relative' }}>
         <Input
           label="Veranstaltungsort"
-          value={locationDetails.name ?? ''}
+          value={locationDetails.name}
           onChange={handleNameChange}
           placeholder="z.B. Sporthalle Waging"
           required={required}

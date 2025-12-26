@@ -88,7 +88,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   runningMatchIds,
   onMatchSwap,
 }) => {
-  const standings = currentStandings || schedule.initialStandings;
+  const standings = currentStandings ?? schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
 
   // Get phases
@@ -187,6 +187,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <ParticipantsAndGroups
           teams={schedule.teams}
           standings={standings}
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
           tournament={{ groups: schedule.tournament.groups } as any}
         />
       )}
@@ -208,6 +209,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           correctionMatchId={correctionMatchId}
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
           tournament={{ groups: schedule.tournament.groups } as any}
           onMatchSwap={onMatchSwap}
         />
@@ -218,6 +220,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         <GroupTables
           standings={standings}
           teams={schedule.teams}
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
           tournament={{ groups: schedule.tournament.groups } as any}
         />
       )}
@@ -245,7 +248,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       {/* Tournament Footer with Organizer and Contact Info */}
       <TournamentFooter
         organizer={schedule.tournament.organizer}
-        contactInfo={contactInfo || schedule.tournament.contactInfo}
+        contactInfo={contactInfo ?? schedule.tournament.contactInfo}
       />
 
       {/* Global styles for responsive design */}

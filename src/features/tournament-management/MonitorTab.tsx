@@ -58,7 +58,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
   )
 
   // Number of fields
-  const numberOfFields = tournament.numberOfFields ?? 1
+  const numberOfFields = tournament.numberOfFields
 
   // Find running or paused match on selected field
   const activeMatches = useMemo(
@@ -86,9 +86,9 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
 
     return {
       id: upcoming.id,
-      number: upcoming.matchNumber ?? 0,
-      homeTeam: upcoming.homeTeam ?? 'TBD',
-      awayTeam: upcoming.awayTeam ?? 'TBD',
+      number: upcoming.matchNumber,
+      homeTeam: upcoming.homeTeam,
+      awayTeam: upcoming.awayTeam,
       field: upcoming.field,
       group: upcoming.group,
       scheduledTime: upcoming.time,

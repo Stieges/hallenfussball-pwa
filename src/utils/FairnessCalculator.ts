@@ -14,10 +14,6 @@ export class FairnessCalculator {
   private globalMaxAvg = -Infinity;
   private readonly projectionCache = new Map<string, number>();
 
-  constructor() {
-    // Constructor kept for potential future parameters
-  }
-
   /**
    * Bind to the mutable teamStates map (call once at start)
    */

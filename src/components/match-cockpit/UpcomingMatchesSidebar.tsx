@@ -67,9 +67,7 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
             const minutesUntil = calculateMinutesUntil(match.scheduledKickoff);
             // Use external highlight flag if provided, otherwise fall back to scheduled time
             const isHighlighted = index === 0 && (
-              highlightFirstMatch !== undefined
-                ? highlightFirstMatch
-                : (minutesUntil !== null && minutesUntil >= 0 && minutesUntil <= highlightMinutesBefore)
+              highlightFirstMatch ?? (minutesUntil !== null && minutesUntil >= 0 && minutesUntil <= highlightMinutesBefore)
             );
 
             return (

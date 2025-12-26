@@ -24,7 +24,7 @@ export function formatScheduleForPrint(schedule: GeneratedSchedule): {
       <div class="meta">
         <span>${schedule.tournament.ageClass}</span>
         <span>${schedule.tournament.date}</span>
-        <span>${schedule.tournament.location}</span>
+        <span>${schedule.tournament.location.name}</span>
       </div>
       <div class="time-info">
         <span>Start: ${formatTime(schedule.startTime)}</span>

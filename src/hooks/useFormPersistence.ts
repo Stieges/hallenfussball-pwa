@@ -145,11 +145,15 @@ export function hasDraftForKey(key: string): boolean {
 /**
  * Get draft metadata without loading the full data
  */
+interface StoredDraftData {
+  timestamp?: string;
+}
+
 export function getDraftMetadata(key: string): { exists: boolean; timestamp: Date | null } {
   try {
     const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}${key}`);
     if (stored) {
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as StoredDraftData | null;
       if (parsed?.timestamp) {
         return { exists: true, timestamp: new Date(parsed.timestamp) };
       }

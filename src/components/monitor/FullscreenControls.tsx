@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Hook co-located with component for encapsulation */
 /**
  * FullscreenControls - Fullscreen toggle and exit controls
  *

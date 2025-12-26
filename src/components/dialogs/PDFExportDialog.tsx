@@ -258,7 +258,7 @@ export const PDFExportDialog = ({
           <Button
             variant="primary"
             size="md"
-            onClick={handleExport}
+            onClick={() => void handleExport()}
             disabled={isGenerating}
             fullWidth
           >

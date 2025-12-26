@@ -189,7 +189,7 @@ export const ShareDialog = ({
             variant="primary"
             size="md"
             icon={<Icons.Copy />}
-            onClick={handleCopyLink}
+            onClick={() => void handleCopyLink()}
             fullWidth
           >
             Link kopieren
@@ -200,7 +200,7 @@ export const ShareDialog = ({
               variant="secondary"
               size="md"
               icon={<Icons.Share />}
-              onClick={handleNativeShare}
+              onClick={() => void handleNativeShare()}
               fullWidth
             >
               Teilen

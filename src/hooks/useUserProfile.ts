@@ -10,6 +10,17 @@ import { UserProfile, AppSettings, getDefaultUserProfile } from '../types/userPr
 const STORAGE_KEY = 'userProfile';
 
 /**
+ * Type guard to validate stored profile data has expected structure
+ */
+interface StoredProfileData {
+  settings?: Partial<AppSettings>;
+}
+
+function isStoredProfileData(data: unknown): data is Partial<UserProfile> & StoredProfileData {
+  return typeof data === 'object' && data !== null;
+}
+
+/**
  * Hook für vollständiges User Profile Management
  */
 export function useUserProfile() {
@@ -69,8 +80,10 @@ export function useAppSettings(): AppSettings {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...getDefaultUserProfile().settings, ...parsed.settings };
+        const parsed: unknown = JSON.parse(stored);
+        if (isStoredProfileData(parsed) && parsed.settings) {
+          return { ...getDefaultUserProfile().settings, ...parsed.settings };
+        }
       }
     } catch (e) {
       console.error('Error loading app settings:', e);
@@ -83,10 +96,12 @@ export function useAppSettings(): AppSettings {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
-          const parsed = JSON.parse(e.newValue);
-          setSettings({ ...getDefaultUserProfile().settings, ...parsed.settings });
-        } catch (e) {
-          console.error('Error parsing storage change:', e);
+          const parsed: unknown = JSON.parse(e.newValue);
+          if (isStoredProfileData(parsed) && parsed.settings) {
+            setSettings({ ...getDefaultUserProfile().settings, ...parsed.settings });
+          }
+        } catch (err) {
+          console.error('Error parsing storage change:', err);
         }
       }
     };
@@ -106,9 +121,10 @@ export function getAppSetting<K extends keyof AppSettings>(key: K): AppSettings[
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.settings && key in parsed.settings) {
-        return parsed.settings[key];
+      const parsed: unknown = JSON.parse(stored);
+      if (isStoredProfileData(parsed) && parsed.settings && key in parsed.settings) {
+        // key in parsed.settings guarantees the value exists
+        return parsed.settings[key] as AppSettings[K];
       }
     }
   } catch (e) {

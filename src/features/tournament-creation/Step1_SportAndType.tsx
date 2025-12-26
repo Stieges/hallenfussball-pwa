@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- SPORT_OPTIONS constant co-located with component */
 import { CSSProperties } from 'react';
 import { Card } from '../../components/ui';
 import { TournamentType, Tournament } from '../../types/tournament';
@@ -86,7 +87,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
   onSportChange,
 }) => {
   // Determine current sportId (from new field or legacy conversion)
-  const currentSportId: SportId = formData.sportId ||
+  const currentSportId: SportId = formData.sportId ??
     (formData.sport === 'football' ? 'football-indoor' : 'football-indoor');
 
   const handleSportChange = (newSportId: SportId) => {

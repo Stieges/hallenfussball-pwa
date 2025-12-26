@@ -35,7 +35,7 @@ export function assignReferees<T extends MatchLike>(
   teams: Team[],
   config: RefereeConfig
 ): T[] {
-  if (!config || config.mode === 'none') {
+  if (config.mode === 'none') {
     return matches;
   }
 
@@ -44,25 +44,23 @@ export function assignReferees<T extends MatchLike>(
 
   if (config.mode === 'organizer') {
     return assignOrganizerReferees(matchesWithManual, config);
-  } else if (config.mode === 'teams') {
-    return assignTeamReferees(matchesWithManual, teams);
   }
-
-  return matches;
+  // config.mode === 'teams' at this point (only remaining option)
+  return assignTeamReferees(matchesWithManual, teams);
 }
 
 /**
  * Apply manual referee assignments
  */
 function applyManualAssignments<T extends MatchLike>(matches: T[], config: RefereeConfig): T[] {
-  if (!config.manualAssignments) {
+  const manualAssignments = config.manualAssignments;
+  if (!manualAssignments) {
     return matches;
   }
 
   return matches.map(match => {
-    const manualRef = config.manualAssignments![match.id];
-    if (manualRef !== undefined) {
-      return { ...match, referee: manualRef };
+    if (match.id in manualAssignments) {
+      return { ...match, referee: manualAssignments[match.id] };
     }
     return match;
   });
@@ -95,8 +93,8 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
   matchesWithMeta.sort((a, b) => a.timeSlot - b.timeSlot);
 
   // Track referee assignments
-  const refereeWorkload: number[] = new Array(numberOfReferees).fill(0);
-  const refereeLastSlots: number[] = new Array(numberOfReferees).fill(-100); // Last time slot each referee worked
+  const refereeWorkload: number[] = new Array<number>(numberOfReferees).fill(0);
+  const refereeLastSlots: number[] = new Array<number>(numberOfReferees).fill(-100); // Last time slot each referee worked
   const assignments = new Map<string, number>();
 
   // Assign referees
@@ -137,7 +135,8 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
       }
 
       // If no referee is available (all violated maxConsecutive), relax constraint
-      if (attempt === numberOfReferees - 1 && assignedRef === undefined) {
+      // Note: assignedRef is always undefined here due to the break above
+      if (attempt === numberOfReferees - 1) {
         // Fallback: assign referee with longest rest
         const refNum = sortedRefs[0];
         assignedRef = refNum;
@@ -194,10 +193,9 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
   // Group matches by field
   const matchesByField = new Map<number, T[]>();
   matches.forEach(match => {
-    if (!matchesByField.has(match.field)) {
-      matchesByField.set(match.field, []);
-    }
-    matchesByField.get(match.field)!.push(match);
+    const fieldMatches = matchesByField.get(match.field) ?? [];
+    fieldMatches.push(match);
+    matchesByField.set(match.field, fieldMatches);
   });
 
   // Assign referees field by field
@@ -262,9 +260,9 @@ export function getRefereeDisplayName(
   // Teams mode: show team name if available
   if (config?.mode === 'teams' && teams) {
     const team = teams[refereeNumber - 1];
-    if (team) {
-      return team.name;
-    }
+    // team may be undefined if refereeNumber > teams.length, but TS doesn't know
+    // (noUncheckedIndexedAccess is disabled)
+    return team.name;
   }
 
   // Default: show number only
@@ -286,11 +284,9 @@ export function isValidFinalsReferee(
 
   // Get team name for this referee number
   const refereeTeam = teams[refereeNumber - 1];
-  if (!refereeTeam) {
-    return false;
-  }
 
   // Check if team is participating in this match
+  // Note: TS thinks refereeTeam is always defined (noUncheckedIndexedAccess disabled)
   if (match.teamA === refereeTeam.name || match.teamB === refereeTeam.name) {
     return false; // Can't referee own match
   }

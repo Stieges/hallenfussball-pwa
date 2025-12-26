@@ -35,7 +35,6 @@ export const RankingTab: React.FC<RankingTabProps> = ({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const hasGroups = tournament.teams.some(t => t.group);
   const hasPlayoffs: boolean = Boolean(
-    tournament.finals &&
     typeof tournament.finals === 'object' &&
     'enabled' in tournament.finals &&
     tournament.finals.enabled
@@ -237,7 +236,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
 
   // Helper to get standing for a team
   const getStanding = (team: { id: string; name: string }): Standing | undefined => {
-    return standingsMap.get(team.id) || standingsMap.get(team.name);
+    return standingsMap.get(team.id) ?? standingsMap.get(team.name);
   };
 
   // Get playoff status info

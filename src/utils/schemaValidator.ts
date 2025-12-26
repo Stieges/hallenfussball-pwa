@@ -19,6 +19,7 @@ const evaluateExpression = (
 
   // Handle undefined values for comparison operators
   if (varValue === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for schema flexibility
     return expression.op === '=' ? expression.value === undefined : false;
   }
 

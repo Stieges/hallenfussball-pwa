@@ -125,8 +125,7 @@ const resolveGroupStanding = (
   }
 
   // ✅ FIX: Berechne tatsächliche Tabellenstände basierend auf Spielergebnissen
-  const groupMatches = tournament.matches ?? [];
-  const standings = calculateStandings(teamsInGroup, groupMatches, tournament, ref.groupId);
+  const standings = calculateStandings(teamsInGroup, tournament.matches, tournament, ref.groupId);
 
   // Hole das Team an der gewünschten Position (1-indexed)
   if (standings.length >= ref.position) {
@@ -145,8 +144,7 @@ const resolveBestSecondPlace = (tournament: Tournament): string | null => {
 
   for (const group of groups) {
     const teamsInGroup = tournament.teams.filter(t => t.group === group);
-    const groupMatches = tournament.matches ?? [];
-    const standings = calculateStandings(teamsInGroup, groupMatches, tournament, group);
+    const standings = calculateStandings(teamsInGroup, tournament.matches, tournament, group);
 
     if (standings.length >= 2) {
       const secondPlace = standings[1];

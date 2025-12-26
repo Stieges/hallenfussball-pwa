@@ -123,7 +123,7 @@ function AppContent() {
 
   const handleImportTournament = async (tournament: Tournament) => {
     try {
-      const hasMatches = tournament.matches && tournament.matches.length > 0;
+      const hasMatches = tournament.matches.length > 0;
 
       if (hasMatches) {
         // Complete import → Just save and stay in dashboard
@@ -218,7 +218,7 @@ function AppContent() {
               await new Promise(resolve => setTimeout(resolve, 200));
               setScreen('dashboard');
             }}
-            existingTournament={selectedTournament || undefined}
+            existingTournament={selectedTournament ?? undefined}
             quickEditMode={quickEditMode}
           />
         )}

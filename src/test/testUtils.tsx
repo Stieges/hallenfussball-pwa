@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Test utilities don't need HMR */
 import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

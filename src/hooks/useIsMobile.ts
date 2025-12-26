@@ -25,30 +25,17 @@ export function useIsMobile(): boolean {
   );
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
-    };
-
     // Use matchMedia for better performance (only fires at breakpoint)
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
     // Handler for media query changes
     const handleMediaChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
 
-    // Modern browsers use addEventListener
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleMediaChange);
-    } else {
-      // Fallback for older browsers
-      window.addEventListener('resize', handleResize);
-    }
+    // All modern browsers support addEventListener on MediaQueryList
+    mediaQuery.addEventListener('change', handleMediaChange);
 
     return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handleMediaChange);
-      } else {
-        window.removeEventListener('resize', handleResize);
-      }
+      mediaQuery.removeEventListener('change', handleMediaChange);
     };
   }, []);
 
@@ -68,14 +55,10 @@ export function useIsTablet(): boolean {
 
     const handler = (e: MediaQueryListEvent) => setIsTablet(e.matches);
 
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handler);
-    }
+    mediaQuery.addEventListener('change', handler);
 
     return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', handler);
-      }
+      mediaQuery.removeEventListener('change', handler);
     };
   }, []);
 

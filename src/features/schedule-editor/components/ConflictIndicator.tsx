@@ -60,6 +60,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({ conflict, onClick 
 
   return (
     <span style={badgeStyle} onClick={onClick} title={conflict.message}>
+      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Fallback for unknown conflict types */}
       <span>{iconMap[conflict.type] ?? '⚠️'}</span>
       <span>{getConflictTypeLabel(conflict.type)}</span>
     </span>
@@ -166,11 +167,10 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
   }
 
   // =========================================================================
-  // Variant: Detailed (full list)
+  // Variant: Detailed (full list) - only remaining option
   // =========================================================================
 
-  if (variant === 'detailed') {
-    const containerStyle: React.CSSProperties = {
+  const containerStyle: React.CSSProperties = {
       display: 'flex',
       flexDirection: 'column',
       gap: spacing.sm,
@@ -218,10 +218,7 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
           </div>
         ))}
       </div>
-    );
-  }
-
-  return null;
+  );
 };
 
 // ============================================================================

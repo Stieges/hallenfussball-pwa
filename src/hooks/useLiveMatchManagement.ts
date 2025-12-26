@@ -123,7 +123,7 @@ export function useLiveMatchManagement({
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Record<string, LiveMatch>;
         return new Map(Object.entries(parsed));
       }
     } catch {
@@ -165,7 +165,7 @@ export function useLiveMatchManagement({
     const updateTimers = () => {
       setLiveMatches(prev => {
         const updated = new Map(prev);
-        let hasChanges = false;
+        let changesCount = 0;
 
         updated.forEach((match, matchId) => {
           if (match.status === 'RUNNING' && match.timerStartTime) {
@@ -178,11 +178,11 @@ export function useLiveMatchManagement({
               ...match,
               elapsedSeconds: totalElapsed,
             });
-            hasChanges = true;
+            changesCount++;
           }
         });
 
-        return hasChanges ? updated : prev;
+        return changesCount > 0 ? updated : prev;
       });
     };
 
@@ -262,7 +262,7 @@ export function useLiveMatchManagement({
       phaseLabel: matchData.label || (matchData.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       fieldId: `field-${matchData.field}`,
       scheduledKickoff: matchData.time,
-      durationSeconds: (tournamentRef.current.groupPhaseGameDuration ?? tournamentRef.current.gameDuration ?? 10) * 60,
+      durationSeconds: tournamentRef.current.groupPhaseGameDuration * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
       homeTeam: { id: homeId, name: homeName },
       awayTeam: { id: awayId, name: awayName },
@@ -339,7 +339,7 @@ export function useLiveMatchManagement({
         ...match,
         status: 'RUNNING' as MatchStatus,
         timerStartTime: new Date().toISOString(),
-        timerElapsedSeconds: match.elapsedSeconds ?? 0,
+        timerElapsedSeconds: match.elapsedSeconds,
         timerPausedAt: undefined,
         events: [...match.events, event],
       });
@@ -422,13 +422,11 @@ export function useLiveMatchManagement({
     if (match.playPhase === 'regular' || match.playPhase === undefined) {
       return match.homeScore === match.awayScore;
     }
-    if (match.playPhase === 'overtime' || match.playPhase === 'goldenGoal') {
-      // Overtime/Golden Goal ended in draw - need penalty shootout
-      const totalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
-      const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
-      return totalHomeScore === totalAwayScore;
-    }
-    return false;
+    // playPhase is 'overtime' | 'goldenGoal' at this point
+    // Overtime/Golden Goal ended in draw - need penalty shootout
+    const totalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
+    const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
+    return totalHomeScore === totalAwayScore;
   };
 
   /**
@@ -850,8 +848,8 @@ export function useLiveMatchManagement({
       } else {
         // Get score from the last remaining event
         const previousEvent = events[events.length - 1];
-        newHomeScore = previousEvent.scoreAfter.home ?? 0;
-        newAwayScore = previousEvent.scoreAfter.away ?? 0;
+        newHomeScore = previousEvent.scoreAfter.home;
+        newAwayScore = previousEvent.scoreAfter.away;
       }
 
       // BUG-CRIT-002 FIX: Also sync with tournament.matches
@@ -992,7 +990,7 @@ export function useLiveMatchManagement({
       phaseLabel: matchData.label || (matchData.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       fieldId: `field-${matchData.field}`,
       scheduledKickoff: matchData.time,
-      durationSeconds: (tournamentRef.current.groupPhaseGameDuration ?? tournamentRef.current.gameDuration ?? 10) * 60,
+      durationSeconds: tournamentRef.current.groupPhaseGameDuration * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
       homeTeam: { id: matchData.homeTeam, name: matchData.homeTeam },
       awayTeam: { id: matchData.awayTeam, name: matchData.awayTeam },

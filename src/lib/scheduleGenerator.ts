@@ -41,7 +41,7 @@ export function generateFullSchedule(
   locale: 'de' | 'en' = 'de'
 ): GeneratedSchedule {
   // Validierung
-  if (!tournament.teams || tournament.teams.length === 0) {
+  if (tournament.teams.length === 0) {
     throw new Error('Tournament must have at least one team')
   }
 
@@ -145,7 +145,7 @@ function generateMatches(
   const shouldGeneratePlayoffs =
     tournament.groupSystem === 'groupsAndFinals' &&
     ((tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
-      (tournament.finals && Object.values(tournament.finals).some(Boolean)))
+      Object.values(tournament.finals).some(Boolean))
 
   if (shouldGeneratePlayoffs) {
     finalMatches = generateFinalMatches(tournament, groupStageMatches, startTime)

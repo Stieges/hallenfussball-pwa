@@ -109,7 +109,7 @@ function calculateMatchElapsedSeconds(match: LiveMatch): number {
   }
 
   if (match.status === 'PAUSED' || !match.timerStartTime) {
-    return (match.timerElapsedSeconds ?? match.elapsedSeconds) ?? 0;
+    return match.timerElapsedSeconds ?? match.elapsedSeconds;
   }
 
   // RUNNING: Calculate from timestamp
@@ -138,7 +138,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       const stored = localStorage.getItem(storageKey);
       if (!stored) {return new Map();}
 
-      const parsed = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as Record<string, LiveMatch> | null;
       if (typeof parsed !== 'object' || parsed === null) {return new Map();}
 
       return new Map(Object.entries(parsed));
@@ -153,8 +153,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
    */
   const markAllGoalsAsSeen = useCallback((matches: Map<string, LiveMatch>) => {
     for (const [, match] of matches) {
-      const events = match.events ?? [];
-      for (const event of events) {
+      for (const event of match.events) {
         if (event.type === 'GOAL') {
           seenGoalIds.current.add(event.id);
         }
@@ -173,8 +172,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       // Only detect goals from RUNNING matches
       if (match.status !== 'RUNNING') {
         // Still mark events as seen to avoid triggering when match resumes
-        const events = match.events ?? [];
-        for (const event of events) {
+        for (const event of match.events) {
           if (event.type === 'GOAL') {
             seenGoalIds.current.add(event.id);
           }
@@ -182,7 +180,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
         continue;
       }
 
-      const events = match.events ?? [];
+      const events = match.events;
 
       // Find goal events we haven't seen yet
       for (const event of events) {

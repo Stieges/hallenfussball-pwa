@@ -41,16 +41,9 @@ export function validateAndParseTournamentImport(
   try {
     if (format === 'json') {
       return parseJSONTournament(content);
-    } else if (format === 'csv') {
-      return parseCSVTeamsToTournament(content);
-    } else {
-      errors.push({
-        code: 'INVALID_FORMAT',
-        field: 'format',
-        message: `Unbekanntes Format: ${format}`,
-      });
-      return { isValid: false, errors, warnings };
     }
+    // format === 'csv' - ImportFormat type only allows 'json' | 'csv'
+    return parseCSVTeamsToTournament(content);
   } catch (error) {
     errors.push({
       code: 'PARSE_ERROR',
@@ -174,7 +167,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
 
   // Determine number of groups
   const groups = new Set(teams.filter(t => t.group).map(t => t.group));
-  const numberOfGroups = groups.size ?? 1;
+  const numberOfGroups = groups.size || 1;
 
   // Parse location object
   const locationData = json.location as Record<string, unknown> | undefined;
@@ -222,7 +215,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
   const finalsConfigData = json.finalsConfig as Record<string, unknown> | undefined;
   const finalsConfig = finalsConfigData && typeof finalsConfigData === 'object'
     ? {
-        preset: (finalsConfigData.preset as FinalsPreset) ?? 'none',
+        preset: (finalsConfigData.preset as FinalsPreset | undefined) ?? 'none',
         parallelSemifinals: Boolean(finalsConfigData.parallelSemifinals),
         parallelQuarterfinals: Boolean(finalsConfigData.parallelQuarterfinals),
         parallelRoundOf16: Boolean(finalsConfigData.parallelRoundOf16),
@@ -244,7 +237,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
   const refereeData = json.refereeConfig as Record<string, unknown> | undefined;
   const refereeConfig = refereeData && typeof refereeData === 'object'
     ? {
-        mode: (refereeData.mode as RefereeMode) ?? 'none',
+        mode: (refereeData.mode as RefereeMode | undefined) ?? 'none',
         numberOfReferees: refereeData.numberOfReferees ? Number(refereeData.numberOfReferees) : undefined,
         maxConsecutiveMatches: refereeData.maxConsecutiveMatches ? Number(refereeData.maxConsecutiveMatches) : undefined,
         refereeNames: refereeData.refereeNames as Record<number, string> | undefined,
@@ -264,14 +257,14 @@ function parseJSONTournament(content: string): ImportValidationResult {
     externalSource,
 
     // Step 1: Sport & Type
-    sport: (json.sport as Tournament['sport']) ?? 'football',
-    tournamentType: (json.tournamentType as Tournament['tournamentType']) ?? 'classic',
+    sport: (json.sport as Tournament['sport'] | undefined) ?? 'football',
+    tournamentType: (json.tournamentType as Tournament['tournamentType'] | undefined) ?? 'classic',
 
     // Step 2: Mode & System
-    mode: (json.mode as Tournament['mode']) || 'classic',
+    mode: (json.mode as Tournament['mode'] | undefined) ?? 'classic',
     numberOfFields: json.numberOfFields ? Number(json.numberOfFields) : Math.max(1, ...matches.map(m => m.field)),
     numberOfTeams: teams.length,
-    groupSystem: (json.groupSystem as Tournament['groupSystem']) || (numberOfGroups > 1 ? 'groupsAndFinals' : 'roundRobin'),
+    groupSystem: (json.groupSystem as Tournament['groupSystem'] | undefined) ?? (numberOfGroups > 1 ? 'groupsAndFinals' : 'roundRobin'),
     numberOfGroups,
 
     // Timing - Group Phase
@@ -301,7 +294,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
     isKidsTournament: Boolean(json.isKidsTournament),
     hideScoresForPublic: Boolean(json.hideScoresForPublic),
     hideRankingsForPublic: Boolean(json.hideRankingsForPublic),
-    resultMode: (json.resultMode as Tournament['resultMode']) || 'goals',
+    resultMode: (json.resultMode as Tournament['resultMode'] | undefined) ?? 'goals',
 
     // Step 3: Metadata
     title: String(json.title),
@@ -406,7 +399,7 @@ export function parseCSVTeamsToTournament(content: string): ImportValidationResu
 
   // Determine groups
   const groups = new Set(teams.filter(t => t.group).map(t => t.group));
-  const numberOfGroups = groups.size ?? 1;
+  const numberOfGroups = groups.size || 1;
 
   // Create tournament with teams only (no matches)
   const tournament: Tournament = {
@@ -485,10 +478,12 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   const teamMatches = new Map<string, number[]>();
 
   matches.forEach((match, index) => {
-    if (!teamMatches.has(match.teamA)) {teamMatches.set(match.teamA, []);}
-    if (!teamMatches.has(match.teamB)) {teamMatches.set(match.teamB, []);}
-    teamMatches.get(match.teamA)!.push(index);
-    teamMatches.get(match.teamB)!.push(index);
+    const teamAMatches = teamMatches.get(match.teamA) ?? [];
+    const teamBMatches = teamMatches.get(match.teamB) ?? [];
+    teamAMatches.push(index);
+    teamBMatches.push(index);
+    teamMatches.set(match.teamA, teamAMatches);
+    teamMatches.set(match.teamB, teamBMatches);
   });
 
   // Check for back-to-back matches

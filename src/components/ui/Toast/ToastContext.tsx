@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Context pattern requires exporting hooks alongside provider */
 /**
  * ToastContext
  *

@@ -63,6 +63,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   const [dragOverMatch, setDragOverMatch] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true); // Collapsed by default
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
   if (!refereeConfig || refereeConfig.mode === 'none') {
     return null;
   }

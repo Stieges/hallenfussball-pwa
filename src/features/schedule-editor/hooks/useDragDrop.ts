@@ -110,6 +110,7 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     setActiveId(null);
     setOverId(null);
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Defensive runtime check
     if (!over || !active) {return;}
     if (active.id === over.id) {return;}
 

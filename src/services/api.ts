@@ -127,9 +127,10 @@ function localStorageGetTournaments(): Tournament[] {
 
     const tournaments = JSON.parse(stored) as Tournament[];
 
-    // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder
+    // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder (legacy localStorage data)
     return tournaments.map(t => ({
       ...t,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy data may lack status field
       status: t.status ?? 'published',
       refereeConfig: t.refereeConfig ?? { mode: 'none' },
       isExternal: t.isExternal ?? false,
@@ -142,7 +143,7 @@ function localStorageGetTournaments(): Tournament[] {
 
 function localStorageGetTournamentById(id: string): Tournament | null {
   const tournaments = localStorageGetTournaments();
-  return tournaments.find(t => t.id === id) || null;
+  return tournaments.find(t => t.id === id) ?? null;
 }
 
 function localStorageSaveTournament(tournament: Tournament): Tournament {

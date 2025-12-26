@@ -102,7 +102,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
       prev.map(g => {
         if (g.id !== groupId) {return g;}
 
-        const currentAllowed = g.allowedFieldIds || fields.map(f => f.id);
+        const currentAllowed = g.allowedFieldIds ?? fields.map(f => f.id);
         const isCurrentlyAllowed = currentAllowed.includes(fieldId);
 
         // Mindestens ein Feld muss erlaubt bleiben
@@ -129,7 +129,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
     const warnings: string[] = [];
 
     groups.forEach(group => {
-      const allowedFields = group.allowedFieldIds || fields.map(f => f.id);
+      const allowedFields = group.allowedFieldIds ?? fields.map(f => f.id);
       if (allowedFields.length === 1 && (formData.numberOfTeams ?? 0) > 4) {
         const groupName = group.customName ?? `Gruppe ${group.id}`;
         warnings.push(`${groupName} hat nur 1 Feld - bei vielen Teams kann es eng werden`);
@@ -271,7 +271,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                     <Input
                       placeholder={`z.B. Halle Nord`}
                       value={field.customName ?? ''}
-                      onChange={(value) => updateField(field.id, { customName: value ?? undefined })}
+                      onChange={(value) => updateField(field.id, { customName: value || undefined })}
                       error={hasError}
                     />
                   </div>
@@ -368,7 +368,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                       <Input
                         placeholder={`z.B. Löwen`}
                         value={group.customName ?? ''}
-                        onChange={(value) => updateGroup(group.id, { customName: value ?? undefined })}
+                        onChange={(value) => updateGroup(group.id, { customName: value || undefined })}
                         error={hasError}
                       />
                     </div>
@@ -443,7 +443,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
 
             {/* Rows */}
             {groups.map((group, index) => {
-              const allowedFields = group.allowedFieldIds || fields.map(f => f.id);
+              const allowedFields = group.allowedFieldIds ?? fields.map(f => f.id);
               const isEvenRow = index % 2 === 0;
 
               return (

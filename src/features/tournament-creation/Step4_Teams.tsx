@@ -246,12 +246,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     <span className={styles.groupLabel}>Gruppe:</span>
                     <select
                       value={team.group ?? ''}
-                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value ?? undefined })}
+                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
                       className={styles.groupSelect}
                       aria-label={`Gruppe für ${team.name}`}
                     >
                       <option value="">Keine Gruppe</option>
-                      {(formData.groups || groupLabels.map(id => ({ id }))).map(group => (
+                      {(formData.groups ?? groupLabels.map(id => ({ id }))).map(group => (
                         <option key={group.id} value={group.id}>
                           {getGroupDisplayName(group)}
                         </option>

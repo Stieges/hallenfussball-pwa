@@ -134,7 +134,7 @@ export function useMatchConflicts(
 
     for (const conflict of conflicts) {
       if (conflict.severity === 'error') {errors++;}
-      else if (conflict.severity === 'warning') {warnings++;}
+      else {warnings++;} // 'warning' is the only remaining option
     }
 
     return { errorCount: errors, warningCount: warnings };

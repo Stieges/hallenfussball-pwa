@@ -149,7 +149,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   const [step, setStep] = useState(initialStep);
   const [formData, setFormData] = useState<Partial<Tournament>>(
-    existingTournament || getDefaultFormData()
+    existingTournament ?? getDefaultFormData()
   );
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [generatedSchedule, setGeneratedSchedule] = useState<ReturnType<typeof generateFullSchedule> | null>(null);
@@ -167,7 +167,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   // Use provided onSave or fallback to default saveTournament
-  const saveTournament = onSave || defaultSaveTournament;
+  const saveTournament = onSave ?? defaultSaveTournament;
 
   // TOUR-EDIT-STRUCTURE: Check if tournament has results (blocks structure changes)
   const hasResults = useMemo(() => {
@@ -222,7 +222,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       // When switching to groupsAndFinals, apply sport-specific default finals preset and tiebreaker
       if (field === 'groupSystem' && value === 'groupsAndFinals') {
-        const sportConfig = getSportConfig(prev.sportId || DEFAULT_SPORT_ID);
+        const sportConfig = getSportConfig(prev.sportId ?? DEFAULT_SPORT_ID);
         updated.finalsConfig = {
           ...prev.finalsConfig,
           preset: sportConfig.defaults.defaultFinalsPreset,
@@ -256,12 +256,12 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   }, []);
 
   // Create draft tournament object from current form data
-  const createDraftTournament = (): Tournament => {
+  const createDraftTournament = useCallback((): Tournament => {
     return {
       id: formData.id || existingTournament?.id || generateTournamentId(),
       status: 'draft',
       sport: formData.sport ?? 'football',
-      sportId: formData.sportId || DEFAULT_SPORT_ID,
+      sportId: formData.sportId ?? DEFAULT_SPORT_ID,
       tournamentType: formData.tournamentType ?? 'classic',
       mode: formData.mode ?? 'classic',
       numberOfFields: formData.numberOfFields ?? 1,
@@ -306,7 +306,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       updatedAt: new Date().toISOString(),
       lastVisitedStep: step, // Save current step for wizard restoration
     };
-  };
+  }, [formData, existingTournament, step]);
 
   // Helper function to save as draft
   // IMPORTANT: Always use defaultSaveTournament for autosave, not saveTournament!
@@ -450,13 +450,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   const removeTeam = (id: string) => {
-    updateForm('teams', formData.teams?.filter((t) => t.id !== id) || []);
+    updateForm('teams', formData.teams?.filter((t) => t.id !== id) ?? []);
   };
 
   const updateTeam = (id: string, updates: Partial<Tournament['teams'][0]>) => {
     updateForm(
       'teams',
-      formData.teams?.map((t) => (t.id === id ? { ...t, ...updates } : t)) || []
+      formData.teams?.map((t) => (t.id === id ? { ...t, ...updates } : t)) ?? []
     );
   };
 
@@ -729,6 +729,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Clear errors for target step
     setStepErrors(prev => {
       const updated = { ...prev };
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- targetStep is a controlled number, not user input
       delete updated[targetStep];
       return updated;
     });

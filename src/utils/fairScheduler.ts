@@ -144,6 +144,7 @@ function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] 
     const teamA = teams[home - 1];
     const teamB = teams[away - 1];
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
     if (teamA && teamB) {
       pairings.push({ teamA, teamB });
     }
@@ -702,6 +703,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
       maxRest,
       avgRest,
       restVariance,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Map.get returns any due to generic instantiation
       fieldDistribution: teamFieldCounts.get(teamId) ?? new Map(),
       homeCount: homeAway.home,
       awayCount: homeAway.away,
@@ -713,7 +715,7 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
   const globalAvgRest = globalCount > 0 ? globalAvgSum / globalCount : 0;
   const totalVariance = teamStats.reduce((sum, stat) => {
     return sum + Math.pow(stat.avgRest - globalAvgRest, 2);
-  }, 0) / (teamStats.length ?? 1);
+  }, 0) / (teamStats.length || 1);
 
   return {
     teamStats,

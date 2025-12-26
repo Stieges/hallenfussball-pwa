@@ -231,7 +231,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
 
   // Current values
   const currentReferee = match.referee;
-  const currentField = match.field ?? 1;
+  const currentField = match.field;
 
   // Check if current values have conflicts
   const currentRefereeOption = refereeOptions.find(o => o.value === currentReferee);

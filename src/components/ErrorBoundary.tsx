@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Error boundary with fallback component */
 import React, { Component, ReactNode } from 'react';
 import { borderRadius, colors, fontSizes, fontWeights } from '../design-tokens';
 interface ErrorBoundaryProps {

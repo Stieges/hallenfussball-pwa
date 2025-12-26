@@ -8,7 +8,7 @@ function validateConfiguration(formData: Partial<Tournament>) {
   const teams = formData.numberOfTeams || 4;
   const fields = formData.numberOfFields || 1;
   const groups = formData.numberOfGroups || 2;
-  const groupSystem = formData.groupSystem || 'roundRobin';
+  const groupSystem = formData.groupSystem ?? 'roundRobin';
   const gameDuration = formData.groupPhaseGameDuration ?? 10;
   const breakDuration = formData.groupPhaseBreakDuration ?? 2;
 

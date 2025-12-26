@@ -60,6 +60,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments ?? {}) };
 
     if (refereeNumber === null) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
       delete manualAssignments[matchId];
     } else {
       manualAssignments[matchId] = refereeNumber;
@@ -325,6 +326,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                     checked={currentTournament.finalsConfig.parallelSemifinals ?? true}
                     onChange={(e) => {
                       handleFinalsConfigChange({
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Checked in parent conditional
                         ...currentTournament.finalsConfig!,
                         parallelSemifinals: e.target.checked,
                       });
@@ -343,6 +345,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                       checked={currentTournament.finalsConfig.parallelQuarterfinals ?? true}
                       onChange={(e) => {
                         handleFinalsConfigChange({
+                          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Checked in parent conditional
                           ...currentTournament.finalsConfig!,
                           parallelQuarterfinals: e.target.checked,
                         });
@@ -381,7 +384,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <Button variant="secondary" onClick={onEdit}>
             Bearbeiten
           </Button>
-          <Button variant="secondary" onClick={handleExportPDF}>
+          <Button variant="secondary" onClick={() => void handleExportPDF()}>
             PDF Exportieren
           </Button>
           <Button

@@ -150,7 +150,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       const liveMatch = liveMatches.get(m.id);
       return liveMatch && liveMatch.status !== 'FINISHED';
     });
-    return runningMatch || fieldMatches.find((m) =>
+    return runningMatch ?? fieldMatches.find((m) =>
       m.scoreA === undefined || m.scoreB === undefined
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
@@ -170,6 +170,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [fieldMatches]);
 
   const lastFinishedMatch = useMemo(() =>
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
     lastFinishedMatchData ? {
       match: toMatchSummary(lastFinishedMatchData),
       homeScore: lastFinishedMatchData.scoreA ?? 0,
@@ -252,6 +253,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
     if (!lastFinishedMatchData) {return;}
     setSelectedMatchId(lastFinishedMatchData.id);
     handleReopenMatch(lastFinishedMatchData);
@@ -291,7 +293,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <select
           className={styles.matchSelect}
           value={selectedMatchId ?? ''}
-          onChange={(e) => handleMatchSelectionChange(e.target.value ?? null)}
+          onChange={(e) => void handleMatchSelectionChange(e.target.value || null)}
         >
           <option value="">Automatisch (nächstes Spiel)</option>
           {fieldMatches.map(match => (
@@ -312,7 +314,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           lastFinishedMatch={lastFinishedMatch}
           upcomingMatches={upcomingMatches}
           highlightNextMatchMinutesBefore={5}
-          onStart={handleStart}
+          onStart={(matchId) => void handleStart(matchId)}
           onPause={handlePause}
           onResume={handleResume}
           onFinish={handleFinishAndReset}

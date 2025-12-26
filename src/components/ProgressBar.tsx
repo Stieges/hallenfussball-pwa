@@ -24,7 +24,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   const hasStepErrors = (stepIndex: number): boolean => {
-    const errors = stepErrors?.[stepIndex + 1] || [];
+    const errors = stepErrors?.[stepIndex + 1] ?? [];
     return errors.length > 0;
   };
 

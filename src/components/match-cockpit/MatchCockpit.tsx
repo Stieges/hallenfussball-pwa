@@ -230,6 +230,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   const showRemainingTimeWarning =
     remainingMinutes !== null &&
     remainingMinutes <= highlightNextMatchMinutesBefore &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: upcomingMatches[0] can be undefined
     nextMatch &&
     !isPhaseChange;
 
@@ -243,7 +244,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
         </div>
         <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusChip
-            status={currentMatch?.status || 'NOT_STARTED'}
+            status={currentMatch?.status ?? 'NOT_STARTED'}
             phaseLabel={currentMatch?.phaseLabel ?? ''}
           />
           {/* Show warning based on remaining time in current match (not scheduled time) */}

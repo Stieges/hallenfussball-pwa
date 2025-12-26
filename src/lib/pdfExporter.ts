@@ -11,7 +11,7 @@
  */
 
 import jsPDF from 'jspdf';
-import autoTable, { RowInput, CellInput } from 'jspdf-autotable';
+import autoTable, { RowInput, CellInput, Styles } from 'jspdf-autotable';
 import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
 import { Standing, RefereeConfig } from '../types/tournament';
 import { getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
@@ -499,8 +499,8 @@ function renderParticipants(
     const leftGroup = groups[i];
     const rightGroup = i + 1 < groups.length ? groups[i + 1] : null;
 
-    const leftTeams = teamsByGroup.get(leftGroup)!;
-    const rightTeams = rightGroup ? teamsByGroup.get(rightGroup)! : [];
+    const leftTeams = teamsByGroup.get(leftGroup) ?? [];
+    const rightTeams = rightGroup ? (teamsByGroup.get(rightGroup) ?? []) : [];
 
     // Calculate box heights
     const leftBoxHeight = titleHeight + leftTeams.length * teamLineHeight + boxPadding * 2;
@@ -653,7 +653,7 @@ function renderGroupStage(
     },
     columnStyles: (() => {
       let colIndex = 0;
-      const styles: any = {};
+      const styles: Record<number, Partial<Styles>> = {};
 
       styles[colIndex++] = { halign: 'center', cellWidth: 10 }; // Nr
       styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // Zeit
@@ -670,7 +670,7 @@ function renderGroupStage(
     })(),
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
+  yPos = doc.lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
   return yPos;
 }
 
@@ -858,7 +858,7 @@ function renderFinalsTable(
         },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
+  yPos = doc.lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
   return yPos;
 }
 
@@ -877,7 +877,7 @@ function renderGroupStandings(
   if (groups.length === 0) {return yPos;}
 
   // Standings-Quelle
-  const currentStandings = standings || schedule.initialStandings;
+  const currentStandings = standings ?? schedule.initialStandings;
 
   groups.forEach(group => {
     // Platz für Titel + Tabelle
@@ -963,7 +963,7 @@ function renderGroupStandings(
       },
     });
 
-    yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap + 4;
+    yPos = doc.lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap + 4;
   });
 
   yPos += PDF_STYLE.spacing.sectionGap;
@@ -991,7 +991,7 @@ function renderFinalRanking(
   doc.text(t.finalRanking, PDF_STYLE.spacing.pageMargin.left, yPos);
   yPos += 2;
 
-  const currentStandings = standings || schedule.initialStandings;
+  const currentStandings = standings ?? schedule.initialStandings;
 
   // Sort all teams by points, goal difference, etc.
   const finalStandings = [...currentStandings].sort(
@@ -1065,7 +1065,7 @@ function renderFinalRanking(
     },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
+  yPos = doc.lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
 
   return yPos;
 }

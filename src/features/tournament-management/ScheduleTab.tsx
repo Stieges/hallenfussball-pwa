@@ -26,6 +26,10 @@ import { CorrectionReason } from '../../types/userProfile';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../utils/playoffResolver';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { detectAllConflicts, ScheduleConflict, ConflictDetectionConfig } from '../schedule-editor';
+import { LiveMatch } from '../../components/match-cockpit/MatchCockpit';
+
+// Type for stored live matches in localStorage
+type StoredLiveMatches = Record<string, LiveMatch>;
 
 // View mode for schedule display
 type ScheduleViewMode = 'table' | 'grid';
@@ -265,12 +269,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
       if (stored) {
-        const liveMatches = JSON.parse(stored);
-        if (liveMatches[matchId]?.status === 'FINISHED') {
+        const liveMatches = JSON.parse(stored) as StoredLiveMatches;
+        if (liveMatches[matchId].status === 'FINISHED') {
           return true;
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore parse errors
     }
 
@@ -281,7 +285,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Helper: Resolve team ID to team name
   const getTeamName = (teamId: string): string => {
     const team = tournament.teams.find(t => t.id === teamId);
-    return team?.name || teamId; // Fallback to ID if team not found
+    return team?.name || teamId; // || is intentional: empty name should also fallback
   };
 
   // MON-LIVE-INDICATOR-01: Get running match IDs from localStorage
@@ -289,13 +293,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
       if (stored) {
-        const liveMatches = JSON.parse(stored);
+        const liveMatches = JSON.parse(stored) as StoredLiveMatches;
         const runningIds = Object.keys(liveMatches).filter(
-          matchId => liveMatches[matchId]?.status === 'RUNNING'
+          id => liveMatches[id].status === 'RUNNING'
         );
         return new Set(runningIds);
       }
-    } catch (e) {
+    } catch {
       // Ignore parse errors
     }
     return new Set();
@@ -428,11 +432,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       }
       const manualAssignments = { ...updatedTournament.refereeConfig.manualAssignments };
 
-      for (const [matchId, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
+      for (const [id, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
         if (refereeNumber === null) {
-          delete manualAssignments[matchId];
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
+          delete manualAssignments[id];
         } else {
-          manualAssignments[matchId] = refereeNumber;
+          manualAssignments[id] = refereeNumber;
         }
       }
 
@@ -444,6 +449,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // Also update matches directly
       updatedTournament.matches = updatedTournament.matches.map(match => {
         const newRef = pendingChanges.refereeAssignments[match.id];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newRef can be null (deletion marker)
         if (newRef !== undefined) {
           return { ...match, referee: newRef ?? undefined };
         }
@@ -456,13 +462,14 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       if (!updatedTournament.fieldAssignments) {
         updatedTournament.fieldAssignments = {};
       }
-      for (const [matchId, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
-        updatedTournament.fieldAssignments[matchId] = fieldNumber;
+      for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
+        updatedTournament.fieldAssignments[id] = fieldNumber;
       }
 
       // Also update matches directly
       updatedTournament.matches = updatedTournament.matches.map(match => {
         const newField = pendingChanges.fieldAssignments[match.id];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: object indexing can return undefined
         if (newField !== undefined) {
           return { ...match, field: newField };
         }
@@ -474,10 +481,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
     // Check for conflicts BEFORE saving
     const conflictConfig: ConflictDetectionConfig = {
-      matchDurationMinutes: tournament.groupPhaseGameDuration ?? 10,
+      matchDurationMinutes: tournament.groupPhaseGameDuration,
       minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,
       checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
-      checkFieldConflicts: (tournament.numberOfFields ?? 1) > 1,
+      checkFieldConflicts: tournament.numberOfFields > 1,
     };
     const conflicts = detectAllConflicts(
       updatedTournament.matches,
@@ -508,11 +515,12 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       }
       const manualAssignments = { ...updatedTournament.refereeConfig.manualAssignments };
 
-      for (const [matchId, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
+      for (const [id, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
         if (refereeNumber === null) {
-          delete manualAssignments[matchId];
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
+          delete manualAssignments[id];
         } else {
-          manualAssignments[matchId] = refereeNumber;
+          manualAssignments[id] = refereeNumber;
         }
       }
 
@@ -523,6 +531,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
       updatedTournament.matches = updatedTournament.matches.map(match => {
         const newRef = pendingChanges.refereeAssignments[match.id];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newRef can be null (deletion marker)
         if (newRef !== undefined) {
           return { ...match, referee: newRef ?? undefined };
         }
@@ -535,12 +544,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       if (!updatedTournament.fieldAssignments) {
         updatedTournament.fieldAssignments = {};
       }
-      for (const [matchId, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
-        updatedTournament.fieldAssignments[matchId] = fieldNumber;
+      for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
+        updatedTournament.fieldAssignments[id] = fieldNumber;
       }
 
       updatedTournament.matches = updatedTournament.matches.map(match => {
         const newField = pendingChanges.fieldAssignments[match.id];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newField can be undefined at runtime
         if (newField !== undefined) {
           return { ...match, field: newField };
         }
@@ -594,7 +604,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       newScoreB,
       reasonType: reason as CorrectionReasonType,
       note,
-      userName: profile.name ?? 'Unbekannt',
+      userName: profile.name,
     };
 
     // Log correction to console
@@ -634,10 +644,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     const liveMatchesData = localStorage.getItem(STORAGE_KEYS.liveMatches(tournament.id));
     if (liveMatchesData) {
       try {
-        const liveMatches = JSON.parse(liveMatchesData);
+        const liveMatches = JSON.parse(liveMatchesData) as StoredLiveMatches;
         const liveMatch = liveMatches[matchId];
 
-        if (liveMatch && liveMatch.status === 'RUNNING') {
+        if (liveMatch.status === 'RUNNING') {
           const confirmEdit = window.confirm(
             '⚠️ WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\n' +
             'Wenn Sie hier das Ergebnis ändern, wird es die Live-Verwaltung überschreiben.\n\n' +
@@ -703,6 +713,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       const manualAssignments = { ...(updatedTournament.refereeConfig.manualAssignments ?? {}) };
 
       if (refereeNumber === null) {
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
         delete manualAssignments[matchId];
       } else {
         manualAssignments[matchId] = refereeNumber;

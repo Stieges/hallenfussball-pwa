@@ -14,7 +14,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const [showExtended, setShowExtended] = useState(false);
 
   // Memoize to prevent useEffect from re-running on every render
-  const contactInfo: ContactInfo = useMemo(() => value ?? {}, [value]);
+  const contactInfo: ContactInfo = useMemo(() => value, [value]);
 
   // Auto-open wenn Daten vorhanden
   useEffect(() => {
@@ -31,7 +31,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   const handleFieldChange = (field: keyof ContactInfo, fieldValue: string) => {
     onChange({
       ...contactInfo,
-      [field]: fieldValue ?? undefined, // Remove empty strings
+      [field]: fieldValue || undefined, // Remove empty strings
     });
   };
 

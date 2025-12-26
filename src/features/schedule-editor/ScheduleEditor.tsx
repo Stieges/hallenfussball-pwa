@@ -200,7 +200,7 @@ function groupMatchesByTimeSlot(
     // Find matches for this time
     for (const match of matches) {
       if (formatTime(match.scheduledTime) === time) {
-        const fieldId = match.field ?? 1;
+        const fieldId = match.field;
         fieldsMap.set(fieldId, match);
       }
     }
@@ -307,8 +307,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     if (phase === 'all') {return tournament.matches;}
     return tournament.matches.filter(m => {
       if (phase === 'group') {return !m.isFinal;}
-      if (phase === 'finals') {return m.isFinal;}
-      return true;
+      // phase === 'finals' is the only remaining option
+      return Boolean(m.isFinal);
     });
   }, [tournament.matches, phase]);
 
@@ -330,13 +330,13 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   });
 
   // Determine if we're in edit mode (external takes precedence)
-  const isEditing = externalEditMode !== undefined ? externalEditMode : state.mode === 'edit';
+  const isEditing = externalEditMode ?? (state.mode === 'edit');
 
   // Conflict detection
   const conflictResult = useMatchConflicts({
     matches: tournament.matches,
     teams: tournament.teams,
-    matchDurationMinutes: tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 10,
+    matchDurationMinutes: tournament.groupPhaseGameDuration,
     minBreakMinutes: tournament.groupPhaseBreakDuration || 2,
     checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
     checkFieldConflicts: true,
@@ -355,7 +355,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       if (!sourceMatch) {return;}
 
       const sourceTime = sourceMatch.scheduledTime;
-      const sourceField = sourceMatch.field ?? 1;
+      const sourceField = sourceMatch.field;
 
       // Check if target slot already has a match (for swapping)
       const targetMatch = tournament.matches.find(
@@ -536,7 +536,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
           <EditorToolbar
             mode={state.mode}
             onToggleMode={handleToggleMode}
-            onSave={handleSave}
+            onSave={() => void handleSave()}
             onDiscard={discardChanges}
             onUndo={handleUndo}
             onRedo={handleRedo}

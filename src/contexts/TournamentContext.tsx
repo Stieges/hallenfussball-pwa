@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Context pattern requires exporting hooks alongside provider */
 import { createContext, useContext, useReducer, useCallback, ReactNode, useMemo } from 'react'
 import { Tournament, Match, Team } from '../types/tournament'
 

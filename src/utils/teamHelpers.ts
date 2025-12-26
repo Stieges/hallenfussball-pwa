@@ -15,9 +15,7 @@ import { Match, Team, Tournament } from '../types/tournament';
 export function matchHasResult(match: Match): boolean {
   return (
     match.scoreA !== undefined &&
-    match.scoreB !== undefined &&
-    match.scoreA !== null &&
-    match.scoreB !== null
+    match.scoreB !== undefined
   );
 }
 

@@ -411,11 +411,13 @@ export function balanceRefereeWorkloads(
 
   // Transfer matches from overloaded to underloaded
   for (const overRef of overloaded) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Checked via overloaded array population
     const overWorkload = workloads.get(overRef)!;
 
     for (const underRef of underloaded) {
       if (overWorkload.assignedMatches <= targetPerRef) {break;}
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Checked via underloaded array population
       const underWorkload = workloads.get(underRef)!;
       if (underWorkload.assignedMatches >= targetPerRef) {continue;}
 
@@ -529,7 +531,7 @@ export function redistributeFields(
   // For each time slot, distribute matches across fields
   for (const [, matchesInSlot] of matchesByTime) {
     // Sort by original field to maintain some consistency
-    matchesInSlot.sort((a, b) => (a.field ?? 1) - (b.field ?? 1));
+    matchesInSlot.sort((a, b) => a.field - b.field);
 
     // Assign fields 1, 2, 3, ... in order
     matchesInSlot.forEach((match, index) => {

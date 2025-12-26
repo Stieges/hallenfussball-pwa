@@ -270,7 +270,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             </div>
           )}
 
-          {tournament.placementLogic && tournament.placementLogic.length > 0 && (
+          {tournament.placementLogic.length > 0 && (
             <div style={infoItemStyle}>
               <dt style={labelStyle}>Platzierung</dt>
               <dd style={{

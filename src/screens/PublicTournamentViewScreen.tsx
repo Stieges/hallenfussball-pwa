@@ -41,6 +41,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
           return;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
         const tournaments: Tournament[] = JSON.parse(stored);
         const found = tournaments.find((t) => t.id === tournamentId);
 
@@ -61,7 +62,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
             const teamsInGroup = found.teams.filter((t) => t.group === group);
             const groupStandings = calculateStandings(
               teamsInGroup,
-              found.matches || [],
+              found.matches,
               found,
               group
             );
@@ -208,7 +209,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
           <ScheduleDisplay
             schedule={filteredSchedule}
             currentStandings={filteredStandings}
-            currentMatches={tournament.matches || []}
+            currentMatches={tournament.matches}
             editable={false}
           />
         </Card>

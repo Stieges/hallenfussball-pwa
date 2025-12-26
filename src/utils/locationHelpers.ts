@@ -113,6 +113,7 @@ export function getUniqueLocations(tournaments: Tournament[]): LocationDetails[]
   tournaments.forEach(tournament => {
     const { location } = tournament;
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy data
     if (!location) {return;}
 
     const key = location.name.toLowerCase();
@@ -170,6 +171,7 @@ export function migrateLocationsToStructured(tournaments: Tournament[]): Tournam
     const { location } = tournament;
 
     // Bereits neues Format? → Skip
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy data migration
     if (typeof location === 'object' && location !== null) {
       return tournament;
     }

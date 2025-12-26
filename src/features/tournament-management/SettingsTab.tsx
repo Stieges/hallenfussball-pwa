@@ -64,17 +64,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   // Dirty-State berechnen
   const isDirty = useMemo(() => {
     const originalData = {
-      title: tournament.title ?? '',
+      title: tournament.title,
       organizer: tournament.organizer ?? '',
-      ageClass: tournament.ageClass ?? DEFAULT_VALUES.ageClass,
-      locationName: tournament.location.name ?? '',
+      ageClass: tournament.ageClass,
+      locationName: tournament.location.name,
       locationCity: tournament.location.city ?? '',
       locationStreet: tournament.location.street ?? '',
       contactName: tournament.contactInfo?.name ?? '',
       contactPhone: tournament.contactInfo?.phone ?? '',
       contactEmail: tournament.contactInfo?.email ?? '',
-      startDate: (tournament.startDate ?? tournament.date) ?? '',
-      startTime: (tournament.startTime ?? tournament.timeSlot) ?? '',
+      startDate: tournament.startDate ?? tournament.date,
+      startTime: tournament.startTime ?? tournament.timeSlot,
     };
 
     const currentData = {
@@ -104,8 +104,9 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = 'Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?';
-        return e.returnValue;
+        const message = 'Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?';
+        e.returnValue = message;
+        return message;
       }
     };
 
@@ -357,7 +358,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 label="Altersklasse"
                 value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
                 onChange={(v) => handleUpdate('ageClass', v)}
-                options={getAgeClassOptions(tournament.sport ?? 'football')}
+                options={getAgeClassOptions(tournament.sport)}
                 style={{ marginTop: '16px' }}
               />
             </Card>

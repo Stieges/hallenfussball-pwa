@@ -61,7 +61,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   };
 
   // Get sport config for defaults
-  const sportConfig = getSportConfig(formData.sportId || DEFAULT_SPORT_ID);
+  const sportConfig = getSportConfig(formData.sportId ?? DEFAULT_SPORT_ID);
   const currentTiebreaker = formData.finalsConfig?.tiebreaker ?? sportConfig.rules.defaultTiebreaker ?? 'shootout';
   const currentDuration = formData.finalsConfig?.tiebreakerDuration ?? sportConfig.rules.defaultTiebreakerDuration ?? 5;
 
@@ -207,7 +207,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
       )}
 
       {/* Parallelization Options */}
-      {currentPreset && ['top-4', 'top-8', 'top-16', 'all-places'].includes(currentPreset) && numberOfFields > 1 && (
+      {['top-4', 'top-8', 'top-16', 'all-places'].includes(currentPreset) && numberOfFields > 1 && (
         <div style={{
           marginTop: '20px',
           padding: '16px',
@@ -273,7 +273,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
       )}
 
       {/* Tiebreaker Options - only show when finals are enabled */}
-      {currentPreset && currentPreset !== 'none' && (
+      {currentPreset !== 'none' && (
         <div style={{
           marginTop: '20px',
           padding: '16px',

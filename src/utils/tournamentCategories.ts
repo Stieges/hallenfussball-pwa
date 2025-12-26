@@ -68,6 +68,7 @@ export function isTournamentCompleted(tournament: Tournament): boolean {
   }
 
   // No matches = not completed
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy data
   if (!tournament.matches || tournament.matches.length === 0) {
     return false;
   }

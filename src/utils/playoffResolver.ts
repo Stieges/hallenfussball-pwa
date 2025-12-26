@@ -22,7 +22,7 @@ export interface PlayoffResolutionResult {
  * Check if all group phase matches are completed
  */
 export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => {
-  const groupMatches = (tournament.matches ?? []).filter(
+  const groupMatches = tournament.matches.filter(
     (m) => !m.isFinal && m.group !== undefined
   );
 
@@ -39,7 +39,7 @@ export const areAllGroupMatchesCompleted = (tournament: Tournament): boolean => 
  * Check if playoff matches need resolution (have placeholder team references)
  */
 export const needsPlayoffResolution = (tournament: Tournament): boolean => {
-  const playoffMatches = (tournament.matches ?? []).filter((m) => m.isFinal);
+  const playoffMatches = tournament.matches.filter((m) => m.isFinal);
 
   return playoffMatches.some(
     (match) =>
@@ -58,7 +58,7 @@ export const needsPlayoffReResolution = (tournament: Tournament): boolean => {
     return false;
   }
 
-  const playoffMatches = (tournament.matches ?? []).filter((m) => m.isFinal);
+  const playoffMatches = tournament.matches.filter((m) => m.isFinal);
 
   // Only check matches with resolved team IDs (not placeholders)
   const groupBasedPlayoffs = playoffMatches.filter((match) => {
@@ -217,7 +217,7 @@ export const resolvePlayoffPairings = (
   const updatedMatchIds: string[] = [];
   let updatedCount = 0;
 
-  const updatedMatches = (tournament.matches || []).map((match) => {
+  const updatedMatches = tournament.matches.map((match) => {
     if (!match.isFinal) {
       return match; // Skip group matches
     }
@@ -278,10 +278,9 @@ const calculateAllGroupStandings = (tournament: Tournament) => {
 
   for (const group of groups) {
     const teamsInGroup = tournament.teams.filter((t) => t.group === group);
-    const groupMatches = tournament.matches || [];
     const groupStandings = calculateStandings(
       teamsInGroup,
-      groupMatches,
+      tournament.matches,
       tournament,
       group
     );
@@ -346,6 +345,7 @@ const resolvePlaceholder = (
 
   let standings: { teamId: string; position: number }[] | undefined;
   for (const key of possibleKeys) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: object indexing can return undefined
     if (groupStandings[key]) {
       standings = groupStandings[key];
       break;
@@ -450,7 +450,7 @@ export const reResolvePlayoffPairings = (
   const updatedMatchIds: string[] = [];
   let updatedCount = 0;
 
-  const updatedMatches = (tournament.matches || []).map((match) => {
+  const updatedMatches = tournament.matches.map((match) => {
     if (!match.isFinal) {
       return match;
     }
@@ -576,7 +576,7 @@ export const resolveBracketAfterPlayoffMatch = (
   const updatedMatchIds: string[] = [];
   let updatedCount = 0;
 
-  const updatedMatches = (tournament.matches || []).map((match) => {
+  const updatedMatches = tournament.matches.map((match) => {
     if (!match.isFinal) {
       return match;
     }

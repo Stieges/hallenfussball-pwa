@@ -31,7 +31,16 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn', // Gradually remove any types
     '@typescript-eslint/explicit-function-return-type': 'off', // Too noisy for React components
     '@typescript-eslint/no-non-null-assertion': 'warn', // Existing codebase uses this
-    '@typescript-eslint/prefer-nullish-coalescing': 'warn', // Many existing uses of ||
+    // prefer-nullish-coalescing: Allow || for primitives where empty string/0 should also trigger fallback
+    '@typescript-eslint/prefer-nullish-coalescing': ['warn', {
+      ignorePrimitives: {
+        string: true,  // Allow: name || 'Unknown' (empty string should fallback)
+        number: true,  // Allow: count || 0 (though rare, can be intentional)
+        boolean: true, // Allow: flag || false
+      },
+      ignoreConditionalTests: true, // Default in v8+
+      ignoreMixedLogicalExpressions: true, // Allow mixed && and ||
+    }],
     '@typescript-eslint/prefer-optional-chain': 'error',
     '@typescript-eslint/strict-boolean-expressions': 'off', // Too strict for React patterns
     '@typescript-eslint/no-floating-promises': 'warn', // Needs gradual fixes
@@ -65,4 +74,23 @@ module.exports = {
     '@typescript-eslint/no-useless-constructor': 'warn',
     '@typescript-eslint/consistent-type-definitions': 'off',
   },
+  overrides: [
+    {
+      // Test files: Relax strict rules that reduce test readability
+      files: ['**/*.test.ts', '**/*.test.tsx', '**/__tests__/**/*.ts', '**/__tests__/**/*.tsx'],
+      rules: {
+        // Allow non-null assertions in tests - they make test expectations clearer
+        '@typescript-eslint/no-non-null-assertion': 'off',
+        // Allow explicit any in test mocks and fixtures
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        // Allow unnecessary conditions in test assertions
+        '@typescript-eslint/no-unnecessary-condition': 'off',
+      },
+    },
+  ],
 };

@@ -192,7 +192,7 @@ export function useScheduleEditor(
   // Get selected match
   const selectedMatch = useMemo(() => {
     if (!state.selectedMatchId) {return null;}
-    return tournament.matches.find(m => m.id === state.selectedMatchId) || null;
+    return tournament.matches.find(m => m.id === state.selectedMatchId) ?? null;
   }, [state.selectedMatchId, tournament.matches]);
 
   // =========================================================================

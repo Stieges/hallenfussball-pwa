@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Dialog hook must be co-located with component */
 /**
  * ConfirmDialog - Styled modal for confirmations
  *
