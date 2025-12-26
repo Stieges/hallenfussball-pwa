@@ -198,7 +198,11 @@ export function getPreset(id: string): ColorPreset | undefined {
  * Gets the default preset
  */
 export function getDefaultPreset(): ColorPreset {
-  return colorPresets.find((p) => p.id === 'default')!
+  const preset = colorPresets.find((p) => p.id === 'default');
+  if (!preset) {
+    throw new Error('Default preset not found - this should never happen');
+  }
+  return preset;
 }
 
 /**

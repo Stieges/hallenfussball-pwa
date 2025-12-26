@@ -203,7 +203,8 @@ export function getAllowedFieldsForGroup(
     // Alle Felder erlaubt
     return allFields;
   }
-  return allFields.filter(f => group.allowedFieldIds!.includes(f.id));
+  // allowedFieldIds is guaranteed non-empty at this point due to check above
+  return allFields.filter(f => group.allowedFieldIds?.includes(f.id));
 }
 
 /**

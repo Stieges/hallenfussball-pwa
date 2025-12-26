@@ -444,10 +444,12 @@ function renderParticipants(
   const teamsByGroup = new Map<string, typeof schedule.teams>();
   schedule.teams.forEach(team => {
     const groupKey = team.group ?? 'Alle';
-    if (!teamsByGroup.has(groupKey)) {
-      teamsByGroup.set(groupKey, []);
+    let groupTeams = teamsByGroup.get(groupKey);
+    if (!groupTeams) {
+      groupTeams = [];
+      teamsByGroup.set(groupKey, groupTeams);
     }
-    teamsByGroup.get(groupKey)!.push(team);
+    groupTeams.push(team);
   });
 
   // Sortiere Teams in jeder Gruppe alphabetisch
@@ -464,7 +466,7 @@ function renderParticipants(
 
   // Special case: Only 1 group - show all teams in single box without group title
   if (groups.length === 1) {
-    const allTeams = teamsByGroup.get(groups[0])!;
+    const allTeams = teamsByGroup.get(groups[0]) ?? [];
     const boxHeight = allTeams.length * teamLineHeight + boxPadding * 2;
 
     yPos = ensureSpace(doc, yPos, boxHeight + 4);

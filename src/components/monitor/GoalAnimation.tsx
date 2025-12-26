@@ -61,7 +61,8 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
     }
 
     isAnimating.current = true;
-    const nextGoal = goalQueue.current.shift()!;
+    const nextGoal = goalQueue.current.shift();
+    if (!nextGoal) {return;} // Should never happen due to length check above
     setCurrentEvent(nextGoal);
     setAnimationKey(prev => prev + 1);
     setIsVisible(true);

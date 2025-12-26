@@ -111,7 +111,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     });
 
     // Pop and apply previous state
-    const previousState = undoStackRef.current.pop()!;
+    const previousState = undoStackRef.current.pop();
+    if (!previousState) {return;} // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: previousState.matches,
@@ -131,7 +132,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     });
 
     // Pop and apply next state
-    const nextState = redoStackRef.current.pop()!;
+    const nextState = redoStackRef.current.pop();
+    if (!nextState) {return;} // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: nextState.matches,

@@ -178,7 +178,8 @@ function groupMatchesByTimeSlot(
       const timeStr = formatTime(match.scheduledTime);
       const timestamp = new Date(match.scheduledTime).getTime();
       // Keep the earliest timestamp for each time string
-      if (!timeMap.has(timeStr) || timestamp < timeMap.get(timeStr)!) {
+      const existing = timeMap.get(timeStr);
+      if (existing === undefined || timestamp < existing) {
         timeMap.set(timeStr, timestamp);
       }
     }
@@ -263,7 +264,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     });
 
     // Pop and apply previous state
-    const previousState = undoStackRef.current.pop()!;
+    const previousState = undoStackRef.current.pop();
+    if (!previousState) {return;} // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: previousState.matches,
@@ -283,7 +285,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     });
 
     // Pop and apply next state
-    const nextState = redoStackRef.current.pop()!;
+    const nextState = redoStackRef.current.pop();
+    if (!nextState) {return;} // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: nextState.matches,
@@ -366,9 +369,16 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       // The targetSlot.startTime is a formatted string like "14:00"
       // We need to combine it with the source match's date
       const targetTimeDate = (() => {
+        if (!sourceMatch.scheduledTime) {
+          // Fallback to current date if no scheduled time
+          const now = new Date();
+          const [hours, minutes] = targetSlot.startTime.split(':').map(Number);
+          now.setHours(hours, minutes, 0, 0);
+          return now;
+        }
         const sourceDate = sourceMatch.scheduledTime instanceof Date
           ? sourceMatch.scheduledTime
-          : new Date(sourceMatch.scheduledTime!);
+          : new Date(sourceMatch.scheduledTime);
         const [hours, minutes] = targetSlot.startTime.split(':').map(Number);
         const newDate = new Date(sourceDate);
         newDate.setHours(hours, minutes, 0, 0);

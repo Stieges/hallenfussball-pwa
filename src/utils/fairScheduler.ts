@@ -207,8 +207,13 @@ function calculateFairnessScore(
   minRestSlots: number,
   fairnessCalculator: FairnessCalculator
 ): number {
-  const stateA = teamStates.get(teamAId)!;
-  const stateB = teamStates.get(teamBId)!;
+  const stateA = teamStates.get(teamAId);
+  const stateB = teamStates.get(teamBId);
+
+  // Early return if states not found (should never happen with valid input)
+  if (!stateA || !stateB) {
+    return Infinity;
+  }
 
   let score = 0;
 
@@ -437,8 +442,9 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         );
 
         if (score < Infinity) {
-          const teamAState = teamStates.get(pairing.teamA.id)!;
-          const teamBState = teamStates.get(pairing.teamB.id)!;
+          const teamAState = teamStates.get(pairing.teamA.id);
+          const teamBState = teamStates.get(pairing.teamB.id);
+          if (!teamAState || !teamBState) {continue;} // Skip if states not found
           const restA = currentSlotIndex - teamAState.lastSlot;
           const restB = currentSlotIndex - teamBState.lastSlot;
           const minRest = Math.min(restA, restB);
@@ -470,8 +476,9 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         // Type guard: pairing.teamB is non-null (BYE-pairings filtered earlier)
         if (!pairing.teamB) {continue;}
 
-        const stateA = teamStates.get(pairing.teamA.id)!;
-        const stateB = teamStates.get(pairing.teamB.id)!;
+        const stateA = teamStates.get(pairing.teamA.id);
+        const stateB = teamStates.get(pairing.teamB.id);
+        if (!stateA || !stateB) {continue;} // Skip if states not found
 
         // Debug logging (disabled for performance with large tournaments)
         // const restA = currentSlotIndex - stateA.lastSlot;
@@ -566,16 +573,17 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
 
   // Initial count
   for (const match of matches) {
-    const balanceA = homeAwayBalance.get(match.teamA)!;
-    const balanceB = homeAwayBalance.get(match.teamB)!;
-    balanceA.home++;
-    balanceB.away++;
+    const balanceA = homeAwayBalance.get(match.teamA);
+    const balanceB = homeAwayBalance.get(match.teamB);
+    if (balanceA) {balanceA.home++;}
+    if (balanceB) {balanceB.away++;}
   }
 
   // Find matches where swapping would improve balance
   for (const match of matches) {
-    const balanceA = homeAwayBalance.get(match.teamA)!;
-    const balanceB = homeAwayBalance.get(match.teamB)!;
+    const balanceA = homeAwayBalance.get(match.teamA);
+    const balanceB = homeAwayBalance.get(match.teamB);
+    if (!balanceA || !balanceB) {continue;}
 
     // Calculate current imbalances
     const imbalanceA = Math.abs(balanceA.home - balanceA.away);
@@ -617,26 +625,44 @@ export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis {
     const field = match.field;
 
     // Team A (Home)
-    if (!teamMatchSlots.has(match.teamA)) {
-      teamMatchSlots.set(match.teamA, []);
-      teamFieldCounts.set(match.teamA, new Map());
-      teamHomeAway.set(match.teamA, { home: 0, away: 0 });
+    let slotsA = teamMatchSlots.get(match.teamA);
+    let fieldCountsA = teamFieldCounts.get(match.teamA);
+    let homeAwayA = teamHomeAway.get(match.teamA);
+    if (!slotsA) {
+      slotsA = [];
+      teamMatchSlots.set(match.teamA, slotsA);
     }
-    teamMatchSlots.get(match.teamA)!.push(slot);
-    const fieldCountsA = teamFieldCounts.get(match.teamA)!;
+    if (!fieldCountsA) {
+      fieldCountsA = new Map();
+      teamFieldCounts.set(match.teamA, fieldCountsA);
+    }
+    if (!homeAwayA) {
+      homeAwayA = { home: 0, away: 0 };
+      teamHomeAway.set(match.teamA, homeAwayA);
+    }
+    slotsA.push(slot);
     fieldCountsA.set(field, (fieldCountsA.get(field) ?? 0) + 1);
-    teamHomeAway.get(match.teamA)!.home++;
+    homeAwayA.home++;
 
     // Team B (Away)
-    if (!teamMatchSlots.has(match.teamB)) {
-      teamMatchSlots.set(match.teamB, []);
-      teamFieldCounts.set(match.teamB, new Map());
-      teamHomeAway.set(match.teamB, { home: 0, away: 0 });
+    let slotsB = teamMatchSlots.get(match.teamB);
+    let fieldCountsB = teamFieldCounts.get(match.teamB);
+    let homeAwayB = teamHomeAway.get(match.teamB);
+    if (!slotsB) {
+      slotsB = [];
+      teamMatchSlots.set(match.teamB, slotsB);
     }
-    teamMatchSlots.get(match.teamB)!.push(slot);
-    const fieldCountsB = teamFieldCounts.get(match.teamB)!;
+    if (!fieldCountsB) {
+      fieldCountsB = new Map();
+      teamFieldCounts.set(match.teamB, fieldCountsB);
+    }
+    if (!homeAwayB) {
+      homeAwayB = { home: 0, away: 0 };
+      teamHomeAway.set(match.teamB, homeAwayB);
+    }
+    slotsB.push(slot);
     fieldCountsB.set(field, (fieldCountsB.get(field) ?? 0) + 1);
-    teamHomeAway.get(match.teamB)!.away++;
+    homeAwayB.away++;
   }
 
   // Calculate stats per team

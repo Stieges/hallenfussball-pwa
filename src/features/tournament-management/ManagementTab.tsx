@@ -146,9 +146,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       return fieldMatches.find(m => m.id === selectedMatchId);
     }
     // Automatic selection: Running match or first without result
-    const runningMatch = fieldMatches.find((m) =>
-      liveMatches.has(m.id) && liveMatches.get(m.id)!.status !== 'FINISHED'
-    );
+    const runningMatch = fieldMatches.find((m) => {
+      const liveMatch = liveMatches.get(m.id);
+      return liveMatch && liveMatch.status !== 'FINISHED';
+    });
     return runningMatch || fieldMatches.find((m) =>
       m.scoreA === undefined || m.scoreB === undefined
     );

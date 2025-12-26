@@ -43,7 +43,7 @@ export const StandingsDisplay: React.FC<StandingsDisplayProps> = ({
             <StandingsTable
               key={group}
               standings={groupStandings}
-              title={getGroupDisplayName(group!, tournament)}
+              title={getGroupDisplayName(group ?? '', tournament)}
             />
           )
         })}

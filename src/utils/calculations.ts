@@ -171,8 +171,10 @@ const compareDirectMatches = (
   let _bWins = 0;
 
   directMatches.forEach((match) => {
-    const scoreA = match.scoreA!;
-    const scoreB = match.scoreB!;
+    // Scores are guaranteed defined by the filter above
+    if (match.scoreA === undefined || match.scoreB === undefined) {return;}
+    const scoreA = match.scoreA;
+    const scoreB = match.scoreB;
     const isAHome = matchesTeam(match.teamA, a);
 
     const aScore = isAHome ? scoreA : scoreB;
