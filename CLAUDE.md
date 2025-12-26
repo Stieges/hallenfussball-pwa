@@ -25,11 +25,23 @@ Das bedeutet, du hast nicht genug recherchiert. Bei der nächsten Aufgabe:
 
 | Wann | Dokument |
 |------|----------|
+| **VOR JEDEM CODING** | `.serena/memories/coding-conventions.md` - **PFLICHTLEKTÜRE!** |
 | **Immer bei Styling** | [Design Token README](src/design-tokens/README.md) |
 | **Bei neuen Features** | [CODE_INDEX.md](CODE_INDEX.md) - Wo ist was? |
 | **Bei UI-Komponenten** | [Design System Concept](docs/concepts/DESIGN-SYSTEM-CONCEPT.md) |
 | **Bei Multi-User Fragen** | [Multi-User Konzept](docs/MULTI-USER-KONZEPT.md) |
 | **Bei Business-Fragen** | [Monetization Concept](docs/concepts/MONETIZATION-CONCEPT.md) |
+
+### Serena Memories (Detailwissen)
+
+Vor komplexen Tasks die relevanten Memories lesen:
+```
+.serena/memories/
+├── coding-conventions.md      # Import-Reihenfolge, Naming, React Patterns
+├── component-patterns.md      # UI-Komponenten Best Practices
+├── file-structure-guide.md    # Projektstruktur & wo neue Dateien hin
+└── workflow-guidelines.md     # Git, PR, Review Prozesse
+```
 
 ---
 
@@ -209,7 +221,9 @@ src/
 
 ---
 
-## Coding Konventionen
+## Coding Konventionen (Kurzfassung)
+
+> **Vollständige Konventionen:** `.serena/memories/coding-conventions.md`
 
 ### Design Tokens sind PFLICHT
 
