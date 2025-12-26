@@ -32,16 +32,17 @@ Das bedeutet, du hast nicht genug recherchiert. Bei der nächsten Aufgabe:
 | **Bei Multi-User Fragen** | [Multi-User Konzept](docs/MULTI-USER-KONZEPT.md) |
 | **Bei Business-Fragen** | [Monetization Concept](docs/concepts/MONETIZATION-CONCEPT.md) |
 
-### Serena Memories (Detailwissen)
+### Serena Memories (nach Aufgabentyp)
 
-Vor komplexen Tasks die relevanten Memories lesen:
-```
-.serena/memories/
-├── coding-conventions.md      # Import-Reihenfolge, Naming, React Patterns
-├── component-patterns.md      # UI-Komponenten Best Practices
-├── file-structure-guide.md    # Projektstruktur & wo neue Dateien hin
-└── workflow-guidelines.md     # Git, PR, Review Prozesse
-```
+| Aufgabentyp | Memory lesen |
+|-------------|--------------|
+| **Code schreiben** | `coding-conventions.md`, `component-patterns.md` |
+| **Neue Datei/Feature anlegen** | `file-structure-guide.md` |
+| **Commit/PR erstellen** | `workflow-guidelines.md` |
+| **User Story umsetzen** | `workflow-guidelines.md` (Status-Management) |
+| **Refactoring planen** | `code-quality-analysis-2025-12.md` |
+
+Pfad: `.serena/memories/`
 
 ---
 
