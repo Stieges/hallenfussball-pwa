@@ -87,8 +87,8 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     return {
       id: upcoming.id,
       number: upcoming.matchNumber ?? 0,
-      homeTeam: upcoming.homeTeam || 'TBD',
-      awayTeam: upcoming.awayTeam || 'TBD',
+      homeTeam: upcoming.homeTeam ?? 'TBD',
+      awayTeam: upcoming.awayTeam ?? 'TBD',
       field: upcoming.field,
       group: upcoming.group,
       scheduledTime: upcoming.time,

@@ -399,7 +399,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               color: colors.primary,
                               fontWeight: fontWeights.semibold,
                             }}>
-                              {placement.matchLabel || 'Playoff'}
+                              {placement.matchLabel ?? 'Playoff'}
                             </span>
                           ) : (
                             <span style={{
@@ -522,7 +522,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               alignItems: 'center',
                               gap: '2px',
                             }}>
-                              {placement.matchLabel || 'Playoff'}
+                              {placement.matchLabel ?? 'Playoff'}
                             </div>
                           ) : hasGroups && placement.team.group ? (
                             <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '2px' }}>

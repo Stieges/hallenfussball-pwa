@@ -287,7 +287,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
               onFocus={() => setActiveSelect('referee')}
               onBlur={() => setActiveSelect(null)}
               style={selectStyle(
-                currentRefereeOption?.hasConflict || false,
+                currentRefereeOption?.hasConflict ?? false,
                 activeSelect === 'referee'
               )}
               title={currentRefereeOption?.conflictMessage}
@@ -323,7 +323,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
             onFocus={() => setActiveSelect('field')}
             onBlur={() => setActiveSelect(null)}
             style={selectStyle(
-              currentFieldOption?.hasConflict || false,
+              currentFieldOption?.hasConflict ?? false,
               activeSelect === 'field'
             )}
             title={currentFieldOption?.conflictMessage}

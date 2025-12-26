@@ -132,7 +132,7 @@ function localStorageGetTournaments(): Tournament[] {
       ...t,
       status: t.status ?? 'published',
       refereeConfig: t.refereeConfig ?? { mode: 'none' },
-      isExternal: t.isExternal || false,
+      isExternal: t.isExternal ?? false,
     }));
   } catch (error) {
     console.error('Error loading tournaments from localStorage:', error);

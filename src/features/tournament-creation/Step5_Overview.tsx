@@ -24,7 +24,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
             Turniername
           </div>
           <div style={{ fontSize: fontSizes.xl, fontWeight: fontWeights.bold, color: colors.textPrimary }}>
-            {formData.title || '(nicht angegeben)'}
+            {formData.title ?? '(nicht angegeben)'}
           </div>
         </div>
 
@@ -87,7 +87,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               Datum
             </div>
             <div style={{ fontSize: fontSizes.lg, fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
-              {formData.date || '-'}
+              {formData.date ?? '-'}
             </div>
           </div>
           <div className={styles.infoBox}>

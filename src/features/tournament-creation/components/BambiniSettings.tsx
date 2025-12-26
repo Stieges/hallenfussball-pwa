@@ -56,7 +56,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
         <label style={{ ...checkboxLabelStyle, marginBottom: '12px' }}>
           <input
             type="checkbox"
-            checked={formData.hideScoresForPublic || false}
+            checked={formData.hideScoresForPublic ?? false}
             onChange={(e) => onUpdate('hideScoresForPublic', e.target.checked)}
             style={checkboxStyle}
           />
@@ -67,7 +67,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
         <label style={checkboxLabelStyle}>
           <input
             type="checkbox"
-            checked={formData.hideRankingsForPublic || false}
+            checked={formData.hideRankingsForPublic ?? false}
             onChange={(e) => onUpdate('hideRankingsForPublic', e.target.checked)}
             style={checkboxStyle}
           />

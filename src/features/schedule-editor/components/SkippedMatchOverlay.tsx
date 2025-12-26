@@ -146,7 +146,7 @@ export const SkippedBadge: React.FC<SkippedBadgeProps> = ({ reason }) => {
   };
 
   return (
-    <span style={badgeStyle} title={reason || 'Spiel übersprungen'}>
+    <span style={badgeStyle} title={reason ?? 'Spiel übersprungen'}>
       <span>⊘</span>
       <span>Übersprungen</span>
     </span>

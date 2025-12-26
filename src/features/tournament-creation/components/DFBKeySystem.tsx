@@ -65,7 +65,7 @@ export const DFBKeySystem: React.FC<DFBKeySystemProps> = ({
   onUpdate,
 }) => {
   const useDFBKeys = formData.useDFBKeys ?? false;
-  const selectedPattern = formData.dfbKeyPattern || '1T06M';
+  const selectedPattern = formData.dfbKeyPattern ?? '1T06M';
   const currentPattern = DFB_ROUND_ROBIN_PATTERNS.find(p => p.code === selectedPattern);
 
   const handleToggle = (enabled: boolean) => {

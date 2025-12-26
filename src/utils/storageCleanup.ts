@@ -137,7 +137,7 @@ export function dispatchStorageWarning(message?: string): void {
   window.dispatchEvent(
     new CustomEvent('storage-quota-warning', {
       detail: {
-        message: message || 'Der lokale Speicher ist voll. Änderungen können nicht gespeichert werden.',
+        message: message ?? 'Der lokale Speicher ist voll. Änderungen können nicht gespeichert werden.',
         timestamp: Date.now(),
       },
     })

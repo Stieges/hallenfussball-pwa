@@ -222,7 +222,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
   const finalsConfigData = json.finalsConfig as Record<string, unknown> | undefined;
   const finalsConfig = finalsConfigData && typeof finalsConfigData === 'object'
     ? {
-        preset: (finalsConfigData.preset as FinalsPreset) || 'none',
+        preset: (finalsConfigData.preset as FinalsPreset) ?? 'none',
         parallelSemifinals: Boolean(finalsConfigData.parallelSemifinals),
         parallelQuarterfinals: Boolean(finalsConfigData.parallelQuarterfinals),
         parallelRoundOf16: Boolean(finalsConfigData.parallelRoundOf16),
@@ -244,7 +244,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
   const refereeData = json.refereeConfig as Record<string, unknown> | undefined;
   const refereeConfig = refereeData && typeof refereeData === 'object'
     ? {
-        mode: (refereeData.mode as RefereeMode) || 'none',
+        mode: (refereeData.mode as RefereeMode) ?? 'none',
         numberOfReferees: refereeData.numberOfReferees ? Number(refereeData.numberOfReferees) : undefined,
         maxConsecutiveMatches: refereeData.maxConsecutiveMatches ? Number(refereeData.maxConsecutiveMatches) : undefined,
         refereeNames: refereeData.refereeNames as Record<number, string> | undefined,
@@ -264,8 +264,8 @@ function parseJSONTournament(content: string): ImportValidationResult {
     externalSource,
 
     // Step 1: Sport & Type
-    sport: (json.sport as Tournament['sport']) || 'football',
-    tournamentType: (json.tournamentType as Tournament['tournamentType']) || 'classic',
+    sport: (json.sport as Tournament['sport']) ?? 'football',
+    tournamentType: (json.tournamentType as Tournament['tournamentType']) ?? 'classic',
 
     // Step 2: Mode & System
     mode: (json.mode as Tournament['mode']) || 'classic',
