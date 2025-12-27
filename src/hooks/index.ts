@@ -11,6 +11,7 @@ export { useFormPersistence } from './useFormPersistence'
 
 // Timer & Animation
 export { useMatchTimer } from './useMatchTimer'
+export { useDialogTimer } from './useDialogTimer'
 export { useShake } from './useShake'
 export { useListAnimation, useFadeIn } from './useListAnimation'
 
@@ -38,3 +39,4 @@ export { usePermissions } from './usePermissions'
 
 // Theming & Corporate Colors
 export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
+export { useTheme, ThemeProvider, type Theme, type ThemeContextValue } from './useTheme'
