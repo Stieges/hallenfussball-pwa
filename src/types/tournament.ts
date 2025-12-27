@@ -341,6 +341,151 @@ export interface Standing {
   points: number;
 }
 
+// ============================================================================
+// LIVE-COCKPIT TYPES (Konzept Abschnitt 8)
+// ============================================================================
+
+/**
+ * Match Event Types for Live-Cockpit
+ * Used to track all events during a match
+ */
+export type MatchEventType =
+  | 'GOAL'
+  | 'YELLOW_CARD'
+  | 'RED_CARD'
+  | 'TIME_PENALTY'
+  | 'SUBSTITUTION'
+  | 'PAUSE'
+  | 'RESUME'
+  | 'HALF_TIME'
+  | 'MATCH_END';
+
+/**
+ * Card type for YELLOW_CARD and RED_CARD events
+ */
+export type CardType = 'YELLOW' | 'RED';
+
+/**
+ * Match Event - represents a single event during a match
+ * Used for event log, undo functionality, and statistics
+ */
+export interface MatchEvent {
+  id: string;
+  type: MatchEventType;
+  timestamp: Date;
+  matchMinute: number;        // Spielminute (0-20)
+  teamId?: string;
+  playerNumber?: number;
+
+  // GOAL specific
+  assistPlayerNumber?: number;
+
+  // TIME_PENALTY specific
+  penaltyDuration?: number;   // Duration in seconds
+  penaltyEndTime?: Date;      // When the penalty ends
+
+  // SUBSTITUTION specific
+  playerOutNumber?: number;
+  playerInNumber?: number;
+
+  // Open entry tracking
+  isOpen: boolean;            // True if player number is missing
+
+  // Metadata
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Live Match Status for Live-Cockpit
+ * More granular than MatchStatus for real-time display
+ */
+export type LiveMatchStatus =
+  | 'NOT_STARTED'
+  | 'RUNNING'
+  | 'PAUSED'
+  | 'HALF_TIME'
+  | 'FINISHED';
+
+/**
+ * How a match result was determined
+ */
+export type MatchResultType = 'REGULAR' | 'OVERTIME' | 'GOLDEN_GOAL' | 'PENALTY';
+
+/**
+ * Active Penalty - represents a running time penalty
+ * Multiple penalties can run simultaneously
+ */
+export interface ActivePenalty {
+  eventId: string;            // Reference to the MatchEvent
+  teamId: string;
+  playerNumber?: number;
+  remainingSeconds: number;   // Countdown
+  startedAt: Date;
+  endsAt: Date;
+}
+
+/**
+ * Match State - complete state of a live match
+ * Used by useLiveCockpit hook
+ */
+export interface MatchState {
+  matchId: string;
+  status: LiveMatchStatus;
+  homeTeam: Team;
+  awayTeam: Team;
+  homeScore: number;
+  awayScore: number;
+  elapsedSeconds: number;
+  halfDurationSeconds: number;
+  currentHalf: 1 | 2;
+  events: MatchEvent[];
+  activePenalties: ActivePenalty[];
+  openEntriesCount: number;
+
+  // Penalty shootout (optional, only for finals)
+  penaltyShootout?: PenaltyShootout;
+  resultType: MatchResultType;
+}
+
+/**
+ * Individual penalty kick in a shootout
+ */
+export interface PenaltyKick {
+  order: number;              // 1-10+ (Sudden Death)
+  teamId: string;
+  playerNumber?: number;
+  scored: boolean;
+  timestamp: Date;
+}
+
+/**
+ * Penalty Shootout state
+ * Tracks the entire shootout including sudden death
+ */
+export interface PenaltyShootout {
+  id: string;
+  matchId: string;
+  kicks: PenaltyKick[];
+  homeScore: number;          // Goals scored in shootout
+  awayScore: number;          // Goals scored in shootout
+  winnerId?: string;          // Team ID of winner (set when decided)
+  isDetailedTracking: boolean; // true = track each kick, false = only final score
+  currentRound: number;       // Current round (1-5, then sudden death)
+  currentTeamId?: string;     // Which team is shooting next
+  isComplete: boolean;        // true when shootout is decided
+}
+
+/**
+ * Knockout/Finals Configuration
+ * Extends FinalsConfig with additional settings for tiebreakers
+ */
+export interface KnockoutConfig {
+  tiebreaker: TiebreakerMode;
+  extraTimeDuration?: number;   // Duration of overtime in seconds (if applicable)
+  penaltyKicksPerTeam: number;  // Standard: 5
+}
+
 /**
  * Kontaktinformationen für Turniere
  * Wird später aus dem User-Bereich befüllt
