@@ -23,7 +23,7 @@ export const FinishPanel: React.FC<FinishPanelProps> = ({ match, onResume, onEdi
     padding: isMobile ? spacing.lg : spacing.md,
     borderRadius: borderRadius.lg,
     border: `1px dashed ${colors.border}`,
-    background: 'rgba(15, 23, 42, 0.95)',
+    background: colors.monitorSectionBgStrong,
     fontSize: isMobile ? fontSizes.md : fontSizes.sm,
     display: 'flex',
     flexDirection: 'column',

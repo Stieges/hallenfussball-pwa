@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 
 export interface MatchMetaProps {
@@ -29,10 +29,10 @@ export const MatchMeta: React.FC<MatchMetaProps> = ({ refereeName, matchId, dura
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: isMobile ? `6px ${spacing.sm}` : `4px ${spacing.sm}`,
-    borderRadius: '999px',
+    padding: isMobile ? `6px ${spacing.sm}` : `${spacing.xs} ${spacing.sm}`,
+    borderRadius: borderRadius.full,
     border: `1px solid ${colors.border}`,
-    background: 'rgba(15, 23, 42, 0.65)',
+    background: colors.monitorSectionBgLight,
   };
 
   const labelStyle: CSSProperties = {

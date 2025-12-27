@@ -75,14 +75,14 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     let borderColor: string = colors.border;
 
     if (eventType === 'GOAL') {
-      backgroundColor = 'rgba(0, 230, 118, 0.05)';
-      borderColor = 'rgba(0, 230, 118, 0.3)';
+      backgroundColor = colors.eventGoalBg;
+      borderColor = colors.eventGoalBorder;
     } else if (eventType === 'STATUS_CHANGE') {
-      backgroundColor = 'rgba(59, 130, 246, 0.05)';
-      borderColor = 'rgba(59, 130, 246, 0.3)';
+      backgroundColor = colors.eventStatusBg;
+      borderColor = colors.eventStatusBorder;
     } else if (eventType === 'RESULT_EDIT') {
-      backgroundColor = 'rgba(251, 191, 36, 0.05)';
-      borderColor = 'rgba(251, 191, 36, 0.3)';
+      backgroundColor = colors.eventEditBg;
+      borderColor = colors.eventEditBorder;
     }
 
     return {

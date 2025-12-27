@@ -60,7 +60,7 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
     alignItems: 'center',
     gap: isMobile ? spacing.md : spacing.sm,
     padding: isMobile ? spacing.lg : spacing.sm,
-    background: isMobile ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.9))' : 'transparent',
+    background: isMobile ? `linear-gradient(135deg, ${colors.panelGradientStart}, ${colors.panelGradientEnd})` : 'transparent',
     border: isMobile ? `1px solid ${colors.border}` : 'none',
     borderRadius: isMobile ? borderRadius.lg : '0',
   };
@@ -71,9 +71,9 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
     fontSize: isMobile ? '40px' : '26px',
     fontWeight: fontWeights.semibold,
     padding: isMobile ? `${spacing.md} ${spacing.lg}` : `6px ${spacing.md}`,
-    borderRadius: '999px',
+    borderRadius: borderRadius.full,
     border: `1px solid ${colors.border}`,
-    background: `radial-gradient(circle at top, rgba(15, 23, 42, 0.98), ${colors.backgroundDeep})`,
+    background: `radial-gradient(circle at top, ${colors.timerGradientBg}, ${colors.backgroundDeep})`,
     boxShadow: `0 0 25px ${colors.primary}40`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -91,8 +91,8 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
 
   const statusPillStyle: CSSProperties = {
     fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
-    padding: isMobile ? `8px ${spacing.md}` : `4px ${spacing.sm}`,
-    borderRadius: '999px',
+    padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.xs} ${spacing.sm}`,
+    borderRadius: borderRadius.full,
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
@@ -106,7 +106,7 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
   const dotStyle: CSSProperties = {
     width: isMobile ? '9px' : '7px',
     height: isMobile ? '9px' : '7px',
-    borderRadius: '999px',
+    borderRadius: borderRadius.full,
     background: 'currentColor',
   };
 

@@ -23,9 +23,9 @@ export const LastMatchBanner: React.FC<LastMatchBannerProps> = ({ lastMatch, onR
   const bannerStyle: CSSProperties = {
     marginBottom: spacing.md,
     padding: spacing.md,
-    borderRadius: isMobile ? borderRadius.lg : '999px',
+    borderRadius: isMobile ? borderRadius.lg : borderRadius.full,
     border: `1px dashed ${colors.border}`,
-    background: 'rgba(15, 23, 42, 0.9)',
+    background: colors.monitorSectionBg,
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     alignItems: isMobile ? 'flex-start' : 'center',

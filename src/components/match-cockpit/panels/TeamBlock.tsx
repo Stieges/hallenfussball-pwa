@@ -34,7 +34,7 @@ const TeamBlockComponent: React.FC<TeamBlockProps> = ({
   const blockStyle: CSSProperties = {
     padding: isMobile ? spacing.lg : spacing.md,
     borderRadius: borderRadius.lg,
-    background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.9))',
+    background: `linear-gradient(135deg, ${colors.panelGradientStart}, ${colors.panelGradientEnd})`,
     border: `1px solid ${colors.border}`,
     display: 'flex',
     flexDirection: 'column',

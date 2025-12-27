@@ -272,6 +272,25 @@ export const colors = {
 
   // Monitor/TV display
   monitorSectionBg: 'rgba(15, 23, 42, 0.9)',
+  monitorSectionBgStrong: 'rgba(15, 23, 42, 0.95)',
+  monitorSectionBgLight: 'rgba(15, 23, 42, 0.65)',
+
+  // Panel gradient stops (for match cockpit panels)
+  panelGradientStart: 'rgba(15, 23, 42, 0.9)',
+  panelGradientEnd: 'rgba(3, 7, 18, 0.9)',
+  timerGradientBg: 'rgba(15, 23, 42, 0.98)',
+
+  // ---------------------------------------------------------------------------
+  // Match Event Colors (for EventsList)
+  // ---------------------------------------------------------------------------
+  eventGoalBg: 'rgba(0, 230, 118, 0.05)',
+  eventGoalBorder: 'rgba(0, 230, 118, 0.3)',
+
+  eventStatusBg: 'rgba(59, 130, 246, 0.05)',
+  eventStatusBorder: 'rgba(59, 130, 246, 0.3)',
+
+  eventEditBg: 'rgba(251, 191, 36, 0.05)',
+  eventEditBorder: 'rgba(251, 191, 36, 0.3)',
 
   // Gradients (stored as full gradient strings)
   gradientNextMatch: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
