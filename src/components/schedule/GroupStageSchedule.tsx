@@ -380,17 +380,17 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       // When THIS row is being dragged: show as placeholder
       ...(isDragging ? {
         opacity: 0.4,
-        backgroundColor: 'rgba(0, 176, 255, 0.1)',
+        backgroundColor: colors.editorDragActiveBg,
         outline: `2px dashed ${colors.primary}`,
         outlineOffset: '-1px',
         zIndex: 0,
       } : {}),
       // When another row is dragged OVER this one: highlight as drop target
       ...(isOver && !isDragging ? {
-        backgroundColor: 'rgba(0, 176, 255, 0.25)',
+        backgroundColor: colors.editorSwapActive,
         outline: `3px solid ${colors.primary}`,
         outlineOffset: '-1px',
-        boxShadow: `0 0 12px rgba(0, 176, 255, 0.4)`,
+        boxShadow: `0 0 12px ${colors.secondary}66`,
       } : {}),
     };
 
@@ -460,7 +460,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     ...tdStyle,
                     textAlign: 'center',
                     padding: editingSchedule ? '4px' : '8px',
-                    backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                    backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined,
                   }}>
                     {editingSchedule && onRefereeChange ? (
                       <select
@@ -536,7 +536,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     ...tdStyle,
                     textAlign: 'center',
                     padding: editingSchedule ? '4px' : '8px',
-                    backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
+                    backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined,
                   }}>
                     {editingSchedule && onFieldChange ? (
                       <select
@@ -610,7 +610,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             {activeMatch && (
               <div style={{
                 backgroundColor: colors.surface,
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                boxShadow: `0 8px 24px ${colors.surfaceDark}`,
                 borderRadius: borderRadius.md,
                 border: `3px solid ${colors.primary}`,
                 padding: '12px 16px',
