@@ -1,769 +1,313 @@
 # Hallenfußball PWA
 
-Eine modulare Progressive Web App für Hallenfußball-Turnierverwaltung mit React, TypeScript und Vite.
+Eine Progressive Web App für Turnierverwaltung - von der Spielplan-Erstellung bis zur Live-Ergebnisverfolgung.
 
 **Repository:** https://github.com/Stieges/hallenfussball-pwa
 
 ---
 
-## 📋 Inhaltsverzeichnis
+## Inhaltsverzeichnis
 
-- [Projekt-Setup](#-projekt-setup)
-- [Architektur-Übersicht](#-architektur-übersicht)
-- [Fair Scheduler System](#-fair-scheduler-system)
-- [Projektstruktur](#-projektstruktur)
-- [Tech Stack](#-tech-stack)
-- [Verfügbare Scripts](#-verfügbare-scripts)
-- [Aktueller Status](#-aktueller-status)
+- [Projekt-Setup](#projekt-setup)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Projektstruktur](#projektstruktur)
+- [Fair Scheduler](#fair-scheduler)
+- [Design System](#design-system)
+- [Verfügbare Scripts](#verfügbare-scripts)
+- [Lizenz](#lizenz)
 
 ---
 
-## 🚀 Projekt-Setup
+## Projekt-Setup
 
 ### Voraussetzungen
 
-- Node.js (v18 oder höher)
-- npm oder yarn
+- Node.js v18+
+- npm
 
 ### Installation
 
 ```bash
-cd hallenfussball-pwa
 npm install
 ```
 
-### Development Server starten
+### Development Server
 
 ```bash
 npm run dev
 ```
 
-Die App läuft dann auf `http://localhost:3001`
+Die App läuft auf `http://localhost:3000`
 
-### Production Build erstellen
+### Production Build
 
 ```bash
 npm run build
-```
-
-### Preview des Production Builds
-
-```bash
 npm run preview
 ```
 
 ---
 
-## 🏗️ Architektur-Übersicht
+## Features
 
-### Kern-Module
+### Implementiert
 
-1. **Fair Scheduler System** - Intelligente Spielplan-Generierung
-2. **Tournament Management** - Turnier-Erstellung und Verwaltung
-3. **Schedule Generation** - Zeit-basierte Spielplan-Berechnung
-4. **Playoff System** - Finale und Platzierungsspiele
+| Feature | Beschreibung |
+|---------|--------------|
+| **Tournament Wizard** | 5-Schritt-Assistent zur Turniererstellung |
+| **Fair Scheduler** | Algorithmus für faire Pausen- und Spielzeitverteilung |
+| **Live-Verwaltung** | Match Cockpit mit Timer, Tor-Buttons, Event-Historie |
+| **Gruppenphase + Playoffs** | 2/4 Gruppen mit konfigurierbaren Finals |
+| **Schedule Editor** | Spielplan nachträglich bearbeiten (Drag & Drop) |
+| **PDF-Export** | Spielpläne, Ergebnisse, Tabellen |
+| **Import (JSON/CSV)** | Turniere und Teams importieren |
+| **QR-Code** | Für Turnier-Sharing |
+| **PWA** | Offline-fähig, installierbar |
+| **Responsive** | Mobile-First mit 3 Breakpoints |
+| **WCAG AA** | Alle Kontraste validiert |
 
-### Datenfluss
+### In Entwicklung
 
-```
-User Input (UI)
-    ↓
-Tournament Creation Wizard (5 Steps)
-    ↓
-Fair Scheduler (generateGroupPhaseSchedule)
-    ↓
-Playoff Scheduler (generatePlayoffSchedule)
-    ↓
-Schedule Generator (generateFullSchedule)
-    ↓
-PDF Export / Display
-```
+- Monitor-Ansicht für Großbildschirm (TV-Modus)
+- Public View (Zuschauer-Link)
+
+### Geplant
+
+- Multi-User mit Rollen (Trainer, Fan, Turnierleitung)
+- Cloud-Sync (Supabase)
+- Push Notifications
 
 ---
 
-## 🎯 Fair Scheduler System
+## Tech Stack
 
-### Überblick
+### Core
 
-Das Fair Scheduler System ist das Herzstück der App und sorgt für **faire Verteilung von Pausen und Spielzeiten** in der Gruppenphase.
+| Technologie | Version | Zweck |
+|-------------|---------|-------|
+| React | 18 | UI Framework |
+| TypeScript | 5 | Type Safety |
+| Vite | 5 | Build Tool + HMR |
 
-### Kernprinzipien (nach Priorität)
+### Libraries
 
-#### 1. **Pausen-Fairness (Höchste Priorität)**
-- Minimierung der globalen Varianz: `maxAvgRest - minAvgRest` über ALLE Teams
-- Keine Back-to-back Spiele wenn `minRestSlotsPerTeam >= 1`
-- Teams mit längeren Pausen werden bevorzugt geplant
+| Library | Zweck |
+|---------|-------|
+| jsPDF + AutoTable | PDF-Generierung |
+| @dnd-kit | Drag & Drop (Schedule Editor) |
+| qrcode | QR-Code Generierung |
+| vite-plugin-pwa | PWA/Offline Support |
 
-#### 2. **Home/Away Balance (Zweite Priorität)**
-- Post-Processing nach Zeit-Scheduling
-- Ziel: `|homeCount - awayCount| ≤ 1` pro Team
-- Swapping ohne Änderung der Slot-Zuordnung
+### Testing & Quality
 
-#### 3. **Feld-Verteilung (Dritte Priorität)**
-- Teams sollen auf verschiedenen Feldern spielen
-- Vermeidung von Feld-Clustering
+| Tool | Zweck |
+|------|-------|
+| Vitest | Unit Tests |
+| Testing Library | React Component Tests |
+| ESLint | Linting |
+| Husky + lint-staged | Pre-commit Hooks |
 
-### Implementierung
+### Persistence
 
-#### Datei: `src/utils/fairScheduler.ts`
+- **localStorage** - Browser-basierte Datenspeicherung
+- **IndexedDB** (via PWA) - Offline-Cache
 
-**Hauptfunktion:**
-```typescript
-export function generateGroupPhaseSchedule(
-  options: GroupPhaseScheduleOptions
-): Match[]
+---
+
+## Projektstruktur
+
+```
+src/
+├── components/
+│   ├── ui/                    # Basis-Komponenten (Button, Card, Input...)
+│   ├── schedule/              # Spielplan-Komponenten
+│   ├── match-cockpit/         # Live-Spielsteuerung
+│   └── dialogs/               # Modale Dialoge
+│
+├── features/
+│   ├── tournament-creation/   # Wizard Steps 1-5
+│   ├── tournament-management/ # Tabs (Spielplan, Tabelle, Ranking)
+│   └── schedule-editor/       # Spielplan-Editor (Drag & Drop)
+│
+├── design-tokens/             # Single Source of Truth für Styling
+│   ├── colors.ts              # Farbpalette (WCAG-validiert)
+│   ├── spacing.ts             # 8pt Grid
+│   ├── typography.ts          # Schriftgrößen & Gewichte
+│   ├── shadows.ts             # Schatten
+│   ├── radii.ts               # Border Radius
+│   ├── motion.ts              # Animationen
+│   └── index.ts               # Zentrale Exports
+│
+├── hooks/                     # Custom React Hooks
+│   ├── useTournaments.ts      # CRUD Operations
+│   ├── useTournamentWizard.ts # Wizard State Management
+│   ├── useLiveMatches.ts      # Live-Match State
+│   ├── useMatchTimer.ts       # Timer-Logik
+│   ├── useAutoSave.ts         # Automatisches Speichern
+│   ├── useIsMobile.ts         # Responsive Detection
+│   └── ...                    # 21 Hooks insgesamt
+│
+├── utils/
+│   ├── fairScheduler.ts       # Kern-Scheduling-Algorithmus
+│   ├── playoffScheduler.ts    # Playoff-Match-Generierung
+│   ├── tournamentImporter.ts  # JSON/CSV Import
+│   └── storage.ts             # localStorage Wrapper
+│
+├── lib/
+│   ├── scheduleGenerator.ts   # Zeit-basierte Integration
+│   └── pdfExporter.ts         # PDF-Export
+│
+├── types/
+│   └── tournament.ts          # TypeScript Definitionen
+│
+├── contexts/                  # React Context Providers
+├── config/                    # App-Konfiguration
+├── services/                  # Service Layer
+├── constants/                 # Konstanten & Schemas
+├── screens/                   # Screen-Komponenten
+├── styles/                    # Legacy Styles (migriert zu design-tokens)
+└── test/                      # Test Utilities
 ```
 
-**Algorithmus:**
+### Wichtige Dateien
 
-1. **Round-Robin Pairing Generation** (Circle Method)
-   - Erzeugt faire Paarungen ohne Heim/Gast-Zuweisung
-   - Deterministische Rotation: Fix einen Team, rotiere andere
+| Priorität | Datei | Beschreibung |
+|-----------|-------|--------------|
+| ⭐⭐⭐ | `src/utils/fairScheduler.ts` | Kern-Scheduling-Algorithmus |
+| ⭐⭐⭐ | `src/utils/playoffScheduler.ts` | Playoff-Logik |
+| ⭐⭐⭐ | `src/lib/scheduleGenerator.ts` | Zeit-basierte Integration |
+| ⭐⭐ | `src/types/tournament.ts` | Datenstruktur-Definitionen |
+| ⭐⭐ | `src/design-tokens/` | Design System |
 
-2. **Greedy Scheduling mit Fairness-Heuristik**
-   ```typescript
-   // Für jeden Slot:
-   for each slot:
-     for each field:
-       candidates = []
-       for each remaining pairing:
-         score = calculateFairnessScore(pairing, slot, field)
-         if score < Infinity:
-           candidates.add({pairing, score, longestRest})
+---
 
-       // Sortiere: Längste Pause ZUERST, dann Fairness-Score
-       candidates.sort((a, b) => {
-         if (a.longestRest !== b.longestRest)
-           return b.longestRest - a.longestRest  // Descending
-         return a.score - b.score  // Ascending
-       })
+## Fair Scheduler
 
-       schedule(candidates[0])
-   ```
+Das Herzstück der App - sorgt für **faire Verteilung von Pausen und Spielzeiten**.
 
-3. **Fairness-Score-Berechnung**
-   ```typescript
-   function calculateFairnessScore(
-     teamA, teamB, slot, field, teamStates, minRestSlots
-   ): number {
-     // 1. Check minimum rest constraint
-     if (!canTeamPlayInSlot(teamA, slot) || !canTeamPlayInSlot(teamB, slot))
-       return Infinity  // Invalid
+### Prioritäten
 
-     // 2. Calculate global variance AFTER this assignment
-     projectedAvgRestByTeam = calculateProjectedAvgRest(teamA, teamB, slot)
-     globalVariance = max(projectedAvgRest) - min(projectedAvgRest)
-     score += globalVariance * 100  // High weight!
+1. **Pausen-Fairness** (höchste) - Minimierung der Varianz zwischen Teams
+2. **Home/Away Balance** - Ausgeglichene Heim/Auswärts-Verteilung
+3. **Feld-Verteilung** - Teams spielen auf verschiedenen Feldern
 
-     // 3. Penalize field overuse
-     score += fieldImbalance * 10
+### Algorithmus
 
-     // 4. Penalize home/away imbalance
-     score += homeAwayImbalance * 5
-
-     return score
-   }
-   ```
-
-4. **Home/Away Balancing (Post-Processing)**
-   ```typescript
-   function balanceHomeAway(matches, teamStates): void {
-     for each match:
-       currentImbalance = |homeCountA - awayCountA| + |homeCountB - awayCountB|
-       swappedImbalance = calculate_after_swap()
-       if swappedImbalance < currentImbalance:
-         swap(match.teamA, match.teamB)
-   ```
-
-### Beispiel-Ergebnis
-
-**Vorher (ohne Fair Scheduler):**
 ```
-Team 1: Pausen [84 min, 12 min] → Ø 48 min
-Team 2: Pausen [72 min, 12 min] → Ø 42 min
-Team 8: Pausen [24 min, 12 min] → Ø 18 min
-Spannweite: 30 min (sehr unfair!)
+1. Round-Robin Pairing Generation (Circle Method)
+2. Greedy Scheduling mit Fairness-Heuristik
+3. Home/Away Balancing (Post-Processing)
 ```
 
-**Nachher (mit Fair Scheduler):**
+### Ergebnis
+
 ```
-Team 1: Pausen [36 min, 24 min] → Ø 30 min
-Team 2: Pausen [36 min, 24 min] → Ø 30 min
-Team 8: Pausen [24 min, 36 min] → Ø 30 min
+Vorher (ohne Fair Scheduler):
+Team 1: Ø 48 min Pause | Team 8: Ø 18 min Pause
+Spannweite: 30 min (unfair!)
+
+Nachher (mit Fair Scheduler):
+Team 1: Ø 30 min Pause | Team 8: Ø 30 min Pause
 Spannweite: ~6 min (fair!)
 ```
 
-### Fairness-Analyse
+Detaillierte Dokumentation: [docs/concepts/FAIR_SCHEDULER.md](docs/concepts/FAIR_SCHEDULER.md)
 
-**Funktion:**
+---
+
+## Design System
+
+Zentralisierte Styling-Werte in `src/design-tokens/`:
+
 ```typescript
-export function analyzeScheduleFairness(matches: Match[]): FairnessAnalysis
+import { colors, spacing, fontSizes, borderRadius } from '@/design-tokens';
+
+// Farben (WCAG AA validiert)
+colors.primary        // #00E676 (Grün)
+colors.textPrimary    // #F5F5F5
+colors.background     // #1A1A2E
+
+// Spacing (8pt Grid)
+spacing.xs   // 4px
+spacing.sm   // 8px
+spacing.md   // 16px
+spacing.lg   // 24px
+spacing.xl   // 32px
+
+// Typography
+fontSizes.sm   // 12px
+fontSizes.md   // 14px
+fontSizes.lg   // 16px
 ```
 
-**Ausgabe:**
-```typescript
-interface FairnessAnalysis {
-  teamStats: TeamFairnessStats[];  // Pro Team
-  global: GlobalFairnessStats;     // Über alle Teams
-}
-
-interface TeamFairnessStats {
-  teamId: string;
-  matchSlots: number[];
-  restsInSlots: number[];
-  minRest: number;
-  maxRest: number;
-  avgRest: number;
-  restVariance: number;
-  fieldDistribution: Map<number, number>;
-  homeCount: number;
-  awayCount: number;
-  homeAwayBalance: number;  // |home - away|
-}
-```
-
-### Debug-Logging
-
-Aktiviere Browser-Konsole für detaillierte Logs:
-```
-[FairScheduler] Starting scheduling: {totalPairings: 12, numberOfFields: 1}
-[FairScheduler] Slot 0, Field 1: Scheduled Team 1 vs Team 7 (Group A), Score: 10.00, Rest: Infinity/Infinity slots
-[FairScheduler] Slot 1, Field 1: Scheduled Team 3 vs Team 5 (Group A), Score: 10.10, Rest: Infinity/Infinity slots
-...
-```
+**Regel:** Keine hardcoded Werte - immer Design Tokens verwenden!
 
 ---
 
-## 📁 Projektstruktur
-
-```
-hallenfussball-pwa/
-├── src/
-│   ├── components/
-│   │   ├── ui/                          # Base UI Components
-│   │   │   ├── Button.tsx
-│   │   │   ├── Card.tsx
-│   │   │   ├── Input.tsx
-│   │   │   ├── Select.tsx
-│   │   │   └── Icons.tsx
-│   │   ├── dialogs/
-│   │   │   └── ImportDialog.tsx         # Turnier-Import Dialog (JSON/CSV)
-│   │   ├── PlayoffParallelConfigurator.tsx  # Playoff Config UI
-│   │   └── ScheduleDisplay.tsx          # Schedule Visualization
-│   │
-│   ├── features/
-│   │   └── tournament-creation/
-│   │       ├── Step1_SportAndType.tsx
-│   │       ├── Step2_ModeAndSystem.tsx
-│   │       ├── Step3_Metadata.tsx
-│   │       ├── Step4_Teams.tsx
-│   │       ├── Step5_Overview.tsx
-│   │       └── TournamentPreview.tsx    # Live Preview with Editing
-│   │
-│   ├── screens/
-│   │   └── TournamentCreationScreen.tsx # Main Wizard Container
-│   │
-│   ├── lib/
-│   │   ├── scheduleGenerator.ts         # Time-based Schedule Generation
-│   │   └── pdfExporter.ts               # PDF Export (jsPDF)
-│   │
-│   ├── utils/
-│   │   ├── fairScheduler.ts             # ⭐ CORE: Fair Scheduling Algorithm
-│   │   ├── playoffScheduler.ts          # Playoff Match Generation
-│   │   ├── tournamentScheduler.ts       # Integration Layer
-│   │   ├── tournamentImporter.ts        # JSON/CSV Import Parser & Validator
-│   │   ├── matchGenerator.ts            # Legacy (deprecated)
-│   │   ├── groupHelpers.ts              # Group Utilities
-│   │   ├── calculations.ts              # Duration Calculations
-│   │   └── storage.ts                   # localStorage Wrapper
-│   │
-│   ├── hooks/
-│   │   ├── useTournaments.ts            # Tournament CRUD Operations
-│   │   └── useLocalStorage.ts           # localStorage Hook
-│   │
-│   ├── types/
-│   │   └── tournament.ts                # TypeScript Type Definitions
-│   │
-│   ├── styles/
-│   │   ├── theme.ts                     # Design Tokens
-│   │   └── global.css                   # Global Styles
-│   │
-│   ├── constants/
-│   │   ├── tournamentOptions.ts         # Dropdown Options
-│   │   └── tournamentSchemas.ts         # Validation Schemas
-│   │
-│   ├── App.tsx
-│   └── main.tsx
-│
-├── docs/
-│   ├── FAIR_SCHEDULER.md                # Detailed Algorithm Documentation
-│   └── SCHEDULER_EXAMPLES.md            # Usage Examples
-│
-├── index.html
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
-
-### Wichtige Dateien für KI-Analyse
-
-| Datei | Beschreibung | Priorität |
-|-------|-------------|-----------|
-| `src/utils/fairScheduler.ts` | Kern-Algorithmus für faire Spielplanung | ⭐⭐⭐ |
-| `src/utils/playoffScheduler.ts` | Playoff-Logik mit Parallelisierung | ⭐⭐⭐ |
-| `src/utils/tournamentImporter.ts` | JSON/CSV Import mit Validierung | ⭐⭐ |
-| `src/lib/scheduleGenerator.ts` | Integration & Zeit-Berechnung | ⭐⭐⭐ |
-| `src/types/tournament.ts` | Alle TypeScript-Typen | ⭐⭐ |
-| `src/components/dialogs/ImportDialog.tsx` | Import Dialog UI | ⭐⭐ |
-| `src/components/PlayoffParallelConfigurator.tsx` | Playoff-Config UI | ⭐⭐ |
-| `docs/FAIR_SCHEDULER.md` | Ausführliche Dokumentation | ⭐⭐ |
-
----
-
-## 🛠️ Tech Stack
-
-### Core
-- **React 18** - UI Framework mit Hooks
-- **TypeScript 5** - Type Safety & Developer Experience
-- **Vite 5** - Fast Build Tool & HMR
-
-### Libraries
-- **jsPDF** + **jsPDF-AutoTable** - PDF Generation
-- **date-fns** - Date Utilities (optional)
-
-### Persistence
-- **localStorage** - Browser-based Data Storage
-
-### Deployment
-- **GitHub Pages** - Static Hosting (geplant)
-
----
-
-## 📦 Verfügbare Scripts
+## Verfügbare Scripts
 
 ```bash
-npm run dev          # Development Server (Port 3001)
-npm run build        # Production Build
-npm run preview      # Preview Production Build
-npm run lint         # ESLint ausführen
+# Development
+npm run dev           # Dev Server (Port 3000)
+npm run build         # Production Build
+npm run preview       # Preview Production Build
+
+# Testing
+npm run test          # Vitest (watch mode)
+npm run test:ui       # Vitest mit UI
+
+# Code Quality
+npm run lint          # ESLint
+npm run lint:fix      # ESLint mit Auto-Fix
+
+# Analysis
+npm run analyze       # Bundle-Größen-Analyse (öffnet stats.html)
 ```
 
 ---
 
-## 📝 Aktueller Status
+## Responsive Design
 
-### ✅ Vollständig Implementiert
+### Breakpoints
 
-#### Fair Scheduler System
-- ✅ Round-Robin Pairing Generation (Circle Method)
-- ✅ Greedy Scheduling mit Fairness-Heuristik
-- ✅ Globale Varianz-Minimierung
-- ✅ Priorität: Längste Pause zuerst
-- ✅ Home/Away Balancing (Post-Processing)
-- ✅ Feld-Verteilung
-- ✅ Fairness-Analyse & Reporting
+```
+Mobile:   < 768px   (Card-basierte Layouts)
+Tablet:   768-1024px (Kompakte Tabellen)
+Desktop:  > 1024px   (Vollständige Tabellen)
+```
 
-#### Playoff System
-- ✅ 2-Gruppen Turniere (Direct Finals)
-- ✅ 4-Gruppen Turniere (Semifinals → Finals)
-- ✅ Parallelisierungs-Konfiguration
-- ✅ Topologische Sortierung (Dependencies)
-- ✅ UI für Playoff-Config
+### Touch-Targets
 
-#### UI & Features
-- ✅ 5-Step Tournament Creation Wizard
-- ✅ Live Preview mit editierbarer Playoff-Config
-- ✅ PDF Export
-- ✅ localStorage Persistence
-- ✅ **Vollständig Responsive Design** (Mobile, Tablet, Desktop)
-- ✅ **NumberStepper Komponente** (Touch-freundliche Zahleneingabe)
-- ✅ Theme System
-- ✅ **Turnier-Import (JSON/CSV)** - Externe Turniere importieren mit visueller Kennzeichnung (US-005)
-
-#### Tournament Management System (NEU v2.2)
-- ✅ Live-Turnierverwaltung mit Tab-Navigation
-- ✅ Turnierleitung (Kampfgericht) Tab
-- ✅ Match Cockpit für Live-Spielsteuerung
-- ✅ Match-Selektor (automatisch oder manuell)
-- ✅ Klickbarer Timer mit manueller Zeitanpassung (MM:SS)
-- ✅ Dedizierte Pause/Fortsetzen-Funktion
-- ✅ Warnungen bei Ergebnis-Überschreibung
-- ✅ LiveMatch State Management (localStorage)
-- ✅ MatchEvent-System für vollständige Event-Historie
-- ✅ Verbesserte Event-Liste mit Emojis und Farbcodierung
-- ✅ Automatische Spielprogression
-- ✅ Live-Tabellen mit Auto-Update
-- ✅ Finale Platzierungsberechnung mit Platzierungslogik-Anzeige
-- ✅ Bearbeitbarer Spielplan mit direkter Ergebniseingabe
-- ✅ Schiedsrichter-Zuweisung (Organizer + Teams Modus)
-- ✅ Multi-Field Support (1-4 Felder)
-
-### 🚧 In Arbeit
-
-- 🔄 Monitor-Ansicht für Publikum (Großbildschirm)
-- 🔄 Public View (Zuschauer-Ansicht via Link)
-
-### 📋 Geplant
-
-- 📅 Push Notifications
-- 📅 Offline-First PWA
-- 📅 Cloud Sync (optional)
-- 📅 QR-Code für Live-Tracking
+- Minimum: 44x44px (WCAG 2.1 Level AA)
+- Buttons: 48x48px
+- Score-Inputs: 60x48px
 
 ---
 
-## 📱 Mobile-First Responsive Design
-
-### Übersicht
-
-Die App ist vollständig für Mobile, Tablet und Desktop optimiert mit einem **Mobile-First Ansatz**.
-
-### NumberStepper Komponente
-
-**Datei:** `src/components/ui/NumberStepper.tsx`
-
-Eine wiederverwendbare Komponente für mobile-freundliche Zahleneingabe mit drei Modi:
-
-```typescript
-<NumberStepper
-  value={numberOfTeams}
-  onChange={setNumberOfTeams}
-  min={2}
-  max={32}
-  mode="stepper"  // oder "slider" oder "input"
-  label="Anzahl Teams"
-  suffix="Teams"
-/>
-```
-
-**Modi:**
-- **Stepper** (±Buttons): Für präzise Eingabe (Teams, Felder, Gruppen)
-  - Touch-freundliche Buttons (min 44x44px)
-  - Große Anzeige des aktuellen Werts
-- **Slider** (Range): Für schnelle Auswahl (Spielzeiten, Pausen)
-  - Visueller Slider mit Daumen-Indikator
-  - Min/Max/Current-Value-Anzeige
-- **Input** (Tastatur): Direkte Eingabe für Power-User
-
-### Responsive Breakpoints
-
-```typescript
-// Mobile-First Strategie
-Mobile:   < 768px   // Card-basierte Layouts, vertikales Stacking
-Tablet:   768-1024px // Kompakte Tabellen, reduzierte Abstände
-Desktop:  > 1024px   // Vollständige Tabellen, alle Features sichtbar
-```
-
-### Screen-spezifische Optimierungen
-
-#### 1. Turnier-Erstellung (Tournament Creation)
-**Datei:** `src/features/tournament-creation/Step2_ModeAndSystem.tsx`
-- ✅ NumberStepper für alle Zahlenfelder
-- ✅ Responsive Form-Layout
-- ✅ Touch-freundliche Buttons (48px Höhe)
-
-**Preview:**
-- ✅ Card-Layout auf Mobile (<768px)
-- ✅ Horizontales Scrollen auf Tablet
-- ✅ Vollständige Tabellen auf Desktop
-
-#### 2. Spielplan-Tab
-**Dateien:**
-- `src/features/tournament-management/ScheduleTab.tsx`
-- `src/components/schedule/GroupStageSchedule.tsx`
-- `src/components/schedule/FinalStageSchedule.tsx`
-
-**Mobile (<768px):**
-- Card-basiertes Layout (ein Match pro Card)
-- Große Score-Inputs (60x48px)
-- Touch-freundliche Dropdowns (44px min-height)
-- Team-Namen gut lesbar (15px font)
-
-**Desktop (≥768px):**
-- Table-Layout mit allen Spalten
-- Kompakte Darstellung
-
-#### 3. Platzierungs-Tab
-**Datei:** `src/features/tournament-management/RankingTab.tsx`
-
-**Mobile (<768px):**
-- Kondensierte Tabelle (Platz, Team, Pkt, Diff)
-- Erweiterbare Zeilen (Tap zum Aufklappen)
-- Detaillierte Statistiken in expandierbarem Panel
-- Keine horizontale Scrollbalken
-
-**Desktop (≥768px):**
-- Vollständige Tabelle mit allen Spalten
-- Alle Statistiken sofort sichtbar
-
-#### 4. Gruppen-Tabelle
-**Dateien:**
-- `src/features/tournament-management/TableTab.tsx`
-- `src/components/schedule/GroupTables.tsx`
-
-**Features:**
-- Identisches responsive Pattern wie Platzierungs-Tab
-- Responsive Grid für mehrere Gruppen
-- Mobile: Single-Column, Desktop: Multi-Column
-- Platzierungslogik-Highlighting funktioniert überall
-
-#### 5. Turnierleitung (Management/Kampfgericht)
-**Dateien:**
-- `src/features/tournament-management/ManagementTab.tsx`
-- `src/components/match-cockpit/MatchCockpit.tsx`
-- `src/components/match-cockpit/CurrentMatchPanel.tsx`
-- `src/components/match-cockpit/UpcomingMatchesSidebar.tsx`
-
-**Mobile (<768px):**
-- Vertikales Stacking aller Komponenten
-- Timer: 40px Schriftgröße, klickbar für manuelle Anpassung
-- Tor-Buttons: Volle Breite, 48px Höhe
-- Control-Buttons: 48px Höhe (Start, Pause, Beenden)
-- Events-Liste: 200px max-height mit Scroll
-- Sidebar: Stapelt sich unter Hauptbereich
-
-**Desktop (≥768px):**
-- 2-Spalten-Layout (Hauptbereich + Sidebar)
-- Kompaktere Darstellung
-
-### Design-Prinzipien
-
-#### Touch-Targets
-- **Minimum:** 44x44px (WCAG 2.1 Level AA)
-- **Empfohlen:** 48x48px (unsere Standard-Buttons)
-- **Score-Inputs:** 60x48px (extra groß für präzise Eingabe)
-
-#### Typography
-```typescript
-// Responsive Font-Größen
-Mobile:   11-15px (kompakt aber lesbar)
-Tablet:   12-16px (ausgewogen)
-Desktop:  13-18px (komfortabel)
-
-// Wichtige Inhalte größer
-Timer:    40px (Mobile) / 26px (Desktop)
-Score:    48px (Mobile) / 30px (Desktop)
-```
-
-#### Spacing
-```typescript
-// Responsive Padding
-Mobile:   12-16px
-Tablet:   16-20px
-Desktop:  20-24px
-
-// Zwischen Elementen
-Mobile:   8-12px gaps
-Desktop:  12-16px gaps
-```
-
-#### Layout-Patterns
-- **Mobile:** Card-basiert, vertikales Stacking
-- **Desktop:** Tables, Grids, Side-by-Side
-- **Transitions:** Smooth bei Window-Resize
-- **No Horizontal Scroll:** Immer vermieden auf Mobile
-
-### Testing-Empfehlungen
-
-```bash
-# Test auf verschiedenen Viewports
-Mobile:  375px (iPhone SE)
-Mobile:  390px (iPhone 12/13/14)
-Mobile:  428px (iPhone 14 Pro Max)
-Tablet:  768px (iPad)
-Tablet: 1024px (iPad Pro)
-Desktop: 1440px (Standard Laptop)
-Desktop: 1920px (Full HD)
-```
-
-**Browser DevTools:**
-1. Chrome DevTools → Toggle Device Toolbar (Cmd+Shift+M)
-2. Teste alle Breakpoints (375px, 768px, 1024px, 1440px)
-3. Teste Touch-Events mit Device Emulation
-4. Prüfe, dass keine horizontalen Scrollbalken erscheinen
-
----
-
-## 🎨 Design System
-
-Theme definiert in `src/styles/theme.ts`:
-
-```typescript
-export const theme = {
-  colors: {
-    primary: '#2563eb',      // Blue
-    secondary: '#7c3aed',    // Purple
-    success: '#10b981',      // Green
-    warning: '#f59e0b',      // Orange
-    danger: '#ef4444',       // Red
-    // ...
-  },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px',
-    xxl: '48px',
-  },
-  // ...
-}
-```
-
----
-
-## 💾 Datenpersistenz
-
-### localStorage Schema
-
-```typescript
-// Key: 'hallenfussball_tournaments'
-interface StoredData {
-  tournaments: Tournament[];
-}
-
-interface Tournament {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  sport: 'football' | 'handball' | 'basketball';
-  mode: 'hallenfussball' | 'futsal' | 'normal';
-  ageClass: string;
-  teams: Team[];
-  groupSystem: 'roundRobin' | 'groupsAndFinals';
-  numberOfGroups?: number;
-  numberOfFields: number;
-  finals: Finals;
-  playoffConfig?: PlayoffConfig;  // NEW
-  minRestSlots?: number;          // NEW
-  // ...
-}
-```
-
----
-
-## 🔧 Konfiguration
-
-### TypeScript Config
-- `tsconfig.json` - App Configuration
-- `tsconfig.node.json` - Vite Configuration
-
-### Vite Config
-```typescript
-// vite.config.ts
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 3000,
-  },
-})
-```
-
----
-
-## 📚 Dokumentation
-
-### Für Entwickler
-- `docs/FAIR_SCHEDULER.md` - Detaillierte Algorithmus-Dokumentation
-- `docs/SCHEDULER_EXAMPLES.md` - Code-Beispiele & Migration
-
-### Für KI-Assistenten
-Diese README ist strukturiert für:
-- **ChatGPT**: Nutze den GitHub-Link für Code-Analyse
-- **Claude**: Direkte Code-Beispiele eingebettet
-- **GitHub Copilot**: JSDoc in allen Funktionen
-
-**KI-Prompt-Template:**
-```
-Analysiere das Hallenfußball PWA Repository:
-https://github.com/Stieges/hallenfussball-pwa
-
-Fokus auf:
-1. src/utils/fairScheduler.ts - Fair Scheduling Algorithmus
-2. src/utils/playoffScheduler.ts - Playoff-Logik
-3. src/lib/scheduleGenerator.ts - Zeit-Berechnung
-
-Erkläre die Implementierung der Pausen-Fairness-Optimierung.
-```
-
----
-
-## 🤝 Contributing
-
-### Branch-Strategie
-- `main` - Production-ready Code
-- Feature-Branches: `feature/xyz`
-- Bugfix-Branches: `bugfix/xyz`
-
-### Commit-Konvention
-```
-<type>: <subject>
-
-<body>
-
-🤖 Generated with Claude Code
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
-
-**Types:** `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
-
----
-
-## 📄 Lizenz
+## Lizenz
 
 **MIT License mit Commons Clause**
 
-Diese Software ist unter der MIT-Lizenz mit Commons Clause lizenziert.
+- ✅ Privater Gebrauch, Modifikation, Fork
+- ✅ Nutzung in Vereinen, Schulen, Non-Profit
+- ❌ Verkauf oder Hosting als kommerzieller Dienst
 
-**Was bedeutet das?**
-- ✅ **Erlaubt:** Privater Gebrauch, Modifikation, Distribution, Fork
-- ✅ **Erlaubt:** Nutzung in Vereinen, Schulen, Non-Profit-Organisationen
-- ❌ **Nicht erlaubt:** Verkauf der Software oder Hosting als kommerzieller Dienst
-
-Die Commons Clause schützt vor kommerzieller Ausbeutung, während die volle Open-Source-Nutzung für die Community erhalten bleibt.
-
-Siehe [LICENSE](LICENSE) für den vollständigen Lizenztext
+Siehe [LICENSE](LICENSE) für den vollständigen Text.
 
 ---
 
-## 👤 Autor
+## Autor
 
-Daniel Stiegler
-- GitHub: [@Stieges](https://github.com/Stieges)
-
----
-
-## 🙏 Acknowledgments
-
-- Fair Scheduler Algorithmus entwickelt mit **Claude Code (Sonnet 4.5)**
-- UI Design inspiriert von modernen Sports-Management-Apps
-- Circle Method für Round-Robin basiert auf klassischen Scheduling-Algorithmen
+**Daniel Stiegler** - [@Stieges](https://github.com/Stieges)
 
 ---
 
-**Letzte Aktualisierung:** 2025-12-20
-**Version:** 2.3.0 (Turnier-Import JSON/CSV mit visueller Kennzeichnung)
+## Acknowledgments
+
+- Fair Scheduler Algorithmus entwickelt mit **Claude Code (Opus 4.5)**
+- Circle Method basiert auf klassischen Round-Robin-Algorithmen
 
 ---
 
-## 📝 Changelog
-
-### v2.3.0 (2025-12-20)
-**US-005: Import und visuelle Differenzierung externer Turniere**
-- ✅ JSON-Import für komplette Turniere (inkl. Teams, Matches, Ergebnisse)
-- ✅ CSV-Import für Team-Listen (Spielplan wird automatisch generiert)
-- ✅ Drag & Drop Datei-Upload im ImportDialog
-- ✅ Validierung mit Warnungen (nicht-blockierend)
-- ✅ Visuelle Kennzeichnung: "Import (komplett)" vs. "Import (nur Teams)"
-- ✅ Dezentes Badge in TournamentCard für externe Turniere
-- ✅ Differenziertes Routing nach Import:
-  - Komplette Imports → Dashboard
-  - Nur-Teams-Imports → Wizard Step 2 zur Spielplan-Generierung
-- ✅ Vorlagen-Download (JSON/CSV Templates)
-
-### v2.2.0 (2025-11-29)
-- Tournament Management System mit Live-Verwaltung
-- Match Cockpit für Live-Spielsteuerung
-- Event-System mit Historie
-- Schiedsrichter-Zuweisung
+**Letzte Aktualisierung:** 2025-12-27
