@@ -89,7 +89,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     height: isMobile ? '48px' : '36px',
     borderRadius: '50%',
     border: `1px solid ${colors.border}`,
-    background: 'rgba(255, 255, 255, 0.1)',
+    background: colors.surfaceLight,
     color: colors.textPrimary,
     fontSize: isMobile ? fontSizes.xl : fontSizes.lg,
     fontWeight: fontWeights.bold,
