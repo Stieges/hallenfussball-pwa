@@ -59,6 +59,9 @@ export const shadowSemantics = {
 
   /** Control element shadow (slider thumbs, switches) */
   control: '0 2px 6px rgba(0, 0, 0, 0.3)',
+
+  /** Drop target glow (for drag & drop indicators) */
+  dropTargetGlow: '0 0 12px rgba(245, 158, 11, 0.4)',
 } as const;
 
 // =============================================================================

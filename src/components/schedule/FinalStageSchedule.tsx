@@ -23,7 +23,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { colors, fontWeights, borderRadius } from '../../design-tokens';
+import { colors, fontSizes, fontWeights, borderRadius, spacing, shadowSemantics } from '../../design-tokens';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
@@ -183,17 +183,17 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       // When THIS row is being dragged: show as placeholder
       ...(isDragging ? {
         opacity: 0.4,
-        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+        backgroundColor: colors.editorSwapBg,
         outline: `2px dashed ${colors.accent}`,
         outlineOffset: '-1px',
         zIndex: 0,
       } : {}),
       // When another row is dragged OVER this one: highlight as drop target
       ...(isOver && !isDragging ? {
-        backgroundColor: 'rgba(255, 152, 0, 0.25)',
+        backgroundColor: colors.editorSwapActive,
         outline: `3px solid ${colors.accent}`,
         outlineOffset: '-1px',
-        boxShadow: `0 0 12px rgba(255, 152, 0, 0.4)`,
+        boxShadow: shadowSemantics.dropTargetGlow,
       } : {}),
     };
 
@@ -208,9 +208,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     return (
       <div style={{
         textAlign: 'center',
-        padding: '40px 20px',
+        padding: `${spacing.xl} ${spacing.lg}`,
         color: colors.textSecondary,
-        fontSize: '15px'
+        fontSize: fontSizes.md
       }}>
         Keine Spiele vorhanden
       </div>
@@ -243,29 +243,29 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const refereeOptions = getRefereeOptions();
   const fieldOptions = getFieldOptions();
 
-  const containerStyle: CSSProperties = { marginBottom: '24px' };
+  const containerStyle: CSSProperties = { marginBottom: spacing.lg };
   const titleStyle: CSSProperties = {
-    fontSize: '18px',
+    fontSize: fontSizes.xl,
     fontWeight: fontWeights.bold,
     color: colors.accent,
-    marginBottom: '16px',
+    marginBottom: spacing.md,
   };
   const tableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '13px',
+    fontSize: fontSizes.sm,
     minWidth: '600px',
   };
   const thStyle: CSSProperties = {
     background: colors.accent,
     color: colors.background,
-    padding: '10px 8px',
+    padding: `10px ${spacing.sm}`,
     textAlign: 'left',
     fontWeight: fontWeights.semibold,
     borderBottom: `2px solid ${colors.border}`,
   };
   const tdStyle: CSSProperties = {
-    padding: '8px',
+    padding: spacing.sm,
     borderBottom: `1px solid ${colors.border}`,
     color: colors.textPrimary,
   };
@@ -277,7 +277,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   };
   // Match label column style (compact for "Runde" column)
   const matchLabelCellStyle: CSSProperties = {
-    fontSize: '11px',
+    fontSize: fontSizes.xs,
     fontWeight: fontWeights.semibold,
     color: colors.accent,
     whiteSpace: 'nowrap',
@@ -293,23 +293,23 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const mobileCardStyle: CSSProperties = {
     backgroundColor: colors.background,
     border: `2px solid ${colors.accent}`,
-    borderRadius: '6px',
-    padding: '10px 12px',
-    marginBottom: '8px',
+    borderRadius: borderRadius.md,
+    padding: `10px ${spacing.sm}`,
+    marginBottom: spacing.sm,
   };
 
   const mobileCardHeaderStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '4px',
-    fontSize: '12px',
+    marginBottom: spacing.xs,
+    fontSize: fontSizes.sm,
   };
 
   const mobileMatchInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: spacing.xs,
     color: colors.textSecondary,
   };
 
@@ -319,21 +319,21 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   };
 
   const mobileLabelStyle: CSSProperties = {
-    fontSize: '13px',
+    fontSize: fontSizes.sm,
     fontWeight: fontWeights.bold,
     color: colors.accent,
-    marginBottom: '4px',
+    marginBottom: spacing.xs,
     textAlign: 'center' as const,
     backgroundColor: `${colors.accent}20`,
     padding: '2px 8px',
-    borderRadius: '4px',
+    borderRadius: borderRadius.sm,
   };
 
   const mobileMetaCompactStyle: CSSProperties = {
     display: 'flex',
-    gap: '8px',
+    gap: spacing.sm,
     color: colors.textMuted,
-    fontSize: '11px',
+    fontSize: fontSizes.xs,
   };
 
   // Team row with inline score - compact layout
@@ -342,7 +342,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '4px 0',
-    fontSize: '14px',
+    fontSize: fontSizes.md,
     fontWeight: isWinner ? fontWeights.bold : fontWeights.normal,
     color: isPlaceholder
       ? colors.textPlaceholder
@@ -355,7 +355,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const mobileTeamNameStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: spacing.xs,
     flex: 1,
     minWidth: 0,
     overflow: 'hidden',
@@ -363,7 +363,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
     fontWeight: fontWeights.bold,
-    fontSize: '16px',
+    fontSize: fontSizes.lg,
     minWidth: '24px',
     textAlign: 'right' as const,
     color: isWinner ? colors.success : colors.textPrimary,
@@ -371,16 +371,16 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   const mobileWinnerIconStyle: CSSProperties = {
     color: colors.success,
-    fontSize: '12px',
+    fontSize: fontSizes.sm,
     flexShrink: 0,
   };
 
   const mobileScoreInputStyle: CSSProperties = {
     width: '36px',
-    padding: '4px',
+    padding: spacing.xs,
     border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    fontSize: '14px',
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.md,
     fontWeight: fontWeights.bold,
     textAlign: 'center' as const,
     backgroundColor: colors.background,
@@ -388,10 +388,10 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   };
 
   const mobileSelectStyle: CSSProperties = {
-    padding: '4px 8px',
+    padding: `${spacing.xs} ${spacing.sm}`,
     border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    fontSize: '12px',
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.sm,
     fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     backgroundColor: colors.background,
@@ -439,7 +439,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 </td>
               )}
               <td style={{ ...tdStyle, fontWeight: fontWeights.semibold }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: spacing.sm }}>
                   <span>{match.matchNumber}</span>
                   {isRunning && <LiveBadge compact />}
                 </div>
@@ -449,9 +449,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   const displayedRef = hasPendingRef ? pendingChanges.refereeAssignments[match.id] : match.referee;
                   const isPendingChange = hasPendingRef;
                   return (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? '4px' : '8px', backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined }}>
+                  <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? spacing.xs : spacing.sm, backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined }}>
                     {editingSchedule && onRefereeChange ? (
-                      <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: '4px', border: `1px solid ${isPendingChange ? colors.primary : colors.border}`, borderRadius: '4px', fontSize: '12px', fontWeight: fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: colors.background, color: colors.textPrimary }}>
+                      <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ width: '100%', padding: spacing.xs, border: `1px solid ${isPendingChange ? colors.primary : colors.border}`, borderRadius: borderRadius.sm, fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: colors.background, color: colors.textPrimary }}>
                         <option value="">-</option>
                         {refereeOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                       </select>
@@ -496,9 +496,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   const displayedField = hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field;
                   const isPendingChange = hasPendingField;
                   return (
-                  <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? '4px' : '8px', backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined }}>
+                  <td style={{ ...tdStyle, textAlign: 'center', padding: editingSchedule ? spacing.xs : spacing.sm, backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined }}>
                     {editingSchedule && onFieldChange ? (
-                      <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: '4px', border: `1px solid ${isPendingChange ? colors.primary : colors.border}`, borderRadius: '4px', fontSize: '12px', fontWeight: fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: colors.background, color: colors.textPrimary }}>
+                      <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ width: '100%', padding: spacing.xs, border: `1px solid ${isPendingChange ? colors.primary : colors.border}`, borderRadius: borderRadius.sm, fontSize: fontSizes.sm, fontWeight: fontWeights.semibold, textAlign: 'center', cursor: 'pointer', backgroundColor: colors.background, color: colors.textPrimary }}>
                         {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                       </select>
                     ) : (<span style={{ fontWeight: fontWeights.semibold }}>{displayedField || '-'}</span>)}
@@ -539,26 +539,26 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               {activeMatch && (
                 <div style={{
                   backgroundColor: colors.surface,
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                  boxShadow: shadowSemantics.dialog,
                   borderRadius: borderRadius.md,
                   border: `3px solid ${colors.accent}`,
-                  padding: '12px 16px',
+                  padding: `${spacing.sm} ${spacing.md}`,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
+                  gap: spacing.md,
                   minWidth: '400px',
                   cursor: 'grabbing',
                 }}>
-                  <span style={{ color: colors.accent, fontSize: '18px' }}>⋮⋮</span>
+                  <span style={{ color: colors.accent, fontSize: fontSizes.xl }}>⋮⋮</span>
                   <span style={{ fontWeight: fontWeights.bold, color: colors.accent }}>
                     #{activeMatch.matchNumber}
                   </span>
                   <span style={{
                     backgroundColor: colors.accent,
                     color: colors.background,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '11px',
+                    padding: `2px ${spacing.sm}`,
+                    borderRadius: borderRadius.sm,
+                    fontSize: fontSizes.xs,
                     fontWeight: fontWeights.semibold,
                   }}>
                     {getFinalMatchLabel(activeMatch)}
@@ -725,13 +725,13 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               <button
                 onClick={() => onStartCorrection?.(match.id)}
                 style={{
-                  marginTop: '4px',
-                  padding: '4px 8px',
-                  fontSize: '11px',
+                  marginTop: spacing.xs,
+                  padding: `${spacing.xs} ${spacing.sm}`,
+                  fontSize: fontSizes.xs,
                   color: colors.textSecondary,
                   backgroundColor: 'transparent',
                   border: `1px solid ${colors.border}`,
-                  borderRadius: '4px',
+                  borderRadius: borderRadius.sm,
                   cursor: 'pointer',
                   width: '100%',
                 }}
@@ -745,14 +745,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
             {editingSchedule && (showReferees || showFields) && (
               <div style={{
                 display: 'flex',
-                gap: '8px',
-                marginTop: '6px',
-                paddingTop: '6px',
+                gap: spacing.sm,
+                marginTop: spacing.xs,
+                paddingTop: spacing.xs,
                 borderTop: `1px solid ${colors.border}`,
               }}>
                 {showReferees && onRefereeChange && (
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: colors.textMuted }}>SR</label>
+                    <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>SR</label>
                     <select
                       value={displayedRef ?? ''}
                       onChange={(e) => {
@@ -774,7 +774,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                 )}
                 {showFields && onFieldChange && (
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: colors.textMuted }}>Feld</label>
+                    <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
                     <select
                       value={displayedField || 1}
                       onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}

@@ -114,7 +114,7 @@ export const PDFExportDialog = ({
     display: 'flex',
     alignItems: 'center',
     gap: spacing.md,
-    padding: '14px 16px',
+    padding: `${spacing.md} ${spacing.md}`,
     borderRadius: borderRadius.sm,
     border: `1px solid ${colors.border}`,
     cursor: 'pointer',
@@ -147,7 +147,7 @@ export const PDFExportDialog = ({
     display: 'flex',
     alignItems: 'center',
     gap: spacing.md,
-    padding: '14px 16px',
+    padding: `${spacing.md} ${spacing.md}`,
     borderRadius: borderRadius.sm,
     border: `1px solid ${colors.border}`,
     cursor: 'pointer',
@@ -163,7 +163,7 @@ export const PDFExportDialog = ({
   const errorStyle: CSSProperties = {
     padding: spacing.md,
     borderRadius: borderRadius.sm,
-    background: 'rgba(255, 82, 82, 0.1)',
+    background: colors.errorLight,
     border: `1px solid ${colors.error}`,
     color: colors.error,
     fontSize: fontSizes.sm,
@@ -182,7 +182,7 @@ export const PDFExportDialog = ({
                 style={{
                   ...radioOptionStyle,
                   borderColor: includeScores ? colors.primary : colors.border,
-                  background: includeScores ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
+                  background: includeScores ? colors.rankingPlacementBg : 'transparent',
                 }}
               >
                 <input
@@ -202,7 +202,7 @@ export const PDFExportDialog = ({
                 style={{
                   ...radioOptionStyle,
                   borderColor: !includeScores ? colors.primary : colors.border,
-                  background: !includeScores ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
+                  background: !includeScores ? colors.rankingPlacementBg : 'transparent',
                 }}
               >
                 <input
@@ -225,7 +225,7 @@ export const PDFExportDialog = ({
             style={{
               ...checkboxSectionStyle,
               borderColor: includeStandings ? colors.primary : colors.border,
-              background: includeStandings ? 'rgba(0, 230, 118, 0.05)' : 'transparent',
+              background: includeStandings ? colors.rankingPlacementBg : 'transparent',
             }}
           >
             <input

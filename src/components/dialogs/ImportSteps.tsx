@@ -48,7 +48,7 @@ export const SelectStep = ({
     borderRadius: borderRadius.md,
     padding: spacing.xxl,
     textAlign: 'center',
-    background: isDragging ? 'rgba(0,230,118,0.1)' : 'transparent',
+    background: isDragging ? colors.primaryLight : 'transparent',
     transition: 'all 0.2s ease',
     cursor: 'pointer',
   };
@@ -66,7 +66,7 @@ export const SelectStep = ({
 
   const errorStyle: CSSProperties = {
     padding: spacing.md,
-    background: 'rgba(255,82,82,0.15)',
+    background: colors.errorLight,
     border: `1px solid ${colors.error}`,
     borderRadius: borderRadius.sm,
     color: colors.error,
@@ -193,8 +193,8 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
 
   const warningItemStyle = (severity: 'info' | 'warning'): CSSProperties => ({
     padding: spacing.md,
-    background: severity === 'warning' ? 'rgba(255,145,0,0.15)' : 'rgba(0,176,255,0.1)',
-    border: `1px solid ${severity === 'warning' ? 'rgba(255,145,0,0.4)' : 'rgba(0,176,255,0.3)'}`,
+    background: severity === 'warning' ? colors.warningLight : colors.infoLight,
+    border: `1px solid ${severity === 'warning' ? colors.correctionBorder : colors.secondaryLight}`,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.sm,
     color: severity === 'warning' ? colors.warning : colors.secondary,

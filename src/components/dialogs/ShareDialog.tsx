@@ -133,7 +133,7 @@ export const ShareDialog = ({
     border: `1px solid ${colors.border}`,
     background: colors.surface,
     color: colors.textPrimary,
-    fontSize: '13px',
+    fontSize: fontSizes.sm,
     fontFamily: 'monospace',
     cursor: 'text',
     wordBreak: 'break-all',

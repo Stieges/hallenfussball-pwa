@@ -63,7 +63,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -185,7 +185,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
   const warningStyle: CSSProperties = {
     padding: spacing.md,
-    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    backgroundColor: colors.editorDirtyBg,
     borderRadius: borderRadius.md,
     fontSize: fontSizes.sm,
     color: colors.warning,
@@ -226,7 +226,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     <div style={overlayStyle} onClick={onClose}>
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <span style={{ fontSize: '24px' }}>&#9888;&#65039;</span>
+          <span style={{ fontSize: fontSizes.xxl }}>&#9888;&#65039;</span>
           <h2 style={titleStyle}>Ergebnis korrigieren</h2>
         </div>
 
