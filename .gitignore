@@ -40,5 +40,11 @@ mcp-adesso-analyzer/
 **/*secret*
 **/*apikey*
 
+# Entwickler-Skripte mit API Keys (adesso AI Hub)
+evaluate-plan.js
+clarify-*.js
+search-property-names.js
+validate-bye-fix.js
+
 # Interne Dokumentation (nicht öffentlich)
 docs/
