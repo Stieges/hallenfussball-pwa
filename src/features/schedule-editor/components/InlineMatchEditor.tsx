@@ -80,7 +80,7 @@ const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties
   fontSize: fontSizes.sm,
   fontWeight: fontWeights.medium,
   color: hasConflict ? colors.error : colors.textPrimary,
-  backgroundColor: hasConflict ? 'rgba(239, 83, 80, 0.1)' : colors.surface,
+  backgroundColor: hasConflict ? colors.editorErrorRowBg : colors.surface,
   border: `1px solid ${hasConflict ? colors.error : isOpen ? colors.primary : colors.border}`,
   borderRadius: borderRadius.sm,
   cursor: 'pointer',
@@ -299,7 +299,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
                   style={{
                     color: option.hasConflict ? colors.error : 'inherit',
                     backgroundColor: option.hasConflict
-                      ? 'rgba(239, 83, 80, 0.1)'
+                      ? colors.editorErrorRowBg
                       : 'inherit',
                   }}
                 >
@@ -335,7 +335,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
                 style={{
                   color: option.hasConflict ? colors.error : 'inherit',
                   backgroundColor: option.hasConflict
-                    ? 'rgba(239, 83, 80, 0.1)'
+                    ? colors.editorErrorRowBg
                     : 'inherit',
                 }}
               >
@@ -390,7 +390,7 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
     fontSize: size === 'sm' ? fontSizes.xs : fontSizes.sm,
     fontWeight: fontWeights.medium,
     color: showConflict ? colors.error : colors.textPrimary,
-    backgroundColor: showConflict ? 'rgba(239, 83, 80, 0.1)' : 'transparent',
+    backgroundColor: showConflict ? colors.editorErrorRowBg : 'transparent',
     border: `1px solid ${showConflict ? colors.error : isOpen ? colors.primary : colors.border}`,
     borderRadius: borderRadius.sm,
     cursor: enabled ? 'pointer' : 'not-allowed',

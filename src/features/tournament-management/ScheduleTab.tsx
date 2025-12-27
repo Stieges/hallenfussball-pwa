@@ -9,16 +9,17 @@
  * - Live-Tabellen-Berechnung
  */
 
-import { useState, useEffect, useCallback, CSSProperties, useRef } from 'react';
-import { Card, Button } from '../../components/ui';
+import { useState, useEffect, useCallback, CSSProperties } from 'react';
+import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../design-tokens';
+import { colors } from '../../design-tokens';
 import { Tournament, Standing, CorrectionEntry, CorrectionReasonType, Match } from '../../types/tournament';
+import { useScheduleHistory } from './hooks';
+import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor, autoReassignReferees, redistributeFields } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
-import { ScheduleActionButtons } from '../../components/ScheduleActionButtons';
 import { CorrectionDialog, ConfirmDialog } from '../../components/dialogs';
 import { useAppSettings, useUserProfile } from '../../hooks/useUserProfile';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -30,9 +31,6 @@ import { LiveMatch } from '../../components/match-cockpit/MatchCockpit';
 
 // Type for stored live matches in localStorage
 type StoredLiveMatches = Record<string, LiveMatch>;
-
-// View mode for schedule display
-type ScheduleViewMode = 'table' | 'grid';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -55,11 +53,6 @@ interface PendingChanges {
   fieldAssignments: Record<string, number>;
 }
 
-// History state for unified undo/redo across both views
-interface HistoryState {
-  matches: Match[];
-  timestamp: number;
-}
 
 export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   tournament,
@@ -86,97 +79,19 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // View mode: 'table' (classic) or 'grid' (new schedule editor)
   const [viewMode, setViewMode] = useState<ScheduleViewMode>('table');
 
-  // =========================================================================
-  // UNIFIED UNDO/REDO HISTORY (shared across both views)
-  // =========================================================================
-  const undoStackRef = useRef<HistoryState[]>([]);
-  const redoStackRef = useRef<HistoryState[]>([]);
-  const [historyVersion, setHistoryVersion] = useState(0); // Force re-render for button states
-
-  // Save current state to undo stack before making changes
-  const saveToHistory = useCallback(() => {
-    undoStackRef.current.push({
-      matches: tournament.matches.map(m => ({ ...m })), // Deep copy
-      timestamp: Date.now(),
+  // Unified Undo/Redo History (shared across both views)
+  const { saveToHistory, handleUndo, handleRedo, clearHistory, canUndo, canRedo } =
+    useScheduleHistory({
+      matches: tournament.matches,
+      onMatchesUpdate: useCallback((matches: Match[]) => {
+        onTournamentUpdate({
+          ...tournament,
+          matches,
+          updatedAt: new Date().toISOString(),
+        }, false);
+      }, [tournament, onTournamentUpdate]),
+      isEditing,
     });
-    // Clear redo stack when new change is made
-    redoStackRef.current = [];
-    setHistoryVersion(v => v + 1);
-  }, [tournament.matches]);
-
-  // Undo: Restore previous state
-  const handleUndo = useCallback(() => {
-    if (undoStackRef.current.length === 0) {return;}
-
-    // Save current state to redo stack
-    redoStackRef.current.push({
-      matches: tournament.matches.map(m => ({ ...m })),
-      timestamp: Date.now(),
-    });
-
-    // Pop and apply previous state
-    const previousState = undoStackRef.current.pop();
-    if (!previousState) {return;} // Should never happen due to length check
-    onTournamentUpdate({
-      ...tournament,
-      matches: previousState.matches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-    setHistoryVersion(v => v + 1);
-  }, [tournament, onTournamentUpdate]);
-
-  // Redo: Restore next state
-  const handleRedo = useCallback(() => {
-    if (redoStackRef.current.length === 0) {return;}
-
-    // Save current state to undo stack
-    undoStackRef.current.push({
-      matches: tournament.matches.map(m => ({ ...m })),
-      timestamp: Date.now(),
-    });
-
-    // Pop and apply next state
-    const nextState = redoStackRef.current.pop();
-    if (!nextState) {return;} // Should never happen due to length check
-    onTournamentUpdate({
-      ...tournament,
-      matches: nextState.matches,
-      updatedAt: new Date().toISOString(),
-    }, false);
-    setHistoryVersion(v => v + 1);
-  }, [tournament, onTournamentUpdate]);
-
-  // Clear history when exiting edit mode
-  const clearHistory = useCallback(() => {
-    undoStackRef.current = [];
-    redoStackRef.current = [];
-    setHistoryVersion(v => v + 1);
-  }, []);
-
-  // Computed history state (historyVersion forces re-render)
-  const canUndo = historyVersion >= 0 && undoStackRef.current.length > 0;
-  const canRedo = historyVersion >= 0 && redoStackRef.current.length > 0;
-
-  // Keyboard shortcuts for undo/redo (only in edit mode)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isEditing) {return;}
-
-      // Ctrl+Z or Cmd+Z for undo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
-      }
-      // Ctrl+Y or Cmd+Shift+Z for redo
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        handleRedo();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isEditing, handleUndo, handleRedo]);
 
   // Handle redistribution of SR (keeps times fixed)
   const handleRedistributeSR = useCallback(() => {
@@ -398,58 +313,37 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     showSuccess(`Spiele ${match1.round} und ${match2.round} getauscht`);
   }, [tournament, onTournamentUpdate, showSuccess, saveToHistory]);
 
-  // Actually apply the changes (called after conflict resolution)
-  const applyChanges = useCallback((updatedTournament: Tournament) => {
-    updatedTournament.updatedAt = new Date().toISOString();
+  // ===========================================================================
+  // PENDING CHANGES → TOURNAMENT BUILDER
+  // ===========================================================================
+  // Applies SR and field changes from pendingChanges to tournament.
+  // Used by both handleSaveChanges and handleSaveWithConflicts.
+  // Match time swaps are applied immediately and not stored in pendingChanges.
+  // ===========================================================================
 
-    // IMPORTANT: Manual edits should NEVER trigger schedule regeneration!
-    // Regeneration would overwrite the user's intentional changes.
-    // Regeneration is only needed for structural changes (add/remove teams, change settings).
-    const needsRegeneration = false;
+  const buildTournamentWithPendingChanges = useCallback((): Tournament => {
+    const updated = { ...tournament };
 
-    onTournamentUpdate(updatedTournament, needsRegeneration);
-
-    setIsEditing(false);
-    setPendingChanges({
-      refereeAssignments: {},
-      fieldAssignments: {},
-    });
-    setShowConflictDialog(false);
-    setDetectedConflicts([]);
-
-    showSuccess('Spielplan-Änderungen gespeichert');
-  }, [onTournamentUpdate, showSuccess]);
-
-  // Apply pending changes and check for conflicts
-  const handleSaveChanges = useCallback(() => {
-    // Build updated tournament with pending changes
-    const updatedTournament = { ...tournament };
-
-    // Apply referee changes
+    // Apply pending SR assignments to both config and matches
     if (Object.keys(pendingChanges.refereeAssignments).length > 0) {
-      if (!updatedTournament.refereeConfig) {
-        updatedTournament.refereeConfig = { mode: 'teams', manualAssignments: {} };
+      if (!updated.refereeConfig) {
+        updated.refereeConfig = { mode: 'teams', manualAssignments: {} };
       }
-      const manualAssignments = { ...updatedTournament.refereeConfig.manualAssignments };
+      const manualAssignments = { ...updated.refereeConfig.manualAssignments };
 
       for (const [id, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
         if (refereeNumber === null) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup
           delete manualAssignments[id];
         } else {
           manualAssignments[id] = refereeNumber;
         }
       }
 
-      updatedTournament.refereeConfig = {
-        ...updatedTournament.refereeConfig,
-        manualAssignments,
-      };
-
-      // Also update matches directly
-      updatedTournament.matches = updatedTournament.matches.map(match => {
+      updated.refereeConfig = { ...updated.refereeConfig, manualAssignments };
+      updated.matches = updated.matches.map(match => {
         const newRef = pendingChanges.refereeAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newRef can be null (deletion marker)
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Can be null
         if (newRef !== undefined) {
           return { ...match, referee: newRef ?? undefined };
         }
@@ -457,19 +351,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       });
     }
 
-    // Apply field changes
+    // Apply pending field assignments to both config and matches
     if (Object.keys(pendingChanges.fieldAssignments).length > 0) {
-      if (!updatedTournament.fieldAssignments) {
-        updatedTournament.fieldAssignments = {};
+      if (!updated.fieldAssignments) {
+        updated.fieldAssignments = {};
       }
       for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
-        updatedTournament.fieldAssignments[id] = fieldNumber;
+        updated.fieldAssignments[id] = fieldNumber;
       }
 
-      // Also update matches directly
-      updatedTournament.matches = updatedTournament.matches.map(match => {
+      updated.matches = updated.matches.map(match => {
         const newField = pendingChanges.fieldAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: object indexing can return undefined
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check
         if (newField !== undefined) {
           return { ...match, field: newField };
         }
@@ -477,15 +370,35 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       });
     }
 
-    // Note: Match time swaps are already applied immediately (not stored in pendingChanges)
+    return updated;
+  }, [tournament, pendingChanges]);
 
-    // Check for conflicts BEFORE saving
+  // Finalize save: update tournament, reset edit state, show success
+  const applyChanges = useCallback((updatedTournament: Tournament) => {
+    updatedTournament.updatedAt = new Date().toISOString();
+
+    // Manual edits should NEVER regenerate schedule - would overwrite user's changes
+    onTournamentUpdate(updatedTournament, false);
+
+    setIsEditing(false);
+    setPendingChanges({ refereeAssignments: {}, fieldAssignments: {} });
+    setShowConflictDialog(false);
+    setDetectedConflicts([]);
+    showSuccess('Spielplan-Änderungen gespeichert');
+  }, [onTournamentUpdate, showSuccess]);
+
+  // Save with conflict check - shows dialog if conflicts detected
+  const handleSaveChanges = useCallback(() => {
+    const updatedTournament = buildTournamentWithPendingChanges();
+
+    // Detect conflicts before saving
     const conflictConfig: ConflictDetectionConfig = {
       matchDurationMinutes: tournament.groupPhaseGameDuration,
       minBreakMinutes: tournament.groupPhaseBreakDuration ?? 0,
       checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
       checkFieldConflicts: tournament.numberOfFields > 1,
     };
+
     const conflicts = detectAllConflicts(
       updatedTournament.matches,
       tournament.teams,
@@ -493,75 +406,18 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     );
 
     if (conflicts.length > 0) {
-      // Show conflict dialog
       setDetectedConflicts(conflicts);
       setShowConflictDialog(true);
       return;
     }
 
-    // No conflicts - save directly
     applyChanges(updatedTournament);
-  }, [tournament, pendingChanges, applyChanges]);
+  }, [tournament, buildTournamentWithPendingChanges, applyChanges]);
 
-  // Handle conflict dialog - save anyway
+  // Save despite conflicts - called from conflict dialog "save anyway"
   const handleSaveWithConflicts = useCallback(() => {
-    // Build updated tournament again and save despite conflicts
-    const updatedTournament = { ...tournament };
-
-    // Apply referee changes
-    if (Object.keys(pendingChanges.refereeAssignments).length > 0) {
-      if (!updatedTournament.refereeConfig) {
-        updatedTournament.refereeConfig = { mode: 'teams', manualAssignments: {} };
-      }
-      const manualAssignments = { ...updatedTournament.refereeConfig.manualAssignments };
-
-      for (const [id, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
-        if (refereeNumber === null) {
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- Intentional cleanup of manual assignment
-          delete manualAssignments[id];
-        } else {
-          manualAssignments[id] = refereeNumber;
-        }
-      }
-
-      updatedTournament.refereeConfig = {
-        ...updatedTournament.refereeConfig,
-        manualAssignments,
-      };
-
-      updatedTournament.matches = updatedTournament.matches.map(match => {
-        const newRef = pendingChanges.refereeAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newRef can be null (deletion marker)
-        if (newRef !== undefined) {
-          return { ...match, referee: newRef ?? undefined };
-        }
-        return match;
-      });
-    }
-
-    // Apply field changes
-    if (Object.keys(pendingChanges.fieldAssignments).length > 0) {
-      if (!updatedTournament.fieldAssignments) {
-        updatedTournament.fieldAssignments = {};
-      }
-      for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
-        updatedTournament.fieldAssignments[id] = fieldNumber;
-      }
-
-      updatedTournament.matches = updatedTournament.matches.map(match => {
-        const newField = pendingChanges.fieldAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- newField can be undefined at runtime
-        if (newField !== undefined) {
-          return { ...match, field: newField };
-        }
-        return match;
-      });
-    }
-
-    // Note: Match time swaps are already applied immediately (not stored in pendingChanges)
-
-    applyChanges(updatedTournament);
-  }, [tournament, pendingChanges, applyChanges]);
+    applyChanges(buildTournamentWithPendingChanges());
+  }, [buildTournamentWithPendingChanges, applyChanges]);
 
   // Correction handlers
   const handleStartCorrection = (matchId: string) => {
@@ -785,7 +641,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Edit mode visual indicator
   const editModeCardStyle: CSSProperties = isEditing ? {
     border: `3px solid ${colors.primary}`,
-    boxShadow: `0 0 0 4px rgba(0, 176, 255, 0.15)`,
+    boxShadow: `0 0 0 4px ${colors.secondaryLight}`,
   } : {};
 
   // Count conflicts by severity
@@ -803,147 +659,26 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       <div style={containerStyle} className="schedule-tab-container">
       <Card style={editModeCardStyle}>
         {/* Action Buttons Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: spacing.lg,
-          borderBottom: `1px solid ${colors.border}`,
-          gap: spacing.md,
-          flexWrap: 'wrap',
-        }}>
-          {/* Left side: Edit mode controls (SHARED across both views) + View toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' }}>
-            {/* Edit Mode Controls - UNIFIED for both views */}
-            {!isEditing ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                ✏️ Spielplan bearbeiten
-              </Button>
-            ) : (
-              <>
-                <span style={{
-                  fontSize: fontSizes.sm,
-                  fontWeight: fontWeights.semibold,
-                  color: colors.primary,
-                  padding: `${spacing.xs} ${spacing.sm}`,
-                  backgroundColor: 'rgba(0, 176, 255, 0.1)',
-                  borderRadius: borderRadius.sm,
-                }}>
-                  Bearbeitungsmodus
-                </span>
-
-                {/* Undo/Redo buttons */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleUndo}
-                  disabled={!canUndo}
-                >
-                  ↩️ Undo
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRedo}
-                  disabled={!canRedo}
-                >
-                  ↪️ Redo
-                </Button>
-
-                {/* Redistribution buttons - keep times, redistribute SR or fields */}
-                {tournament.refereeConfig?.mode !== 'none' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRedistributeSR}
-                  >
-                    🔄 SR verteilen
-                  </Button>
-                )}
-                {tournament.numberOfFields > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleRedistributeFields}
-                  >
-                    🔄 Felder verteilen
-                  </Button>
-                )}
-
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleSaveChanges}
-                  disabled={!hasUnsavedChanges && !canUndo}
-                >
-                  💾 Speichern
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                >
-                  Abbrechen
-                </Button>
-              </>
-            )}
-
-            {/* View Mode Toggle */}
-            <div style={{
-              display: 'flex',
-              backgroundColor: colors.background,
-              borderRadius: borderRadius.md,
-              padding: '2px',
-              border: `1px solid ${colors.border}`,
-              marginLeft: isEditing ? spacing.md : 0,
-            }}>
-              <button
-                onClick={() => setViewMode('table')}
-                style={{
-                  padding: `${spacing.xs} ${spacing.md}`,
-                  border: 'none',
-                  borderRadius: borderRadius.sm,
-                  fontSize: fontSizes.sm,
-                  fontWeight: viewMode === 'table' ? fontWeights.semibold : fontWeights.medium,
-                  backgroundColor: viewMode === 'table' ? colors.primary : 'transparent',
-                  color: viewMode === 'table' ? colors.background : colors.textSecondary,
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                Tabelle
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                style={{
-                  padding: `${spacing.xs} ${spacing.md}`,
-                  border: 'none',
-                  borderRadius: borderRadius.sm,
-                  fontSize: fontSizes.sm,
-                  fontWeight: viewMode === 'grid' ? fontWeights.semibold : fontWeights.medium,
-                  backgroundColor: viewMode === 'grid' ? colors.primary : 'transparent',
-                  color: viewMode === 'grid' ? colors.background : colors.textSecondary,
-                  cursor: 'pointer',
-                  transition: 'all 150ms ease',
-                }}
-              >
-                Grid
-              </button>
-            </div>
-          </div>
-
-          {/* Right side: Export buttons */}
-          <ScheduleActionButtons
-            tournament={tournament}
-            schedule={schedule}
-            standings={currentStandings}
-            variant="organizer"
-          />
-        </div>
+        <ScheduleToolbar
+          isEditing={isEditing}
+          onStartEditing={() => setIsEditing(true)}
+          onSave={handleSaveChanges}
+          onCancel={handleCancelEdit}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onRedistributeSR={handleRedistributeSR}
+          onRedistributeFields={handleRedistributeFields}
+          showSRButton={tournament.refereeConfig?.mode !== 'none'}
+          showFieldsButton={tournament.numberOfFields > 1}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          tournament={tournament}
+          schedule={schedule}
+          standings={currentStandings}
+        />
 
         {/* Conditional rendering based on view mode */}
         {viewMode === 'table' ? (
@@ -1002,56 +737,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       cancelText="Zurück zur Bearbeitung"
       variant={criticalConflicts.length > 0 ? 'danger' : 'warning'}
       message={
-        <div style={{ textAlign: 'left' }}>
-          {criticalConflicts.length > 0 && (
-            <div style={{
-              marginBottom: spacing.md,
-              padding: spacing.md,
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
-              border: `1px solid ${colors.error}`,
-              borderRadius: borderRadius.md,
-            }}>
-              <div style={{
-                fontWeight: fontWeights.semibold,
-                color: colors.error,
-                marginBottom: spacing.sm,
-              }}>
-                ⛔ Kritische Fehler ({criticalConflicts.length})
-              </div>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                {criticalConflicts.map((c, i) => (
-                  <li key={i} style={{ color: colors.textPrimary, marginBottom: spacing.xs }}>
-                    {c.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {warningConflicts.length > 0 && (
-            <div style={{
-              padding: spacing.md,
-              backgroundColor: 'rgba(245, 158, 11, 0.1)',
-              border: `1px solid ${colors.warning}`,
-              borderRadius: borderRadius.md,
-            }}>
-              <div style={{
-                fontWeight: fontWeights.semibold,
-                color: colors.warning,
-                marginBottom: spacing.sm,
-              }}>
-                ⚠️ Warnungen ({warningConflicts.length})
-              </div>
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                {warningConflicts.map((c, i) => (
-                  <li key={i} style={{ color: colors.textPrimary, marginBottom: spacing.xs }}>
-                    {c.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        <ScheduleConflictContent
+          criticalConflicts={criticalConflicts}
+          warningConflicts={warningConflicts}
+        />
       }
     />
 

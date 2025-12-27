@@ -75,11 +75,11 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
     minWidth: 0, // Allow shrinking below content size
     padding: hasMatch ? 0 : spacing.sm,
     backgroundColor: isSwapTarget
-      ? 'rgba(245, 158, 11, 0.15)' // Orange for swap
+      ? colors.editorSwapBg // Orange for swap
       : isDropTarget
-        ? 'rgba(0, 176, 255, 0.15)'
+        ? colors.secondaryLight
         : isHighlighted
-          ? 'rgba(0, 176, 255, 0.05)'
+          ? colors.editorDropTargetBg
           : hasMatch
             ? colors.surface
             : colors.background,
@@ -88,7 +88,7 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
       : isDropTarget
         ? `2px solid ${colors.primary}`
         : isHighlighted
-          ? `2px dashed rgba(0, 176, 255, 0.4)`
+          ? `2px dashed ${colors.secondary}`
           : hasMatch
             ? `1px solid ${colors.border}`
             : `2px dashed ${colors.border}`,
@@ -98,9 +98,9 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
     alignItems: 'stretch', // Match cards fill full height
     justifyContent: 'stretch', // Match cards fill full width
     boxShadow: isSwapTarget
-      ? `0 0 0 3px rgba(245, 158, 11, 0.25), inset 0 0 20px rgba(245, 158, 11, 0.1)`
+      ? `0 0 0 3px ${colors.editorSwapActive}, inset 0 0 20px ${colors.editorSwapBg}`
       : isDropTarget
-        ? `0 0 0 3px rgba(0, 176, 255, 0.2), inset 0 0 20px rgba(0, 176, 255, 0.1)`
+        ? `0 0 0 3px ${colors.secondaryLight}, inset 0 0 20px ${colors.editorDropTargetBg}`
         : 'none',
   };
 
@@ -173,7 +173,7 @@ export const TimeSlotCompact: React.FC<TimeSlotCompactProps> = ({
 
   const style: React.CSSProperties = {
     minHeight: hasMatch ? 'auto' : '40px',
-    backgroundColor: isOver ? 'rgba(0, 176, 255, 0.1)' : 'transparent',
+    backgroundColor: isOver ? colors.editorDragActiveBg : 'transparent',
     border: hasMatch ? 'none' : `1px dashed ${isOver ? colors.primary : colors.border}`,
     borderRadius: borderRadius.sm,
     display: 'flex',

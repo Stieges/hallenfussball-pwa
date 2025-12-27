@@ -40,7 +40,7 @@ export const Select: React.FC<SelectProps> = ({
 
   const selectStyles: CSSProperties = {
     padding: `${spacing.md} ${spacing.lg}`,
-    background: 'rgba(0,0,0,0.3)',
+    background: colors.inputBg,
     border: `1px solid ${colors.border}`,
     borderRadius: borderRadius.md,
     color: colors.textPrimary,

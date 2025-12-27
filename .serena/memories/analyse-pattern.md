@@ -1,0 +1,1 @@
+../../.claude/workflows/ANALYSE_PATTERN.md

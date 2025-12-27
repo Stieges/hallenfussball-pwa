@@ -101,6 +101,7 @@ export const colors = {
   // ---------------------------------------------------------------------------
   background: primitives.neutral[950],
   surface: 'rgba(255, 255, 255, 0.05)',
+  surfaceLight: 'rgba(255, 255, 255, 0.1)',
   surfaceSolid: primitives.neutral[800], // Solid fallback for surface
   surfaceHover: 'rgba(255, 255, 255, 0.08)',
   surfaceDark: 'rgba(0, 0, 0, 0.3)', // For score containers, input backgrounds
@@ -188,8 +189,90 @@ export const colors = {
   // Special Colors
   // ---------------------------------------------------------------------------
   overlay: 'rgba(0, 0, 0, 0.5)',
+  overlayStrong: 'rgba(0, 0, 0, 0.7)',
   focus: primitives.green[400],
   focusRing: 'rgba(0, 230, 118, 0.2)',
+
+  // Input backgrounds
+  inputBg: 'rgba(0, 0, 0, 0.3)',
+
+  // Background variants (for gradients)
+  backgroundDark: '#0d1d35',
+  backgroundDeep: '#020617',
+  backgroundGradientDark: 'radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%)',
+
+  // Animation/Effect Colors
+  confettiColors: ['#00e676', '#76ff03', '#ffeb3b', '#ffffff'] as readonly string[],
+
+  // Gradient color stops (for gradient construction)
+  gradientErrorLight: '#ff6b6b',
+  gradientPrimaryLight: '#4ade80',
+
+  // QR Code
+  qrBackground: '#FFFFFF',
+
+  // ---------------------------------------------------------------------------
+  // Schedule Editor Colors
+  // ---------------------------------------------------------------------------
+  // Edit Mode (green tints for active editing state)
+  editorEditModeBg: 'rgba(76, 175, 80, 0.1)',
+  editorEditModeHover: 'rgba(76, 175, 80, 0.2)',
+  editorEditModeRowBg: 'rgba(76, 175, 80, 0.08)',
+  editorEditModeBorder: 'rgba(76, 175, 80, 0.4)',
+
+  // Dirty/Changed indicator (amber/yellow for unsaved changes)
+  editorDirtyBg: 'rgba(255, 193, 7, 0.15)',
+  editorDirtyRowBg: 'rgba(255, 193, 7, 0.08)',
+  editorDirtyRowBgLight: 'rgba(255, 193, 7, 0.05)',
+  editorDirtyBorder: 'rgba(255, 193, 7, 0.4)',
+
+  // Swap/Move indicators (amber for drag targets)
+  editorSwapBg: 'rgba(245, 158, 11, 0.15)',
+  editorSwapActive: 'rgba(245, 158, 11, 0.25)',
+
+  // Error rows (red tints for conflicts)
+  editorErrorRowBg: 'rgba(239, 83, 80, 0.1)',
+  editorErrorRowBgLight: 'rgba(239, 83, 80, 0.05)',
+
+  // Drag & Drop
+  editorDragActiveBg: 'rgba(0, 176, 255, 0.1)',
+  editorDropTargetBg: 'rgba(0, 176, 255, 0.05)',
+
+  // Locked/Disabled matches
+  editorLockedBg: 'rgba(0, 0, 0, 0.08)',
+  editorLockedText: 'rgba(255, 255, 255, 0.5)',
+
+  // ---------------------------------------------------------------------------
+  // Management & Ranking Colors
+  // ---------------------------------------------------------------------------
+  // Ranking highlights (green tints for active placement criteria)
+  rankingHighlightBg: 'rgba(34, 197, 94, 0.15)',
+  rankingPlacementBg: 'rgba(0, 230, 118, 0.08)',
+  rankingExpandedBg: 'rgba(0, 230, 118, 0.05)',
+
+  // Info banners (blue tints for informational content)
+  infoBannerBg: 'rgba(33, 150, 243, 0.08)',
+  infoBadgeBg: 'rgba(33, 150, 243, 0.15)',
+
+  // Warning banners (orange tints for caution/dirty state)
+  warningBannerBg: 'rgba(255, 152, 0, 0.08)',
+  warningBannerBgStrong: 'rgba(255, 152, 0, 0.1)',
+  warningBannerBorder: 'rgba(255, 152, 0, 0.3)',
+  dirtyIndicatorBg: 'rgba(255, 152, 0, 0.15)',
+
+  // Delete/Danger action backgrounds
+  dangerActionBg: 'rgba(244, 67, 54, 0.1)',
+
+  // Neutral badges and rows
+  neutralBadgeBg: 'rgba(0, 0, 0, 0.08)',
+  neutralRowBg: 'rgba(0, 0, 0, 0.02)',
+  neutralStatusBg: 'rgba(100, 100, 100, 0.1)',
+
+  // Monitor/TV display
+  monitorSectionBg: 'rgba(15, 23, 42, 0.9)',
+
+  // Gradients (stored as full gradient strings)
+  gradientNextMatch: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
 } as const;
 
 // =============================================================================

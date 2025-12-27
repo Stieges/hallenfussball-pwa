@@ -169,10 +169,10 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     height: '100%',
     width: `${progressPercent}%`,
     background: isOvertime
-      ? `linear-gradient(90deg, ${colors.error} 0%, #ff6b6b 100%)`
+      ? `linear-gradient(90deg, ${colors.error} 0%, ${colors.gradientErrorLight} 100%)`
       : isNearEnd
-        ? `linear-gradient(90deg, ${colors.error} 0%, #ff6b6b 100%)`
-        : `linear-gradient(90deg, ${colors.primary} 0%, #4ade80 100%)`,
+        ? `linear-gradient(90deg, ${colors.error} 0%, ${colors.gradientErrorLight} 100%)`
+        : `linear-gradient(90deg, ${colors.primary} 0%, ${colors.gradientPrimaryLight} 100%)`,
     borderRadius: currentSize.progress,
     transition: 'width 0.5s linear',
     boxShadow: isNearEnd || isOvertime

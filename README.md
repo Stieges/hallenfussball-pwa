@@ -712,7 +712,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## 📄 Lizenz
 
-MIT License - siehe `LICENSE` Datei
+**MIT License mit Commons Clause**
+
+Diese Software ist unter der MIT-Lizenz mit Commons Clause lizenziert.
+
+**Was bedeutet das?**
+- ✅ **Erlaubt:** Privater Gebrauch, Modifikation, Distribution, Fork
+- ✅ **Erlaubt:** Nutzung in Vereinen, Schulen, Non-Profit-Organisationen
+- ❌ **Nicht erlaubt:** Verkauf der Software oder Hosting als kommerzieller Dienst
+
+Die Commons Clause schützt vor kommerzieller Ausbeutung, während die volle Open-Source-Nutzung für die Community erhalten bleibt.
+
+Siehe [LICENSE](LICENSE) für den vollständigen Lizenztext
 
 ---
 

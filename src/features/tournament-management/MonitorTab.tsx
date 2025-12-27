@@ -114,7 +114,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     height: isFullscreen ? '100vh' : 'auto',
     overflow: isFullscreen ? 'hidden' : 'visible',
     padding: isFullscreen ? 0 : spacing.xxl,
-    background: 'radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%)',
+    background: colors.backgroundGradientDark,
     color: colors.textPrimary,
     position: 'relative',
     display: isFullscreen ? 'flex' : 'block',
@@ -136,7 +136,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
   }
 
   const sectionStyle: CSSProperties = {
-    background: 'rgba(15, 23, 42, 0.9)',
+    background: colors.monitorSectionBg,
     borderRadius: borderRadius.xl,
     padding: spacing.xxl,
     border: `1px solid ${colors.border}`,

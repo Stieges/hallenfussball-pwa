@@ -14,7 +14,7 @@
 import { useState, CSSProperties } from 'react';
 import { Card, Input, Button } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../../design-tokens';
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -212,7 +212,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     border: 'none',
     cursor: 'pointer',
     fontWeight: fontWeights.medium,
-    background: variant === 'edit' ? colors.surface : 'rgba(244, 67, 54, 0.1)',
+    background: variant === 'edit' ? colors.surface : colors.dangerActionBg,
     color: variant === 'edit' ? colors.textPrimary : colors.error,
     transition: 'all 0.2s ease',
   });
@@ -225,7 +225,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const removedTeamStyle: CSSProperties = {
     ...teamRowStyle,
     opacity: 0.6,
-    background: 'rgba(0,0,0,0.02)',
+    background: colors.neutralRowBg,
   };
 
   const removedTeamNameStyle: CSSProperties = {
@@ -244,7 +244,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Error Message */}
       {error && (
-        <Card style={{ background: 'rgba(244, 67, 54, 0.1)', marginBottom: spacing.lg }}>
+        <Card style={{ background: colors.dangerActionBg, marginBottom: spacing.lg }}>
           <div style={{ color: colors.error, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>❌</span>
             <span>{error}</span>
@@ -259,7 +259,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       )}
 
       {/* Info Box */}
-      <Card style={{ marginBottom: spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
+      <Card style={{ marginBottom: spacing.lg, background: colors.infoBannerBg }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
           <span style={{ fontSize: '24px' }}>ℹ️</span>
           <div>
@@ -322,7 +322,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <div style={teamInfoStyle}>
                       <span style={teamNameStyle}>{team.name}</span>
                       {team.group && (
-                        <span style={badgeStyle(colors.primary, 'rgba(33, 150, 243, 0.15)')}>
+                        <span style={badgeStyle(colors.primary, colors.infoBadgeBg)}>
                           {getGroupDisplayName(team.group, tournament)}
                         </span>
                       )}
@@ -332,7 +332,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         </span>
                       )}
                       {analysis.matchesWithoutResults > 0 && (
-                        <span style={badgeStyle(colors.textSecondary, 'rgba(0,0,0,0.08)')}>
+                        <span style={badgeStyle(colors.textSecondary, colors.neutralBadgeBg)}>
                           {analysis.matchesWithoutResults} geplant
                         </span>
                       )}
@@ -377,7 +377,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <div style={teamInfoStyle}>
                   <span style={removedTeamNameStyle}>{team.name}</span>
                   {analysis.matchesWithResults > 0 && (
-                    <span style={badgeStyle(colors.textSecondary, 'rgba(0,0,0,0.08)')}>
+                    <span style={badgeStyle(colors.textSecondary, colors.neutralBadgeBg)}>
                       {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
                     </span>
                   )}
@@ -424,7 +424,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
                 <div style={{
                   padding: spacing.md,
-                  background: 'rgba(255, 152, 0, 0.1)',
+                  background: colors.warningBannerBgStrong,
                   borderRadius: borderRadius.sm,
                   marginTop: '12px',
                 }}>
@@ -466,7 +466,7 @@ const overlayStyle: CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  background: 'rgba(0, 0, 0, 0.5)',
+  background: colors.overlay,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -479,5 +479,5 @@ const dialogStyle: CSSProperties = {
   padding: spacing.xl,
   maxWidth: '500px',
   width: '90%',
-  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+  boxShadow: shadows.xl,
 };

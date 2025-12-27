@@ -8,8 +8,9 @@
  */
 
 import React, { CSSProperties, useState, useMemo } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, spacing } from '../../design-tokens';
 import { Card } from '../../components/ui';
+import { HighlightedCell } from './components';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
@@ -124,7 +125,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     top: isMobile ? spacing.sm : spacing.lg,
     right: isMobile ? spacing.sm : spacing.lg,
     padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
-    background: 'rgba(0, 230, 118, 0.15)',
+    background: colors.primaryLight,
     border: `1px solid ${colors.primary}`,
     borderRadius: borderRadius.lg,
     color: colors.primary,
@@ -250,21 +251,21 @@ export const RankingTab: React.FC<RankingTabProps> = ({
         icon: '⏳',
         text: 'Playoffs noch nicht gestartet',
         color: colors.textSecondary,
-        bgColor: 'rgba(100, 100, 100, 0.1)',
+        bgColor: colors.neutralStatusBg,
       };
     } else if (playoffStatus === 'in-progress') {
       return {
         icon: '▶',
         text: `Playoffs laufen (${completedFinalsCount}/${totalFinalsCount} Spiele)`,
         color: colors.warning,
-        bgColor: 'rgba(255, 145, 0, 0.1)',
+        bgColor: colors.warningBannerBgStrong,
       };
     } else {
       return {
         icon: '✅',
         text: 'Turnier abgeschlossen',
         color: colors.primary,
-        bgColor: 'rgba(0, 230, 118, 0.1)',
+        bgColor: colors.editorEditModeBg,
       };
     }
   };
@@ -286,7 +287,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
           <div style={{
             marginBottom: spacing.lg,
             padding: isMobile ? spacing.sm : spacing.md,
-            background: 'rgba(0, 230, 118, 0.08)',
+            background: colors.rankingPlacementBg,
             borderRadius: borderRadius.md,
             border: `1px solid ${colors.primary}40`,
           }}>
@@ -392,7 +393,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               alignItems: 'center',
                               gap: '4px',
                               padding: '2px 8px',
-                              background: 'rgba(0, 230, 118, 0.15)',
+                              background: colors.primaryLight,
                               borderRadius: '12px',
                               fontSize: fontSizes.xs,
                               color: colors.primary,
@@ -419,14 +420,9 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         {standing?.played ?? '-'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <span style={{
-                          fontWeight: highlightWins ? fontWeights.bold : fontWeights.normal,
-                          padding: highlightWins ? '2px 8px' : '0',
-                          background: highlightWins ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                          borderRadius: highlightWins ? '4px' : '0',
-                        }}>
+                        <HighlightedCell highlight={highlightWins}>
                           {standing?.won ?? '-'}
-                        </span>
+                        </HighlightedCell>
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
                         {standing?.drawn ?? '-'}
@@ -435,39 +431,23 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         {standing?.lost ?? '-'}
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <span style={{
-                          fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? fontWeights.bold : fontWeights.normal,
-                          padding: (highlightGoalsFor || highlightGoalsAgainst) ? '2px 8px' : '0',
-                          background: (highlightGoalsFor || highlightGoalsAgainst) ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                          borderRadius: (highlightGoalsFor || highlightGoalsAgainst) ? '4px' : '0',
-                        }}>
+                        <HighlightedCell highlight={highlightGoalsFor || highlightGoalsAgainst}>
                           {standing ? `${standing.goalsFor}:${standing.goalsAgainst}` : '-'}
-                        </span>
+                        </HighlightedCell>
                       </td>
                       <td style={{
                         ...tdStyle,
                         textAlign: 'center',
                         color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
                       }}>
-                        <span style={{
-                          fontWeight: highlightGoalDiff ? fontWeights.bold : fontWeights.semibold,
-                          padding: highlightGoalDiff ? '2px 8px' : '0',
-                          background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                          borderRadius: highlightGoalDiff ? '4px' : '0',
-                        }}>
+                        <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold">
                           {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
-                        </span>
+                        </HighlightedCell>
                       </td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>
-                        <span style={{
-                          fontWeight: fontWeights.bold,
-                          fontSize: fontSizes.lg,
-                          padding: highlightPoints ? '2px 8px' : '0',
-                          background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                          borderRadius: highlightPoints ? '4px' : '0',
-                        }}>
+                        <HighlightedCell highlight={highlightPoints} baseWeight="bold" fontSize="lg">
                           {standing?.points ?? '-'}
-                        </span>
+                        </HighlightedCell>
                       </td>
                     </tr>
                   );
@@ -509,12 +489,12 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
                           <div style={medalStyle(placement.rank)}>{placement.rank}</div>
                         </td>
-                        <td style={{ ...tdStyle, fontWeight: fontWeights.semibold, fontSize: '14px' }}>
+                        <td style={{ ...tdStyle, fontWeight: fontWeights.semibold, fontSize: fontSizes.md }}>
                           {placement.team.name}
                           {/* Show playoff badge or group info */}
                           {placement.decidedBy === 'playoff' ? (
                             <div style={{
-                              fontSize: '10px',
+                              fontSize: fontSizesMd3.statLabel,
                               color: colors.primary,
                               marginTop: '2px',
                               display: 'flex',
@@ -524,39 +504,27 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               {placement.matchLabel ?? 'Playoff'}
                             </div>
                           ) : hasGroups && placement.team.group ? (
-                            <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '2px' }}>
+                            <div style={{ fontSize: fontSizes.xs, color: colors.textSecondary, marginTop: '2px' }}>
                               {getGroupShortCode(placement.team.group, tournament)}
                             </div>
                           ) : null}
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center' }}>
-                          <span style={{
-                            fontWeight: fontWeights.bold,
-                            fontSize: '15px',
-                            padding: highlightPoints ? '2px 6px' : '0',
-                            background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                            borderRadius: highlightPoints ? '4px' : '0',
-                          }}>
+                          <HighlightedCell highlight={highlightPoints} baseWeight="bold" fontSize="lg">
                             {standing?.points ?? '-'}
-                          </span>
+                          </HighlightedCell>
                         </td>
                         <td style={{
                           ...tdStyle,
                           textAlign: 'center',
                           color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
                         }}>
-                          <span style={{
-                            fontWeight: fontWeights.semibold,
-                            fontSize: '14px',
-                            padding: highlightGoalDiff ? '2px 6px' : '0',
-                            background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
-                            borderRadius: highlightGoalDiff ? '4px' : '0',
-                          }}>
+                          <HighlightedCell highlight={highlightGoalDiff} baseWeight="semibold" fontSize="md">
                             {standing ? (goalDiff > 0 ? '+' : '') + goalDiff : '-'}
-                          </span>
+                          </HighlightedCell>
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
-                          <span style={{ fontSize: '16px', color: colors.primary }}>
+                          <span style={{ fontSize: fontSizes.lg, color: colors.primary }}>
                             {isExpanded ? '▼' : '▶'}
                           </span>
                         </td>
@@ -565,47 +533,47 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                         <tr key={`${teamKey}-details`}>
                           <td colSpan={5} style={{
                             padding: '12px',
-                            background: 'rgba(0, 230, 118, 0.05)',
+                            background: colors.rankingExpandedBg,
                             borderBottom: `1px solid ${colors.border}`,
                           }}>
                             <div style={{
                               display: 'grid',
                               gridTemplateColumns: 'repeat(4, 1fr)',
                               gap: '12px',
-                              fontSize: '13px',
+                              fontSize: fontSizes.sm,
                             }}>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Spiele</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Spiele</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.played}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Siege</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Siege</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.won}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Unent.</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Unent.</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.drawn}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Niederl.</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Niederl.</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.lost}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore geschossen</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Tore geschossen</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.goalsFor}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore kassiert</div>
+                                <div style={{ color: colors.textSecondary, fontSize: fontSizes.xs, marginBottom: '4px' }}>Tore kassiert</div>
                                 <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
                                   {standing.goalsAgainst}
                                 </div>
@@ -627,7 +595,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
               textAlign: 'center',
               padding: isMobile ? spacing.lg : spacing.xxl,
               color: colors.textSecondary,
-              fontSize: isMobile ? '14px' : fontSizes.lg,
+              fontSize: isMobile ? fontSizes.md : fontSizes.lg,
             }}>
               Noch keine Ergebnisse vorhanden.
               <br />

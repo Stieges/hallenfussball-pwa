@@ -23,7 +23,7 @@ interface NextMatchCardProps {
 
 export const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, tournament }) => {
   const cardStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1))',
+    background: colors.gradientNextMatch,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
     border: `2px solid ${colors.primary}`,

@@ -254,7 +254,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     alignItems: 'center',
     gap: spacing.xs,
     padding: `${spacing.xs} ${spacing.sm}`,
-    background: isDirty ? 'rgba(255, 152, 0, 0.15)' : 'rgba(76, 175, 80, 0.15)',
+    background: isDirty ? colors.dirtyIndicatorBg : colors.successLight,
     color: isDirty ? colors.warning : colors.success,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.sm,
@@ -420,7 +420,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </Card>
 
             {/* Info-Box für nicht-editierbare Felder */}
-            <Card style={{ marginTop: spacing.lg, background: 'rgba(33, 150, 243, 0.08)' }}>
+            <Card style={{ marginTop: spacing.lg, background: colors.infoBannerBg }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
                 <span style={{ fontSize: '24px' }}>ℹ️</span>
                 <div>
@@ -446,7 +446,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
         {/* Wizard-Bearbeitung Buttons - IMMER SICHTBAR */}
         {onEditInWizard && (
-          <Card style={{ marginTop: spacing.lg, background: 'rgba(255, 152, 0, 0.08)', border: `1px solid rgba(255, 152, 0, 0.3)` }}>
+          <Card style={{ marginTop: spacing.lg, background: colors.warningBannerBg, border: `1px solid ${colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
               <span style={{ fontSize: '24px' }}>⚠️</span>
               <div style={{ flex: 1 }}>

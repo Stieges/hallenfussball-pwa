@@ -42,7 +42,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({ conflict, onClick 
     alignItems: 'center',
     gap: spacing.xs,
     padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: isError ? 'rgba(239, 83, 80, 0.15)' : 'rgba(255, 193, 7, 0.15)',
+    backgroundColor: isError ? colors.errorLight : colors.editorDirtyBg,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.xs,
     fontWeight: fontWeights.medium,
@@ -181,7 +181,7 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
       flexDirection: 'column',
       gap: spacing.xs,
       padding: spacing.sm,
-      backgroundColor: isError ? 'rgba(239, 83, 80, 0.1)' : 'rgba(255, 193, 7, 0.1)',
+      backgroundColor: isError ? colors.editorErrorRowBg : colors.editorDirtyRowBg,
       borderLeft: `3px solid ${isError ? colors.error : colors.warning}`,
       borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
     });

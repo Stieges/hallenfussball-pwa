@@ -53,6 +53,12 @@ export const fontSizesMd3 = {
   displayMedium: '36px',
   displaySmall: '28px',
 
+  // Match/Score Display (extra large for TV/Monitor views)
+  scoreXl: '90px',
+  scoreLg: '72px',
+  scoreMd: '56px',
+  scoreSm: '40px',
+
   // Headline
   headlineLarge: '24px',
   headlineMedium: '20px',
@@ -97,6 +103,12 @@ export const lineHeights = {
   displayLarge: '56px',  // 7 × 8
   displayMedium: '40px', // 5 × 8
   displaySmall: '32px',  // 4 × 8
+
+  // Match/Score Display
+  scoreXl: '96px',   // 12 × 8
+  scoreLg: '80px',   // 10 × 8
+  scoreMd: '64px',   // 8 × 8
+  scoreSm: '48px',   // 6 × 8
 
   // Headline
   headlineLarge: '32px', // 4 × 8

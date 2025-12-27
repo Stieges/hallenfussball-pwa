@@ -71,6 +71,25 @@ export const spacingSemantics = {
   // Accessibility
   touchTarget: '44px',
   touchTargetLg: '48px',
+  touchTargetSm: '36px',
+
+  // Icon Buttons
+  iconButtonSm: '36px',
+  iconButtonMd: '44px',
+  iconButtonLg: '48px',
+
+  // Dialog/Modal widths
+  dialogSm: '400px',
+  dialogMd: '500px',
+  dialogLg: '600px',
+  dialogXl: '800px',
+
+  // Container max widths
+  containerSm: '400px',
+  containerMd: '800px',
+  containerLg: '1080px',
+  containerXl: '1200px',
+  containerFull: '1600px',
 
   // Layout
   sectionGap: spacing.xl,

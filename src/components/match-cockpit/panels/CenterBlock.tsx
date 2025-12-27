@@ -73,7 +73,7 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
     padding: isMobile ? `${spacing.md} ${spacing.lg}` : `6px ${spacing.md}`,
     borderRadius: '999px',
     border: `1px solid ${colors.border}`,
-    background: 'radial-gradient(circle at top, rgba(15, 23, 42, 0.98), #020617)',
+    background: `radial-gradient(circle at top, rgba(15, 23, 42, 0.98), ${colors.backgroundDeep})`,
     boxShadow: `0 0 25px ${colors.primary}40`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',

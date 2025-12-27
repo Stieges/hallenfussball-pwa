@@ -49,7 +49,7 @@ const overlayStyle: React.CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  backgroundColor: colors.overlayStrong,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -155,8 +155,8 @@ const conflictItemStyle = (severity: 'error' | 'warning'): React.CSSProperties =
   gap: spacing.xs,
   padding: spacing.md,
   backgroundColor: severity === 'error'
-    ? 'rgba(239, 83, 80, 0.1)'
-    : 'rgba(255, 193, 7, 0.1)',
+    ? colors.editorErrorRowBg
+    : colors.editorDirtyRowBg,
   border: `1px solid ${severity === 'error' ? colors.error : colors.warning}`,
   borderRadius: borderRadius.md,
 });
@@ -403,8 +403,8 @@ export const ConflictList: React.FC<ConflictListProps> = ({
     color: severity === 'error' ? colors.error : colors.warning,
     padding: spacing.xs,
     backgroundColor: severity === 'error'
-      ? 'rgba(239, 83, 80, 0.05)'
-      : 'rgba(255, 193, 7, 0.05)',
+      ? colors.editorErrorRowBgLight
+      : colors.editorDirtyRowBgLight,
     borderRadius: borderRadius.sm,
   });
 

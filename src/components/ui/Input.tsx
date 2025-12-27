@@ -48,7 +48,7 @@ export const Input: React.FC<InputProps> = ({
 
   const inputStyles: CSSProperties = {
     padding: `${spacing.md} ${spacing.lg}`,
-    background: 'rgba(0,0,0,0.3)',
+    background: colors.inputBg,
     border: `1px solid ${error ? colors.error : colors.border}`,
     borderRadius: borderRadius.md,
     color: colors.textPrimary,

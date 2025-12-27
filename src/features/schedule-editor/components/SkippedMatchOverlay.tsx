@@ -40,7 +40,7 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: compact ? spacing.xs : spacing.sm,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlayStrong,
     borderRadius: borderRadius.md,
     padding: compact ? spacing.sm : spacing.md,
     zIndex: 10,
@@ -114,7 +114,7 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
             onClick={onUnskip}
             style={{
               color: colors.textPrimary,
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: colors.border,
             }}
           >
             Wiederherstellen
@@ -138,7 +138,7 @@ export const SkippedBadge: React.FC<SkippedBadgeProps> = ({ reason }) => {
     alignItems: 'center',
     gap: spacing.xs,
     padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    backgroundColor: colors.editorDirtyBg,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.xs,
     fontWeight: fontWeights.medium,

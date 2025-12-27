@@ -121,13 +121,13 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     height: '100%', // Fill parent height
     boxSizing: 'border-box',
     backgroundColor: isDragging
-      ? 'rgba(0, 176, 255, 0.15)' // Light blue tint when dragging
+      ? colors.secondaryLight // Light blue tint when dragging
       : isSelected
-        ? 'rgba(0, 176, 255, 0.08)'
+        ? colors.statusLiveRowBg
         : isFinished
-          ? 'rgba(76, 175, 80, 0.08)'
+          ? colors.editorEditModeRowBg
           : isRunning
-            ? 'rgba(255, 193, 7, 0.08)'
+            ? colors.editorDirtyRowBg
             : colors.surface,
     border: isDragging
       ? `3px dashed ${colors.primary}` // Dashed border when dragging
@@ -145,7 +145,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
       ? 'none' // No shadow when dragging - simpler look
       : isSelected
         ? shadows.md
-        : '0 1px 3px rgba(0, 0, 0, 0.08)',
+        : shadows.sm,
     cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'default',
     overflow: 'hidden',
   };
@@ -264,7 +264,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     width: '28px',
     height: '28px',
     color: colors.primary,
-    backgroundColor: 'rgba(0, 176, 255, 0.1)',
+    backgroundColor: colors.editorDragActiveBg,
     borderRadius: borderRadius.sm,
     cursor: 'grab',
     fontSize: '16px',

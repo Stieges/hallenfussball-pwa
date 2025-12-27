@@ -95,7 +95,7 @@ export const ShareDialog = ({
     aspectRatio: '1 / 1',
     borderRadius: borderRadius.md,
     border: `1px solid ${colors.border}`,
-    background: '#FFFFFF',
+    background: colors.qrBackground,
     padding: spacing.md,
   };
 

@@ -35,7 +35,8 @@ const preGeneratedConfetti = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
   isCircle: i % 2 === 0,
 }));
 
-const CONFETTI_COLORS = ['#00e676', '#76ff03', '#ffeb3b', '#ffffff'];
+// Use design tokens for confetti colors
+const CONFETTI_COLORS = colors.confettiColors;
 
 export const GoalAnimation: React.FC<GoalAnimationProps> = ({
   goalEvent,
