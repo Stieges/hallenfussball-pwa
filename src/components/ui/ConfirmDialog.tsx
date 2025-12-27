@@ -7,7 +7,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, spacing, shadowSemantics } from '../../design-tokens';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 /** Secondary action button configuration */
@@ -132,7 +132,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -145,7 +145,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     border: `2px solid ${variantConfig.accent}`,
-    boxShadow: `0 0 30px rgba(0, 0, 0, 0.5), 0 0 15px ${variantConfig.accent}40`,
+    boxShadow: `${shadowSemantics.dialog}, 0 0 15px ${variantConfig.accent}40`,
     maxWidth: '480px',
     width: '100%',
     animation: 'slideIn 0.2s ease-out',
@@ -162,7 +162,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const iconStyle: CSSProperties = {
-    fontSize: '28px',
+    fontSize: fontSizesMd3.displaySmall,
   };
 
   const titleStyle: CSSProperties = {
@@ -187,7 +187,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const detailsStyle: CSSProperties = {
     marginTop: spacing.md,
     padding: spacing.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: colors.surfaceDarkMedium,
     borderRadius: borderRadius.sm,
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
@@ -200,7 +200,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     gap: spacing.md,
     padding: spacing.lg,
     borderTop: `1px solid ${colors.border}`,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    backgroundColor: colors.surfaceDarkLight,
   };
 
   const buttonBaseStyle: CSSProperties = {
@@ -264,7 +264,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               style={cancelButtonStyle}
               onClick={effectiveOnCancel}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.backgroundColor = colors.surfaceLight;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -283,7 +283,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 }}
                 onClick={handleSecondaryAction}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.backgroundColor = colors.surfaceLight;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';

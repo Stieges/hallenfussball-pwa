@@ -23,7 +23,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { colors, fontWeights, borderRadius } from '../../design-tokens';
+import { colors, fontSizes, fontWeights, borderRadius, spacing } from '../../design-tokens';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
@@ -195,20 +195,20 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Styles
   const containerStyle: CSSProperties = {
-    marginBottom: '24px',
+    marginBottom: spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '18px',
+    fontSize: fontSizes.xl,
     fontWeight: fontWeights.bold,
     color: colors.primary,
-    marginBottom: '16px',
+    marginBottom: spacing.md,
   };
 
   const tableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: '13px',
+    fontSize: fontSizes.sm,
     minWidth: '600px',
   };
 
@@ -248,7 +248,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '6px',
-    fontSize: '12px',
+    fontSize: fontSizes.sm,
   };
 
   const mobileMatchInfoStyle: CSSProperties = {
@@ -265,9 +265,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const mobileMetaCompactStyle: CSSProperties = {
     display: 'flex',
-    gap: '8px',
+    gap: spacing.sm,
     color: colors.textMuted,
-    fontSize: '11px',
+    fontSize: fontSizes.xs,
   };
 
   // Team row with inline score - compact layout
@@ -294,7 +294,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
     fontWeight: fontWeights.bold,
-    fontSize: '16px',
+    fontSize: fontSizes.lg,
     minWidth: '24px',
     textAlign: 'right' as const,
     color: isWinner ? colors.success : colors.textPrimary,
@@ -302,7 +302,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const mobileWinnerIconStyle: CSSProperties = {
     color: colors.success,
-    fontSize: '12px',
+    fontSize: fontSizes.sm,
     flexShrink: 0,
   };
 

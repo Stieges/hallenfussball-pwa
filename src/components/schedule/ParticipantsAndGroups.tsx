@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontWeights } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
 
@@ -37,31 +37,31 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   });
 
   const containerStyle: CSSProperties = {
-    marginBottom: '24px',
+    marginBottom: spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '18px',
+    fontSize: fontSizes.xl,
     fontWeight: fontWeights.bold,
     color: colors.primary,
-    marginBottom: '16px',
+    marginBottom: spacing.md,
   };
 
   const groupsGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: '16px',
+    gap: spacing.md,
   };
 
   const groupBoxStyle: CSSProperties = {
-    padding: '16px',
+    padding: spacing.md,
     background: colors.background,
     border: `1px solid ${colors.border}`,
     borderRadius: borderRadius.md,
   };
 
   const groupTitleStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
     color: colors.primary,
     marginBottom: '12px',

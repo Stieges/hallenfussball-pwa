@@ -105,6 +105,8 @@ export const colors = {
   surfaceSolid: primitives.neutral[800], // Solid fallback for surface
   surfaceHover: 'rgba(255, 255, 255, 0.08)',
   surfaceDark: 'rgba(0, 0, 0, 0.3)', // For score containers, input backgrounds
+  surfaceDarkLight: 'rgba(0, 0, 0, 0.1)', // Light dark overlay
+  surfaceDarkMedium: 'rgba(0, 0, 0, 0.2)', // Medium dark overlay
   surfaceVariant: primitives.neutral[700],
 
   // ---------------------------------------------------------------------------

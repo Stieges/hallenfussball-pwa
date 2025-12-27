@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontWeights } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, letterSpacing } from '../../design-tokens';
 interface LiveBadgeProps {
   /** Optional compact mode for smaller displays */
   compact?: boolean;
@@ -26,11 +26,11 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
     background: colors.statusLiveBg,
     border: `1px solid ${colors.statusLive}`,
     borderRadius: borderRadius.sm,
-    fontSize: compact ? '10px' : '11px',
+    fontSize: compact ? fontSizesMd3.statLabel : fontSizes.xs,
     fontWeight: fontWeights.bold,
     color: colors.statusLive,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: letterSpacing.wide,
     animation: 'livePulse 2s ease-in-out infinite',
     ...style,
   };

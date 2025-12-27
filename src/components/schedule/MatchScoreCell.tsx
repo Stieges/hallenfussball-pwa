@@ -1,5 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
-import { borderRadius, colors, fontWeights } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -61,7 +61,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
     const scoreStyle: CSSProperties = {
       fontWeight: fontWeights.bold,
-      fontSize: '14px',
+      fontSize: fontSizes.md,
     };
 
     const buttonStyle: CSSProperties = {
@@ -69,7 +69,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       border: `1px solid ${colors.border}`,
       borderRadius: borderRadius.sm,
       color: colors.textSecondary,
-      fontSize: '11px',
+      fontSize: fontSizes.xs,
       padding: '3px 8px',
       cursor: 'pointer',
       transition: 'all 0.2s ease',
@@ -124,7 +124,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   if (editable || inCorrectionMode) {
     const inputContainerStyle: CSSProperties = {
       display: 'flex',
-      gap: '4px',
+      gap: spacing.xs,
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative' as const,
@@ -132,12 +132,12 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
     const inputStyle: CSSProperties = {
       width: '40px',
-      padding: '4px',
+      padding: spacing.xs,
       border: inCorrectionMode
         ? `2px solid ${colors.warning}`
         : `1px solid ${colors.border}`,
-      borderRadius: '4px',
-      fontSize: '13px',
+      borderRadius: borderRadius.sm,
+      fontSize: fontSizes.sm,
       fontWeight: fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode
@@ -150,7 +150,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
       position: 'absolute' as const,
       top: '-8px',
       right: '-8px',
-      fontSize: '16px',
+      fontSize: fontSizes.lg,
     };
 
     return (

@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, shadowSemantics, spacing } from '../../design-tokens';
 import { Button } from './Button';
 
 interface NumberStepperProps {
@@ -122,7 +122,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
       background: ${colors.primary};
       cursor: ${disabled ? 'not-allowed' : 'pointer'};
       border: 3px solid ${colors.background};
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: ${shadowSemantics.control};
     }
     input[type='range']::-moz-range-thumb {
       width: 20px;
@@ -131,7 +131,7 @@ export const NumberStepper: React.FC<NumberStepperProps> = ({
       background: ${colors.primary};
       cursor: ${disabled ? 'not-allowed' : 'pointer'};
       border: 3px solid ${colors.background};
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: ${shadowSemantics.control};
     }
   `;
 

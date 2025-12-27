@@ -37,7 +37,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         return {
           border: colors.border,
           bg: 'transparent',
-          headerBg: 'rgba(255, 255, 255, 0.03)',
+          headerBg: colors.surface,
         };
     }
   };
@@ -45,7 +45,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const variantStyles = getVariantStyles();
 
   const containerStyle: CSSProperties = {
-    marginTop: '16px',
+    marginTop: spacing.lg,
     border: `1px solid ${variantStyles.border}`,
     borderRadius: borderRadius.md,
     overflow: 'hidden',
@@ -75,7 +75,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     padding: `${spacing.xs} ${spacing.sm}`,
     fontSize: fontSizes.xs,
     fontWeight: fontWeights.medium,
-    background: 'rgba(255, 255, 255, 0.1)',
+    background: colors.surfaceLight,
     borderRadius: borderRadius.lg,
     color: colors.textSecondary,
   };

@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontWeights } from '../../design-tokens';
+import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, spacing } from '../../design-tokens';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
 
@@ -25,20 +25,20 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   const numberOfMatches = schedule.allMatches.length;
 
   const containerStyle: CSSProperties = {
-    marginBottom: '32px',
+    marginBottom: spacing.xl,
     borderBottom: `2px solid ${colors.primary}`,
-    paddingBottom: '24px',
+    paddingBottom: spacing.lg,
   };
 
   const headerFlexStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    marginBottom: spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '32px',
+    fontSize: fontSizesMd3.displayMedium,
     fontWeight: fontWeights.bold,
     color: colors.primary,
     margin: 0,
@@ -59,18 +59,18 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: fontSizes.md,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: '16px',
+    marginBottom: spacing.md,
   };
 
   const metaGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '12px',
-    padding: '16px',
-    background: 'rgba(37, 99, 235, 0.05)',
+    padding: spacing.md,
+    background: colors.infoBannerBg,
     borderRadius: borderRadius.md,
     border: `1px solid ${colors.border}`,
   };
@@ -83,7 +83,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
 
   const metaLabelStyle: CSSProperties = {
     fontWeight: fontWeights.semibold,
-    marginRight: '8px',
+    marginRight: spacing.sm,
   };
 
   return (
@@ -96,7 +96,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
         {qrCodeUrl && (
           <div style={{ textAlign: 'center' }}>
             <img src={qrCodeUrl} alt="QR Code" style={qrCodeStyle} />
-            <div style={{ fontSize: '10px', color: colors.textSecondary, marginTop: '4px' }}>
+            <div style={{ fontSize: fontSizesMd3.statLabel, color: colors.textSecondary, marginTop: spacing.xs }}>
               Live Ergebnisse
             </div>
           </div>

@@ -13,7 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, fontWeights } from '../../design-tokens';
+import { colors, fontSizes, fontWeights, letterSpacing, spacing } from '../../design-tokens';
 import { ContactInfo } from '../../types/tournament';
 
 // Re-export for convenience
@@ -45,7 +45,7 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
 
   const containerStyle: CSSProperties = {
     marginTop: '40px',
-    paddingTop: '24px',
+    paddingTop: spacing.lg,
     borderTop: `2px solid ${colors.primary}`,
   };
 
@@ -53,27 +53,27 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
     display: compact ? 'block' : 'flex',
     justifyContent: 'space-between',
     alignItems: compact ? 'flex-start' : 'flex-start',
-    gap: '24px',
+    gap: spacing.lg,
     flexWrap: 'wrap',
   };
 
   const sectionStyle: CSSProperties = {
     flex: compact ? 'none' : '1 1 auto',
     minWidth: compact ? '100%' : '200px',
-    marginBottom: compact ? '16px' : 0,
+    marginBottom: compact ? spacing.md : 0,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: '12px',
+    fontSize: fontSizes.sm,
     fontWeight: fontWeights.semibold,
     color: colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '8px',
+    letterSpacing: letterSpacing.wide,
+    marginBottom: spacing.sm,
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: fontSizes.md,
     color: colors.textPrimary,
     lineHeight: 1.6,
   };

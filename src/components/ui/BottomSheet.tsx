@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback } from 'react';
-import { colors, spacing, borderRadius } from '../../design-tokens';
+import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../design-tokens';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const overlayStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0, 0, 0, 0.5)',
+    background: colors.overlay,
     zIndex: 1100,
     display: 'flex',
     flexDirection: 'column',
@@ -83,8 +83,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const titleStyle: CSSProperties = {
     padding: `0 ${spacing.lg} ${spacing.md}`,
-    fontSize: '18px',
-    fontWeight: 600,
+    fontSize: fontSizes.xl,
+    fontWeight: fontWeights.semibold,
     color: colors.textPrimary,
     borderBottom: `1px solid ${colors.border}`,
     margin: 0,
@@ -190,14 +190,14 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: '16px',
-    fontWeight: 500,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.medium,
     color: colors.textPrimary,
     margin: 0,
   };
 
   const descriptionStyle: CSSProperties = {
-    fontSize: '13px',
+    fontSize: fontSizes.sm,
     color: colors.textSecondary,
     margin: '2px 0 0',
   };

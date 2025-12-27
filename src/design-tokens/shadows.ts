@@ -56,6 +56,9 @@ export const shadowSemantics = {
 
   /** Inner shadow (for inset elements) */
   inset: 'inset 0 2px 4px rgba(0, 0, 0, 0.2)',
+
+  /** Control element shadow (slider thumbs, switches) */
+  control: '0 2px 6px rgba(0, 0, 0, 0.3)',
 } as const;
 
 // =============================================================================

@@ -98,7 +98,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
     background: colors.background,
     border: `1px solid ${colors.border}`,
     borderRadius: borderRadius.md,
-    padding: '16px',
+    padding: spacing.md,
     minWidth: 0,
     overflow: 'hidden',
   };
@@ -179,7 +179,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <span style={{
                       fontWeight: highlightWins ? fontWeights.bold : fontWeights.normal,
                       padding: highlightWins ? '2px 6px' : '0',
-                      background: highlightWins ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                      background: highlightWins ? colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightWins ? '4px' : '0',
                     }}>
                       {standing.won}
@@ -195,7 +195,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <span style={{
                       fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? fontWeights.bold : fontWeights.normal,
                       padding: (highlightGoalsFor || highlightGoalsAgainst) ? '2px 6px' : '0',
-                      background: (highlightGoalsFor || highlightGoalsAgainst) ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                      background: (highlightGoalsFor || highlightGoalsAgainst) ? colors.rankingHighlightBg : 'transparent',
                       borderRadius: (highlightGoalsFor || highlightGoalsAgainst) ? '4px' : '0',
                     }}>
                       {standing.goalsFor}:{standing.goalsAgainst}
@@ -209,7 +209,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <span style={{
                       fontWeight: highlightGoalDiff ? fontWeights.bold : fontWeights.semibold,
                       padding: highlightGoalDiff ? '2px 6px' : '0',
-                      background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                      background: highlightGoalDiff ? colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightGoalDiff ? '4px' : '0',
                     }}>
                       {goalDiff > 0 ? '+' : ''}{goalDiff}
@@ -220,7 +220,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       fontWeight: fontWeights.bold,
                       fontSize: '15px',
                       padding: highlightPoints ? '2px 6px' : '0',
-                      background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                      background: highlightPoints ? colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightPoints ? '4px' : '0',
                     }}>
                       {standing.points}
@@ -270,7 +270,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         fontWeight: fontWeights.bold,
                         fontSize: '15px',
                         padding: highlightPoints ? '2px 6px' : '0',
-                        background: highlightPoints ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                        background: highlightPoints ? colors.rankingHighlightBg : 'transparent',
                         borderRadius: highlightPoints ? '4px' : '0',
                       }}>
                         {standing.points}
@@ -285,7 +285,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         fontWeight: fontWeights.semibold,
                         fontSize: '14px',
                         padding: highlightGoalDiff ? '2px 6px' : '0',
-                        background: highlightGoalDiff ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                        background: highlightGoalDiff ? colors.rankingHighlightBg : 'transparent',
                         borderRadius: highlightGoalDiff ? '4px' : '0',
                       }}>
                         {goalDiff > 0 ? '+' : ''}{goalDiff}
@@ -301,7 +301,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <tr key={`${teamKey}-details`}>
                       <td colSpan={5} style={{
                         padding: '12px',
-                        background: 'rgba(0, 230, 118, 0.05)',
+                        background: colors.rankingExpandedBg,
                         borderBottom: `1px solid ${colors.border}`,
                       }}>
                         <div style={{
@@ -322,7 +322,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                               fontWeight: fontWeights.semibold,
                               color: colors.textPrimary,
                               padding: highlightWins ? '2px 6px' : '0',
-                              background: highlightWins ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                              background: highlightWins ? colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightWins ? '4px' : '0',
                               display: 'inline-block',
                             }}>
@@ -347,7 +347,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                               fontWeight: fontWeights.semibold,
                               color: colors.textPrimary,
                               padding: highlightGoalsFor ? '2px 6px' : '0',
-                              background: highlightGoalsFor ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                              background: highlightGoalsFor ? colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightGoalsFor ? '4px' : '0',
                               display: 'inline-block',
                             }}>
@@ -360,7 +360,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                               fontWeight: fontWeights.semibold,
                               color: colors.textPrimary,
                               padding: highlightGoalsAgainst ? '2px 6px' : '0',
-                              background: highlightGoalsAgainst ? 'rgba(34, 197, 94, 0.15)' : 'transparent',
+                              background: highlightGoalsAgainst ? colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightGoalsAgainst ? '4px' : '0',
                               display: 'inline-block',
                             }}>
