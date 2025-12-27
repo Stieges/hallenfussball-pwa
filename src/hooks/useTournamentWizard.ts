@@ -359,8 +359,8 @@ export function useTournamentWizard(
     saveCallback?.();
     setVisitedSteps(prev => new Set([...prev, targetStep]));
     setStepErrors(prev => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [targetStep]: _, ...rest } = prev;
+      const { [targetStep]: _removed, ...rest } = prev;
+      void _removed; // Consume unused variable
       return rest;
     });
     setStep(targetStep);
