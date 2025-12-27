@@ -7,19 +7,19 @@
  * 3. Monitor - Große Zuschauer-Ansicht
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, spacing } from '../design-tokens';
+import { borderRadius, colors, fontFamilies, fontSizes, fontSizesMd3, fontWeights, spacing } from '../design-tokens';
 import { Tournament } from '../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
-import { Standing } from '../types/tournament';
-import { calculateStandings } from '../utils/calculations';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
+import { useIsMobile } from '../hooks/useIsMobile';
+import { useTournamentSync } from '../hooks/useTournamentSync';
+import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
+import type { BottomNavTab } from '../components/ui';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
-import { TableTab } from '../features/tournament-management/TableTab';
-import { RankingTab } from '../features/tournament-management/RankingTab';
+import { TabellenTab } from '../features/tournament-management/TabellenTab';
 import { ManagementTab } from '../features/tournament-management/ManagementTab';
 import { MonitorTab } from '../features/tournament-management/MonitorTab';
 import { SettingsTab } from '../features/tournament-management/SettingsTab';
@@ -31,7 +31,7 @@ interface TournamentManagementScreenProps {
   onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
 }
 
-type TabType = 'schedule' | 'table' | 'ranking' | 'management' | 'monitor' | 'teams' | 'settings';
+type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'teams' | 'settings';
 
 export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = ({
   tournamentId,
@@ -39,241 +39,27 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onEditInWizard,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('schedule');
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
-  const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
+
+  // Mobile Navigation
+  const isMobile = useIsMobile();
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // TOUR-EDIT-META: Dirty-State-Tracking für SettingsTab
   const [isSettingsDirty, setIsSettingsDirty] = useState(false);
   const [pendingTab, setPendingTab] = useState<TabType | null>(null);
   const [showDirtyWarning, setShowDirtyWarning] = useState(false);
 
-  // Load tournament from localStorage (später von Backend)
-  useEffect(() => {
-    const loadTournament = () => {
-      try {
-        const stored = localStorage.getItem('tournaments');
-
-        if (!stored) {
-          console.error('❌ No tournaments found in localStorage');
-          setLoadingError('Keine Turniere in localStorage gefunden');
-          return;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
-        const tournaments: Tournament[] = JSON.parse(stored);
-
-        const found = tournaments.find((t) => t.id === tournamentId);
-
-        if (found) {
-          // MIGRATION: Generate matches if empty (for old tournaments)
-          let updatedTournament = found;
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy localStorage data
-          if (!found.matches || found.matches.length === 0) {
-
-            // Generate schedule to get matches
-            const tempSchedule = generateFullSchedule(found);
-
-            // Convert ScheduledMatch[] to Match[]
-            const generatedMatches = tempSchedule.allMatches.map((scheduledMatch, index) => ({
-              id: scheduledMatch.id,
-              round: Math.floor(index / found.numberOfFields) + 1,
-              field: scheduledMatch.field,
-              slot: scheduledMatch.slot,
-              teamA: scheduledMatch.homeTeam,
-              teamB: scheduledMatch.awayTeam,
-              scoreA: scheduledMatch.scoreA,
-              scoreB: scheduledMatch.scoreB,
-              group: scheduledMatch.group,
-              isFinal: scheduledMatch.phase !== 'groupStage',
-              finalType: scheduledMatch.finalType,
-              label: scheduledMatch.label,
-              scheduledTime: scheduledMatch.startTime,
-              referee: scheduledMatch.referee,
-            }));
-
-            // Update tournament with generated matches
-            updatedTournament = {
-              ...found,
-              matches: generatedMatches,
-              updatedAt: new Date().toISOString(),
-            };
-
-            // Save updated tournament back to localStorage
-            const index = tournaments.findIndex((t) => t.id === tournamentId);
-            if (index !== -1) {
-              tournaments[index] = updatedTournament;
-              localStorage.setItem('tournaments', JSON.stringify(tournaments));
-              // Notify useTournaments hook about the change
-              window.dispatchEvent(new CustomEvent('tournament-updated'));
-            }
-          }
-
-          setTournament(updatedTournament);
-
-          // Generate schedule
-          const generatedSchedule = generateFullSchedule(updatedTournament);
-
-          // CRITICAL: Sync match IDs from tournament.matches to schedule.allMatches
-          // This ensures the IDs match when we try to merge scores
-          const syncedSchedule = {
-            ...generatedSchedule,
-            allMatches: generatedSchedule.allMatches.map((sm, index) => {
-              const tournamentMatch = updatedTournament.matches[index];
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
-              if (tournamentMatch) {
-                return { ...sm, id: tournamentMatch.id };
-              }
-              return sm;
-            }),
-            phases: generatedSchedule.phases.map(phase => ({
-              ...phase,
-              matches: phase.matches.map((sm) => {
-                // FIX: Match by slot + field + group/label instead of team names
-                // Team names can differ in format (technical placeholder vs display text)
-                // NOTE: Use slot (time slot index) NOT round or matchNumber (they are different!)
-                const tournamentMatch = updatedTournament.matches.find(m => {
-                  // For group stage: match by slot + field + group
-                  if (sm.group && m.group) {
-                    return m.slot === sm.slot && m.field === sm.field && m.group === sm.group;
-                  }
-                  // For playoffs: match by label (most reliable for finals)
-                  if (sm.label && m.label) {
-                    return m.label === sm.label;
-                  }
-                  // Fallback: match by slot + field (should be unique)
-                  return m.slot === sm.slot && m.field === sm.field;
-                });
-                if (tournamentMatch) {
-                  return { ...sm, id: tournamentMatch.id };
-                }
-                return sm;
-              })
-            }))
-          };
-
-          setSchedule(syncedSchedule);
-
-          // Calculate initial standings
-          const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
-          setCurrentStandings(standings);
-          setLoadingError(null);
-        } else {
-          console.error('❌ Tournament not found with ID:', tournamentId);
-          setLoadingError(`Turnier mit ID ${tournamentId} nicht gefunden`);
-        }
-      } catch (error) {
-        console.error('❌ Error loading tournament:', error);
-        setLoadingError(`Fehler beim Laden: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
-      }
-    };
-
-    loadTournament();
-  }, [tournamentId]);
-
-  const handleTournamentUpdate = (updatedTournament: Tournament, regenerateSchedule = false) => {
-    // Persist to localStorage (später Backend)
-    const stored = localStorage.getItem('tournaments');
-    if (stored) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
-      const tournaments: Tournament[] = JSON.parse(stored);
-      const index = tournaments.findIndex((t) => t.id === updatedTournament.id);
-      if (index !== -1) {
-        tournaments[index] = updatedTournament;
-        localStorage.setItem('tournaments', JSON.stringify(tournaments));
-        // Notify useTournaments hook about the change (for Dashboard refresh)
-        window.dispatchEvent(new CustomEvent('tournament-updated'));
-      }
-    }
-
-    // BATCH all state updates together to prevent multiple re-renders
-    if (regenerateSchedule) {
-      const generatedSchedule = generateFullSchedule(updatedTournament);
-
-      // CRITICAL: Sync match IDs from tournament.matches to schedule
-      const syncedSchedule = {
-        ...generatedSchedule,
-        allMatches: generatedSchedule.allMatches.map((sm, index) => {
-          const tournamentMatch = updatedTournament.matches[index];
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
-          if (tournamentMatch) {
-            return { ...sm, id: tournamentMatch.id };
-          }
-          return sm;
-        }),
-        phases: generatedSchedule.phases.map(phase => ({
-          ...phase,
-          matches: phase.matches.map((sm) => {
-            // FIX: Match by slot + field + group/label instead of team names
-            // Team names can differ in format (technical placeholder vs display text)
-            // NOTE: Use slot (time slot index) NOT round or matchNumber (they are different!)
-            const tournamentMatch = updatedTournament.matches.find(m => {
-              // For group stage: match by slot + field + group
-              if (sm.group && m.group) {
-                return m.slot === sm.slot && m.field === sm.field && m.group === sm.group;
-              }
-              // For playoffs: match by label (most reliable for finals)
-              if (sm.label && m.label) {
-                return m.label === sm.label;
-              }
-              // Fallback: match by slot + field (should be unique)
-              return m.slot === sm.slot && m.field === sm.field;
-            });
-            if (tournamentMatch) {
-              return { ...sm, id: tournamentMatch.id };
-            }
-            return sm;
-          })
-        }))
-      };
-
-      const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
-
-      setTournament(updatedTournament);
-      setSchedule(syncedSchedule);
-      setCurrentStandings(standings);
-    } else {
-      // For updates without regeneration: Sync referee assignments from tournament.matches to schedule
-      if (schedule) {
-        const updatedSchedule = {
-          ...schedule,
-          allMatches: schedule.allMatches.map(sm => {
-            const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
-            if (tournamentMatch) {
-              return { ...sm, referee: tournamentMatch.referee };
-            }
-            return sm;
-          }),
-          phases: schedule.phases.map(phase => ({
-            ...phase,
-            matches: phase.matches.map(sm => {
-              const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
-              if (tournamentMatch) {
-                return { ...sm, referee: tournamentMatch.referee };
-              }
-              return sm;
-            })
-          }))
-        };
-
-        const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
-
-        setTournament(updatedTournament);
-        setSchedule(updatedSchedule);
-        setCurrentStandings(standings);
-      } else {
-        // Fallback if schedule is null
-        const standings = calculateStandings(updatedTournament.teams, updatedTournament.matches, updatedTournament);
-        setTournament(updatedTournament);
-        setCurrentStandings(standings);
-      }
-    }
-  };
+  // Tournament-Schedule sync via custom hook
+  const {
+    tournament,
+    schedule,
+    currentStandings,
+    loadingError,
+    handleTournamentUpdate,
+  } = useTournamentSync(tournamentId);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
-    // Wenn wir im Settings-Tab sind und es ungespeicherte Änderungen gibt
     if (activeTab === 'settings' && isSettingsDirty && newTab !== 'settings') {
       setPendingTab(newTab);
       setShowDirtyWarning(true);
@@ -298,6 +84,22 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     setShowDirtyWarning(false);
   };
 
+  // Handle mobile bottom navigation
+  const handleMobileNavChange = (tab: BottomNavTab) => {
+    if (tab === 'more') {
+      setShowMoreMenu(true);
+    } else {
+      handleTabChange(tab as TabType);
+    }
+  };
+
+  // Handle selection from "more" menu
+  const handleMoreMenuSelect = (tab: TabType) => {
+    setShowMoreMenu(false);
+    handleTabChange(tab);
+  };
+
+  // Loading / Error state
   if (!tournament || !schedule) {
     return (
       <div style={loadingStyle}>
@@ -358,7 +160,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     border: `1px solid ${colors.border}`,
     borderRadius: borderRadius.md,
     color: colors.textPrimary,
-    fontSize: '20px',
+    fontSize: fontSizesMd3.headlineMedium,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -390,13 +192,14 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     background: colors.surface,
     overflowX: 'auto',
     WebkitOverflowScrolling: 'touch',
-    scrollbarWidth: 'none', // Firefox
-    msOverflowStyle: 'none', // IE/Edge
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
   };
 
   const contentStyle: CSSProperties = {
     flex: 1,
     overflow: 'auto',
+    paddingBottom: isMobile ? '72px' : undefined,
   };
 
   return (
@@ -418,45 +221,17 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         </div>
       </header>
 
-      {/* TAB BAR */}
-      <nav style={tabBarStyle}>
-        <TabButton
-          label="Spielplan"
-          isActive={activeTab === 'schedule'}
-          onClick={() => handleTabChange('schedule')}
-        />
-        <TabButton
-          label="Gruppen-Tabelle"
-          isActive={activeTab === 'table'}
-          onClick={() => handleTabChange('table')}
-        />
-        <TabButton
-          label="Platzierung"
-          isActive={activeTab === 'ranking'}
-          onClick={() => handleTabChange('ranking')}
-        />
-        <TabButton
-          label="Turnierleitung"
-          isActive={activeTab === 'management'}
-          onClick={() => handleTabChange('management')}
-        />
-        <TabButton
-          label="Monitor"
-          isActive={activeTab === 'monitor'}
-          onClick={() => handleTabChange('monitor')}
-        />
-        <TabButton
-          label="Teams"
-          isActive={activeTab === 'teams'}
-          onClick={() => handleTabChange('teams')}
-        />
-        <TabButton
-          label="Einstellungen"
-          isActive={activeTab === 'settings'}
-          onClick={() => handleTabChange('settings')}
-          isDirty={isSettingsDirty}
-        />
-      </nav>
+      {/* TAB BAR - Desktop only */}
+      {!isMobile && (
+        <nav style={tabBarStyle}>
+          <TabButton label="Spielplan" isActive={activeTab === 'schedule'} onClick={() => handleTabChange('schedule')} />
+          <TabButton label="Tabellen" isActive={activeTab === 'tabellen'} onClick={() => handleTabChange('tabellen')} />
+          <TabButton label="Live" isActive={activeTab === 'management'} onClick={() => handleTabChange('management')} />
+          <TabButton label="Monitor" isActive={activeTab === 'monitor'} onClick={() => handleTabChange('monitor')} />
+          <TabButton label="Teams" isActive={activeTab === 'teams'} onClick={() => handleTabChange('teams')} />
+          <TabButton label="Einstellungen" isActive={activeTab === 'settings'} onClick={() => handleTabChange('settings')} isDirty={isSettingsDirty} />
+        </nav>
+      )}
 
       {/* TAB CONTENT */}
       <div style={contentStyle}>
@@ -468,23 +243,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onTournamentUpdate={handleTournamentUpdate}
           />
         )}
-
-        {activeTab === 'table' && (
-          <TableTab
+        {activeTab === 'tabellen' && (
+          <TabellenTab
             tournament={tournament}
             schedule={schedule}
             currentStandings={currentStandings}
           />
         )}
-
-        {activeTab === 'ranking' && (
-          <RankingTab
-            tournament={tournament}
-            schedule={schedule}
-            currentStandings={currentStandings}
-          />
-        )}
-
         {activeTab === 'management' && (
           <ManagementTab
             tournament={tournament}
@@ -492,7 +257,6 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onTournamentUpdate={handleTournamentUpdate}
           />
         )}
-
         {activeTab === 'monitor' && (
           <MonitorTab
             tournament={tournament}
@@ -500,14 +264,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             currentStandings={currentStandings}
           />
         )}
-
         {activeTab === 'teams' && (
           <TeamsTab
             tournament={tournament}
             onTournamentUpdate={handleTournamentUpdate}
           />
         )}
-
         {activeTab === 'settings' && (
           <SettingsTab
             tournament={tournament}
@@ -530,22 +292,53 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
               Möchtest du die Änderungen verwerfen?
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button
-                onClick={handleCancelTabChange}
-                style={dialogButtonStyle('secondary')}
-              >
+              <button onClick={handleCancelTabChange} style={dialogButtonStyle('secondary')}>
                 Abbrechen
               </button>
-              <button
-                onClick={handleConfirmTabChange}
-                style={dialogButtonStyle('danger')}
-              >
+              <button onClick={handleConfirmTabChange} style={dialogButtonStyle('danger')}>
                 Verwerfen
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* MOBILE BOTTOM NAVIGATION */}
+      {isMobile && (
+        <BottomNavigation
+          activeTab={activeTab}
+          onTabChange={handleMobileNavChange}
+        />
+      )}
+
+      {/* MOBILE "MEHR" BOTTOM SHEET */}
+      <BottomSheet
+        isOpen={showMoreMenu}
+        onClose={() => setShowMoreMenu(false)}
+        title="Mehr"
+      >
+        <BottomSheetItem
+          icon={<Icons.Users size={20} color="currentColor" />}
+          label="Teams"
+          description="Teams verwalten"
+          onClick={() => handleMoreMenuSelect('teams')}
+          isActive={activeTab === 'teams'}
+        />
+        <BottomSheetItem
+          icon={<Icons.Settings size={20} color="currentColor" />}
+          label="Einstellungen"
+          description="Turnier konfigurieren"
+          onClick={() => handleMoreMenuSelect('settings')}
+          isActive={activeTab === 'settings'}
+        />
+        <BottomSheetItem
+          icon={<Icons.Monitor size={20} color="currentColor" />}
+          label="Monitor"
+          description="Großbildschirm-Ansicht"
+          onClick={() => handleMoreMenuSelect('monitor')}
+          isActive={activeTab === 'monitor'}
+        />
+      </BottomSheet>
     </div>
   );
 };
@@ -562,12 +355,14 @@ interface TabButtonProps {
 }
 
 const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   const buttonStyle: CSSProperties = {
     padding: `${spacing.md} ${spacing.lg}`,
     background: 'transparent',
     border: 'none',
     borderBottom: isActive ? `3px solid ${colors.primary}` : '3px solid transparent',
-    color: isActive ? colors.primary : colors.textSecondary,
+    color: isActive ? colors.primary : (isHovered ? colors.primary : colors.textSecondary),
     fontSize: fontSizes.md,
     fontWeight: isActive ? fontWeights.semibold : fontWeights.normal,
     cursor: 'pointer',
@@ -575,16 +370,9 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
     fontFamily: fontFamilies.body,
   };
 
-  const hoverStyle: CSSProperties = {
-    ...buttonStyle,
-    color: colors.primary,
-  };
-
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <button
-      style={isHovered && !isActive ? hoverStyle : buttonStyle}
+      style={buttonStyle}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -605,7 +393,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
 };
 
 // ============================================================================
-// LOADING STYLES
+// STYLES
 // ============================================================================
 
 const loadingStyle: CSSProperties = {
@@ -621,7 +409,6 @@ const loadingTextStyle: CSSProperties = {
   color: colors.textSecondary,
 };
 
-// TOUR-EDIT-META: Dialog Styles
 const overlayStyle: CSSProperties = {
   position: 'fixed',
   top: 0,

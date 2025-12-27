@@ -131,4 +131,41 @@ export const Icons = {
       <path d="M7 2v5h6V2M7 18v-5h6v5" stroke={color} strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
+
+  // Bottom Navigation Icons
+  List: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M3 5h14M3 10h14M3 15h10" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  BarChart: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M3 17V9M8 17V5M13 17v-4M18 17V3" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  MoreHorizontal: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="4" cy="10" r="2" fill={color} />
+      <circle cx="10" cy="10" r="2" fill={color} />
+      <circle cx="16" cy="10" r="2" fill={color} />
+    </svg>
+  ),
+
+  Users: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="7" cy="6" r="3" stroke={color} strokeWidth="2" />
+      <path d="M1 17c0-3 2.5-5 6-5s6 2 6 5" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <circle cx="14" cy="6" r="2" stroke={color} strokeWidth="2" />
+      <path d="M16 11c2 0 3 1.5 3 3" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  Monitor: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="3" width="16" height="11" rx="2" stroke={color} strokeWidth="2" />
+      <path d="M7 17h6M10 14v3" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
 };

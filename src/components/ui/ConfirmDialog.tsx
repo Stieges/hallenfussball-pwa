@@ -10,13 +10,20 @@ import { CSSProperties, useEffect, useCallback, useRef } from 'react';
 import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
+/** Secondary action button configuration */
+export interface SecondaryAction {
+  text: string;
+  onClick: () => void;
+  variant?: 'secondary' | 'danger';
+}
+
 export interface ConfirmDialogProps {
-  /** Whether the dialog is open */
-  isOpen: boolean;
+  /** Whether the dialog is open (optional - always visible if not provided) */
+  isOpen?: boolean;
   /** Dialog title */
   title: string;
   /** Dialog message (can include line breaks) */
-  message: string;
+  message: string | React.ReactNode;
   /** Variant affects colors */
   variant?: ConfirmDialogVariant;
   /** Confirm button text */
@@ -25,32 +32,58 @@ export interface ConfirmDialogProps {
   cancelText?: string;
   /** Called when confirmed */
   onConfirm: () => void;
-  /** Called when cancelled or closed */
-  onCancel: () => void;
+  /** Called when cancelled or closed (optional if onClose is provided) */
+  onCancel?: () => void;
   /** Optional additional details to show */
   details?: string;
+  /** Optional secondary action (third button between cancel and confirm) */
+  secondaryAction?: SecondaryAction;
+  /** Alias for confirmText (for backwards compatibility) */
+  confirmLabel?: string;
+  /** Alias for cancelText (for backwards compatibility) */
+  cancelLabel?: string;
+  /** Alias for onCancel (for backwards compatibility with dialogs version) */
+  onClose?: () => void;
 }
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
-  isOpen,
+  isOpen = true, // Default to visible for match-cockpit compatibility
   title,
   message,
   variant = 'warning',
-  confirmText = 'Bestätigen',
-  cancelText = 'Abbrechen',
+  confirmText,
+  cancelText,
   onConfirm,
   onCancel,
   details,
+  secondaryAction,
+  // Backwards compatibility aliases
+  confirmLabel,
+  cancelLabel,
+  onClose,
 }) => {
+  // Handle backwards compatibility
+  const effectiveConfirmText = confirmText ?? confirmLabel ?? 'Bestätigen';
+  const effectiveCancelText = cancelText ?? cancelLabel ?? 'Abbrechen';
+
+  // Memoize the cancel handler to prevent unnecessary re-renders
+  const effectiveOnCancel = useCallback(() => {
+    if (onCancel) {
+      onCancel();
+    } else if (onClose) {
+      onClose();
+    }
+  }, [onCancel, onClose]);
+
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   // Handle escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      onCancel();
+      effectiveOnCancel();
     }
-  }, [onCancel]);
+  }, [effectiveOnCancel]);
 
   // Focus management
   useEffect(() => {
@@ -197,8 +230,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
-      onCancel();
+      effectiveOnCancel();
     }
+  };
+
+  const handleSecondaryAction = () => {
+    secondaryAction?.onClick();
+    effectiveOnCancel();
   };
 
   return (
@@ -224,7 +262,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <div style={footerStyle}>
             <button
               style={cancelButtonStyle}
-              onClick={onCancel}
+              onClick={effectiveOnCancel}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
               }}
@@ -232,8 +270,28 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
-              {cancelText}
+              {effectiveCancelText}
             </button>
+            {secondaryAction && (
+              <button
+                style={{
+                  ...cancelButtonStyle,
+                  ...(secondaryAction.variant === 'danger' && {
+                    borderColor: colors.error,
+                    color: colors.error,
+                  }),
+                }}
+                onClick={handleSecondaryAction}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {secondaryAction.text}
+              </button>
+            )}
             <button
               ref={confirmButtonRef}
               style={confirmButtonStyle}
@@ -245,7 +303,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 e.currentTarget.style.backgroundColor = variantConfig.confirmBg;
               }}
             >
-              {confirmText}
+              {effectiveConfirmText}
             </button>
           </div>
         </div>

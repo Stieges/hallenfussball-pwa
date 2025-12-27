@@ -17,7 +17,7 @@ import { TiebreakerBanner } from './TiebreakerBanner';
 import { PenaltyShootoutDialog } from './PenaltyShootoutDialog';
 import { EditScoreDialog } from './EditScoreDialog';
 import { EditTimeDialog } from './EditTimeDialog';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 // Panel sub-components (extracted for maintainability)
 import {

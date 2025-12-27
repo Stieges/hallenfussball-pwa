@@ -10,6 +10,7 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
   DragStartEvent,
   DragEndEvent,
@@ -89,6 +90,13 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
       // This prevents accidental drags on click
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Touch requires a small delay to distinguish from scrolling
+      activationConstraint: {
+        delay: 200,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {

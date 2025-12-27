@@ -89,7 +89,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     borderRadius: borderRadius.md,
     border: `1px dashed ${colors.border}`,
     color: colors.textSecondary,
-    fontSize: '14px',
+    fontSize: fontSizes.md,
   };
 
   const renderSection = (

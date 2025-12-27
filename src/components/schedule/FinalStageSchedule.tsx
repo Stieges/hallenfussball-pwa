@@ -289,78 +289,114 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     fontWeight: fontWeights.medium,
   };
 
-  // Mobile card styles
+  // Mobile Card Styles - Compact Design (matching GroupStageSchedule)
   const mobileCardStyle: CSSProperties = {
     backgroundColor: colors.background,
     border: `2px solid ${colors.accent}`,
-    borderRadius: '8px',
-    padding: '16px',
-    marginBottom: '12px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    marginBottom: '8px',
   };
+
   const mobileCardHeaderStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px',
-    paddingBottom: '8px',
-    borderBottom: `2px solid ${colors.accent}`,
+    marginBottom: '4px',
+    fontSize: '12px',
   };
-  const mobileMatchNumberStyle: CSSProperties = {
-    fontSize: '16px',
-    fontWeight: fontWeights.bold,
-    color: colors.accent,
-  };
-  const mobileTimeStyle: CSSProperties = {
-    fontSize: '14px',
-    color: colors.textSecondary,
-  };
-  const mobileLabelStyle: CSSProperties = {
-    fontSize: '16px',
-    fontWeight: fontWeights.bold,
-    color: colors.accent,
-    marginBottom: '12px',
-    textAlign: 'center',
-  };
-  const mobileTeamsContainerStyle: CSSProperties = { marginBottom: '12px' };
-  const mobileTeamStyle: CSSProperties = {
-    fontSize: '15px',
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
-    marginBottom: '8px',
-  };
-  const mobileScoreContainerStyle: CSSProperties = {
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '12px',
-    backgroundColor: colors.surfaceDark,
-    borderRadius: '6px',
-    marginBottom: '12px',
-  };
-  const mobileMetaStyle: CSSProperties = {
-    display: 'flex',
-    gap: '16px',
-    flexWrap: 'wrap',
-    fontSize: '13px',
-    color: colors.textSecondary,
-  };
-  const mobileMetaItemStyle: CSSProperties = {
+
+  const mobileMatchInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
+    color: colors.textSecondary,
   };
-  const mobileSelectStyle: CSSProperties = {
-    padding: '8px 12px',
+
+  const mobileMatchNumberStyle: CSSProperties = {
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
+  };
+
+  const mobileLabelStyle: CSSProperties = {
+    fontSize: '13px',
+    fontWeight: fontWeights.bold,
+    color: colors.accent,
+    marginBottom: '4px',
+    textAlign: 'center' as const,
+    backgroundColor: `${colors.accent}20`,
+    padding: '2px 8px',
+    borderRadius: '4px',
+  };
+
+  const mobileMetaCompactStyle: CSSProperties = {
+    display: 'flex',
+    gap: '8px',
+    color: colors.textMuted,
+    fontSize: '11px',
+  };
+
+  // Team row with inline score - compact layout
+  const getMobileTeamRowStyle = (isWinner: boolean, isLoser: boolean, hasResult: boolean, isPlaceholder: boolean): CSSProperties => ({
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '4px 0',
+    fontSize: '14px',
+    fontWeight: isWinner ? fontWeights.bold : fontWeights.normal,
+    color: isPlaceholder
+      ? colors.textPlaceholder
+      : hasResult
+        ? (isLoser ? colors.textMuted : colors.textPrimary)
+        : colors.textPrimary,
+    fontStyle: isPlaceholder ? 'italic' : 'normal',
+  });
+
+  const mobileTeamNameStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
+  };
+
+  const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
+    fontWeight: fontWeights.bold,
+    fontSize: '16px',
+    minWidth: '24px',
+    textAlign: 'right' as const,
+    color: isWinner ? colors.success : colors.textPrimary,
+  });
+
+  const mobileWinnerIconStyle: CSSProperties = {
+    color: colors.success,
+    fontSize: '12px',
+    flexShrink: 0,
+  };
+
+  const mobileScoreInputStyle: CSSProperties = {
+    width: '36px',
+    padding: '4px',
     border: `1px solid ${colors.border}`,
     borderRadius: '4px',
     fontSize: '14px',
+    fontWeight: fontWeights.bold,
+    textAlign: 'center' as const,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+  };
+
+  const mobileSelectStyle: CSSProperties = {
+    padding: '4px 8px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    fontSize: '12px',
     fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     backgroundColor: colors.background,
     color: colors.textPrimary,
-    minHeight: '44px',
+    minHeight: '32px',
   };
 
   // Render table content
@@ -540,74 +576,222 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         )}
       </div>
 
+      {/* Mobile Card View - Compact Design */}
       <div className="mobile-view">
         {sortedMatches.map((match) => {
           const isRunning = runningMatchIds?.has(match.id);
+          const isFinished = finishedMatches?.has(match.id) ?? false;
+          const hasResult = match.scoreA !== undefined && match.scoreB !== undefined;
+          const homeIsPlaceholder = isPlaceholderTeam(match.homeTeam);
+          const awayIsPlaceholder = isPlaceholderTeam(match.awayTeam);
+
+          // Determine winner/loser
+          const homeWins = hasResult && (match.scoreA ?? 0) > (match.scoreB ?? 0);
+          const awayWins = hasResult && (match.scoreB ?? 0) > (match.scoreA ?? 0);
+          const isDraw = hasResult && match.scoreA === match.scoreB;
+
+          // Get pending changes
+          const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+          const displayedRef = hasPendingRef
+            ? pendingChanges.refereeAssignments[match.id]
+            : match.referee;
+          const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+          const displayedField = hasPendingField
+            ? pendingChanges.fieldAssignments[match.id]
+            : match.field;
+
+          // Is this match editable for score input?
+          const canEditScore = editable && onScoreChange !== undefined && !isFinished;
+          const inCorrectionMode = correctionMatchId === match.id;
+
           return (
-          <div key={match.id} style={mobileCardStyle}>
+          <div
+            key={match.id}
+            style={{
+              ...mobileCardStyle,
+              ...(isRunning ? {
+                borderColor: colors.statusLive,
+                backgroundColor: colors.statusLiveRowBg,
+              } : {}),
+            }}
+          >
+            {/* Compact Header: #Nr • Zeit | Meta Info */}
             <div style={mobileCardHeaderStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+              <div style={mobileMatchInfoStyle}>
+                <span style={mobileMatchNumberStyle}>#{match.matchNumber}</span>
+                <span>•</span>
+                <span>{match.time}</span>
                 {isRunning && <LiveBadge compact />}
               </div>
-              <span style={mobileTimeStyle}>{match.time}</span>
+              <div style={mobileMetaCompactStyle}>
+                {showReferees && displayedRef && (
+                  <span style={hasPendingRef ? { color: colors.primary } : undefined}>
+                    SR:{displayedRef}
+                  </span>
+                )}
+                {showFields && displayedField && displayedField > 1 && (
+                  <span style={hasPendingField ? { color: colors.primary } : undefined}>
+                    F:{displayedField}
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Final Match Label */}
             <div style={mobileLabelStyle}>{getFinalMatchLabel(match)}</div>
-            <div style={mobileTeamsContainerStyle}>
-              <div style={{
-                ...mobileTeamStyle,
-                ...(isPlaceholderTeam(match.homeTeam) ? { color: colors.textPlaceholder, fontStyle: 'italic' } : {})
-              }}>{match.homeTeam}</div>
-              <div style={{
-                ...mobileTeamStyle,
-                ...(isPlaceholderTeam(match.awayTeam) ? { color: colors.textPlaceholder, fontStyle: 'italic' } : {})
-              }}>{match.awayTeam}</div>
+
+            {/* Team Row: Home Team with Score */}
+            <div style={getMobileTeamRowStyle(homeWins, awayWins && !isDraw, hasResult, homeIsPlaceholder)}>
+              <div style={mobileTeamNameStyle}>
+                {homeWins && <span style={mobileWinnerIconStyle}>✓</span>}
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap' as const
+                }}>
+                  {match.homeTeam}
+                </span>
+              </div>
+              {canEditScore || inCorrectionMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={match.scoreA ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== '' && match.scoreB !== undefined) {
+                      onScoreChange?.(match.id, parseInt(val), match.scoreB);
+                    }
+                  }}
+                  placeholder="–"
+                  style={{
+                    ...mobileScoreInputStyle,
+                    ...(inCorrectionMode ? {
+                      borderColor: colors.warning,
+                      backgroundColor: colors.warningLight,
+                    } : {}),
+                  }}
+                />
+              ) : (
+                <span style={mobileScoreStyle(homeWins)}>
+                  {match.scoreA ?? '–'}
+                </span>
+              )}
             </div>
-            <div style={mobileScoreContainerStyle}>
-              <MatchScoreCell
-                matchId={match.id}
-                scoreA={match.scoreA}
-                scoreB={match.scoreB}
-                editable={editable && onScoreChange !== undefined}
-                isFinished={finishedMatches?.has(match.id) ?? false}
-                inCorrectionMode={correctionMatchId === match.id}
-                onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
-                onStartCorrection={() => onStartCorrection?.(match.id)}
-              />
+
+            {/* Team Row: Away Team with Score */}
+            <div style={getMobileTeamRowStyle(awayWins, homeWins && !isDraw, hasResult, awayIsPlaceholder)}>
+              <div style={mobileTeamNameStyle}>
+                {awayWins && <span style={mobileWinnerIconStyle}>✓</span>}
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap' as const
+                }}>
+                  {match.awayTeam}
+                </span>
+              </div>
+              {canEditScore || inCorrectionMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={match.scoreB ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (match.scoreA !== undefined && val !== '') {
+                      onScoreChange?.(match.id, match.scoreA, parseInt(val));
+                    }
+                  }}
+                  placeholder="–"
+                  style={{
+                    ...mobileScoreInputStyle,
+                    ...(inCorrectionMode ? {
+                      borderColor: colors.warning,
+                      backgroundColor: colors.warningLight,
+                    } : {}),
+                  }}
+                />
+              ) : (
+                <span style={mobileScoreStyle(awayWins)}>
+                  {match.scoreB ?? '–'}
+                </span>
+              )}
             </div>
-            <div style={mobileMetaStyle}>
-              {showReferees && (() => {
-                const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-                const displayedRef = hasPendingRef ? pendingChanges.refereeAssignments[match.id] : match.referee;
-                const isPendingChange = hasPendingRef;
-                return (
-                <div style={{ ...mobileMetaItemStyle, backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined, padding: isPendingChange ? '4px 8px' : undefined, borderRadius: isPendingChange ? '4px' : undefined }}>
-                  <strong>SR:</strong>
-                  {editingSchedule && onRefereeChange ? (
-                    <select value={displayedRef ?? ''} onChange={(e) => onRefereeChange(match.id, e.target.value ? parseInt(e.target.value) : null)} style={{ ...mobileSelectStyle, border: `1px solid ${isPendingChange ? colors.primary : colors.border}` }}>
+
+            {/* Correction button for finished matches */}
+            {isFinished && !inCorrectionMode && (
+              <button
+                onClick={() => onStartCorrection?.(match.id)}
+                style={{
+                  marginTop: '4px',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  color: colors.textSecondary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+                className="correction-btn-mobile"
+              >
+                Korrigieren
+              </button>
+            )}
+
+            {/* Edit mode: Referee & Field selectors */}
+            {editingSchedule && (showReferees || showFields) && (
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '6px',
+                paddingTop: '6px',
+                borderTop: `1px solid ${colors.border}`,
+              }}>
+                {showReferees && onRefereeChange && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '10px', color: colors.textMuted }}>SR</label>
+                    <select
+                      value={displayedRef ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        onRefereeChange(match.id, value ? parseInt(value) : null);
+                      }}
+                      style={{
+                        ...mobileSelectStyle,
+                        width: '100%',
+                        border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
+                      }}
+                    >
                       <option value="">-</option>
-                      {refereeOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                      {refereeOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
-                  ) : (<span>{displayedRef ?? '-'}</span>)}
-                </div>
-                );
-              })()}
-              {showFields && (() => {
-                const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-                const displayedField = hasPendingField ? pendingChanges.fieldAssignments[match.id] : match.field;
-                const isPendingChange = hasPendingField;
-                return (
-                <div style={{ ...mobileMetaItemStyle, backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined, padding: isPendingChange ? '4px 8px' : undefined, borderRadius: isPendingChange ? '4px' : undefined }}>
-                  <strong>Feld:</strong>
-                  {editingSchedule && onFieldChange ? (
-                    <select value={displayedField || 1} onChange={(e) => { const fieldNum = parseInt(e.target.value); onFieldChange(match.id, fieldNum); }} style={{ ...mobileSelectStyle, border: `1px solid ${isPendingChange ? colors.primary : colors.border}` }}>
-                      {fieldOptions.map(opt => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                  </div>
+                )}
+                {showFields && onFieldChange && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '10px', color: colors.textMuted }}>Feld</label>
+                    <select
+                      value={displayedField || 1}
+                      onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+                      style={{
+                        ...mobileSelectStyle,
+                        width: '100%',
+                        border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+                      }}
+                    >
+                      {fieldOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
                     </select>
-                  ) : (<span>{displayedField || '-'}</span>)}
-                </div>
-                );
-              })()}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           );
         })}
@@ -618,6 +802,12 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         @media (max-width: 767px) {
           .final-stage-schedule .desktop-view { display: none; }
           .final-stage-schedule .mobile-view { display: block; }
+        }
+        /* Mobile correction button hover */
+        .final-stage-schedule .correction-btn-mobile:hover {
+          background: ${colors.accent} !important;
+          color: white !important;
+          border-color: ${colors.accent} !important;
         }
         @media (min-width: 768px) and (max-width: 1024px) {
           .final-stage-schedule table { font-size: 12px; }

@@ -234,82 +234,101 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     minWidth: '60px',
   };
 
-  // Mobile Card Styles
+  // Mobile Card Styles - Compact Design
   const mobileCardStyle: CSSProperties = {
     backgroundColor: colors.background,
     border: `1px solid ${colors.border}`,
-    borderRadius: '8px',
-    padding: '16px',
-    marginBottom: '12px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    borderRadius: '6px',
+    padding: '10px 12px',
+    marginBottom: '8px',
   };
 
   const mobileCardHeaderStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px',
-    paddingBottom: '8px',
-    borderBottom: `1px solid ${colors.border}`,
+    marginBottom: '6px',
+    fontSize: '12px',
+  };
+
+  const mobileMatchInfoStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    color: colors.textSecondary,
   };
 
   const mobileMatchNumberStyle: CSSProperties = {
-    fontSize: '16px',
     fontWeight: fontWeights.bold,
     color: colors.primary,
   };
 
-  const mobileTimeStyle: CSSProperties = {
-    fontSize: '14px',
-    color: colors.textSecondary,
-  };
-
-  const mobileTeamsContainerStyle: CSSProperties = {
-    marginBottom: '12px',
-  };
-
-  const mobileTeamStyle: CSSProperties = {
-    fontSize: '15px',
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
-    marginBottom: '8px',
-  };
-
-  const mobileScoreContainerStyle: CSSProperties = {
+  const mobileMetaCompactStyle: CSSProperties = {
     display: 'flex',
-    gap: '12px',
+    gap: '8px',
+    color: colors.textMuted,
+    fontSize: '11px',
+  };
+
+  // Team row with inline score - compact layout
+  const getMobileTeamRowStyle = (isWinner: boolean, isLoser: boolean, hasResult: boolean): CSSProperties => ({
+    display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: '12px',
-    backgroundColor: colors.surfaceDark,
-    borderRadius: '6px',
-    marginBottom: '12px',
-  };
+    padding: '4px 0',
+    fontSize: '14px',
+    fontWeight: isWinner ? fontWeights.bold : fontWeights.normal,
+    color: hasResult
+      ? (isLoser ? colors.textMuted : colors.textPrimary)
+      : colors.textPrimary,
+  });
 
-  const mobileMetaStyle: CSSProperties = {
-    display: 'flex',
-    gap: '16px',
-    flexWrap: 'wrap',
-    fontSize: '13px',
-    color: colors.textSecondary,
-  };
-
-  const mobileMetaItemStyle: CSSProperties = {
+  const mobileTeamNameStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
+    flex: 1,
+    minWidth: 0,
+    overflow: 'hidden',
   };
 
-  const mobileSelectStyle: CSSProperties = {
-    padding: '8px 12px',
+  const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
+    fontWeight: fontWeights.bold,
+    fontSize: '16px',
+    minWidth: '24px',
+    textAlign: 'right' as const,
+    color: isWinner ? colors.success : colors.textPrimary,
+  });
+
+  const mobileWinnerIconStyle: CSSProperties = {
+    color: colors.success,
+    fontSize: '12px',
+    flexShrink: 0,
+  };
+
+  // Edit mode styles for inline score input
+  const mobileScoreInputStyle: CSSProperties = {
+    width: '36px',
+    padding: '4px',
     border: `1px solid ${colors.border}`,
     borderRadius: '4px',
     fontSize: '14px',
+    fontWeight: fontWeights.bold,
+    textAlign: 'center' as const,
+    backgroundColor: colors.background,
+    color: colors.textPrimary,
+  };
+
+  const mobileSelectStyle: CSSProperties = {
+    padding: '4px 8px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: '4px',
+    fontSize: '12px',
     fontWeight: fontWeights.semibold,
     cursor: 'pointer',
     backgroundColor: colors.background,
     color: colors.textPrimary,
-    minHeight: '44px',
+    minHeight: '32px',
   };
 
   // Get active match for drag overlay
@@ -601,7 +620,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 minWidth: '400px',
                 maxWidth: '600px',
                 cursor: 'grabbing',
-                transform: 'translate(-50%, -50%)', // Center on cursor
+                // Note: DragOverlay already positions at pointer, no transform needed
               }}>
                 <span style={{ color: colors.primary, fontSize: '18px' }}>⋮⋮</span>
                 <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
@@ -633,65 +652,181 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         </div>
       )}
 
-      {/* Mobile Card View */}
+      {/* Mobile Card View - Compact Design */}
       <div className="mobile-view">
         {sortedMatches.map((match) => {
           const isRunning = runningMatchIds?.has(match.id);
+          const isFinished = finishedMatches?.has(match.id) ?? false;
+          const hasResult = match.scoreA !== undefined && match.scoreB !== undefined;
+
+          // Determine winner/loser (safe because hasResult guarantees both scores exist)
+          const homeWins = hasResult && (match.scoreA ?? 0) > (match.scoreB ?? 0);
+          const awayWins = hasResult && (match.scoreB ?? 0) > (match.scoreA ?? 0);
+          const isDraw = hasResult && match.scoreA === match.scoreB;
+
+          // Get pending changes
+          const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+          const displayedRef = hasPendingRef
+            ? pendingChanges.refereeAssignments[match.id]
+            : match.referee;
+          const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+          const displayedField = hasPendingField
+            ? pendingChanges.fieldAssignments[match.id]
+            : match.field;
+
+          // Is this match editable for score input?
+          const canEditScore = editable && onScoreChange !== undefined && !isFinished;
+          const inCorrectionMode = correctionMatchId === match.id;
+
           return (
-          <div key={match.id} style={mobileCardStyle}>
-            {/* Header with match number and time */}
+          <div
+            key={match.id}
+            style={{
+              ...mobileCardStyle,
+              ...(isRunning ? {
+                borderColor: colors.statusLive,
+                backgroundColor: colors.statusLiveRowBg,
+              } : {}),
+            }}
+          >
+            {/* Compact Header: #Nr • Zeit | Meta Info */}
             <div style={mobileCardHeaderStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={mobileMatchNumberStyle}>Spiel #{match.matchNumber}</span>
+              <div style={mobileMatchInfoStyle}>
+                <span style={mobileMatchNumberStyle}>#{match.matchNumber}</span>
+                <span>•</span>
+                <span>{match.time}</span>
                 {isRunning && <LiveBadge compact />}
               </div>
-              <span style={mobileTimeStyle}>{match.time}</span>
+              <div style={mobileMetaCompactStyle}>
+                {hasGroups && (
+                  <span>{match.group ? getGroupShortCode(match.group, tournament) : ''}</span>
+                )}
+                {showReferees && displayedRef && (
+                  <span style={hasPendingRef ? { color: colors.primary } : undefined}>
+                    SR:{displayedRef}
+                  </span>
+                )}
+                {showFields && displayedField && displayedField > 1 && (
+                  <span style={hasPendingField ? { color: colors.primary } : undefined}>
+                    F:{displayedField}
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* Teams */}
-            <div style={mobileTeamsContainerStyle}>
-              <div style={mobileTeamStyle}>{match.homeTeam}</div>
-              <div style={mobileTeamStyle}>{match.awayTeam}</div>
-            </div>
-
-            {/* Score Input */}
-            <div style={mobileScoreContainerStyle}>
-              <MatchScoreCell
-                matchId={match.id}
-                scoreA={match.scoreA}
-                scoreB={match.scoreB}
-                editable={editable && onScoreChange !== undefined}
-                isFinished={finishedMatches?.has(match.id) ?? false}
-                inCorrectionMode={correctionMatchId === match.id}
-                onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
-                onStartCorrection={() => onStartCorrection?.(match.id)}
-              />
-            </div>
-
-            {/* Meta information */}
-            <div style={mobileMetaStyle}>
-              {hasGroups && (
-                <div style={mobileMetaItemStyle}>
-                  <strong>Gruppe:</strong>
-                  <span>{match.group ? getGroupShortCode(match.group, tournament) : '-'}</span>
-                </div>
-              )}
-              {showReferees && (() => {
-                const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-                const displayedRef = hasPendingRef
-                  ? pendingChanges.refereeAssignments[match.id]
-                  : match.referee;
-                const isPendingChange = hasPendingRef;
-
-                return (
-                <div style={{
-                  ...mobileMetaItemStyle,
-                  backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
-                  padding: isPendingChange ? '4px 8px' : undefined,
-                  borderRadius: isPendingChange ? '4px' : undefined,
+            {/* Team Row: Home Team with Score */}
+            <div style={getMobileTeamRowStyle(homeWins, awayWins && !isDraw, hasResult)}>
+              <div style={mobileTeamNameStyle}>
+                {homeWins && <span style={mobileWinnerIconStyle}>✓</span>}
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap' as const
                 }}>
-                  <strong>SR:</strong>
-                  {editingSchedule && onRefereeChange ? (
+                  {match.homeTeam}
+                </span>
+              </div>
+              {canEditScore || inCorrectionMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={match.scoreA ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val !== '' && match.scoreB !== undefined) {
+                      onScoreChange?.(match.id, parseInt(val), match.scoreB);
+                    }
+                  }}
+                  placeholder="–"
+                  style={{
+                    ...mobileScoreInputStyle,
+                    ...(inCorrectionMode ? {
+                      borderColor: colors.warning,
+                      backgroundColor: colors.warningLight,
+                    } : {}),
+                  }}
+                />
+              ) : (
+                <span style={mobileScoreStyle(homeWins)}>
+                  {match.scoreA ?? '–'}
+                </span>
+              )}
+            </div>
+
+            {/* Team Row: Away Team with Score */}
+            <div style={getMobileTeamRowStyle(awayWins, homeWins && !isDraw, hasResult)}>
+              <div style={mobileTeamNameStyle}>
+                {awayWins && <span style={mobileWinnerIconStyle}>✓</span>}
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap' as const
+                }}>
+                  {match.awayTeam}
+                </span>
+              </div>
+              {canEditScore || inCorrectionMode ? (
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={match.scoreB ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (match.scoreA !== undefined && val !== '') {
+                      onScoreChange?.(match.id, match.scoreA, parseInt(val));
+                    }
+                  }}
+                  placeholder="–"
+                  style={{
+                    ...mobileScoreInputStyle,
+                    ...(inCorrectionMode ? {
+                      borderColor: colors.warning,
+                      backgroundColor: colors.warningLight,
+                    } : {}),
+                  }}
+                />
+              ) : (
+                <span style={mobileScoreStyle(awayWins)}>
+                  {match.scoreB ?? '–'}
+                </span>
+              )}
+            </div>
+
+            {/* Correction button for finished matches */}
+            {isFinished && !inCorrectionMode && (
+              <button
+                onClick={() => onStartCorrection?.(match.id)}
+                style={{
+                  marginTop: '4px',
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  color: colors.textSecondary,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  width: '100%',
+                }}
+                className="correction-btn-mobile"
+              >
+                Korrigieren
+              </button>
+            )}
+
+            {/* Edit mode: Referee & Field selectors */}
+            {editingSchedule && (showReferees || showFields) && (
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '6px',
+                paddingTop: '6px',
+                borderTop: `1px solid ${colors.border}`,
+              }}>
+                {showReferees && onRefereeChange && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '10px', color: colors.textMuted }}>SR</label>
                     <select
                       value={displayedRef ?? ''}
                       onChange={(e) => {
@@ -700,63 +835,37 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                       }}
                       style={{
                         ...mobileSelectStyle,
-                        border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
+                        width: '100%',
+                        border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
                       }}
                     >
                       <option value="">-</option>
                       {refereeOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
-                  ) : (
-                    <span>{displayedRef ?? '-'}</span>
-                  )}
-                </div>
-                );
-              })()}
-              {showFields && (() => {
-                const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-                const displayedField = hasPendingField
-                  ? pendingChanges.fieldAssignments[match.id]
-                  : match.field;
-                const isPendingChange = hasPendingField;
-
-                return (
-                <div style={{
-                  ...mobileMetaItemStyle,
-                  backgroundColor: isPendingChange ? 'rgba(0, 176, 255, 0.1)' : undefined,
-                  padding: isPendingChange ? '4px 8px' : undefined,
-                  borderRadius: isPendingChange ? '4px' : undefined,
-                }}>
-                  <strong>Feld:</strong>
-                  {editingSchedule && onFieldChange ? (
+                  </div>
+                )}
+                {showFields && onFieldChange && (
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '10px', color: colors.textMuted }}>Feld</label>
                     <select
                       value={displayedField || 1}
-                      onChange={(e) => {
-                        const fieldNum = parseInt(e.target.value);
-                        // In edit mode, no confirmation - conflicts are checked on save
-                        onFieldChange(match.id, fieldNum);
-                      }}
+                      onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
                       style={{
                         ...mobileSelectStyle,
-                        border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
+                        width: '100%',
+                        border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
                       }}
                     >
                       {fieldOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
                       ))}
                     </select>
-                  ) : (
-                    <span>{displayedField || '-'}</span>
-                  )}
-                </div>
-                );
-              })()}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           );
         })}
@@ -776,6 +885,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           .group-stage-schedule .mobile-view {
             display: block;
           }
+        }
+
+        /* Mobile correction button hover */
+        .correction-btn-mobile:hover {
+          background: ${colors.primary} !important;
+          color: white !important;
+          border-color: ${colors.primary} !important;
         }
 
         /* Tablet: Keep table but adjust sizing */
