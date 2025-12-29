@@ -388,8 +388,16 @@ export interface MatchEvent {
   playerOutNumber?: number;
   playerInNumber?: number;
 
-  // Open entry tracking
-  isOpen: boolean;            // True if player number is missing
+  // Card type (for YELLOW_CARD and RED_CARD events)
+  cardType?: 'YELLOW' | 'RED';
+
+  /**
+   * Incomplete entry tracking
+   * True if event was created with "Ohne Details" button
+   * Events with incomplete=true should be shown with ⚠️ in the event log
+   * and can be edited later to add missing details
+   */
+  incomplete?: boolean;
 
   // Metadata
   createdAt: Date;

@@ -18,18 +18,21 @@ export { useListAnimation, useFadeIn } from './useListAnimation'
 // User Interaction
 export { useDebounce, useDebouncedCallback } from './useDebounce'
 export { useClickOutside, useClickOutsideMultiple } from './useClickOutside'
+export { useLongPress } from './useLongPress'
 
 // State Utilities
 export { usePrevious, usePreviousDistinct } from './usePrevious'
 
 // Responsive & Layout
 export { useIsMobile } from './useIsMobile'
+export { useBreakpoint, type Breakpoint, type BreakpointConfig, type UseBreakpointReturn } from './useBreakpoint'
 
 // Live Data & Sync
 export { useLiveMatchManagement } from './useLiveMatchManagement'
 export { useLiveMatches } from './useLiveMatches'
 export { useMultiTabSync } from './useMultiTabSync'
 export { useOnlineStatus } from './useOnlineStatus'
+export { useSyncedPenalties } from './useSyncedPenalties'
 
 // Domain Specific
 export { useTournaments } from './useTournaments'
@@ -40,3 +43,7 @@ export { usePermissions } from './usePermissions'
 // Theming & Corporate Colors
 export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
 export { useTheme, ThemeProvider, type Theme, type ThemeContextValue } from './useTheme'
+
+// Accessibility
+export { useHighContrast } from './useHighContrast'
+export { useFontScale, FONT_SCALES, FONT_SCALE_LABELS } from './useFontScale'

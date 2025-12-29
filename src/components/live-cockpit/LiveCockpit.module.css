@@ -1,0 +1,294 @@
+/**
+ * LiveCockpit CSS Module
+ *
+ * Handles pseudo-classes that inline styles cannot:
+ * - :hover, :active, :focus states
+ * - CSS animations
+ * - Safe area insets
+ */
+
+/* =============================================================================
+   Safe Area Insets (iPhone Notch)
+   ============================================================================= */
+
+.footerBar {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* =============================================================================
+   Goal Button Styles
+   ============================================================================= */
+
+.goalButton {
+  /* Base transition for all states */
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  /* Remove tap highlight on mobile */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent text selection */
+  user-select: none;
+  /* Touch optimization */
+  touch-action: manipulation;
+}
+
+.goalButton:hover:not(:disabled) {
+  transform: scale(1.02);
+  filter: brightness(1.1);
+}
+
+.goalButton:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.95);
+}
+
+.goalButton:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-primary-glow-light);
+}
+
+/* Goal scored animation trigger */
+.goalButton.scored {
+  animation: goalScored 0.4s ease-out;
+}
+
+/* =============================================================================
+   Minus Button Styles
+   ============================================================================= */
+
+.minusButton {
+  transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.minusButton:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: var(--color-error-glow);
+}
+
+.minusButton:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.minusButton:focus-visible {
+  outline: 2px solid #FF5252;
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   Action Button Styles (Footer)
+   ============================================================================= */
+
+.actionButton {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.actionButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.actionButton:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.actionButton:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+}
+
+/* Primary variant */
+.actionButtonPrimary:hover:not(:disabled) {
+  box-shadow: 0 6px 20px var(--color-primary-glow);
+}
+
+/* Danger variant */
+.actionButtonDanger:hover:not(:disabled) {
+  background: var(--color-error-glow);
+}
+
+/* =============================================================================
+   Timer Clickable Indicator
+   ============================================================================= */
+
+.timerClickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  border-radius: 8px;
+  position: relative;
+}
+
+.timerClickable::after {
+  content: '✎';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 12px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.timerClickable:hover {
+  background: var(--color-surface-highlight);
+  transform: scale(1.02);
+}
+
+.timerClickable:hover::after {
+  opacity: 1;
+}
+
+.timerClickable:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   Score Display Animation
+   ============================================================================= */
+
+.scoreValue {
+  transition: transform 0.2s ease;
+}
+
+.scoreValue.animate {
+  animation: goalScored 0.4s ease-out;
+}
+
+/* =============================================================================
+   LIVE Badge Pulse
+   ============================================================================= */
+
+.liveBadgeDot {
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+/* =============================================================================
+   Toast Animations
+   ============================================================================= */
+
+.toastEnter {
+  animation: toastSlideIn 0.2s ease-out;
+}
+
+.toastExit {
+  animation: toastSlideOut 0.2s ease-out;
+}
+
+/* =============================================================================
+   Undo Button
+   ============================================================================= */
+
+.undoButton {
+  transition: transform 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.undoButton:hover:not(:disabled) {
+  transform: rotate(-15deg);
+  color: var(--color-primary, #00E676);
+}
+
+.undoButton:active:not(:disabled) {
+  transform: rotate(-30deg) scale(0.95);
+}
+
+.undoButton:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+}
+
+/* =============================================================================
+   Dialog Button Focus States
+   ============================================================================= */
+
+.dialogButton {
+  transition: background 0.15s ease, transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dialogButton:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-primary-glow-light);
+}
+
+.dialogButtonDanger:focus-visible {
+  outline: 2px solid var(--color-error, #FF5252);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-error-glow);
+}
+
+/* =============================================================================
+   Responsive Tablet Optimizations
+   ============================================================================= */
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .actionZone {
+    flex-direction: row;
+    gap: 24px;
+  }
+
+  .goalButton {
+    min-height: 80px;
+    font-size: 20px;
+  }
+
+  .scoreValue {
+    font-size: 64px;
+  }
+}
+
+/* =============================================================================
+   Reduced Motion
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .goalButton,
+  .minusButton,
+  .actionButton,
+  .timerClickable,
+  .scoreValue,
+  .liveBadgeDot,
+  .undoButton {
+    transition: none;
+    animation: none;
+  }
+
+  .goalButton.scored,
+  .scoreValue.animate {
+    animation: none;
+  }
+}
+
+/* =============================================================================
+   Global Focus Styles for Live Cockpit Container
+   Ensures all interactive elements have visible focus indicators
+   ============================================================================= */
+
+.liveCockpitContainer button:focus-visible,
+.liveCockpitContainer [role="button"]:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+}
+
+/* Skip if already has focus styles */
+.liveCockpitContainer .goalButton:focus-visible,
+.liveCockpitContainer .minusButton:focus-visible,
+.liveCockpitContainer .actionButton:focus-visible,
+.liveCockpitContainer .timerClickable:focus-visible,
+.liveCockpitContainer .undoButton:focus-visible {
+  /* Keep existing focus styles */
+}
+
+/* Dialog overlay buttons - higher specificity for dialogs */
+.dialogOverlay button:focus-visible {
+  outline: 2px solid var(--color-primary, #00E676);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--color-primary-glow-light);
+}

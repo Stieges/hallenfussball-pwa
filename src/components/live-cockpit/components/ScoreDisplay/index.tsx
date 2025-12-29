@@ -1,0 +1,490 @@
+/**
+ * ScoreDisplay - Central Score and Timer Display (Redesigned)
+ *
+ * Classic scoreboard layout:
+ * ┌─────────────────────────────────────────────────┐
+ * │              ⏱ 05:23 / 10:00                    │
+ * ├─────────────────────────────────────────────────┤
+ * │  TEAM A          3 : 2          TEAM B          │
+ * │  (Heim)                         (Gast)          │
+ * └─────────────────────────────────────────────────┘
+ *
+ * Key improvements:
+ * - Team names are LARGE and prominent
+ * - Three-column layout: Team | Score | Team
+ * - Home/Away labels for clarity
+ * - Timer at top (secondary importance)
+ */
+
+import { useState, useEffect, type CSSProperties } from 'react';
+import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import type { Breakpoint } from '../../../../hooks';
+import type { Team, MatchStatus, MatchPlayPhase } from '../../types';
+import styles from '../../LiveCockpit.module.css';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface ScoreDisplayProps {
+  homeTeam: Team;
+  awayTeam: Team;
+  homeScore: number;
+  awayScore: number;
+  elapsedSeconds: number;
+  durationSeconds: number;
+  status: MatchStatus;
+  playPhase?: MatchPlayPhase;
+  overtimeScore?: { home: number; away: number };
+  penaltyScore?: { home: number; away: number };
+  onTimerClick?: () => void;
+  breakpoint?: Breakpoint;
+  /** Compact mode for focus view - shows only score and minimal timer */
+  compact?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
+  homeTeam,
+  awayTeam,
+  homeScore,
+  awayScore,
+  elapsedSeconds,
+  durationSeconds,
+  status,
+  playPhase,
+  overtimeScore,
+  penaltyScore,
+  onTimerClick,
+  breakpoint = 'desktop',
+  compact = false,
+}) => {
+  const isMobile = breakpoint === 'mobile';
+  const isTablet = breakpoint === 'tablet';
+  const isRunning = status === 'RUNNING';
+
+  // Track score changes for animation
+  const [homeAnimating, setHomeAnimating] = useState(false);
+  const [awayAnimating, setAwayAnimating] = useState(false);
+  const [prevHomeScore, setPrevHomeScore] = useState(homeScore);
+  const [prevAwayScore, setPrevAwayScore] = useState(awayScore);
+
+  // Trigger animation when scores change
+  useEffect(() => {
+    if (homeScore !== prevHomeScore) {
+      setHomeAnimating(true);
+      setPrevHomeScore(homeScore);
+      const timer = setTimeout(() => setHomeAnimating(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [homeScore, prevHomeScore]);
+
+  useEffect(() => {
+    if (awayScore !== prevAwayScore) {
+      setAwayAnimating(true);
+      setPrevAwayScore(awayScore);
+      const timer = setTimeout(() => setAwayAnimating(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [awayScore, prevAwayScore]);
+
+  // ---------------------------------------------------------------------------
+  // Phase label
+  // ---------------------------------------------------------------------------
+
+  const getPhaseLabel = () => {
+    if (playPhase === 'overtime') {return 'Verlängerung';}
+    if (playPhase === 'goldenGoal') {return 'Golden Goal';}
+    if (playPhase === 'penalty') {return 'Elfmeterschießen';}
+    return null;
+  };
+
+  const phaseLabel = getPhaseLabel();
+
+  // ---------------------------------------------------------------------------
+  // Styles
+  // ---------------------------------------------------------------------------
+
+  const containerStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: isMobile ? spacing.xs : spacing.sm,
+    padding: isMobile ? spacing.sm : spacing.md,
+    background: `linear-gradient(180deg, ${colors.surfaceSolid}, ${colors.surface})`,
+    borderRadius: borderRadius.lg,
+    border: `1px solid ${colors.border}`,
+    width: '100%',
+    maxWidth: '700px',
+  };
+
+  // Timer row at top
+  const timerRowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: `${spacing.xs} ${spacing.md}`,
+    background: isRunning ? `${colors.primary}15` : colors.surfaceDark,
+    borderRadius: borderRadius.md,
+    border: isRunning ? `1px solid ${colors.primary}40` : `1px solid ${colors.border}`,
+    cursor: onTimerClick ? 'pointer' : 'default',
+  };
+
+  const timerLabelStyle: CSSProperties = {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  };
+
+  const timerValueStyle: CSSProperties = {
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    fontVariantNumeric: 'tabular-nums',
+    color: isRunning ? colors.primary : colors.textPrimary,
+  };
+
+  // Main scoreboard - three columns
+  const scoreboardStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
+    alignItems: 'center',
+    gap: isMobile ? spacing.xs : spacing.sm,
+    width: '100%',
+    padding: isMobile ? spacing.xs : spacing.sm,
+  };
+
+  // Team column styles
+  const teamColumnStyle = (side: 'home' | 'away'): CSSProperties => ({
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: side === 'home' ? 'flex-end' : 'flex-start',
+    gap: spacing.xs,
+  });
+
+  const teamNameStyle: CSSProperties = {
+    fontSize: isMobile ? fontSizes.md : isTablet ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    wordBreak: 'break-word',
+    lineHeight: 1.1,
+  };
+
+  const teamLabelStyle: CSSProperties = {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  };
+
+  // Center score
+  const scoreCenterStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: isMobile ? spacing.xs : spacing.sm,
+    padding: isMobile ? spacing.xs : spacing.sm,
+    background: colors.surfaceDark,
+    borderRadius: borderRadius.md,
+    minWidth: isMobile ? '80px' : '120px',
+  };
+
+  const scoreValueStyle: CSSProperties = {
+    fontSize: isMobile ? '2rem' : isTablet ? '2.5rem' : '3rem',
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    fontVariantNumeric: 'tabular-nums',
+    lineHeight: 1,
+    minWidth: isMobile ? '28px' : '40px',
+    textAlign: 'center',
+  };
+
+  const scoreSeparatorStyle: CSSProperties = {
+    fontSize: isMobile ? '1.5rem' : '2rem',
+    fontWeight: fontWeights.normal,
+    color: colors.textSecondary,
+    lineHeight: 1,
+  };
+
+  // Phase indicator
+  const phaseIndicatorStyle: CSSProperties = {
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+    color: colors.warning,
+    background: colors.warningLight,
+    padding: `${spacing.xs} ${spacing.sm}`,
+    borderRadius: borderRadius.sm,
+    textTransform: 'uppercase',
+  };
+
+  // ---------------------------------------------------------------------------
+  // Compact Mode Styles (Focus View)
+  // ---------------------------------------------------------------------------
+
+  const compactContainerStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    width: '100%',
+  };
+
+  const compactScoreStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: isMobile ? spacing.md : spacing.lg,
+  };
+
+  // Konzept-Referenz: 96px Score im Fokus-Modus (§4.1, §10.3)
+  const compactScoreValueStyle: CSSProperties = {
+    fontSize: isMobile ? '6rem' : isTablet ? '6rem' : '6rem', // 96px auf allen Geräten
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    fontVariantNumeric: 'tabular-nums',
+    lineHeight: 1,
+  };
+
+  const compactSeparatorStyle: CSSProperties = {
+    fontSize: isMobile ? '2rem' : '3rem',
+    fontWeight: fontWeights.normal,
+    color: colors.textSecondary,
+    lineHeight: 1,
+  };
+
+  const compactTimerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.semibold,
+    fontVariantNumeric: 'tabular-nums',
+    color: isRunning ? colors.primary : colors.textSecondary,
+  };
+
+  // ---------------------------------------------------------------------------
+  // Render - Compact Mode (Focus View)
+  // ---------------------------------------------------------------------------
+
+  // Team name styles for compact mode (Konzept §4.1 Wireframe)
+  const compactTeamRowStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: '400px',
+    padding: `0 ${spacing.md}`,
+  };
+
+  const compactTeamNameStyle: CSSProperties = {
+    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+    maxWidth: '45%',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  };
+
+  if (compact) {
+    return (
+      <div style={compactContainerStyle}>
+        {/* Giant Score - 96px (Konzept §4.1) */}
+        <div style={compactScoreStyle}>
+          <span
+            style={compactScoreValueStyle}
+            className={`${styles.scoreValue} ${homeAnimating ? styles.animate : ''}`}
+            role="text"
+            aria-label={`${homeTeam.name} ${homeScore}`}
+          >
+            {homeScore}
+          </span>
+          <span style={compactSeparatorStyle} aria-hidden="true">:</span>
+          <span
+            style={compactScoreValueStyle}
+            className={`${styles.scoreValue} ${awayAnimating ? styles.animate : ''}`}
+            role="text"
+            aria-label={`${awayTeam.name} ${awayScore}`}
+          >
+            {awayScore}
+          </span>
+        </div>
+
+        {/* Timer below score */}
+        <div style={compactTimerStyle}>
+          {isRunning && <span style={{ color: colors.error }}>●</span>}
+          <span aria-live="polite">{formatTime(elapsedSeconds)}</span>
+          {status !== 'FINISHED' && (
+            <span style={{ color: colors.textSecondary }}>/ {formatTime(durationSeconds)}</span>
+          )}
+        </div>
+
+        {/* Team Names below timer (Konzept §4.1 Wireframe) */}
+        <div style={compactTeamRowStyle}>
+          <span style={compactTeamNameStyle}>{homeTeam.name}</span>
+          <span style={compactTeamNameStyle}>{awayTeam.name}</span>
+        </div>
+
+        {/* Phase indicator if special */}
+        {phaseLabel && (
+          <span style={phaseIndicatorStyle}>{phaseLabel}</span>
+        )}
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render - Full Mode (Standard/Extended View)
+  // ---------------------------------------------------------------------------
+
+  return (
+    <div style={containerStyle}>
+      {/* Timer row at top */}
+      <div
+        style={timerRowStyle}
+        className={onTimerClick ? styles.timerClickable : undefined}
+        onClick={onTimerClick}
+        role={onTimerClick ? 'button' : undefined}
+        tabIndex={onTimerClick ? 0 : undefined}
+        onKeyDown={onTimerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTimerClick(); } } : undefined}
+        aria-label={onTimerClick ? 'Zeit anpassen - klicken zum Bearbeiten' : undefined}
+      >
+        {isRunning && <span style={{ color: colors.error }}>●</span>}
+        <span style={timerLabelStyle}>
+          {status === 'NOT_STARTED' ? 'Spielzeit' : status === 'FINISHED' ? 'Endstand' : 'LIVE'}
+        </span>
+        <span style={timerValueStyle} aria-live="polite">
+          {formatTime(elapsedSeconds)}
+        </span>
+        {status !== 'FINISHED' && (
+          <span style={timerLabelStyle}>/ {formatTime(durationSeconds)}</span>
+        )}
+      </div>
+
+      {/* Phase indicator (if special phase) */}
+      {phaseLabel && (
+        <span style={phaseIndicatorStyle}>{phaseLabel}</span>
+      )}
+
+      {/* Main scoreboard: Team Name | Score | Team Name */}
+      <div style={scoreboardStyle}>
+        {/* Home Team */}
+        <div style={teamColumnStyle('home')}>
+          <span style={teamNameStyle}>{homeTeam.name}</span>
+          <span style={teamLabelStyle}>Heim</span>
+        </div>
+
+        {/* Score */}
+        <div style={scoreCenterStyle}>
+          <span
+            style={scoreValueStyle}
+            className={`${styles.scoreValue} ${homeAnimating ? styles.animate : ''}`}
+            role="text"
+            aria-label={`${homeTeam.name} ${homeScore}`}
+          >
+            {homeScore}
+          </span>
+          <span style={scoreSeparatorStyle} aria-hidden="true">:</span>
+          <span
+            style={scoreValueStyle}
+            className={`${styles.scoreValue} ${awayAnimating ? styles.animate : ''}`}
+            role="text"
+            aria-label={`${awayTeam.name} ${awayScore}`}
+          >
+            {awayScore}
+          </span>
+        </div>
+
+        {/* Away Team */}
+        <div style={teamColumnStyle('away')}>
+          <span style={teamNameStyle}>{awayTeam.name}</span>
+          <span style={teamLabelStyle}>Gast</span>
+        </div>
+      </div>
+
+      {/* Additional scores for overtime/penalty */}
+      {(overtimeScore || penaltyScore) && (
+        <div style={{ display: 'flex', gap: spacing.md, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {overtimeScore && (
+            <AdditionalScore
+              label="Verlängerung"
+              homeScore={overtimeScore.home}
+              awayScore={overtimeScore.away}
+            />
+          )}
+          {penaltyScore && (
+            <AdditionalScore
+              label="Elfmeter"
+              homeScore={penaltyScore.home}
+              awayScore={penaltyScore.away}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Sub-Components
+// ---------------------------------------------------------------------------
+
+interface AdditionalScoreProps {
+  label: string;
+  homeScore: number;
+  awayScore: number;
+}
+
+const AdditionalScore: React.FC<AdditionalScoreProps> = ({
+  label,
+  homeScore,
+  awayScore,
+}) => {
+  const containerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: `${spacing.xs} ${spacing.md}`,
+    background: colors.surfaceDark,
+    borderRadius: borderRadius.md,
+  };
+
+  const labelStyle: CSSProperties = {
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+  };
+
+  const scoreStyle: CSSProperties = {
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    fontVariantNumeric: 'tabular-nums',
+  };
+
+  return (
+    <div style={containerStyle}>
+      <span style={labelStyle}>{label}:</span>
+      <span style={scoreStyle}>{homeScore} : {awayScore}</span>
+    </div>
+  );
+};
+
+export default ScoreDisplay;

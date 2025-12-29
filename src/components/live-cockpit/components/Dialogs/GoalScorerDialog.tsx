@@ -1,35 +1,40 @@
 /**
- * GoalScorerDialog - Optional Goal Scorer Selection
+ * GoalScorerDialog - Jersey Number Input for Goal Scorer
  *
- * Allows tournament directors to optionally record who scored.
- * Can be skipped for quick input mode.
+ * Allows tournament directors to optionally record the jersey number of the scorer.
+ * Simplified UX: Just enter a number (0-99) instead of selecting from player list.
  *
  * Features:
  * - 10s Auto-Dismiss Timer (Konzept §5.1)
  * - Timer resets on user interaction
  * - Visual countdown progress bar
+ * - Quick-select buttons for common numbers (1-11)
+ * - Manual input for any number (0-99)
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
 import { useDialogTimer } from '../../../../hooks';
-
-export interface Player {
-  id: string;
-  name: string;
-  number?: number;
-}
+import moduleStyles from '../../LiveCockpit.module.css';
 
 interface GoalScorerDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (playerId: string | null) => void;
+  /**
+   * Callback when goal is confirmed
+   * @param jerseyNumber - Jersey number of scorer (null if not entered)
+   * @param assists - Array of up to 2 assist jersey numbers (null entries for skipped)
+   * @param incomplete - True if saved with "Ohne Nr." button
+   */
+  onConfirm: (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => void;
   teamName: string;
   teamColor?: string;
-  players?: Player[];
   /** Auto-Dismiss nach X Sekunden (default: 10, 0 = deaktiviert) */
   autoDismissSeconds?: number;
 }
+
+// Quick-select buttons for common jersey numbers
+const QUICK_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 export function GoalScorerDialog({
   isOpen,
@@ -37,15 +42,19 @@ export function GoalScorerDialog({
   onConfirm,
   teamName,
   teamColor = colors.primary,
-  players = [],
   autoDismissSeconds = 10,
 }: GoalScorerDialogProps) {
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
+  const [jerseyNumber, setJerseyNumber] = useState<string>('');
+  const [assist1, setAssist1] = useState<string>('');
+  const [assist2, setAssist2] = useState<string>('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-dismiss callback (stable reference)
+  // Auto-dismiss callback (stable reference) - saves as incomplete
   const handleAutoSkip = useCallback(() => {
-    onConfirm(null);
-    setSelectedPlayer(null);
+    onConfirm(null, [], true); // incomplete = true
+    setJerseyNumber('');
+    setAssist1('');
+    setAssist2('');
     onClose();
   }, [onConfirm, onClose]);
 
@@ -60,8 +69,12 @@ export function GoalScorerDialog({
   // Reset timer and state when dialog opens/closes
   useEffect(() => {
     if (isOpen) {
-      setSelectedPlayer(null);
+      setJerseyNumber('');
+      setAssist1('');
+      setAssist2('');
       resetTimer();
+      // Focus input after a short delay to ensure dialog is rendered
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen, resetTimer]);
 
@@ -69,27 +82,90 @@ export function GoalScorerDialog({
     return null;
   }
 
+  // Parse numbers from inputs
+  const parsedNumber = jerseyNumber ? parseInt(jerseyNumber, 10) : null;
+  const isValidNumber = parsedNumber !== null && !isNaN(parsedNumber) && parsedNumber >= 0 && parsedNumber <= 99;
+
+  const parsedAssist1 = assist1 ? parseInt(assist1, 10) : null;
+  const parsedAssist2 = assist2 ? parseInt(assist2, 10) : null;
+  const isValidAssist1 = parsedAssist1 !== null && !isNaN(parsedAssist1) && parsedAssist1 >= 0 && parsedAssist1 <= 99;
+  const isValidAssist2 = parsedAssist2 !== null && !isNaN(parsedAssist2) && parsedAssist2 >= 0 && parsedAssist2 <= 99;
+
+  // Build assists array (filter out invalid entries)
+  const getAssists = (): (number | null)[] => {
+    const assists: (number | null)[] = [];
+    if (isValidAssist1) {assists.push(parsedAssist1);}
+    if (isValidAssist2) {assists.push(parsedAssist2);}
+    return assists;
+  };
+
+  // "Speichern" - saves with jersey number and assists
   const handleConfirm = () => {
-    onConfirm(selectedPlayer);
-    setSelectedPlayer(null);
+    onConfirm(isValidNumber ? parsedNumber : null, getAssists(), false);
+    setJerseyNumber('');
+    setAssist1('');
+    setAssist2('');
     onClose();
   };
 
+  // "Ohne Nr." - saves as incomplete for later completion
   const handleSkip = () => {
-    onConfirm(null);
-    setSelectedPlayer(null);
+    onConfirm(null, [], true); // incomplete = true
+    setJerseyNumber('');
+    setAssist1('');
+    setAssist2('');
     onClose();
   };
 
-  const handlePlayerSelect = (playerId: string) => {
-    setSelectedPlayer(playerId);
-    // Reset timer on user interaction
+  // Quick-select a number
+  const handleQuickSelect = (num: number) => {
+    setJerseyNumber(num.toString());
     resetTimer();
   };
 
+  // Handle input change for jersey number
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Only allow digits, max 2 characters
+    if (/^\d{0,2}$/.test(value)) {
+      setJerseyNumber(value);
+      resetTimer();
+    }
+  };
+
+  // Handle assist input changes
+  const handleAssist1Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d{0,2}$/.test(value)) {
+      setAssist1(value);
+      resetTimer();
+    }
+  };
+
+  const handleAssist2Change = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d{0,2}$/.test(value)) {
+      setAssist2(value);
+      resetTimer();
+    }
+  };
+
+  // Handle keyboard submit
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleConfirm();
+    }
+  };
+
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
+      <div
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="goal-scorer-dialog-title"
+      >
         {/* Auto-dismiss progress bar */}
         {isActive && autoDismissSeconds > 0 && (
           <div style={styles.timerContainer}>
@@ -107,59 +183,92 @@ export function GoalScorerDialog({
         <div style={{ ...styles.header, borderColor: teamColor }}>
           <span style={styles.goalIcon}>⚽</span>
           <div>
-            <div style={styles.headerTitle}>Tor für</div>
+            <div id="goal-scorer-dialog-title" style={styles.headerTitle}>Tor für</div>
             <div style={{ ...styles.teamName, color: teamColor }}>{teamName}</div>
           </div>
         </div>
 
-        {/* Player List */}
-        {players.length > 0 ? (
-          <div style={styles.playerList}>
-            {players.map((player) => (
-              <button
-                key={player.id}
-                style={{
-                  ...styles.playerButton,
-                  ...(selectedPlayer === player.id ? styles.playerButtonSelected : {}),
-                }}
-                onClick={() => handlePlayerSelect(player.id)}
-              >
-                {player.number && (
-                  <span style={styles.playerNumber}>#{player.number}</span>
-                )}
-                <span style={styles.playerName}>{player.name}</span>
-              </button>
-            ))}
+        {/* Jersey Number Input */}
+        <div style={styles.inputSection}>
+          <label style={styles.inputLabel}>Rückennummer (optional)</label>
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={jerseyNumber}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="—"
+            style={styles.numberInput}
+            aria-label="Rückennummer eingeben"
+          />
+        </div>
+
+        {/* Quick-select buttons for scorer */}
+        <div style={styles.quickSelectGrid}>
+          {QUICK_NUMBERS.map((num) => (
+            <button
+              key={num}
+              style={{
+                ...styles.quickButton,
+                ...(jerseyNumber === num.toString() ? {
+                  backgroundColor: teamColor,
+                  color: colors.onPrimary,
+                  borderColor: teamColor,
+                } : {}),
+              }}
+              onClick={() => handleQuickSelect(num)}
+              type="button"
+            >
+              {num}
+            </button>
+          ))}
+        </div>
+
+        {/* Assist Input Section */}
+        <div style={styles.assistSection}>
+          <label style={styles.assistLabel}>Assist (optional)</label>
+          <div style={styles.assistInputRow}>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={assist1}
+              onChange={handleAssist1Change}
+              onKeyDown={handleKeyDown}
+              placeholder="—"
+              style={styles.assistInput}
+              aria-label="Assist 1 Rückennummer"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={assist2}
+              onChange={handleAssist2Change}
+              onKeyDown={handleKeyDown}
+              placeholder="—"
+              style={styles.assistInput}
+              aria-label="Assist 2 Rückennummer"
+            />
           </div>
-        ) : (
-          <div style={styles.noPlayers}>
-            <p style={styles.noPlayersText}>
-              Keine Spieler hinterlegt.
-            </p>
-            <p style={styles.noPlayersHint}>
-              Tor wird ohne Torschütze erfasst.
-            </p>
-          </div>
-        )}
+        </div>
 
         {/* Actions */}
         <div style={styles.actions}>
           <button style={styles.skipButton} onClick={handleSkip}>
-            Überspringen{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
+            Ohne Nr.{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
           </button>
-          {players.length > 0 && (
-            <button
-              style={{
-                ...styles.confirmButton,
-                backgroundColor: teamColor,
-                opacity: selectedPlayer ? 1 : 0.5,
-              }}
-              onClick={handleConfirm}
-              disabled={!selectedPlayer}
-            >
-              Bestätigen
-            </button>
-          )}
+          <button
+            style={{
+              ...styles.confirmButton,
+              backgroundColor: teamColor,
+            }}
+            onClick={handleConfirm}
+          >
+            Speichern
+          </button>
         </div>
       </div>
     </div>
@@ -170,7 +279,7 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: colors.overlayDialog,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -180,9 +289,8 @@ const styles: Record<string, React.CSSProperties> = {
   dialog: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: borderRadius.xl,
-    maxWidth: '400px',
+    maxWidth: '360px',
     width: '100%',
-    maxHeight: '80vh',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -218,56 +326,78 @@ const styles: Record<string, React.CSSProperties> = {
   },
   teamName: {
     fontSize: fontSizes.lg,
-    fontWeight: 600,
+    fontWeight: fontWeights.semibold,
   },
-  playerList: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: spacing.md,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: spacing.sm,
-  },
-  playerButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    border: `2px solid transparent`,
-    borderRadius: borderRadius.lg,
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.15s ease',
-  },
-  playerButtonSelected: {
-    backgroundColor: `${colors.primary}20`,
-    borderColor: colors.primary,
-  },
-  playerNumber: {
-    fontSize: fontSizes.sm,
-    fontWeight: 600,
-    color: colors.textSecondary,
-    minWidth: '36px',
-  },
-  playerName: {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
-  },
-  noPlayers: {
-    padding: spacing.xl,
+  inputSection: {
+    padding: spacing.lg,
+    paddingBottom: spacing.md,
     textAlign: 'center',
   },
-  noPlayersText: {
-    fontSize: fontSizes.md,
+  inputLabel: {
+    display: 'block',
+    fontSize: fontSizes.sm,
     color: colors.textSecondary,
-    margin: 0,
     marginBottom: spacing.sm,
   },
-  noPlayersHint: {
+  numberInput: {
+    width: '100px',
+    padding: spacing.md,
+    fontSize: fontSizes.xxl,
+    fontWeight: fontWeights.bold,
+    textAlign: 'center',
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    border: `2px solid ${colors.border}`,
+    borderRadius: borderRadius.lg,
+    outline: 'none',
+  },
+  quickSelectGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(6, 1fr)',
+    gap: spacing.xs,
+    padding: `0 ${spacing.md} ${spacing.md}`,
+  },
+  quickButton: {
+    minWidth: '44px',
+    minHeight: '44px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: fontSizes.md,
+    fontWeight: fontWeights.semibold,
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  assistSection: {
+    padding: `0 ${spacing.lg} ${spacing.md}`,
+    textAlign: 'center',
+  },
+  assistLabel: {
+    display: 'block',
     fontSize: fontSizes.sm,
-    color: colors.textTertiary,
-    margin: 0,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  assistInputRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  assistInput: {
+    width: '70px',
+    padding: spacing.sm,
+    fontSize: fontSizes.lg,
+    fontWeight: fontWeights.semibold,
+    textAlign: 'center',
+    backgroundColor: colors.surface,
+    color: colors.textPrimary,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    outline: 'none',
   },
   actions: {
     display: 'flex',
@@ -279,7 +409,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: spacing.md,
     fontSize: fontSizes.md,
-    fontWeight: 500,
+    fontWeight: fontWeights.medium,
     backgroundColor: 'transparent',
     color: colors.textSecondary,
     border: `1px solid ${colors.borderDefault}`,
@@ -291,7 +421,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     padding: spacing.md,
     fontSize: fontSizes.md,
-    fontWeight: 600,
+    fontWeight: fontWeights.semibold,
     color: colors.onPrimary,
     border: 'none',
     borderRadius: borderRadius.lg,
