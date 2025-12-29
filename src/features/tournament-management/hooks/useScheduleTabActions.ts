@@ -114,6 +114,7 @@ export function useScheduleTabActions({
   }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess]);
 
   // Handle match swap via DnD (apply immediately for view sync)
+  // Swaps scheduledTime AND field between two matches for complete slot swap
   const handleMatchSwap = useCallback((matchId1: string, matchId2: string) => {
     const match1 = tournament.matches.find(m => m.id === matchId1);
     const match2 = tournament.matches.find(m => m.id === matchId2);
@@ -125,12 +126,19 @@ export function useScheduleTabActions({
 
     saveToHistory();
 
+    // Swap both time and field for complete slot exchange
     const time1 = match1.scheduledTime;
     const time2 = match2.scheduledTime;
+    const field1 = match1.field;
+    const field2 = match2.field;
 
     const updatedMatches = tournament.matches.map(m => {
-      if (m.id === matchId1) { return { ...m, scheduledTime: time2 }; }
-      if (m.id === matchId2) { return { ...m, scheduledTime: time1 }; }
+      if (m.id === matchId1) {
+        return { ...m, scheduledTime: time2, field: field2 };
+      }
+      if (m.id === matchId2) {
+        return { ...m, scheduledTime: time1, field: field1 };
+      }
       return m;
     });
 
