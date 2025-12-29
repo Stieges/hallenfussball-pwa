@@ -26,8 +26,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { colors, fontSizes, fontWeights, borderRadius, spacing } from '../../design-tokens';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
-import { MatchScoreCell } from './MatchScoreCell';
-import { LiveBadge } from './LiveBadge';
 import { getGroupShortCode } from '../../utils/displayNames';
 import {
   MatchCard,
@@ -79,12 +77,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onRefereeChange,
   onFieldChange,
   onScoreChange,
-  editable = false,
+  editable: _editable = false,
   editingSchedule = false,
   pendingChanges,
   finishedMatches,
-  correctionMatchId,
-  onStartCorrection,
+  correctionMatchId: _correctionMatchId,
+  onStartCorrection: _onStartCorrection,
   runningMatchIds,
   tournament,
   onMatchSwap,
@@ -405,35 +403,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     marginBottom: spacing.md,
   };
 
-  const tableStyle: CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: fontSizes.sm,
-    minWidth: '600px',
-  };
-
-  const thStyle: CSSProperties = {
-    background: colors.primary,
-    color: colors.background,
-    padding: '10px 8px',
-    textAlign: 'left',
-    fontWeight: fontWeights.semibold,
-    borderBottom: `2px solid ${colors.border}`,
-  };
-
-  const tdStyle: CSSProperties = {
-    padding: '8px',
-    borderBottom: `1px solid ${colors.border}`,
-    color: colors.textPrimary,
-  };
-
-  const resultCellStyle: CSSProperties = {
-    ...tdStyle,
-    textAlign: 'center',
-    fontWeight: fontWeights.bold,
-    minWidth: '60px',
-  };
-
   // Mobile edit mode select style
   const mobileSelectStyle: CSSProperties = {
     padding: '4px 8px',
@@ -449,73 +418,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Get active match for drag overlay
   const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
-
-  // ============================================================================
-  // SortableRow Component - uses useSortable for smooth animations
-  // Drag listeners are only attached to the drag handle, not the entire row
-  // ============================================================================
-  interface SortableRowRenderProps {
-    attributes: ReturnType<typeof useSortable>['attributes'];
-    listeners: ReturnType<typeof useSortable>['listeners'];
-    canDrag: boolean;
-    isDragging: boolean;
-  }
-
-  const SortableRow: React.FC<{
-    match: ScheduledMatch;
-    children: (props: SortableRowRenderProps) => React.ReactNode;
-  }> = ({ match, children }) => {
-    const isRunning = runningMatchIds?.has(match.id);
-    const isFinished = finishedMatches?.has(match.id);
-
-    // Can only drag scheduled matches (not running or finished)
-    const canDrag = !!(editingSchedule && onMatchSwap && !isRunning && !isFinished);
-
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-      isOver,
-    } = useSortable({
-      id: match.id,
-      disabled: !canDrag,
-    });
-
-    // Apply transform and transition for smooth animations
-    const style: CSSProperties = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      ...(isRunning ? { backgroundColor: colors.statusLiveRowBg } : {}),
-      ...(editingSchedule && canDrag ? {
-        outline: `2px solid ${colors.primary}`,
-        outlineOffset: '-1px',
-      } : {}),
-      // When THIS row is being dragged: show as placeholder
-      ...(isDragging ? {
-        opacity: 0.4,
-        backgroundColor: colors.editorDragActiveBg,
-        outline: `2px dashed ${colors.primary}`,
-        outlineOffset: '-1px',
-        zIndex: 0,
-      } : {}),
-      // When another row is dragged OVER this one: highlight as drop target
-      ...(isOver && !isDragging ? {
-        backgroundColor: colors.editorSwapActive,
-        outline: `3px solid ${colors.primary}`,
-        outlineOffset: '-1px',
-        boxShadow: `0 0 12px ${colors.secondary}66`,
-      } : {}),
-    };
-
-    return (
-      <tr ref={setNodeRef} style={style}>
-        {children({ attributes, listeners, canDrag, isDragging })}
-      </tr>
-    );
-  };
 
   // ============================================================================
   // SortableMobileCard Component - uses useSortable for mobile card DnD
@@ -677,6 +579,277 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     );
   };
 
+  // ============================================================================
+  // SortableDesktopCard Component - Desktop card with DnD support for edit mode
+  // Uses horizontal layout with drag handle, conflict badge, and SR controls
+  // ============================================================================
+  interface SortableDesktopCardProps {
+    match: ScheduledMatch;
+    status: MatchCardStatus;
+    displayedRef: number | null | undefined;
+    displayedField: number | undefined;
+    hasUnsavedChanges: boolean;
+    hasPendingRef: boolean;
+    hasPendingField: boolean;
+    conflicts: ScheduleConflict[];
+  }
+
+  const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
+    match,
+    status,
+    displayedRef,
+    displayedField,
+    hasUnsavedChanges,
+    hasPendingRef,
+    hasPendingField,
+    conflicts,
+  }) => {
+    const isLocked = status === 'running' || status === 'finished';
+    const canDrag = !!(editingSchedule && onMatchSwap && !isLocked);
+    const hasConflicts = conflicts.length > 0;
+    const hasErrors = conflicts.some(c => c.severity === 'error');
+
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+      isOver,
+    } = useSortable({
+      id: match.id,
+      disabled: !canDrag,
+    });
+
+    // Container style with transform
+    const containerStyle: CSSProperties = {
+      marginBottom: spacing.sm,
+      transform: CSS.Transform.toString(transform),
+      transition,
+      ...(isDragging ? { opacity: 0.5, zIndex: 0 } : {}),
+    };
+
+    // Row wrapper with drag handle integrated
+    const rowWrapperStyle: CSSProperties = {
+      display: 'flex',
+      alignItems: 'stretch',
+      borderRadius: borderRadius.md,
+      overflow: 'hidden',
+      border: `1px solid ${
+        isOver && !isDragging
+          ? colors.primary
+          : hasErrors
+            ? colors.error
+            : hasConflicts
+              ? colors.warning
+              : hasUnsavedChanges
+                ? colors.editorDirtyBorder
+                : colors.border
+      }`,
+      boxShadow: isOver && !isDragging
+        ? `0 0 12px ${colors.primaryGlowLight}`
+        : undefined,
+    };
+
+    // Drag handle style
+    const dragHandleStyle: CSSProperties = {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 40,
+      backgroundColor: isOver && !isDragging
+        ? colors.editorSwapActive
+        : hasUnsavedChanges
+          ? colors.editorDirtyRowBg
+          : colors.editorEditModeRowBg,
+      cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'not-allowed',
+      color: isLocked ? colors.textDisabled : colors.textSecondary,
+      fontSize: fontSizes.lg,
+      touchAction: 'none',
+      flexShrink: 0,
+    };
+
+    // Content area style
+    const contentStyle: CSSProperties = {
+      flex: 1,
+      display: 'grid',
+      gridTemplateColumns: showReferees
+        ? 'auto auto auto 1fr auto 1fr auto auto'
+        : 'auto auto 1fr auto 1fr auto auto',
+      alignItems: 'center',
+      gap: spacing.md,
+      padding: `${spacing.sm} ${spacing.md}`,
+      backgroundColor: isOver && !isDragging
+        ? colors.editorSwapActive
+        : hasUnsavedChanges
+          ? colors.editorDirtyRowBg
+          : status === 'running'
+            ? colors.statusLiveRowBg
+            : colors.surface,
+    };
+
+    // Conflict indicator style
+    const conflictIndicatorStyle: CSSProperties = {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 28,
+      height: 28,
+      borderRadius: '50%',
+      backgroundColor: hasErrors ? colors.error : colors.warning,
+      color: colors.onError,
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.bold,
+      cursor: 'help',
+      flexShrink: 0,
+    };
+
+    // SR dropdown style
+    const srSelectStyle: CSSProperties = {
+      padding: '4px 8px',
+      border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
+      borderRadius: borderRadius.sm,
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      backgroundColor: colors.background,
+      color: colors.textPrimary,
+      cursor: 'pointer',
+      minWidth: 60,
+    };
+
+    // Field dropdown style
+    const fieldSelectStyle: CSSProperties = {
+      padding: '4px 8px',
+      border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+      borderRadius: borderRadius.sm,
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.semibold,
+      backgroundColor: colors.background,
+      color: colors.textPrimary,
+      cursor: 'pointer',
+      minWidth: 60,
+    };
+
+    const timeStyle: CSSProperties = {
+      fontSize: fontSizes.sm,
+      fontWeight: fontWeights.medium,
+      color: status === 'running' ? colors.primary : colors.textSecondary,
+      fontVariantNumeric: 'tabular-nums',
+      minWidth: 50,
+    };
+
+    const teamNameStyle: CSSProperties = {
+      fontSize: fontSizes.md,
+      fontWeight: fontWeights.bold,
+      color: colors.textPrimary,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    };
+
+    const vsStyle: CSSProperties = {
+      fontSize: fontSizes.sm,
+      color: colors.textMuted,
+      padding: `0 ${spacing.sm}`,
+    };
+
+    const groupStyle: CSSProperties = {
+      fontSize: fontSizes.xs,
+      color: colors.textSecondary,
+      textAlign: 'right',
+      minWidth: 45,
+    };
+
+    return (
+      <div ref={setNodeRef} style={containerStyle}>
+        <div style={rowWrapperStyle}>
+          {/* Drag Handle */}
+          <div
+            style={dragHandleStyle}
+            {...(canDrag ? { ...attributes, ...listeners } : {})}
+            aria-label={isLocked ? 'Spiel kann nicht verschoben werden' : 'Ziehen zum Verschieben'}
+          >
+            {isLocked ? '🔒' : '⋮⋮'}
+          </div>
+
+          {/* Content */}
+          <div style={contentStyle}>
+            {/* Conflict Indicator */}
+            {hasConflicts && (
+              <div
+                style={conflictIndicatorStyle}
+                title={conflicts.map(c => c.message).join('\n')}
+              >
+                {conflicts.length}
+              </div>
+            )}
+            {!hasConflicts && <div style={{ width: 28 }} />}
+
+            {/* SR Selector */}
+            {showReferees && onRefereeChange && (
+              <select
+                value={displayedRef ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  onRefereeChange(match.id, value ? parseInt(value) : null);
+                }}
+                style={srSelectStyle}
+                aria-label="Schiedsrichter"
+              >
+                <option value="">SR -</option>
+                {refereeOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    SR {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Time */}
+            <div style={timeStyle}>
+              {isDragging ? '↕️' : match.time}
+            </div>
+
+            {/* Home Team */}
+            <div style={{ ...teamNameStyle, textAlign: 'right' }}>
+              {match.homeTeam}
+            </div>
+
+            {/* VS */}
+            <div style={vsStyle}>vs</div>
+
+            {/* Away Team */}
+            <div style={teamNameStyle}>
+              {match.awayTeam}
+            </div>
+
+            {/* Field Selector */}
+            {showFields && onFieldChange && (
+              <select
+                value={displayedField || 1}
+                onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+                style={fieldSelectStyle}
+                aria-label="Feld"
+              >
+                {fieldOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    F{opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Group */}
+            <div style={groupStyle}>
+              {match.group ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render desktop card list (non-edit mode)
   const renderDesktopCardContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
@@ -686,185 +859,38 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     </div>
   );
 
-  // Render table content (used in edit mode for efficient bulk editing)
-  const renderTableContent = () => (
-    <table style={tableStyle}>
-      <thead>
-        <tr>
-          {editingSchedule && <th style={{ ...thStyle, width: '30px' }}></th>}
-          <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
-          {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
-          <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
-          {hasGroups && <th style={{ ...thStyle, width: '40px' }}>Gr</th>}
-          <th style={thStyle}>Heim</th>
-          <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
-          <th style={thStyle}>Gast</th>
-          {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {sortedMatches.map((match) => {
-          const isRunning = runningMatchIds?.has(match.id);
+  // Render desktop cards for edit mode (with DnD support)
+  const renderDesktopEditContent = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+      {sortedMatches.map((match) => {
+        const status = getMatchStatus(match);
 
-          return (
-            <SortableRow key={match.id} match={match}>
-              {({ attributes, listeners, canDrag, isDragging }) => (
-                <>
-                {/* Drag handle column - only in edit mode */}
-                {editingSchedule && (
-                  <td
-                    style={{
-                      ...tdStyle,
-                      textAlign: 'center',
-                      width: '30px',
-                      cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'default',
-                      color: canDrag ? colors.primary : colors.textMuted,
-                      touchAction: 'none', // Prevents scroll while dragging
-                    }}
-                    {...(canDrag ? { ...attributes, ...listeners } : {})}
-                  >
-                    {canDrag ? '⋮⋮' : '🔒'}
-                  </td>
-                )}
-                <td style={{ ...tdStyle, fontWeight: fontWeights.semibold }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{match.matchNumber}</span>
-                    {isRunning && <LiveBadge compact />}
-                  </div>
-                </td>
-                {showReferees && (() => {
-                  // Get displayed value - pending change takes priority
-                  const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-                  const displayedRef = hasPendingRef
-                    ? pendingChanges.refereeAssignments[match.id]
-                    : match.referee;
-                  const isPendingChange = hasPendingRef;
+        // Get pending changes for edit mode
+        const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+        const displayedRef = hasPendingRef
+          ? pendingChanges.refereeAssignments[match.id]
+          : match.referee;
+        const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+        const displayedField = hasPendingField
+          ? pendingChanges.fieldAssignments[match.id]
+          : match.field;
+        const hasUnsavedChanges = hasPendingRef || hasPendingField;
 
-                  return (
-                  <td style={{
-                    ...tdStyle,
-                    textAlign: 'center',
-                    padding: editingSchedule ? '4px' : '8px',
-                    backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined,
-                  }}>
-                    {editingSchedule && onRefereeChange ? (
-                      <select
-                        value={displayedRef ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          onRefereeChange(match.id, value ? parseInt(value) : null);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '4px',
-                          border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: fontWeights.semibold,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: colors.background,
-                          color: colors.textPrimary,
-                        }}
-                      >
-                        <option value="">-</option>
-                        {refereeOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: fontWeights.semibold }}>
-                        {displayedRef ?? '-'}
-                      </span>
-                    )}
-                  </td>
-                  );
-                })()}
-                <td style={{
-                  ...tdStyle,
-                  color: isDragging ? colors.textMuted : undefined,
-                  fontStyle: isDragging ? 'italic' : undefined,
-                }}>
-                  {isDragging ? '↕️' : match.time}
-                </td>
-                {hasGroups && (
-                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: fontWeights.semibold }}>
-                    {match.group ? getGroupShortCode(match.group, tournament) : '-'}
-                  </td>
-                )}
-                <td style={tdStyle}>{match.homeTeam}</td>
-                <td style={resultCellStyle}>
-                  <MatchScoreCell
-                    matchId={match.id}
-                    scoreA={match.scoreA}
-                    scoreB={match.scoreB}
-                    editable={editable && onScoreChange !== undefined}
-                    isFinished={finishedMatches?.has(match.id) ?? false}
-                    inCorrectionMode={correctionMatchId === match.id}
-                    onScoreChange={(scoreA, scoreB) => onScoreChange?.(match.id, scoreA, scoreB)}
-                    onStartCorrection={() => onStartCorrection?.(match.id)}
-                  />
-                </td>
-                <td style={tdStyle}>{match.awayTeam}</td>
-                {showFields && (() => {
-                  // Get displayed value - pending change takes priority
-                  const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-                  const displayedField = hasPendingField
-                    ? pendingChanges.fieldAssignments[match.id]
-                    : match.field;
-                  const isPendingChange = hasPendingField;
-
-                  return (
-                  <td style={{
-                    ...tdStyle,
-                    textAlign: 'center',
-                    padding: editingSchedule ? '4px' : '8px',
-                    backgroundColor: isPendingChange ? colors.editorDragActiveBg : undefined,
-                  }}>
-                    {editingSchedule && onFieldChange ? (
-                      <select
-                        value={displayedField || 1}
-                        onChange={(e) => {
-                          const fieldNum = parseInt(e.target.value);
-                          // In edit mode, no confirmation - conflicts are checked on save
-                          onFieldChange(match.id, fieldNum);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '4px',
-                          border: `1px solid ${isPendingChange ? colors.primary : colors.border}`,
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: fontWeights.semibold,
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          backgroundColor: colors.background,
-                          color: colors.textPrimary,
-                        }}
-                      >
-                        {fieldOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span style={{ fontWeight: fontWeights.semibold }}>
-                        {displayedField || '-'}
-                      </span>
-                    )}
-                  </td>
-                  );
-                })()}
-                </>
-              )}
-            </SortableRow>
-          );
-        })}
-      </tbody>
-    </table>
+        return (
+          <SortableDesktopCard
+            key={match.id}
+            match={match}
+            status={status}
+            displayedRef={displayedRef}
+            displayedField={displayedField}
+            hasUnsavedChanges={hasUnsavedChanges}
+            hasPendingRef={hasPendingRef}
+            hasPendingField={hasPendingField}
+            conflicts={getMatchConflicts(match.id)}
+          />
+        );
+      })}
+    </div>
   );
 
   return (
@@ -873,25 +899,25 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         {hasGroups ? 'Vorrunde' : 'Spielplan'}
       </h2>
 
-      {/* Desktop View - Card layout (normal) or Table (edit mode) */}
+      {/* Desktop View - Card layout (normal) or Card edit mode */}
       {editingSchedule && onMatchSwap ? (
-        /* Edit Mode: Table view with DnD for efficient bulk editing */
+        /* Edit Mode: Desktop cards with DnD, conflict display, and inline editing */
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="desktop-view" style={{ overflowX: 'auto' }}>
+          <div className="desktop-view">
             <SortableContext
               items={sortedMatches.map(m => m.id)}
               strategy={verticalListSortingStrategy}
             >
-              {renderTableContent()}
+              {renderDesktopEditContent()}
             </SortableContext>
           </div>
 
-          {/* Drag Overlay - OUTSIDE scrollable container to prevent offset issues */}
+          {/* Desktop Drag Overlay - Compact row preview */}
           <DragOverlay dropAnimation={null}>
             {activeMatch && (
               <div style={{
@@ -899,29 +925,30 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 boxShadow: `0 8px 24px ${colors.surfaceDark}`,
                 borderRadius: borderRadius.md,
                 border: `3px solid ${colors.primary}`,
-                padding: '12px 16px',
+                padding: `${spacing.sm} ${spacing.md}`,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '16px',
+                gap: spacing.md,
                 minWidth: '400px',
-                maxWidth: '600px',
+                maxWidth: '700px',
                 cursor: 'grabbing',
               }}>
-                <span style={{ color: colors.primary, fontSize: '18px' }}>⋮⋮</span>
-                <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
-                  #{activeMatch.matchNumber}
+                <span style={{ color: colors.primary, fontSize: fontSizes.lg }}>⋮⋮</span>
+                <span style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+                  {activeMatch.time}
                 </span>
-                <span style={{ color: colors.textSecondary }}>{activeMatch.time}</span>
-                <span style={{ fontWeight: fontWeights.semibold, flex: 1 }}>
-                  {activeMatch.homeTeam} <span style={{ color: colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                <span style={{ fontWeight: fontWeights.bold, flex: 1 }}>
+                  {activeMatch.homeTeam}
+                  <span style={{ color: colors.textMuted, padding: `0 ${spacing.sm}` }}>vs</span>
+                  {activeMatch.awayTeam}
                 </span>
                 {hasGroups && (
                   <span style={{
                     backgroundColor: colors.primary,
                     color: colors.background,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
+                    padding: `2px ${spacing.sm}`,
+                    borderRadius: borderRadius.sm,
+                    fontSize: fontSizes.xs,
                     fontWeight: fontWeights.semibold,
                   }}>
                     {activeMatch.group ? getGroupShortCode(activeMatch.group, tournament) : '-'}
