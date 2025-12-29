@@ -53,13 +53,11 @@ const TEST_TOURNAMENT = {
 };
 
 test.describe('Live Cockpit', () => {
-  // Skip iPhone 13 - Safe Area viewport emulation causes click interception issues
+  // Skip iPhones - Safe Area viewport emulation causes click interception issues
   // The app works on real iOS devices, this is a Playwright limitation
-  test.beforeEach(async (_fixtures, testInfo) => {
-    test.skip(testInfo.project.name === 'iPhone 13', 'Skipping on iPhone 13 due to Safe Area emulation issues');
-  });
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-  test.beforeEach(async ({ page }) => {
     // Seed localStorage BEFORE navigating
     await page.addInitScript((tournament) => {
       localStorage.setItem('tournaments', JSON.stringify([tournament]));
@@ -382,12 +380,10 @@ test.describe('Live Cockpit', () => {
 test.describe('Live Cockpit - Mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  // Skip iPhone 13 - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async (_fixtures, testInfo) => {
-    test.skip(testInfo.project.name === 'iPhone 13', 'Skipping on iPhone 13 due to Safe Area emulation issues');
-  });
+  // Skip iPhones - Safe Area viewport emulation causes click interception issues
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-  test.beforeEach(async ({ page }) => {
     // Seed localStorage BEFORE navigating
     await page.addInitScript((tournament) => {
       localStorage.setItem('tournaments', JSON.stringify([tournament]));
