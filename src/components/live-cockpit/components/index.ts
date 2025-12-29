@@ -28,6 +28,7 @@ export {
   CardDialog,
   TimePenaltyDialog,
   SubstitutionDialog,
+  EventEditDialog,
 } from './Dialogs';
 export { ScoreEditDialog } from './ScoreEditDialog';
 

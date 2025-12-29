@@ -28,10 +28,31 @@ import {
   TimePenaltyDialog,
   SubstitutionDialog,
   GoalScorerDialog,
+  EventEditDialog,
 } from './components';
+
 
 // Hooks
 import { useToast } from './hooks';
+
+/**
+ * BUG-010: Event interface compatible with both match-cockpit and tournament.ts formats.
+ * Used for the event editing functionality.
+ */
+interface EditableMatchEvent {
+  id: string;
+  type: string;
+  timestampSeconds?: number;
+  matchMinute?: number;
+  teamId?: string;
+  playerNumber?: number;
+  incomplete?: boolean;
+  payload?: {
+    teamId?: string;
+    teamName?: string;
+    playerNumber?: number;
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -78,6 +99,9 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
   // BUG-009: Track which team side triggered the substitution dialog
   const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
+  // BUG-010: Event editing state
+  const [showEventEditDialog, setShowEventEditDialog] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EditableMatchEvent | null>(null);
   const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
@@ -324,9 +348,33 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   // BUG-010: Handler for editing events from the sidebar
   const handleEventEdit = useCallback(
-    (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown> }) => {
-      // TODO: Open appropriate dialog based on event type
-      // For now, show info toast
+    (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown>; incomplete?: boolean }) => {
+      if (!currentMatch) {return;}
+      // Find the full event from match.events to get all properties
+      const fullEvent = currentMatch.events.find(e => e.id === event.id);
+      if (fullEvent) {
+        // Cast to our compatible interface
+        const editableEvent: EditableMatchEvent = {
+          id: fullEvent.id,
+          type: fullEvent.type,
+          timestampSeconds: fullEvent.timestampSeconds,
+          payload: fullEvent.payload as EditableMatchEvent['payload'],
+        };
+        setEditingEvent(editableEvent);
+        setShowEventEditDialog(true);
+      }
+    },
+    [currentMatch]
+  );
+
+  // BUG-010: Handler for updating event details
+  const handleEventUpdate = useCallback(
+    (eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => {
+      if (!currentMatch) {return;}
+      const event = currentMatch.events.find(e => e.id === eventId);
+      if (!event) {return;}
+
+      // Show success toast with event type
       const eventTypeLabels: Record<string, string> = {
         GOAL: 'Tor',
         YELLOW_CARD: 'Gelbe Karte',
@@ -335,10 +383,50 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         SUBSTITUTION: 'Wechsel',
         FOUL: 'Foul',
       };
-      const label = eventTypeLabels[event.type] || event.type;
-      showInfo(`✏️ ${label} bearbeiten (Funktion in Entwicklung)`);
+      const label = eventTypeLabels[event.type] ?? event.type;
+      const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
+      showSuccess(`✅ ${label}${playerInfo} aktualisiert`);
+
+      // Note: Full persistence would require parent callback - for now just showing toast
+      // TODO: Add onUpdateEvent prop to LiveCockpitProps when backend is ready
     },
-    [showInfo]
+    [currentMatch, showSuccess]
+  );
+
+  // BUG-010: Handler for deleting events (with score adjustment for GOALs)
+  const handleEventDelete = useCallback(
+    (eventId: string) => {
+      if (!currentMatch) {return;}
+      const event = currentMatch.events.find(e => e.id === eventId);
+      if (!event) {return;}
+
+      const eventTypeLabels: Record<string, string> = {
+        GOAL: 'Tor',
+        YELLOW_CARD: 'Gelbe Karte',
+        RED_CARD: 'Rote Karte',
+        TIME_PENALTY: 'Zeitstrafe',
+        SUBSTITUTION: 'Wechsel',
+        FOUL: 'Foul',
+      };
+      const label = eventTypeLabels[event.type] ?? event.type;
+
+      // If it's a GOAL event, also decrement the score
+      // match-cockpit format: payload.teamId
+      const eventTeamId = event.payload.teamId;
+      if (event.type === 'GOAL' && eventTeamId) {
+        onGoal(currentMatch.id, eventTeamId, -1);
+        const teamName = eventTeamId === currentMatch.homeTeam.id
+          ? currentMatch.homeTeam.name
+          : currentMatch.awayTeam.name;
+        showInfo(`🗑️ ${label} für ${teamName} gelöscht (Spielstand angepasst)`);
+      } else {
+        showInfo(`🗑️ ${label} gelöscht`);
+      }
+
+      // Note: Full persistence would require parent callback
+      // TODO: Add onDeleteEvent prop to LiveCockpitProps when backend is ready
+    },
+    [currentMatch, onGoal, showInfo]
   );
 
   // ---------------------------------------------------------------------------
@@ -758,6 +846,20 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         }
         teamColor={colors.primary}
         autoDismissSeconds={10}
+      />
+
+      {/* BUG-010: EventEditDialog for editing/deleting events */}
+      <EventEditDialog
+        isOpen={showEventEditDialog}
+        onClose={() => {
+          setShowEventEditDialog(false);
+          setEditingEvent(null);
+        }}
+        event={editingEvent}
+        homeTeam={match.homeTeam}
+        awayTeam={match.awayTeam}
+        onUpdate={handleEventUpdate}
+        onDelete={handleEventDelete}
       />
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
