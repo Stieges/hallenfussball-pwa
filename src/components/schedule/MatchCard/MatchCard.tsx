@@ -25,6 +25,7 @@ import {
   borderRadius,
 } from '../../../design-tokens';
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
+import { formatTime, getTeamInitials } from './utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -70,47 +71,6 @@ export interface MatchCardProps {
   expandContent?: React.ReactNode;
   /** Disable interactions */
   disabled?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatTime(isoOrTime?: string): string {
-  if (!isoOrTime) {
-    return '--:--';
-  }
-
-  // If already formatted (HH:MM), return as-is
-  if (/^\d{1,2}:\d{2}$/.test(isoOrTime)) {
-    return isoOrTime;
-  }
-
-  // Try to parse as Date
-  try {
-    const date = new Date(isoOrTime);
-    if (isNaN(date.getTime())) {
-      return isoOrTime;
-    }
-    return date.toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return isoOrTime;
-  }
-}
-
-function getTeamInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) {
-    return words[0].substring(0, 2).toUpperCase();
-  }
-  return words
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
 }
 
 // ---------------------------------------------------------------------------
@@ -233,7 +193,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const avatarStyle: CSSProperties = {
     width: 40,
     height: 40,
-    borderRadius: '6px',
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.primary,
     display: 'flex',
     alignItems: 'center',
@@ -245,7 +205,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: '15px',
+    fontSize: fontSizes.lg,
     fontWeight: 800,
     color: colors.textPrimary,
     overflow: 'hidden',
@@ -256,13 +216,13 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const liveBadgeStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-    backgroundColor: 'rgba(0,230,118,0.2)',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
     color: colors.primary,
-    fontSize: '10px',
+    fontSize: fontSizes.xs,
     fontWeight: fontWeights.bold,
-    padding: '3px 8px',
-    borderRadius: '4px',
+    padding: `3px ${spacing.sm}`,
+    borderRadius: borderRadius.sm,
   };
 
   const liveDotStyle: CSSProperties = {

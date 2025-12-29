@@ -22,6 +22,7 @@ import {
   borderRadius,
 } from '../../../design-tokens';
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
+import { formatTime, getTeamInitials } from './utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -67,45 +68,6 @@ export interface MatchCardDesktopProps {
   expandContent?: React.ReactNode;
   /** Disable interactions */
   disabled?: boolean;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function formatTime(isoOrTime?: string): string {
-  if (!isoOrTime) {
-    return '--:--';
-  }
-
-  if (/^\d{1,2}:\d{2}$/.test(isoOrTime)) {
-    return isoOrTime;
-  }
-
-  try {
-    const date = new Date(isoOrTime);
-    if (isNaN(date.getTime())) {
-      return isoOrTime;
-    }
-    return date.toLocaleTimeString('de-DE', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return isoOrTime;
-  }
-}
-
-function getTeamInitials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) {
-    return words[0].substring(0, 2).toUpperCase();
-  }
-  return words
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
 }
 
 // ---------------------------------------------------------------------------
@@ -178,7 +140,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     backgroundColor: isLive
       ? undefined
       : isHovered && !disabled
-        ? '#2A2A4D'
+        ? colors.surfaceHover
         : colors.surface,
     background: isLive
       ? `linear-gradient(135deg, rgba(0,230,118,0.08), ${colors.surface})`
@@ -211,7 +173,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const avatarStyle: CSSProperties = {
     width: 32,
     height: 32,
-    borderRadius: '4px',
+    borderRadius: borderRadius.sm,
     backgroundColor: colors.primary,
     display: 'flex',
     alignItems: 'center',
@@ -223,7 +185,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: '15px',
+    fontSize: fontSizes.lg,
     fontWeight: 800,
     color: colors.textPrimary,
     overflow: 'hidden',
@@ -241,13 +203,13 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const liveBadgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: '4px',
-    backgroundColor: 'rgba(0,230,118,0.2)',
+    gap: spacing.xs,
+    backgroundColor: colors.primaryLight,
     color: colors.primary,
-    fontSize: '10px',
+    fontSize: fontSizes.xs,
     fontWeight: fontWeights.bold,
-    padding: '2px 6px',
-    borderRadius: '4px',
+    padding: `2px 6px`,
+    borderRadius: borderRadius.sm,
     marginLeft: spacing.sm,
   };
 
