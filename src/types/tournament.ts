@@ -422,11 +422,24 @@ export interface RuntimeMatchEvent {
     direction?: 'INC' | 'DEC';
     newHomeScore?: number;
     newAwayScore?: number;
+    /** For STATUS_CHANGE events */
+    toStatus?: 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+    /** Spieler-Rückennummer (Torschütze, Karte, Strafe) */
     playerNumber?: number;
+    /** @deprecated Use assists array instead */
     assistPlayerNumber?: number;
+    /** Rückennummern der Vorlagengeber (max 2) */
+    assists?: number[];
+    /** Dauer der Zeitstrafe in Sekunden (default: 120) */
     penaltyDuration?: number;
+    /** @deprecated Use playersOut array instead */
     playerOutNumber?: number;
+    /** @deprecated Use playersIn array instead */
     playerInNumber?: number;
+    /** Rückennummern der ausgewechselten Spieler */
+    playersOut?: number[];
+    /** Rückennummern der eingewechselten Spieler */
+    playersIn?: number[];
     cardType?: 'YELLOW' | 'RED';
   };
   scoreAfter?: {

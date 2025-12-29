@@ -169,23 +169,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const getEventDescription = (event: RuntimeMatchEvent): string => {
     const teamName = event.payload.teamName ??
       (event.payload.teamId === homeTeamId ? homeTeamName : awayTeamName);
-    const playerInfo = event.payload.playerNumber ? ` (#${event.payload.playerNumber})` : '';
+    const playerInfo = event.payload.playerNumber ? ` #${event.payload.playerNumber}` : '';
 
     switch (event.type) {
-      case 'GOAL':
-        return event.payload.direction === 'DEC'
-          ? `−1 ${teamName}`
-          : `TOR ${teamName}${playerInfo}`;
+      case 'GOAL': {
+        if (event.payload.direction === 'DEC') {
+          return `−1 ${teamName}`;
+        }
+        // Build goal description with player and assists
+        let goalText = `TOR ${teamName}${playerInfo}`;
+        // Show assists if present
+        const assists = event.payload.assists;
+        if (assists && assists.length > 0) {
+          const assistText = assists.map(a => `#${a}`).join(', ');
+          goalText += ` (Assist: ${assistText})`;
+        }
+        return goalText;
+      }
       case 'YELLOW_CARD':
         return `Gelb ${teamName}${playerInfo}`;
       case 'RED_CARD':
         return `Rot ${teamName}${playerInfo}`;
-      case 'TIME_PENALTY':
-        return `2 Min ${teamName}${playerInfo}`;
-      case 'SUBSTITUTION':
+      case 'TIME_PENALTY': {
+        const duration = event.payload.penaltyDuration
+          ? Math.floor(event.payload.penaltyDuration / 60)
+          : 2;
+        return `${duration} Min ${teamName}${playerInfo}`;
+      }
+      case 'SUBSTITUTION': {
+        // Show player numbers if available
+        const playersOut = event.payload.playersOut;
+        const playersIn = event.payload.playersIn;
+        if (playersOut?.length || playersIn?.length) {
+          const outInfo = playersOut?.map(n => `#${n}`).join(',') ?? '?';
+          const inInfo = playersIn?.map(n => `#${n}`).join(',') ?? '?';
+          return `🔄 ${teamName}: ${outInfo} → ${inInfo}`;
+        }
         return `Wechsel ${teamName}`;
+      }
       case 'FOUL':
         return `Foul ${teamName}`;
+      case 'STATUS_CHANGE': {
+        // Show descriptive label for status changes
+        const toStatus = event.payload.toStatus;
+        switch (toStatus) {
+          case 'RUNNING': return 'Spiel gestartet';
+          case 'PAUSED': return 'Spiel pausiert';
+          case 'FINISHED': return 'Spiel beendet';
+          default: return `Status: ${toStatus}`;
+        }
+      }
       default:
         return event.type;
     }

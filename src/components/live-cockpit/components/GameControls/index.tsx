@@ -131,6 +131,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           disabled={!canUndo}
           type="button"
           aria-label="Rückgängig"
+          data-testid="match-undo-button"
         >
           ↩ {!isMobile && 'Rückgängig'}
         </button>
@@ -143,6 +144,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
         disabled={isFinished}
         type="button"
         aria-label={isRunning ? 'Pausieren' : 'Starten'}
+        data-testid={isRunning ? 'match-pause-button' : 'match-start-button'}
       >
         {getMainButtonLabel()}
       </button>
@@ -154,6 +156,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
         disabled={isFinished}
         type="button"
         aria-label="Zeit bearbeiten"
+        data-testid="match-edit-time-button"
       >
         🕒 {!isMobile && 'Zeit'}
       </button>
@@ -187,6 +190,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
         disabled={isFinished || isNotStarted}
         type="button"
         aria-label="Spiel beenden"
+        data-testid="match-finish-button"
       >
         🏁 {!isMobile && 'Beenden'}
       </button>

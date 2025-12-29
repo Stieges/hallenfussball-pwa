@@ -44,8 +44,28 @@ export interface UseLiveMatchManagementReturn {
   handleFinish: (matchId: string) => void;
   /** Force finish a match (skip tiebreaker check) */
   handleForceFinish: (matchId: string) => void;
-  /** Record a goal */
-  handleGoal: (matchId: string, teamId: string, delta: 1 | -1) => void;
+  /** Record a goal with optional player info */
+  handleGoal: (matchId: string, teamId: string, delta: 1 | -1, options?: {
+    playerNumber?: number;
+    assists?: number[];
+    incomplete?: boolean;
+  }) => void;
+  /** Record a time penalty (2 Min Strafe) */
+  handleTimePenalty: (matchId: string, teamId: string, options?: {
+    playerNumber?: number;
+    durationSeconds?: number;
+  }) => void;
+  /** Record a card (Yellow/Red) */
+  handleCard: (matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: {
+    playerNumber?: number;
+  }) => void;
+  /** Record a substitution */
+  handleSubstitution: (matchId: string, teamId: string, options?: {
+    playersOut?: number[];
+    playersIn?: number[];
+  }) => void;
+  /** Record a foul */
+  handleFoul: (matchId: string, teamId: string) => void;
   /** Undo last event */
   handleUndoLastEvent: (matchId: string) => void;
   /** Manually edit result */
@@ -761,7 +781,12 @@ export function useLiveMatchManagement({
    * BUG-CRIT-001 FIX: Tournament update moved to setTimeout to prevent race condition
    * when goals are clicked rapidly in succession
    */
-  const handleGoal = useCallback((matchId: string, teamId: string, delta: 1 | -1) => {
+  const handleGoal = useCallback((
+    matchId: string,
+    teamId: string,
+    delta: 1 | -1,
+    options?: { playerNumber?: number; assists?: number[]; incomplete?: boolean }
+  ) => {
     setLiveMatches(prev => {
       const match = prev.get(matchId);
       if (!match) {
@@ -782,11 +807,14 @@ export function useLiveMatchManagement({
           teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
           teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name,
           direction: delta > 0 ? 'INC' : 'DEC',
+          playerNumber: options?.playerNumber,
+          assists: options?.assists,
         },
         scoreAfter: {
           home: newHomeScore,
           away: newAwayScore,
         },
+        incomplete: options?.incomplete,
       };
 
       // BUG-CRIT-001 FIX: Update tournament.matches asynchronously AFTER liveMatches state is committed
@@ -821,6 +849,173 @@ export function useLiveMatchManagement({
       return updated;
     });
   }, [onTournamentUpdate]);
+
+  /**
+   * Record a time penalty (2 Min Strafe)
+   */
+  const handleTimePenalty = useCallback((
+    matchId: string,
+    teamId: string,
+    options?: { playerNumber?: number; durationSeconds?: number }
+  ) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleTimePenalty: Match not found:', matchId);
+        return prev;
+      }
+
+      const isHomeTeam = match.homeTeam.id === teamId || match.homeTeam.name === teamId;
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: calculateRealTimeElapsed(match),
+        type: 'TIME_PENALTY',
+        payload: {
+          teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
+          teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name,
+          playerNumber: options?.playerNumber,
+          penaltyDuration: options?.durationSeconds ?? 120, // default 2 min
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        events: [...match.events, event],
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Record a card (Yellow/Red)
+   */
+  const handleCard = useCallback((
+    matchId: string,
+    teamId: string,
+    cardType: 'YELLOW' | 'RED',
+    options?: { playerNumber?: number }
+  ) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleCard: Match not found:', matchId);
+        return prev;
+      }
+
+      const isHomeTeam = match.homeTeam.id === teamId || match.homeTeam.name === teamId;
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: calculateRealTimeElapsed(match),
+        type: cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD',
+        payload: {
+          teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
+          teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name,
+          playerNumber: options?.playerNumber,
+          cardType,
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        events: [...match.events, event],
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Record a substitution
+   */
+  const handleSubstitution = useCallback((
+    matchId: string,
+    teamId: string,
+    options?: { playersOut?: number[]; playersIn?: number[] }
+  ) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleSubstitution: Match not found:', matchId);
+        return prev;
+      }
+
+      const isHomeTeam = match.homeTeam.id === teamId || match.homeTeam.name === teamId;
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: calculateRealTimeElapsed(match),
+        type: 'SUBSTITUTION',
+        payload: {
+          teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
+          teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name,
+          playersOut: options?.playersOut,
+          playersIn: options?.playersIn,
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        events: [...match.events, event],
+      });
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Record a foul
+   */
+  const handleFoul = useCallback((matchId: string, teamId: string) => {
+    setLiveMatches(prev => {
+      const match = prev.get(matchId);
+      if (!match) {
+        console.error('handleFoul: Match not found:', matchId);
+        return prev;
+      }
+
+      const isHomeTeam = match.homeTeam.id === teamId || match.homeTeam.name === teamId;
+
+      const event: MatchEvent = {
+        id: `${matchId}-${Date.now()}`,
+        matchId,
+        timestampSeconds: calculateRealTimeElapsed(match),
+        type: 'FOUL',
+        payload: {
+          teamId: isHomeTeam ? match.homeTeam.id : match.awayTeam.id,
+          teamName: isHomeTeam ? match.homeTeam.name : match.awayTeam.name,
+        },
+        scoreAfter: {
+          home: match.homeScore,
+          away: match.awayScore,
+        },
+      };
+
+      const updated = new Map(prev);
+      updated.set(matchId, {
+        ...match,
+        events: [...match.events, event],
+      });
+      return updated;
+    });
+  }, []);
 
   /**
    * Undo last event
@@ -1017,6 +1212,10 @@ export function useLiveMatchManagement({
     handleFinish,
     handleForceFinish,
     handleGoal,
+    handleTimePenalty,
+    handleCard,
+    handleSubstitution,
+    handleFoul,
     handleUndoLastEvent,
     handleManualEditResult,
     handleAdjustTime,

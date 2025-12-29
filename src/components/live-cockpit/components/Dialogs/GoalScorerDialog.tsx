@@ -269,7 +269,7 @@ export function GoalScorerDialog({
 
         {/* Actions */}
         <div style={styles.actions}>
-          <button style={styles.skipButton} onClick={handleSkip}>
+          <button style={styles.skipButton} onClick={handleSkip} data-testid="dialog-skip-button">
             Ohne Nr.{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
           </button>
           <button
@@ -278,6 +278,7 @@ export function GoalScorerDialog({
               backgroundColor: teamColor,
             }}
             onClick={handleConfirm}
+            data-testid="dialog-confirm-button"
           >
             Speichern
           </button>

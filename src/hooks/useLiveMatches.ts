@@ -26,7 +26,7 @@ export interface MatchEvent {
   id: string;
   matchId: string;
   timestampSeconds: number;
-  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE';
+  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE' | 'YELLOW_CARD' | 'RED_CARD' | 'TIME_PENALTY' | 'SUBSTITUTION' | 'FOUL';
   payload: {
     teamId?: string;
     teamName?: string;
@@ -34,11 +34,30 @@ export interface MatchEvent {
     newHomeScore?: number;
     newAwayScore?: number;
     toStatus?: MatchStatus;
+    /** Rückennummer des Spielers (Torschütze, Karte, Strafe) */
+    playerNumber?: number;
+    /** @deprecated Use assists array instead */
+    assistPlayerNumber?: number;
+    /** Rückennummern der Vorlagengeber (max 2) */
+    assists?: number[];
+    /** Dauer der Zeitstrafe in Sekunden (default: 120) */
+    penaltyDuration?: number;
+    /** @deprecated Use playersOut array instead */
+    playerOutNumber?: number;
+    /** @deprecated Use playersIn array instead */
+    playerInNumber?: number;
+    /** Rückennummern der ausgewechselten Spieler */
+    playersOut?: number[];
+    /** Rückennummern der eingewechselten Spieler */
+    playersIn?: number[];
+    cardType?: 'YELLOW' | 'RED';
   };
   scoreAfter: {
     home: number;
     away: number;
   };
+  /** Event wurde ohne Details erfasst - muss nachgetragen werden */
+  incomplete?: boolean;
 }
 
 export interface LiveMatch {

@@ -22,6 +22,18 @@ export interface MatchEvent {
     newAwayScore?: number;
     toStatus?: string;
     to?: string;
+    /** Spieler-Rückennummer (Torschütze, Karte, Strafe) */
+    playerNumber?: number;
+    /** Assists bei Toren (max 2) */
+    assists?: number[];
+    /** Dauer der Zeitstrafe in Sekunden */
+    penaltyDuration?: number;
+    /** Ausgewechselte Spieler */
+    playersOut?: number[];
+    /** Eingewechselte Spieler */
+    playersIn?: number[];
+    /** Kartentyp */
+    cardType?: 'YELLOW' | 'RED';
   };
   scoreAfter: { home: number; away: number };
 }
@@ -83,6 +95,21 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     } else if (eventType === 'RESULT_EDIT') {
       backgroundColor = colors.eventEditBg;
       borderColor = colors.eventEditBorder;
+    } else if (eventType === 'YELLOW_CARD') {
+      backgroundColor = colors.warningBannerBg;
+      borderColor = colors.warning;
+    } else if (eventType === 'RED_CARD') {
+      backgroundColor = colors.dangerGradientStart;
+      borderColor = colors.error;
+    } else if (eventType === 'TIME_PENALTY') {
+      backgroundColor = colors.warningBannerBg;
+      borderColor = colors.warning;
+    } else if (eventType === 'SUBSTITUTION') {
+      backgroundColor = colors.surfaceElevated;
+      borderColor = colors.border;
+    } else if (eventType === 'FOUL') {
+      backgroundColor = colors.surfaceElevated;
+      borderColor = colors.border;
     }
 
     return {
@@ -117,12 +144,21 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   };
 
   const getEventDescription = (event: MatchEvent) => {
+    const { teamName, playerNumber, assists, playersOut, playersIn, penaltyDuration } = event.payload;
+    // DEF-004: Robust fallback for missing teamName
+    const displayName = teamName || 'Unbekanntes Team';
+    const playerInfo = playerNumber ? ` #${playerNumber}` : '';
+
     if (event.type === 'GOAL') {
-      const { teamName, direction } = event.payload;
-      // DEF-004: Robust fallback for missing teamName
-      const displayName = teamName || 'Unbekanntes Team';
+      const { direction } = event.payload;
       if (direction === 'INC') {
-        return `⚽ Tor für ${displayName}`;
+        let goalText = `⚽ Tor für ${displayName}${playerInfo}`;
+        // Show assists if present
+        if (assists && assists.length > 0) {
+          const assistText = assists.map(a => `#${a}`).join(', ');
+          goalText += ` (Assist: ${assistText})`;
+        }
+        return goalText;
       } else {
         return `↩️ Tor zurückgenommen bei ${displayName}`;
       }
@@ -140,6 +176,22 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
         default:
           return `Status: ${toStatus}`;
       }
+    } else if (event.type === 'YELLOW_CARD') {
+      return `🟨 Gelbe Karte ${displayName}${playerInfo}`;
+    } else if (event.type === 'RED_CARD') {
+      return `🟥 Rote Karte ${displayName}${playerInfo}`;
+    } else if (event.type === 'TIME_PENALTY') {
+      const duration = penaltyDuration ? Math.floor(penaltyDuration / 60) : 2;
+      return `⏱ ${duration} Min Zeitstrafe ${displayName}${playerInfo}`;
+    } else if (event.type === 'SUBSTITUTION') {
+      if (playersOut?.length || playersIn?.length) {
+        const outInfo = playersOut?.map(n => `#${n}`).join(',') ?? '?';
+        const inInfo = playersIn?.map(n => `#${n}`).join(',') ?? '?';
+        return `🔄 Wechsel ${displayName}: ${outInfo} → ${inInfo}`;
+      }
+      return `🔄 Wechsel ${displayName}`;
+    } else if (event.type === 'FOUL') {
+      return `⚠ Foul ${displayName}`;
     }
     return 'Ereignis';
   };

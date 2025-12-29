@@ -20,6 +20,8 @@ export interface TeamBlockProps {
   fouls: number;
   disabled?: boolean;
   breakpoint?: Breakpoint;
+  /** Team side for data-testid attributes */
+  side?: 'home' | 'away';
   // Actions
   onGoal: () => void;
   onMinus: () => void;
@@ -42,6 +44,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   fouls: _fouls,
   disabled = false,
   breakpoint = 'desktop',
+  side,
   onGoal,
   onMinus,
   onPenalty,
@@ -51,6 +54,8 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   onFoul,
   canDecrement = true,
 }) => {
+  // Derive side from teamLabel if not provided
+  const teamSide = side ?? (teamLabel === 'Heim' ? 'home' : 'away');
   const isMobile = breakpoint === 'mobile';
 
   // ---------------------------------------------------------------------------
@@ -176,12 +181,12 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <div style={teamNameStyle}>{teamName}</div>
+        <div style={teamNameStyle} data-testid={`team-name-${teamSide}`}>{teamName}</div>
         <div style={teamLabelStyle}>{teamLabel}</div>
       </div>
 
       {/* Score */}
-      <div style={scoreStyle}>{score}</div>
+      <div style={scoreStyle} data-testid={`score-${teamSide}`}>{score}</div>
 
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
@@ -193,6 +198,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
             disabled={disabled}
             type="button"
             aria-label={`Tor für ${teamName}`}
+            data-testid={`goal-button-${teamSide}`}
           >
             + TOR
           </button>
@@ -202,6 +208,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
             disabled={disabled || !canDecrement}
             type="button"
             aria-label={`Tor für ${teamName} entfernen`}
+            data-testid={`goal-minus-button-${teamSide}`}
           >
             −1
           </button>

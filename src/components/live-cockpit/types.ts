@@ -68,10 +68,28 @@ export interface LiveCockpitProps {
   onPause(matchId: string): void;
   onResume(matchId: string): void;
   onFinish(matchId: string): void;
-  onGoal(matchId: string, teamId: string, delta: 1 | -1): void;
+  onGoal(matchId: string, teamId: string, delta: 1 | -1, options?: {
+    playerNumber?: number;
+    assists?: number[];
+    incomplete?: boolean;
+  }): void;
   onUndoLastEvent(matchId: string): void;
   onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
   onAdjustTime(matchId: string, newElapsedSeconds: number): void;
+
+  // Optional Event Handlers for detailed tracking
+  onTimePenalty?(matchId: string, teamId: string, options?: {
+    playerNumber?: number;
+    durationSeconds?: number;
+  }): void;
+  onCard?(matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: {
+    playerNumber?: number;
+  }): void;
+  onSubstitution?(matchId: string, teamId: string, options?: {
+    playersOut?: number[];
+    playersIn?: number[];
+  }): void;
+  onFoul?(matchId: string, teamId: string): void;
 
   onLoadNextMatch(fieldId: string): void;
   onReopenLastMatch(fieldId: string): void;

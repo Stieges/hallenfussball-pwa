@@ -61,6 +61,11 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   onRecordPenaltyResult: _onRecordPenaltyResult,
   onForceFinish: _onForceFinish,
   onCancelTiebreaker: _onCancelTiebreaker,
+  // Event tracking handlers (new)
+  onTimePenalty,
+  onCard,
+  onSubstitution,
+  onFoul,
 }) => {
   // Responsive breakpoint detection
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
@@ -155,15 +160,22 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
       const teamId = pendingGoalSide === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
       const teamName = pendingGoalSide === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
 
-      // Call the parent handler with delta +1
-      onGoal(currentMatch.id, teamId, 1);
+      // Filter out null assists and convert to number array
+      const validAssists = assists?.filter((a): a is number => a !== null) ?? [];
+
+      // Call the parent handler with delta +1 and player options
+      onGoal(currentMatch.id, teamId, 1, {
+        playerNumber: jerseyNumber ?? undefined,
+        assists: validAssists.length > 0 ? validAssists : undefined,
+        incomplete: incomplete ?? false,
+      });
 
       // Build toast message with jersey number and assists
       if (incomplete) {
         showInfo(`⚽ Tor für ${teamName} (ohne Nr.)`);
       } else if (jerseyNumber !== null) {
-        const assistText = assists && assists.length > 0
-          ? ` (Assist: ${assists.map(a => `#${a}`).join(', ')})`
+        const assistText = validAssists.length > 0
+          ? ` (Assist: ${validAssists.map(a => `#${a}`).join(', ')})`
           : '';
         showSuccess(`⚽ Tor für ${teamName} (#${jerseyNumber})${assistText}`);
       } else {
@@ -247,37 +259,51 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     if (!currentMatch) {return;}
     const newFouls = homeFouls + 1;
     setHomeFouls(newFouls);
+
+    // Call parent handler to create event
+    onFoul?.(currentMatch.id, currentMatch.homeTeam.id);
+
     showInfo(`Foul für ${currentMatch.homeTeam.name} (${newFouls})`);
     if (newFouls === 5) {
       showInfo(`⚠ ACHTUNG: ${currentMatch.homeTeam.name} hat 5 Fouls!`);
     }
-  }, [currentMatch, homeFouls, showInfo]);
+  }, [currentMatch, homeFouls, onFoul, showInfo]);
 
   const handleFoulAway = useCallback(() => {
     if (!currentMatch) {return;}
     const newFouls = awayFouls + 1;
     setAwayFouls(newFouls);
+
+    // Call parent handler to create event
+    onFoul?.(currentMatch.id, currentMatch.awayTeam.id);
+
     showInfo(`Foul für ${currentMatch.awayTeam.name} (${newFouls})`);
     if (newFouls === 5) {
       showInfo(`⚠ ACHTUNG: ${currentMatch.awayTeam.name} hat 5 Fouls!`);
     }
-  }, [currentMatch, awayFouls, showInfo]);
+  }, [currentMatch, awayFouls, onFoul, showInfo]);
 
   // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
     (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
-      const teamName = currentMatch?.homeTeam.id === teamId
+      if (!currentMatch) {return;}
+
+      const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
-        : currentMatch?.awayTeam.name;
+        : currentMatch.awayTeam.name;
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
       const cardName = cardType === 'YELLOW' ? 'Gelbe' : 'Rote';
+
+      // Call parent handler to create event
+      onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
+
       showInfo(`${cardName} Karte für ${teamName}${playerInfo}`);
       setShowCardDialog(false);
       // BUG-007: Reset pending card state
       setPendingCardType(null);
       setPendingCardTeamSide(null);
     },
-    [currentMatch, showInfo]
+    [currentMatch, onCard, showInfo]
   );
 
   const handleTimePenaltyConfirm = useCallback(
@@ -288,9 +314,16 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         : currentMatch.awayTeam.name;
       const mins = Math.floor(durationSeconds / 60);
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
+
+      // Call parent handler to create event
+      onTimePenalty?.(currentMatch.id, teamId, {
+        playerNumber,
+        durationSeconds,
+      });
+
       showInfo(`${mins} Min Zeitstrafe für ${teamName}${playerInfo}`);
 
-      // Add to active penalties
+      // Add to active penalties (local UI state for countdown)
       const now = new Date();
       const endsAt = new Date(now.getTime() + durationSeconds * 1000);
       const newPenalty: ActivePenalty = {
@@ -305,7 +338,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
       setShowTimePenaltyDialog(false);
       setPendingPenaltySide(null);
     },
-    [currentMatch, showInfo]
+    [currentMatch, onTimePenalty, showInfo]
   );
 
   // BUG-009: Updated to handle multi-player substitutions
@@ -316,6 +349,12 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
 
+      // Call parent handler to create event
+      onSubstitution?.(currentMatch.id, teamId, {
+        playersOut: playersOut.length > 0 ? playersOut : undefined,
+        playersIn: playersIn.length > 0 ? playersIn : undefined,
+      });
+
       // Format player numbers for display
       const outInfo = playersOut.length > 0 ? playersOut.map(n => `#${n}`).join(',') : '?';
       const inInfo = playersIn.length > 0 ? playersIn.map(n => `#${n}`).join(',') : '?';
@@ -323,7 +362,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
       setShowSubstitutionDialog(false);
       setPendingSubstitutionSide(null);
     },
-    [currentMatch, showInfo]
+    [currentMatch, onSubstitution, showInfo]
   );
 
   // BUG-010: Handler for editing events from the sidebar
@@ -600,7 +639,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
             />
           )}
 
-          <span style={statusBadgeStyle}>{getStatusLabel()}</span>
+          <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
         </div>
 
         {/* Foul Bar - Mobile only */}
@@ -639,6 +678,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                 onClick={() => !isFinished && setShowTimeAdjustDialog(true)}
                 role="button"
                 tabIndex={0}
+                data-testid="match-timer-display"
               >
                 {formatTime(displayElapsedSeconds)}
               </span>

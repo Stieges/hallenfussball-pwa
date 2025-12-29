@@ -1,7 +1,7 @@
 /**
  * ManagementTab - Turnierleitung (Kampfgericht)
  *
- * Live-Spielverwaltung mit MatchCockpit:
+ * Live-Spielverwaltung mit LiveCockpit:
  * - Timer-Management für jedes Spiel
  * - Live-Torzählung mit Event-Tracking
  * - Speicherung in tournament.matches
@@ -18,10 +18,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../lib/scheduleGenerator';
-import {
-  MatchCockpit,
-  MatchSummary,
-} from '../../components/match-cockpit/MatchCockpit';
+import { LiveCockpitMockup } from '../../components/live-cockpit';
+import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useLiveMatchManagement } from '../../hooks/useLiveMatchManagement';
 import styles from './ManagementTab.module.css';
@@ -50,6 +48,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleFinish,
     handleForceFinish,
     handleGoal,
+    handleTimePenalty,
+    handleCard,
+    handleSubstitution,
+    handleFoul,
     handleUndoLastEvent,
     handleManualEditResult,
     handleAdjustTime,
@@ -305,9 +307,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </select>
       </div>
 
-      {/* MATCH COCKPIT */}
+      {/* LIVE COCKPIT - Based on HTML Mockups */}
       {currentMatch ? (
-        <MatchCockpit
+        <LiveCockpitMockup
           fieldName={`Feld ${selectedFieldNumber}`}
           tournamentName={tournament.title}
           currentMatch={currentMatch}
@@ -324,6 +326,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onAdjustTime={handleAdjustTime}
           onLoadNextMatch={handleLoadNextMatch}
           onReopenLastMatch={handleReopenLastMatch}
+          // Event tracking callbacks
+          onTimePenalty={handleTimePenalty}
+          onCard={handleCard}
+          onSubstitution={handleSubstitution}
+          onFoul={handleFoul}
           // Tiebreaker callbacks
           onStartOvertime={handleStartOvertime}
           onStartGoldenGoal={handleStartGoldenGoal}
