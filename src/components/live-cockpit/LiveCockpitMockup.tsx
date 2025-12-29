@@ -14,7 +14,7 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../design-tokens';
 import { useBreakpoint, useMatchTimer } from '../../hooks';
 import type { LiveCockpitProps } from './types';
-import type { ActivePenalty } from '../../types/tournament';
+import type { ActivePenalty, EditableMatchEvent } from '../../types/tournament';
 
 // Sub-components
 import {
@@ -31,28 +31,8 @@ import {
   EventEditDialog,
 } from './components';
 
-
 // Hooks
 import { useToast } from './hooks';
-
-/**
- * BUG-010: Event interface compatible with both match-cockpit and tournament.ts formats.
- * Used for the event editing functionality.
- */
-interface EditableMatchEvent {
-  id: string;
-  type: string;
-  timestampSeconds?: number;
-  matchMinute?: number;
-  teamId?: string;
-  playerNumber?: number;
-  incomplete?: boolean;
-  payload?: {
-    teamId?: string;
-    teamName?: string;
-    playerNumber?: number;
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Main Component

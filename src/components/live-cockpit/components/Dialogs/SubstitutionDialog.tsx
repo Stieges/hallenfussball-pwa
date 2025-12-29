@@ -51,6 +51,18 @@ export function SubstitutionDialog({
   // Track which input field is active for quick-select
   const [activeField, setActiveField] = useState<{ type: 'out' | 'in'; index: number } | null>(null);
 
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) {return;}
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Determine selected team from preselectedTeamSide
   const selectedTeam = preselectedTeamSide === 'home' ? homeTeam :
                        preselectedTeamSide === 'away' ? awayTeam : null;

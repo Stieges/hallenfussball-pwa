@@ -8,7 +8,7 @@
  * - Paused too long by accident
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -29,6 +29,23 @@ export function TimeAdjustDialog({
 }: TimeAdjustDialogProps) {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
+
+  // Escape key handler
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, handleKeyDown]);
 
   // Initialize with current time when dialog opens
   useEffect(() => {
@@ -84,9 +101,15 @@ export function TimeAdjustDialog({
 
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="time-adjust-dialog-title"
+      >
         {/* Title */}
-        <h2 style={styles.title}>Spielzeit anpassen</h2>
+        <h2 id="time-adjust-dialog-title" style={styles.title}>Spielzeit anpassen</h2>
 
         {/* Current Time */}
         <p style={styles.currentTime}>

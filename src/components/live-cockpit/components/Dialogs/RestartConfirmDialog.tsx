@@ -5,6 +5,7 @@
  * Shows current score that will be lost.
  */
 
+import { useEffect, useCallback } from 'react';
 import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -29,6 +30,23 @@ export function RestartConfirmDialog({
   awayScore,
   elapsedTime,
 }: RestartConfirmDialogProps) {
+  // Escape key handler
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, handleKeyDown]);
+
   if (!isOpen) {
     return null;
   }
@@ -40,7 +58,13 @@ export function RestartConfirmDialog({
 
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="restart-confirm-dialog-title"
+      >
         {/* Warning Icon */}
         <div style={styles.iconContainer}>
           <svg
@@ -60,7 +84,7 @@ export function RestartConfirmDialog({
         </div>
 
         {/* Title */}
-        <h2 style={styles.title}>Spiel neu starten?</h2>
+        <h2 id="restart-confirm-dialog-title" style={styles.title}>Spiel neu starten?</h2>
 
         {/* Current Score Display */}
         <div style={styles.scoreContainer}>

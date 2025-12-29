@@ -9,37 +9,11 @@
 
 import { type CSSProperties } from 'react';
 import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface ActivePenalty {
-  eventId: string;
-  teamId: string;
-  playerNumber?: number;
-  remainingSeconds: number;
-}
-
-interface MatchEvent {
-  id: string;
-  type: string;
-  timestampSeconds: number;
-  payload?: {
-    teamId?: string;
-    teamName?: string;
-    playerNumber?: number;
-    direction?: 'INC' | 'DEC';
-    penaltyDuration?: number;
-    cardType?: 'YELLOW' | 'RED';
-  };
-  /** Event wurde ohne Details erfasst - muss nachgetragen werden */
-  incomplete?: boolean;
-}
+import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
-  events: MatchEvent[];
+  events: RuntimeMatchEvent[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -47,7 +21,7 @@ export interface SidebarProps {
   /** @deprecated Use onEventEdit instead */
   onEventClick?: (eventId: string) => void;
   /** BUG-010: Callback when edit button is clicked on any event */
-  onEventEdit?: (event: MatchEvent) => void;
+  onEventEdit?: (event: RuntimeMatchEvent) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -192,14 +166,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  const getEventDescription = (event: MatchEvent): string => {
-    const teamName = event.payload?.teamName ??
-      (event.payload?.teamId === homeTeamId ? homeTeamName : awayTeamName);
-    const playerInfo = event.payload?.playerNumber ? ` (#${event.payload.playerNumber})` : '';
+  const getEventDescription = (event: RuntimeMatchEvent): string => {
+    const teamName = event.payload.teamName ??
+      (event.payload.teamId === homeTeamId ? homeTeamName : awayTeamName);
+    const playerInfo = event.payload.playerNumber ? ` (#${event.payload.playerNumber})` : '';
 
     switch (event.type) {
       case 'GOAL':
-        return event.payload?.direction === 'DEC'
+        return event.payload.direction === 'DEC'
           ? `−1 ${teamName}`
           : `TOR ${teamName}${playerInfo}`;
       case 'YELLOW_CARD':

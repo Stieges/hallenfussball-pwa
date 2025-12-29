@@ -405,6 +405,68 @@ export interface MatchEvent {
 }
 
 /**
+ * Runtime Match Event - used in useLiveMatches hook and match-cockpit
+ * This is the payload-based format used during live matches.
+ *
+ * Different from MatchEvent (above) which uses flat properties.
+ * Use EditableMatchEvent for components that need to work with both formats.
+ */
+export interface RuntimeMatchEvent {
+  id: string;
+  matchId?: string;
+  timestampSeconds: number;
+  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE' | 'YELLOW_CARD' | 'RED_CARD' | 'TIME_PENALTY' | 'SUBSTITUTION' | 'FOUL';
+  payload: {
+    teamId?: string;
+    teamName?: string;
+    direction?: 'INC' | 'DEC';
+    newHomeScore?: number;
+    newAwayScore?: number;
+    playerNumber?: number;
+    assistPlayerNumber?: number;
+    penaltyDuration?: number;
+    playerOutNumber?: number;
+    playerInNumber?: number;
+    cardType?: 'YELLOW' | 'RED';
+  };
+  scoreAfter?: {
+    home: number;
+    away: number;
+  };
+  /** Event was recorded without details - needs completion */
+  incomplete?: boolean;
+}
+
+/**
+ * Editable Match Event - adapter interface for components that work with both formats.
+ * Used by EventEditDialog and other editing components.
+ */
+export interface EditableMatchEvent {
+  id: string;
+  type: string;
+  // Support both runtime (timestampSeconds) and storage (matchMinute) formats
+  timestampSeconds?: number;
+  matchMinute?: number;
+  // Direct properties (storage format)
+  teamId?: string;
+  playerNumber?: number;
+  incomplete?: boolean;
+  // Payload properties (runtime format)
+  payload?: {
+    teamId?: string;
+    teamName?: string;
+    playerNumber?: number;
+  };
+}
+
+/**
+ * Type guard to check if event is in runtime format
+ */
+export function isRuntimeMatchEvent(event: MatchEvent | RuntimeMatchEvent): event is RuntimeMatchEvent {
+  return 'payload' in event && 'timestampSeconds' in event;
+}
+
+/**
  * Live Match Status for Live-Cockpit
  * More granular than MatchStatus for real-time display
  */

@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import type { EditableMatchEvent } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -22,32 +23,10 @@ interface Team {
   name: string;
 }
 
-/**
- * Generic event interface that works with both match-cockpit and tournament.ts MatchEvent types.
- * This adapter type allows the dialog to work regardless of which event structure is passed.
- */
-interface EditableEvent {
-  id: string;
-  type: string;
-  // Support both match-cockpit (timestampSeconds) and tournament.ts (matchMinute) formats
-  timestampSeconds?: number;
-  matchMinute?: number;
-  // Direct properties (tournament.ts style)
-  teamId?: string;
-  playerNumber?: number;
-  incomplete?: boolean;
-  // Payload properties (match-cockpit style)
-  payload?: {
-    teamId?: string;
-    teamName?: string;
-    playerNumber?: number;
-  };
-}
-
 interface EventEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  event: EditableEvent | null;
+  event: EditableMatchEvent | null;
   homeTeam: Team;
   awayTeam: Team;
   /**
@@ -75,6 +54,18 @@ export function EventEditDialog({
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) {return;}
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Reset state when dialog opens or event changes
   useEffect(() => {
     if (isOpen && event) {
@@ -86,12 +77,12 @@ export function EventEditDialog({
   }, [isOpen, event]);
 
   // Helper to get teamId from either format
-  const getEventTeamId = (e: EditableEvent): string | undefined => {
+  const getEventTeamId = (e: EditableMatchEvent): string | undefined => {
     return e.teamId ?? e.payload?.teamId;
   };
 
   // Helper to get time in seconds from either format
-  const getEventTimeSeconds = (e: EditableEvent): number | undefined => {
+  const getEventTimeSeconds = (e: EditableMatchEvent): number | undefined => {
     if (e.timestampSeconds !== undefined) {return e.timestampSeconds;}
     if (e.matchMinute !== undefined) {return e.matchMinute * 60;}
     return undefined;
