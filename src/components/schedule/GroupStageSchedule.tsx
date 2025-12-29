@@ -37,6 +37,8 @@ import {
   type RefereeOption,
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
+import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
+import type { ScheduleConflict } from '../../features/schedule-editor/types';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -127,6 +129,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [expandedMatchId]);
+
+  // Conflict detection for edit mode
+  const { getMatchConflicts } = useMatchConflictsFromTournament(
+    tournament ?? null,
+    editingSchedule // Only detect when in edit mode
+  );
 
   // DnD Sensors - require 8px movement before drag starts
   const sensors = useSensors(
@@ -521,6 +529,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     displayedField: number | undefined;
     hasUnsavedChanges: boolean;
     hasPendingField: boolean;
+    conflicts: ScheduleConflict[];
   }
 
   const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
@@ -531,6 +540,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     displayedField,
     hasUnsavedChanges,
     hasPendingField,
+    conflicts,
   }) => {
     const isLocked = status === 'running' || status === 'finished';
 
@@ -598,6 +608,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               typeof value === 'string' ? parseInt(value) : value;
             onRefereeChange(matchId, numValue);
           } : undefined}
+          conflicts={conflicts}
           onCardClick={() => handleCardClick(match.id)}
           onCircleClick={() => handleCircleClick(match.id)}
           isExpanded={isExpanded}
@@ -966,6 +977,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     displayedField={displayedField}
                     hasUnsavedChanges={hasUnsavedChanges}
                     hasPendingField={hasPendingField}
+                    conflicts={getMatchConflicts(match.id)}
                   />
                 );
               })}
