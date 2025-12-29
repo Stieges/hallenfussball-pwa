@@ -29,7 +29,13 @@ import { RefereeConfig, Tournament } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';
 import { getGroupShortCode } from '../../utils/displayNames';
-import { MatchCard, MatchCardDesktop, type MatchCardStatus } from './MatchCard';
+import {
+  MatchCard,
+  MatchCardDesktop,
+  EditableMatchCard,
+  type MatchCardStatus,
+  type RefereeOption,
+} from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
 
 // Pending changes during edit mode
@@ -369,6 +375,15 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const refereeOptions = getRefereeOptions();
   const fieldOptions = getFieldOptions();
+
+  // Transform referee options for EditableMatchCard (includes "Kein SR" option)
+  const editableRefereeOptions: RefereeOption[] = [
+    { value: null, label: 'Kein SR' },
+    ...refereeOptions.map(opt => ({
+      value: opt.value,
+      label: `SR ${opt.label}`,
+    })),
+  ];
 
   // Styles
   const containerStyle: CSSProperties = {
@@ -790,6 +805,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         {sortedMatches.map((match) => {
           const status = getMatchStatus(match);
           const isExpanded = expandedMatchId === match.id;
+          const isLocked = status === 'running' || status === 'finished';
 
           // Get pending changes for edit mode
           const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
@@ -800,30 +816,58 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           const displayedField = hasPendingField
             ? pendingChanges.fieldAssignments[match.id]
             : match.field;
+          const hasUnsavedChanges = hasPendingRef || hasPendingField;
+
+          // Shared card props
+          const cardProps = {
+            matchId: match.id,
+            matchNumber: match.matchNumber,
+            scheduledTime: match.time,
+            field: match.field,
+            group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+            homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
+            awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
+            homeScore: match.scoreA ?? 0,
+            awayScore: match.scoreB ?? 0,
+            status: status,
+            progress: 0,
+          };
 
           return (
             <div key={match.id} style={{ marginBottom: spacing.sm }}>
-              <MatchCard
-                matchId={match.id}
-                matchNumber={match.matchNumber}
-                scheduledTime={match.time}
-                field={match.field}
-                group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
-                homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
-                awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
-                homeScore={match.scoreA ?? 0}
-                awayScore={match.scoreB ?? 0}
-                status={status}
-                progress={0}
-                onCardClick={() => handleCardClick(match.id)}
-                onCircleClick={() => handleCircleClick(match.id)}
-                isExpanded={isExpanded}
-                expandContent={renderExpandContent(match)}
-                disabled={editingSchedule}
-              />
+              {editingSchedule ? (
+                // Edit Mode: EditableMatchCard with integrated SR badge
+                <EditableMatchCard
+                  {...cardProps}
+                  canDrag={false} // DnD handled separately via DndContext
+                  isLocked={isLocked}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                  referee={displayedRef ?? undefined}
+                  refereeOptions={showReferees ? editableRefereeOptions : []}
+                  onRefereeChange={onRefereeChange ? (matchId, value) => {
+                    // Convert null to null, string to number
+                    const numValue = value === null ? null :
+                      typeof value === 'string' ? parseInt(value) : value;
+                    onRefereeChange(matchId, numValue);
+                  } : undefined}
+                  onCardClick={() => handleCardClick(match.id)}
+                  onCircleClick={() => handleCircleClick(match.id)}
+                  isExpanded={isExpanded}
+                  expandContent={renderExpandContent(match)}
+                />
+              ) : (
+                // Normal Mode: Standard MatchCard
+                <MatchCard
+                  {...cardProps}
+                  onCardClick={() => handleCardClick(match.id)}
+                  onCircleClick={() => handleCircleClick(match.id)}
+                  isExpanded={isExpanded}
+                  expandContent={renderExpandContent(match)}
+                />
+              )}
 
-              {/* Edit mode: Referee & Field selectors (shown below card) */}
-              {editingSchedule && (showReferees || showFields) && (
+              {/* Edit mode: Field selector (shown below card) */}
+              {editingSchedule && showFields && onFieldChange && (
                 <div style={{
                   display: 'flex',
                   gap: spacing.sm,
@@ -832,46 +876,22 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   backgroundColor: colors.surfaceLight,
                   borderRadius: borderRadius.sm,
                 }}>
-                  {showReferees && onRefereeChange && (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>SR</label>
-                      <select
-                        value={displayedRef ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          onRefereeChange(match.id, value ? parseInt(value) : null);
-                        }}
-                        style={{
-                          ...mobileSelectStyle,
-                          width: '100%',
-                          border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
-                        }}
-                      >
-                        <option value="">-</option>
-                        {refereeOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {showFields && onFieldChange && (
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
-                      <select
-                        value={displayedField || 1}
-                        onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                        style={{
-                          ...mobileSelectStyle,
-                          width: '100%',
-                          border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-                        }}
-                      >
-                        {fieldOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
+                    <select
+                      value={displayedField || 1}
+                      onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+                      style={{
+                        ...mobileSelectStyle,
+                        width: '100%',
+                        border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+                      }}
+                    >
+                      {fieldOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
             </div>
