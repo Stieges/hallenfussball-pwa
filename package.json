@@ -11,6 +11,12 @@
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "test": "vitest",
     "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:mobile": "playwright test --project='iPhone 13' --project='Pixel 5'",
+    "test:e2e:desktop": "playwright test --project='Desktop Chrome'",
+    "test:a11y": "playwright test tests/e2e/usability/accessibility.spec.ts",
     "prepare": "husky",
     "analyze": "npm run build && open dist/stats.html"
   },
@@ -26,6 +32,8 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
