@@ -601,7 +601,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
           </section>
         )}
 
-        {/* Goal Buttons - Konzept §4.1: 80px vertikal im Fokus-Modus */}
+        {/* Goal Buttons */}
         <section style={thumbZoneStyle}>
           <ActionZone
             onGoal={handleGoal}
@@ -612,7 +612,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
             disabled={isFinished || isNotStarted}
             showMinusButtons={mode !== 'focus'}
             breakpoint={breakpoint}
-            compact={mode === 'focus'}
           />
         </section>
       </main>

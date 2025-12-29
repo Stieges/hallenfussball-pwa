@@ -31,8 +31,6 @@ interface ActionZoneProps {
   /** @deprecated Use breakpoint instead */
   isMobile?: boolean;
   breakpoint?: Breakpoint;
-  /** Compact/Focus mode: vertical stacking, 80px buttons, no minus */
-  compact?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,45 +47,9 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
   showMinusButtons = true,
   isMobile: isMobileProp,
   breakpoint = 'desktop',
-  compact = false,
 }) => {
   // Backwards compatibility: use isMobile prop if breakpoint not provided
   const isMobile = isMobileProp ?? breakpoint === 'mobile';
-
-  // ---------------------------------------------------------------------------
-  // Compact Mode (Focus View) - Konzept §4.1
-  // Vertically stacked, 80px buttons, full width, no minus
-  // ---------------------------------------------------------------------------
-
-  if (compact) {
-    const compactContainerStyle: CSSProperties = {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: spacing.sm,
-      width: '100%',
-    };
-
-    return (
-      <div style={compactContainerStyle} className={styles.actionZone}>
-        <CompactGoalButton
-          onClick={() => onGoal('home', 'INC')}
-          disabled={disabled}
-          teamName={homeTeamName}
-          ariaLabel={`Tor für ${homeTeamName} hinzufügen`}
-        />
-        <CompactGoalButton
-          onClick={() => onGoal('away', 'INC')}
-          disabled={disabled}
-          teamName={awayTeamName}
-          ariaLabel={`Tor für ${awayTeamName} hinzufügen`}
-        />
-      </div>
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Standard/Extended Mode - Horizontal Layout
-  // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -352,82 +314,6 @@ const MinusButton: React.FC<MinusButtonProps> = ({
       type="button"
     >
       −
-    </button>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// Compact Goal Button (Focus Mode) - Konzept §4.1, §10.1
-// 80px height, full width, prominent team name
-// ---------------------------------------------------------------------------
-
-interface CompactGoalButtonProps {
-  onClick: () => void;
-  disabled?: boolean;
-  teamName: string;
-  ariaLabel: string;
-}
-
-const CompactGoalButton: React.FC<CompactGoalButtonProps> = ({
-  onClick,
-  disabled = false,
-  teamName,
-  ariaLabel,
-}) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const handleClick = useCallback(() => {
-    if (disabled) {
-      return;
-    }
-
-    setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 400);
-
-    if ('vibrate' in navigator) {
-      navigator.vibrate(50);
-    }
-
-    onClick();
-  }, [disabled, onClick]);
-
-  // Konzept §4.1: 80px Höhe, volle Breite
-  const buttonStyle: CSSProperties = {
-    width: '100%',
-    minHeight: '80px', // Konzept-Vorgabe: 80px
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    fontSize: fontSizes.xl, // Größere Schrift im Fokus-Modus
-    fontWeight: fontWeights.bold,
-    color: disabled ? colors.textDisabled : colors.onPrimary,
-    background: disabled
-      ? colors.surfaceDark
-      : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryHover})`,
-    border: disabled ? `1px solid ${colors.border}` : 'none',
-    borderRadius: borderRadius.lg,
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    boxShadow: disabled ? 'none' : `0 4px 12px ${colors.primary}40`,
-    textTransform: 'uppercase',
-  };
-
-  const iconStyle: CSSProperties = {
-    fontSize: '28px',
-    lineHeight: 1,
-  };
-
-  return (
-    <button
-      style={buttonStyle}
-      className={`${styles.goalButton} ${isAnimating ? styles.scored : ''}`}
-      onClick={handleClick}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      type="button"
-    >
-      <span style={iconStyle}>⚽</span>
-      <span>+ TOR {teamName}</span>
     </button>
   );
 };

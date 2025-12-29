@@ -252,9 +252,8 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     gap: isMobile ? spacing.md : spacing.lg,
   };
 
-  // Konzept-Referenz: 96px Score im Fokus-Modus (§4.1, §10.3)
   const compactScoreValueStyle: CSSProperties = {
-    fontSize: isMobile ? '6rem' : isTablet ? '6rem' : '6rem', // 96px auf allen Geräten
+    fontSize: isMobile ? '3.5rem' : isTablet ? '4rem' : '4.5rem',
     fontWeight: fontWeights.bold,
     color: colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
@@ -281,27 +280,6 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   // ---------------------------------------------------------------------------
   // Render - Compact Mode (Focus View)
   // ---------------------------------------------------------------------------
-
-  // Team name styles for compact mode (Konzept §4.1 Wireframe)
-  const compactTeamRowStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: '400px',
-    padding: `0 ${spacing.md}`,
-  };
-
-  const compactTeamNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-    maxWidth: '45%',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
 
   if (compact) {
     return (
@@ -334,12 +312,6 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
           {status !== 'FINISHED' && (
             <span style={{ color: colors.textSecondary }}>/ {formatTime(durationSeconds)}</span>
           )}
-        </div>
-
-        {/* Team Names below timer (Konzept §4.1 Wireframe) */}
-        <div style={compactTeamRowStyle}>
-          <span style={compactTeamNameStyle}>{homeTeam.name}</span>
-          <span style={compactTeamNameStyle}>{awayTeam.name}</span>
         </div>
 
         {/* Phase indicator if special */}
