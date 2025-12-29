@@ -3,6 +3,8 @@
  *
  * Based on mockup: scoreboard-desktop.html
  * Shows active time penalties and event history
+ *
+ * BUG-010: Added edit functionality for all events
  */
 
 import { type CSSProperties } from 'react';
@@ -42,8 +44,10 @@ export interface SidebarProps {
   awayTeamName: string;
   homeTeamId: string;
   awayTeamId: string;
-  /** Callback when an incomplete event is clicked for editing */
+  /** @deprecated Use onEventEdit instead */
   onEventClick?: (eventId: string) => void;
+  /** BUG-010: Callback when edit button is clicked on any event */
+  onEventEdit?: (event: MatchEvent) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   homeTeamId,
   awayTeamId,
   onEventClick,
+  onEventEdit,
 }) => {
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -152,6 +157,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
     fontSize: fontSizes.sm,
   };
 
+  // BUG-010: Edit button style
+  const editButtonStyle: CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    padding: spacing.xs,
+    cursor: 'pointer',
+    fontSize: fontSizes.sm,
+    color: colors.textMuted,
+    borderRadius: borderRadius.sm,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'color 0.15s ease',
+    minWidth: 28,
+    minHeight: 28,
+  };
+
+  const logEntryRightStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.xs,
+  };
+
   const getEventIcon = (type: string): string => {
     switch (type) {
       case 'GOAL': return '⚽';
@@ -229,25 +257,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           recentEvents.map((event, index) => {
             const isIncomplete = event.incomplete === true;
-            const isClickable = isIncomplete && onEventClick;
+            // BUG-010: All events are now editable if onEventEdit is provided
+            const canEdit = !!onEventEdit;
+            // Legacy: still support onEventClick for incomplete events
+            const isLegacyClickable = isIncomplete && onEventClick && !onEventEdit;
             const isLastItem = index === recentEvents.length - 1;
 
-            const entryStyle = isClickable
+            const entryStyle = isLegacyClickable
               ? logEntryClickableStyle
               : {
                   ...logEntryStyle,
                   borderBottom: isLastItem ? 'none' : logEntryStyle.borderBottom,
                 };
 
+            const handleEditClick = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (onEventEdit) {
+                onEventEdit(event);
+              }
+            };
+
             return (
               <div
                 key={event.id}
                 style={entryStyle}
-                onClick={isClickable ? () => onEventClick(event.id) : undefined}
-                role={isClickable ? 'button' : undefined}
-                tabIndex={isClickable ? 0 : undefined}
+                onClick={isLegacyClickable ? () => onEventClick(event.id) : undefined}
+                role={isLegacyClickable ? 'button' : undefined}
+                tabIndex={isLegacyClickable ? 0 : undefined}
                 onKeyDown={
-                  isClickable
+                  isLegacyClickable
                     ? (e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -261,7 +299,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {getEventIcon(event.type)} {getEventDescription(event)}
                   {isIncomplete && <span style={incompleteWarningStyle}>⚠️</span>}
                 </span>
-                <span style={logTimeStyle}>{formatTime(event.timestampSeconds)}</span>
+                <div style={logEntryRightStyle}>
+                  <span style={logTimeStyle}>{formatTime(event.timestampSeconds)}</span>
+                  {/* BUG-010: Edit button for all events */}
+                  {canEdit && (
+                    <button
+                      style={editButtonStyle}
+                      onClick={handleEditClick}
+                      aria-label={`${getEventDescription(event)} bearbeiten`}
+                      title="Bearbeiten"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })

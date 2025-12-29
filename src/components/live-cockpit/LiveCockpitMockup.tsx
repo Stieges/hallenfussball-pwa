@@ -76,6 +76,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-007: Track which card type and team side triggered the card dialog
   const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'RED' | null>(null);
   const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
+  // BUG-009: Track which team side triggered the substitution dialog
+  const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
   const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
@@ -302,18 +304,41 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     [currentMatch, showInfo]
   );
 
+  // BUG-009: Updated to handle multi-player substitutions
   const handleSubstitutionConfirm = useCallback(
-    (teamId: string, playerOut?: number, playerIn?: number) => {
+    (teamId: string, playersOut: number[], playersIn: number[]) => {
       if (!currentMatch) {return;}
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
-      const outInfo = playerOut ? `#${playerOut}` : '?';
-      const inInfo = playerIn ? `#${playerIn}` : '?';
-      showInfo(`Wechsel ${teamName}: ${outInfo} ↔ ${inInfo}`);
+
+      // Format player numbers for display
+      const outInfo = playersOut.length > 0 ? playersOut.map(n => `#${n}`).join(',') : '?';
+      const inInfo = playersIn.length > 0 ? playersIn.map(n => `#${n}`).join(',') : '?';
+      showInfo(`🔄 Wechsel ${teamName}: ${outInfo} → ${inInfo}`);
       setShowSubstitutionDialog(false);
+      setPendingSubstitutionSide(null);
     },
     [currentMatch, showInfo]
+  );
+
+  // BUG-010: Handler for editing events from the sidebar
+  const handleEventEdit = useCallback(
+    (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown> }) => {
+      // TODO: Open appropriate dialog based on event type
+      // For now, show info toast
+      const eventTypeLabels: Record<string, string> = {
+        GOAL: 'Tor',
+        YELLOW_CARD: 'Gelbe Karte',
+        RED_CARD: 'Rote Karte',
+        TIME_PENALTY: 'Zeitstrafe',
+        SUBSTITUTION: 'Wechsel',
+        FOUL: 'Foul',
+      };
+      const label = eventTypeLabels[event.type] || event.type;
+      showInfo(`✏️ ${label} bearbeiten (Funktion in Entwicklung)`);
+    },
+    [showInfo]
   );
 
   // ---------------------------------------------------------------------------
@@ -582,7 +607,11 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                   setPendingCardTeamSide('home');
                   setShowCardDialog(true);
                 }}
-                onSubstitution={() => setShowSubstitutionDialog(true)}
+                onSubstitution={() => {
+                  // BUG-009: Set team side before opening dialog
+                  setPendingSubstitutionSide('home');
+                  setShowSubstitutionDialog(true);
+                }}
                 onFoul={handleFoulHome}
                 canDecrement={canDecrementHome}
               />
@@ -616,7 +645,11 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                   setPendingCardTeamSide('away');
                   setShowCardDialog(true);
                 }}
-                onSubstitution={() => setShowSubstitutionDialog(true)}
+                onSubstitution={() => {
+                  // BUG-009: Set team side before opening dialog
+                  setPendingSubstitutionSide('away');
+                  setShowSubstitutionDialog(true);
+                }}
                 onFoul={handleFoulAway}
                 canDecrement={canDecrementAway}
               />
@@ -646,6 +679,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               awayTeamName={match.awayTeam.name}
               homeTeamId={match.homeTeam.id}
               awayTeamId={match.awayTeam.id}
+              // BUG-010: Enable event editing
+              onEventEdit={handleEventEdit}
             />
           )}
         </div>
@@ -694,10 +729,16 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
       <SubstitutionDialog
         isOpen={showSubstitutionDialog}
-        onClose={() => setShowSubstitutionDialog(false)}
+        onClose={() => {
+          setShowSubstitutionDialog(false);
+          setPendingSubstitutionSide(null);
+        }}
         onConfirm={handleSubstitutionConfirm}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
+        // BUG-009: Pre-select team based on button clicked
+        preselectedTeamSide={pendingSubstitutionSide ?? undefined}
+        autoDismissSeconds={10}
       />
 
       {/* GoalScorerDialog - BUG-002: Torschütze + Assist erfassen */}

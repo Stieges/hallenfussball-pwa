@@ -95,6 +95,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [showCardDialog, setShowCardDialog] = useState(false);
   const [showTimePenaltyDialog, setShowTimePenaltyDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
+  // BUG-009: Track which team side triggered the substitution dialog
+  const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<TeamSide | null>(null);
 
   // GoalScorerDialog State
   const [showGoalDialog, setShowGoalDialog] = useState(false);
@@ -355,16 +357,20 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
   // handlePenaltyExpire is now handled by useSyncedPenalties hook
 
+  // BUG-009: Updated to handle multi-player substitutions
   const handleSubstitutionConfirm = useCallback(
-    (teamId: string, playerOut?: number, playerIn?: number) => {
+    (teamId: string, playersOut: number[], playersIn: number[]) => {
       if (!currentMatch) {return;}
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
-      const outInfo = playerOut ? `#${playerOut}` : '?';
-      const inInfo = playerIn ? `#${playerIn}` : '?';
-      showInfo(`Wechsel ${teamName}: ${outInfo} ↔ ${inInfo}`);
+
+      // Format player numbers for display
+      const outInfo = playersOut.length > 0 ? playersOut.map(n => `#${n}`).join(',') : '?';
+      const inInfo = playersIn.length > 0 ? playersIn.map(n => `#${n}`).join(',') : '?';
+      showInfo(`🔄 Wechsel ${teamName}: ${outInfo} → ${inInfo}`);
       setShowSubstitutionDialog(false);
+      setPendingSubstitutionSide(null);
       // TODO: Persist substitution event when backend supports it
     },
     [currentMatch, showInfo]
@@ -676,13 +682,18 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         awayTeam={match.awayTeam}
       />
 
-      {/* Substitution Dialog */}
+      {/* Substitution Dialog - BUG-009: Updated for multi-player substitutions */}
       <SubstitutionDialog
         isOpen={showSubstitutionDialog}
-        onClose={() => setShowSubstitutionDialog(false)}
+        onClose={() => {
+          setShowSubstitutionDialog(false);
+          setPendingSubstitutionSide(null);
+        }}
         onConfirm={handleSubstitutionConfirm}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
+        preselectedTeamSide={pendingSubstitutionSide ?? undefined}
+        autoDismissSeconds={10}
       />
 
       {/* GoalScorerDialog - opens when +Tor is clicked */}

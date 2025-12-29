@@ -2,13 +2,17 @@
  * SubstitutionDialog - Player Substitution Dialog
  *
  * Allows tournament directors to record player substitutions.
- * Flow: Team → Player Out → Player In
+ * BUG-009 FIX: Redesigned for multi-player substitutions with RAUS/REIN areas.
+ * - Team is pre-selected based on which button was clicked
+ * - Multiple players can be substituted at once (common in futsal)
+ * - Auto-dismiss after 10 seconds
  *
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §5.4
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -19,10 +23,18 @@ interface Team {
 interface SubstitutionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (teamId: string, playerOutNumber?: number, playerInNumber?: number) => void;
+  /** Callback with arrays for multi-player substitutions */
+  onConfirm: (teamId: string, playersOut: number[], playersIn: number[]) => void;
   homeTeam: Team;
   awayTeam: Team;
+  /** BUG-009: Pre-select team based on button clicked */
+  preselectedTeamSide?: 'home' | 'away';
+  /** Auto-dismiss after X seconds (default: 10, 0 = disabled) */
+  autoDismissSeconds?: number;
 }
+
+// Quick-select buttons for common jersey numbers
+const QUICK_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export function SubstitutionDialog({
   isOpen,
@@ -30,233 +42,146 @@ export function SubstitutionDialog({
   onConfirm,
   homeTeam,
   awayTeam,
+  preselectedTeamSide,
+  autoDismissSeconds = 10,
 }: SubstitutionDialogProps) {
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [playerOutNumber, setPlayerOutNumber] = useState<string>('');
-  const [playerInNumber, setPlayerInNumber] = useState<string>('');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // BUG-009: Arrays for multi-player substitutions
+  const [playersOut, setPlayersOut] = useState<string[]>(['']);
+  const [playersIn, setPlayersIn] = useState<string[]>(['']);
+  // Track which input field is active for quick-select
+  const [activeField, setActiveField] = useState<{ type: 'out' | 'in'; index: number } | null>(null);
+
+  // Determine selected team from preselectedTeamSide
+  const selectedTeam = preselectedTeamSide === 'home' ? homeTeam :
+                       preselectedTeamSide === 'away' ? awayTeam : null;
+
+  // Auto-skip handler for timer expiry
+  const handleAutoSkip = useCallback(() => {
+    if (!selectedTeam) {
+      onClose();
+      return;
+    }
+    // Submit with whatever data we have
+    const outNums = playersOut.filter(n => n.trim()).map(n => parseInt(n, 10));
+    const inNums = playersIn.filter(n => n.trim()).map(n => parseInt(n, 10));
+    onConfirm(selectedTeam.id, outNums, inNums);
+    onClose();
+  }, [selectedTeam, playersOut, playersIn, onConfirm, onClose]);
+
+  // Timer hook for auto-dismiss
+  const { remainingSeconds, reset: resetTimer, progressPercent, isActive } = useDialogTimer({
+    durationSeconds: autoDismissSeconds,
+    onExpire: handleAutoSkip,
+    autoStart: isOpen && autoDismissSeconds > 0 && selectedTeam !== null,
+    paused: !isOpen,
+  });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (isOpen) {
-      setSelectedTeam(null);
-      setPlayerOutNumber('');
-      setPlayerInNumber('');
-      setStep(1);
+      setPlayersOut(['']);
+      setPlayersIn(['']);
+      setActiveField({ type: 'out', index: 0 });
+      resetTimer();
     }
-  }, [isOpen]);
+  }, [isOpen, resetTimer]);
 
-  const handleTeamSelect = useCallback((team: Team) => {
-    setSelectedTeam(team);
-    setStep(2);
-  }, []);
+  // Add another player field
+  const handleAddPlayerOut = useCallback(() => {
+    setPlayersOut(prev => [...prev, '']);
+    setActiveField({ type: 'out', index: playersOut.length });
+    resetTimer();
+  }, [playersOut.length, resetTimer]);
 
-  const handlePlayerOutConfirm = useCallback(() => {
-    setStep(3);
-  }, []);
+  const handleAddPlayerIn = useCallback(() => {
+    setPlayersIn(prev => [...prev, '']);
+    setActiveField({ type: 'in', index: playersIn.length });
+    resetTimer();
+  }, [playersIn.length, resetTimer]);
 
+  // Update player number
+  const handlePlayerOutChange = useCallback((index: number, value: string) => {
+    setPlayersOut(prev => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+    resetTimer();
+  }, [resetTimer]);
+
+  const handlePlayerInChange = useCallback((index: number, value: string) => {
+    setPlayersIn(prev => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+    resetTimer();
+  }, [resetTimer]);
+
+  // Quick number selection
+  const handleQuickNumber = useCallback((num: number) => {
+    if (!activeField) {return;}
+    const value = String(num);
+    if (activeField.type === 'out') {
+      handlePlayerOutChange(activeField.index, value);
+    } else {
+      handlePlayerInChange(activeField.index, value);
+    }
+    resetTimer();
+  }, [activeField, handlePlayerOutChange, handlePlayerInChange, resetTimer]);
+
+  // Confirm substitution
   const handleConfirm = useCallback(() => {
-    if (!selectedTeam) {
-      return;
-    }
-    const outNum = playerOutNumber.trim() ? parseInt(playerOutNumber, 10) : undefined;
-    const inNum = playerInNumber.trim() ? parseInt(playerInNumber, 10) : undefined;
-    onConfirm(selectedTeam.id, outNum, inNum);
+    if (!selectedTeam) {return;}
+    const outNums = playersOut.filter(n => n.trim()).map(n => parseInt(n, 10));
+    const inNums = playersIn.filter(n => n.trim()).map(n => parseInt(n, 10));
+    onConfirm(selectedTeam.id, outNums, inNums);
     onClose();
-  }, [selectedTeam, playerOutNumber, playerInNumber, onConfirm, onClose]);
+  }, [selectedTeam, playersOut, playersIn, onConfirm, onClose]);
 
-  const handleBack = useCallback(() => {
-    if (step === 3) {
-      setStep(2);
-      setPlayerInNumber('');
-    } else if (step === 2) {
-      setStep(1);
-      setPlayerOutNumber('');
-    }
-  }, [step]);
+  // Check if we have at least one valid substitution
+  const hasValidData = playersOut.some(n => n.trim()) || playersIn.some(n => n.trim());
 
-  const handleSkip = useCallback(() => {
-    if (!selectedTeam) {
-      return;
-    }
-    onConfirm(selectedTeam.id, undefined, undefined);
-    onClose();
-  }, [selectedTeam, onConfirm, onClose]);
+  // Count mismatch warning
+  const outCount = playersOut.filter(n => n.trim()).length;
+  const inCount = playersIn.filter(n => n.trim()).length;
+  const hasMismatch = outCount > 0 && inCount > 0 && outCount !== inCount;
 
   if (!isOpen) {
     return null;
   }
 
-  const renderStep1Team = () => (
-    <>
-      <div style={styles.iconHeader}>
-        <span style={styles.swapIcon}>🔄</span>
-        <h2 id="substitution-dialog-title" style={styles.title}>Wechsel</h2>
-      </div>
-      <p style={styles.subtitle}>Welches Team?</p>
-
-      <div style={styles.teamGrid}>
-        <button
-          style={styles.teamButton}
-          onClick={() => handleTeamSelect(homeTeam)}
+  // If no team preselected, show team selection (fallback)
+  if (!selectedTeam) {
+    return (
+      <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
+        <div
+          style={styles.dialog}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="substitution-dialog-title"
         >
-          <span style={styles.teamLabel}>{homeTeam.name}</span>
-        </button>
-
-        <button
-          style={styles.teamButton}
-          onClick={() => handleTeamSelect(awayTeam)}
-        >
-          <span style={styles.teamLabel}>{awayTeam.name}</span>
-        </button>
-      </div>
-
-      <button style={styles.cancelButton} onClick={onClose}>
-        Abbrechen
-      </button>
-    </>
-  );
-
-  const renderStep2PlayerOut = () => (
-    <>
-      <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
-          ←
-        </button>
-        <div style={styles.headerContent}>
-          <span style={styles.swapIconSmall}>🔄</span>
-          <div>
-            <h2 style={styles.titleSmall}>Wechsel</h2>
-            <p style={styles.teamSubtitle}>{selectedTeam?.name}</p>
+          <div style={styles.iconHeader}>
+            <span style={styles.swapIcon}>🔄</span>
+            <h2 id="substitution-dialog-title" style={styles.title}>Wechsel</h2>
           </div>
-        </div>
-        <div style={{ width: 44 }} />
-      </div>
-
-      <p style={styles.subtitle}>
-        <span style={styles.outLabel}>RAUS</span> - Rückennummer
-      </p>
-
-      <div style={styles.inputContainer}>
-        <input
-          type="number"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="#"
-          value={playerOutNumber}
-          onChange={(e) => setPlayerOutNumber(e.target.value)}
-          style={styles.numberInput}
-          autoFocus
-          min={1}
-          max={99}
-        />
-      </div>
-
-      <div style={styles.quickNumbers}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-          <button
-            key={num}
-            style={{
-              ...styles.quickNumberButton,
-              backgroundColor:
-                playerOutNumber === String(num)
-                  ? colors.errorLight
-                  : colors.surface,
-              borderColor:
-                playerOutNumber === String(num) ? colors.error : 'transparent',
-            }}
-            onClick={() => setPlayerOutNumber(String(num))}
-          >
-            {num}
-          </button>
-        ))}
-      </div>
-
-      <div style={styles.actions}>
-        <button style={styles.skipButton} onClick={handleSkip}>
-          Überspringen
-        </button>
-        <button
-          style={styles.nextButton}
-          onClick={handlePlayerOutConfirm}
-        >
-          Weiter
-        </button>
-      </div>
-    </>
-  );
-
-  const renderStep3PlayerIn = () => (
-    <>
-      <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
-          ←
-        </button>
-        <div style={styles.headerContent}>
-          <span style={styles.swapIconSmall}>🔄</span>
-          <div>
-            <h2 style={styles.titleSmall}>Wechsel</h2>
-            <p style={styles.teamSubtitle}>
-              {selectedTeam?.name} · #{playerOutNumber || '?'} raus
-            </p>
+          <p style={styles.subtitle}>Welches Team?</p>
+          <div style={styles.teamGrid}>
+            <button style={styles.teamButton} onClick={onClose}>
+              <span style={styles.teamLabel}>{homeTeam.name}</span>
+            </button>
+            <button style={styles.teamButton} onClick={onClose}>
+              <span style={styles.teamLabel}>{awayTeam.name}</span>
+            </button>
           </div>
-        </div>
-        <div style={{ width: 44 }} />
-      </div>
-
-      <p style={styles.subtitle}>
-        <span style={styles.inLabel}>REIN</span> - Rückennummer
-      </p>
-
-      <div style={styles.inputContainer}>
-        <input
-          type="number"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="#"
-          value={playerInNumber}
-          onChange={(e) => setPlayerInNumber(e.target.value)}
-          style={styles.numberInput}
-          autoFocus
-          min={1}
-          max={99}
-        />
-      </div>
-
-      <div style={styles.quickNumbers}>
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-          <button
-            key={num}
-            style={{
-              ...styles.quickNumberButton,
-              backgroundColor:
-                playerInNumber === String(num)
-                  ? colors.successLight
-                  : colors.surface,
-              borderColor:
-                playerInNumber === String(num) ? colors.success : 'transparent',
-            }}
-            onClick={() => setPlayerInNumber(String(num))}
-          >
-            {num}
+          <button style={styles.cancelButton} onClick={onClose}>
+            Abbrechen
           </button>
-        ))}
+        </div>
       </div>
-
-      <div style={styles.actions}>
-        <button style={styles.skipButton} onClick={handleConfirm}>
-          Ohne Nummer
-        </button>
-        <button
-          style={styles.confirmButton}
-          onClick={handleConfirm}
-          disabled={!playerInNumber.trim()}
-        >
-          Speichern
-        </button>
-      </div>
-    </>
-  );
+    );
+  }
 
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
@@ -267,9 +192,142 @@ export function SubstitutionDialog({
         aria-modal="true"
         aria-labelledby="substitution-dialog-title"
       >
-        {step === 1 && renderStep1Team()}
-        {step === 2 && renderStep2PlayerOut()}
-        {step === 3 && renderStep3PlayerIn()}
+        {/* Auto-dismiss progress bar */}
+        {isActive && autoDismissSeconds > 0 && (
+          <div style={styles.timerContainer}>
+            <div
+              style={{
+                ...styles.timerBar,
+                width: `${progressPercent}%`,
+              }}
+            />
+            <span style={styles.timerText}>{remainingSeconds}s</span>
+          </div>
+        )}
+
+        {/* Header with team name */}
+        <div style={styles.iconHeader}>
+          <span style={styles.swapIcon}>🔄</span>
+          <div>
+            <h2 id="substitution-dialog-title" style={styles.title}>Wechsel</h2>
+            <p style={styles.teamSubtitle}>{selectedTeam.name}</p>
+          </div>
+        </div>
+
+        {/* RAUS Section */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.outLabel}>🔴 RAUS</span>
+            <button style={styles.addButton} onClick={handleAddPlayerOut} aria-label="Spieler hinzufügen">
+              +
+            </button>
+          </div>
+          <div style={styles.playerInputs}>
+            {playersOut.map((value, index) => (
+              <input
+                key={`out-${index}`}
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="#"
+                value={value}
+                onChange={(e) => handlePlayerOutChange(index, e.target.value)}
+                onFocus={() => setActiveField({ type: 'out', index })}
+                style={{
+                  ...styles.numberInputSmall,
+                  borderColor: activeField !== null && activeField.type === 'out' && activeField.index === index
+                    ? colors.error
+                    : colors.borderDefault,
+                }}
+                min={1}
+                max={99}
+                autoFocus={index === 0}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* REIN Section */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.inLabel}>🟢 REIN</span>
+            <button style={styles.addButton} onClick={handleAddPlayerIn} aria-label="Spieler hinzufügen">
+              +
+            </button>
+          </div>
+          <div style={styles.playerInputs}>
+            {playersIn.map((value, index) => (
+              <input
+                key={`in-${index}`}
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="#"
+                value={value}
+                onChange={(e) => handlePlayerInChange(index, e.target.value)}
+                onFocus={() => setActiveField({ type: 'in', index })}
+                style={{
+                  ...styles.numberInputSmall,
+                  borderColor: activeField !== null && activeField.type === 'in' && activeField.index === index
+                    ? colors.success
+                    : colors.borderDefault,
+                }}
+                min={1}
+                max={99}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Mismatch Warning */}
+        {hasMismatch && (
+          <div style={styles.warningBanner}>
+            ⚠️ Anzahl RAUS ({outCount}) ≠ REIN ({inCount})
+          </div>
+        )}
+
+        {/* Quick Numbers */}
+        <div style={styles.quickNumbers}>
+          {QUICK_NUMBERS.map((num) => {
+            const isSelectedOut = playersOut.includes(String(num));
+            const isSelectedIn = playersIn.includes(String(num));
+            return (
+              <button
+                key={num}
+                style={{
+                  ...styles.quickNumberButton,
+                  backgroundColor: isSelectedOut
+                    ? colors.errorLight
+                    : isSelectedIn
+                      ? colors.successLight
+                      : colors.surface,
+                  borderColor: isSelectedOut
+                    ? colors.error
+                    : isSelectedIn
+                      ? colors.success
+                      : 'transparent',
+                }}
+                onClick={() => handleQuickNumber(num)}
+              >
+                {num}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Actions */}
+        <div style={styles.actions}>
+          <button style={styles.cancelButton} onClick={onClose}>
+            Abbrechen
+          </button>
+          <button
+            style={styles.confirmButton}
+            onClick={handleConfirm}
+            disabled={!hasValidData}
+          >
+            Bestätigen
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -294,52 +352,44 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: spacing.md,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  timerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: colors.surface,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  timerBar: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    transition: 'width 1s linear',
+  },
+  timerText: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: 8,
+    fontSize: fontSizes.xs,
+    color: colors.textMuted,
   },
   iconHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   swapIcon: {
     fontSize: '32px',
   },
-  swapIconSmall: {
-    fontSize: '24px',
-  },
-  headerWithBack: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: fontSizes.xl,
-    color: colors.textSecondary,
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: borderRadius.lg,
-    cursor: 'pointer',
-  },
-  headerContent: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   title: {
     fontSize: fontSizes.xl,
-    fontWeight: 600,
-    color: colors.textPrimary,
-    margin: 0,
-    textAlign: 'center',
-  },
-  titleSmall: {
-    fontSize: fontSizes.lg,
     fontWeight: 600,
     color: colors.textPrimary,
     margin: 0,
@@ -348,6 +398,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: fontSizes.sm,
     color: colors.textSecondary,
     margin: 0,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: fontSizes.md,
@@ -355,13 +406,64 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     textAlign: 'center',
   },
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: spacing.sm,
+  },
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   outLabel: {
     color: colors.error,
     fontWeight: 600,
+    fontSize: fontSizes.md,
   },
   inLabel: {
     color: colors.success,
     fontWeight: 600,
+    fontSize: fontSizes.md,
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: fontSizes.lg,
+    fontWeight: 600,
+    color: colors.textSecondary,
+    backgroundColor: colors.surface,
+    border: `1px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.md,
+    cursor: 'pointer',
+  },
+  playerInputs: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  numberInputSmall: {
+    width: 56,
+    height: 48,
+    fontSize: fontSizes.lg,
+    fontWeight: 700,
+    textAlign: 'center',
+    backgroundColor: colors.surface,
+    border: `2px solid ${colors.borderDefault}`,
+    borderRadius: borderRadius.md,
+    color: colors.textPrimary,
+    outline: 'none',
+  },
+  warningBanner: {
+    backgroundColor: colors.warningBannerBg,
+    color: colors.warning,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    fontSize: fontSizes.sm,
+    textAlign: 'center',
   },
   teamGrid: {
     display: 'flex',
@@ -385,22 +487,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: colors.textPrimary,
   },
-  inputContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-  },
-  numberInput: {
-    width: 100,
-    height: 64,
-    fontSize: fontSizes.xxl,
-    fontWeight: 700,
-    textAlign: 'center',
-    backgroundColor: colors.surface,
-    border: `2px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
-    color: colors.textPrimary,
-    outline: 'none',
-  },
   quickNumbers: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, 1fr)',
@@ -423,18 +509,6 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: spacing.sm,
   },
   cancelButton: {
-    width: '100%',
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    fontWeight: 500,
-    backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
-    cursor: 'pointer',
-    minHeight: 48,
-  },
-  skipButton: {
     flex: 1,
     padding: spacing.md,
     fontSize: fontSizes.md,
@@ -442,18 +516,6 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
     color: colors.textSecondary,
     border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
-    cursor: 'pointer',
-    minHeight: 48,
-  },
-  nextButton: {
-    flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
-    fontWeight: 600,
-    backgroundColor: colors.secondary,
-    color: colors.onSecondary,
-    border: 'none',
     borderRadius: borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
