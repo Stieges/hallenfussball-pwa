@@ -21,3 +21,11 @@ export type { SkeletonProps } from './Skeleton';
 export { BottomNavigation } from './BottomNavigation';
 export type { BottomNavTab } from './BottomNavigation';
 export { BottomSheet, BottomSheetItem } from './BottomSheet';
+
+// Progress Indicators
+export { ProgressRing, ScoreContent, VSContent } from './ProgressRing';
+export type { ProgressRingProps, ScoreContentProps } from './ProgressRing';
+
+// Score Input
+export { ScoreStepper } from './ScoreStepper';
+export type { ScoreStepperProps } from './ScoreStepper';

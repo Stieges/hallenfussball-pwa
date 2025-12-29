@@ -123,6 +123,8 @@
 | [BUG-008](bugs/BUG-008-Zeitstrafe-Cleanup.md) | 🟡 Minor | ✅ Fixed | Zeitstrafe-Countdown + Cleanup |
 | [BUG-009](bugs/BUG-009-Wechsel-Dialog.md) | 🟡 Minor | Open | Wechsel-Dialog umständlich |
 | [BUG-010](bugs/BUG-010-Event-Nachbearbeitung.md) | 🟠 Major | Open | Event-Log nachträgliche Bearbeitung |
+| BUG-011 | 🟡 Minor | ✅ Closed | **Spielplan 2.0:** Card-Tap öffnet kein Quick-Score Expand (Mobile) – War Test-Problem, nicht Impl-Bug |
+| BUG-012 | 🟡 Minor | ✅ Closed | **Spielplan 2.0:** "Zum Cockpit" Navigation – War Test-Problem, nicht Impl-Bug |
 | BUG-003 Grid Insert | Feature Request | - | Insert-between ist nicht Bug, sondern Feature |
 
 ### Refactoring

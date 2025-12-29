@@ -15,9 +15,41 @@ export default defineConfig({
   },
 
   projects: [
-    { name: 'iPhone 13', use: { ...devices['iPhone 13'], hasTouch: true } },
-    { name: 'Pixel 5', use: { ...devices['Pixel 5'], hasTouch: true } },
-    { name: 'Desktop Chrome', use: { ...devices['Desktop Chrome'] } },
+    // ==========================================================================
+    // iOS Safari (WebKit) - Kritisch für PWA!
+    // ==========================================================================
+    {
+      name: 'iPhone SE Safari',
+      use: { ...devices['iPhone SE'], browserName: 'webkit' },
+    },
+    {
+      name: 'iPhone 13 Safari',
+      use: { ...devices['iPhone 13'], browserName: 'webkit' },
+    },
+    {
+      name: 'iPhone 15 Pro Safari',
+      use: { ...devices['iPhone 15 Pro'], browserName: 'webkit' },
+    },
+
+    // ==========================================================================
+    // Android Chrome
+    // ==========================================================================
+    {
+      name: 'Pixel 5',
+      use: { ...devices['Pixel 5'], hasTouch: true },
+    },
+
+    // ==========================================================================
+    // Desktop
+    // ==========================================================================
+    {
+      name: 'Desktop Chrome',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'Desktop Safari',
+      use: { ...devices['Desktop Safari'] },
+    },
   ],
 
   webServer: {

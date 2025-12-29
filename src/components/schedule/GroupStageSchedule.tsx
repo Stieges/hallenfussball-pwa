@@ -5,7 +5,7 @@
  * US-SCHEDULE-EDITOR: Now supports Drag & Drop for match swapping in edit mode
  */
 
-import { CSSProperties, useState, useMemo, useEffect } from 'react';
+import { CSSProperties, useState, useMemo, useEffect, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +29,8 @@ import { RefereeConfig, Tournament } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { MatchCard, MatchCardDesktop, type MatchCardStatus } from './MatchCard';
+import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -103,6 +105,23 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Only reset when entering edit mode, not when matches change
   }, [editingSchedule]);
 
+  // Spielplan 2.0: Expand state for mobile cards
+  type ExpandType = 'quick' | 'live' | 'start' | null;
+  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+  const [expandType, setExpandType] = useState<ExpandType>(null);
+
+  // Close expand when clicking outside or pressing Escape
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && expandedMatchId) {
+        setExpandedMatchId(null);
+        setExpandType(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [expandedMatchId]);
+
   // DnD Sensors - require 8px movement before drag starts
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -140,6 +159,164 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       onMatchSwap(sourceMatchId, targetMatchId);
     }
   };
+
+  // ============================================================================
+  // Spielplan 2.0: Helper functions for MatchCard integration
+  // ============================================================================
+
+  /**
+   * Convert match state to MatchCardStatus
+   */
+  const getMatchStatus = (match: ScheduledMatch): MatchCardStatus => {
+    if (runningMatchIds?.has(match.id)) {
+      return 'running';
+    }
+    if (finishedMatches?.has(match.id)) {
+      return 'finished';
+    }
+    // Check if match has a score (started but paused would still show as finished)
+    if (match.scoreA !== undefined && match.scoreB !== undefined) {
+      return 'finished';
+    }
+    return 'scheduled';
+  };
+
+  /**
+   * Handle card body click - opens QuickScore expand for non-live matches
+   */
+  const handleCardClick = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {return;}
+
+    const status = getMatchStatus(match);
+
+    if (status === 'running') {
+      // Live matches: Show hint that score is managed in cockpit
+      // For now, show LiveInfoExpand
+      setExpandedMatchId(matchId);
+      setExpandType('live');
+      return;
+    }
+
+    // Toggle expand for non-live matches
+    if (expandedMatchId === matchId && expandType === 'quick') {
+      setExpandedMatchId(null);
+      setExpandType(null);
+    } else {
+      setExpandedMatchId(matchId);
+      setExpandType('quick');
+    }
+  };
+
+  /**
+   * Handle circle click - status-specific action
+   */
+  const handleCircleClick = (matchId: string) => {
+    const match = matches.find(m => m.id === matchId);
+    if (!match) {return;}
+
+    const status = getMatchStatus(match);
+
+    switch (status) {
+      case 'scheduled':
+        // Not started: Show start confirmation
+        setExpandedMatchId(matchId);
+        setExpandType('start');
+        break;
+      case 'running':
+        // Live: Show live info with link to cockpit
+        setExpandedMatchId(matchId);
+        setExpandType('live');
+        break;
+      case 'finished':
+        // Finished: Show quick edit (same as card click for now)
+        setExpandedMatchId(matchId);
+        setExpandType('quick');
+        break;
+    }
+  };
+
+  /**
+   * Handle score save from expand
+   */
+  const handleExpandSave = useCallback((matchId: string, homeScore: number, awayScore: number) => {
+    if (onScoreChange) {
+      onScoreChange(matchId, homeScore, awayScore);
+    }
+    setExpandedMatchId(null);
+    setExpandType(null);
+  }, [onScoreChange]);
+
+  /**
+   * Handle expand cancel/close
+   */
+  const handleExpandClose = useCallback(() => {
+    setExpandedMatchId(null);
+    setExpandType(null);
+  }, []);
+
+  /**
+   * Navigate to cockpit for a match
+   * TODO: Implement actual navigation via context or URL params
+   * The actual navigation should be handled by a callback prop (onNavigateToCockpit)
+   */
+  const handleNavigateToCockpit = useCallback((_matchId: string) => {
+    // For now, just close the expand - navigation will be added later
+    setExpandedMatchId(null);
+    setExpandType(null);
+  }, []);
+
+  /**
+   * Unified render function for expand content (used by both mobile and desktop)
+   */
+  const renderExpandContent = useCallback((match: ScheduledMatch): React.ReactNode => {
+    if (expandedMatchId !== match.id || !expandType) {
+      return null;
+    }
+
+    const homeTeam = { id: `${match.id}-home`, name: match.homeTeam };
+    const awayTeam = { id: `${match.id}-away`, name: match.awayTeam };
+
+    switch (expandType) {
+      case 'quick':
+        return (
+          <QuickScoreExpand
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            homeScore={match.scoreA ?? 0}
+            awayScore={match.scoreB ?? 0}
+            onSave={(home, away) => handleExpandSave(match.id, home, away)}
+            onCancel={handleExpandClose}
+          />
+        );
+      case 'live':
+        return (
+          <LiveInfoExpand
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            homeScore={match.scoreA ?? 0}
+            awayScore={match.scoreB ?? 0}
+            elapsedFormatted={match.time || '00:00'}
+            onNavigateToCockpit={() => handleNavigateToCockpit(match.id)}
+            onClose={handleExpandClose}
+          />
+        );
+      case 'start':
+        return (
+          <StartMatchExpand
+            homeTeam={homeTeam}
+            awayTeam={awayTeam}
+            matchNumber={match.matchNumber}
+            scheduledTime={match.time}
+            field={match.field}
+            onConfirm={() => handleNavigateToCockpit(match.id)}
+            onCancel={handleExpandClose}
+          />
+        );
+      default:
+        return null;
+    }
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -234,91 +411,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     minWidth: '60px',
   };
 
-  // Mobile Card Styles - Compact Design
-  const mobileCardStyle: CSSProperties = {
-    backgroundColor: colors.background,
-    border: `1px solid ${colors.border}`,
-    borderRadius: '6px',
-    padding: '10px 12px',
-    marginBottom: '8px',
-  };
-
-  const mobileCardHeaderStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '6px',
-    fontSize: fontSizes.sm,
-  };
-
-  const mobileMatchInfoStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    color: colors.textSecondary,
-  };
-
-  const mobileMatchNumberStyle: CSSProperties = {
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
-  };
-
-  const mobileMetaCompactStyle: CSSProperties = {
-    display: 'flex',
-    gap: spacing.sm,
-    color: colors.textMuted,
-    fontSize: fontSizes.xs,
-  };
-
-  // Team row with inline score - compact layout
-  const getMobileTeamRowStyle = (isWinner: boolean, isLoser: boolean, hasResult: boolean): CSSProperties => ({
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '4px 0',
-    fontSize: '14px',
-    fontWeight: isWinner ? fontWeights.bold : fontWeights.normal,
-    color: hasResult
-      ? (isLoser ? colors.textMuted : colors.textPrimary)
-      : colors.textPrimary,
-  });
-
-  const mobileTeamNameStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    flex: 1,
-    minWidth: 0,
-    overflow: 'hidden',
-  };
-
-  const mobileScoreStyle = (isWinner: boolean): CSSProperties => ({
-    fontWeight: fontWeights.bold,
-    fontSize: fontSizes.lg,
-    minWidth: '24px',
-    textAlign: 'right' as const,
-    color: isWinner ? colors.success : colors.textPrimary,
-  });
-
-  const mobileWinnerIconStyle: CSSProperties = {
-    color: colors.success,
-    fontSize: fontSizes.sm,
-    flexShrink: 0,
-  };
-
-  // Edit mode styles for inline score input
-  const mobileScoreInputStyle: CSSProperties = {
-    width: '36px',
-    padding: '4px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: fontWeights.bold,
-    textAlign: 'center' as const,
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
-  };
-
+  // Mobile edit mode select style
   const mobileSelectStyle: CSSProperties = {
     padding: '4px 8px',
     border: `1px solid ${colors.border}`,
@@ -401,7 +494,46 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     );
   };
 
-  // Render table content (used both in normal view and drag overlay)
+  // ============================================================================
+  // DesktopCard Component - renders MatchCardDesktop (no DnD in normal mode)
+  // ============================================================================
+  const DesktopCard: React.FC<{ match: ScheduledMatch }> = ({ match }) => {
+    const status = getMatchStatus(match);
+    const isExpanded = expandedMatchId === match.id;
+
+    return (
+      <div style={{ marginBottom: spacing.sm }}>
+        <MatchCardDesktop
+          matchId={match.id}
+          matchNumber={match.matchNumber}
+          scheduledTime={match.time}
+          field={match.field}
+          group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
+          homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
+          awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
+          homeScore={match.scoreA ?? 0}
+          awayScore={match.scoreB ?? 0}
+          status={status}
+          progress={0}
+          onRowClick={() => handleCardClick(match.id)}
+          onCircleClick={() => handleCircleClick(match.id)}
+          isExpanded={isExpanded}
+          expandContent={renderExpandContent(match)}
+        />
+      </div>
+    );
+  };
+
+  // Render desktop card list (non-edit mode)
+  const renderDesktopCardContent = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+      {sortedMatches.map((match) => (
+        <DesktopCard key={match.id} match={match} />
+      ))}
+    </div>
+  );
+
+  // Render table content (used in edit mode for efficient bulk editing)
   const renderTableContent = () => (
     <table style={tableStyle}>
       <thead>
@@ -588,8 +720,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         {hasGroups ? 'Vorrunde' : 'Spielplan'}
       </h2>
 
-      {/* Desktop Table View with DnD */}
+      {/* Desktop View - Card layout (normal) or Table (edit mode) */}
       {editingSchedule && onMatchSwap ? (
+        /* Edit Mode: Table view with DnD for efficient bulk editing */
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -620,7 +753,6 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 minWidth: '400px',
                 maxWidth: '600px',
                 cursor: 'grabbing',
-                // Note: DragOverlay already positions at pointer, no transform needed
               }}>
                 <span style={{ color: colors.primary, fontSize: '18px' }}>⋮⋮</span>
                 <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
@@ -647,24 +779,19 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           </DragOverlay>
         </DndContext>
       ) : (
-        <div className="desktop-view" style={{ overflowX: 'auto' }}>
-          {renderTableContent()}
+        /* Normal Mode: MatchCardDesktop with expand functionality (no DnD needed) */
+        <div className="desktop-view">
+          {renderDesktopCardContent()}
         </div>
       )}
 
-      {/* Mobile Card View - Compact Design */}
+      {/* Mobile Card View - Spielplan 2.0 with MatchCard */}
       <div className="mobile-view">
         {sortedMatches.map((match) => {
-          const isRunning = runningMatchIds?.has(match.id);
-          const isFinished = finishedMatches?.has(match.id) ?? false;
-          const hasResult = match.scoreA !== undefined && match.scoreB !== undefined;
+          const status = getMatchStatus(match);
+          const isExpanded = expandedMatchId === match.id;
 
-          // Determine winner/loser (safe because hasResult guarantees both scores exist)
-          const homeWins = hasResult && (match.scoreA ?? 0) > (match.scoreB ?? 0);
-          const awayWins = hasResult && (match.scoreB ?? 0) > (match.scoreA ?? 0);
-          const isDraw = hasResult && match.scoreA === match.scoreB;
-
-          // Get pending changes
+          // Get pending changes for edit mode
           const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
           const displayedRef = hasPendingRef
             ? pendingChanges.refereeAssignments[match.id]
@@ -674,199 +801,80 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             ? pendingChanges.fieldAssignments[match.id]
             : match.field;
 
-          // Is this match editable for score input?
-          const canEditScore = editable && onScoreChange !== undefined && !isFinished;
-          const inCorrectionMode = correctionMatchId === match.id;
-
           return (
-          <div
-            key={match.id}
-            style={{
-              ...mobileCardStyle,
-              ...(isRunning ? {
-                borderColor: colors.statusLive,
-                backgroundColor: colors.statusLiveRowBg,
-              } : {}),
-            }}
-          >
-            {/* Compact Header: #Nr • Zeit | Meta Info */}
-            <div style={mobileCardHeaderStyle}>
-              <div style={mobileMatchInfoStyle}>
-                <span style={mobileMatchNumberStyle}>#{match.matchNumber}</span>
-                <span>•</span>
-                <span>{match.time}</span>
-                {isRunning && <LiveBadge compact />}
-              </div>
-              <div style={mobileMetaCompactStyle}>
-                {hasGroups && (
-                  <span>{match.group ? getGroupShortCode(match.group, tournament) : ''}</span>
-                )}
-                {showReferees && displayedRef && (
-                  <span style={hasPendingRef ? { color: colors.primary } : undefined}>
-                    SR:{displayedRef}
-                  </span>
-                )}
-                {showFields && displayedField && displayedField > 1 && (
-                  <span style={hasPendingField ? { color: colors.primary } : undefined}>
-                    F:{displayedField}
-                  </span>
-                )}
-              </div>
-            </div>
+            <div key={match.id} style={{ marginBottom: spacing.sm }}>
+              <MatchCard
+                matchId={match.id}
+                matchNumber={match.matchNumber}
+                scheduledTime={match.time}
+                field={match.field}
+                group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
+                homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
+                awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
+                homeScore={match.scoreA ?? 0}
+                awayScore={match.scoreB ?? 0}
+                status={status}
+                progress={0}
+                onCardClick={() => handleCardClick(match.id)}
+                onCircleClick={() => handleCircleClick(match.id)}
+                isExpanded={isExpanded}
+                expandContent={renderExpandContent(match)}
+                disabled={editingSchedule}
+              />
 
-            {/* Team Row: Home Team with Score */}
-            <div style={getMobileTeamRowStyle(homeWins, awayWins && !isDraw, hasResult)}>
-              <div style={mobileTeamNameStyle}>
-                {homeWins && <span style={mobileWinnerIconStyle}>✓</span>}
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const
+              {/* Edit mode: Referee & Field selectors (shown below card) */}
+              {editingSchedule && (showReferees || showFields) && (
+                <div style={{
+                  display: 'flex',
+                  gap: spacing.sm,
+                  marginTop: spacing.xs,
+                  padding: `${spacing.xs} ${spacing.sm}`,
+                  backgroundColor: colors.surfaceLight,
+                  borderRadius: borderRadius.sm,
                 }}>
-                  {match.homeTeam}
-                </span>
-              </div>
-              {canEditScore || inCorrectionMode ? (
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={match.scoreA ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val !== '' && match.scoreB !== undefined) {
-                      onScoreChange?.(match.id, parseInt(val), match.scoreB);
-                    }
-                  }}
-                  placeholder="–"
-                  style={{
-                    ...mobileScoreInputStyle,
-                    ...(inCorrectionMode ? {
-                      borderColor: colors.warning,
-                      backgroundColor: colors.warningLight,
-                    } : {}),
-                  }}
-                />
-              ) : (
-                <span style={mobileScoreStyle(homeWins)}>
-                  {match.scoreA ?? '–'}
-                </span>
+                  {showReferees && onRefereeChange && (
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>SR</label>
+                      <select
+                        value={displayedRef ?? ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          onRefereeChange(match.id, value ? parseInt(value) : null);
+                        }}
+                        style={{
+                          ...mobileSelectStyle,
+                          width: '100%',
+                          border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
+                        }}
+                      >
+                        <option value="">-</option>
+                        {refereeOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {showFields && onFieldChange && (
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
+                      <select
+                        value={displayedField || 1}
+                        onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+                        style={{
+                          ...mobileSelectStyle,
+                          width: '100%',
+                          border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+                        }}
+                      >
+                        {fieldOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
-
-            {/* Team Row: Away Team with Score */}
-            <div style={getMobileTeamRowStyle(awayWins, homeWins && !isDraw, hasResult)}>
-              <div style={mobileTeamNameStyle}>
-                {awayWins && <span style={mobileWinnerIconStyle}>✓</span>}
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const
-                }}>
-                  {match.awayTeam}
-                </span>
-              </div>
-              {canEditScore || inCorrectionMode ? (
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={match.scoreB ?? ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (match.scoreA !== undefined && val !== '') {
-                      onScoreChange?.(match.id, match.scoreA, parseInt(val));
-                    }
-                  }}
-                  placeholder="–"
-                  style={{
-                    ...mobileScoreInputStyle,
-                    ...(inCorrectionMode ? {
-                      borderColor: colors.warning,
-                      backgroundColor: colors.warningLight,
-                    } : {}),
-                  }}
-                />
-              ) : (
-                <span style={mobileScoreStyle(awayWins)}>
-                  {match.scoreB ?? '–'}
-                </span>
-              )}
-            </div>
-
-            {/* Correction button for finished matches */}
-            {isFinished && !inCorrectionMode && (
-              <button
-                onClick={() => onStartCorrection?.(match.id)}
-                style={{
-                  marginTop: '4px',
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  color: colors.textSecondary,
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  width: '100%',
-                }}
-                className="correction-btn-mobile"
-              >
-                Korrigieren
-              </button>
-            )}
-
-            {/* Edit mode: Referee & Field selectors */}
-            {editingSchedule && (showReferees || showFields) && (
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                marginTop: '6px',
-                paddingTop: '6px',
-                borderTop: `1px solid ${colors.border}`,
-              }}>
-                {showReferees && onRefereeChange && (
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: colors.textMuted }}>SR</label>
-                    <select
-                      value={displayedRef ?? ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        onRefereeChange(match.id, value ? parseInt(value) : null);
-                      }}
-                      style={{
-                        ...mobileSelectStyle,
-                        width: '100%',
-                        border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
-                      }}
-                    >
-                      <option value="">-</option>
-                      {refereeOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {showFields && onFieldChange && (
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: '10px', color: colors.textMuted }}>Feld</label>
-                    <select
-                      value={displayedField || 1}
-                      onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                      style={{
-                        ...mobileSelectStyle,
-                        width: '100%',
-                        border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-                      }}
-                    >
-                      {fieldOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
           );
         })}
       </div>

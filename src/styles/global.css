@@ -57,6 +57,14 @@
   --color-success: #4CAF50;
   --color-accent: #00B0FF;
 
+  /* Shadows & Glows */
+  --color-shadow-soft: rgba(0, 0, 0, 0.2);
+  --color-shadow-medium: rgba(0, 0, 0, 0.3);
+  --color-primary-glow: rgba(0, 230, 118, 0.5);
+  --color-primary-glow-light: rgba(0, 230, 118, 0.2);
+  --color-error-glow: rgba(255, 82, 82, 0.25);
+  --color-surface-highlight: rgba(255, 255, 255, 0.05);
+
   /* Spacing - 8pt Grid System (synced with theme.ts) */
   --spacing-xs: 4px;   /* 0.5x - half-unit for tight spacing */
   --spacing-sm: 8px;   /* 1x */
@@ -359,6 +367,65 @@ textarea:-ms-input-placeholder {
   }
   100% {
     opacity: 1;
+  }
+}
+
+/* Live indicator pulse - radial glow */
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
+    transform: scale(1.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    transform: scale(1);
+  }
+}
+
+/* Goal scored celebration */
+@keyframes goalScored {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.15);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Toast slide in from top */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Toast slide out to top */
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
   }
 }
 

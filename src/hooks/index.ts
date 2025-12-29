@@ -30,6 +30,7 @@ export { useBreakpoint, type Breakpoint, type BreakpointConfig, type UseBreakpoi
 // Live Data & Sync
 export { useLiveMatchManagement } from './useLiveMatchManagement'
 export { useLiveMatches } from './useLiveMatches'
+export { useLiveProgress, formatTime, type UseLiveProgressReturn, type ProgressMatch } from './useLiveProgress'
 export { useMultiTabSync } from './useMultiTabSync'
 export { useOnlineStatus } from './useOnlineStatus'
 export { useSyncedPenalties } from './useSyncedPenalties'
