@@ -510,6 +510,133 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   };
 
   // ============================================================================
+  // SortableMobileCard Component - uses useSortable for mobile card DnD
+  // Passes drag handle attributes/listeners to EditableMatchCard
+  // ============================================================================
+  interface SortableMobileCardProps {
+    match: ScheduledMatch;
+    status: MatchCardStatus;
+    isExpanded: boolean;
+    displayedRef: number | null | undefined;
+    displayedField: number | undefined;
+    hasUnsavedChanges: boolean;
+    hasPendingField: boolean;
+  }
+
+  const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
+    match,
+    status,
+    isExpanded,
+    displayedRef,
+    displayedField,
+    hasUnsavedChanges,
+    hasPendingField,
+  }) => {
+    const isLocked = status === 'running' || status === 'finished';
+
+    // Can only drag scheduled matches (not running or finished)
+    const canDrag = !!(editingSchedule && onMatchSwap && !isLocked);
+
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+      isOver,
+    } = useSortable({
+      id: match.id,
+      disabled: !canDrag,
+    });
+
+    // Apply transform and transition for smooth animations
+    const wrapperStyle: CSSProperties = {
+      marginBottom: spacing.sm,
+      transform: CSS.Transform.toString(transform),
+      transition,
+      // Drag states
+      ...(isDragging ? {
+        opacity: 0.5,
+        zIndex: 0,
+      } : {}),
+      ...(isOver && !isDragging ? {
+        transform: CSS.Transform.toString(transform),
+      } : {}),
+    };
+
+    // Shared card props
+    const cardProps = {
+      matchId: match.id,
+      matchNumber: match.matchNumber,
+      scheduledTime: match.time,
+      field: match.field,
+      group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+      homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
+      awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
+      homeScore: match.scoreA ?? 0,
+      awayScore: match.scoreB ?? 0,
+      status: status,
+      progress: 0,
+    };
+
+    return (
+      <div ref={setNodeRef} style={wrapperStyle}>
+        <EditableMatchCard
+          {...cardProps}
+          canDrag={canDrag}
+          isDragging={isDragging}
+          isDropTarget={isOver && !isDragging}
+          dragHandleAttributes={attributes}
+          dragHandleListeners={listeners}
+          isLocked={isLocked}
+          hasUnsavedChanges={hasUnsavedChanges}
+          referee={displayedRef ?? undefined}
+          refereeOptions={showReferees ? editableRefereeOptions : []}
+          onRefereeChange={onRefereeChange ? (matchId, value) => {
+            const numValue = value === null ? null :
+              typeof value === 'string' ? parseInt(value) : value;
+            onRefereeChange(matchId, numValue);
+          } : undefined}
+          onCardClick={() => handleCardClick(match.id)}
+          onCircleClick={() => handleCircleClick(match.id)}
+          isExpanded={isExpanded}
+          expandContent={renderExpandContent(match)}
+        />
+
+        {/* Edit mode: Field selector (shown below card) */}
+        {editingSchedule && showFields && onFieldChange && (
+          <div style={{
+            display: 'flex',
+            gap: spacing.sm,
+            marginTop: spacing.xs,
+            padding: `${spacing.xs} ${spacing.sm}`,
+            backgroundColor: colors.surfaceLight,
+            borderRadius: borderRadius.sm,
+          }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
+              <select
+                value={displayedField || 1}
+                onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
+                style={{
+                  ...mobileSelectStyle,
+                  width: '100%',
+                  border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+                }}
+              >
+                {fieldOptions.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================================
   // DesktopCard Component - renders MatchCardDesktop (no DnD in normal mode)
   // ============================================================================
   const DesktopCard: React.FC<{ match: ScheduledMatch }> = ({ match }) => {
@@ -801,62 +928,103 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       )}
 
       {/* Mobile Card View - Spielplan 2.0 with MatchCard */}
-      <div className="mobile-view">
-        {sortedMatches.map((match) => {
-          const status = getMatchStatus(match);
-          const isExpanded = expandedMatchId === match.id;
-          const isLocked = status === 'running' || status === 'finished';
+      {editingSchedule && onMatchSwap ? (
+        /* Edit Mode: Mobile cards with DnD */
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="mobile-view">
+            <SortableContext
+              items={sortedMatches.map(m => m.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedMatches.map((match) => {
+                const status = getMatchStatus(match);
+                const isExpanded = expandedMatchId === match.id;
 
-          // Get pending changes for edit mode
-          const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
-          const displayedRef = hasPendingRef
-            ? pendingChanges.refereeAssignments[match.id]
-            : match.referee;
-          const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
-          const displayedField = hasPendingField
-            ? pendingChanges.fieldAssignments[match.id]
-            : match.field;
-          const hasUnsavedChanges = hasPendingRef || hasPendingField;
+                // Get pending changes for edit mode
+                const hasPendingRef = pendingChanges?.refereeAssignments[match.id] !== undefined;
+                const displayedRef = hasPendingRef
+                  ? pendingChanges.refereeAssignments[match.id]
+                  : match.referee;
+                const hasPendingField = pendingChanges?.fieldAssignments[match.id] !== undefined;
+                const displayedField = hasPendingField
+                  ? pendingChanges.fieldAssignments[match.id]
+                  : match.field;
+                const hasUnsavedChanges = hasPendingRef || hasPendingField;
 
-          // Shared card props
-          const cardProps = {
-            matchId: match.id,
-            matchNumber: match.matchNumber,
-            scheduledTime: match.time,
-            field: match.field,
-            group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
-            homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
-            awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
-            homeScore: match.scoreA ?? 0,
-            awayScore: match.scoreB ?? 0,
-            status: status,
-            progress: 0,
-          };
+                return (
+                  <SortableMobileCard
+                    key={match.id}
+                    match={match}
+                    status={status}
+                    isExpanded={isExpanded}
+                    displayedRef={displayedRef}
+                    displayedField={displayedField}
+                    hasUnsavedChanges={hasUnsavedChanges}
+                    hasPendingField={hasPendingField}
+                  />
+                );
+              })}
+            </SortableContext>
+          </div>
 
-          return (
-            <div key={match.id} style={{ marginBottom: spacing.sm }}>
-              {editingSchedule ? (
-                // Edit Mode: EditableMatchCard with integrated SR badge
-                <EditableMatchCard
-                  {...cardProps}
-                  canDrag={false} // DnD handled separately via DndContext
-                  isLocked={isLocked}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                  referee={displayedRef ?? undefined}
-                  refereeOptions={showReferees ? editableRefereeOptions : []}
-                  onRefereeChange={onRefereeChange ? (matchId, value) => {
-                    // Convert null to null, string to number
-                    const numValue = value === null ? null :
-                      typeof value === 'string' ? parseInt(value) : value;
-                    onRefereeChange(matchId, numValue);
-                  } : undefined}
-                  onCardClick={() => handleCardClick(match.id)}
-                  onCircleClick={() => handleCircleClick(match.id)}
-                  isExpanded={isExpanded}
-                  expandContent={renderExpandContent(match)}
-                />
-              ) : (
-                // Normal Mode: Standard MatchCard
+          {/* Mobile Drag Overlay */}
+          <DragOverlay dropAnimation={null}>
+            {activeMatch && (
+              <div style={{
+                backgroundColor: colors.surface,
+                boxShadow: `0 8px 24px ${colors.surfaceDark}`,
+                borderRadius: borderRadius.md,
+                border: `3px solid ${colors.primary}`,
+                padding: spacing.md,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.sm,
+                minWidth: '280px',
+                maxWidth: '100%',
+                cursor: 'grabbing',
+              }}>
+                <span style={{ color: colors.primary, fontSize: fontSizes.lg }}>⋮⋮</span>
+                <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
+                  #{activeMatch.matchNumber}
+                </span>
+                <span style={{ color: colors.textSecondary, fontSize: fontSizes.sm }}>
+                  {activeMatch.time}
+                </span>
+                <span style={{ fontWeight: fontWeights.semibold, flex: 1, fontSize: fontSizes.sm }}>
+                  {activeMatch.homeTeam} <span style={{ color: colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                </span>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        /* Normal Mode: Standard MatchCards without DnD */
+        <div className="mobile-view">
+          {sortedMatches.map((match) => {
+            const status = getMatchStatus(match);
+            const isExpanded = expandedMatchId === match.id;
+
+            const cardProps = {
+              matchId: match.id,
+              matchNumber: match.matchNumber,
+              scheduledTime: match.time,
+              field: match.field,
+              group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+              homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
+              awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
+              homeScore: match.scoreA ?? 0,
+              awayScore: match.scoreB ?? 0,
+              status: status,
+              progress: 0,
+            };
+
+            return (
+              <div key={match.id} style={{ marginBottom: spacing.sm }}>
                 <MatchCard
                   {...cardProps}
                   onCardClick={() => handleCardClick(match.id)}
@@ -864,40 +1032,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
                 />
-              )}
-
-              {/* Edit mode: Field selector (shown below card) */}
-              {editingSchedule && showFields && onFieldChange && (
-                <div style={{
-                  display: 'flex',
-                  gap: spacing.sm,
-                  marginTop: spacing.xs,
-                  padding: `${spacing.xs} ${spacing.sm}`,
-                  backgroundColor: colors.surfaceLight,
-                  borderRadius: borderRadius.sm,
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
-                    <select
-                      value={displayedField || 1}
-                      onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                      style={{
-                        ...mobileSelectStyle,
-                        width: '100%',
-                        border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-                      }}
-                    >
-                      {fieldOptions.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <style>{`
         /* Hide mobile view by default */
