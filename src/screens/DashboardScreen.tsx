@@ -361,7 +361,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         tournament={tournament}
                         categoryLabel="Bevorstehend"
                         onClick={() => onTournamentClick(tournament)}
-                        onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
+                        onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
                       />
                     ))}
                   </div>
@@ -384,7 +384,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         tournament={tournament}
                         categoryLabel="Entwurf"
                         onClick={() => onTournamentClick(tournament)}
-                        onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
+                        onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
                       />
                     ))}
                   </div>
@@ -457,7 +457,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                           tournament={tournament}
                           categoryLabel={`Archiviert ${year}`}
                           onClick={() => onTournamentClick(tournament)}
-                          onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : undefined}
+                          onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : undefined}
                         />
                       ))}
                     </div>

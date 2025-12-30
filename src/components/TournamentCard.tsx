@@ -7,14 +7,16 @@
  * - Ort
  * - Altersklasse
  * - Modus (Jeder gegen Jeden / Gruppen + Finale)
+ * - Action menu (dropdown on desktop, bottom sheet on mobile)
  */
 
 import { CSSProperties } from 'react';
 import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
-import { Card, Icons } from './ui';
+import { Card } from './ui';
 import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../design-tokens';
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
+import { TournamentActionMenu } from './TournamentActionMenu';
 
 /**
  * Get display name for tournament system
@@ -51,11 +53,19 @@ function formatPlacementLogic(placementLogic: PlacementCriterion[]): string {
   return active.map(p => getPlacementAbbreviation(p.id)).join(' > ');
 }
 
+/** Map categoryLabel to TournamentActionMenu category */
+type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
+
 interface TournamentCardProps {
   tournament: Tournament;
   onClick?: () => void;
   categoryLabel?: string; // Optional: "Läuft", "Bevorstehend", etc.
-  onDelete?: () => void; // Optional: Delete callback
+  /** @deprecated Use onSoftDelete instead */
+  onDelete?: () => void;
+  /** Soft delete callback (moves to trash) */
+  onSoftDelete?: () => void;
+  /** Share callback */
+  onShare?: () => void;
 }
 
 export const TournamentCard: React.FC<TournamentCardProps> = ({
@@ -63,7 +73,28 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   onClick,
   categoryLabel,
   onDelete,
+  onSoftDelete,
+  onShare,
 }) => {
+  // Map categoryLabel to TournamentCategory
+  const getCategory = (): TournamentCategory => {
+    if (tournament.status === 'draft') {return 'draft';}
+    switch (categoryLabel) {
+      case 'Läuft':
+        return 'running';
+      case 'Bevorstehend':
+        return 'upcoming';
+      case 'Beendet':
+        return 'finished';
+      default:
+        // Check for archived label pattern
+        if (categoryLabel?.startsWith('Archiviert')) {return 'finished';}
+        return 'draft';
+    }
+  };
+
+  const category = getCategory();
+  const deleteHandler = onSoftDelete ?? onDelete;
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
@@ -165,25 +196,10 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
     fontWeight: fontWeights.medium,
   };
 
-  const deleteButtonStyle: CSSProperties = {
-    marginTop: spacing.md,
-    width: '100%',
-    background: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.sm,
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    transition: 'all 0.2s ease',
-  };
-
   const badgeColors = getBadgeColor();
+
+  // Check if we need to show action menu (has any action handlers)
+  const hasActions = onClick !== undefined || onShare !== undefined || deleteHandler !== undefined;
 
   const externalBadgeStyle: CSSProperties = {
     padding: `${spacing.xs} ${spacing.sm}`,
@@ -235,6 +251,19 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             >
               {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
             </span>
+          )}
+          {/* Action Menu - Only show if actions available */}
+          {hasActions && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <TournamentActionMenu
+                tournament={tournament}
+                category={category}
+                onOpen={onClick}
+                onShare={onShare}
+                onDelete={deleteHandler}
+                testId={`tournament-${tournament.id}-actions`}
+              />
+            </div>
           )}
         </div>
 
@@ -300,31 +329,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
             </div>
           )}
         </dl>
-
-        {/* Delete Button - Only show if onDelete is provided - At the bottom */}
-        {onDelete && (
-          <button
-            style={deleteButtonStyle}
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent card click
-              onDelete();
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 82, 82, 0.1)';
-              e.currentTarget.style.borderColor = colors.error;
-              e.currentTarget.style.color = colors.error;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = colors.border;
-              e.currentTarget.style.color = colors.textSecondary;
-            }}
-            aria-label={`Turnier "${tournament.title}" löschen`}
-          >
-            <Icons.Trash size={16} />
-            <span>Löschen</span>
-          </button>
-        )}
       </article>
     </Card>
   );

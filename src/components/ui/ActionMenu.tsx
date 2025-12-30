@@ -1,0 +1,228 @@
+/**
+ * ActionMenu Component
+ *
+ * Desktop dropdown menu for contextual actions.
+ * Opens on click of trigger button (usually "..." icon).
+ *
+ * Features:
+ * - Positioned relative to trigger
+ * - Closes on click outside
+ * - Keyboard navigation (Escape to close)
+ * - Animated appearance
+ */
+
+import { CSSProperties, useEffect, useRef, useState, useCallback } from 'react';
+import { colors, spacing, borderRadius, fontSizes, fontWeights, shadows } from '../../design-tokens';
+import { Icons } from './Icons';
+
+export interface ActionMenuItem {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  variant?: 'default' | 'danger';
+  disabled?: boolean;
+}
+
+interface ActionMenuProps {
+  items: ActionMenuItem[];
+  /** Test ID for E2E tests */
+  testId?: string;
+}
+
+export const ActionMenu: React.FC<ActionMenuProps> = ({
+  items,
+  testId,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Close on Escape key
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, handleKeyDown]);
+
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
+  const handleItemClick = (item: ActionMenuItem) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!item.disabled) {
+      item.onClick();
+      setIsOpen(false);
+    }
+  };
+
+  const containerStyle: CSSProperties = {
+    position: 'relative',
+    display: 'inline-block',
+  };
+
+  const triggerStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '36px',
+    height: '36px',
+    border: 'none',
+    background: 'transparent',
+    borderRadius: borderRadius.md,
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    transition: 'all 0.2s ease',
+  };
+
+  const menuStyle: CSSProperties = {
+    position: 'absolute',
+    top: 'calc(100% + 4px)',
+    right: 0,
+    minWidth: '180px',
+    background: colors.surface,
+    border: `1px solid ${colors.border}`,
+    borderRadius: borderRadius.md,
+    boxShadow: shadows.lg,
+    zIndex: 1000,
+    overflow: 'hidden',
+    animation: 'menuFadeIn 0.15s ease-out',
+  };
+
+  const getItemStyle = (item: ActionMenuItem, isHovered: boolean): CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: spacing.sm,
+    width: '100%',
+    padding: `${spacing.sm} ${spacing.md}`,
+    border: 'none',
+    background: isHovered ? colors.surfaceHover : 'transparent',
+    cursor: item.disabled ? 'not-allowed' : 'pointer',
+    color: item.disabled
+      ? colors.textMuted
+      : item.variant === 'danger'
+        ? colors.error
+        : colors.textPrimary,
+    fontSize: fontSizes.sm,
+    fontWeight: fontWeights.medium,
+    textAlign: 'left',
+    opacity: item.disabled ? 0.5 : 1,
+    transition: 'background 0.15s ease',
+  });
+
+  return (
+    <div style={containerStyle}>
+      <button
+        ref={triggerRef}
+        style={triggerStyle}
+        onClick={handleTriggerClick}
+        aria-label="Aktionen"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        data-testid={testId ? `${testId}-trigger` : undefined}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = colors.surfaceHover;
+          e.currentTarget.style.color = colors.textPrimary;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = colors.textSecondary;
+        }}
+      >
+        <Icons.MoreVertical size={20} />
+      </button>
+
+      {isOpen && (
+        <div
+          ref={menuRef}
+          style={menuStyle}
+          role="menu"
+          aria-label="Aktionen"
+          data-testid={testId ? `${testId}-menu` : undefined}
+        >
+          {items.map((item) => (
+            <ActionMenuItemButton
+              key={item.id}
+              item={item}
+              onClick={handleItemClick(item)}
+              getItemStyle={getItemStyle}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Animation keyframes */}
+      {isOpen && (
+        <style>{`
+          @keyframes menuFadeIn {
+            from {
+              opacity: 0;
+              transform: translateY(-8px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
+      )}
+    </div>
+  );
+};
+
+// Separate component for menu items to handle hover state
+const ActionMenuItemButton: React.FC<{
+  item: ActionMenuItem;
+  onClick: (e: React.MouseEvent) => void;
+  getItemStyle: (item: ActionMenuItem, isHovered: boolean) => CSSProperties;
+}> = ({ item, onClick, getItemStyle }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <button
+      style={getItemStyle(item, isHovered)}
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      role="menuitem"
+      disabled={item.disabled}
+      data-testid={`action-menu-item-${item.id}`}
+    >
+      {item.icon}
+      <span>{item.label}</span>
+    </button>
+  );
+};

@@ -22,6 +22,10 @@ export { BottomNavigation } from './BottomNavigation';
 export type { BottomNavTab } from './BottomNavigation';
 export { BottomSheet, BottomSheetItem } from './BottomSheet';
 
+// Action Menu (Desktop Dropdown)
+export { ActionMenu } from './ActionMenu';
+export type { ActionMenuItem } from './ActionMenu';
+
 // Progress Indicators
 export { ProgressRing, ScoreContent, VSContent } from './ProgressRing';
 export type { ProgressRingProps, ScoreContentProps } from './ProgressRing';

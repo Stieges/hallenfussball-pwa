@@ -226,4 +226,18 @@ export const Icons = {
       <path d="M2 4h16M5 10h10M8 16h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
+
+  MoreVertical: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="4" r="2" fill={color} />
+      <circle cx="10" cy="10" r="2" fill={color} />
+      <circle cx="10" cy="16" r="2" fill={color} />
+    </svg>
+  ),
+
+  ExternalLink: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M15 11v5a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2h5M12 3h5v5M10 10l8-8" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 };
