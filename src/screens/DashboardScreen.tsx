@@ -19,6 +19,7 @@ import {
   getActiveTournaments,
   getTrashedTournaments,
   getRemainingDays,
+  getExtendedCategories,
 } from '../utils/tournamentCategories';
 import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
@@ -66,6 +67,19 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     () => categorizeTournaments(activeTournaments),
     [activeTournaments]
   );
+
+  // Extended categories with year grouping for archive
+  const extendedCategories = useMemo(
+    () => getExtendedCategories(activeTournaments),
+    [activeTournaments]
+  );
+
+  // Get sorted years (most recent first)
+  const sortedYears = useMemo(() => {
+    return Object.keys(extendedCategories.archivedByYear)
+      .map(Number)
+      .sort((a, b) => b - a);
+  }, [extendedCategories.archivedByYear]);
 
   // Count tournaments expiring within 7 days
   const expiringSoonCount = useMemo(() => {
@@ -304,32 +318,71 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       )}
 
       {activeTab === 'archiv' && (
-        <div style={sectionStyle}>
-          <h2 style={sectionHeaderStyle}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>
-              <Icons.Archive size={22} color={colors.statusFinished} />
+        <>
+          {/* Archive Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+            marginBottom: spacing.md,
+          }}>
+            <Icons.Archive size={24} color={colors.statusFinished} />
+            <h2 style={{
+              fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
+              fontWeight: fontWeights.bold,
+              color: colors.textPrimary,
+              margin: 0,
+            }}>
+              Archiv
+            </h2>
+            <span style={{
+              fontSize: fontSizes.sm,
+              color: colors.textSecondary,
+            }}>
+              ({categorized.finished.length} Turniere)
             </span>
-            Archiv
-            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
-              ({categorized.finished.length})
-            </span>
-          </h2>
+          </div>
+
           {categorized.finished.length === 0 ? (
-            <div style={emptyStateStyle}>Keine archivierten Turniere</div>
-          ) : (
-            <div style={gridStyle}>
-              {categorized.finished.map((tournament) => (
-                <TournamentCard
-                  key={tournament.id}
-                  tournament={tournament}
-                  categoryLabel="Archiviert"
-                  onClick={() => onTournamentClick(tournament)}
-                  onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : undefined}
-                />
-              ))}
+            <div style={emptyStateStyle}>
+              <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
+                <Icons.Archive size={40} color={colors.textSecondary} />
+              </div>
+              <p>Keine archivierten Turniere</p>
+              <p style={{ fontSize: fontSizes.sm, marginTop: spacing.xs }}>
+                Abgeschlossene Turniere erscheinen hier automatisch.
+              </p>
             </div>
+          ) : (
+            <>
+              {sortedYears.map((year, index) => {
+                const tournamentsForYear = extendedCategories.archivedByYear[year];
+                return (
+                  <CollapsibleSection
+                    key={year}
+                    title={`${year}`}
+                    icon={<Icons.Calendar size={18} color={colors.textSecondary} />}
+                    badge={tournamentsForYear.length}
+                    defaultOpen={index === 0} // Most recent year expanded
+                    testId={`archive-year-${year}`}
+                  >
+                    <div style={gridStyle}>
+                      {tournamentsForYear.map((tournament) => (
+                        <TournamentCard
+                          key={tournament.id}
+                          tournament={tournament}
+                          categoryLabel={`Archiviert ${year}`}
+                          onClick={() => onTournamentClick(tournament)}
+                          onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : undefined}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleSection>
+                );
+              })}
+            </>
           )}
-        </div>
+        </>
       )}
 
       {activeTab === 'papierkorb' && (
