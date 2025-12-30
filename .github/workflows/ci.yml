@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ['iPhone 13 Safari', 'Pixel 5', 'Desktop Chrome']
+        project: ['iPhone 13', 'Pixel 5', 'Desktop Chrome']
 
     steps:
       - name: Checkout
