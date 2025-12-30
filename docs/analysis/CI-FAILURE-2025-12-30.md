@@ -72,11 +72,11 @@ matrix:
 
 ## Handlungsempfehlungen
 
-### 1. Pre-Commit Check für CI/Config Sync (HOCH)
+### 1. Pre-Commit Check für CI/Config Sync (HOCH) ✅ ERLEDIGT
 
 **Problem:** Änderungen an `playwright.config.ts` vergessen oft die CI-Datei.
 
-**Lösung:** Husky Pre-Commit Hook hinzufügen:
+**Lösung:** Husky Pre-Commit Hook hinzugefügt (Commit `df7bf91`):
 
 ```bash
 # .husky/pre-commit (erweitern)
@@ -85,6 +85,22 @@ if git diff --cached --name-only | grep -q "playwright.config.ts"; then
   grep -E "project:" .github/workflows/ci.yml
   echo "---"
   grep -E "name:" playwright.config.ts | grep "'"
+fi
+```
+
+### 1b. Pre-Push Check für Uncommitted Changes (HOCH) ✅ ERLEDIGT
+
+**Problem:** Lokale Änderungen an CI-Dateien werden nicht gepusht, CI verwendet alten Stand.
+
+**Lösung:** Pre-Push Hook hinzugefügt (Commit `df7bf91`):
+
+```bash
+# .husky/pre-push
+UNCOMMITTED_CI_FILES=$(git diff --name-only | grep -E "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/ci\.yml" || true)
+
+if [ -n "$UNCOMMITTED_CI_FILES" ]; then
+  echo "🚨 WARNUNG: Uncommitted CI-relevante Änderungen!"
+  # Zeigt betroffene Dateien und fragt nach Bestätigung
 fi
 ```
 
@@ -137,18 +153,21 @@ In `.claude/CLAUDE.md` oder `TESTING.md` hinzufügen:
 
 ## Präventions-Checkliste
 
-| # | Maßnahme | Aufwand | Impact |
-|---|----------|---------|--------|
-| 1 | Pre-Commit Warning für playwright.config.ts | 15 min | Hoch |
-| 2 | `act` für lokale CI-Tests | 30 min | Mittel |
-| 3 | Docs Update (Workflow-Sync Hinweis) | 10 min | Mittel |
-| 4 | CI ohne explizite Projektnamen | 1h | Niedrig (weniger Kontrolle) |
+| # | Maßnahme | Aufwand | Impact | Status |
+|---|----------|---------|--------|--------|
+| 1 | Pre-Commit Warning für playwright/vite Config | 15 min | Hoch | ✅ |
+| 1b | Pre-Push Warning für uncommitted Changes | 10 min | Hoch | ✅ |
+| 2 | `act` für lokale CI-Tests | 30 min | Mittel | Optional |
+| 3 | Docs Update (Workflow-Sync Hinweis) | 10 min | Mittel | ✅ (diese Datei) |
+| 4 | CI ohne explizite Projektnamen | 1h | Niedrig | Nicht empfohlen |
 
 ---
 
 ## Nächste Schritte
 
 1. ✅ Fix committed (ci.yml aktualisiert)
-2. [ ] Push und CI-Run verifizieren
-3. [ ] Pre-Commit Hook hinzufügen (optional)
-4. [ ] Docs aktualisieren (optional)
+2. ✅ Push und CI-Run verifiziert (Run #20602553307 - alle Jobs grün)
+3. ✅ Pre-Commit Hook hinzugefügt (Commit `df7bf91`)
+4. ✅ Pre-Push Hook hinzugefügt (warnt bei uncommitted CI-Änderungen)
+5. [ ] Port-Sync automatisieren (optional, MITTEL)
+6. [ ] `act` für lokale CI-Tests installieren (optional, MITTEL)
