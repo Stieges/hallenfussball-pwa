@@ -341,8 +341,15 @@ export function getExtendedCategories(tournaments: Tournament[], now: Date = new
 
 /**
  * Calculate remaining days until permanent deletion
+ * Accepts a Tournament object or a deletedAt string
  */
-export function getRemainingDays(deletedAt: string): number {
+export function getRemainingDays(tournamentOrDeletedAt: Tournament | string): number | null {
+  const deletedAt = typeof tournamentOrDeletedAt === 'string'
+    ? tournamentOrDeletedAt
+    : tournamentOrDeletedAt.deletedAt;
+
+  if (!deletedAt) {return null;}
+
   const deletedDate = new Date(deletedAt);
   const expiryDate = new Date(deletedDate.getTime() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000);
   const now = new Date();

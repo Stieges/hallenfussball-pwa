@@ -132,6 +132,14 @@ export const Icons = {
     </svg>
   ),
 
+  Archive: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <rect x="2" y="3" width="16" height="4" rx="1" stroke={color} strokeWidth="2" />
+      <path d="M3 7v9a1 1 0 001 1h12a1 1 0 001-1V7" stroke={color} strokeWidth="2" />
+      <path d="M8 11h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
   // Bottom Navigation Icons
   List: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">

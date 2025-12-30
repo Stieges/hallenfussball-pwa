@@ -63,6 +63,7 @@ export const semanticColorsDark = {
   textPlaceholder: '#9DB2CC', // 4.7:1 on surface
   textDisabled: palette.neutral[600],
   textTertiary: palette.neutral[400],
+  textOnDark: '#ffffff', // For text on colored backgrounds
 
   // ---------------------------------------------------------------------------
   // Border Colors
@@ -123,6 +124,10 @@ export const semanticColorsDark = {
 
   statusExternal: '#9575CD',
   statusExternalBg: 'rgba(149, 117, 205, 0.15)',
+
+  // Warning/Trash status
+  statusWarning: palette.orange[500],
+  statusWarningBg: 'rgba(249, 115, 22, 0.15)',
 
   // ---------------------------------------------------------------------------
   // Live Cockpit Specific
