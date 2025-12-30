@@ -8,14 +8,15 @@
  * 4. Gespeicherte Turniere - draft status
  */
 
-import { Tournament, Match } from '../types/tournament';
+import { Tournament, Match, TRASH_RETENTION_DAYS } from '../types/tournament';
 
-export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft';
+export type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
 
 /**
  * Parse tournament date and time into a Date object
+ * Exported for use in other modules
  */
-function getTournamentDateTime(tournament: Tournament): Date | null {
+export function getTournamentDateTime(tournament: Tournament): Date | null {
   // Prefer new startDate/startTime fields
   if (tournament.startDate && tournament.startTime) {
     const dateTimeString = `${tournament.startDate}T${tournament.startTime}:00`;
@@ -169,9 +170,21 @@ function isTournamentFinished(tournament: Tournament, now: Date): boolean {
 }
 
 /**
+ * Check if tournament is in trash (soft-deleted)
+ */
+export function isTournamentTrashed(tournament: Tournament): boolean {
+  return !!tournament.deletedAt;
+}
+
+/**
  * Categorize a single tournament
  */
 export function categorizeTournament(tournament: Tournament, now: Date = new Date()): TournamentCategory {
+  // Trashed tournaments (soft-deleted)
+  if (isTournamentTrashed(tournament)) {
+    return 'trashed';
+  }
+
   // Draft tournaments
   if (tournament.status === 'draft') {
     return 'draft';
@@ -202,6 +215,15 @@ export interface CategorizedTournaments {
   upcoming: Tournament[];
   finished: Tournament[];
   draft: Tournament[];
+  trashed: Tournament[];
+}
+
+/**
+ * Extended categorization with archived tournaments grouped by year
+ */
+export interface ExtendedCategorizedTournaments extends CategorizedTournaments {
+  archivedByYear: Record<number, Tournament[]>;
+  finishable: Tournament[];
 }
 
 export function categorizeTournaments(tournaments: Tournament[], now: Date = new Date()): CategorizedTournaments {
@@ -210,6 +232,7 @@ export function categorizeTournaments(tournaments: Tournament[], now: Date = new
     upcoming: [],
     finished: [],
     draft: [],
+    trashed: [],
   };
 
   for (const tournament of tournaments) {
@@ -248,6 +271,13 @@ export function categorizeTournaments(tournaments: Tournament[], now: Date = new
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
   });
 
+  // Trashed: by deletedAt (most recently deleted first)
+  categorized.trashed.sort((a, b) => {
+    const dateA = a.deletedAt ? new Date(a.deletedAt) : new Date(0);
+    const dateB = b.deletedAt ? new Date(b.deletedAt) : new Date(0);
+    return dateB.getTime() - dateA.getTime();
+  });
+
   return categorized;
 }
 
@@ -269,4 +299,86 @@ export function formatTournamentDate(tournament: Tournament): string {
   const minutes = date.getMinutes().toString().padStart(2, '0');
 
   return `${day}.${month}.${year}, ${hours}:${minutes} Uhr`;
+}
+
+/**
+ * Get extended categorization with archived by year and finishable tournaments
+ */
+export function getExtendedCategories(tournaments: Tournament[], now: Date = new Date()): ExtendedCategorizedTournaments {
+  const base = categorizeTournaments(tournaments, now);
+
+  // Group finished tournaments by year
+  const archivedByYear: Record<number, Tournament[]> = {};
+  for (const tournament of base.finished) {
+    const date = getTournamentDateTime(tournament);
+    const year = date ? date.getFullYear() : new Date().getFullYear();
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Initialize array for new year key
+    if (!archivedByYear[year]) {
+      archivedByYear[year] = [];
+    }
+    archivedByYear[year].push(tournament);
+  }
+
+  // Find finishable tournaments (100% matches complete but not archived)
+  const finishable = [...base.running, ...base.upcoming].filter(tournament => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
+    if (!tournament.matches || tournament.matches.length === 0) {return false;}
+    if (tournament.manuallyCompleted) {return false;}
+
+    const allMatchesComplete = tournament.matches.every(
+      m => typeof m.scoreA === 'number' && typeof m.scoreB === 'number'
+    );
+
+    return allMatchesComplete;
+  });
+
+  return {
+    ...base,
+    archivedByYear,
+    finishable,
+  };
+}
+
+/**
+ * Calculate remaining days until permanent deletion
+ */
+export function getRemainingDays(deletedAt: string): number {
+  const deletedDate = new Date(deletedAt);
+  const expiryDate = new Date(deletedDate.getTime() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const remainingMs = expiryDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+}
+
+/**
+ * Get countdown style based on remaining days
+ */
+export function getCountdownStyle(days: number): 'normal' | 'warning' | 'danger' {
+  if (days <= 3) {return 'danger';}
+  if (days <= 7) {return 'warning';}
+  return 'normal';
+}
+
+/**
+ * Filter only active (non-trashed) tournaments
+ */
+export function getActiveTournaments(tournaments: Tournament[]): Tournament[] {
+  return tournaments.filter(t => !t.deletedAt);
+}
+
+/**
+ * Filter only trashed tournaments
+ */
+export function getTrashedTournaments(tournaments: Tournament[]): Tournament[] {
+  return tournaments.filter(t => !!t.deletedAt);
+}
+
+/**
+ * Get tournaments that are expired (past retention period)
+ */
+export function getExpiredTrashedTournaments(tournaments: Tournament[]): Tournament[] {
+  return tournaments.filter(t => {
+    if (!t.deletedAt) {return false;}
+    return getRemainingDays(t.deletedAt) === 0;
+  });
 }

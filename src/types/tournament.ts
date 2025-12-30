@@ -9,6 +9,36 @@ export type RoundLogic = 'fixed' | 'promotion';
 export type ResultMode = 'goals' | 'winLossOnly';
 export type TournamentStatus = 'draft' | 'published';
 
+/**
+ * Dashboard-Status für erweiterte Kategorisierung
+ * Unterscheidet zwischen verschiedenen Turnier-Zuständen für Dashboard-Tabs
+ */
+export type DashboardTournamentStatus = 'draft' | 'upcoming' | 'running' | 'finished' | 'cancelled';
+
+/**
+ * Turnier-System-Typ für Filterung und Anzeige
+ */
+export type TournamentSystemType = 'groups' | 'knockout' | 'groups_knockout' | 'league';
+
+/**
+ * Stats-Snapshot für archivierte Turniere (Performance-Optimierung)
+ * Wird beim Abschließen eines Turniers erstellt
+ */
+export interface TournamentStatsSnapshot {
+  teamCount: number;
+  totalMatches: number;
+  completedMatches: number;
+  winnerName?: string;
+  winnerTeamId?: string;
+  secondPlaceName?: string;
+  thirdPlaceName?: string;
+  totalGoals?: number;
+  createdAt: string;
+}
+
+/** Retention period for soft-deleted tournaments in days */
+export const TRASH_RETENTION_DAYS = 30;
+
 export interface Team {
   id: string;
   name: string;
@@ -327,6 +357,28 @@ export interface Tournament {
   // Manual completion override
   manuallyCompleted?: boolean; // Turnier manuell als beendet markiert (z.B. Abbruch)
   completedAt?: string;        // ISO timestamp wann Turnier beendet wurde
+
+  // Dashboard Soft Delete (Papierkorb)
+  /** ISO Date when moved to trash. Undefined = not deleted */
+  deletedAt?: string;
+
+  // Dashboard Status (derived, für erweiterte Kategorisierung)
+  /** Detaillierter Status für Dashboard-Anzeige */
+  dashboardStatus?: DashboardTournamentStatus;
+
+  // Turnier-System für Filterung
+  /** Art des Turniersystems (groups, knockout, etc.) */
+  tournamentSystem?: TournamentSystemType;
+
+  // Stats Snapshot für archivierte Turniere
+  /** Gespeicherte Statistiken beim Abschluss für Performance */
+  statsSnapshot?: TournamentStatsSnapshot;
+
+  // Abbruch-Grund
+  /** Grund für Turnierabbruch (wenn cancelled) */
+  cancelledReason?: string;
+  /** ISO timestamp wann Turnier abgebrochen wurde */
+  cancelledAt?: string;
 }
 
 export interface Standing {
