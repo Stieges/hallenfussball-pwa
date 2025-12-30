@@ -66,6 +66,8 @@ interface TournamentCardProps {
   onSoftDelete?: () => void;
   /** Share callback */
   onShare?: () => void;
+  /** Test ID for E2E tests */
+  testId?: string;
 }
 
 export const TournamentCard: React.FC<TournamentCardProps> = ({
@@ -75,6 +77,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   onDelete,
   onSoftDelete,
   onShare,
+  testId,
 }) => {
   // Map categoryLabel to TournamentCategory
   const getCategory = (): TournamentCategory => {
@@ -225,6 +228,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           Object.assign(e.currentTarget.style, cardStyle);
         }
       }}
+      data-testid={testId ?? `tournament-card-${tournament.id}`}
     >
       <article
         role={onClick ? 'button' : undefined}

@@ -145,7 +145,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   });
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-testid="search-filter-bar">
       {/* Search Input */}
       <div style={searchContainerStyle}>
         <span style={searchIconStyle}>
@@ -163,12 +163,14 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           onBlur={(e) => {
             e.target.style.borderColor = colors.border;
           }}
+          data-testid="search-input"
         />
         <button
           style={clearButtonStyle}
           onClick={() => onSearchChange('')}
           aria-label="Suche leeren"
           type="button"
+          data-testid="search-clear"
         >
           <Icons.X size={16} />
         </button>
@@ -196,6 +198,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
               type="button"
               aria-pressed={isActive}
               aria-label={`Filter: ${chip.label} ${isActive ? '(aktiv)' : ''}`}
+              data-testid={`filter-chip-${chip.id}`}
             >
               {chip.icon}
               <span>{chip.label}</span>

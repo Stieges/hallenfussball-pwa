@@ -7,6 +7,8 @@ interface CardProps {
   onClick?: () => void;
   onMouseEnter?: (e: React.MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  /** Test ID for E2E tests */
+  'data-testid'?: string;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -16,6 +18,7 @@ export const Card: React.FC<CardProps> = ({
   onClick,
   onMouseEnter,
   onMouseLeave,
+  'data-testid': testId,
 }) => {
   const cardStyles: CSSProperties = {
     background: gradients.card,
@@ -34,6 +37,7 @@ export const Card: React.FC<CardProps> = ({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      data-testid={testId}
     >
       {children}
     </div>
