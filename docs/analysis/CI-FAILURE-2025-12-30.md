@@ -13,7 +13,7 @@
 
 ## Root Cause Analyse
 
-### Was passiert ist
+### Problem 1: Projekt-Namen Mismatch (BEHOBEN)
 
 1. Commit `9ca0e94` (feat(testing): Add QA testing system...) änderte `playwright.config.ts`
 2. Die Projekt-Namen wurden vereinfacht:
@@ -22,6 +22,21 @@
 3. **Die CI-Workflow-Datei wurde NICHT aktualisiert**
 4. CI versuchte `npx playwright test --project="iPhone 13 Safari"` auszuführen
 5. Playwright fand das Projekt nicht → Timeout beim WebServer-Start
+
+**Fix:** ci.yml aktualisiert (Commit `6063992`)
+
+### Problem 2: Port-Mismatch (BEHOBEN)
+
+Nach dem ersten Fix trat weiterhin ein Timeout auf:
+
+| Config | Port |
+|--------|------|
+| `vite.config.ts` | `3002` |
+| `playwright.config.ts` | `5173` (default) |
+
+Playwright wartete auf Port 5173, aber Vite startete auf Port 3002.
+
+**Fix:** playwright.config.ts auf Port 3002 geändert
 
 ### Diff der Änderung
 
