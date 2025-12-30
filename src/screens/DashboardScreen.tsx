@@ -13,6 +13,7 @@ import { TournamentCard } from '../components/TournamentCard';
 import { TrashTournamentCard } from '../components/TrashTournamentCard';
 import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
+import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
 import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
 import {
   categorizeTournaments,
@@ -62,6 +63,15 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<FilterChip[]>([]);
   const isMobile = useIsMobile();
+
+  // Empty Trash Confirmation Dialog
+  const emptyTrashDialog = useConfirmDialog({
+    title: 'Papierkorb leeren?',
+    message: 'Alle Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+    variant: 'danger',
+    confirmText: 'Papierkorb leeren',
+    cancelText: 'Abbrechen',
+  });
 
   // Filter tournaments based on active tab
   const activeTournaments = useMemo(() => getActiveTournaments(tournaments), [tournaments]);
@@ -530,11 +540,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <Button
                     variant="secondary"
                     onClick={() => {
-                      // This will be handled by a confirm dialog in Phase 8
-                      // For now, we just show the button
-                      if (window.confirm(`Alle ${trashedTournaments.length} Turniere endgültig löschen?`)) {
-                        trashedTournaments.forEach(t => onPermanentDelete(t.id, t.title));
-                      }
+                      void (async () => {
+                        const confirmed = await emptyTrashDialog.confirm({
+                          message: `Alle ${trashedTournaments.length} Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+                        });
+                        if (confirmed) {
+                          trashedTournaments.forEach(t => onPermanentDelete(t.id, t.title));
+                        }
+                      })();
                     }}
                     icon={<Icons.Trash size={16} />}
                     style={{
@@ -570,6 +583,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           expiringSoonCount={expiringSoonCount}
         />
       )}
+
+      {/* Confirm Dialog for Empty Trash */}
+      <ConfirmDialog {...emptyTrashDialog.dialogProps} />
     </div>
   );
 };

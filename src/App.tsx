@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { colors, fontFamilies } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
+import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
 import { AuthProvider } from './features/auth/context/AuthContext';
@@ -68,7 +69,81 @@ type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'regist
 function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
-  const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
+  const {
+    tournaments,
+    loading,
+    saveTournament,
+    deleteTournament: _deleteTournament, // Legacy - use softDeleteTournament instead
+    softDeleteTournament,
+    restoreTournament,
+    permanentDeleteTournament,
+  } = useTournaments();
+
+  // ============================================================================
+  // CONFIRM DIALOG HOOKS (must be called unconditionally before any returns)
+  // ============================================================================
+
+  // Soft Delete Confirmation (move to trash)
+  const softDeleteDialog = useConfirmDialog({
+    title: 'Turnier löschen?',
+    message: 'Das Turnier wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.',
+    variant: 'warning',
+    confirmText: 'In Papierkorb',
+    cancelText: 'Abbrechen',
+  });
+
+  // Permanent Delete Confirmation
+  const permanentDeleteDialog = useConfirmDialog({
+    title: 'Endgültig löschen?',
+    message: 'Das Turnier wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+    variant: 'danger',
+    confirmText: 'Endgültig löschen',
+    cancelText: 'Abbrechen',
+  });
+
+  // ============================================================================
+  // SOFT DELETE HANDLERS (with Confirm Dialogs)
+  // ============================================================================
+
+  const handleSoftDelete = useCallback(async (id: string, title: string) => {
+    const confirmed = await softDeleteDialog.confirm({
+      message: `Das Turnier "${title}" wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.`,
+    });
+
+    if (confirmed) {
+      try {
+        await softDeleteTournament(id);
+      } catch (error) {
+        console.error('[App] Failed to soft delete tournament:', error);
+        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+      }
+    }
+  }, [softDeleteDialog, softDeleteTournament, showError]);
+
+  const handleRestore = useCallback(async (id: string, title: string) => {
+    try {
+      await restoreTournament(id);
+      // Optionally show success toast
+    } catch (error) {
+      console.error('[App] Failed to restore tournament:', error);
+      showError(`Fehler beim Wiederherstellen von "${title}". Bitte versuche es erneut.`);
+    }
+  }, [restoreTournament, showError]);
+
+  const handlePermanentDelete = useCallback(async (id: string, title: string) => {
+    const confirmed = await permanentDeleteDialog.confirm({
+      message: `Das Turnier "${title}" wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+    });
+
+    if (confirmed) {
+      try {
+        await permanentDeleteTournament(id);
+      } catch (error) {
+        console.error('[App] Failed to permanently delete tournament:', error);
+        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+      }
+    }
+  }, [permanentDeleteDialog, permanentDeleteTournament, showError]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
@@ -126,19 +201,9 @@ function AppContent() {
     }
   };
 
+  // Legacy delete handler (for backwards compatibility)
   const handleDeleteTournament = async (id: string, title: string) => {
-    const confirmed = window.confirm(
-      `Möchtest du das Turnier "${title}" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`
-    );
-
-    if (confirmed) {
-      try {
-        await deleteTournament(id);
-      } catch (error) {
-        console.error('[App] Failed to delete tournament:', error);
-        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
-      }
-    }
+    await handleSoftDelete(id, title);
   };
 
   const handleImportTournament = async (tournament: Tournament) => {
@@ -266,6 +331,9 @@ function AppContent() {
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
             onImportTournament={(tournament) => void handleImportTournament(tournament)}
+            onSoftDelete={(id, title) => void handleSoftDelete(id, title)}
+            onRestore={(id, title) => void handleRestore(id, title)}
+            onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
             onNavigateToProfile={() => setScreen('profile')}
@@ -323,6 +391,10 @@ function AppContent() {
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
         )}
       </Suspense>
+
+      {/* Confirm Dialogs */}
+      <ConfirmDialog {...softDeleteDialog.dialogProps} />
+      <ConfirmDialog {...permanentDeleteDialog.dialogProps} />
     </div>
   );
 }
