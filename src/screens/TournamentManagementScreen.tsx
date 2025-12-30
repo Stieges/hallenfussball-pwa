@@ -25,10 +25,17 @@ import { MonitorTab } from '../features/tournament-management/MonitorTab';
 import { SettingsTab } from '../features/tournament-management/SettingsTab';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
 
+// Auth
+import { AuthSection } from '../components/layout/AuthSection';
+
 interface TournamentManagementScreenProps {
   tournamentId: string;
   onBack?: () => void;
   onEditInWizard?: (tournament: Tournament, targetStep?: number) => void;
+  // Auth Navigation
+  onNavigateToLogin: () => void;
+  onNavigateToRegister: () => void;
+  onNavigateToProfile: () => void;
 }
 
 type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'teams' | 'settings';
@@ -37,6 +44,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   tournamentId,
   onBack,
   onEditInWizard,
+  onNavigateToLogin,
+  onNavigateToRegister,
+  onNavigateToProfile,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('schedule');
 
@@ -148,13 +158,17 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     borderBottom: `1px solid ${colors.border}`,
     background: colors.surface,
     position: 'relative',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  };
+
+  const headerContentStyle: CSSProperties = {
+    flex: 1,
+    minWidth: 0, // For text truncation
   };
 
   const backButtonStyle: CSSProperties = {
-    position: 'absolute',
-    left: spacing.lg,
-    top: '50%',
-    transform: 'translateY(-50%)',
     padding: spacing.sm,
     background: 'transparent',
     border: `1px solid ${colors.border}`,
@@ -168,6 +182,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     width: '36px',
     height: '36px',
     transition: 'all 0.2s ease',
+    flexShrink: 0,
+    marginRight: spacing.md,
   };
 
   const titleStyle: CSSProperties = {
@@ -175,13 +191,17 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     fontWeight: fontWeights.bold,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
-    marginLeft: onBack ? '50px' : '0',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   };
 
   const subtitleStyle: CSSProperties = {
     fontSize: fontSizes.md,
     color: colors.textSecondary,
-    marginLeft: onBack ? '50px' : '0',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   };
 
   const tabBarStyle: CSSProperties = {
@@ -206,6 +226,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     <div style={containerStyle}>
       {/* HEADER */}
       <header style={headerStyle}>
+        {/* Left: Back Button */}
         {onBack && (
           <button
             onClick={onBack}
@@ -215,10 +236,21 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             ←
           </button>
         )}
-        <div style={titleStyle}>{tournament.title}</div>
-        <div style={subtitleStyle}>
-          {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
+
+        {/* Center: Title & Subtitle */}
+        <div style={headerContentStyle}>
+          <div style={titleStyle}>{tournament.title}</div>
+          <div style={subtitleStyle}>
+            {tournament.ageClass} · {formatDateGerman(tournament.date)} · {getLocationName(tournament)}
+          </div>
         </div>
+
+        {/* Right: Auth Section */}
+        <AuthSection
+          onNavigateToLogin={onNavigateToLogin}
+          onNavigateToRegister={onNavigateToRegister}
+          onNavigateToProfile={onNavigateToProfile}
+        />
       </header>
 
       {/* TAB BAR - Desktop only */}

@@ -11,6 +11,7 @@ import { useTournamentWizard } from '../hooks/useTournamentWizard';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { borderRadius, colors, fontFamilies, fontSizes, fontSizesMd3, fontWeights, gradients, shadows, spacing } from '../design-tokens';
 import { useToast } from '../components/ui/Toast';
+import { AuthSection } from '../components/layout/AuthSection';
 
 // Lazy load step components for better performance
 const Step1_SportAndType = lazy(() =>
@@ -60,6 +61,10 @@ interface TournamentCreationScreenProps {
   onSave?: (tournament: Tournament) => void | Promise<void>;
   existingTournament?: Tournament;
   quickEditMode?: boolean; // Schnellbearbeitung: Zeigt prominenten Speichern-Button
+  // Auth Navigation
+  onNavigateToLogin: () => void;
+  onNavigateToRegister: () => void;
+  onNavigateToProfile: () => void;
 }
 
 export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> = ({
@@ -67,6 +72,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   onSave,
   existingTournament,
   quickEditMode = false,
+  onNavigateToLogin,
+  onNavigateToRegister,
+  onNavigateToProfile,
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
@@ -330,7 +338,40 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   return (
     <div style={{ padding: '40px 20px', maxWidth: containerMaxWidth, margin: '0 auto' }}>
-      {/* Header */}
+      {/* Header with Auth Section */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+      }}>
+        {/* Left: Back Button */}
+        <button
+          onClick={handleBackToDashboard}
+          style={{
+            padding: `${spacing.sm} ${spacing.md}`,
+            background: 'transparent',
+            border: 'none',
+            color: colors.textSecondary,
+            fontSize: fontSizes.md,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+          }}
+        >
+          <Icons.ChevronLeft />
+          {quickEditMode ? 'Abbrechen' : 'Zurück'}
+        </button>
+
+        {/* Right: Auth Section */}
+        <AuthSection
+          onNavigateToLogin={onNavigateToLogin}
+          onNavigateToRegister={onNavigateToRegister}
+          onNavigateToProfile={onNavigateToProfile}
+        />
+      </header>
+
       {/* Quick Edit Banner */}
       {quickEditMode && (
         <div style={{
@@ -360,25 +401,6 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           </Button>
         </div>
       )}
-
-      <button
-        onClick={handleBackToDashboard}
-        style={{
-          marginBottom: '24px',
-          padding: `${spacing.sm} ${spacing.md}`,
-          background: 'transparent',
-          border: 'none',
-          color: colors.textSecondary,
-          fontSize: fontSizes.md,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: spacing.sm,
-        }}
-      >
-        <Icons.ChevronLeft />
-        {quickEditMode ? 'Abbrechen' : 'Zurück zum Dashboard'}
-      </button>
 
       <h1
         style={{

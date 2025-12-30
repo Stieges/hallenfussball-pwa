@@ -168,4 +168,26 @@ export const Icons = {
       <path d="M7 17h6M10 14v3" stroke={color} strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
+
+  // Auth Icons
+  User: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="6" r="4" stroke={color} strokeWidth="2" />
+      <path d="M2 18c0-4 3-6 8-6s8 2 8 6" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  UserPlus: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="8" cy="6" r="3" stroke={color} strokeWidth="2" />
+      <path d="M1 18c0-4 3-5 7-5s7 1 7 5" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d="M16 5v4M14 7h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  LogOut: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M7 17H4a2 2 0 01-2-2V5a2 2 0 012-2h3M13 14l4-4-4-4M17 10H7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 };

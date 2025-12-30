@@ -149,6 +149,8 @@ interface BottomSheetItemProps {
   description?: string;
   onClick: () => void;
   isActive?: boolean;
+  /** Test ID for E2E tests */
+  'data-testid'?: string;
 }
 
 export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
@@ -157,6 +159,7 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
   description,
   onClick,
   isActive = false,
+  'data-testid': testId,
 }) => {
   const itemStyle: CSSProperties = {
     display: 'flex',
@@ -214,6 +217,7 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
       onMouseLeave={(e) => {
         e.currentTarget.style.background = isActive ? colors.secondaryLight : 'transparent';
       }}
+      data-testid={testId}
     >
       <div style={iconContainerStyle}>
         {icon}

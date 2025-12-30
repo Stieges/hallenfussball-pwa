@@ -18,6 +18,7 @@ import { categorizeTournaments, CategorizedTournaments } from '../utils/tourname
 import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { AuthSection } from '../components/layout/AuthSection';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
@@ -25,6 +26,10 @@ interface DashboardScreenProps {
   onTournamentClick: (tournament: Tournament) => void;
   onDeleteTournament: (id: string, title: string) => void;
   onImportTournament: (tournament: Tournament) => void;
+  // Auth Navigation
+  onNavigateToLogin: () => void;
+  onNavigateToRegister: () => void;
+  onNavigateToProfile: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -33,6 +38,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onTournamentClick,
   onDeleteTournament,
   onImportTournament,
+  onNavigateToLogin,
+  onNavigateToRegister,
+  onNavigateToProfile,
 }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const categorized: CategorizedTournaments = categorizeTournaments(tournaments);
@@ -157,33 +165,49 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <h1 style={titleStyle}>{getAppTitle()}</h1>
         <div style={{
           display: 'flex',
+          alignItems: 'center',
           gap: isMobile ? spacing.sm : spacing.md,
           flexDirection: isMobile ? 'column' : 'row',
           width: isMobile ? '100%' : 'auto',
         }}>
-          <Button
-            variant="secondary"
-            onClick={() => setShowImportDialog(true)}
-            icon={<Icons.Upload />}
-            style={{
-              padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
-              fontSize: isMobile ? fontSizes.sm : fontSizes.md,
-              fontWeight: fontWeights.medium,
-            }}
-          >
-            Importieren
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onCreateNew}
-            style={{
-              padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.xl}`,
-              fontSize: isMobile ? fontSizes.sm : fontSizes.md,
-              fontWeight: fontWeights.bold,
-            }}
-          >
-            + Neues Turnier
-          </Button>
+          {/* Auth Section */}
+          <AuthSection
+            onNavigateToLogin={onNavigateToLogin}
+            onNavigateToRegister={onNavigateToRegister}
+            onNavigateToProfile={onNavigateToProfile}
+          />
+
+          {/* Action Buttons */}
+          <div style={{
+            display: 'flex',
+            gap: isMobile ? spacing.sm : spacing.md,
+            flexDirection: isMobile ? 'column' : 'row',
+            width: isMobile ? '100%' : 'auto',
+          }}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowImportDialog(true)}
+              icon={<Icons.Upload />}
+              style={{
+                padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
+                fontSize: isMobile ? fontSizes.sm : fontSizes.md,
+                fontWeight: fontWeights.medium,
+              }}
+            >
+              Importieren
+            </Button>
+            <Button
+              variant="primary"
+              onClick={onCreateNew}
+              style={{
+                padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.xl}`,
+                fontSize: isMobile ? fontSizes.sm : fontSizes.md,
+                fontWeight: fontWeights.bold,
+              }}
+            >
+              + Neues Turnier
+            </Button>
+          </div>
         </div>
       </div>
 

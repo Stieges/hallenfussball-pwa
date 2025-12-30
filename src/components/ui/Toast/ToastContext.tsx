@@ -27,6 +27,8 @@ interface ToastContextValue {
   showInfo: (message: string, options?: ToastOptions) => string;
   /** QW-003: Show goal notification with undo button */
   showGoalWithUndo: (teamName: string, onUndo: () => void) => string;
+  /** AUTH: Show migration success notification (Guest → User) */
+  showMigrationSuccess: () => string;
   dismiss: (id: string) => void;
   dismissAll: () => void;
 }
@@ -104,12 +106,23 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     [addToast, dismiss]
   );
 
+  // AUTH: Success toast when guest account is migrated to full user account
+  const showMigrationSuccess = useCallback(
+    () => addToast(
+      'success',
+      'Dein Gastaccount wurde erfolgreich mit deinem neuen Konto verknüpft. Alle deine Turniere sind übernommen.',
+      { duration: 5000 }
+    ),
+    [addToast]
+  );
+
   const value: ToastContextValue = {
     showSuccess,
     showError,
     showWarning,
     showInfo,
     showGoalWithUndo,
+    showMigrationSuccess,
     dismiss,
     dismissAll,
   };

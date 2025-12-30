@@ -5,6 +5,15 @@ import { colors, fontFamilies } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
+import { AuthProvider } from './features/auth/context/AuthContext';
+import { useAuth } from './features/auth/hooks/useAuth';
+import {
+  GuestBanner,
+  LoginScreen,
+  RegisterScreen,
+  UserProfileScreen,
+  InviteAcceptScreen,
+} from './features/auth/components';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -54,26 +63,37 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'invite';
 
 function AppContent() {
   const { showError } = useToast();
+  const { isGuest } = useAuth();
   const { tournaments, loading, saveTournament, deleteTournament } = useTournaments();
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
-  // Parse URL on mount to detect public tournament view
+  // Parse URL on mount to detect public tournament view or invite
   useEffect(() => {
     const path = window.location.pathname;
     const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
+    const inviteMatch = path.match(/^\/invite$/);
 
     if (publicMatch) {
       const tournamentId = publicMatch[1];
       setPublicTournamentId(tournamentId);
       setScreen('public');
+    } else if (inviteMatch) {
+      // Parse invite token from URL params
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      if (token) {
+        setInviteToken(token);
+        setScreen('invite');
+      }
     }
   }, []);
 
@@ -170,6 +190,21 @@ function AppContent() {
     }
   };
 
+  // Helper to navigate to tournament after accepting invite
+  const handleInviteAccepted = (tournamentId: string) => {
+    // Clear URL params
+    window.history.replaceState({}, '', '/');
+    setInviteToken(null);
+    // Navigate to the tournament
+    const tournament = tournaments.find(t => t.id === tournamentId);
+    if (tournament) {
+      setSelectedTournament(tournament);
+      setScreen('view');
+    } else {
+      setScreen('dashboard');
+    }
+  };
+
   return (
     <div
       style={{
@@ -179,7 +214,51 @@ function AppContent() {
         fontFamily: fontFamilies.body,
       }}
     >
+      {/* Guest Banner - shows registration prompt for guests */}
+      {isGuest && screen === 'dashboard' && (
+        <GuestBanner
+          dismissible
+          onDismiss={() => { /* stays dismissed */ }}
+          onRegisterClick={() => setScreen('register')}
+        />
+      )}
+
       <Suspense fallback={<ScreenLoader />}>
+        {/* Auth Screens */}
+        {screen === 'login' && (
+          <LoginScreen
+            onSuccess={() => setScreen('dashboard')}
+            onNavigateToRegister={() => setScreen('register')}
+          />
+        )}
+
+        {screen === 'register' && (
+          <RegisterScreen
+            onSuccess={() => setScreen('dashboard')}
+            onNavigateToLogin={() => setScreen('login')}
+          />
+        )}
+
+        {screen === 'profile' && (
+          <UserProfileScreen
+            onBack={() => setScreen('dashboard')}
+          />
+        )}
+
+        {screen === 'invite' && inviteToken && (
+          <InviteAcceptScreen
+            token={inviteToken}
+            onAccepted={handleInviteAccepted}
+            onNeedLogin={() => setScreen('login')}
+            onCancel={() => {
+              window.history.replaceState({}, '', '/');
+              setInviteToken(null);
+              setScreen('dashboard');
+            }}
+          />
+        )}
+
+        {/* Main App Screens */}
         {screen === 'dashboard' && (
           <DashboardScreen
             tournaments={tournaments}
@@ -187,6 +266,9 @@ function AppContent() {
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
             onImportTournament={(tournament) => void handleImportTournament(tournament)}
+            onNavigateToLogin={() => setScreen('login')}
+            onNavigateToRegister={() => setScreen('register')}
+            onNavigateToProfile={() => setScreen('profile')}
           />
         )}
 
@@ -220,6 +302,9 @@ function AppContent() {
             }}
             existingTournament={selectedTournament ?? undefined}
             quickEditMode={quickEditMode}
+            onNavigateToLogin={() => setScreen('login')}
+            onNavigateToRegister={() => setScreen('register')}
+            onNavigateToProfile={() => setScreen('profile')}
           />
         )}
 
@@ -228,6 +313,9 @@ function AppContent() {
             tournamentId={selectedTournament.id}
             onBack={() => setScreen('dashboard')}
             onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
+            onNavigateToLogin={() => setScreen('login')}
+            onNavigateToRegister={() => setScreen('register')}
+            onNavigateToProfile={() => setScreen('profile')}
           />
         )}
 
@@ -241,11 +329,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <StorageWarningBanner />
-      <OfflineBanner />
-      <AppContent />
-    </ToastProvider>
+    <AuthProvider>
+      <ToastProvider>
+        <StorageWarningBanner />
+        <OfflineBanner />
+        <AppContent />
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 
