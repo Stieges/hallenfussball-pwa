@@ -7,8 +7,19 @@
 
 export const STORAGE_KEY_TOURNAMENTS = 'tournaments';
 
+/**
+ * Generate a future date string (tomorrow) in YYYY-MM-DD format
+ * This ensures tournaments are categorized as "upcoming" not "finished"
+ */
+function getFutureDate(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+}
+
 export function createTestTournament() {
   const now = new Date().toISOString();
+  const futureDate = getFutureDate();
   return {
     id: 'e2e-test-tournament',
     title: 'E2E Test Turnier',
@@ -17,6 +28,10 @@ export function createTestTournament() {
     tournamentType: 'group_only',
     createdAt: now,
     updatedAt: now,
+    date: futureDate,
+    timeSlot: '10:00 - 14:00',
+    startDate: futureDate,
+    startTime: '10:00',
     settings: {
       matchDurationMinutes: 10,
       breakDurationMinutes: 2,
@@ -97,6 +112,11 @@ export function createTestTournament() {
  *   await page.evaluate(seedTestTournament);
  */
 export function seedTestTournament() {
+  // Generate future date inline (runs in browser context)
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const futureDate = tomorrow.toISOString().split('T')[0];
+
   const tournament = {
     id: 'e2e-test-tournament',
     title: 'E2E Test Turnier',
@@ -105,6 +125,10 @@ export function seedTestTournament() {
     tournamentType: 'group_only',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    date: futureDate,
+    timeSlot: '10:00 - 14:00',
+    startDate: futureDate,
+    startTime: '10:00',
     settings: {
       matchDurationMinutes: 10,
       breakDurationMinutes: 2,

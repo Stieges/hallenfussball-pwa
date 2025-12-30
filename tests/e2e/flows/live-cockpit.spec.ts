@@ -10,47 +10,62 @@
 
 import { test, expect } from '@playwright/test';
 
-// Minimal but valid tournament structure for E2E testing
-// Using empty matches array to let the app generate the schedule
-const TEST_TOURNAMENT = {
-  id: 'e2e-test-tournament',
-  status: 'published',
-  sport: 'football',
-  tournamentType: 'classic',
-  mode: 'classic',
-  numberOfFields: 1,
-  numberOfTeams: 4,
-  numberOfGroups: 1,
-  groupSystem: 'roundRobin',
-  groupPhaseGameDuration: 10,
-  groupPhaseBreakDuration: 2,
-  gameDuration: 10,
-  breakDuration: 2,
-  placementLogic: ['points', 'goalDifference', 'goalsFor'],
-  finals: { enabled: false },
-  isKidsTournament: false,
-  hideScoresForPublic: false,
-  hideRankingsForPublic: false,
-  resultMode: 'goals',
-  pointSystem: { win: 3, draw: 1, loss: 0 },
-  title: 'E2E Test Turnier',
-  ageClass: 'U12',
-  date: '2025-01-15',
-  timeSlot: '10:00 - 14:00',
-  startDate: '2025-01-15',
-  startTime: '10:00',
-  location: { name: 'Test-Halle' },
-  teams: [
-    { id: 'team-1', name: 'FC Test A' },
-    { id: 'team-2', name: 'FC Test B' },
-    { id: 'team-3', name: 'FC Test C' },
-    { id: 'team-4', name: 'FC Test D' },
-  ],
-  // Let the app generate matches from the schedule
-  matches: [],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+/**
+ * Generate a future date string (tomorrow) in YYYY-MM-DD format
+ * This ensures tournaments are categorized as "upcoming" not "finished"
+ */
+function getFutureDate(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+}
+
+/**
+ * Create test tournament with dynamic future date
+ * Must be called fresh each time to get current date
+ */
+function createTestTournament() {
+  const futureDate = getFutureDate();
+  return {
+    id: 'e2e-test-tournament',
+    status: 'published',
+    sport: 'football',
+    tournamentType: 'classic',
+    mode: 'classic',
+    numberOfFields: 1,
+    numberOfTeams: 4,
+    numberOfGroups: 1,
+    groupSystem: 'roundRobin',
+    groupPhaseGameDuration: 10,
+    groupPhaseBreakDuration: 2,
+    gameDuration: 10,
+    breakDuration: 2,
+    placementLogic: ['points', 'goalDifference', 'goalsFor'],
+    finals: { enabled: false },
+    isKidsTournament: false,
+    hideScoresForPublic: false,
+    hideRankingsForPublic: false,
+    resultMode: 'goals',
+    pointSystem: { win: 3, draw: 1, loss: 0 },
+    title: 'E2E Test Turnier',
+    ageClass: 'U12',
+    date: futureDate,
+    timeSlot: '10:00 - 14:00',
+    startDate: futureDate,
+    startTime: '10:00',
+    location: { name: 'Test-Halle' },
+    teams: [
+      { id: 'team-1', name: 'FC Test A' },
+      { id: 'team-2', name: 'FC Test B' },
+      { id: 'team-3', name: 'FC Test C' },
+      { id: 'team-4', name: 'FC Test D' },
+    ],
+    // Let the app generate matches from the schedule
+    matches: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 test.describe('Live Cockpit', () => {
   // Skip iPhones - Safe Area viewport emulation causes click interception issues
@@ -59,9 +74,10 @@ test.describe('Live Cockpit', () => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     // Seed localStorage BEFORE navigating
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
 
     // Navigate to app
     await page.goto('/');
@@ -385,9 +401,10 @@ test.describe('Live Cockpit - Mobile', () => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     // Seed localStorage BEFORE navigating
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test('Touch targets are appropriately sized on mobile', async ({ page }) => {

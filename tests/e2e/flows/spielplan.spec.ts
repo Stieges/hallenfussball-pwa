@@ -16,47 +16,62 @@
 
 import { test, expect, Page } from '@playwright/test';
 
-// Test-Turnier mit verschiedenen Match-Zuständen
-const TEST_TOURNAMENT = {
-  id: 'spielplan-test-tournament',
-  status: 'published',
-  sport: 'football',
-  tournamentType: 'classic',
-  mode: 'classic',
-  numberOfFields: 2,
-  numberOfTeams: 6,
-  numberOfGroups: 1,
-  groupSystem: 'roundRobin',
-  groupPhaseGameDuration: 10,
-  groupPhaseBreakDuration: 2,
-  gameDuration: 10,
-  breakDuration: 2,
-  placementLogic: ['points', 'goalDifference', 'goalsFor'],
-  finals: { enabled: false },
-  isKidsTournament: false,
-  hideScoresForPublic: false,
-  hideRankingsForPublic: false,
-  resultMode: 'goals',
-  pointSystem: { win: 3, draw: 1, loss: 0 },
-  title: 'Spielplan Test Turnier',
-  ageClass: 'U12',
-  date: '2025-01-15',
-  timeSlot: '10:00 - 14:00',
-  startDate: '2025-01-15',
-  startTime: '10:00',
-  location: { name: 'Test-Halle' },
-  teams: [
-    { id: 'team-1', name: 'FC Bayern' },
-    { id: 'team-2', name: 'BVB Dortmund' },
-    { id: 'team-3', name: 'RB Leipzig' },
-    { id: 'team-4', name: 'VfB Stuttgart' },
-    { id: 'team-5', name: '1. FC Nürnberg' },
-    { id: 'team-6', name: 'SpVgg Fürth' },
-  ],
-  matches: [],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+/**
+ * Generate a future date string (tomorrow) in YYYY-MM-DD format
+ * This ensures tournaments are categorized as "upcoming" not "finished"
+ */
+function getFutureDate(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+}
+
+/**
+ * Create test tournament with dynamic future date
+ */
+function createTestTournament() {
+  const futureDate = getFutureDate();
+  return {
+    id: 'spielplan-test-tournament',
+    status: 'published',
+    sport: 'football',
+    tournamentType: 'classic',
+    mode: 'classic',
+    numberOfFields: 2,
+    numberOfTeams: 6,
+    numberOfGroups: 1,
+    groupSystem: 'roundRobin',
+    groupPhaseGameDuration: 10,
+    groupPhaseBreakDuration: 2,
+    gameDuration: 10,
+    breakDuration: 2,
+    placementLogic: ['points', 'goalDifference', 'goalsFor'],
+    finals: { enabled: false },
+    isKidsTournament: false,
+    hideScoresForPublic: false,
+    hideRankingsForPublic: false,
+    resultMode: 'goals',
+    pointSystem: { win: 3, draw: 1, loss: 0 },
+    title: 'Spielplan Test Turnier',
+    ageClass: 'U12',
+    date: futureDate,
+    timeSlot: '10:00 - 14:00',
+    startDate: futureDate,
+    startTime: '10:00',
+    location: { name: 'Test-Halle' },
+    teams: [
+      { id: 'team-1', name: 'FC Bayern' },
+      { id: 'team-2', name: 'BVB Dortmund' },
+      { id: 'team-3', name: 'RB Leipzig' },
+      { id: 'team-4', name: 'VfB Stuttgart' },
+      { id: 'team-5', name: '1. FC Nürnberg' },
+      { id: 'team-6', name: 'SpVgg Fürth' },
+    ],
+    matches: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 // Helper: Navigate to Spielplan tab
 async function navigateToSpielplan(page: Page) {
@@ -123,9 +138,10 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -203,9 +219,10 @@ test.describe('Spielplan 2.0 - Desktop Layout', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -273,9 +290,10 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -338,9 +356,10 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -450,9 +469,10 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -560,9 +580,10 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -696,9 +717,10 @@ test.describe('Spielplan 2.0 - Design Tokens', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -753,9 +775,10 @@ test.describe('Spielplan 2.0 - Accessibility', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -834,9 +857,10 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, TEST_TOURNAMENT);
+    const tournament = createTestTournament();
+    await page.addInitScript((t) => {
+      localStorage.setItem('tournaments', JSON.stringify([t]));
+    }, tournament);
   });
 
   test.afterEach(async ({ page }) => {
@@ -852,7 +876,7 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
   test('Leerer Spielplan zeigt sinnvolle Message', async ({ page }) => {
     // GIVEN - Tournament with no matches
     const emptyTournament = {
-      ...TEST_TOURNAMENT,
+      ...createTestTournament(),
       id: 'empty-tournament',
       title: 'Leeres Turnier',
       teams: [],
@@ -885,7 +909,7 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
   test('Lange Teamnamen werden korrekt abgeschnitten', async ({ page }) => {
     // GIVEN - Tournament with long team names
     const longNameTournament = {
-      ...TEST_TOURNAMENT,
+      ...createTestTournament(),
       id: 'long-names-tournament',
       title: 'Turnier mit langen Namen',
       teams: [
