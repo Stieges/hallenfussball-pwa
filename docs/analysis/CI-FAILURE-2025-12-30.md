@@ -29,14 +29,17 @@
 
 Nach dem ersten Fix trat weiterhin ein Timeout auf:
 
-| Config | Port |
-|--------|------|
-| `vite.config.ts` | `3002` |
-| `playwright.config.ts` | `5173` (default) |
+| Config | Port | Hinweis |
+|--------|------|---------|
+| `vite.config.ts` (committed) | `3000` | Original |
+| `vite.config.ts` (lokal) | `3002` | Uncommitted! |
+| `playwright.config.ts` (alt) | `5173` | Default |
 
-Playwright wartete auf Port 5173, aber Vite startete auf Port 3002.
+**Ursache:** Die lokale vite.config.ts hatte uncommitted Änderungen (3002),
+aber CI verwendet den committed Stand (3000). Playwright wurde fälschlich
+auf 3002 gesetzt.
 
-**Fix:** playwright.config.ts auf Port 3002 geändert
+**Fix:** Beide Configs auf Port 3000 vereinheitlicht
 
 ### Diff der Änderung
 
