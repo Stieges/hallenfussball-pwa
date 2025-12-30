@@ -10,7 +10,7 @@
 import { CSSProperties, useState, useMemo } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
-import { Button } from '../components/ui';
+import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
 import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
 import {
@@ -132,64 +132,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     fontSize: fontSizes.md,
   };
 
-  const renderSection = (
-    title: string,
-    icon: React.ReactNode,
-    tournaments: Tournament[],
-    categoryLabel: string,
-    emptyMessage: string,
-    allowDelete: boolean = false,
-    isHighlighted: boolean = false
-  ) => {
-    const highlightedSectionStyle: CSSProperties = isHighlighted && tournaments.length > 0
-      ? {
-          ...sectionStyle,
-          padding: isMobile ? '16px' : '24px',
-          background: `linear-gradient(135deg, ${colors.statusLiveBg} 0%, transparent 100%)`,
-          borderRadius: borderRadius.lg,
-          border: `1px solid ${colors.statusLive}40`,
-        }
-      : sectionStyle;
-
-    if (tournaments.length === 0) {
-      return (
-        <div style={sectionStyle}>
-          <h2 style={sectionHeaderStyle}>
-            <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
-            {title}
-            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
-              ({tournaments.length})
-            </span>
-          </h2>
-          <div style={emptyStateStyle}>{emptyMessage}</div>
-        </div>
-      );
-    }
-
-    return (
-      <div style={highlightedSectionStyle}>
-        <h2 style={sectionHeaderStyle}>
-          <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
-          {title}
-          <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
-            ({tournaments.length})
-          </span>
-        </h2>
-        <div style={gridStyle}>
-          {tournaments.map((tournament) => (
-            <TournamentCard
-              key={tournament.id}
-              tournament={tournament}
-              categoryLabel={categoryLabel}
-              onClick={() => onTournamentClick(tournament)}
-              onDelete={allowDelete ? () => onDeleteTournament(tournament.id, tournament.title) : undefined}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={containerStyle}>
       {/* Header */}
@@ -279,38 +221,82 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             </div>
           )}
 
-          {/* Sections (only render if tournaments exist) */}
+          {/* Sections with CollapsibleSection (only render if tournaments exist) */}
           {activeTournaments.length > 0 && (
             <>
-              {/* 1. Aktuell laufende Turniere - NO DELETE, HIGHLIGHTED */}
-              {renderSection(
-                'Aktuell laufende Turniere',
-                <Icons.Play size={22} color={colors.statusLive} />,
-                categorized.running,
-                'Läuft',
-                'Keine laufenden Turniere',
-                false, // NO delete for running tournaments
-                true   // isHighlighted
+              {/* 1. Aktuell laufende Turniere - Always open, highlighted */}
+              {categorized.running.length > 0 && (
+                <CollapsibleSection
+                  title="Aktuell laufende Turniere"
+                  icon={<Icons.Play size={20} color={colors.statusLive} />}
+                  badge={categorized.running.length}
+                  defaultOpen={true}
+                  variant="live"
+                  testId="section-running"
+                >
+                  <div style={gridStyle}>
+                    {categorized.running.map((tournament) => (
+                      <TournamentCard
+                        key={tournament.id}
+                        tournament={tournament}
+                        categoryLabel="Läuft"
+                        onClick={() => onTournamentClick(tournament)}
+                        // No delete for running tournaments
+                      />
+                    ))}
+                  </div>
+                </CollapsibleSection>
               )}
 
-              {/* 2. Bevorstehende Turniere - SOFT DELETE */}
-              {renderSection(
-                'Bevorstehende Turniere',
-                <Icons.Calendar size={22} color={colors.statusUpcoming} />,
-                categorized.upcoming,
-                'Bevorstehend',
-                'Keine bevorstehenden Turniere',
-                true // Allow soft delete
+              {/* 2. Bevorstehende Turniere - Open if no running */}
+              {categorized.upcoming.length > 0 && (
+                <CollapsibleSection
+                  title="Bevorstehende Turniere"
+                  icon={<Icons.Calendar size={20} color={colors.statusUpcoming} />}
+                  badge={categorized.upcoming.length}
+                  defaultOpen={categorized.running.length === 0}
+                  testId="section-upcoming"
+                >
+                  <div style={gridStyle}>
+                    {categorized.upcoming.map((tournament) => (
+                      <TournamentCard
+                        key={tournament.id}
+                        tournament={tournament}
+                        categoryLabel="Bevorstehend"
+                        onClick={() => onTournamentClick(tournament)}
+                        onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleSection>
               )}
 
-              {/* 3. Gespeicherte Turniere (Entwürfe) - SOFT DELETE */}
-              {renderSection(
-                'Gespeicherte Turniere',
-                <Icons.Save size={22} color={colors.statusDraft} />,
-                categorized.draft,
-                'Entwurf',
-                'Keine gespeicherten Entwürfe',
-                true // Allow soft delete
+              {/* 3. Gespeicherte Turniere (Entwürfe) - Collapsed by default */}
+              {categorized.draft.length > 0 && (
+                <CollapsibleSection
+                  title="Gespeicherte Entwürfe"
+                  icon={<Icons.Save size={20} color={colors.statusDraft} />}
+                  badge={categorized.draft.length}
+                  defaultOpen={false}
+                  testId="section-draft"
+                >
+                  <div style={gridStyle}>
+                    {categorized.draft.map((tournament) => (
+                      <TournamentCard
+                        key={tournament.id}
+                        tournament={tournament}
+                        categoryLabel="Entwurf"
+                        onClick={() => onTournamentClick(tournament)}
+                        onDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleSection>
+              )}
+
+              {/* Empty state when all sections are empty */}
+              {categorized.running.length === 0 && categorized.upcoming.length === 0 && categorized.draft.length === 0 && (
+                <div style={emptyStateStyle}>Keine aktiven Turniere vorhanden</div>
               )}
             </>
           )}

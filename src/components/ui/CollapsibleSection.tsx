@@ -1,12 +1,18 @@
 import { CSSProperties, ReactNode, useState } from 'react';
 import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+
 interface CollapsibleSectionProps {
   title: string;
   children: ReactNode;
   defaultOpen?: boolean;
-  icon?: string;
-  badge?: string;
-  variant?: 'default' | 'primary' | 'secondary';
+  /** Icon as React node or emoji string */
+  icon?: ReactNode;
+  /** Badge text (e.g., count) */
+  badge?: string | number;
+  /** Visual variant */
+  variant?: 'default' | 'primary' | 'secondary' | 'live';
+  /** Optional data-testid */
+  testId?: string;
 }
 
 export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
@@ -16,10 +22,11 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   icon,
   badge,
   variant = 'default',
+  testId,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const getVariantStyles = (): { border: string; bg: string; headerBg: string } => {
+  const getVariantStyles = (): { border: string; bg: string; headerBg: string; titleColor?: string } => {
     switch (variant) {
       case 'primary':
         return {
@@ -32,6 +39,13 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           border: colors.secondaryBorderActive,
           bg: colors.secondarySubtle,
           headerBg: colors.secondaryMedium,
+        };
+      case 'live':
+        return {
+          border: `${colors.statusLive}40`,
+          bg: colors.statusLiveBg,
+          headerBg: colors.statusLiveBg,
+          titleColor: colors.statusLive,
         };
       default:
         return {
@@ -67,7 +81,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     flex: 1,
     fontSize: fontSizes.md,
     fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    color: variantStyles.titleColor ?? colors.textPrimary,
     margin: 0,
   };
 
@@ -96,7 +110,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-testid={testId}>
       <div
         style={headerStyle}
         onClick={() => setIsOpen(!isOpen)}
@@ -110,9 +124,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
           }
         }}
       >
-        {icon && <span aria-hidden="true">{icon}</span>}
+        {icon && <span style={{ display: 'flex', alignItems: 'center' }} aria-hidden="true">{icon}</span>}
         <h3 style={titleStyle}>{title}</h3>
-        {badge && <span style={badgeStyle}>{badge}</span>}
+        {badge !== undefined && <span style={badgeStyle}>{badge}</span>}
         <span style={chevronStyle} aria-hidden="true">▼</span>
       </div>
       <div style={contentStyle}>{children}</div>
