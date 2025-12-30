@@ -26,7 +26,7 @@ import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AuthSection } from '../components/layout/AuthSection';
-import { DashboardNav, DashboardTab } from '../components/dashboard';
+import { DashboardNav, DashboardTab, SearchFilterBar, FilterChip } from '../components/dashboard';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
@@ -59,6 +59,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>('turniere');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilters, setActiveFilters] = useState<FilterChip[]>([]);
   const isMobile = useIsMobile();
 
   // Filter tournaments based on active tab
@@ -68,6 +70,50 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     () => categorizeTournaments(activeTournaments),
     [activeTournaments]
   );
+
+  // Handle filter toggle
+  const handleFilterToggle = (filter: FilterChip) => {
+    setActiveFilters(prev =>
+      prev.includes(filter)
+        ? prev.filter(f => f !== filter)
+        : [...prev, filter]
+    );
+  };
+
+  // Filter tournaments by search query
+  const filterBySearch = (tournament: Tournament): boolean => {
+    if (!searchQuery.trim()) {return true;}
+    const query = searchQuery.toLowerCase();
+    return (
+      tournament.title.toLowerCase().includes(query) ||
+      (tournament.organizer?.toLowerCase().includes(query) ?? false) ||
+      tournament.ageClass.toLowerCase().includes(query) ||
+      (tournament.location.city?.toLowerCase().includes(query) ?? false) ||
+      tournament.location.name.toLowerCase().includes(query)
+    );
+  };
+
+  // Apply search and filter to categorized tournaments
+  const filteredCategorized = useMemo(() => {
+    const result: CategorizedTournaments = {
+      running: categorized.running.filter(filterBySearch),
+      upcoming: categorized.upcoming.filter(filterBySearch),
+      finished: categorized.finished.filter(filterBySearch),
+      draft: categorized.draft.filter(filterBySearch),
+      trashed: categorized.trashed.filter(filterBySearch),
+    };
+
+    // If filters are active, only show matching categories
+    if (activeFilters.length > 0) {
+      if (!activeFilters.includes('running')) {result.running = [];}
+      if (!activeFilters.includes('upcoming')) {result.upcoming = [];}
+      if (!activeFilters.includes('finished')) {result.finished = [];}
+      if (!activeFilters.includes('draft')) {result.draft = [];}
+    }
+
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- filterBySearch uses searchQuery
+  }, [categorized, activeFilters, searchQuery]);
 
   // Extended categories with year grouping for archive
   const extendedCategories = useMemo(
@@ -210,6 +256,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         />
       )}
 
+      {/* Search and Filter - Only on Turniere tab */}
+      {activeTab === 'turniere' && activeTournaments.length > 0 && (
+        <SearchFilterBar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeFilters={activeFilters}
+          onFilterToggle={handleFilterToggle}
+        />
+      )}
+
       {/* Tab Content */}
       {activeTab === 'turniere' && (
         <>
@@ -239,18 +295,44 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* Sections with CollapsibleSection (only render if tournaments exist) */}
           {activeTournaments.length > 0 && (
             <>
+              {/* Search results empty state */}
+              {(searchQuery || activeFilters.length > 0) &&
+                filteredCategorized.running.length === 0 &&
+                filteredCategorized.upcoming.length === 0 &&
+                filteredCategorized.draft.length === 0 && (
+                  <div style={{
+                    padding: isMobile ? '40px 16px' : '60px 20px',
+                    textAlign: 'center',
+                    background: colors.surface,
+                    borderRadius: borderRadius.md,
+                    border: `1px solid ${colors.border}`,
+                  }}>
+                    <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
+                      <Icons.Search size={40} color={colors.textSecondary} />
+                    </div>
+                    <p style={{ margin: 0, color: colors.textSecondary }}>
+                      Keine Turniere gefunden
+                    </p>
+                    {searchQuery && (
+                      <p style={{ margin: `${spacing.xs} 0 0`, fontSize: fontSizes.sm, color: colors.textMuted }}>
+                        Keine Ergebnisse für "{searchQuery}"
+                      </p>
+                    )}
+                  </div>
+                )}
+
               {/* 1. Aktuell laufende Turniere - Always open, highlighted */}
-              {categorized.running.length > 0 && (
+              {filteredCategorized.running.length > 0 && (
                 <CollapsibleSection
                   title="Aktuell laufende Turniere"
                   icon={<Icons.Play size={20} color={colors.statusLive} />}
-                  badge={categorized.running.length}
+                  badge={filteredCategorized.running.length}
                   defaultOpen={true}
                   variant="live"
                   testId="section-running"
                 >
                   <div style={gridStyle}>
-                    {categorized.running.map((tournament) => (
+                    {filteredCategorized.running.map((tournament) => (
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
@@ -264,16 +346,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               )}
 
               {/* 2. Bevorstehende Turniere - Open if no running */}
-              {categorized.upcoming.length > 0 && (
+              {filteredCategorized.upcoming.length > 0 && (
                 <CollapsibleSection
                   title="Bevorstehende Turniere"
                   icon={<Icons.Calendar size={20} color={colors.statusUpcoming} />}
-                  badge={categorized.upcoming.length}
-                  defaultOpen={categorized.running.length === 0}
+                  badge={filteredCategorized.upcoming.length}
+                  defaultOpen={filteredCategorized.running.length === 0}
                   testId="section-upcoming"
                 >
                   <div style={gridStyle}>
-                    {categorized.upcoming.map((tournament) => (
+                    {filteredCategorized.upcoming.map((tournament) => (
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
@@ -287,16 +369,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               )}
 
               {/* 3. Gespeicherte Turniere (Entwürfe) - Collapsed by default */}
-              {categorized.draft.length > 0 && (
+              {filteredCategorized.draft.length > 0 && (
                 <CollapsibleSection
                   title="Gespeicherte Entwürfe"
                   icon={<Icons.Save size={20} color={colors.statusDraft} />}
-                  badge={categorized.draft.length}
+                  badge={filteredCategorized.draft.length}
                   defaultOpen={false}
                   testId="section-draft"
                 >
                   <div style={gridStyle}>
-                    {categorized.draft.map((tournament) => (
+                    {filteredCategorized.draft.map((tournament) => (
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
@@ -309,8 +391,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 </CollapsibleSection>
               )}
 
-              {/* Empty state when all sections are empty */}
-              {categorized.running.length === 0 && categorized.upcoming.length === 0 && categorized.draft.length === 0 && (
+              {/* Empty state when no filters/search active and all sections are empty */}
+              {!searchQuery && activeFilters.length === 0 &&
+                categorized.running.length === 0 && categorized.upcoming.length === 0 && categorized.draft.length === 0 && (
                 <div style={emptyStateStyle}>Keine aktiven Turniere vorhanden</div>
               )}
             </>

@@ -6,6 +6,8 @@
  * - Tournament sections
  * - Archive view
  * - Trash/Papierkorb view
+ * - Search & Filter
  */
 
 export { DashboardNav, type DashboardTab } from './DashboardNav';
+export { SearchFilterBar, type FilterChip } from './SearchFilterBar';

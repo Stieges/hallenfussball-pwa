@@ -213,4 +213,17 @@ export const Icons = {
       <path d="M10 7v4M10 14v1" stroke={color} strokeWidth="2" strokeLinecap="round" />
     </svg>
   ),
+
+  Search: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <circle cx="9" cy="9" r="6" stroke={color} strokeWidth="2" />
+      <path d="M13.5 13.5L17 17" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  Filter: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M2 4h16M5 10h10M8 16h4" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
 };
