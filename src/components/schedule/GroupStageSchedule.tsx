@@ -18,25 +18,23 @@ import {
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { colors, fontSizes, fontWeights, borderRadius, spacing } from '../../design-tokens';
+import { colors, fontSizes, fontWeights, borderRadius, spacing, spacingSemantics } from '../../design-tokens';
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
 import {
   MatchCard,
-  MatchCardDesktop,
-  EditableMatchCard,
   type MatchCardStatus,
   type RefereeOption,
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
 import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
-import type { ScheduleConflict } from '../../features/schedule-editor/types';
+import { SortableMobileCard } from './SortableMobileCard';
+import { SortableDesktopCard } from './SortableDesktopCard';
+import { DesktopCard } from './DesktopCard';
 
 // Pending changes during edit mode
 interface PendingChanges {
@@ -343,16 +341,16 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     return (
       <div style={{
         textAlign: 'center',
-        padding: '40px 20px',
+        padding: `${spacing.xl} ${spacing.md}`,
         color: colors.textSecondary,
-        fontSize: '15px'
+        fontSize: fontSizes.lg
       }}>
         Keine Spiele vorhanden
       </div>
     );
   }
 
-  const showReferees = refereeConfig && refereeConfig.mode !== 'none';
+  const showReferees = !!(refereeConfig && refereeConfig.mode !== 'none');
   const showFields = numberOfFields > 1;
 
   // Generate referee options for dropdown (nur Nummern)
@@ -403,459 +401,29 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     marginBottom: spacing.md,
   };
 
-  // Mobile edit mode select style
-  const mobileSelectStyle: CSSProperties = {
-    padding: '4px 8px',
-    border: `1px solid ${colors.border}`,
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: fontWeights.semibold,
-    cursor: 'pointer',
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
-    minHeight: '32px',
-  };
-
   // Get active match for drag overlay
   const activeMatch = activeId ? sortedMatches.find(m => m.id === activeId) : null;
-
-  // ============================================================================
-  // SortableMobileCard Component - uses useSortable for mobile card DnD
-  // Passes drag handle attributes/listeners to EditableMatchCard
-  // ============================================================================
-  interface SortableMobileCardProps {
-    match: ScheduledMatch;
-    status: MatchCardStatus;
-    isExpanded: boolean;
-    displayedRef: number | null | undefined;
-    displayedField: number | undefined;
-    hasUnsavedChanges: boolean;
-    hasPendingField: boolean;
-    conflicts: ScheduleConflict[];
-  }
-
-  const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
-    match,
-    status,
-    isExpanded,
-    displayedRef,
-    displayedField,
-    hasUnsavedChanges,
-    hasPendingField,
-    conflicts,
-  }) => {
-    const isLocked = status === 'running' || status === 'finished';
-
-    // Can only drag scheduled matches (not running or finished)
-    const canDrag = !!(editingSchedule && onMatchSwap && !isLocked);
-
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-      isOver,
-    } = useSortable({
-      id: match.id,
-      disabled: !canDrag,
-    });
-
-    // Apply transform and transition for smooth animations
-    const wrapperStyle: CSSProperties = {
-      marginBottom: spacing.sm,
-      transform: CSS.Transform.toString(transform),
-      transition,
-      // Drag states
-      ...(isDragging ? {
-        opacity: 0.5,
-        zIndex: 0,
-      } : {}),
-      ...(isOver && !isDragging ? {
-        transform: CSS.Transform.toString(transform),
-      } : {}),
-    };
-
-    // Shared card props
-    const cardProps = {
-      matchId: match.id,
-      matchNumber: match.matchNumber,
-      scheduledTime: match.time,
-      field: match.field,
-      group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
-      homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
-      awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
-      homeScore: match.scoreA ?? 0,
-      awayScore: match.scoreB ?? 0,
-      status: status,
-      progress: 0,
-    };
-
-    return (
-      <div ref={setNodeRef} style={wrapperStyle}>
-        <EditableMatchCard
-          {...cardProps}
-          canDrag={canDrag}
-          isDragging={isDragging}
-          isDropTarget={isOver && !isDragging}
-          dragHandleAttributes={attributes}
-          dragHandleListeners={listeners}
-          isLocked={isLocked}
-          hasUnsavedChanges={hasUnsavedChanges}
-          referee={displayedRef ?? undefined}
-          refereeOptions={showReferees ? editableRefereeOptions : []}
-          onRefereeChange={onRefereeChange ? (matchId, value) => {
-            const numValue = value === null ? null :
-              typeof value === 'string' ? parseInt(value) : value;
-            onRefereeChange(matchId, numValue);
-          } : undefined}
-          conflicts={conflicts}
-          onCardClick={() => handleCardClick(match.id)}
-          onCircleClick={() => handleCircleClick(match.id)}
-          isExpanded={isExpanded}
-          expandContent={renderExpandContent(match)}
-        />
-
-        {/* Edit mode: Field selector (shown below card) */}
-        {editingSchedule && showFields && onFieldChange && (
-          <div style={{
-            display: 'flex',
-            gap: spacing.sm,
-            marginTop: spacing.xs,
-            padding: `${spacing.xs} ${spacing.sm}`,
-            backgroundColor: colors.surfaceLight,
-            borderRadius: borderRadius.sm,
-          }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
-              <select
-                value={displayedField || 1}
-                onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                style={{
-                  ...mobileSelectStyle,
-                  width: '100%',
-                  border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-                }}
-              >
-                {fieldOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // DesktopCard Component - renders MatchCardDesktop (no DnD in normal mode)
-  // ============================================================================
-  const DesktopCard: React.FC<{ match: ScheduledMatch }> = ({ match }) => {
-    const status = getMatchStatus(match);
-    const isExpanded = expandedMatchId === match.id;
-
-    return (
-      <div style={{ marginBottom: spacing.sm }}>
-        <MatchCardDesktop
-          matchId={match.id}
-          matchNumber={match.matchNumber}
-          scheduledTime={match.time}
-          field={match.field}
-          group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
-          homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
-          awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
-          homeScore={match.scoreA ?? 0}
-          awayScore={match.scoreB ?? 0}
-          status={status}
-          progress={0}
-          onRowClick={() => handleCardClick(match.id)}
-          onCircleClick={() => handleCircleClick(match.id)}
-          isExpanded={isExpanded}
-          expandContent={renderExpandContent(match)}
-        />
-      </div>
-    );
-  };
-
-  // ============================================================================
-  // SortableDesktopCard Component - Desktop card with DnD support for edit mode
-  // Uses horizontal layout with drag handle, conflict badge, and SR controls
-  // ============================================================================
-  interface SortableDesktopCardProps {
-    match: ScheduledMatch;
-    status: MatchCardStatus;
-    displayedRef: number | null | undefined;
-    displayedField: number | undefined;
-    hasUnsavedChanges: boolean;
-    hasPendingRef: boolean;
-    hasPendingField: boolean;
-    conflicts: ScheduleConflict[];
-  }
-
-  const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
-    match,
-    status,
-    displayedRef,
-    displayedField,
-    hasUnsavedChanges,
-    hasPendingRef,
-    hasPendingField,
-    conflicts,
-  }) => {
-    const isLocked = status === 'running' || status === 'finished';
-    const canDrag = !!(editingSchedule && onMatchSwap && !isLocked);
-    const hasConflicts = conflicts.length > 0;
-    const hasErrors = conflicts.some(c => c.severity === 'error');
-
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-      isOver,
-    } = useSortable({
-      id: match.id,
-      disabled: !canDrag,
-    });
-
-    // Container style with transform
-    const containerStyle: CSSProperties = {
-      marginBottom: spacing.sm,
-      transform: CSS.Transform.toString(transform),
-      transition,
-      ...(isDragging ? { opacity: 0.5, zIndex: 0 } : {}),
-    };
-
-    // Row wrapper with drag handle integrated
-    const rowWrapperStyle: CSSProperties = {
-      display: 'flex',
-      alignItems: 'stretch',
-      borderRadius: borderRadius.md,
-      overflow: 'hidden',
-      border: `1px solid ${
-        isOver && !isDragging
-          ? colors.primary
-          : hasErrors
-            ? colors.error
-            : hasConflicts
-              ? colors.warning
-              : hasUnsavedChanges
-                ? colors.editorDirtyBorder
-                : colors.border
-      }`,
-      boxShadow: isOver && !isDragging
-        ? `0 0 12px ${colors.primaryGlowLight}`
-        : undefined,
-    };
-
-    // Drag handle style
-    const dragHandleStyle: CSSProperties = {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 40,
-      backgroundColor: isOver && !isDragging
-        ? colors.editorSwapActive
-        : hasUnsavedChanges
-          ? colors.editorDirtyRowBg
-          : colors.editorEditModeRowBg,
-      cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'not-allowed',
-      color: isLocked ? colors.textDisabled : colors.textSecondary,
-      fontSize: fontSizes.lg,
-      touchAction: 'none',
-      flexShrink: 0,
-    };
-
-    // Content area style
-    const contentStyle: CSSProperties = {
-      flex: 1,
-      display: 'grid',
-      gridTemplateColumns: showReferees
-        ? 'auto auto auto 1fr auto 1fr auto auto'
-        : 'auto auto 1fr auto 1fr auto auto',
-      alignItems: 'center',
-      gap: spacing.md,
-      padding: `${spacing.sm} ${spacing.md}`,
-      backgroundColor: isOver && !isDragging
-        ? colors.editorSwapActive
-        : hasUnsavedChanges
-          ? colors.editorDirtyRowBg
-          : status === 'running'
-            ? colors.statusLiveRowBg
-            : colors.surface,
-    };
-
-    // Conflict indicator style
-    const conflictIndicatorStyle: CSSProperties = {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 28,
-      height: 28,
-      borderRadius: '50%',
-      backgroundColor: hasErrors ? colors.error : colors.warning,
-      color: colors.onError,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.bold,
-      cursor: 'help',
-      flexShrink: 0,
-    };
-
-    // SR dropdown style
-    const srSelectStyle: CSSProperties = {
-      padding: '4px 8px',
-      border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
-      borderRadius: borderRadius.sm,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      backgroundColor: colors.background,
-      color: colors.textPrimary,
-      cursor: 'pointer',
-      minWidth: 60,
-    };
-
-    // Field dropdown style
-    const fieldSelectStyle: CSSProperties = {
-      padding: '4px 8px',
-      border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-      borderRadius: borderRadius.sm,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      backgroundColor: colors.background,
-      color: colors.textPrimary,
-      cursor: 'pointer',
-      minWidth: 60,
-    };
-
-    const timeStyle: CSSProperties = {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.medium,
-      color: status === 'running' ? colors.primary : colors.textSecondary,
-      fontVariantNumeric: 'tabular-nums',
-      minWidth: 50,
-    };
-
-    const teamNameStyle: CSSProperties = {
-      fontSize: fontSizes.md,
-      fontWeight: fontWeights.bold,
-      color: colors.textPrimary,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap',
-    };
-
-    const vsStyle: CSSProperties = {
-      fontSize: fontSizes.sm,
-      color: colors.textMuted,
-      padding: `0 ${spacing.sm}`,
-    };
-
-    const groupStyle: CSSProperties = {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
-      textAlign: 'right',
-      minWidth: 45,
-    };
-
-    return (
-      <div ref={setNodeRef} style={containerStyle}>
-        <div style={rowWrapperStyle}>
-          {/* Drag Handle */}
-          <div
-            style={dragHandleStyle}
-            {...(canDrag ? { ...attributes, ...listeners } : {})}
-            aria-label={isLocked ? 'Spiel kann nicht verschoben werden' : 'Ziehen zum Verschieben'}
-          >
-            {isLocked ? '🔒' : '⋮⋮'}
-          </div>
-
-          {/* Content */}
-          <div style={contentStyle}>
-            {/* Conflict Indicator */}
-            {hasConflicts && (
-              <div
-                style={conflictIndicatorStyle}
-                title={conflicts.map(c => c.message).join('\n')}
-              >
-                {conflicts.length}
-              </div>
-            )}
-            {!hasConflicts && <div style={{ width: 28 }} />}
-
-            {/* SR Selector */}
-            {showReferees && onRefereeChange && (
-              <select
-                value={displayedRef ?? ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  onRefereeChange(match.id, value ? parseInt(value) : null);
-                }}
-                style={srSelectStyle}
-                aria-label="Schiedsrichter"
-              >
-                <option value="">SR -</option>
-                {refereeOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    SR {opt.label}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {/* Time */}
-            <div style={timeStyle}>
-              {isDragging ? '↕️' : match.time}
-            </div>
-
-            {/* Home Team */}
-            <div style={{ ...teamNameStyle, textAlign: 'right' }}>
-              {match.homeTeam}
-            </div>
-
-            {/* VS */}
-            <div style={vsStyle}>vs</div>
-
-            {/* Away Team */}
-            <div style={teamNameStyle}>
-              {match.awayTeam}
-            </div>
-
-            {/* Field Selector */}
-            {showFields && onFieldChange && (
-              <select
-                value={displayedField || 1}
-                onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
-                style={fieldSelectStyle}
-                aria-label="Feld"
-              >
-                {fieldOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    F{opt.label}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {/* Group */}
-            <div style={groupStyle}>
-              {match.group ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // Render desktop card list (non-edit mode)
   const renderDesktopCardContent = () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
-      {sortedMatches.map((match) => (
-        <DesktopCard key={match.id} match={match} />
-      ))}
+      {sortedMatches.map((match) => {
+        const status = getMatchStatus(match);
+        const isExpanded = expandedMatchId === match.id;
+
+        return (
+          <DesktopCard
+            key={match.id}
+            match={match}
+            status={status}
+            isExpanded={isExpanded}
+            tournament={tournament}
+            onCardClick={handleCardClick}
+            onCircleClick={handleCircleClick}
+            renderExpandContent={renderExpandContent}
+          />
+        );
+      })}
     </div>
   );
 
@@ -887,6 +455,15 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             hasPendingRef={hasPendingRef}
             hasPendingField={hasPendingField}
             conflicts={getMatchConflicts(match.id)}
+            editingSchedule={editingSchedule}
+            canSwap={!!onMatchSwap}
+            tournament={tournament}
+            showReferees={showReferees}
+            refereeOptions={refereeOptions}
+            showFields={showFields}
+            fieldOptions={fieldOptions}
+            onRefereeChange={onRefereeChange}
+            onFieldChange={onFieldChange}
           />
         );
       })}
@@ -929,8 +506,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: spacing.md,
-                minWidth: '400px',
-                maxWidth: '700px',
+                minWidth: spacingSemantics.dialogSm,
+                maxWidth: spacingSemantics.dialogXl,
                 cursor: 'grabbing',
               }}>
                 <span style={{ color: colors.primary, fontSize: fontSizes.lg }}>⋮⋮</span>
@@ -1005,6 +582,18 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     hasUnsavedChanges={hasUnsavedChanges}
                     hasPendingField={hasPendingField}
                     conflicts={getMatchConflicts(match.id)}
+                    editingSchedule={editingSchedule}
+                    canSwap={!!onMatchSwap}
+                    tournament={tournament}
+                    showReferees={showReferees}
+                    refereeOptions={editableRefereeOptions}
+                    showFields={showFields}
+                    fieldOptions={fieldOptions}
+                    onRefereeChange={onRefereeChange}
+                    onFieldChange={onFieldChange}
+                    onCardClick={handleCardClick}
+                    onCircleClick={handleCircleClick}
+                    renderExpandContent={renderExpandContent}
                   />
                 );
               })}

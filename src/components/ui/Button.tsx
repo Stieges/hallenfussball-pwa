@@ -80,20 +80,24 @@ export const Button: React.FC<ButtonProps> = ({
     width: fullWidth ? '100%' : 'auto',
     opacity: isDisabled ? 0.5 : 1,
     transform: isPressed ? 'scale(0.97)' : 'scale(1)',
+    touchAction: 'manipulation', // Disable 300ms tap delay on mobile
   };
 
   const sizeStyles: Record<string, CSSProperties> = {
     sm: {
       padding: `${spacing.sm} ${spacing.md}`,
       fontSize: fontSizes.sm,
+      minHeight: '44px', // WCAG: 44px minimum touch target
     },
     md: {
       padding: `${spacing.md} ${spacing.lg}`,
       fontSize: fontSizes.md,
+      minHeight: '44px', // WCAG: 44px minimum touch target
     },
     lg: {
       padding: `${spacing.lg} ${spacing.xl}`,
       fontSize: fontSizes.lg,
+      minHeight: '48px', // Larger touch target for primary actions
     },
   };
 

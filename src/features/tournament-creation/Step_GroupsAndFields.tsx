@@ -269,7 +269,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                   </span>
                   <div style={{ position: 'relative' }}>
                     <Input
-                      placeholder={`z.B. Halle Nord`}
+                      placeholder="Halle Nord"
                       value={field.customName ?? ''}
                       onChange={(value) => updateField(field.id, { customName: value || undefined })}
                       error={hasError}
@@ -366,7 +366,7 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
                     </span>
                     <div style={{ position: 'relative' }}>
                       <Input
-                        placeholder={`z.B. Löwen`}
+                        placeholder="Löwen"
                         value={group.customName ?? ''}
                         onChange={(value) => updateGroup(group.id, { customName: value || undefined })}
                         error={hasError}

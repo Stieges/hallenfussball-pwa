@@ -21,7 +21,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         label="Turniername"
         value={formData.title ?? ''}
         onChange={(v) => onUpdate('title', v)}
-        placeholder="z.B. TSV Waging Hallencup 2025"
+        placeholder="Vereinsname Hallencup 2025"
         required
       />
 
@@ -29,7 +29,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         label="Veranstalter (optional)"
         value={formData.organizer ?? ''}
         onChange={(v) => onUpdate('organizer', v)}
-        placeholder="z.B. TSV Waging e.V."
+        placeholder="Mein Verein e.V."
         style={{ marginTop: '16px' }}
       />
 
@@ -73,7 +73,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
             // Keep legacy field in sync (simple format)
             onUpdate('timeSlot', v);
           }}
-          placeholder="z.B. 09:00"
+          placeholder="09:00"
           required
         />
       </div>

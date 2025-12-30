@@ -74,11 +74,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
       gap: '12px',
       padding: '14px 16px',
       background: isSelected
-        ? isRecommended ? 'rgba(255,215,0,0.15)' : 'rgba(255,165,0,0.12)'
-        : isRecommended ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.15)',
+        ? isRecommended ? colors.accentLight : colors.warningLight
+        : isRecommended ? colors.surfaceDarkMedium : colors.surfaceDarkLight,
       border: isSelected
-        ? `2px solid ${isRecommended ? colors.accent : 'rgba(255,165,0,0.5)'}`
-        : isRecommended ? '2px solid rgba(255,215,0,0.3)' : '2px solid rgba(255,255,255,0.1)',
+        ? `2px solid ${isRecommended ? colors.accent : colors.warning}`
+        : isRecommended ? `2px solid ${colors.accentBorder}` : `2px solid ${colors.border}`,
       borderRadius: borderRadius.md,
       cursor: 'pointer',
       transition: 'all 0.2s',
@@ -96,7 +96,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             width: '18px',
             height: '18px',
             cursor: 'pointer',
-            accentColor: isRecommended ? colors.accent : 'rgba(255,165,0,0.8)'
+            accentColor: isRecommended ? colors.accent : colors.warning
           }}
         />
         <div style={{ flex: 1 }}>
@@ -116,7 +116,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           </div>
           {option.explanation && (
             <div style={{
-              color: isRecommended ? colors.textSecondary : 'rgba(255,165,0,0.8)',
+              color: isRecommended ? colors.textSecondary : colors.warning,
               fontSize: '11px',
               marginTop: '4px',
               fontStyle: 'italic'
@@ -151,7 +151,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             style={{
               width: '100%',
               padding: '10px 12px',
-              background: 'rgba(0,0,0,0.2)',
+              background: colors.surfaceDarkMedium,
               border: `1px solid ${colors.border}`,
               borderRadius: borderRadius.sm,
               color: colors.textSecondary,
@@ -179,9 +179,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '16px',
           padding: '12px 16px',
-          background: 'rgba(255,165,0,0.12)',
+          background: colors.warningLight,
           borderRadius: borderRadius.md,
-          border: '1px solid rgba(255,165,0,0.3)'
+          border: `1px solid ${colors.warningBorder}`
         }}>
           <p style={{ fontSize: '12px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
             <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
@@ -194,9 +194,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '16px',
           padding: '12px 16px',
-          background: 'rgba(0,176,255,0.12)',
+          background: colors.secondaryLight,
           borderRadius: borderRadius.md,
-          border: '1px solid rgba(0,176,255,0.3)'
+          border: `1px solid ${colors.secondaryBorderActive}`
         }}>
           <p style={{ fontSize: '12px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
             <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
@@ -211,9 +211,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '20px',
           padding: '16px',
-          background: 'rgba(255,215,0,0.08)',
+          background: colors.accentMedium,
           borderRadius: borderRadius.md,
-          border: '1px solid rgba(255,215,0,0.2)'
+          border: `1px solid ${colors.accentLight}`
         }}>
           <h4 style={{
             color: colors.accent,
@@ -277,9 +277,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '20px',
           padding: '16px',
-          background: 'rgba(0,176,255,0.08)',
+          background: colors.secondaryMedium,
           borderRadius: borderRadius.md,
-          border: '1px solid rgba(0,176,255,0.2)'
+          border: `1px solid ${colors.infoBorder}`
         }}>
           <h4 style={{
             color: colors.secondary,
@@ -356,7 +356,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{
                   width: '60px',
                   padding: '6px 10px',
-                  background: 'rgba(0,0,0,0.3)',
+                  background: colors.inputBg,
                   border: `1px solid ${colors.border}`,
                   borderRadius: borderRadius.sm,
                   color: colors.textPrimary,

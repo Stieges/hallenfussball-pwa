@@ -11,7 +11,7 @@
 vollständiger test
 ```
 
-Führt **ALLE 10 Agents** der Reihe nach aus und erstellt einen konsolidierten Report.
+Führt **ALLE 11 Agents** der Reihe nach aus und erstellt einen konsolidierten Report.
 
 ---
 
@@ -29,6 +29,7 @@ Führt **ALLE 10 Agents** der Reihe nach aus und erstellt einen konsolidierten R
 | 8 | @pwa | Offline, Service Worker, Install |
 | 9 | @api | Endpoints, Validierung, Errors |
 | 10 | @regression | Keine alten Bugs wieder da |
+| 11 | **@usability** | Nielsen Heuristics, Task Flows, Mobile/Desktop UX |
 
 ---
 
@@ -59,6 +60,8 @@ Führt **ALLE 10 Agents** der Reihe nach aus und erstellt einen konsolidierten R
 │         ↓                                                       │
 │  10. @regression     ──→ Alle Tests nochmal                     │
 │         ↓                                                       │
+│  11. @usability      ──→ Nielsen Heuristics + Task Flows        │
+│         ↓                                                       │
 │  ══════════════════════════════════════════════════════════     │
 │  CONSOLIDATED REPORT → docs/qa-reports/[DATUM]-FULL-QA.md       │
 │                                                                 │
@@ -71,10 +74,15 @@ Führt **ALLE 10 Agents** der Reihe nach aus und erstellt einen konsolidierten R
 
 | Befehl | Was passiert |
 |--------|--------------|
-| `vollständiger test` | Alle 10 Agents |
+| `vollständiger test` | Alle 11 Agents |
 | `schneller test` | @code-quality + @functional (nur Happy Path) |
 | `vor release` | @regression + @security + @performance + @device |
 | `Führe @[agent] aus` | Einzelner Agent |
+| `Führe @usability aus` | Vollständiger Usability-Durchlauf (11 Teile) |
+| `Führe @usability aus für [Feature]` | Fokussierter Usability-Test |
+| `Führe @usability-mobile aus` | Nur Mobile-Usability |
+| `Führe @usability-desktop aus` | Nur Desktop-Usability |
+| `Führe @usability-flows aus` | Nur Task-Flow-Analyse |
 
 ---
 
@@ -453,6 +461,86 @@ npm run test:e2e
 
 ---
 
+### Agent 11: @usability
+
+**Prüft:** Nielsen Heuristics, Mobile/Desktop UX, Task Flows, Cognitive Load
+
+**Detaillierte Dokumentation:** `.claude/agents/USABILITY_AGENT.md`
+
+**11 Prüfbereiche:**
+1. Nielsen's 10 Heuristics
+2. Mobile Usability (One-Handed, Touch, Gestures)
+3. Desktop Usability (Keyboard, Mouse, Multi-Window)
+4. Task-Flow-Analyse (Effizienz, Klicks, Zeit)
+5. Fehlertoleranz & Recovery
+6. Cognitive Load & Information Architecture
+7. Feedback & Guidance
+8. Navigation & Orientierung
+9. Formular-Usability
+10. Onboarding & Hilfe
+11. Kontext-spezifisch (Spielfeldrand-Szenario)
+
+**Kritische Task-Flow-Ziele:**
+| Flow | Klicks (Ziel) | Zeit (Ziel) |
+|------|---------------|-------------|
+| Tor erfassen | ≤2 | ≤3s |
+| Spieler wechseln | ≤3 | ≤5s |
+| Nächstes Spiel starten | ≤1 | ≤2s |
+| Ergebnis korrigieren | ≤3 | ≤5s |
+| Turnier erstellen | ≤15 | ≤5min |
+
+**Touch Target Requirements:**
+| Element-Typ | Minimum | Empfohlen |
+|-------------|---------|-----------|
+| Sekundär-Buttons | 44×44px | 48×48px |
+| Primär-Buttons | 48×48px | 56×56px |
+| Score-Buttons | 56×56px | 64×64px |
+
+**Output:**
+```markdown
+## @usability Report
+
+### Nielsen Heuristics
+| Heuristik | Status | Issues |
+|-----------|--------|--------|
+| Sichtbarkeit Status | ✅/⚠️/❌ | X |
+| System/Welt Match | ✅/⚠️/❌ | X |
+| Benutzerkontrolle | ✅/⚠️/❌ | X |
+| Konsistenz | ✅/⚠️/❌ | X |
+| Fehlervermeidung | ✅/⚠️/❌ | X |
+| Wiedererkennung | ✅/⚠️/❌ | X |
+| Flexibilität | ✅/⚠️/❌ | X |
+| Ästhetik | ✅/⚠️/❌ | X |
+| Fehlerbehandlung | ✅/⚠️/❌ | X |
+| Hilfe | ✅/⚠️/❌ | X |
+
+### Mobile Usability
+| Check | Status |
+|-------|--------|
+| One-Handed Operation | ✅/❌ |
+| Touch Targets ≥44px | ✅/❌ |
+| Touch Feedback | ✅/❌ |
+| Input Zoom (≥16px) | ✅/❌ |
+
+### Task Flows
+| Flow | Klicks | Zeit | Status |
+|------|--------|------|--------|
+| Tor erfassen | X | Xs | ✅/❌ |
+| ... | ... | ... | ... |
+
+### Spielfeldrand-Tauglichkeit
+| Anforderung | Status |
+|-------------|--------|
+| One-Handed | ✅/❌ |
+| Große Touch Targets | ✅/❌ |
+| Schnelles Tor-Erfassen | ✅/❌ |
+| Offline-fähig | ✅/❌ |
+| Gute Lesbarkeit | ✅/❌ |
+| Fehlertoleranz | ✅/❌ |
+```
+
+---
+
 ## Consolidated Report Template
 
 Nach `vollständiger test` wird erstellt:
@@ -476,6 +564,7 @@ Nach `vollständiger test` wird erstellt:
 | @pwa | ✅/⚠️/❌ | 0 | 0 | 0 |
 | @api | ✅/⚠️/❌ | 0 | 0 | 0 |
 | @regression | ✅/⚠️/❌ | 0 | 0 | 0 |
+| @usability | ✅/⚠️/❌ | 0 | 0 | 0 |
 
 **Gesamt:** X Critical, X High, X Medium
 

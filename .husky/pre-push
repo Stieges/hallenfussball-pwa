@@ -1,2 +1,29 @@
+# Check for uncommitted CI-relevant changes
+UNCOMMITTED_CI_FILES=$(git diff --name-only | grep -E "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/ci\.yml" || true)
+
+if [ -n "$UNCOMMITTED_CI_FILES" ]; then
+  echo ""
+  echo "🚨 WARNUNG: Uncommitted CI-relevante Änderungen!"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Folgende Dateien haben lokale Änderungen die NICHT gepusht werden:"
+  echo "$UNCOMMITTED_CI_FILES" | while read file; do echo "   - $file"; done
+  echo ""
+  echo "⚠️  CI verwendet den COMMITTED Stand, nicht deine lokalen Änderungen!"
+  echo ""
+  echo "Optionen:"
+  echo "   1. git add <datei> && git commit --amend  (Änderungen inkludieren)"
+  echo "   2. git checkout <datei>                   (Lokale Änderungen verwerfen)"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  read -p "Trotzdem pushen? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Push abgebrochen."
+    exit 1
+  fi
+fi
+
 npm run lint
 npm run build

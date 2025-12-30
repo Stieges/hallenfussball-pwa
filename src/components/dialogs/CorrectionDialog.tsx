@@ -285,7 +285,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
             value={note}
             onChange={(e) => setNote(e.target.value)}
             style={textareaStyle}
-            placeholder="z.B. Protestentscheidung nach Videoanalyse..."
+            placeholder="Optionale Anmerkung zur Korrektur"
           />
         </div>
 

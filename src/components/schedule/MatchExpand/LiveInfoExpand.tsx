@@ -163,8 +163,8 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     display: 'inline-flex',
     alignItems: 'center',
     gap: spacing.xs,
-    backgroundColor: 'rgba(220, 38, 38, 0.2)',
-    color: '#DC2626',
+    backgroundColor: colors.liveBadgeBg,
+    color: colors.liveBadge,
     fontSize: fontSizes.sm,
     fontWeight: fontWeights.bold,
     padding: `${spacing.xs} ${spacing.sm}`,
@@ -175,7 +175,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     width: 8,
     height: 8,
     borderRadius: '50%',
-    backgroundColor: '#DC2626',
+    backgroundColor: colors.liveBadge,
     animation: 'pulse 2s ease-in-out infinite',
   };
 

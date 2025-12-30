@@ -131,18 +131,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
   const cardStyle: CSSProperties = {
     backgroundColor: isLive
-      ? `linear-gradient(135deg, rgba(0,230,118,0.08), ${colors.surface})`
+      ? `linear-gradient(135deg, ${colors.primaryMedium}, ${colors.surface})`
       : colors.surface,
     background: isLive
-      ? `linear-gradient(135deg, rgba(0,230,118,0.08), ${colors.surface})`
+      ? `linear-gradient(135deg, ${colors.primaryMedium}, ${colors.surface})`
       : colors.surface,
-    border: `1px solid ${isLive ? 'rgba(0,230,118,0.4)' : colors.border}`,
+    border: `1px solid ${isLive ? colors.borderActive : colors.border}`,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     cursor: disabled ? 'default' : 'pointer',
     transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     boxShadow: isHovered && !disabled
-      ? `0 4px 12px rgba(0,0,0,0.3)`
+      ? `0 4px 12px ${colors.shadowMedium}`
       : 'none',
   };
 

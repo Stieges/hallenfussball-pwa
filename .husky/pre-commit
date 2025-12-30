@@ -1,2 +1,35 @@
+# Check for config file changes that need CI sync
+if git diff --cached --name-only | grep -qE "playwright\.config\.ts|vite\.config\.ts|\.github/workflows/ci\.yml"; then
+  echo ""
+  echo "⚠️  CI-RELEVANTE DATEIEN GEÄNDERT!"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+
+  # Show which files changed
+  if git diff --cached --name-only | grep -q "playwright.config.ts"; then
+    echo "📋 playwright.config.ts geändert"
+    echo "   → Prüfe: Stimmen Projekt-Namen mit ci.yml überein?"
+    echo "   → Prüfe: Stimmt der Port mit vite.config.ts überein?"
+  fi
+
+  if git diff --cached --name-only | grep -q "vite.config.ts"; then
+    echo "⚙️  vite.config.ts geändert"
+    echo "   → Prüfe: Stimmt server.port mit playwright.config.ts überein?"
+  fi
+
+  if git diff --cached --name-only | grep -q "ci.yml"; then
+    echo "🔄 ci.yml geändert"
+    echo "   → Prüfe: Stimmen matrix.project Namen mit playwright.config.ts überein?"
+  fi
+
+  echo ""
+  echo "Aktuelle Ports:"
+  echo "   vite.config.ts:       $(grep -E 'port:\s*[0-9]+' vite.config.ts 2>/dev/null | head -1 | grep -oE '[0-9]+')"
+  echo "   playwright.config.ts: $(grep -E "PORT.*'[0-9]+'" playwright.config.ts 2>/dev/null | grep -oE '[0-9]+')"
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
+
 npx lint-staged
 npm run test -- --run

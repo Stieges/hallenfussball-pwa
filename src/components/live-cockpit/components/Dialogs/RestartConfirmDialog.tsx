@@ -223,7 +223,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: fontSizes.md,
     fontWeight: 600,
     backgroundColor: colors.warning,
-    color: '#000',
+    color: colors.onWarning,
     border: 'none',
     borderRadius: borderRadius.lg,
     cursor: 'pointer',

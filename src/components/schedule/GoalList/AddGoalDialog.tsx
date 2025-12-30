@@ -252,7 +252,7 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
             pattern="[0-9]*"
             value={playerNumber}
             onChange={handlePlayerNumberChange}
-            placeholder="z.B. 10"
+            placeholder="10"
             style={inputStyle}
             autoComplete="off"
           />

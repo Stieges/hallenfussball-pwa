@@ -342,7 +342,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 label="Turniername"
                 value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
-                placeholder="z.B. TSV Waging Hallencup 2025"
+                placeholder="Vereinsname Hallencup 2025"
                 required
               />
 
@@ -350,7 +350,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 label="Veranstalter (optional)"
                 value={formData.organizer ?? ''}
                 onChange={(v) => handleUpdate('organizer', v)}
-                placeholder="z.B. TSV Waging e.V."
+                placeholder="Mein Verein e.V."
                 style={{ marginTop: '16px' }}
               />
 
@@ -400,7 +400,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   type="time"
                   value={formData.startTime ?? ''}
                   onChange={(v) => handleUpdate('startTime', v)}
-                  placeholder="z.B. 09:00"
+                  placeholder="09:00"
                   required
                 />
               </div>

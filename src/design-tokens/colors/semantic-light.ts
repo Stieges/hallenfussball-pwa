@@ -18,12 +18,21 @@ export const semanticColorsLight = {
   primaryHover: palette.emerald[700],
   primaryActive: palette.emerald[800],
   primaryLight: 'rgba(5, 150, 105, 0.12)',
+  primaryMedium: 'rgba(5, 150, 105, 0.08)',
+  primarySubtle: 'rgba(5, 150, 105, 0.04)',
 
   secondary: palette.blue[600],
   secondaryHover: palette.blue[700],
   secondaryLight: 'rgba(0, 150, 230, 0.12)',
+  secondaryMedium: 'rgba(0, 150, 230, 0.08)',
+  secondarySubtle: 'rgba(0, 150, 230, 0.04)',
+  secondaryBorderActive: 'rgba(0, 150, 230, 0.25)',
 
   accent: palette.amber[600],
+  accentLight: 'rgba(217, 119, 6, 0.15)',
+  accentMedium: 'rgba(217, 119, 6, 0.08)',
+  accentSubtle: 'rgba(217, 119, 6, 0.05)',
+  accentBorder: 'rgba(217, 119, 6, 0.25)',
 
   // ---------------------------------------------------------------------------
   // Background Colors
@@ -66,10 +75,12 @@ export const semanticColorsLight = {
   error: palette.red[600],
   errorHover: palette.red[700],
   errorLight: 'rgba(220, 38, 38, 0.1)',
+  errorBorder: 'rgba(220, 38, 38, 0.25)',
 
   warning: palette.amber[600],
   warningHover: palette.amber[700],
   warningLight: 'rgba(217, 119, 6, 0.1)',
+  warningBorder: 'rgba(217, 119, 6, 0.25)',
 
   success: palette.emerald[600],
   successHover: palette.emerald[700],
@@ -77,6 +88,7 @@ export const semanticColorsLight = {
 
   info: palette.blue[600],
   infoLight: 'rgba(0, 150, 230, 0.1)',
+  infoBorder: 'rgba(0, 150, 230, 0.2)',
 
   // ---------------------------------------------------------------------------
   // On-Colors (text on colored backgrounds)

@@ -128,7 +128,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const containerStyle: CSSProperties = {
     borderRadius: borderRadius.md,
     overflow: 'hidden',
-    border: `1px solid ${isLive ? 'rgba(0,230,118,0.4)' : colors.border}`,
+    border: `1px solid ${isLive ? colors.borderActive : colors.border}`,
   };
 
   const rowStyle: CSSProperties = {
@@ -143,7 +143,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         ? colors.surfaceHover
         : colors.surface,
     background: isLive
-      ? `linear-gradient(135deg, rgba(0,230,118,0.08), ${colors.surface})`
+      ? `linear-gradient(135deg, ${colors.primaryMedium}, ${colors.surface})`
       : undefined,
     cursor: disabled ? 'default' : 'pointer',
     transition: 'background-color 0.15s ease',

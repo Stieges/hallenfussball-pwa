@@ -128,7 +128,7 @@ export const GAME_PERIODS_OPTIONS: SelectOption[] = [
  * Standard-Werte
  */
 export const DEFAULT_VALUES = {
-  ageClass: 'U11',
+  ageClass: '', // Keine Vorauswahl - Benutzer muss selbst wählen
   numberOfGroups: 2,
   numberOfFields: 1,
   groupPhaseGameDuration: 10, // Spieldauer Gruppenphase (Standard: 10 Min)

@@ -170,6 +170,9 @@ export function useScheduleTabActions({
       if (!confirmEdit) { return; }
     }
 
+    // Save to history BEFORE making changes (for Undo)
+    saveToHistory();
+
     // Update tournament matches
     const updatedMatches = tournament.matches.map((match) =>
       match.id === matchId ? { ...match, scoreA, scoreB } : match
@@ -194,7 +197,7 @@ export function useScheduleTabActions({
     if (bracketResolution?.wasResolved) {
       onTournamentUpdate(updatedTournament, false);
     }
-  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning]);
+  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning, saveToHistory]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
   const handleRefereeAssignment = useCallback((matchId: string, refereeNumber: number | null) => {

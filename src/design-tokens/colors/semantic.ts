@@ -24,12 +24,21 @@ export const semanticColorsDark = {
   primaryHover: palette.green[500],
   primaryActive: palette.green[600],
   primaryLight: 'rgba(0, 230, 118, 0.15)',
+  primaryMedium: 'rgba(0, 230, 118, 0.1)',
+  primarySubtle: 'rgba(0, 230, 118, 0.05)',
 
   secondary: palette.blue[500],
   secondaryHover: palette.blue[600],
   secondaryLight: 'rgba(0, 176, 255, 0.15)',
+  secondaryMedium: 'rgba(0, 176, 255, 0.1)',
+  secondarySubtle: 'rgba(0, 176, 255, 0.05)',
+  secondaryBorderActive: 'rgba(0, 176, 255, 0.3)',
 
   accent: '#FFD700',
+  accentLight: 'rgba(255, 215, 0, 0.2)',
+  accentMedium: 'rgba(255, 215, 0, 0.1)',
+  accentSubtle: 'rgba(255, 215, 0, 0.05)',
+  accentBorder: 'rgba(255, 215, 0, 0.3)',
 
   // ---------------------------------------------------------------------------
   // Background Colors
@@ -72,10 +81,12 @@ export const semanticColorsDark = {
   error: palette.red[400],
   errorHover: palette.red[500],
   errorLight: 'rgba(255, 82, 82, 0.15)',
+  errorBorder: 'rgba(255, 82, 82, 0.3)',
 
   warning: palette.orange[400],
   warningHover: palette.orange[500],
   warningLight: 'rgba(255, 145, 0, 0.15)',
+  warningBorder: 'rgba(255, 145, 0, 0.3)',
 
   success: '#4CAF50',
   successHover: '#43A047',
@@ -83,6 +94,7 @@ export const semanticColorsDark = {
 
   info: palette.blue[500],
   infoLight: 'rgba(0, 176, 255, 0.15)',
+  infoBorder: 'rgba(0, 176, 255, 0.2)',
 
   // ---------------------------------------------------------------------------
   // On-Colors (text on colored backgrounds)

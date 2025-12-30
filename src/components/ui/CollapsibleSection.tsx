@@ -23,15 +23,15 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          border: 'rgba(0, 230, 118, 0.3)',
-          bg: 'rgba(0, 230, 118, 0.05)',
-          headerBg: 'rgba(0, 230, 118, 0.1)',
+          border: colors.borderActive,
+          bg: colors.primarySubtle,
+          headerBg: colors.primaryMedium,
         };
       case 'secondary':
         return {
-          border: 'rgba(0, 176, 255, 0.3)',
-          bg: 'rgba(0, 176, 255, 0.05)',
-          headerBg: 'rgba(0, 176, 255, 0.1)',
+          border: colors.secondaryBorderActive,
+          bg: colors.secondarySubtle,
+          headerBg: colors.secondaryMedium,
         };
       default:
         return {

@@ -168,9 +168,9 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   const containerStyle: CSSProperties = {
     marginTop: '24px',
     padding: '20px',
-    background: 'rgba(255,215,0,0.05)',
+    background: colors.accentSubtle,
     borderRadius: borderRadius.md,
-    border: '1px solid rgba(255,215,0,0.2)',
+    border: `1px solid ${colors.accentLight}`,
   };
 
   const headerStyle: CSSProperties = {
@@ -236,7 +236,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
     alignItems: 'center',
     padding: '12px',
     background: dragOverMatch === matchId
-      ? 'rgba(255,215,0,0.2)'
+      ? colors.accentLight
       : colors.background,
     border: `1px solid ${dragOverMatch === matchId
       ? colors.accent

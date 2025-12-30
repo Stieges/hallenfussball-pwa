@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2025-12-29
+> **Letzte Aktualisierung:** 2025-12-30 (Dashboard + User-Menu IST-Analyse erstellt)
 
 ---
 
@@ -12,21 +12,22 @@
 **Referenz:** `docs/concepts/LIVE-COCKPIT-KONZEPT.md`
 **Gap-Analyse:** 2025-12-27 durchgeführt
 
-> ⚠️ **Hinweis:** Es existiert bereits eine umfangreiche Implementierung in `src/components/live-cockpit/`.
+> ⚠️ **Hinweis:** Die Produktion verwendet `LiveCockpitMockup.tsx` (887 LOC).
+> `LiveCockpit.tsx` ist **@deprecated** und wird nicht mehr verwendet.
 > Die Phasen wurden basierend auf der Gap-Analyse aktualisiert.
 
 ---
 
-### Phase 1: Types & Hooks – OFFEN
+### Phase 1: Types & Hooks – ✅ ERLEDIGT
 
 | Aufgabe | Status | Commit | Notizen |
 |---------|--------|--------|---------|
 | Types erweitern (`tournament.ts`) | ✅ Erledigt | `fffa28c` | `MatchEventType`, `MatchEvent`, `MatchState`, `ActivePenalty`, `PenaltyShootout`, `PenaltyKick`, `KnockoutConfig` |
 | `useDialogTimer` Hook | ✅ Erledigt | – | Auto-Dismiss Countdown-Timer für Dialoge |
-| `useMatchTimer` Hook | ⬜ Offen | – | Timer-Logik aus LiveCockpit extrahieren |
-| `useLiveCockpit` Hook | ⬜ Offen | – | State-Management aus LiveCockpit extrahieren |
+| `useMatchTimer` Hook | ✅ Erledigt | – | `src/hooks/useMatchTimer.ts` – requestAnimationFrame-basiert |
+| `useLiveCockpit` Hook | ❌ Obsolet | – | LiveCockpit.tsx ist @deprecated, kein Refactoring nötig |
 
-**Nächster Schritt:** Types erweitern in `tournament.ts`
+**Status:** Phase 1 abgeschlossen.
 **Konzept-Referenz:** Abschnitt 8 (Datenmodell)
 
 ---
@@ -41,9 +42,9 @@
 | `MatchControls` (Footer) | ✅ Erledigt | – | `components/FooterBar/index.tsx` |
 | `Header` | ✅ Erledigt | – | `components/Header/index.tsx` mit Modus, Undo |
 | `GoalScorerDialog` | ✅ Erledigt | – | Mit Auto-Dismiss Timer (10s, `useDialogTimer`) |
-| `LiveCockpit` (Container) | ✅ Erledigt | – | `LiveCockpit.tsx` (650 LOC) |
+| `LiveCockpit` (Container) | ✅ Erledigt | – | `LiveCockpitMockup.tsx` (887 LOC) – **Aktive Produktion** |
 
-**Status:** Vollständig implementiert inkl. Auto-Dismiss Timer.
+**Status:** Vollständig implementiert. `LiveCockpit.tsx` ist @deprecated.
 
 ---
 
@@ -95,13 +96,41 @@
 | ~~5~~ | ~~`PenaltyIndicators` (Laufende Strafen)~~ | 3 | ✅ Erledigt |
 | ~~6~~ | ~~`SubstitutionDialog` implementieren~~ | 3 | ✅ Erledigt |
 | ~~7~~ | ~~`OpenEntriesSection` implementieren~~ | 3 | ✅ Erledigt |
-| 8 | `useMatchTimer` Hook extrahieren | 1 | Offen |
-| 9 | `useLiveCockpit` Hook extrahieren | 1 | Offen |
-| 10 | `PenaltyResultDialog` (nur Endergebnis) | 4 | Offen |
+| ~~8~~ | ~~`useMatchTimer` Hook extrahieren~~ | 1 | ✅ Erledigt (existiert in `src/hooks/`) |
+| ~~9~~ | ~~`useLiveCockpit` Hook extrahieren~~ | 1 | ❌ Obsolet (LiveCockpit.tsx deprecated) |
+| 10 | `PenaltyResultDialog` (nur Endergebnis) | 4 | Niedrig – Nice-to-have |
+
+**🎉 Live-Cockpit Feature ist funktional komplett!** Verbleibende Aufgaben sind Refactoring/Nice-to-have.
 
 ---
 
 ## 🟡 Backlog
+
+### Usability Issues (aus @usability Report 2025-12-30)
+
+**Report:** `docs/qa-reports/2025-12-30-USABILITY.md`
+
+#### HIGH Priority
+
+| ID | Issue | Datei | Status |
+|----|-------|-------|--------|
+| ~~H1~~ | ~~Button (sm) keine minHeight → Touch Target < 44px~~ | `src/components/ui/Button.tsx` | ✅ Erledigt |
+| H2 | Kein Undo für Turnier-Löschung → Papierkorb | [Konzept](concepts/PAPIERKORB-KONZEPT.md) | ⬜ Offen (~5h) |
+
+#### MEDIUM Priority
+
+| ID | Issue | Datei | Status |
+|----|-------|-------|--------|
+| M1 | ESC-Handler für Dialoge verifizieren | `components/ui/ConfirmDialog.tsx`, etc. | ⬜ Offen (30 Min) |
+| M2 | Keyboard Shortcuts undokumentiert | Docs | ⬜ Offen (1h) |
+| ~~M3~~ | ~~`touch-action: manipulation` fehlt in Button~~ | `src/components/ui/Button.tsx` | ✅ Erledigt |
+| M4 | Focus-Outline kontrastreicher | `Button.tsx`, `Input.tsx` | ⬜ Offen (30 Min) |
+| M5 | Spiel-Beendigung kein Undo | `LiveCockpitMockup.tsx` | ⬜ Offen (2h) |
+| M6 | Altersklassen-Dropdown lang (~30 Optionen) | `Step1_Metadata` | ⬜ Offen (1h) |
+| M7 | Error Messages nur roter Rahmen, kein Text | `src/components/ui/Input.tsx` | ⬜ Offen (1h) |
+| M8 | Kein Onboarding für Power-Features | App | ⬜ Offen (3h) |
+
+---
 
 ### Features
 
@@ -121,8 +150,8 @@
 | [BUG-006](bugs/BUG-006-Zeitstrafe-Dialog-Redundant.md) | 🟡 Minor | ✅ Fixed | Zeitstrafe-Dialog fragt redundant nach Zeit |
 | [BUG-007](bugs/BUG-007-Karten-Dialog-Redundant.md) | 🟡 Minor | ✅ Fixed | Karten-Dialog mit Quick-Mode |
 | [BUG-008](bugs/BUG-008-Zeitstrafe-Cleanup.md) | 🟡 Minor | ✅ Fixed | Zeitstrafe-Countdown + Cleanup |
-| [BUG-009](bugs/BUG-009-Wechsel-Dialog.md) | 🟡 Minor | Open | Wechsel-Dialog umständlich |
-| [BUG-010](bugs/BUG-010-Event-Nachbearbeitung.md) | 🟠 Major | Open | Event-Log nachträgliche Bearbeitung |
+| [BUG-009](bugs/BUG-009-Wechsel-Dialog.md) | 🟡 Minor | ✅ Fixed | Wechsel-Dialog – RAUS/REIN Redesign in LiveCockpitMockup |
+| [BUG-010](bugs/BUG-010-Event-Nachbearbeitung.md) | 🟠 Major | ✅ Fixed | Event-Log Bearbeitung – EventEditDialog in LiveCockpitMockup |
 | BUG-011 | 🟡 Minor | ✅ Closed | **Spielplan 2.0:** Card-Tap öffnet kein Quick-Score Expand (Mobile) – War Test-Problem, nicht Impl-Bug |
 | BUG-012 | 🟡 Minor | ✅ Closed | **Spielplan 2.0:** "Zum Cockpit" Navigation – War Test-Problem, nicht Impl-Bug |
 | BUG-003 Grid Insert | Feature Request | - | Insert-between ist nicht Bug, sondern Feature |
@@ -133,7 +162,7 @@
 |---------|-----------|-------------------|
 | **Wizard: 100+ hardcoded rgba() migrieren** | Hoch | `features/tournament-creation/**` – IST-Analyse: [WIZARD-IST-ANALYSE.md](analysis/WIZARD-IST-ANALYSE.md) |
 | Wizard: Neue Subtle/Border Tokens erstellen | Hoch | `design-tokens/colors/semantic.ts` – primarySubtle, secondarySubtle, warningSubtle, goldSubtle + Border-Varianten |
-| **Live-Cockpit: LiveCockpit.tsx aufteilen (935→~400 LOC)** | Hoch | `live-cockpit/LiveCockpit.tsx` – IST-Analyse: [LIVE-COCKPIT-IST-ANALYSE.md](analysis/LIVE-COCKPIT-IST-ANALYSE.md) |
+| ~~Live-Cockpit: LiveCockpit.tsx aufteilen~~ | ❌ Obsolet | `LiveCockpit.tsx` ist @deprecated – Produktion nutzt `LiveCockpitMockup.tsx` |
 | Live-Cockpit: Dialog-Code extrahieren (~300 LOC) | Mittel | `live-cockpit/components/Dialogs/*.tsx` – DialogBase, TeamSelector, PlayerNumberInput |
 | Live-Cockpit: ~22 hardcoded fontSize migrieren | Mittel | `live-cockpit/**/*.tsx` – zu fontSizes.* |
 | Shared Dialog Styles extrahieren | Mittel | `live-cockpit/components/Dialogs/*.tsx` – ~70% Code-Duplikation zwischen Dialogen (~300 LOC Ersparnis) |
@@ -142,8 +171,8 @@
 | Keyboard-Support für Dialoge | Niedrig | Alle Dialoge – Escape/Enter Shortcuts |
 | Focus-Trap für Dialoge | Niedrig | Alle Dialoge – echte Modal-Semantik |
 | Design Token Migration | Niedrig | Verbleibende Komponenten (Screens erledigt) |
-| Live-Cockpit: Mode aus localStorage laden | Niedrig | `live-cockpit/LiveCockpit.tsx` – fehlendes Init |
-| Live-Cockpit: LiveCockpitMockup.tsx entfernen | Niedrig | `live-cockpit/LiveCockpitMockup.tsx` – 602 LOC obsolet? |
+| ~~Live-Cockpit: Mode aus localStorage laden~~ | ❌ Obsolet | Betrifft deprecated `LiveCockpit.tsx` |
+| Live-Cockpit: `LiveCockpit.tsx` löschen | Niedrig | 935 LOC deprecated Code entfernen – optional |
 
 ### Analyse
 
@@ -158,12 +187,52 @@
 |---------|-----------|
 | - | - |
 
+### Testing (Audit 2025-12-29)
+
+> **Goldene Regel:** 1 Funktion = n Acceptance Criteria = n Tests
+
+#### Schedule-Editor Editiermodus – FEHLENDE TESTS
+
+**E2E Tests (Playwright):**
+
+| Test | Priorität | Status |
+|------|-----------|--------|
+| AC-4: Drag & Drop tauscht Matches | Hoch | ⬜ Offen |
+| Gesperrte Matches (mit Ergebnis) nicht ziehbar | Hoch | ⬜ Offen |
+| Save persistiert Änderungen in localStorage | Mittel | ⬜ Offen |
+| SR redistribution Button Funktion | Mittel | ⬜ Offen |
+| Field redistribution Button Funktion | Mittel | ⬜ Offen |
+| Mobile View Tests (iPhone) | Niedrig | ⬜ Offen (aktuell skipped) |
+
+**Unit Tests (Vitest):**
+
+| Test | Priorität | Status |
+|------|-----------|--------|
+| `useDragDrop` hook | Mittel | ⬜ Offen |
+| `DraggableMatch` component | Niedrig | ⬜ Offen |
+| `TimeSlot` component | Niedrig | ⬜ Offen |
+| `ConflictDialog` component | Niedrig | ⬜ Offen |
+
+**Vorhandene Tests (✅ Komplett):**
+- `useScheduleEditor.test.ts` (~70 Tests)
+- `useMatchConflicts.test.ts` (~20 Tests)
+- `scheduleConflicts.test.ts` (~30 Tests)
+- `autoReassign.test.ts` (~30 Tests)
+- `schedule-editor.spec.ts` (14 E2E Tests)
+
 ---
 
 ## Erledigt
 
 | Aufgabe | Erledigt am | Commit |
 |---------|-------------|--------|
+| Dashboard IST-Analyse | 2025-12-30 | [DASHBOARD-IST-ANALYSE.md](analysis/DASHBOARD-IST-ANALYSE.md) |
+| User-Menu IST-Analyse | 2025-12-30 | [USER-MENU-IST-ANALYSE.md](analysis/USER-MENU-IST-ANALYSE.md) |
+| Papierkorb-Konzept erstellt | 2025-12-30 | [PAPIERKORB-KONZEPT.md](concepts/PAPIERKORB-KONZEPT.md) |
+| Usability-Fixes: H1 (Touch Targets), M3 (tap-delay) | 2025-12-30 | `Button.tsx` minHeight + touchAction |
+| TODO.md Audit – veraltete Einträge korrigiert | 2025-12-29 | `useMatchTimer` ✅, BUG-009/010 ✅, LiveCockpit.tsx als @deprecated markiert |
+| Testing & Konzept System v2 Setup | 2025-12-29 | TESTING.md, BROWSER_DEBUGGING.md, CLAUDE.md erweitert |
+| Schedule-Editor Test-Audit | 2025-12-29 | ~150 Unit Tests + 14 E2E Tests dokumentiert, Gaps identifiziert |
 | Live-Cockpit Layout-Revert (Focus-Mode Compact) | 2025-12-29 | `19c5143` - ScoreDisplay, ActionZone, LiveCockpit |
 | Event Logging für Penalties, Cards, Substitutions, Fouls | 2025-12-29 | `c343877` - RuntimeMatchEvent erweitert, Handler verbunden |
 | Live-Cockpit IST-Analyse | 2025-12-29 | [LIVE-COCKPIT-IST-ANALYSE.md](analysis/LIVE-COCKPIT-IST-ANALYSE.md) |

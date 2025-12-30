@@ -80,7 +80,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             label="Ansprechpartner"
             value={contactInfo.name ?? ''}
             onChange={(v) => handleFieldChange('name', v)}
-            placeholder="z.B. Max Mustermann"
+            placeholder="Vor- und Nachname"
           />
 
           <Input
@@ -88,7 +88,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             type="email"
             value={contactInfo.email ?? ''}
             onChange={(v) => handleFieldChange('email', v)}
-            placeholder="z.B. turnier@tsv-waging.de"
+            placeholder="kontakt@verein.de"
             style={{ marginTop: '16px' }}
           />
 
@@ -97,7 +97,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             type="tel"
             value={contactInfo.phone ?? ''}
             onChange={(v) => handleFieldChange('phone', v)}
-            placeholder="z.B. +49 8681 12345"
+            placeholder="+49 123 456789"
             style={{ marginTop: '16px' }}
           />
 
@@ -105,7 +105,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
             label="Website"
             value={contactInfo.website ?? ''}
             onChange={(v) => handleFieldChange('website', v)}
-            placeholder="z.B. www.tsv-waging.de"
+            placeholder="www.mein-verein.de"
             style={{ marginTop: '16px' }}
           />
 

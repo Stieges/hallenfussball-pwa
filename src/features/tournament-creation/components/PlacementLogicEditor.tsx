@@ -63,14 +63,14 @@ const SortableItem: React.FC<SortableItemProps> = ({
     gap: '12px',
     padding: '12px 16px',
     background: isDragging
-      ? 'rgba(0,176,255,0.2)'
+      ? colors.secondaryLight
       : criterion.enabled
-        ? 'rgba(0,230,118,0.1)'
-        : 'rgba(0,0,0,0.2)',
+        ? colors.primaryMedium
+        : colors.surfaceDarkMedium,
     border: isDragging
-      ? '1px solid rgba(0,176,255,0.5)'
+      ? `1px solid ${colors.secondaryBorderActive}`
       : criterion.enabled
-        ? '1px solid rgba(0,230,118,0.3)'
+        ? `1px solid ${colors.borderActive}`
         : '1px solid transparent',
     borderRadius: '10px',
     opacity: criterion.enabled ? 1 : 0.5,
@@ -101,7 +101,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   const toggleButtonStyle: CSSProperties = {
     padding: '6px 12px',
-    background: criterion.enabled ? colors.primary : 'rgba(255,255,255,0.1)',
+    background: criterion.enabled ? colors.primary : colors.border,
     border: 'none',
     borderRadius: '6px',
     color: criterion.enabled ? colors.background : colors.textSecondary,

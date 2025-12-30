@@ -190,7 +190,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           style={{
             padding: '40px 20px',
             textAlign: 'center',
-            background: 'rgba(0,0,0,0.2)',
+            background: colors.surfaceDarkMedium,
             borderRadius: borderRadius.md,
             border: `1px dashed ${colors.border}`,
           }}
@@ -283,17 +283,17 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               style={{
                 padding: '12px 16px',
                 background: warning.type === 'error'
-                  ? 'rgba(255,82,82,0.1)'
+                  ? colors.errorLight
                   : warning.type === 'warning'
-                    ? 'rgba(255,145,0,0.1)'
-                    : 'rgba(0,176,255,0.08)',
+                    ? colors.warningLight
+                    : colors.infoLight,
                 borderRadius: borderRadius.md,
                 border: `1px solid ${
                   warning.type === 'error'
-                    ? 'rgba(255,82,82,0.3)'
+                    ? colors.errorBorder
                     : warning.type === 'warning'
-                      ? 'rgba(255,145,0,0.3)'
-                      : 'rgba(0,176,255,0.2)'
+                      ? colors.warningBorder
+                      : colors.infoBorder
                 }`,
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -336,9 +336,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           style={{
             marginTop: '16px',
             padding: '12px',
-            background: 'rgba(0,176,255,0.1)',
+            background: colors.secondaryLight,
             borderRadius: borderRadius.md,
-            border: '1px solid rgba(0,176,255,0.3)',
+            border: `1px solid ${colors.secondaryBorderActive}`,
           }}
         >
           <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
