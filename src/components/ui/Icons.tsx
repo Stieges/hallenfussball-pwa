@@ -198,4 +198,19 @@ export const Icons = {
       <path d="M7 17H4a2 2 0 01-2-2V5a2 2 0 012-2h3M13 14l4-4-4-4M17 10H7" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+
+  Restore: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M3 10a7 7 0 0114 0 7 7 0 01-14 0z" stroke={color} strokeWidth="2" />
+      <path d="M3 3v4h4" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 7a7 7 0 0112.95 3.67" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
+
+  AlertTriangle: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M10 2L1 18h18L10 2z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 7v4M10 14v1" stroke={color} strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ),
 };

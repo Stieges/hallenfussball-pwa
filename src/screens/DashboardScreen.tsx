@@ -10,6 +10,7 @@
 import { CSSProperties, useState, useMemo } from 'react';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
+import { TrashTournamentCard } from '../components/TrashTournamentCard';
 import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
 import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
@@ -50,7 +51,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onDeleteTournament,
   onImportTournament,
   onSoftDelete,
-  onRestore: _onRestore, // Will be used in Phase 5
+  onRestore,
   onPermanentDelete,
   onNavigateToLogin,
   onNavigateToRegister,
@@ -404,24 +405,65 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             Turniere werden nach {TRASH_RETENTION_DAYS} Tagen automatisch gelöscht.
           </p>
           {trashedTournaments.length === 0 ? (
-            <div style={emptyStateStyle}>Der Papierkorb ist leer</div>
-          ) : (
-            <div style={gridStyle}>
-              {trashedTournaments.map((tournament) => {
-                const remainingDays = getRemainingDays(tournament);
-                return (
-                  <TournamentCard
-                    key={tournament.id}
-                    tournament={tournament}
-                     
-                    categoryLabel={remainingDays !== null ? `${remainingDays} Tage übrig` : 'Im Papierkorb'}
-                    onClick={() => onTournamentClick(tournament)}
-                    onDelete={onPermanentDelete ? () => onPermanentDelete(tournament.id, tournament.title) : undefined}
-                    // TODO: Add restore button in Phase 5
-                  />
-                );
-              })}
+            <div style={emptyStateStyle}>
+              <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
+                <Icons.Trash size={40} color={colors.textSecondary} />
+              </div>
+              <p style={{ margin: 0, marginBottom: spacing.xs }}>Der Papierkorb ist leer</p>
+              <p style={{ fontSize: fontSizes.sm, margin: 0, color: colors.textMuted }}>
+                Gelöschte Turniere können hier wiederhergestellt werden.
+              </p>
             </div>
+          ) : (
+            <>
+              <div style={gridStyle}>
+                {trashedTournaments.map((tournament) => {
+                  const remainingDays = getRemainingDays(tournament);
+                  const handleRestore = () => {
+                    if (onRestore) {
+                      onRestore(tournament.id, tournament.title);
+                    }
+                  };
+                  const handlePermanentDelete = () => {
+                    if (onPermanentDelete) {
+                      onPermanentDelete(tournament.id, tournament.title);
+                    }
+                  };
+                  return (
+                    <TrashTournamentCard
+                      key={tournament.id}
+                      tournament={tournament}
+                      remainingDays={remainingDays ?? 0}
+                      onClick={() => onTournamentClick(tournament)}
+                      onRestore={handleRestore}
+                      onPermanentDelete={handlePermanentDelete}
+                    />
+                  );
+                })}
+              </div>
+              {/* Empty Trash Button - Only show if there are multiple items */}
+              {trashedTournaments.length > 1 && onPermanentDelete && (
+                <div style={{ marginTop: spacing.lg, textAlign: 'center' }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      // This will be handled by a confirm dialog in Phase 8
+                      // For now, we just show the button
+                      if (window.confirm(`Alle ${trashedTournaments.length} Turniere endgültig löschen?`)) {
+                        trashedTournaments.forEach(t => onPermanentDelete(t.id, t.title));
+                      }
+                    }}
+                    icon={<Icons.Trash size={16} />}
+                    style={{
+                      color: colors.error,
+                      borderColor: colors.errorBorder,
+                    }}
+                  >
+                    Papierkorb leeren ({trashedTournaments.length})
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
