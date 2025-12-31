@@ -1,5 +1,33 @@
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, gradients } from '../design-tokens';
+import { borderRadius, colors, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
+
+// Step Status Icons
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+    <circle cx="7" cy="7" r="6" fill={colors.primary} />
+    <path
+      d="M4.5 7L6.5 9L9.5 5"
+      stroke={colors.onPrimary}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CurrentIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+    <circle cx="7" cy="7" r="6" fill={colors.textPrimary} />
+    <circle cx="7" cy="7" r="3" fill={colors.surface} />
+  </svg>
+);
+
+const EmptyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+    <circle cx="7" cy="7" r="5.5" stroke={colors.textSecondary} strokeWidth="1" fill="none" />
+  </svg>
+);
+
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
@@ -26,6 +54,22 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const hasStepErrors = (stepIndex: number): boolean => {
     const errors = stepErrors?.[stepIndex + 1] ?? [];
     return errors.length > 0;
+  };
+
+  // Determine which icon to show for each step
+  const getStepIcon = (stepIndex: number): React.ReactNode => {
+    const stepNum = stepIndex + 1;
+    const isVisited = isStepVisited(stepIndex);
+    const isCurrent = currentStep === stepNum;
+    const isCompleted = isVisited && stepNum < currentStep;
+
+    if (isCompleted) {
+      return <CheckIcon />;
+    }
+    if (isCurrent) {
+      return <CurrentIcon />;
+    }
+    return <EmptyIcon />;
   };
 
   const labelStyle = (stepIndex: number): CSSProperties => {
@@ -95,8 +139,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   return (
-    <div style={{ marginBottom: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+    <div style={{ marginBottom: spacing.lg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing.sm }}>
         {stepLabels.map((label, index) => {
           const stepNum = index + 1;
           const isVisited = isStepVisited(index);
@@ -116,6 +160,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               role="tab"
               tabIndex={isClickableStep ? 0 : -1}
             >
+              {getStepIcon(index)}
               {label}
               {hasErrors && <span style={errorBadgeStyle} aria-label="Fehler" />}
             </button>
@@ -125,7 +170,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <div
         style={{
           height: '4px',
-          background: 'rgba(255,255,255,0.1)',
+          background: colors.border,
           borderRadius: borderRadius.sm,
           overflow: 'hidden',
         }}
