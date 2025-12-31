@@ -73,7 +73,37 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
       return `${count} SR`;
     }
     if (mode === 'teams') {return 'Teams stellen SR';}
-    return '';
+    return 'Keine';
+  };
+
+  // Helper to get time planning summary
+  const getTimeSummary = (): string => {
+    const gameDuration = formData.groupPhaseGameDuration ?? 10;
+    const breakDuration = formData.groupPhaseBreakDuration ?? 2;
+    return `${gameDuration}′ Spiel / ${breakDuration}′ Pause`;
+  };
+
+  // Helper to get finals summary
+  const getFinalsSummary = (): string => {
+    const preset = formData.finalsConfig?.preset ?? 'none';
+    switch (preset) {
+      case 'none': return 'Keine';
+      case 'final-only': return 'Nur Finale';
+      case 'top-4': return 'HF + Finale';
+      case 'top-8': return 'Mit VF';
+      case 'top-16': return 'Mit AF';
+      case 'all-places': return 'Alle Plätze';
+    }
+  };
+
+  // Helper to get special rules summary
+  const getSpecialRulesSummary = (): string => {
+    if (formData.tournamentType !== 'bambini') {return 'Keine';}
+    const rules: string[] = [];
+    if (formData.hideScoresForPublic) {rules.push('Ergebnisse');}
+    if (formData.hideRankingsForPublic) {rules.push('Tabellen');}
+    if (rules.length === 0) {return 'Bambini-Modus';}
+    return `Bambini (${rules.length} verborgen)`;
   };
 
   return (
@@ -210,6 +240,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Zeitplanung"
+            badge={getTimeSummary()}
             defaultOpen={true}
           >
             {/* Smart Config */}
@@ -271,6 +302,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           {canUseGroups && (
             <CollapsibleSection
               title="Finalrunde"
+              badge={getFinalsSummary()}
               variant="primary"
               defaultOpen={false}
             >
@@ -300,6 +332,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           <CollapsibleSection
             title="Sonderregeln"
+            badge={getSpecialRulesSummary()}
             defaultOpen={false}
           >
             <BambiniSettings
