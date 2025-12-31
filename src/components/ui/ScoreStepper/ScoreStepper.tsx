@@ -147,6 +147,10 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     transition: 'background-color 0.15s ease, transform 0.1s ease',
     userSelect: 'none',
     WebkitTapHighlightColor: 'transparent',
+    // Mobile touch improvements - prevent 300ms delay and double-tap zoom
+    touchAction: 'manipulation',
+    WebkitUserSelect: 'none',
+    WebkitTouchCallout: 'none',
   });
 
   const valueStyle: CSSProperties = {

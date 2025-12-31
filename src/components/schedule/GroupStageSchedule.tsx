@@ -64,6 +64,8 @@ interface GroupStageScheduleProps {
   tournament?: Tournament;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  /** Callback to navigate to cockpit with selected match */
+  onNavigateToCockpit?: (matchId: string) => void;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -84,6 +86,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   runningMatchIds,
   tournament,
   onMatchSwap,
+  onNavigateToCockpit,
 }) => {
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -114,7 +117,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
 
-  // Close expand when clicking outside or pressing Escape
+  // Close expand when pressing Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && expandedMatchId) {
@@ -124,6 +127,33 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
+  }, [expandedMatchId]);
+
+  // Close expand when clicking outside (Mobile UX improvement)
+  useEffect(() => {
+    if (!expandedMatchId) {return;}
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if click is outside any MatchCard
+      const clickedCard = target.closest('[data-match-card]');
+      if (!clickedCard) {
+        setExpandedMatchId(null);
+        setExpandType(null);
+      }
+    };
+
+    // Use setTimeout to avoid closing on the same click that opened
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+      document.addEventListener('touchend', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('touchend', handleClickOutside);
+    };
   }, [expandedMatchId]);
 
   // Conflict detection for edit mode
@@ -270,11 +300,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
    * TODO: Implement actual navigation via context or URL params
    * The actual navigation should be handled by a callback prop (onNavigateToCockpit)
    */
-  const handleNavigateToCockpit = useCallback((_matchId: string) => {
-    // For now, just close the expand - navigation will be added later
+  const handleNavigateToCockpit = useCallback((matchId: string) => {
+    // Close the expand
     setExpandedMatchId(null);
     setExpandType(null);
-  }, []);
+    // Navigate to cockpit if callback provided
+    onNavigateToCockpit?.(matchId);
+  }, [onNavigateToCockpit]);
 
   /**
    * Unified render function for expand content (used by both mobile and desktop)

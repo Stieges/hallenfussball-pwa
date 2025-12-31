@@ -236,14 +236,23 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           </div>
 
           {/* ============================================
-              SECTION 2: Zeitplanung (collapsible)
+              SMART CONFIG - Prominent Section
               ============================================ */}
-          <CollapsibleSection
-            title="Zeitplanung"
-            badge={getTimeSummary()}
-            defaultOpen={true}
-          >
-            {/* Smart Config */}
+          <div style={{
+            marginTop: spacing.lg,
+            padding: spacing.md,
+            background: `linear-gradient(135deg, ${colors.secondarySubtle}, ${colors.primarySubtle})`,
+            border: `2px solid ${colors.secondaryBorderActive}`,
+            borderRadius: borderRadius.lg,
+          }}>
+            <p style={{
+              color: colors.textSecondary,
+              fontSize: fontSizes.xs,
+              margin: `0 0 ${spacing.sm} 0`,
+              textAlign: 'center',
+            }}>
+              💡 Tipp: Lass dir die optimale Konfiguration berechnen
+            </p>
             <SmartConfig
               formData={formData}
               onApply={(config) => {
@@ -253,7 +262,16 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 onUpdate('groupPhaseBreakDuration', config.groupPhaseBreakDuration);
               }}
             />
+          </div>
 
+          {/* ============================================
+              SECTION 2: Zeitplanung (collapsible)
+              ============================================ */}
+          <CollapsibleSection
+            title="Zeitplanung"
+            badge={getTimeSummary()}
+            defaultOpen={false}
+          >
             {/* Game Time Configuration - Group Phase */}
             <GameTimeConfig
               formData={formData}

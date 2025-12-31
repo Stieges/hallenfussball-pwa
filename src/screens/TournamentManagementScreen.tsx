@@ -50,6 +50,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('schedule');
 
+  // Initial match ID for cockpit navigation (passed from ScheduleTab)
+  const [initialMatchId, setInitialMatchId] = useState<string | null>(null);
+
   // Mobile Navigation
   const isMobile = useIsMobile();
   const [showMoreMenu, setShowMoreMenu] = useState(false);
@@ -107,6 +110,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const handleMoreMenuSelect = (tab: TabType) => {
     setShowMoreMenu(false);
     handleTabChange(tab);
+  };
+
+  // Handle navigation to cockpit with specific match
+  const handleNavigateToCockpit = (matchId: string) => {
+    setInitialMatchId(matchId);
+    setActiveTab('management');
   };
 
   // Loading / Error state
@@ -273,6 +282,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             schedule={schedule}
             currentStandings={currentStandings}
             onTournamentUpdate={handleTournamentUpdate}
+            onNavigateToCockpit={handleNavigateToCockpit}
           />
         )}
         {activeTab === 'tabellen' && (
@@ -287,6 +297,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             tournament={tournament}
             schedule={schedule}
             onTournamentUpdate={handleTournamentUpdate}
+            initialMatchId={initialMatchId}
+            onInitialMatchConsumed={() => setInitialMatchId(null)}
           />
         )}
         {activeTab === 'monitor' && (

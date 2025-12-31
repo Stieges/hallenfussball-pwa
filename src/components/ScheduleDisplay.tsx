@@ -65,6 +65,8 @@ interface ScheduleDisplayProps {
   runningMatchIds?: Set<string>;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  /** Callback to navigate to cockpit with selected match */
+  onNavigateToCockpit?: (matchId: string) => void;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -87,6 +89,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onStartCorrection,
   runningMatchIds,
   onMatchSwap,
+  onNavigateToCockpit,
 }) => {
   const standings = currentStandings ?? schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -212,6 +215,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
           tournament={{ groups: schedule.tournament.groups } as any}
           onMatchSwap={onMatchSwap}
+          onNavigateToCockpit={onNavigateToCockpit}
         />
       )}
 

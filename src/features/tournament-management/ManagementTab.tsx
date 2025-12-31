@@ -15,7 +15,7 @@
  * - Uses CSS Modules for responsive styles
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../lib/scheduleGenerator';
 import { LiveCockpitMockup } from '../../components/live-cockpit';
@@ -28,12 +28,18 @@ interface ManagementTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /** Initial match ID to select (from schedule navigation) */
+  initialMatchId?: string | null;
+  /** Callback when initial match has been consumed */
+  onInitialMatchConsumed?: () => void;
 }
 
 export const ManagementTab: React.FC<ManagementTabProps> = ({
   tournament,
   schedule,
-  onTournamentUpdate
+  onTournamentUpdate,
+  initialMatchId,
+  onInitialMatchConsumed,
 }) => {
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
@@ -81,6 +87,21 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     confirmText: 'Wechseln',
     cancelText: 'Abbrechen',
   });
+
+  // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit")
+  useEffect(() => {
+    if (initialMatchId) {
+      // Find the match to get its field number
+      const match = schedule.allMatches.find(m => m.id === initialMatchId);
+      if (match) {
+        // Set the field and match selection
+        setSelectedFieldNumber(match.field);
+        setSelectedMatchId(initialMatchId);
+      }
+      // Consume the initial match ID
+      onInitialMatchConsumed?.();
+    }
+  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed]);
 
   // Helper: Check if a team reference is a placeholder (not a real team ID)
   const isPlaceholder = useCallback((teamRef: string): boolean => {

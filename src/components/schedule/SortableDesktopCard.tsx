@@ -253,7 +253,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div ref={setNodeRef} style={containerStyle}>
+    <div ref={setNodeRef} style={containerStyle} data-match-card>
       <div style={rowWrapperStyle}>
         {/* Drag Handle */}
         <div

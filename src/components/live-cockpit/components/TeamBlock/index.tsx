@@ -114,6 +114,11 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     color: disabled ? colors.textDisabled : colors.textPrimary,
     opacity: disabled ? 0.5 : 1,
     transition: 'all 0.15s',
+    // Mobile touch improvements - prevent 300ms delay and double-tap zoom
+    touchAction: 'manipulation',
+    WebkitTapHighlightColor: 'transparent',
+    WebkitUserSelect: 'none',
+    userSelect: 'none',
   };
 
   const btnGoalStyle: CSSProperties = {

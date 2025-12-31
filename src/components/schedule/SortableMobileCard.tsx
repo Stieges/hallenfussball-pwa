@@ -156,7 +156,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div ref={setNodeRef} style={wrapperStyle}>
+    <div ref={setNodeRef} style={wrapperStyle} data-match-card>
       <EditableMatchCard
         {...cardProps}
         canDrag={canDrag}

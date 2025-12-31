@@ -251,6 +251,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       role="article"
       aria-label={`Spiel ${matchNumber || ''}: ${homeTeam.name} gegen ${awayTeam.name}`}
+      data-match-card
     >
       {/* Header: Time, Field, Group, Live Badge */}
       <div style={headerStyle}>

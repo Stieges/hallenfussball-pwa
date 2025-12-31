@@ -59,7 +59,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-match-card>
       <MatchCardDesktop
         matchId={match.id}
         matchNumber={match.matchNumber}

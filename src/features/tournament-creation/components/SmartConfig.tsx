@@ -336,12 +336,28 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
             <div className={styles.inputRow}>
               <input
                 id="available-hours"
-                type="number"
+                type="text"
+                inputMode="decimal"
+                pattern="[0-9]*\.?[0-9]*"
                 value={availableHours}
-                onChange={(e) => setAvailableHours(Math.max(1, Math.min(12, Number(e.target.value))))}
-                min={1}
-                max={12}
-                step={0.5}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Allow empty string during editing
+                  if (val === '') {return;}
+                  const num = parseFloat(val);
+                  if (!isNaN(num)) {
+                    setAvailableHours(Math.max(1, Math.min(12, num)));
+                  }
+                }}
+                onBlur={(e) => {
+                  // Ensure valid value on blur
+                  const val = parseFloat(e.target.value);
+                  if (isNaN(val) || val < 1) {
+                    setAvailableHours(1);
+                  } else if (val > 12) {
+                    setAvailableHours(12);
+                  }
+                }}
                 className={styles.hoursInput}
                 aria-describedby="hours-unit"
               />
