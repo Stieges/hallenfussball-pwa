@@ -119,6 +119,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const [generatedSchedule, setGeneratedSchedule] = useState<ReturnType<typeof generateFullSchedule> | null>(null);
   const [showSaveNotification, setShowSaveNotification] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
 
   // Use provided onSave or fallback to default saveTournament
   const saveTournament = onSave ?? defaultSaveTournament;
@@ -176,15 +177,22 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation, createDraftTournament, lastSavedDataRef, setFormData]);
 
-  // Helper function to change step with autosave
+  // Helper function to change step with autosave and slide animation
   const handleStepChange = useCallback((newStep: number) => {
+    // Determine slide direction based on navigation
+    const direction = newStep > step ? 'right' : 'left';
+    setSlideDirection(direction);
+
     // Reset generated schedule when navigating TO step 6 (Overview)
     if (newStep === 6) {
       setGeneratedSchedule(null);
     }
     // Use wizard hook's handleStepChange with saveAsDraft callback
     wizardHandleStepChange(newStep, saveAsDraft);
-  }, [wizardHandleStepChange, saveAsDraft]);
+
+    // Clear slide direction after animation completes
+    setTimeout(() => setSlideDirection(null), 300);
+  }, [wizardHandleStepChange, saveAsDraft, step]);
 
   // Autosave 1: Periodic autosave every 10 seconds
   useEffect(() => {
@@ -431,6 +439,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       {/* Steps with lazy loading and error boundary */}
       <ErrorBoundary>
         <Suspense fallback={<StepLoadingFallback />}>
+        <div
+          className="step-content"
+          data-slide={slideDirection}
+          style={{ willChange: slideDirection ? 'transform, opacity' : 'auto' }}
+        >
         {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
 
         {step === 2 && (
@@ -602,6 +615,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           />
         </>
       )}
+        </div>
         </Suspense>
       </ErrorBoundary>
 
@@ -688,6 +702,39 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           variant: 'danger',
         }}
       />
+
+      {/* Slide Animation Styles */}
+      <style>{`
+        .step-content[data-slide="right"] {
+          animation: slideFromRight 250ms ease-out;
+        }
+
+        .step-content[data-slide="left"] {
+          animation: slideFromLeft 250ms ease-out;
+        }
+
+        @keyframes slideFromRight {
+          from {
+            transform: translateX(30px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideFromLeft {
+          from {
+            transform: translateX(-30px);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 };
