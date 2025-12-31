@@ -265,6 +265,38 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           </div>
 
           {/* ============================================
+              SECTION DIVIDER - Erweiterte Einstellungen
+              ============================================ */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.md,
+            marginTop: spacing.xl,
+            marginBottom: spacing.sm,
+          }}>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: `linear-gradient(to right, transparent, ${colors.border}, ${colors.border})`,
+            }} />
+            <span style={{
+              color: colors.textSecondary,
+              fontSize: fontSizes.xs,
+              fontWeight: fontWeights.medium,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              whiteSpace: 'nowrap',
+            }}>
+              Erweiterte Einstellungen
+            </span>
+            <div style={{
+              flex: 1,
+              height: '1px',
+              background: `linear-gradient(to left, transparent, ${colors.border}, ${colors.border})`,
+            }} />
+          </div>
+
+          {/* ============================================
               SECTION 2: Zeitplanung (collapsible)
               ============================================ */}
           <CollapsibleSection
