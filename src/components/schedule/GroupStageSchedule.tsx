@@ -23,7 +23,7 @@ import {
 } from '@dnd-kit/sortable';
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
-import { RefereeConfig, Tournament } from '../../types/tournament';
+import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
 import {
   MatchCard,
@@ -31,7 +31,9 @@ import {
   type RefereeOption,
 } from './MatchCard';
 import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
+import { MatchSummary } from './MatchSummary';
 import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
+import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { SortableMobileCard } from './SortableMobileCard';
 import { SortableDesktopCard } from './SortableDesktopCard';
 import { DesktopCard } from './DesktopCard';
@@ -119,6 +121,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   type ExpandType = 'quick' | 'live' | 'start' | null;
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
+
+  // Match Summary state (for finished match circle click)
+  const [showMatchSummary, setShowMatchSummary] = useState(false);
+  const [summaryMatchId, setSummaryMatchId] = useState<string | null>(null);
+
+  // Get live match data including events
+  const { liveMatches } = useLiveMatches(tournament?.id ?? '');
 
   // Close expand when pressing Escape
   useEffect(() => {
@@ -272,9 +281,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         setExpandType('live');
         break;
       case 'finished':
-        // Finished: Show quick edit (same as card click for now)
-        setExpandedMatchId(matchId);
-        setExpandType('quick');
+        // Finished: Show match summary with events
+        setSummaryMatchId(matchId);
+        setShowMatchSummary(true);
         break;
     }
   };
@@ -708,6 +717,47 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           })}
         </div>
       )}
+
+      {/* Match Summary for finished matches */}
+      {showMatchSummary && summaryMatchId && (() => {
+        const match = matches.find(m => m.id === summaryMatchId);
+        if (!match) {return null;}
+
+        // Get live match data for events
+        const liveMatch = liveMatches.get(summaryMatchId);
+        const liveEvents = liveMatch?.events;
+        const events: RuntimeMatchEvent[] = liveEvents
+          ? liveEvents.map(e => ({
+              ...e,
+              matchId: e.matchId,
+              scoreAfter: e.scoreAfter,
+            }))
+          : [];
+
+        return (
+          <MatchSummary
+            isOpen={showMatchSummary}
+            onClose={() => {
+              setShowMatchSummary(false);
+              setSummaryMatchId(null);
+            }}
+            homeScore={match.scoreA ?? 0}
+            awayScore={match.scoreB ?? 0}
+            homeTeamId={match.originalTeamA}
+            awayTeamId={match.originalTeamB}
+            homeTeamName={match.homeTeam}
+            awayTeamName={match.awayTeam}
+            events={events}
+            onEditScore={() => {
+              // Close summary and open quick edit for score correction
+              setShowMatchSummary(false);
+              setSummaryMatchId(null);
+              setExpandedMatchId(summaryMatchId);
+              setExpandType('quick');
+            }}
+          />
+        );
+      })()}
 
       <style>{`
         /* Hide mobile view by default */
