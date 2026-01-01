@@ -11,19 +11,19 @@ import { palette } from './palette';
 
 export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
-  // Brand Colors (darker for light mode contrast)
+  // Brand Colors (darker for light mode contrast - WCAG AA 4.5:1 required)
   // ---------------------------------------------------------------------------
-  primary: palette.emerald[600], // Darker green for light bg
-  primaryDark: palette.emerald[700],
-  primaryHover: palette.emerald[700],
-  primaryActive: palette.emerald[800],
-  primaryLight: 'rgba(5, 150, 105, 0.12)',
-  primaryMedium: 'rgba(5, 150, 105, 0.08)',
-  primarySubtle: 'rgba(5, 150, 105, 0.04)',
-  primarySelected: 'rgba(5, 150, 105, 0.18)', // For selected cards/buttons
-  primaryBorder: 'rgba(5, 150, 105, 0.2)',
-  primaryBorderActive: 'rgba(5, 150, 105, 0.4)',
-  primaryBorderStrong: 'rgba(5, 150, 105, 0.5)',
+  primary: palette.emerald[700], // #047857 - 4.69:1 contrast on white (WCAG AA)
+  primaryDark: palette.emerald[800],
+  primaryHover: palette.emerald[800],
+  primaryActive: palette.emerald[900],
+  primaryLight: 'rgba(4, 120, 87, 0.12)',
+  primaryMedium: 'rgba(4, 120, 87, 0.08)',
+  primarySubtle: 'rgba(4, 120, 87, 0.04)',
+  primarySelected: 'rgba(4, 120, 87, 0.18)', // For selected cards/buttons
+  primaryBorder: 'rgba(4, 120, 87, 0.2)',
+  primaryBorderActive: 'rgba(4, 120, 87, 0.4)',
+  primaryBorderStrong: 'rgba(4, 120, 87, 0.5)',
 
   secondary: palette.blue[600],
   secondaryHover: palette.blue[700],

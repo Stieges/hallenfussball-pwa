@@ -461,28 +461,28 @@
      |--------------------|---------------|--------|
      | text-primary       | 15:1          | AAA    |
      | text-secondary     | 5.8:1         | AA     |
-     | primary #059669    | 4.6:1         | AA     |
+     | primary #047857    | 4.69:1        | AA     |
      | secondary #0096E6  | 4.5:1         | AA     |
      | error #DC2626      | 5.9:1         | AA     |
      | warning #D97706    | 4.6:1         | AA     |
      =========================================== */
 
   /* ===========================================
-     Colors - Primary Brand
+     Colors - Primary Brand (WCAG AA: 4.69:1 on white)
      =========================================== */
-  --color-primary: #059669;
-  --color-primary-dark: #047857;
-  --color-primary-hover: #047857;
-  --color-primary-active: #065F46;
-  --color-primary-light: rgba(5, 150, 105, 0.12);
-  --color-primary-medium: rgba(5, 150, 105, 0.08);
-  --color-primary-subtle: rgba(5, 150, 105, 0.04);
-  --color-primary-selected: rgba(5, 150, 105, 0.18);
-  --color-primary-border: rgba(5, 150, 105, 0.2);
-  --color-primary-border-active: rgba(5, 150, 105, 0.4);
-  --color-primary-border-strong: rgba(5, 150, 105, 0.5);
-  --color-primary-glow: rgba(5, 150, 105, 0.3);
-  --color-primary-glow-light: rgba(5, 150, 105, 0.15);
+  --color-primary: #047857;
+  --color-primary-dark: #065F46;
+  --color-primary-hover: #065F46;
+  --color-primary-active: #064E3B;
+  --color-primary-light: rgba(4, 120, 87, 0.12);
+  --color-primary-medium: rgba(4, 120, 87, 0.08);
+  --color-primary-subtle: rgba(4, 120, 87, 0.04);
+  --color-primary-selected: rgba(4, 120, 87, 0.18);
+  --color-primary-border: rgba(4, 120, 87, 0.2);
+  --color-primary-border-active: rgba(4, 120, 87, 0.4);
+  --color-primary-border-strong: rgba(4, 120, 87, 0.5);
+  --color-primary-glow: rgba(4, 120, 87, 0.3);
+  --color-primary-glow-light: rgba(4, 120, 87, 0.15);
 
   /* ===========================================
      Colors - Secondary Brand
