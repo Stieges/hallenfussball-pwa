@@ -23,6 +23,8 @@ export interface GameControlsProps {
   onSwitchSides: () => void;
   onHalfTime: () => void;
   onFinish: () => void;
+  /** BUG-002: Event log button for mobile retroactive editing */
+  onEventLog?: () => void;
   canUndo?: boolean;
   breakpoint?: Breakpoint;
 }
@@ -40,6 +42,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onSwitchSides,
   onHalfTime,
   onFinish,
+  onEventLog,
   canUndo = false,
   breakpoint = 'desktop',
 }) => {
@@ -194,6 +197,19 @@ export const GameControls: React.FC<GameControlsProps> = ({
       >
         🏁 {!isMobile && 'Beenden'}
       </button>
+
+      {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar) */}
+      {isMobile && onEventLog && (
+        <button
+          style={btnStyle}
+          onClick={onEventLog}
+          type="button"
+          aria-label="Ereignisprotokoll anzeigen"
+          data-testid="match-event-log-button"
+        >
+          📋 Ereignisse
+        </button>
+      )}
     </div>
   );
 };

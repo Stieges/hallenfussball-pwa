@@ -174,7 +174,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
         ? `linear-gradient(90deg, ${cssVars.colors.error} 0%, ${cssVars.colors.gradientErrorLight} 100%)`
         : `linear-gradient(90deg, ${cssVars.colors.primary} 0%, ${cssVars.colors.gradientPrimaryLight} 100%)`,
     borderRadius: currentSize.progress,
-    transition: 'width 0.5s linear',
+    transition: 'width 1s linear',
     boxShadow: isNearEnd || isOvertime
       ? `0 0 12px ${cssVars.colors.error}`
       : `0 0 10px ${cssVars.colors.primary}`,

@@ -36,5 +36,8 @@ export { ScoreEditDialog } from './ScoreEditDialog';
 export { PenaltyIndicators } from './PenaltyIndicators';
 export { OpenEntriesSection, OpenEntriesBadge } from './OpenEntries/OpenEntriesSection';
 
+// BUG-002: Event Log Bottom Sheet for Mobile
+export { EventLogBottomSheet } from './EventLogBottomSheet';
+
 // Toast Notifications
 export { Toast, ToastContainer, type ToastData, type ToastType } from './Toast';

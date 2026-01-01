@@ -226,7 +226,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
     <div style={overlayStyle} onClick={onClose}>
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={headerStyle}>
-          <span style={{ fontSize: cssVars.fontSizes.xxl }}>&#9888;&#65039;</span>
+          <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">⚠️</span>
           <h2 style={titleStyle}>Ergebnis korrigieren</h2>
         </div>
 

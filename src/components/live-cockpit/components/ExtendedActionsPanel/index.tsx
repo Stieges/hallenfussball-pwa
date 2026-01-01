@@ -23,6 +23,8 @@ interface ExtendedActionsPanelProps {
   onRedCard?: () => void;
   onTimePenalty?: () => void;
   onSubstitution?: () => void;
+  /** BUG-002: Event log button for mobile retroactive editing */
+  onEventLog?: () => void;
   disabled?: boolean;
   breakpoint?: Breakpoint;
 }
@@ -38,6 +40,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
   onRedCard,
   onTimePenalty,
   onSubstitution,
+  onEventLog,
   disabled = false,
   breakpoint = 'desktop',
 }) => {
@@ -156,6 +159,19 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           aria-label="Wechsel"
         >
           🔄 {!isMobile && 'Wechsel'}
+        </button>
+      )}
+
+      {/* BUG-002: Event Log for retroactive editing on mobile */}
+      {onEventLog && (
+        <button
+          style={buttonStyle(cssVars.colors.surface, cssVars.colors.textSecondary)}
+          onClick={onEventLog}
+          disabled={disabled}
+          type="button"
+          aria-label="Ereignisprotokoll anzeigen"
+        >
+          📋 {!isMobile && 'Ereignisse'}
         </button>
       )}
     </div>

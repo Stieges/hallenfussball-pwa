@@ -29,6 +29,8 @@ import {
   SubstitutionDialog,
   GoalScorerDialog,
   EventEditDialog,
+  // BUG-002: Event Log Bottom Sheet for Mobile
+  EventLogBottomSheet,
 } from './components';
 
 // Hooks
@@ -88,6 +90,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   const [showEventEditDialog, setShowEventEditDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EditableMatchEvent | null>(null);
   const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
+  // BUG-002: Event Log Bottom Sheet for Mobile
+  const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
 
@@ -773,6 +777,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               onSwitchSides={handleSwitchSides}
               onHalfTime={handleHalfTime}
               onFinish={handleFinish}
+              // BUG-002: Event Log for Mobile
+              onEventLog={() => setShowEventLogBottomSheet(true)}
               canUndo={canUndo}
               breakpoint={breakpoint}
             />
@@ -880,6 +886,22 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         awayTeam={match.awayTeam}
         onUpdate={handleEventUpdate}
         onDelete={handleEventDelete}
+      />
+
+      {/* BUG-002: Event Log Bottom Sheet for Mobile */}
+      <EventLogBottomSheet
+        isOpen={showEventLogBottomSheet}
+        onClose={() => setShowEventLogBottomSheet(false)}
+        events={match.events}
+        homeTeamName={match.homeTeam.name}
+        awayTeamName={match.awayTeam.name}
+        homeTeamId={match.homeTeam.id}
+        awayTeamId={match.awayTeam.id}
+        onEventEdit={(event) => {
+          setShowEventLogBottomSheet(false);
+          setEditingEvent(event);
+          setShowEventEditDialog(true);
+        }}
       />
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
