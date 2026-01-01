@@ -475,7 +475,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   const containerStyle: CSSProperties = {
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
-    minHeight: '100vh',
+    minHeight: 'var(--min-h-screen)',
     display: 'flex',
     flexDirection: 'column',
   };

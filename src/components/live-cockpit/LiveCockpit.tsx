@@ -413,7 +413,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh', // Feste Höhe statt minHeight - verhindert Scrollen
+    height: 'var(--h-screen)', // Feste Höhe statt minHeight - verhindert Scrollen
     overflow: 'hidden', // Kein Overflow
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,

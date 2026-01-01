@@ -192,7 +192,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: '100vh',
+    minHeight: 'var(--min-h-screen)',
     padding: cssVars.spacing.lg,
     background: cssVars.colors.background,
   },

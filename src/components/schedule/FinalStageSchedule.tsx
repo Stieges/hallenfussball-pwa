@@ -23,7 +23,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { cssVars, shadowSemantics } from '../../design-tokens'
+import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
@@ -802,12 +802,13 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
       <style>{`
         .final-stage-schedule .mobile-view { display: none; }
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .final-stage-schedule .desktop-view { display: none; }
           .final-stage-schedule .mobile-view { display: block; }
         }
-        /* Mobile correction button hover */
-        .final-stage-schedule .correction-btn-mobile:hover {
+        /* Mobile correction button hover/active */
+        .final-stage-schedule .correction-btn-mobile:hover,
+        .final-stage-schedule .correction-btn-mobile:active {
           background: ${cssVars.colors.accent} !important;
           color: white !important;
           border-color: ${cssVars.colors.accent} !important;

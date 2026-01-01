@@ -233,7 +233,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
 const styles: Record<string, CSSProperties> = {
   container: {
-    minHeight: '100vh',
+    minHeight: 'var(--min-h-screen)',
     padding: cssVars.spacing.lg,
     background: cssVars.colors.background,
   },

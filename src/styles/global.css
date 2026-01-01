@@ -358,6 +358,14 @@
   --layout-height-header: 56px;
 
   /* ===========================================
+     Viewport Units - Dynamic for Mobile
+     100dvh adjusts for mobile browser address bars
+     Fallback to 100vh for older browsers
+     =========================================== */
+  --min-h-screen: 100vh;
+  --h-screen: 100vh;
+
+  /* ===========================================
      Typography - MD3 Type Scale
      Synced with src/styles/typography.ts
      =========================================== */
@@ -447,6 +455,18 @@
 
   /* Theme Gradient */
   --theme-gradient: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+}
+
+/* ============================================
+   Dynamic Viewport Height (dvh) Support
+   Overrides 100vh with 100dvh for mobile browsers
+   that have dynamic address bars
+   ============================================ */
+@supports (min-height: 100dvh) {
+  :root {
+    --min-h-screen: 100dvh;
+    --h-screen: 100dvh;
+  }
 }
 
 /* ============================================
@@ -826,7 +846,7 @@ body {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: var(--min-h-screen);
 }
 
 /* Custom scrollbar */
@@ -1189,12 +1209,12 @@ textarea:focus-visible,
 
 /* Main content container with safe area */
 .main-content-with-nav {
-  min-height: 100vh;
+  min-height: var(--min-h-screen);
   padding-bottom: var(--layout-height-bottom-nav);
 }
 
 /* Content area during edit mode (with action bar) */
 .main-content-edit-mode {
-  min-height: 100vh;
+  min-height: var(--min-h-screen);
   padding-bottom: calc(var(--layout-height-bottom-nav) + var(--layout-height-bottom-action-bar));
 }

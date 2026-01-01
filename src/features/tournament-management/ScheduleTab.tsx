@@ -19,7 +19,7 @@
 import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { cssVars } from '../../design-tokens'
+import { cssVars, mediaQueries } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import {
   useScheduleHistory,
@@ -357,7 +357,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
 
       {/* Responsive Styles */}
       <style>{`
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .schedule-tab-container {
             padding: 16px 12px !important;
           }
@@ -369,7 +369,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           }
         }
 
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .schedule-tab-container .card {
             border-radius: 8px;
             padding: 12px;

@@ -39,7 +39,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: ['iPhone 13', 'Pixel 5', 'Desktop Chrome']
+        # Breakpoint-basierte Viewports (Primary)
+        project: [mobile-sm, mobile-md, tablet-portrait, desktop]
 
     steps:
       - name: Checkout

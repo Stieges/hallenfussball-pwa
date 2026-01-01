@@ -38,7 +38,7 @@ const ScreenLoader = () => (
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      minHeight: '100vh',
+      minHeight: 'var(--min-h-screen)',
       background: cssVars.colors.background,
       color: cssVars.colors.textPrimary,
     }}
@@ -180,7 +180,7 @@ function AppContent() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: '100vh',
+          minHeight: 'var(--min-h-screen)',
           background: cssVars.colors.background,
           color: cssVars.colors.textPrimary,
         }}
@@ -274,7 +274,7 @@ function AppContent() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: 'var(--min-h-screen)',
         background: cssVars.colors.background,
         color: cssVars.colors.textPrimary,
         fontFamily: cssVars.fontFamilies.body,

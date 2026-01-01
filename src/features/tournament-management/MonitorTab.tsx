@@ -110,8 +110,8 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
 
   // Styles
   const containerStyle: CSSProperties = {
-    minHeight: '100vh',
-    height: isFullscreen ? '100vh' : 'auto',
+    minHeight: 'var(--min-h-screen)',
+    height: isFullscreen ? 'var(--h-screen)' : 'auto',
     overflow: isFullscreen ? 'hidden' : 'visible',
     padding: isFullscreen ? 0 : cssVars.spacing.xxl,
     background: cssVars.colors.backgroundGradientDark,

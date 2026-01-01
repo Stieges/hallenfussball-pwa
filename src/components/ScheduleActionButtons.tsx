@@ -3,7 +3,7 @@ import { Button } from './ui/Button';
 import { Icons } from './ui/Icons';
 import { ShareDialog } from './dialogs/ShareDialog';
 import { PDFExportDialog } from './dialogs/PDFExportDialog';
-import { cssVars } from '../design-tokens'
+import { cssVars, mediaQueries } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
 
@@ -87,7 +87,7 @@ export const ScheduleActionButtons = ({
 
       {/* Responsive Styles */}
       <style>{`
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .schedule-action-buttons {
             position: fixed !important;
             bottom: ${cssVars.spacing.lg} !important;

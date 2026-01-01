@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { cssVars, spacingSemantics } from '../../design-tokens'
+import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
@@ -716,7 +716,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         }
 
         /* Mobile: Show cards, hide table */
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .group-stage-schedule .desktop-view {
             display: none;
           }
@@ -725,8 +725,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           }
         }
 
-        /* Mobile correction button hover */
-        .correction-btn-mobile:hover {
+        /* Mobile correction button hover/active */
+        .correction-btn-mobile:hover,
+        .correction-btn-mobile:active {
           background: ${cssVars.colors.primary} !important;
           color: white !important;
           border-color: ${cssVars.colors.primary} !important;

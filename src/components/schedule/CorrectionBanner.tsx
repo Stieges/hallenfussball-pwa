@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars, mediaQueries } from '../../design-tokens'
 export interface CorrectionBannerProps {
   matchId: string;
   matchLabel: string;
@@ -135,7 +135,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
       </div>
 
       <style>{`
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .correction-banner {
             padding: ${cssVars.spacing.md} !important;
             font-size: ${cssVars.fontSizes.md} !important;
@@ -148,7 +148,8 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
           }
         }
 
-        .correction-banner-close:hover {
+        .correction-banner-close:hover,
+        .correction-banner-close:active {
           background: ${cssVars.colors.correctionBorder};
         }
       `}</style>

@@ -116,7 +116,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
   };
 
   const containerStyle: CSSProperties = {
-    minHeight: '100vh',
+    minHeight: 'var(--min-h-screen)',
     background: `linear-gradient(135deg, ${cssVars.colors.background} 0%, ${cssVars.colors.backgroundDark} 100%)`,
     padding: cssVars.spacing.xl,
   };

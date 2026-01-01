@@ -57,6 +57,9 @@ export const mediaQueries = {
   /** Tablet and up */
   tabletUp: `@media (min-width: ${parseInt(breakpoints.mobile) + 1}px)`,
 
+  /** Below tablet (max-width: 767px) - phones only */
+  tabletDown: `@media (max-width: ${parseInt(breakpoints.tablet) - 1}px)`,
+
   /** Desktop and up */
   desktop: `@media (min-width: ${parseInt(breakpoints.tablet) + 1}px)`,
 

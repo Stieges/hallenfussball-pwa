@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { cssVars } from '../../design-tokens'
+import { cssVars, mediaQueries } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
 
 export interface DialogProps {
@@ -148,7 +148,7 @@ export const Dialog = ({
           }
         }
 
-        @media (max-width: 767px) {
+        ${mediaQueries.tabletDown} {
           .dialog-overlay {
             padding: 12px !important;
             align-items: flex-start !important;

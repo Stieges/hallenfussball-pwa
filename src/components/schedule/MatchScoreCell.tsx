@@ -1,5 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars, mediaQueries } from '../../design-tokens'
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -99,13 +99,14 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
         </div>
 
         <style>{`
-          .correction-button:hover {
+          .correction-button:hover,
+          .correction-button:active {
             background: ${cssVars.colors.primary};
             color: white;
             border-color: ${cssVars.colors.primary};
           }
 
-          @media (max-width: 767px) {
+          ${mediaQueries.tabletDown} {
             .match-score-cell-finished {
               gap: 4px !important;
             }

@@ -156,7 +156,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   }
 
   const containerStyle: CSSProperties = {
-    minHeight: '100vh',
+    minHeight: 'var(--min-h-screen)',
     background: cssVars.colors.background,
     display: 'flex',
     flexDirection: 'column',
@@ -441,7 +441,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
 // ============================================================================
 
 const loadingStyle: CSSProperties = {
-  minHeight: '100vh',
+  minHeight: 'var(--min-h-screen)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
