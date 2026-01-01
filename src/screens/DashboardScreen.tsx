@@ -14,7 +14,7 @@ import { TrashTournamentCard } from '../components/TrashTournamentCard';
 import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
 import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
-import { cssVars, fontFamilies } from '../design-tokens'
+import { cssVars } from '../design-tokens'
 import {
   categorizeTournaments,
   CategorizedTournaments,
@@ -165,7 +165,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontFamily: fontFamilies.heading,
+    fontFamily: cssVars.fontFamilies.heading,
     fontSize: isMobile ? cssVars.fontSizes.xxl : cssVars.fontSizes.xxxl,
     margin: 0,
     background: cssVars.gradients.primary,

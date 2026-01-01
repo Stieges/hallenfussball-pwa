@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useState, useEffect } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { MatchStatus } from '../../hooks/useLiveMatches';
 
 export interface MatchTimerProps {
@@ -130,7 +130,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   const timeStyle: CSSProperties = {
     fontSize: currentSize.time,
     fontWeight: cssVars.fontWeights.bold,
-    fontFamily: fontFamilies.heading,
+    fontFamily: cssVars.fontFamilies.heading,
     color: isOvertime
       ? cssVars.colors.error
       : isPaused

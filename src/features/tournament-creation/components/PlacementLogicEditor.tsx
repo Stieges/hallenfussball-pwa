@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../../components/ui';
-import { cssVars, fontFamilies } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens'
 import { PlacementCriterion } from '../../../types/tournament';
 
 interface PlacementLogicEditorProps {
@@ -164,7 +164,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         {/* Position Number */}
         <span
           style={{
-            fontFamily: fontFamilies.heading,
+            fontFamily: cssVars.fontFamilies.heading,
             fontSize: '18px',
             color: cssVars.colors.primary,
             minWidth: '24px',

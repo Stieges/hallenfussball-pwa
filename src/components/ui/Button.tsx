@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactNode, useState, useEffect } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { transitions } from '../../styles/motion';
 
 interface ButtonProps {
@@ -76,7 +76,7 @@ export const Button: React.FC<ButtonProps> = ({
     fontWeight: cssVars.fontWeights.bold,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     transition: `all 0.2s ease, ${transitions.buttonPress}`,
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
     width: fullWidth ? '100%' : 'auto',
     opacity: isDisabled ? 0.5 : 1,
     transform: isPressed ? 'scale(0.97)' : 'scale(1)',

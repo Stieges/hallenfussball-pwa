@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
-import { colors, fontFamilies } from './design-tokens';
+import { cssVars } from './design-tokens';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
@@ -39,8 +39,8 @@ const ScreenLoader = () => (
       justifyContent: 'center',
       alignItems: 'center',
       minHeight: '100vh',
-      background: colors.background,
-      color: colors.textPrimary,
+      background: cssVars.colors.background,
+      color: cssVars.colors.textPrimary,
     }}
   >
     <div style={{ textAlign: 'center' }}>
@@ -48,8 +48,8 @@ const ScreenLoader = () => (
         style={{
           width: 40,
           height: 40,
-          border: `3px solid ${colors.border}`,
-          borderTopColor: colors.primary,
+          border: `3px solid ${cssVars.colors.border}`,
+          borderTopColor: cssVars.colors.primary,
           borderRadius: '50%',
           animation: 'spin 1s linear infinite',
           margin: '0 auto 16px',
@@ -181,8 +181,8 @@ function AppContent() {
           justifyContent: 'center',
           alignItems: 'center',
           minHeight: '100vh',
-          background: colors.background,
-          color: colors.textPrimary,
+          background: cssVars.colors.background,
+          color: cssVars.colors.textPrimary,
         }}
       >
         <div>Lade Turniere...</div>
@@ -275,9 +275,9 @@ function AppContent() {
     <div
       style={{
         minHeight: '100vh',
-        background: colors.background,
-        color: colors.textPrimary,
-        fontFamily: fontFamilies.body,
+        background: cssVars.colors.background,
+        color: cssVars.colors.textPrimary,
+        fontFamily: cssVars.fontFamilies.body,
       }}
     >
       {/* Guest Banner - shows registration prompt for guests */}

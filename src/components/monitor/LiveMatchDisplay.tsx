@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
 import { MatchTimer } from './MatchTimer';
 
@@ -186,7 +186,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     fontSize: currentSize.teamName,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
-    fontFamily: fontFamilies.heading,
+    fontFamily: cssVars.fontFamilies.heading,
     lineHeight: 1.15,
     wordBreak: 'break-word',
     maxWidth: '100%',
@@ -207,7 +207,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     fontSize: currentSize.score,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.primary,
-    fontFamily: fontFamilies.heading,
+    fontFamily: cssVars.fontFamilies.heading,
     minWidth: size === 'xl' ? '160px' : size === 'lg' ? '100px' : '70px',
     textAlign: 'center',
     textShadow: isRunning

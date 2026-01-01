@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 interface InputProps {
   label?: string;
   type?: 'text' | 'number' | 'email' | 'tel' | 'date' | 'time';
@@ -53,7 +53,7 @@ export const Input: React.FC<InputProps> = ({
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     transition: 'border-color 0.2s ease',
     width: '100%',

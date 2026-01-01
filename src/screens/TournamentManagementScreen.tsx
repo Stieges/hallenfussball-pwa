@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { CSSProperties } from 'react';
-import { cssVars, fontFamilies, fontSizesMd3 } from '../design-tokens'
+import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -411,7 +411,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
     fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
   };
 
   return (

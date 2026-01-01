@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useMemo } from 'react';
-import { cssVars, fontFamilies } from '../design-tokens'
+import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
 import { Standing, Match } from '../types/tournament';
 import {
@@ -172,7 +172,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     width: '100%',
     padding: '40px 20px',
     background: cssVars.colors.background,
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
     color: cssVars.colors.textPrimary,
   };
 

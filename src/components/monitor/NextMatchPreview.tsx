@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useCallback, useRef } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { MatchStatus } from '../../hooks/useLiveMatches';
 
 export interface NextMatch {
@@ -167,7 +167,7 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
     fontSize: '28px',
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
-    fontFamily: fontFamilies.heading,
+    fontFamily: cssVars.fontFamilies.heading,
   };
 
   const vsStyle: CSSProperties = {

@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 interface SelectOption {
   value: string | number;
   label: string;
@@ -45,7 +45,7 @@ export const Select: React.FC<SelectProps> = ({
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     cursor: 'pointer',
     transition: 'border-color 0.2s ease',

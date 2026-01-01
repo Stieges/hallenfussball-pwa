@@ -9,7 +9,7 @@ import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
-import { cssVars, fontFamilies, fontSizesMd3 } from '../design-tokens'
+import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
 
@@ -412,7 +412,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       <h1
         style={{
-          fontFamily: fontFamilies.heading,
+          fontFamily: cssVars.fontFamilies.heading,
           fontSize: cssVars.fontSizes.xxxl,
           marginBottom: '32px',
           background: cssVars.gradients.primary,

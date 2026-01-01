@@ -9,7 +9,7 @@
 
 import { CSSProperties } from 'react';
 import { Icons } from '../ui/Icons';
-import { cssVars, fontFamilies } from '../../design-tokens'
+import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export type FilterChip = 'running' | 'upcoming' | 'finished' | 'draft';
@@ -99,7 +99,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
-    fontFamily: fontFamilies.body,
+    fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     transition: 'border-color 0.2s ease',
   };
