@@ -27,6 +27,9 @@ export const semanticColorsDark = {
   primaryMedium: 'rgba(0, 230, 118, 0.1)',
   primarySubtle: 'rgba(0, 230, 118, 0.05)',
   primarySelected: 'rgba(0, 230, 118, 0.2)', // For selected cards/buttons
+  primaryBorder: 'rgba(0, 230, 118, 0.2)',
+  primaryBorderActive: 'rgba(0, 230, 118, 0.3)',
+  primaryBorderStrong: 'rgba(0, 230, 118, 0.4)',
 
   secondary: palette.blue[500],
   secondaryHover: palette.blue[600],
@@ -35,7 +38,9 @@ export const semanticColorsDark = {
   secondarySubtle: 'rgba(0, 176, 255, 0.05)',
   secondarySelected: 'rgba(0, 176, 255, 0.2)', // For selected info states
   secondaryBadge: 'rgba(0, 176, 255, 0.08)', // For subtle info badges
+  secondaryBorder: 'rgba(0, 176, 255, 0.2)',
   secondaryBorderActive: 'rgba(0, 176, 255, 0.3)',
+  secondaryBorderStrong: 'rgba(0, 176, 255, 0.5)',
 
   accent: '#FFD700',
   accentLight: 'rgba(255, 215, 0, 0.2)',
@@ -86,13 +91,18 @@ export const semanticColorsDark = {
   error: palette.red[400],
   errorHover: palette.red[500],
   errorLight: 'rgba(255, 82, 82, 0.15)',
+  errorMedium: 'rgba(255, 82, 82, 0.2)',
   errorBorder: 'rgba(255, 82, 82, 0.3)',
 
   warning: palette.orange[400],
   warningHover: palette.orange[500],
   warningLight: 'rgba(255, 145, 0, 0.15)',
+  warningSubtle: 'rgba(255, 145, 0, 0.08)',
+  warningMedium: 'rgba(255, 145, 0, 0.1)',
   warningSelected: 'rgba(255, 145, 0, 0.2)', // For selected warning states
   warningBorder: 'rgba(255, 145, 0, 0.3)',
+  warningBorderActive: 'rgba(255, 145, 0, 0.3)',
+  warningBorderStrong: 'rgba(255, 145, 0, 0.5)',
 
   success: '#4CAF50',
   successHover: '#43A047',

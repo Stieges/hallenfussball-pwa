@@ -198,17 +198,71 @@ All design values come from this directory. Never use:
 
 ```
 src/design-tokens/
-├── index.ts        # Main export
-├── colors.ts       # Color palette
-├── spacing.ts      # 8pt spacing scale
-├── typography.ts   # Font definitions
-├── shadows.ts      # Elevation shadows
-├── radii.ts        # Border radius
-├── motion.ts       # Animations
-├── breakpoints.ts  # Responsive
-├── gradients.ts    # CSS gradients
-└── README.md       # This file
+├── index.ts           # Main export
+├── colors/
+│   ├── index.ts       # Color exports
+│   ├── semantic.ts    # Dark theme (Source of Truth)
+│   └── semantic-light.ts # Light theme
+├── cssVars.ts         # CSS Variable mappings
+├── spacing.ts         # 8pt spacing scale
+├── typography.ts      # Font definitions
+├── shadows.ts         # Elevation shadows
+├── radii.ts           # Border radius
+├── motion.ts          # Animations
+├── breakpoints.ts     # Responsive
+├── gradients.ts       # CSS gradients
+├── __tests__/         # Token tests
+│   ├── cssVars.test.ts
+│   └── token-sync.test.ts # Sync verification
+└── README.md          # This file
 ```
+
+## Token Synchronization
+
+### Multi-File Sync Architecture
+
+Design tokens span multiple files that MUST stay in sync:
+
+| File | Purpose | Sync Requirement |
+|------|---------|------------------|
+| `colors/semantic.ts` | Dark theme colors | Source of Truth |
+| `colors/semantic-light.ts` | Light theme colors | Same properties as semantic.ts |
+| `cssVars.ts` | CSS Variable mappings | All color properties mapped |
+| `styles/global.css` | Runtime CSS Variables | `:root` and `[data-theme]` have all vars |
+
+### Verification Commands
+
+```bash
+# Check token sync (also runs in CI and pre-commit)
+npm run tokens:check
+
+# Run sync tests
+npm test -- --run src/design-tokens/__tests__/token-sync.test.ts
+```
+
+### Adding a New Color Token
+
+1. Add to `colors/semantic.ts` (dark value)
+2. Add to `colors/semantic-light.ts` (light value)
+3. Add mapping to `cssVars.ts`: `myColor: 'var(--color-my-color)'`
+4. Add to `global.css` `:root` block: `--color-my-color: #hexvalue;`
+5. Add to `global.css` `[data-theme="light"]` block
+6. Run `npm run tokens:check` to verify
+
+### Naming Convention
+
+| TypeScript (camelCase) | CSS Variable (kebab-case) |
+|------------------------|---------------------------|
+| `textPrimary` | `--color-text-primary` |
+| `surfaceHover` | `--color-surface-hover` |
+| `borderActive` | `--color-border-active` |
+
+### Excluded Properties
+
+Some properties are intentionally excluded from CSS Variable sync:
+- `confettiColors` - Array type, not CSS compatible
+- `backgroundGradientDark` - Full CSS gradient string
+- `gradientNextMatch` - Full CSS gradient string
 
 ## Migration Guide
 

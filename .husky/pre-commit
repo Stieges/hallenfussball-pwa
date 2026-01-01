@@ -31,5 +31,27 @@ if git diff --cached --name-only | grep -qE "playwright\.config\.ts|vite\.config
   echo ""
 fi
 
+# Check for design token changes that need sync verification
+if git diff --cached --name-only | grep -qE "src/design-tokens/|src/styles/global\.css"; then
+  echo ""
+  echo "🎨 DESIGN TOKEN DATEIEN GEÄNDERT"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Prüfe Token-Synchronisation..."
+  if ! npm run tokens:check; then
+    echo ""
+    echo "❌ Token Sync Check fehlgeschlagen!"
+    echo "   Stelle sicher, dass alle Dateien synchron sind:"
+    echo "   - semantic*.ts (gleiche Properties)"
+    echo "   - cssVars.ts (alle Properties gemappt)"
+    echo "   - global.css (alle CSS Variables in :root und [data-theme])"
+    echo ""
+    exit 1
+  fi
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
+
 npx lint-staged
 npm run test -- --run

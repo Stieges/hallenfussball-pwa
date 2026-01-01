@@ -18,7 +18,8 @@
     "test:e2e:desktop": "playwright test --project='Desktop Chrome'",
     "test:a11y": "playwright test tests/e2e/usability/accessibility.spec.ts",
     "prepare": "husky",
-    "analyze": "npm run build && open dist/stats.html"
+    "analyze": "npm run build && open dist/stats.html",
+    "tokens:check": "node scripts/check-design-token-sync.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
