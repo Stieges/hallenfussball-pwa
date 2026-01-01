@@ -1,9 +1,10 @@
 import { CSSProperties } from 'react';
 import { cssVars } from '../design-tokens'
+import { useIsMobile } from '../hooks/useIsMobile';
 
-// Step Status Icons
-const CheckIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+// Step Status Icons - size prop for responsive sizing
+const CheckIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
     <circle cx="7" cy="7" r="6" fill={cssVars.colors.primary} />
     <path
       d="M4.5 7L6.5 9L9.5 5"
@@ -15,18 +16,28 @@ const CheckIcon = () => (
   </svg>
 );
 
-const CurrentIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+const CurrentIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
     <circle cx="7" cy="7" r="6" fill={cssVars.colors.textPrimary} />
     <circle cx="7" cy="7" r="3" fill={cssVars.colors.surface} />
   </svg>
 );
 
-const EmptyIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+const EmptyIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
     <circle cx="7" cy="7" r="5.5" stroke={cssVars.colors.textSecondary} strokeWidth="1" fill="none" />
   </svg>
 );
+
+// Mobile-friendly short labels
+const SHORT_LABELS: Record<string, string> = {
+  'Stammdaten': '1',
+  'Sportart': '2',
+  'Modus': '3',
+  'Gruppen & Felder': '4',
+  'Teams': '5',
+  'Übersicht': '6',
+};
 
 interface ProgressBarProps {
   currentStep: number;
@@ -47,6 +58,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   stepErrors,
   clickable = true,
 }) => {
+  const isMobile = useIsMobile();
+  const iconSize = isMobile ? 12 : 14;
+
   const isStepVisited = (stepIndex: number): boolean => {
     return visitedSteps ? visitedSteps.has(stepIndex + 1) : false;
   };
@@ -64,12 +78,20 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const isCompleted = isVisited && stepNum < currentStep;
 
     if (isCompleted) {
-      return <CheckIcon />;
+      return <CheckIcon size={iconSize} />;
     }
     if (isCurrent) {
-      return <CurrentIcon />;
+      return <CurrentIcon size={iconSize} />;
     }
-    return <EmptyIcon />;
+    return <EmptyIcon size={iconSize} />;
+  };
+
+  // Get display label - use short version on mobile
+  const getDisplayLabel = (label: string): string => {
+    if (isMobile) {
+      return SHORT_LABELS[label] || label;
+    }
+    return label;
   };
 
   const labelStyle = (stepIndex: number): CSSProperties => {
@@ -80,7 +102,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const isClickableStep = clickable && onStepClick && (isVisited || isCurrent);
 
     return {
-      fontSize: cssVars.fontSizes.xs,
+      fontSize: isMobile ? '10px' : cssVars.fontSizes.xs,
       fontWeight: isCurrent ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
       color:
         currentStep > stepNum
@@ -95,9 +117,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       position: 'relative',
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '4px',
+      gap: isMobile ? '2px' : '4px',
       textDecoration: isCurrent ? 'underline' : 'none',
-      textUnderlineOffset: '4px',
+      textUnderlineOffset: isMobile ? '2px' : '4px',
       opacity: hasErrors ? 0.8 : 1,
     };
   };
@@ -111,7 +133,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     return {
       background: 'none',
       border: 'none',
-      padding: '8px 4px',
+      padding: isMobile ? '6px 2px' : '8px 4px',
       margin: 0,
       cursor: isClickableStep ? 'pointer' : 'default',
       ...labelStyle(stepIndex),
@@ -139,8 +161,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   return (
-    <div style={{ marginBottom: cssVars.spacing.lg }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: cssVars.spacing.sm }}>
+    <div style={{ marginBottom: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: cssVars.spacing.sm,
+        overflow: 'hidden',
+      }}>
         {stepLabels.map((label, index) => {
           const stepNum = index + 1;
           const isVisited = isStepVisited(index);
@@ -161,7 +188,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               tabIndex={isClickableStep ? 0 : -1}
             >
               {getStepIcon(index)}
-              {label}
+              {getDisplayLabel(label)}
               {hasErrors && <span style={errorBadgeStyle} aria-label="Fehler" />}
             </button>
           );

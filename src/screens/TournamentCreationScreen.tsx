@@ -8,6 +8,7 @@ import { Step5_Overview as Step5_OverviewDirect } from '../features/tournament-c
 import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
@@ -78,6 +79,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
+  const isMobile = useIsMobile();
 
   // ============================================================================
   // WIZARD HOOK - All wizard state and actions from useTournamentWizard
@@ -345,13 +347,17 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const containerMaxWidth = isShowingPreview ? '1600px' : '800px';
 
   return (
-    <div style={{ padding: '40px 20px', maxWidth: containerMaxWidth, margin: '0 auto' }}>
+    <div style={{
+      padding: isMobile ? '20px 12px' : '40px 20px',
+      maxWidth: containerMaxWidth,
+      margin: '0 auto',
+    }}>
       {/* Header with Auth Section */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: cssVars.spacing.lg,
+        marginBottom: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
       }}>
         {/* Left: Back Button */}
         <button
@@ -413,8 +419,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       <h1
         style={{
           fontFamily: cssVars.fontFamilies.heading,
-          fontSize: cssVars.fontSizes.xxxl,
-          marginBottom: '32px',
+          fontSize: isMobile ? cssVars.fontSizes.xxl : cssVars.fontSizes.xxxl,
+          marginBottom: isMobile ? '20px' : '32px',
           background: cssVars.gradients.primary,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -621,26 +627,39 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       {/* Navigation - ausblenden wenn Step 6 (Preview hat eigene Navigation) */}
       {step !== 6 && (
-        <div style={{ marginTop: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginTop: isMobile ? '16px' : '24px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: isMobile ? 'wrap' : 'nowrap',
+            gap: isMobile ? cssVars.spacing.sm : 0,
+          }}>
             <Button
               variant="ghost"
               onClick={() => handleStepChange(Math.max(1, step - 1))}
               disabled={step === 1}
               icon={<Icons.ChevronLeft />}
+              size={isMobile ? 'sm' : 'md'}
             >
               Zurück
             </Button>
 
-            <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
+            <div style={{
+              display: 'flex',
+              gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
+              flexWrap: isMobile ? 'wrap' : 'nowrap',
+              justifyContent: isMobile ? 'flex-end' : 'flex-start',
+            }}>
               {/* Speichern-Button - nur ab Step 2 anzeigen wenn grundlegende Daten vorhanden */}
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
                   variant="secondary"
                   onClick={handleSaveDraft}
                   icon={<Icons.Check />}
+                  size={isMobile ? 'sm' : 'md'}
                 >
-                  Als Entwurf speichern
+                  {isMobile ? 'Speichern' : 'Als Entwurf speichern'}
                 </Button>
               )}
 
@@ -650,6 +669,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   disabled={!canGoNext()}
                   icon={<Icons.ChevronRight />}
                   iconPosition="right"
+                  size={isMobile ? 'sm' : 'md'}
                 >
                   Weiter
                 </Button>
