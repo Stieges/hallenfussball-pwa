@@ -54,6 +54,8 @@ interface FinalStageScheduleProps {
   runningMatchIds?: Set<string>;
   /** US-SCHEDULE-EDITOR: Callback when matches are swapped via DnD */
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
+  /** Whether to show the section title (default: true) */
+  showTitle?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -72,6 +74,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   onStartCorrection,
   runningMatchIds,
   onMatchSwap,
+  showTitle = true,
 }) => {
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -516,7 +519,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   return (
     <div style={containerStyle} className="final-stage-schedule">
-      <h2 style={titleStyle}>Finalrunde</h2>
+      {showTitle && <h2 style={titleStyle}>Finalrunde</h2>}
 
       {/* Desktop Table View with DnD */}
       <div className="desktop-view" style={{ overflowX: 'auto' }}>

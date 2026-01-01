@@ -38,6 +38,8 @@ export interface MatchCardDesktopProps {
   field?: number;
   /** Group label */
   group?: string;
+  /** Whether to show group label (hide for single-group tournaments) */
+  showGroupLabel?: boolean;
   /** Home team */
   homeTeam: Team;
   /** Away team */
@@ -74,6 +76,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   scheduledTime,
   field,
   group,
+  showGroupLabel = true,
   homeTeam,
   awayTeam,
   homeScore,
@@ -283,7 +286,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
         {/* Group */}
         <div style={groupStyle}>
-          {group ? `Gr. ${group}` : ''}
+          {showGroupLabel && group && group !== 'all' ? `Gr. ${group}` : ''}
         </div>
       </div>
 

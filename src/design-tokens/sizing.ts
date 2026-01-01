@@ -70,7 +70,26 @@ export const buttonHeights = {
   lg: '56px',
 } as const;
 
+/**
+ * Layout heights - fixed height components
+ */
+export const layoutHeights = {
+  /** Bottom navigation bar height */
+  bottomNav: '56px',
+  /** Bottom action bar height (save/cancel in edit modes) */
+  bottomActionBar: '56px',
+  /** Header/toolbar height */
+  header: '56px',
+} as const;
+
+export const layoutHeightValues = {
+  bottomNav: 56,
+  bottomActionBar: 56,
+  header: 56,
+} as const;
+
 export type TouchTargetKey = keyof typeof touchTargets;
 export type IconSizeKey = keyof typeof iconSizes;
 export type InputHeightKey = keyof typeof inputHeights;
 export type ButtonHeightKey = keyof typeof buttonHeights;
+export type LayoutHeightKey = keyof typeof layoutHeights;

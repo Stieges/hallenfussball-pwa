@@ -28,11 +28,14 @@ interface ActionMenuProps {
   items: ActionMenuItem[];
   /** Test ID for E2E tests */
   testId?: string;
+  /** Whether the menu trigger is visible (default: true) */
+  visible?: boolean;
 }
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({
   items,
   testId,
+  visible = true,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -142,6 +145,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     opacity: item.disabled ? 0.5 : 1,
     transition: 'background 0.15s ease',
   });
+
+  // Return null when not visible (after hooks to satisfy React rules)
+  if (!visible) {
+    return null;
+  }
 
   return (
     <div style={containerStyle}>

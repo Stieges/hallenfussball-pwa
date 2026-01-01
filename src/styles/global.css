@@ -1156,3 +1156,40 @@ textarea:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================
+   LAYOUT: Safe Area Utilities
+   ============================================ */
+
+/* Bottom navigation safe area padding */
+.safe-area-bottom-nav {
+  padding-bottom: 56px; /* layoutHeights.bottomNav */
+}
+
+/* Bottom action bar safe area (above bottom nav) */
+.safe-area-bottom-action {
+  padding-bottom: 112px; /* bottomNav + bottomActionBar */
+}
+
+/* Mobile-only safe area padding */
+@media (max-width: 767px) {
+  .mobile-safe-area-bottom {
+    padding-bottom: 56px;
+  }
+
+  .mobile-safe-area-bottom-action {
+    padding-bottom: 112px;
+  }
+}
+
+/* Main content container with safe area */
+.main-content-with-nav {
+  min-height: 100vh;
+  padding-bottom: 56px; /* Space for bottom navigation */
+}
+
+/* Content area during edit mode (with action bar) */
+.main-content-edit-mode {
+  min-height: 100vh;
+  padding-bottom: 112px; /* Space for action bar + nav */
+}

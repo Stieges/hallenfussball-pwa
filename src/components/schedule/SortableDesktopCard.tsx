@@ -52,6 +52,8 @@ export interface SortableDesktopCardProps {
   canSwap: boolean;
   /** Tournament data for group name resolution */
   tournament?: Tournament;
+  /** Whether to show group label (hide for single-group tournaments) */
+  showGroupLabel?: boolean;
   /** Show referee selector */
   showReferees: boolean;
   /** Referee options for dropdown */
@@ -88,6 +90,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   fieldOptions,
   onRefereeChange,
   onFieldChange,
+  showGroupLabel = true,
 }) => {
   const isLocked = status === 'running' || status === 'finished';
   const canDrag = editingSchedule && canSwap && !isLocked;
@@ -324,7 +327,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
 
           {/* Group */}
           <div style={groupStyle}>
-            {match.group ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''}
+            {showGroupLabel && match.group && match.group !== 'all' ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''}
           </div>
         </div>
       </div>

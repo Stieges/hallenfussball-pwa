@@ -47,6 +47,8 @@ export interface SortableMobileCardProps {
   canSwap: boolean;
   /** Tournament data for group name resolution */
   tournament?: Tournament;
+  /** Whether to show group label (hide for single-group tournaments) */
+  showGroupLabel?: boolean;
   /** Show referee selector */
   showReferees: boolean;
   /** Referee options for dropdown */
@@ -83,6 +85,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   editingSchedule,
   canSwap,
   tournament,
+  showGroupLabel = true,
   showReferees,
   refereeOptions,
   showFields,
@@ -143,6 +146,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     scheduledTime: match.time,
     field: match.field,
     group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+    showGroupLabel,
     homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
     awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
     homeScore: match.scoreA ?? 0,

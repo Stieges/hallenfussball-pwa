@@ -25,6 +25,8 @@ export interface DesktopCardProps {
   isExpanded: boolean;
   /** Tournament data for group name resolution */
   tournament?: Tournament;
+  /** Whether to show group label (hide for single-group tournaments) */
+  showGroupLabel?: boolean;
   /** Callback when card body is clicked */
   onCardClick: (matchId: string) => void;
   /** Callback when score circle is clicked */
@@ -42,6 +44,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   status,
   isExpanded,
   tournament,
+  showGroupLabel = true,
   onCardClick,
   onCircleClick,
   renderExpandContent,
@@ -66,6 +69,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         scheduledTime={match.time}
         field={match.field}
         group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
+        showGroupLabel={showGroupLabel}
         homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
         awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
         homeScore={match.scoreA ?? 0}

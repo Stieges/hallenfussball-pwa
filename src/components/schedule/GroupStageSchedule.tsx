@@ -66,6 +66,8 @@ interface GroupStageScheduleProps {
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** Whether to show the section title (default: true) */
+  showTitle?: boolean;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -87,6 +89,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   tournament,
   onMatchSwap,
   onNavigateToCockpit,
+  showTitle = true,
 }) => {
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -384,6 +387,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   const showReferees = !!(refereeConfig && refereeConfig.mode !== 'none');
   const showFields = numberOfFields > 1;
+  // Hide group label for single-group tournaments (or when no groups defined)
+  const showGroupLabel = (tournament?.groups?.length ?? 0) > 1;
 
   // Generate referee options for dropdown (nur Nummern)
   const getRefereeOptions = () => {
@@ -450,6 +455,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             status={status}
             isExpanded={isExpanded}
             tournament={tournament}
+            showGroupLabel={showGroupLabel}
             onCardClick={handleCardClick}
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
@@ -490,6 +496,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             editingSchedule={editingSchedule}
             canSwap={!!onMatchSwap}
             tournament={tournament}
+            showGroupLabel={showGroupLabel}
             showReferees={showReferees}
             refereeOptions={refereeOptions}
             showFields={showFields}
@@ -504,9 +511,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   return (
     <div style={containerStyle} className="group-stage-schedule">
-      <h2 style={titleStyle}>
-        {hasGroups ? 'Vorrunde' : 'Spielplan'}
-      </h2>
+      {showTitle && (
+        <h2 style={titleStyle}>
+          {hasGroups ? 'Vorrunde' : 'Spielplan'}
+        </h2>
+      )}
 
       {/* Desktop View - Card layout (normal) or Card edit mode */}
       {editingSchedule && onMatchSwap ? (
@@ -617,6 +626,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     editingSchedule={editingSchedule}
                     canSwap={!!onMatchSwap}
                     tournament={tournament}
+                    showGroupLabel={showGroupLabel}
                     showReferees={showReferees}
                     refereeOptions={editableRefereeOptions}
                     showFields={showFields}
@@ -675,6 +685,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               scheduledTime: match.time,
               field: match.field,
               group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+              showGroupLabel,
               homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
               awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
               homeScore: match.scoreA ?? 0,

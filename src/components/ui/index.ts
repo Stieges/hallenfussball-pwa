@@ -26,6 +26,14 @@ export { BottomSheet, BottomSheetItem } from './BottomSheet';
 export { ActionMenu } from './ActionMenu';
 export type { ActionMenuItem } from './ActionMenu';
 
+// Bottom Action Bar (Edit Mode Actions)
+export { BottomActionBar } from './BottomActionBar';
+export type { BottomActionBarProps } from './BottomActionBar';
+
+// Collapsible Info Panel (with localStorage persistence)
+export { CollapsibleInfoPanel } from './CollapsibleInfoPanel';
+export type { CollapsibleInfoPanelProps } from './CollapsibleInfoPanel';
+
 // Progress Indicators
 export { ProgressRing, ScoreContent, VSContent } from './ProgressRing';
 export type { ProgressRingProps, ScoreContentProps } from './ProgressRing';
