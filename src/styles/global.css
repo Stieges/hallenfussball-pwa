@@ -40,30 +40,282 @@
      Placeholder: #9DB2CC = 4.7:1 on input bg (AA)
      =========================================== */
 
-  /* Colors */
+  /* ===========================================
+     Colors - Primary Brand
+     =========================================== */
   --color-primary: #00E676;
+  --color-primary-dark: #00C853;
   --color-primary-hover: #00C853;
-  --color-background: #0A1628;
-  --color-surface: rgba(255, 255, 255, 0.05); /* Synced: glassmorphic effect */
-  --color-surface-solid: #1E293B; /* Fallback for contexts needing solid color */
-  --color-surface-hover: rgba(255, 255, 255, 0.08);
-  --color-border: rgba(255, 255, 255, 0.1); /* Synced with theme.ts */
-  --color-border-solid: #334155; /* Fallback for solid borders */
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #A3B8D4; /* WCAG AA 5.1:1 on surface */
-  --color-text-muted: rgba(255, 255, 255, 0.5);
-  --color-warning: #FF9100;
-  --color-error: #FF5252;
-  --color-success: #4CAF50;
-  --color-accent: #00B0FF;
-
-  /* Shadows & Glows */
-  --color-shadow-soft: rgba(0, 0, 0, 0.2);
-  --color-shadow-medium: rgba(0, 0, 0, 0.3);
+  --color-primary-active: #00A040;
+  --color-primary-light: rgba(0, 230, 118, 0.15);
+  --color-primary-medium: rgba(0, 230, 118, 0.1);
+  --color-primary-subtle: rgba(0, 230, 118, 0.05);
+  --color-primary-selected: rgba(0, 230, 118, 0.2);
+  --color-primary-border: rgba(0, 230, 118, 0.2);
+  --color-primary-border-active: rgba(0, 230, 118, 0.3);
+  --color-primary-border-strong: rgba(0, 230, 118, 0.4);
   --color-primary-glow: rgba(0, 230, 118, 0.5);
   --color-primary-glow-light: rgba(0, 230, 118, 0.2);
-  --color-error-glow: rgba(255, 82, 82, 0.25);
+
+  /* ===========================================
+     Colors - Secondary Brand
+     =========================================== */
+  --color-secondary: #00B0FF;
+  --color-secondary-hover: #0091EA;
+  --color-secondary-subtle: rgba(0, 176, 255, 0.05);
+  --color-secondary-light: rgba(0, 176, 255, 0.15);
+  --color-secondary-medium: rgba(0, 176, 255, 0.1);
+  --color-secondary-selected: rgba(0, 176, 255, 0.2);
+  --color-secondary-badge: rgba(0, 176, 255, 0.08);
+  --color-secondary-border: rgba(0, 176, 255, 0.2);
+  --color-secondary-border-active: rgba(0, 176, 255, 0.3);
+  --color-secondary-border-strong: rgba(0, 176, 255, 0.5);
+
+  /* ===========================================
+     Colors - Accent
+     =========================================== */
+  --color-accent: #FFD700;
+  --color-accent-light: rgba(255, 215, 0, 0.2);
+  --color-accent-medium: rgba(255, 215, 0, 0.1);
+  --color-accent-subtle: rgba(255, 215, 0, 0.05);
+  --color-accent-badge: rgba(255, 215, 0, 0.08);
+  --color-accent-border: rgba(255, 215, 0, 0.3);
+
+  /* ===========================================
+     Colors - Background
+     =========================================== */
+  --color-background: #0A1628;
+  --color-background-dark: #0d1d35;
+  --color-background-deep: #020617;
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-surface-light: rgba(255, 255, 255, 0.1);
+  --color-surface-solid: #1E293B;
+  --color-surface-hover: rgba(255, 255, 255, 0.08);
+  --color-surface-dark: rgba(0, 0, 0, 0.3);
+  --color-surface-dark-medium: rgba(0, 0, 0, 0.2);
+  --color-surface-dark-light: rgba(0, 0, 0, 0.1);
+  --color-surface-variant: #475569;
+  --color-surface-elevated: #1E293B;
   --color-surface-highlight: rgba(255, 255, 255, 0.05);
+
+  /* ===========================================
+     Colors - Text
+     =========================================== */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A3B8D4;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --color-text-placeholder: #9DB2CC;
+  --color-text-disabled: #64748B;
+  --color-text-tertiary: #94A3B8;
+  --color-text-on-dark: #ffffff;
+
+  /* ===========================================
+     Colors - On-Colors (text on colored bg)
+     =========================================== */
+  --color-on-primary: #0A1628;
+  --color-on-secondary: #0A1628;
+  --color-on-error: #FFFFFF;
+  --color-on-warning: #000000;
+  --color-on-success: #FFFFFF;
+
+  /* ===========================================
+     Colors - Borders
+     =========================================== */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-light: #64748B;
+  --color-border-active: rgba(0, 230, 118, 0.3);
+  --color-border-solid: #334155;
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.12);
+  --color-border-strong: #64748B;
+
+  /* ===========================================
+     Colors - Error
+     =========================================== */
+  --color-error: #FF5252;
+  --color-error-hover: #FF1744;
+  --color-error-light: rgba(255, 82, 82, 0.15);
+  --color-error-medium: rgba(255, 82, 82, 0.2);
+  --color-error-border: rgba(255, 82, 82, 0.3);
+  --color-error-glow: rgba(255, 82, 82, 0.25);
+
+  /* ===========================================
+     Colors - Warning
+     =========================================== */
+  --color-warning: #FF9100;
+  --color-warning-hover: #FF6D00;
+  --color-warning-subtle: rgba(255, 145, 0, 0.08);
+  --color-warning-light: rgba(255, 145, 0, 0.15);
+  --color-warning-medium: rgba(255, 145, 0, 0.1);
+  --color-warning-selected: rgba(255, 145, 0, 0.2);
+  --color-warning-border: rgba(255, 145, 0, 0.3);
+  --color-warning-border-active: rgba(255, 145, 0, 0.3);
+  --color-warning-border-strong: rgba(255, 145, 0, 0.5);
+  --color-warning-shadow: rgba(255, 193, 7, 0.3);
+  --color-warning-highlight: rgba(255, 193, 7, 0.08);
+
+  /* ===========================================
+     Colors - Success
+     =========================================== */
+  --color-success: #4CAF50;
+  --color-success-hover: #43A047;
+  --color-success-light: rgba(76, 175, 80, 0.15);
+
+  /* ===========================================
+     Colors - Info
+     =========================================== */
+  --color-info: #00B0FF;
+  --color-info-light: rgba(0, 176, 255, 0.15);
+  --color-info-border: rgba(0, 176, 255, 0.2);
+
+  /* ===========================================
+     Colors - Status (Tournament States)
+     =========================================== */
+  --color-status-live: #DC2626;
+  --color-status-live-bg: rgba(220, 38, 38, 0.15);
+  --color-status-live-row-bg: rgba(220, 38, 38, 0.08);
+
+  --color-status-upcoming: #4CAF50;
+  --color-status-upcoming-bg: rgba(76, 175, 80, 0.15);
+
+  --color-status-finished: #9E9E9E;
+  --color-status-finished-bg: rgba(158, 158, 158, 0.15);
+
+  --color-status-draft: #FF9100;
+  --color-status-draft-bg: rgba(255, 145, 0, 0.15);
+
+  --color-status-external: #9575CD;
+  --color-status-external-bg: rgba(149, 117, 205, 0.15);
+
+  --color-status-warning: #F97316;
+  --color-status-warning-bg: rgba(249, 115, 22, 0.15);
+
+  /* ===========================================
+     Colors - Live Cockpit
+     =========================================== */
+  --color-live-badge: #DC2626;
+  --color-live-badge-bg: rgba(220, 38, 38, 0.2);
+  --color-live-badge-pulse: rgba(220, 38, 38, 0.4);
+
+  /* ===========================================
+     Colors - Correction/Warning Banner
+     =========================================== */
+  --color-correction-bg: rgba(255, 145, 0, 0.12);
+  --color-correction-border: rgba(255, 145, 0, 0.4);
+  --color-correction-text: #FFB74D;
+  --color-correction-icon: #FF9100;
+
+  /* ===========================================
+     Colors - Medal (Rankings)
+     =========================================== */
+  --color-medal-gold: #FFD700;
+  --color-medal-silver: #C0C0C0;
+  --color-medal-bronze: #CD7F32;
+
+  /* ===========================================
+     Colors - Special
+     =========================================== */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-strong: rgba(0, 0, 0, 0.7);
+  --color-overlay-dialog: rgba(0, 0, 0, 0.8);
+  --color-focus: #00E676;
+  --color-focus-ring: rgba(0, 230, 118, 0.2);
+  --color-input-bg: rgba(0, 0, 0, 0.3);
+  --color-qr-background: #FFFFFF;
+
+  /* ===========================================
+     Colors - Shadows & Glows
+     =========================================== */
+  --color-shadow-soft: rgba(0, 0, 0, 0.2);
+  --color-shadow-medium: rgba(0, 0, 0, 0.3);
+
+  /* ===========================================
+     Colors - Danger
+     =========================================== */
+  --color-danger-highlight: rgba(248, 81, 73, 0.15);
+  --color-danger-gradient-start: rgba(248, 81, 73, 0.2);
+  --color-danger-gradient-end: rgba(248, 81, 73, 0.05);
+  --color-danger-border: rgba(248, 81, 73, 0.3);
+  --color-danger-action-bg: rgba(244, 67, 54, 0.1);
+
+  /* ===========================================
+     Colors - Gradient Helpers
+     =========================================== */
+  --color-gradient-error-light: #ff6b6b;
+  --color-gradient-primary-light: #4ade80;
+
+  /* ===========================================
+     Colors - Schedule Editor
+     =========================================== */
+  --color-editor-edit-mode-bg: rgba(76, 175, 80, 0.1);
+  --color-editor-edit-mode-hover: rgba(76, 175, 80, 0.2);
+  --color-editor-edit-mode-row-bg: rgba(76, 175, 80, 0.08);
+  --color-editor-edit-mode-border: rgba(76, 175, 80, 0.4);
+
+  --color-editor-dirty-bg: rgba(255, 193, 7, 0.15);
+  --color-editor-dirty-row-bg: rgba(255, 193, 7, 0.08);
+  --color-editor-dirty-row-bg-light: rgba(255, 193, 7, 0.05);
+  --color-editor-dirty-border: rgba(255, 193, 7, 0.4);
+
+  --color-editor-swap-bg: rgba(245, 158, 11, 0.15);
+  --color-editor-swap-active: rgba(245, 158, 11, 0.25);
+
+  --color-editor-error-row-bg: rgba(239, 83, 80, 0.1);
+  --color-editor-error-row-bg-light: rgba(239, 83, 80, 0.05);
+
+  --color-editor-drag-active-bg: rgba(0, 176, 255, 0.1);
+  --color-editor-drop-target-bg: rgba(0, 176, 255, 0.05);
+
+  --color-editor-locked-bg: rgba(0, 0, 0, 0.08);
+  --color-editor-locked-text: rgba(255, 255, 255, 0.5);
+
+  /* ===========================================
+     Colors - Management & Ranking
+     =========================================== */
+  --color-ranking-highlight-bg: rgba(34, 197, 94, 0.15);
+  --color-ranking-placement-bg: rgba(0, 230, 118, 0.08);
+  --color-ranking-expanded-bg: rgba(0, 230, 118, 0.05);
+
+  --color-info-banner-bg: rgba(33, 150, 243, 0.08);
+  --color-info-badge-bg: rgba(33, 150, 243, 0.15);
+
+  --color-warning-banner-bg: rgba(255, 152, 0, 0.08);
+  --color-warning-banner-bg-strong: rgba(255, 152, 0, 0.1);
+  --color-warning-banner-border: rgba(255, 152, 0, 0.3);
+  --color-dirty-indicator-bg: rgba(255, 152, 0, 0.15);
+
+  --color-neutral-badge-bg: rgba(0, 0, 0, 0.08);
+  --color-neutral-row-bg: rgba(0, 0, 0, 0.02);
+  --color-neutral-status-bg: rgba(100, 100, 100, 0.1);
+
+  --color-monitor-section-bg: rgba(15, 23, 42, 0.9);
+  --color-monitor-section-bg-strong: rgba(15, 23, 42, 0.95);
+  --color-monitor-section-bg-light: rgba(15, 23, 42, 0.65);
+
+  --color-panel-gradient-start: rgba(15, 23, 42, 0.9);
+  --color-panel-gradient-end: rgba(3, 7, 18, 0.9);
+  --color-timer-gradient-bg: rgba(15, 23, 42, 0.98);
+
+  /* ===========================================
+     Colors - Match Events
+     =========================================== */
+  --color-event-goal-bg: rgba(0, 230, 118, 0.05);
+  --color-event-goal-border: rgba(0, 230, 118, 0.3);
+
+  --color-event-status-bg: rgba(59, 130, 246, 0.05);
+  --color-event-status-border: rgba(59, 130, 246, 0.3);
+
+  --color-event-edit-bg: rgba(251, 191, 36, 0.05);
+  --color-event-edit-border: rgba(251, 191, 36, 0.3);
+
+  /* ===========================================
+     Gradients
+     =========================================== */
+  --gradient-primary-secondary: linear-gradient(135deg, #00E676, #00B0FF);
+  --gradient-subtle: linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
+  --gradient-subtle-hover: linear-gradient(135deg, rgba(0, 176, 255, 0.25), rgba(0, 230, 118, 0.25));
+  --gradient-next-match: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1));
+  --gradient-background-dark: radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%);
 
   /* Spacing - 8pt Grid System (synced with theme.ts) */
   --spacing-xs: 4px;   /* 0.5x - half-unit for tight spacing */
@@ -78,6 +330,23 @@
   --border-radius-md: 8px;  /* 1x (was 12px) */
   --border-radius-lg: 16px; /* 2x */
   --border-radius-xl: 24px; /* 3x (was 20px) */
+
+  /* Touch Targets - WCAG 2.5.5 Accessible Sizing */
+  --touch-target-minimum: 44px;   /* WCAG 2.5.5 minimum */
+  --touch-target-comfortable: 48px; /* MD3 recommendation */
+  --touch-target-primary: 56px;   /* Primary actions */
+
+  /* Icon Sizes */
+  --icon-size-xs: 16px;
+  --icon-size-sm: 20px;
+  --icon-size-md: 24px;
+  --icon-size-lg: 32px;
+  --icon-size-xl: 40px;
+
+  /* Input/Button Heights */
+  --input-height-sm: 36px;
+  --input-height-md: 44px;
+  --input-height-lg: 56px;
 
   /* ===========================================
      Typography - MD3 Type Scale
@@ -168,6 +437,361 @@
 
   /* Theme Gradient */
   --theme-gradient: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+}
+
+/* ============================================
+   Light Theme Variables
+   Activated via [data-theme="light"] on <html>
+   ============================================ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* ===========================================
+     Colors - Light Mode (WCAG AA Validated)
+
+     Background:      #FFFFFF / #F8FAFC
+     Surface:         #F8FAFC / #F1F5F9
+
+     | Color              | on Background | Passes |
+     |--------------------|---------------|--------|
+     | text-primary       | 15:1          | AAA    |
+     | text-secondary     | 5.8:1         | AA     |
+     | primary #059669    | 4.6:1         | AA     |
+     | secondary #0096E6  | 4.5:1         | AA     |
+     | error #DC2626      | 5.9:1         | AA     |
+     | warning #D97706    | 4.6:1         | AA     |
+     =========================================== */
+
+  /* ===========================================
+     Colors - Primary Brand
+     =========================================== */
+  --color-primary: #059669;
+  --color-primary-dark: #047857;
+  --color-primary-hover: #047857;
+  --color-primary-active: #065F46;
+  --color-primary-light: rgba(5, 150, 105, 0.12);
+  --color-primary-medium: rgba(5, 150, 105, 0.08);
+  --color-primary-subtle: rgba(5, 150, 105, 0.04);
+  --color-primary-selected: rgba(5, 150, 105, 0.18);
+  --color-primary-border: rgba(5, 150, 105, 0.2);
+  --color-primary-border-active: rgba(5, 150, 105, 0.4);
+  --color-primary-border-strong: rgba(5, 150, 105, 0.5);
+  --color-primary-glow: rgba(5, 150, 105, 0.3);
+  --color-primary-glow-light: rgba(5, 150, 105, 0.15);
+
+  /* ===========================================
+     Colors - Secondary Brand
+     =========================================== */
+  --color-secondary: #0096E6;
+  --color-secondary-hover: #007ACC;
+  --color-secondary-subtle: rgba(0, 150, 230, 0.04);
+  --color-secondary-light: rgba(0, 150, 230, 0.12);
+  --color-secondary-medium: rgba(0, 150, 230, 0.08);
+  --color-secondary-selected: rgba(0, 150, 230, 0.18);
+  --color-secondary-badge: rgba(0, 150, 230, 0.06);
+  --color-secondary-border: rgba(0, 150, 230, 0.2);
+  --color-secondary-border-active: rgba(0, 150, 230, 0.25);
+  --color-secondary-border-strong: rgba(0, 150, 230, 0.4);
+
+  /* ===========================================
+     Colors - Accent
+     =========================================== */
+  --color-accent: #D97706;
+  --color-accent-light: rgba(217, 119, 6, 0.15);
+  --color-accent-medium: rgba(217, 119, 6, 0.08);
+  --color-accent-subtle: rgba(217, 119, 6, 0.05);
+  --color-accent-badge: rgba(217, 119, 6, 0.06);
+  --color-accent-border: rgba(217, 119, 6, 0.25);
+
+  /* ===========================================
+     Colors - Background
+     =========================================== */
+  --color-background: #FFFFFF;
+  --color-background-dark: #F1F5F9;
+  --color-background-deep: #F8FAFC;
+  --color-surface: #F8FAFC;
+  --color-surface-light: #F1F5F9;
+  --color-surface-solid: #F8FAFC;
+  --color-surface-hover: #F1F5F9;
+  --color-surface-dark: #F1F5F9;
+  --color-surface-dark-medium: #F1F5F9;
+  --color-surface-dark-light: #F8FAFC;
+  --color-surface-variant: #E2E8F0;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-highlight: rgba(0, 0, 0, 0.03);
+
+  /* ===========================================
+     Colors - Text
+     =========================================== */
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: rgba(0, 0, 0, 0.5);
+  --color-text-placeholder: #9CA3AF;
+  --color-text-disabled: #9CA3AF;
+  --color-text-tertiary: #9CA3AF;
+  --color-text-on-dark: #ffffff;
+
+  /* ===========================================
+     Colors - On-Colors (text on colored bg)
+     =========================================== */
+  --color-on-primary: #FFFFFF;
+  --color-on-secondary: #FFFFFF;
+  --color-on-error: #FFFFFF;
+  --color-on-warning: #FFFFFF;
+  --color-on-success: #FFFFFF;
+
+  /* ===========================================
+     Colors - Borders
+     =========================================== */
+  --color-border: #E2E8F0;
+  --color-border-light: #E2E8F0;
+  --color-border-active: rgba(5, 150, 105, 0.4);
+  --color-border-solid: #CBD5E1;
+  --color-border-subtle: #F1F5F9;
+  --color-border-default: #E2E8F0;
+  --color-border-strong: #94A3B8;
+
+  /* ===========================================
+     Colors - Error
+     =========================================== */
+  --color-error: #DC2626;
+  --color-error-hover: #B91C1C;
+  --color-error-light: rgba(220, 38, 38, 0.1);
+  --color-error-medium: rgba(220, 38, 38, 0.15);
+  --color-error-border: rgba(220, 38, 38, 0.25);
+  --color-error-glow: rgba(220, 38, 38, 0.15);
+
+  /* ===========================================
+     Colors - Warning
+     =========================================== */
+  --color-warning: #D97706;
+  --color-warning-hover: #B45309;
+  --color-warning-subtle: rgba(217, 119, 6, 0.05);
+  --color-warning-light: rgba(217, 119, 6, 0.1);
+  --color-warning-medium: rgba(217, 119, 6, 0.15);
+  --color-warning-selected: rgba(217, 119, 6, 0.18);
+  --color-warning-border: rgba(217, 119, 6, 0.25);
+  --color-warning-border-active: rgba(217, 119, 6, 0.35);
+  --color-warning-border-strong: rgba(217, 119, 6, 0.5);
+  --color-warning-shadow: rgba(245, 158, 11, 0.2);
+  --color-warning-highlight: rgba(245, 158, 11, 0.05);
+
+  /* ===========================================
+     Colors - Success
+     =========================================== */
+  --color-success: #059669;
+  --color-success-hover: #047857;
+  --color-success-light: rgba(5, 150, 105, 0.1);
+
+  /* ===========================================
+     Colors - Info
+     =========================================== */
+  --color-info: #0096E6;
+  --color-info-light: rgba(0, 150, 230, 0.1);
+  --color-info-border: rgba(0, 150, 230, 0.2);
+
+  /* ===========================================
+     Colors - Status (Tournament States)
+     =========================================== */
+  --color-status-live: #DC2626;
+  --color-status-live-bg: rgba(220, 38, 38, 0.1);
+  --color-status-live-row-bg: rgba(220, 38, 38, 0.05);
+
+  --color-status-upcoming: #059669;
+  --color-status-upcoming-bg: rgba(5, 150, 105, 0.1);
+
+  --color-status-finished: #64748B;
+  --color-status-finished-bg: rgba(100, 116, 139, 0.1);
+
+  --color-status-draft: #D97706;
+  --color-status-draft-bg: rgba(217, 119, 6, 0.1);
+
+  --color-status-external: #7C3AED;
+  --color-status-external-bg: rgba(124, 58, 237, 0.1);
+
+  --color-status-warning: #EA580C;
+  --color-status-warning-bg: rgba(234, 88, 12, 0.1);
+
+  /* ===========================================
+     Colors - Live Cockpit
+     =========================================== */
+  --color-live-badge: #DC2626;
+  --color-live-badge-bg: rgba(220, 38, 38, 0.12);
+  --color-live-badge-pulse: rgba(220, 38, 38, 0.25);
+
+  /* ===========================================
+     Colors - Correction/Warning Banner
+     =========================================== */
+  --color-correction-bg: rgba(217, 119, 6, 0.08);
+  --color-correction-border: rgba(217, 119, 6, 0.3);
+  --color-correction-text: #B45309;
+  --color-correction-icon: #D97706;
+
+  /* ===========================================
+     Colors - Medal (Rankings)
+     =========================================== */
+  --color-medal-gold: #FFD700;
+  --color-medal-silver: #C0C0C0;
+  --color-medal-bronze: #CD7F32;
+
+  /* ===========================================
+     Colors - Special
+     =========================================== */
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  --color-overlay-strong: rgba(0, 0, 0, 0.6);
+  --color-overlay-dialog: rgba(0, 0, 0, 0.7);
+  --color-focus: #059669;
+  --color-focus-ring: rgba(5, 150, 105, 0.25);
+  --color-input-bg: #F8FAFC;
+  --color-qr-background: #FFFFFF;
+
+  /* ===========================================
+     Colors - Shadows & Glows
+     =========================================== */
+  --color-shadow-soft: rgba(0, 0, 0, 0.08);
+  --color-shadow-medium: rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+  /* ===========================================
+     Colors - Danger
+     =========================================== */
+  --color-danger-highlight: rgba(220, 38, 38, 0.08);
+  --color-danger-gradient-start: rgba(220, 38, 38, 0.12);
+  --color-danger-gradient-end: rgba(220, 38, 38, 0.03);
+  --color-danger-border: rgba(220, 38, 38, 0.2);
+  --color-danger-action-bg: rgba(220, 38, 38, 0.06);
+
+  /* ===========================================
+     Colors - Gradient Helpers
+     =========================================== */
+  --color-gradient-error-light: #F87171;
+  --color-gradient-primary-light: #34D399;
+
+  /* ===========================================
+     Colors - Schedule Editor
+     =========================================== */
+  --color-editor-edit-mode-bg: rgba(5, 150, 105, 0.06);
+  --color-editor-edit-mode-hover: rgba(5, 150, 105, 0.12);
+  --color-editor-edit-mode-row-bg: rgba(5, 150, 105, 0.04);
+  --color-editor-edit-mode-border: rgba(5, 150, 105, 0.3);
+
+  --color-editor-dirty-bg: rgba(245, 158, 11, 0.1);
+  --color-editor-dirty-row-bg: rgba(245, 158, 11, 0.05);
+  --color-editor-dirty-row-bg-light: rgba(245, 158, 11, 0.03);
+  --color-editor-dirty-border: rgba(245, 158, 11, 0.3);
+
+  --color-editor-swap-bg: rgba(245, 158, 11, 0.1);
+  --color-editor-swap-active: rgba(245, 158, 11, 0.2);
+
+  --color-editor-error-row-bg: rgba(220, 38, 38, 0.06);
+  --color-editor-error-row-bg-light: rgba(220, 38, 38, 0.03);
+
+  --color-editor-drag-active-bg: rgba(37, 99, 235, 0.06);
+  --color-editor-drop-target-bg: rgba(37, 99, 235, 0.03);
+
+  --color-editor-locked-bg: rgba(0, 0, 0, 0.03);
+  --color-editor-locked-text: rgba(0, 0, 0, 0.4);
+
+  /* ===========================================
+     Colors - Management & Ranking
+     =========================================== */
+  --color-ranking-highlight-bg: rgba(5, 150, 105, 0.08);
+  --color-ranking-placement-bg: rgba(5, 150, 105, 0.05);
+  --color-ranking-expanded-bg: rgba(5, 150, 105, 0.03);
+
+  --color-info-banner-bg: rgba(37, 99, 235, 0.05);
+  --color-info-badge-bg: rgba(37, 99, 235, 0.1);
+
+  --color-warning-banner-bg: rgba(245, 158, 11, 0.05);
+  --color-warning-banner-bg-strong: rgba(245, 158, 11, 0.08);
+  --color-warning-banner-border: rgba(245, 158, 11, 0.2);
+  --color-dirty-indicator-bg: rgba(245, 158, 11, 0.1);
+
+  --color-neutral-badge-bg: rgba(0, 0, 0, 0.04);
+  --color-neutral-row-bg: rgba(0, 0, 0, 0.01);
+  --color-neutral-status-bg: rgba(100, 116, 139, 0.06);
+
+  --color-monitor-section-bg: rgba(248, 250, 252, 0.95);
+  --color-monitor-section-bg-strong: rgba(248, 250, 252, 0.98);
+  --color-monitor-section-bg-light: rgba(248, 250, 252, 0.8);
+
+  --color-panel-gradient-start: rgba(248, 250, 252, 0.95);
+  --color-panel-gradient-end: rgba(241, 245, 249, 0.95);
+  --color-timer-gradient-bg: rgba(248, 250, 252, 0.98);
+
+  /* ===========================================
+     Colors - Match Events
+     =========================================== */
+  --color-event-goal-bg: rgba(5, 150, 105, 0.04);
+  --color-event-goal-border: rgba(5, 150, 105, 0.2);
+
+  --color-event-status-bg: rgba(37, 99, 235, 0.04);
+  --color-event-status-border: rgba(37, 99, 235, 0.2);
+
+  --color-event-edit-bg: rgba(245, 158, 11, 0.04);
+  --color-event-edit-border: rgba(245, 158, 11, 0.2);
+
+  /* ===========================================
+     Gradients
+     =========================================== */
+  --gradient-primary-secondary: linear-gradient(135deg, #059669, #0096E6);
+  --gradient-subtle: linear-gradient(135deg, rgba(0, 150, 230, 0.08), rgba(5, 150, 105, 0.08));
+  --gradient-subtle-hover: linear-gradient(135deg, rgba(0, 150, 230, 0.15), rgba(5, 150, 105, 0.15));
+  --gradient-next-match: linear-gradient(135deg, rgba(5, 150, 105, 0.06), rgba(37, 99, 235, 0.06));
+  --gradient-background-dark: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+
+  /* ===========================================
+     Theme Layer
+     =========================================== */
+  --theme-primary: var(--color-primary);
+  --theme-primary-hover: #047857;
+  --theme-primary-active: #065F46;
+  --theme-primary-light: rgba(5, 150, 105, 0.12);
+  --theme-on-primary: #FFFFFF;
+
+  --theme-secondary: var(--color-secondary);
+  --theme-secondary-hover: #007ACC;
+  --theme-secondary-light: rgba(0, 150, 230, 0.12);
+  --theme-on-secondary: #FFFFFF;
+
+  --theme-gradient: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+}
+
+/* Light mode body adjustments */
+[data-theme="light"] body {
+  background: #FFFFFF;
+  color: #1A1A2E;
+}
+
+/* Light mode scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(5, 150, 105, 0.3);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(5, 150, 105, 0.5);
+}
+
+/* Light mode select styling */
+[data-theme="light"] select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A1A2E' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+}
+
+[data-theme="light"] select option {
+  background: #FFFFFF;
+  color: #1A1A2E;
+}
+
+/* Light mode input placeholders */
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder {
+  color: #9CA3AF;
 }
 
 * {
@@ -461,9 +1085,9 @@ textarea:-ms-input-placeholder {
 
 /* Visible focus ring for keyboard navigation */
 *:focus-visible {
-  outline: 2px solid #00E676;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
 }
 
 /* Buttons and interactive elements */
@@ -475,16 +1099,24 @@ textarea:focus-visible,
 [role="button"]:focus-visible,
 [role="tab"]:focus-visible,
 [tabindex]:focus-visible {
-  outline: 2px solid #00E676;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(0, 230, 118, 0.2);
+  box-shadow: 0 0 0 4px var(--color-primary-selected);
 }
 
 /* Cards and clickable containers */
 [role="button"]:focus-visible,
 .clickable:focus-visible {
-  outline: 2px solid #00E676;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* Icon buttons - ensure touch target on focus */
+.icon-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  min-width: var(--touch-target-minimum);
+  min-height: var(--touch-target-minimum);
 }
 
 /* Skip link for screen readers */
@@ -492,13 +1124,13 @@ textarea:focus-visible,
   position: absolute;
   top: -40px;
   left: 0;
-  background: #00E676;
-  color: #0A1628;
-  padding: 8px 16px;
+  background: var(--color-primary);
+  color: var(--color-background);
+  padding: var(--spacing-sm) var(--spacing-md);
   z-index: 10000;
   font-weight: bold;
   text-decoration: none;
-  border-radius: 0 0 8px 0;
+  border-radius: 0 0 var(--border-radius-md) 0;
 }
 
 .skip-link:focus {

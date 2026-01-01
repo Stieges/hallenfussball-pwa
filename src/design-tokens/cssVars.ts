@@ -19,8 +19,11 @@
 // =============================================================================
 
 export const cssColors = {
-  // Primary
+  // ---------------------------------------------------------------------------
+  // Brand Colors - Primary
+  // ---------------------------------------------------------------------------
   primary: 'var(--color-primary)',
+  primaryDark: 'var(--color-primary-dark)',
   primaryHover: 'var(--color-primary-hover)',
   primaryActive: 'var(--color-primary-active)',
   primaryLight: 'var(--color-primary-light)',
@@ -33,68 +36,256 @@ export const cssColors = {
   primaryGlow: 'var(--color-primary-glow)',
   primaryGlowLight: 'var(--color-primary-glow-light)',
 
-  // Secondary
+  // ---------------------------------------------------------------------------
+  // Brand Colors - Secondary
+  // ---------------------------------------------------------------------------
   secondary: 'var(--color-secondary)',
   secondaryHover: 'var(--color-secondary-hover)',
   secondarySubtle: 'var(--color-secondary-subtle)',
   secondaryLight: 'var(--color-secondary-light)',
   secondaryMedium: 'var(--color-secondary-medium)',
+  secondarySelected: 'var(--color-secondary-selected)',
+  secondaryBadge: 'var(--color-secondary-badge)',
   secondaryBorder: 'var(--color-secondary-border)',
   secondaryBorderActive: 'var(--color-secondary-border-active)',
   secondaryBorderStrong: 'var(--color-secondary-border-strong)',
 
-  // Backgrounds
+  // ---------------------------------------------------------------------------
+  // Brand Colors - Accent
+  // ---------------------------------------------------------------------------
+  accent: 'var(--color-accent)',
+  accentLight: 'var(--color-accent-light)',
+  accentMedium: 'var(--color-accent-medium)',
+  accentSubtle: 'var(--color-accent-subtle)',
+  accentBadge: 'var(--color-accent-badge)',
+  accentBorder: 'var(--color-accent-border)',
+
+  // ---------------------------------------------------------------------------
+  // Background Colors
+  // ---------------------------------------------------------------------------
   background: 'var(--color-background)',
+  backgroundDark: 'var(--color-background-dark)',
+  backgroundDeep: 'var(--color-background-deep)',
   surface: 'var(--color-surface)',
+  surfaceLight: 'var(--color-surface-light)',
   surfaceSolid: 'var(--color-surface-solid)',
   surfaceHover: 'var(--color-surface-hover)',
   surfaceDark: 'var(--color-surface-dark)',
   surfaceDarkMedium: 'var(--color-surface-dark-medium)',
   surfaceDarkLight: 'var(--color-surface-dark-light)',
+  surfaceVariant: 'var(--color-surface-variant)',
+  surfaceElevated: 'var(--color-surface-elevated)',
   surfaceHighlight: 'var(--color-surface-highlight)',
 
-  // Text
+  // ---------------------------------------------------------------------------
+  // Text Colors
+  // ---------------------------------------------------------------------------
   textPrimary: 'var(--color-text-primary)',
   textSecondary: 'var(--color-text-secondary)',
   textMuted: 'var(--color-text-muted)',
+  textPlaceholder: 'var(--color-text-placeholder)',
   textDisabled: 'var(--color-text-disabled)',
   textTertiary: 'var(--color-text-tertiary)',
+  textOnDark: 'var(--color-text-on-dark)',
 
-  // Text on colored backgrounds
+  // ---------------------------------------------------------------------------
+  // On-Colors (text on colored backgrounds)
+  // ---------------------------------------------------------------------------
   onPrimary: 'var(--color-on-primary)',
   onSecondary: 'var(--color-on-secondary)',
+  onError: 'var(--color-on-error)',
+  onWarning: 'var(--color-on-warning)',
+  onSuccess: 'var(--color-on-success)',
 
-  // Borders
+  // ---------------------------------------------------------------------------
+  // Border Colors
+  // ---------------------------------------------------------------------------
   border: 'var(--color-border)',
+  borderLight: 'var(--color-border-light)',
+  borderActive: 'var(--color-border-active)',
   borderSolid: 'var(--color-border-solid)',
   borderSubtle: 'var(--color-border-subtle)',
-  borderLight: 'var(--color-border-light)',
+  borderDefault: 'var(--color-border-default)',
+  borderStrong: 'var(--color-border-strong)',
 
+  // ---------------------------------------------------------------------------
   // Semantic: Error
+  // ---------------------------------------------------------------------------
   error: 'var(--color-error)',
+  errorHover: 'var(--color-error-hover)',
   errorLight: 'var(--color-error-light)',
   errorMedium: 'var(--color-error-medium)',
   errorBorder: 'var(--color-error-border)',
   errorGlow: 'var(--color-error-glow)',
 
+  // ---------------------------------------------------------------------------
   // Semantic: Warning
+  // ---------------------------------------------------------------------------
   warning: 'var(--color-warning)',
+  warningHover: 'var(--color-warning-hover)',
   warningSubtle: 'var(--color-warning-subtle)',
   warningLight: 'var(--color-warning-light)',
   warningMedium: 'var(--color-warning-medium)',
+  warningSelected: 'var(--color-warning-selected)',
   warningBorder: 'var(--color-warning-border)',
   warningBorderActive: 'var(--color-warning-border-active)',
   warningBorderStrong: 'var(--color-warning-border-strong)',
+  warningShadow: 'var(--color-warning-shadow)',
+  warningHighlight: 'var(--color-warning-highlight)',
 
+  // ---------------------------------------------------------------------------
   // Semantic: Success
+  // ---------------------------------------------------------------------------
   success: 'var(--color-success)',
+  successHover: 'var(--color-success-hover)',
+  successLight: 'var(--color-success-light)',
 
-  // Semantic: Accent
-  accent: 'var(--color-accent)',
+  // ---------------------------------------------------------------------------
+  // Semantic: Info
+  // ---------------------------------------------------------------------------
+  info: 'var(--color-info)',
+  infoLight: 'var(--color-info-light)',
+  infoBorder: 'var(--color-info-border)',
 
-  // Shadows
+  // ---------------------------------------------------------------------------
+  // Status Colors (for tournament states)
+  // ---------------------------------------------------------------------------
+  statusLive: 'var(--color-status-live)',
+  statusLiveBg: 'var(--color-status-live-bg)',
+  statusLiveRowBg: 'var(--color-status-live-row-bg)',
+
+  statusUpcoming: 'var(--color-status-upcoming)',
+  statusUpcomingBg: 'var(--color-status-upcoming-bg)',
+
+  statusFinished: 'var(--color-status-finished)',
+  statusFinishedBg: 'var(--color-status-finished-bg)',
+
+  statusDraft: 'var(--color-status-draft)',
+  statusDraftBg: 'var(--color-status-draft-bg)',
+
+  statusExternal: 'var(--color-status-external)',
+  statusExternalBg: 'var(--color-status-external-bg)',
+
+  statusWarning: 'var(--color-status-warning)',
+  statusWarningBg: 'var(--color-status-warning-bg)',
+
+  // ---------------------------------------------------------------------------
+  // Live Cockpit Specific
+  // ---------------------------------------------------------------------------
+  liveBadge: 'var(--color-live-badge)',
+  liveBadgeBg: 'var(--color-live-badge-bg)',
+  liveBadgePulse: 'var(--color-live-badge-pulse)',
+
+  // ---------------------------------------------------------------------------
+  // Correction/Warning Banner
+  // ---------------------------------------------------------------------------
+  correctionBg: 'var(--color-correction-bg)',
+  correctionBorder: 'var(--color-correction-border)',
+  correctionText: 'var(--color-correction-text)',
+  correctionIcon: 'var(--color-correction-icon)',
+
+  // ---------------------------------------------------------------------------
+  // Medal Colors (for rankings)
+  // ---------------------------------------------------------------------------
+  medalGold: 'var(--color-medal-gold)',
+  medalSilver: 'var(--color-medal-silver)',
+  medalBronze: 'var(--color-medal-bronze)',
+
+  // ---------------------------------------------------------------------------
+  // Special Colors
+  // ---------------------------------------------------------------------------
+  overlay: 'var(--color-overlay)',
+  overlayStrong: 'var(--color-overlay-strong)',
+  overlayDialog: 'var(--color-overlay-dialog)',
+  focus: 'var(--color-focus)',
+  focusRing: 'var(--color-focus-ring)',
+  inputBg: 'var(--color-input-bg)',
+  qrBackground: 'var(--color-qr-background)',
+
+  // ---------------------------------------------------------------------------
+  // Shadows & Glows
+  // ---------------------------------------------------------------------------
   shadowSoft: 'var(--color-shadow-soft)',
   shadowMedium: 'var(--color-shadow-medium)',
+
+  // ---------------------------------------------------------------------------
+  // Danger Colors
+  // ---------------------------------------------------------------------------
+  dangerHighlight: 'var(--color-danger-highlight)',
+  dangerGradientStart: 'var(--color-danger-gradient-start)',
+  dangerGradientEnd: 'var(--color-danger-gradient-end)',
+  dangerBorder: 'var(--color-danger-border)',
+  dangerActionBg: 'var(--color-danger-action-bg)',
+
+  // ---------------------------------------------------------------------------
+  // Gradient Helpers
+  // ---------------------------------------------------------------------------
+  gradientErrorLight: 'var(--color-gradient-error-light)',
+  gradientPrimaryLight: 'var(--color-gradient-primary-light)',
+
+  // ---------------------------------------------------------------------------
+  // Schedule Editor Colors
+  // ---------------------------------------------------------------------------
+  editorEditModeBg: 'var(--color-editor-edit-mode-bg)',
+  editorEditModeHover: 'var(--color-editor-edit-mode-hover)',
+  editorEditModeRowBg: 'var(--color-editor-edit-mode-row-bg)',
+  editorEditModeBorder: 'var(--color-editor-edit-mode-border)',
+
+  editorDirtyBg: 'var(--color-editor-dirty-bg)',
+  editorDirtyRowBg: 'var(--color-editor-dirty-row-bg)',
+  editorDirtyRowBgLight: 'var(--color-editor-dirty-row-bg-light)',
+  editorDirtyBorder: 'var(--color-editor-dirty-border)',
+
+  editorSwapBg: 'var(--color-editor-swap-bg)',
+  editorSwapActive: 'var(--color-editor-swap-active)',
+
+  editorErrorRowBg: 'var(--color-editor-error-row-bg)',
+  editorErrorRowBgLight: 'var(--color-editor-error-row-bg-light)',
+
+  editorDragActiveBg: 'var(--color-editor-drag-active-bg)',
+  editorDropTargetBg: 'var(--color-editor-drop-target-bg)',
+
+  editorLockedBg: 'var(--color-editor-locked-bg)',
+  editorLockedText: 'var(--color-editor-locked-text)',
+
+  // ---------------------------------------------------------------------------
+  // Management & Ranking Colors
+  // ---------------------------------------------------------------------------
+  rankingHighlightBg: 'var(--color-ranking-highlight-bg)',
+  rankingPlacementBg: 'var(--color-ranking-placement-bg)',
+  rankingExpandedBg: 'var(--color-ranking-expanded-bg)',
+
+  infoBannerBg: 'var(--color-info-banner-bg)',
+  infoBadgeBg: 'var(--color-info-badge-bg)',
+
+  warningBannerBg: 'var(--color-warning-banner-bg)',
+  warningBannerBgStrong: 'var(--color-warning-banner-bg-strong)',
+  warningBannerBorder: 'var(--color-warning-banner-border)',
+  dirtyIndicatorBg: 'var(--color-dirty-indicator-bg)',
+
+  neutralBadgeBg: 'var(--color-neutral-badge-bg)',
+  neutralRowBg: 'var(--color-neutral-row-bg)',
+  neutralStatusBg: 'var(--color-neutral-status-bg)',
+
+  monitorSectionBg: 'var(--color-monitor-section-bg)',
+  monitorSectionBgStrong: 'var(--color-monitor-section-bg-strong)',
+  monitorSectionBgLight: 'var(--color-monitor-section-bg-light)',
+
+  panelGradientStart: 'var(--color-panel-gradient-start)',
+  panelGradientEnd: 'var(--color-panel-gradient-end)',
+  timerGradientBg: 'var(--color-timer-gradient-bg)',
+
+  // ---------------------------------------------------------------------------
+  // Match Event Colors (for EventsList)
+  // ---------------------------------------------------------------------------
+  eventGoalBg: 'var(--color-event-goal-bg)',
+  eventGoalBorder: 'var(--color-event-goal-border)',
+
+  eventStatusBg: 'var(--color-event-status-bg)',
+  eventStatusBorder: 'var(--color-event-status-border)',
+
+  eventEditBg: 'var(--color-event-edit-bg)',
+  eventEditBorder: 'var(--color-event-edit-border)',
 } as const;
 
 // =============================================================================
@@ -105,6 +296,8 @@ export const cssGradients = {
   primarySecondary: 'var(--gradient-primary-secondary)',
   subtle: 'var(--gradient-subtle)',
   subtleHover: 'var(--gradient-subtle-hover)',
+  nextMatch: 'var(--gradient-next-match)',
+  backgroundDark: 'var(--gradient-background-dark)',
 } as const;
 
 // =============================================================================
