@@ -23,7 +23,7 @@ Eine Progressive Web App für Turnierverwaltung - von der Spielplan-Erstellung b
 
 ### Voraussetzungen
 
-- Node.js v18+
+- Node.js v20+ (erforderlich für Vite 7)
 - npm
 
 ### Installation
@@ -88,7 +88,7 @@ npm run preview
 |-------------|---------|-------|
 | React | 18 | UI Framework |
 | TypeScript | 5 | Type Safety |
-| Vite | 5 | Build Tool + HMR |
+| Vite | 7 | Build Tool + HMR |
 
 ### Libraries
 
