@@ -121,7 +121,7 @@ export const ThemeProvider = ({
     if (metaThemeColor) {
       metaThemeColor.setAttribute(
         'content',
-        resolvedTheme === 'light' ? '#FFFFFF' : '#0A1628'
+        resolvedTheme === 'light' ? semanticColorsLight.background : semanticColorsDark.background
       );
     }
   }, [resolvedTheme]);
