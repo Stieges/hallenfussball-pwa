@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+// eslint-disable-next-line local-rules/prefer-css-vars -- confettiColors is an array, not CSS var compatible
 import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 

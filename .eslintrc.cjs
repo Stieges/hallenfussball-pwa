@@ -1,3 +1,10 @@
+/**
+ * ESLint Configuration
+ *
+ * Custom local rules are defined in eslint-local-rules.cjs
+ * and used via the 'local-rules' plugin.
+ */
+
 module.exports = {
   root: true,
   env: { browser: true, es2020: true },
@@ -7,7 +14,7 @@ module.exports = {
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', '*.js', 'node_modules', 'mcp-adesso-analyzer'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', '*.js', '*.cjs', 'node_modules', 'mcp-adesso-analyzer', 'eslint-rules'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
@@ -15,7 +22,7 @@ module.exports = {
     project: ['./tsconfig.json', './tsconfig.node.json'],
     tsconfigRootDir: __dirname,
   },
-  plugins: ['react-refresh'],
+  plugins: ['react-refresh', 'local-rules'],
   rules: {
     // React Refresh
     'react-refresh/only-export-components': [
@@ -53,6 +60,11 @@ module.exports = {
     'curly': ['warn', 'all'], // Gradually enforce
     'prefer-const': 'error',
     'no-var': 'error',
+
+    // Design Tokens / Theme Support
+    // Enforces cssVars usage instead of direct token imports
+    // See: docs/concepts/THEME-MIGRATION-KOMPLETT.md
+    'local-rules/prefer-css-vars': 'warn',
 
     // Temporarily relaxed for existing codebase
     '@typescript-eslint/no-unnecessary-condition': 'warn',

@@ -3,7 +3,11 @@
  *
  * Verwendet in RankingTab für Statistik-Spalten (Punkte, Tore, Diff, etc.)
  * Zeigt grünen Hintergrund wenn das Kriterium für die Platzierung relevant ist.
+ *
+ * NOTE: Uses direct fontWeights/fontSizes imports because dynamic property access
+ * (e.g., fontWeights[key]) requires the actual object, not CSS variable strings.
  */
+/* eslint-disable local-rules/prefer-css-vars */
 
 import { CSSProperties, ReactNode } from 'react';
 import { cssVars, fontWeights, fontSizes, FontSizeKey } from '../../../design-tokens'
