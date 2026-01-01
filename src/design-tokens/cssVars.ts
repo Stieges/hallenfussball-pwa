@@ -463,6 +463,16 @@ export const cssInputHeights = {
 } as const;
 
 // =============================================================================
+// Layout Heights
+// =============================================================================
+
+export const cssLayoutHeights = {
+  bottomNav: 'var(--layout-height-bottom-nav)',
+  bottomActionBar: 'var(--layout-height-bottom-action-bar)',
+  header: 'var(--layout-height-header)',
+} as const;
+
+// =============================================================================
 // Theme Variables (Corporate Colors)
 // =============================================================================
 
@@ -498,6 +508,7 @@ export const cssVars = {
   touchTargets: cssTouchTargets,
   iconSizes: cssIconSizes,
   inputHeights: cssInputHeights,
+  layoutHeights: cssLayoutHeights,
   theme: cssTheme,
 } as const;
 

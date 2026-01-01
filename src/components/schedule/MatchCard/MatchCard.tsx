@@ -103,9 +103,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
   const handleCardClick = useCallback(
     (e: React.MouseEvent) => {
-      // Prevent click if clicking on score circle
+      // Prevent click if clicking on score circle or expand content
       const target = e.target as HTMLElement;
-      if (target.closest('[data-score-circle]')) {
+      if (target.closest('[data-score-circle]') || target.closest('[data-expand-content]')) {
         return;
       }
 
@@ -303,7 +303,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
       {/* Expand Content */}
       {isExpanded && expandContent && (
-        <div style={expandStyle}>
+        <div style={expandStyle} data-expand-content>
           {expandContent}
         </div>
       )}

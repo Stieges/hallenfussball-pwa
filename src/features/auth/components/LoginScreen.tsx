@@ -229,7 +229,9 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: cssVars.spacing.md,
-    minHeight: '32px',
+    minHeight: '44px', // Touch target minimum
+    gap: cssVars.spacing.sm,
+    flexWrap: 'nowrap' as const,
   },
   backButton: {
     display: 'flex',
@@ -243,6 +245,9 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     cursor: 'pointer',
     transition: 'color 0.2s, background 0.2s',
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
+    minHeight: '44px', // Touch target
   },
   closeButton: {
     display: 'flex',

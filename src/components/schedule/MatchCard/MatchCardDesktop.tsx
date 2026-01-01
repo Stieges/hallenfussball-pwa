@@ -101,7 +101,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   const handleRowClick = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('[data-score-circle]')) {
+      if (target.closest('[data-score-circle]') || target.closest('[data-expand-content]')) {
         return;
       }
 
@@ -292,7 +292,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
       {/* Expand Content */}
       {isExpanded && expandContent && (
-        <div style={expandStyle}>
+        <div style={expandStyle} data-expand-content>
           {expandContent}
         </div>
       )}

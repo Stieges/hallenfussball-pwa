@@ -97,6 +97,8 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
     transition: 'all 0.2s ease',
   };
 
+  const contentId = `panel-content-${storageKey}`;
+
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -104,6 +106,7 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     cursor: 'pointer',
     userSelect: 'none',
+    minHeight: '44px', // Touch target minimum
   };
 
   const iconContainerStyle: CSSProperties = {
@@ -153,6 +156,7 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
         role="button"
         tabIndex={0}
         aria-expanded={!isCollapsed}
+        aria-controls={contentId}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -166,7 +170,7 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
         <h4 style={titleStyle}>{title}</h4>
         <span style={chevronStyle} aria-hidden="true">▼</span>
       </div>
-      <div style={contentStyle}>
+      <div id={contentId} style={contentStyle}>
         {children}
       </div>
     </div>
