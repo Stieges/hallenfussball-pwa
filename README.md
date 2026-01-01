@@ -107,6 +107,7 @@ npm run preview
 | Testing Library | React Component Tests |
 | ESLint | Linting |
 | Husky + lint-staged | Pre-commit Hooks |
+| Token Sync Tests | Design Token Synchronisation |
 
 ### Persistence
 
@@ -243,6 +244,24 @@ fontSizes.lg   // 16px
 
 **Regel:** Keine hardcoded Werte - immer Design Tokens verwenden!
 
+### Token Synchronisation
+
+Design Tokens sind über mehrere Dateien verteilt, die synchron gehalten werden müssen:
+
+| Datei | Zweck |
+|-------|-------|
+| `colors/semantic.ts` | Dark Theme (Source of Truth) |
+| `colors/semantic-light.ts` | Light Theme |
+| `cssVars.ts` | CSS Variable Mappings |
+| `styles/global.css` | Runtime CSS Variables |
+
+**Automatische Prüfung:**
+- Pre-commit Hook prüft Token-Sync bei Änderungen
+- CI Pipeline validiert in jedem Build
+- `npm run tokens:check` für manuellen Check
+
+Detaillierte Dokumentation: [src/design-tokens/README.md](src/design-tokens/README.md)
+
 ---
 
 ## Verfügbare Scripts
@@ -260,6 +279,7 @@ npm run test:ui       # Vitest mit UI
 # Code Quality
 npm run lint          # ESLint
 npm run lint:fix      # ESLint mit Auto-Fix
+npm run tokens:check  # Design Token Synchronisation prüfen
 
 # Analysis
 npm run analyze       # Bundle-Größen-Analyse (öffnet stats.html)
@@ -310,4 +330,4 @@ Siehe [LICENSE](LICENSE) für den vollständigen Text.
 
 ---
 
-**Letzte Aktualisierung:** 2025-12-27
+**Letzte Aktualisierung:** 2026-01-01
