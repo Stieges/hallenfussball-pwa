@@ -4,9 +4,20 @@
  * Single source of truth for all design values in the application.
  * Import from here for consistent styling across components.
  *
- * @example
+ * RECOMMENDED (Theme-aware via CSS Variables):
  * ```typescript
- * import { colors, spacing, fontSizes } from '../design-tokens';
+ * import { cssVars } from '@/design-tokens';
+ *
+ * const style = {
+ *   color: cssVars.colors.primary,
+ *   padding: cssVars.spacing.md,
+ *   fontSize: cssVars.fontSizes.sm,
+ * };
+ * ```
+ *
+ * LEGACY (No theme support - will be deprecated):
+ * ```typescript
+ * import { colors, spacing, fontSizes } from '@/design-tokens';
  *
  * const style = {
  *   color: colors.primary,
@@ -84,12 +95,26 @@ export {
 
 export { gradients, type GradientToken } from './gradients';
 
+export {
+  touchTargets,
+  touchTargetValues,
+  iconSizes,
+  iconSizeValues,
+  inputHeights,
+  buttonHeights,
+  type TouchTargetKey,
+  type IconSizeKey,
+  type InputHeightKey,
+  type ButtonHeightKey,
+} from './sizing';
+
 // =============================================================================
 // Convenience Object Export
 // =============================================================================
 
 import { colors } from './colors';
 import { spacing, spacingSemantics } from './spacing';
+import { touchTargets, iconSizes, inputHeights, buttonHeights } from './sizing';
 import { fontFamilies, fontSizes, fontWeights, lineHeights, typography } from './typography';
 import { shadows, shadowSemantics } from './shadows';
 import { radii, radiiSemantics } from './radii';
@@ -121,7 +146,45 @@ export const tokens = {
   mediaQueries,
   containerWidths,
   gradients,
+  touchTargets,
+  iconSizes,
+  inputHeights,
+  buttonHeights,
 } as const;
 
 export type Tokens = typeof tokens;
 export default tokens;
+
+// =============================================================================
+// CSS Variable Exports (Theme-aware - RECOMMENDED)
+// =============================================================================
+
+export {
+  cssVars,
+  cssColors,
+  cssGradients,
+  cssSpacing,
+  cssBorderRadius,
+  cssShadows,
+  cssFontFamilies,
+  cssFontSizes,
+  cssLineHeights,
+  cssFontWeights,
+  cssTouchTargets,
+  cssIconSizes,
+  cssInputHeights,
+  cssTheme,
+  type CssVarColors,
+  type CssVarGradients,
+  type CssVarSpacing,
+  type CssVarBorderRadius,
+  type CssVarShadows,
+  type CssVarFontFamilies,
+  type CssVarFontSizes,
+  type CssVarLineHeights,
+  type CssVarFontWeights,
+  type CssVarTouchTargets,
+  type CssVarIconSizes,
+  type CssVarInputHeights,
+  type CssVarTheme,
+} from './cssVars';
