@@ -64,7 +64,7 @@ export const semanticColorsLight = {
   textSecondary: '#6B7280', // Medium gray - 5.8:1 on white
   textMuted: 'rgba(0, 0, 0, 0.5)',
   textPlaceholder: '#9CA3AF', // Light gray - 4.6:1 on white
-  textDisabled: palette.neutral[400],
+  textDisabled: palette.neutral[500], // WCAG fix: war neutral[400] (#94A3B8, 2.6:1) → jetzt 4.7:1 auf weiß
   textTertiary: '#9CA3AF',
   textOnDark: '#ffffff', // For text on colored backgrounds
 

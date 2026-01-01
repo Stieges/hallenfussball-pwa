@@ -70,7 +70,7 @@ export const semanticColorsDark = {
   textSecondary: '#A3B8D4', // 5.1:1 on surface
   textMuted: 'rgba(255, 255, 255, 0.5)',
   textPlaceholder: '#9DB2CC', // 4.7:1 on surface
-  textDisabled: palette.neutral[600],
+  textDisabled: '#6B7A8F', // WCAG fix: war palette.neutral[600] (#475569, 2.4:1) → jetzt 4.1:1 auf background
   textTertiary: palette.neutral[400],
   textOnDark: '#ffffff', // For text on colored backgrounds
 
