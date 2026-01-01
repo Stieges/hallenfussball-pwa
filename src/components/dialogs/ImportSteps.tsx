@@ -11,7 +11,7 @@
 import { CSSProperties, DragEvent } from 'react';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
-import { borderRadius, colors, fontSizes, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Tournament, ImportValidationResult } from '../../types/tournament';
 import { formatTournamentDate } from '../../utils/tournamentCategories';
 import { downloadTemplate } from './ImportTemplates';
@@ -44,33 +44,33 @@ export const SelectStep = ({
   onButtonClick,
 }: SelectStepProps) => {
   const dropZoneStyle: CSSProperties = {
-    border: `2px dashed ${isDragging ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.md,
-    padding: spacing.xxl,
+    border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    padding: cssVars.spacing.xxl,
     textAlign: 'center',
-    background: isDragging ? colors.primaryLight : 'transparent',
+    background: isDragging ? cssVars.colors.primaryLight : 'transparent',
     transition: 'all 0.2s ease',
     cursor: 'pointer',
   };
 
   const iconStyle: CSSProperties = {
     fontSize: '48px',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   };
 
   const hintStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+    marginTop: cssVars.spacing.md,
   };
 
   const errorStyle: CSSProperties = {
-    padding: spacing.md,
-    background: colors.errorLight,
-    border: `1px solid ${colors.error}`,
-    borderRadius: borderRadius.sm,
-    color: colors.error,
-    fontSize: fontSizes.sm,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.errorLight,
+    border: `1px solid ${cssVars.colors.error}`,
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   return (
@@ -85,7 +85,7 @@ export const SelectStep = ({
         <div style={iconStyle}>
           {isDragging ? '📂' : '📁'}
         </div>
-        <p style={{ color: colors.textPrimary, fontSize: fontSizes.md, margin: 0 }}>
+        <p style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md, margin: 0 }}>
           {isDragging ? 'Datei hier ablegen' : 'Datei hierher ziehen oder klicken'}
         </p>
         <p style={hintStyle}>
@@ -102,7 +102,7 @@ export const SelectStep = ({
       />
 
       {selectedFile && !error && (
-        <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+        <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
           Ausgewählt: {selectedFile.name}
         </div>
       )}
@@ -125,19 +125,19 @@ export const SelectStep = ({
 
       {/* Template Downloads */}
       <div style={{
-        marginTop: spacing.lg,
-        paddingTop: spacing.lg,
-        borderTop: `1px solid ${colors.border}`,
+        marginTop: cssVars.spacing.lg,
+        paddingTop: cssVars.spacing.lg,
+        borderTop: `1px solid ${cssVars.colors.border}`,
       }}>
         <p style={{
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
-          margin: `0 0 ${spacing.md} 0`,
+          fontSize: cssVars.fontSizes.sm,
+          color: cssVars.colors.textSecondary,
+          margin: `0 0 ${cssVars.spacing.md} 0`,
           textAlign: 'center',
         }}>
           Vorlage herunterladen:
         </p>
-        <div style={{ display: 'flex', gap: spacing.md }}>
+        <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
           <Button
             variant="secondary"
             size="sm"
@@ -158,9 +158,9 @@ export const SelectStep = ({
           </Button>
         </div>
         <p style={{
-          fontSize: fontSizes.xs,
-          color: colors.textMuted,
-          margin: `${spacing.sm} 0 0 0`,
+          fontSize: cssVars.fontSizes.xs,
+          color: cssVars.colors.textMuted,
+          margin: `${cssVars.spacing.sm} 0 0 0`,
           textAlign: 'center',
           lineHeight: '1.4',
         }}>
@@ -186,27 +186,27 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
   const warningsContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     maxHeight: '300px',
     overflowY: 'auto',
   };
 
   const warningItemStyle = (severity: 'info' | 'warning'): CSSProperties => ({
-    padding: spacing.md,
-    background: severity === 'warning' ? colors.warningLight : colors.infoLight,
-    border: `1px solid ${severity === 'warning' ? colors.correctionBorder : colors.secondaryLight}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
-    color: severity === 'warning' ? colors.warning : colors.secondary,
+    padding: cssVars.spacing.md,
+    background: severity === 'warning' ? cssVars.colors.warningLight : cssVars.colors.infoLight,
+    border: `1px solid ${severity === 'warning' ? cssVars.colors.correctionBorder : cssVars.colors.secondaryLight}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    color: severity === 'warning' ? cssVars.colors.warning : cssVars.colors.secondary,
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   });
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.md,
-    marginTop: spacing.md,
+    gap: cssVars.spacing.md,
+    marginTop: cssVars.spacing.md,
   };
 
   const infoWarnings = warnings.filter(w => w.severity === 'info');
@@ -214,7 +214,7 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
 
   return (
     <>
-      <p style={{ color: colors.textSecondary, fontSize: fontSizes.sm, margin: 0 }}>
+      <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, margin: 0 }}>
         Beim Import wurden folgende Hinweise festgestellt:
       </p>
 
@@ -257,45 +257,45 @@ export interface PreviewStepProps {
 
 export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
   const previewContainerStyle: CSSProperties = {
-    background: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    border: `1px solid ${colors.border}`,
+    background: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.md,
+    padding: cssVars.spacing.lg,
+    border: `1px solid ${cssVars.colors.border}`,
   };
 
   const previewGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const previewItemStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
   };
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.md,
-    marginTop: spacing.md,
+    gap: cssVars.spacing.md,
+    marginTop: cssVars.spacing.md,
   };
 
   return (
     <>
       <div style={previewContainerStyle}>
-        <h3 style={{ color: colors.textPrimary, fontSize: fontSizes.lg, margin: `0 0 ${spacing.lg} 0` }}>
+        <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: `0 0 ${cssVars.spacing.lg} 0` }}>
           {tournament.title}
         </h3>
 
@@ -322,7 +322,7 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
           </div>
           <div style={previewItemStyle}>
             <span style={labelStyle}>Quelle</span>
-            <span style={{ ...valueStyle, color: colors.statusExternal }}>
+            <span style={{ ...valueStyle, color: cssVars.colors.statusExternal }}>
               {tournament.externalSource}
             </span>
           </div>
@@ -353,23 +353,23 @@ export interface SuccessStepProps {
 export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
   const successContainerStyle: CSSProperties = {
     textAlign: 'center',
-    padding: spacing.xl,
+    padding: cssVars.spacing.xl,
   };
 
   const iconStyle: CSSProperties = {
     fontSize: '64px',
-    marginBottom: spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    color: colors.textPrimary,
-    marginBottom: spacing.md,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.md,
   };
 
   const subMessageStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   return (

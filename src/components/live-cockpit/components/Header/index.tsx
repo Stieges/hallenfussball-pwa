@@ -11,7 +11,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { MatchStatus, MatchPlayPhase, LiveCockpitMode } from '../../types';
 import { Button } from '../../../ui';
@@ -62,22 +62,22 @@ export const Header: React.FC<HeaderProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: isMobile ? `${spacing.xs} ${spacing.sm}` : `${spacing.sm} ${spacing.md}`,
-    background: colors.surfaceSolid,
-    borderBottom: `1px solid ${colors.border}`,
-    gap: spacing.sm,
+    padding: isMobile ? `${cssVars.spacing.xs} ${cssVars.spacing.sm}` : `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    background: cssVars.colors.surfaceSolid,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    gap: cssVars.spacing.sm,
   };
 
   const leftSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const centerSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flex: 1,
     justifyContent: 'center',
   };
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
   const rightSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const matchInfoStyle: CSSProperties = {
@@ -95,14 +95,14 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   const matchNumberStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const fieldNameStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
   };
 
   // ---------------------------------------------------------------------------
@@ -145,9 +145,9 @@ export const Header: React.FC<HeaderProps> = ({
             style={{
               background: 'transparent',
               border: 'none',
-              padding: spacing.sm,
-              fontSize: fontSizes.xl,
-              color: colors.textSecondary,
+              padding: cssVars.spacing.sm,
+              fontSize: cssVars.fontSizes.xl,
+              color: cssVars.colors.textSecondary,
               cursor: 'pointer',
             }}
           >
@@ -199,22 +199,22 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, playPhase }) => {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    padding: `4px ${spacing.sm}`,
-    borderRadius: borderRadius.full,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.bold,
+    padding: `4px ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.full,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    background: isLive ? colors.liveBadgeBg : colors.neutralBadgeBg,
-    color: isLive ? colors.liveBadge : colors.textSecondary,
-    border: `1px solid ${isLive ? colors.liveBadge : colors.border}`,
+    background: isLive ? cssVars.colors.liveBadgeBg : cssVars.colors.neutralBadgeBg,
+    color: isLive ? cssVars.colors.liveBadge : cssVars.colors.textSecondary,
+    border: `1px solid ${isLive ? cssVars.colors.liveBadge : cssVars.colors.border}`,
   };
 
   const dotStyle: CSSProperties = {
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    background: colors.liveBadge,
+    background: cssVars.colors.liveBadge,
   };
 
   return (
@@ -246,18 +246,18 @@ const ModeSwitch: React.FC<ModeSwitchProps> = ({ mode, onChange, compact = false
 
   const containerStyle: CSSProperties = {
     display: 'flex',
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.md,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.md,
     padding: '2px',
   };
 
   const optionStyle = (isActive: boolean): CSSProperties => ({
-    padding: compact ? `6px ${spacing.sm}` : `4px ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
-    fontSize: compact ? fontSizes.sm : fontSizes.xs,
-    fontWeight: isActive ? fontWeights.semibold : fontWeights.normal,
-    color: isActive ? colors.textPrimary : colors.textSecondary,
-    background: isActive ? colors.surface : 'transparent',
+    padding: compact ? `6px ${cssVars.spacing.sm}` : `4px ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: compact ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
+    fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
+    color: isActive ? cssVars.colors.textPrimary : cssVars.colors.textSecondary,
+    background: isActive ? cssVars.colors.surface : 'transparent',
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.15s ease',

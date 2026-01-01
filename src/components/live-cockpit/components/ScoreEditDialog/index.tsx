@@ -3,7 +3,7 @@
  */
 
 import { useState, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import moduleStyles from '../../LiveCockpit.module.css';
 
 // ---------------------------------------------------------------------------
@@ -56,29 +56,29 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
     left: 0,
     right: 0,
     bottom: 0,
-    background: colors.overlayStrong,
+    background: cssVars.colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 100,
-    padding: spacing.md,
+    padding: cssVars.spacing.md,
   };
 
   const dialogStyle: CSSProperties = {
-    background: colors.surfaceSolid,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: cssVars.spacing.lg,
     maxWidth: '350px',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
   };
 
@@ -86,19 +86,19 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const teamScoreStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     maxWidth: '100px',
     overflow: 'hidden',
@@ -110,35 +110,35 @@ export const ScoreEditDialog: React.FC<ScoreEditDialogProps> = ({
     width: '60px',
     height: '60px',
     fontSize: '2rem',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     textAlign: 'center',
-    background: colors.surface,
-    border: `2px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
+    background: cssVars.colors.surface,
+    border: `2px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
   };
 
   const separatorStyle: CSSProperties = {
     fontSize: '2rem',
-    fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textSecondary,
   };
 
   const buttonContainerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: cssVars.spacing.sm,
+    marginTop: cssVars.spacing.sm,
   };
 
   const buttonStyle = (isPrimary: boolean): CSSProperties => ({
     flex: 1,
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: isPrimary ? colors.onPrimary : colors.textPrimary,
-    background: isPrimary ? colors.primary : colors.surface,
-    border: isPrimary ? 'none' : `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: isPrimary ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
+    background: isPrimary ? cssVars.colors.primary : cssVars.colors.surface,
+    border: isPrimary ? 'none' : `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
   });
 

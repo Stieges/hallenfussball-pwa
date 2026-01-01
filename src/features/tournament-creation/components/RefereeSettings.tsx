@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { Select, Input, NumberStepper } from '../../../components/ui';
-import { borderRadius, colors, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament, RefereeMode, FinalsRefereeMode, RefereeConfig } from '../../../types/tournament';
 
 interface RefereeSettingsProps {
@@ -97,7 +97,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
     marginTop: '16px',
     padding: '16px',
     background: 'rgba(255,215,0,0.08)',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     border: '1px solid rgba(255,215,0,0.2)',
   };
 
@@ -105,7 +105,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
     marginTop: '12px',
     padding: '12px',
     background: 'rgba(0,0,0,0.15)',
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const hasNames = refereeConfig?.refereeNames && Object.keys(refereeConfig.refereeNames).length > 0;
@@ -143,8 +143,8 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
     <div style={containerStyle}>
       <h3 style={{
         fontSize: '16px',
-        fontWeight: fontWeights.semibold,
-        color: colors.textPrimary,
+        fontWeight: cssVars.fontWeights.semibold,
+        color: cssVars.colors.textPrimary,
         marginBottom: '16px'
       }}>
         Schiedsrichter
@@ -160,7 +160,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           { value: 'teams', label: 'Teams stellen SR (nach eigenem Spiel)' },
         ]}
       />
-      <p style={{ fontSize: '11px', color: colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
+      <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
         <strong>Veranstalter-Modus:</strong> Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).{' '}
         <strong>Teams-Modus:</strong> Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld.
       </p>
@@ -186,7 +186,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               mode="stepper"
             />
           </div>
-          <p style={{ fontSize: '11px', color: colors.textSecondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
             Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt.
             "Max. zusammenhängende Partien = 1" bedeutet keine direkt aufeinanderfolgenden Einsätze.
           </p>
@@ -197,9 +197,9 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               type="checkbox"
               checked={hasNames}
               onChange={(e) => handleNamesToggle(e.target.checked)}
-              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.accent }}
+              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
             />
-            <span style={{ color: colors.textPrimary, fontSize: '14px', fontWeight: fontWeights.medium }}>
+            <span style={{ color: cssVars.colors.textPrimary, fontSize: '14px', fontWeight: cssVars.fontWeights.medium }}>
               Namen der Schiedsrichter angeben
             </span>
           </label>
@@ -207,7 +207,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           {/* Name Inputs */}
           {hasNames && (
             <div style={namesContainerStyle}>
-              <h4 style={{ color: colors.textPrimary, fontSize: '13px', margin: '0 0 12px 0', fontWeight: fontWeights.semibold }}>
+              <h4 style={{ color: cssVars.colors.textPrimary, fontSize: '13px', margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
                 Schiedsrichter-Namen
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -228,8 +228,8 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                       />
                       {hasError && (
                         <p style={{
-                          margin: `${spacing.xs} 0 0 0`,
-                          color: colors.error,
+                          margin: `${cssVars.spacing.xs} 0 0 0`,
+                          color: cssVars.colors.error,
                           fontSize: '11px',
                         }}>
                           Dieser Name wird bereits verwendet
@@ -239,7 +239,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                   );
                 })}
               </div>
-              <p style={{ fontSize: '11px', color: colors.textSecondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
+              <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
                 Die Namen erscheinen später im Spielplan statt "SR1", "SR2", etc.
               </p>
             </div>
@@ -260,7 +260,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               { value: 'nonParticipatingTeams', label: 'Unbeteiligte Teams (nicht im aktuellen Spiel)' },
             ]}
           />
-          <p style={{ fontSize: '11px', color: colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
+          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
             <strong>Ausgeschiedene Teams:</strong> Nur Teams, die nicht in der Finalrunde spielen.{' '}
             <strong>Unbeteiligte Teams:</strong> Teams die aktuell nicht im Finalspiel stehen (flexibler).
           </p>

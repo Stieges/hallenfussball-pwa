@@ -14,7 +14,7 @@
 import { useState, CSSProperties } from 'react';
 import { Card, Input, Button } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
-import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import {
   analyzeTeamMatches,
   deleteTeamSafely,
@@ -157,63 +157,63 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   // ============================================================================
 
   const containerStyle: CSSProperties = {
-    padding: spacing.lg,
-    background: colors.background,
+    padding: cssVars.spacing.lg,
+    background: cssVars.colors.background,
     minHeight: 'calc(100vh - 200px)',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const teamRowStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
-    borderBottom: `1px solid ${colors.border}`,
-    gap: spacing.md,
+    padding: cssVars.spacing.md,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    gap: cssVars.spacing.md,
   };
 
   const teamInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     flex: 1,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
     fontSize: '11px',
     padding: '2px 8px',
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
     background: bgColor,
     color: color,
-    fontWeight: fontWeights.medium,
+    fontWeight: cssVars.fontWeights.medium,
   });
 
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const actionButtonStyle = (variant: 'edit' | 'delete'): CSSProperties => ({
     padding: '6px 12px',
-    fontSize: fontSizes.sm,
-    borderRadius: borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    borderRadius: cssVars.borderRadius.sm,
     border: 'none',
     cursor: 'pointer',
-    fontWeight: fontWeights.medium,
-    background: variant === 'edit' ? colors.surface : colors.dangerActionBg,
-    color: variant === 'edit' ? colors.textPrimary : colors.error,
+    fontWeight: cssVars.fontWeights.medium,
+    background: variant === 'edit' ? cssVars.colors.surface : cssVars.colors.dangerActionBg,
+    color: variant === 'edit' ? cssVars.colors.textPrimary : cssVars.colors.error,
     transition: 'all 0.2s ease',
   });
 
@@ -225,13 +225,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const removedTeamStyle: CSSProperties = {
     ...teamRowStyle,
     opacity: 0.6,
-    background: colors.neutralRowBg,
+    background: cssVars.colors.neutralRowBg,
   };
 
   const removedTeamNameStyle: CSSProperties = {
     ...teamNameStyle,
     textDecoration: 'line-through',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   // ============================================================================
@@ -244,8 +244,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Error Message */}
       {error && (
-        <Card style={{ background: colors.dangerActionBg, marginBottom: spacing.lg }}>
-          <div style={{ color: colors.error, display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Card style={{ background: cssVars.colors.dangerActionBg, marginBottom: cssVars.spacing.lg }}>
+          <div style={{ color: cssVars.colors.error, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>❌</span>
             <span>{error}</span>
             <button
@@ -259,14 +259,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       )}
 
       {/* Info Box */}
-      <Card style={{ marginBottom: spacing.lg, background: colors.infoBannerBg }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.md }}>
+      <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
           <span style={{ fontSize: '24px' }}>ℹ️</span>
           <div>
-            <h4 style={{ margin: '0 0 8px 0', color: colors.textPrimary }}>
+            <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
               Team-Bearbeitung
             </h4>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: colors.textSecondary, fontSize: fontSizes.sm }}>
+            <ul style={{ margin: 0, paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
               <li><strong>Umbenennen:</strong> Jederzeit möglich (z.B. für Rechtschreibkorrekturen)</li>
               <li><strong>Löschen ohne Ergebnisse:</strong> Team und alle Spiele werden entfernt</li>
               <li><strong>Löschen mit Ergebnissen:</strong> Spiele mit Ergebnissen bleiben erhalten</li>
@@ -277,12 +277,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Active Teams */}
       <Card>
-        <h3 style={{ color: colors.textPrimary, margin: '0 0 16px 0' }}>
+        <h3 style={{ color: cssVars.colors.textPrimary, margin: '0 0 16px 0' }}>
           Aktive Teams ({activeTeams.length})
         </h3>
 
         {activeTeams.length === 0 ? (
-          <p style={{ color: colors.textSecondary, fontStyle: 'italic' }}>
+          <p style={{ color: cssVars.colors.textSecondary, fontStyle: 'italic' }}>
             Keine aktiven Teams vorhanden.
           </p>
         ) : (
@@ -322,17 +322,17 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <div style={teamInfoStyle}>
                       <span style={teamNameStyle}>{team.name}</span>
                       {team.group && (
-                        <span style={badgeStyle(colors.primary, colors.infoBadgeBg)}>
+                        <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
                           {getGroupDisplayName(team.group, tournament)}
                         </span>
                       )}
                       {analysis.matchesWithResults > 0 && (
-                        <span style={badgeStyle(colors.success, colors.successLight)}>
+                        <span style={badgeStyle(cssVars.colors.success, cssVars.colors.successLight)}>
                           {analysis.matchesWithResults} Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
                         </span>
                       )}
                       {analysis.matchesWithoutResults > 0 && (
-                        <span style={badgeStyle(colors.textSecondary, colors.neutralBadgeBg)}>
+                        <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
                           {analysis.matchesWithoutResults} geplant
                         </span>
                       )}
@@ -361,11 +361,11 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
       {/* Removed Teams */}
       {removedTeams.length > 0 && (
-        <Card style={{ marginTop: spacing.lg }}>
-          <h3 style={{ color: colors.textSecondary, margin: '0 0 16px 0' }}>
+        <Card style={{ marginTop: cssVars.spacing.lg }}>
+          <h3 style={{ color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
             Entfernte Teams ({removedTeams.length})
           </h3>
-          <p style={{ color: colors.textSecondary, fontSize: fontSizes.sm, marginBottom: '16px' }}>
+          <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, marginBottom: '16px' }}>
             Diese Teams wurden entfernt, aber ihre historischen Ergebnisse sind noch im Spielplan sichtbar.
           </p>
 
@@ -377,12 +377,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <div style={teamInfoStyle}>
                   <span style={removedTeamNameStyle}>{team.name}</span>
                   {analysis.matchesWithResults > 0 && (
-                    <span style={badgeStyle(colors.textSecondary, colors.neutralBadgeBg)}>
+                    <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
                       {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
                     </span>
                   )}
                   {team.removedAt && (
-                    <span style={{ fontSize: '11px', color: colors.textSecondary }}>
+                    <span style={{ fontSize: '11px', color: cssVars.colors.textSecondary }}>
                       Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
                     </span>
                   )}
@@ -390,12 +390,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 <button
                   style={{
                     padding: '6px 12px',
-                    fontSize: fontSizes.sm,
-                    borderRadius: borderRadius.sm,
-                    border: `1px solid ${colors.border}`,
+                    fontSize: cssVars.fontSizes.sm,
+                    borderRadius: cssVars.borderRadius.sm,
+                    border: `1px solid ${cssVars.colors.border}`,
                     cursor: 'pointer',
                     background: 'transparent',
-                    color: colors.textSecondary,
+                    color: cssVars.colors.textSecondary,
                   }}
                   onClick={() => handleRestoreTeam(team.id)}
                 >
@@ -411,24 +411,24 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {deleteConfirmTeam && (
         <div style={overlayStyle}>
           <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: colors.textPrimary }}>
+            <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
               Team löschen?
             </h3>
 
             <div style={{ marginBottom: '16px' }}>
-              <p style={{ color: colors.textSecondary, margin: '0 0 12px 0' }}>
+              <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
                 {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
                   `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
               </p>
 
               {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
                 <div style={{
-                  padding: spacing.md,
-                  background: colors.warningBannerBgStrong,
-                  borderRadius: borderRadius.sm,
+                  padding: cssVars.spacing.md,
+                  background: cssVars.colors.warningBannerBgStrong,
+                  borderRadius: cssVars.borderRadius.sm,
                   marginTop: '12px',
                 }}>
-                  <p style={{ margin: 0, color: colors.warning, fontSize: fontSizes.sm }}>
+                  <p style={{ margin: 0, color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm }}>
                     ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
                   </p>
                 </div>
@@ -442,7 +442,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               <Button
                 variant="primary"
                 onClick={handleConfirmDelete}
-                style={{ background: colors.error }}
+                style={{ background: cssVars.colors.error }}
               >
                 {deleteConfirmTeam.analysis.matchesWithResults > 0
                   ? 'Als entfernt markieren'
@@ -466,7 +466,7 @@ const overlayStyle: CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  background: colors.overlay,
+  background: cssVars.colors.overlay,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -474,10 +474,10 @@ const overlayStyle: CSSProperties = {
 };
 
 const dialogStyle: CSSProperties = {
-  background: colors.surface,
-  borderRadius: borderRadius.lg,
-  padding: spacing.xl,
+  background: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.lg,
+  padding: cssVars.spacing.xl,
   maxWidth: '500px',
   width: '90%',
-  boxShadow: shadows.xl,
+  boxShadow: cssVars.shadows.xl,
 };

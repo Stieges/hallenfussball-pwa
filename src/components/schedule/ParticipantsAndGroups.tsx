@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
 
@@ -37,33 +37,33 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   });
 
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
-    marginBottom: spacing.md,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.primary,
+    marginBottom: cssVars.spacing.md,
   };
 
   const groupsGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const groupBoxStyle: CSSProperties = {
-    padding: spacing.md,
-    background: colors.background,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.background,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const groupTitleStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.primary,
     marginBottom: '12px',
   };
 
@@ -76,8 +76,8 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   const teamItemStyle: CSSProperties = {
     padding: '6px 0',
     fontSize: '13px',
-    color: colors.textPrimary,
-    borderBottom: `1px solid ${colors.border}`,
+    color: cssVars.colors.textPrimary,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
   };
 
   // Special case: Only 1 group - hide group title

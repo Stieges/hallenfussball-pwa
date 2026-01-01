@@ -13,13 +13,7 @@
 import { type CSSProperties, useState, useRef, useCallback } from 'react';
 import type { DraggableAttributes } from '@dnd-kit/core';
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { MatchCard, type MatchCardProps } from './MatchCard';
 import { ConflictBadge } from './ConflictBadge';
 import { SRQuickEditPopover, type RefereeOption } from './SRQuickEditPopover';
@@ -146,54 +140,54 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
     justifyContent: 'center',
     width: 40,
     backgroundColor: isDropTarget
-      ? colors.editorSwapActive
+      ? cssVars.colors.editorSwapActive
       : hasUnsavedChanges
-        ? colors.editorDirtyRowBg
-        : colors.editorEditModeRowBg,
-    borderRadius: `${borderRadius.md} 0 0 ${borderRadius.md}`,
+        ? cssVars.colors.editorDirtyRowBg
+        : cssVars.colors.editorEditModeRowBg,
+    borderRadius: `${cssVars.borderRadius.md} 0 0 ${cssVars.borderRadius.md}`,
     border: `1px solid ${
       isDropTarget
-        ? colors.primary
+        ? cssVars.colors.primary
         : hasUnsavedChanges
-          ? colors.editorDirtyBorder
-          : colors.editorEditModeBorder
+          ? cssVars.colors.editorDirtyBorder
+          : cssVars.colors.editorEditModeBorder
     }`,
     borderRight: 'none',
     cursor: canDrag && !isLocked ? 'grab' : 'not-allowed',
-    color: isLocked ? colors.textDisabled : colors.textSecondary,
-    fontSize: fontSizes.lg,
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
     transition: 'background-color 0.15s ease, border-color 0.15s ease',
   };
 
   const cardWrapperStyle: CSSProperties = {
     flex: 1,
     position: 'relative',
-    borderRadius: canDrag ? `0 ${borderRadius.md} ${borderRadius.md} 0` : borderRadius.md,
+    borderRadius: canDrag ? `0 ${cssVars.borderRadius.md} ${cssVars.borderRadius.md} 0` : cssVars.borderRadius.md,
     overflow: 'hidden',
     border: isDropTarget
-      ? `2px solid ${colors.primary}`
+      ? `2px solid ${cssVars.colors.primary}`
       : hasUnsavedChanges
-        ? `1px solid ${colors.editorDirtyBorder}`
+        ? `1px solid ${cssVars.colors.editorDirtyBorder}`
         : undefined,
     boxShadow: isDropTarget
-      ? `0 0 12px ${colors.primaryGlowLight}`
+      ? `0 0 12px ${cssVars.colors.primaryGlowLight}`
       : undefined,
   };
 
   const srBadgeStyle: CSSProperties = {
     position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
+    top: cssVars.spacing.sm,
+    right: cssVars.spacing.sm,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `2px ${spacing.sm}`,
-    backgroundColor: hasReferee ? colors.surfaceSolid : colors.surfaceDark,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: hasReferee ? colors.textPrimary : colors.textMuted,
+    gap: cssVars.spacing.xs,
+    padding: `2px ${cssVars.spacing.sm}`,
+    backgroundColor: hasReferee ? cssVars.colors.surfaceSolid : cssVars.colors.surfaceDark,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
+    color: hasReferee ? cssVars.colors.textPrimary : cssVars.colors.textMuted,
     cursor: refereeOptions.length > 0 ? 'pointer' : 'default',
     transition: 'background-color 0.15s ease',
     zIndex: 5,
@@ -204,12 +198,12 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    backgroundColor: colors.overlayStrong,
-    color: colors.textMuted,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
+    backgroundColor: cssVars.colors.overlayStrong,
+    color: cssVars.colors.textMuted,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
     zIndex: 10,
     pointerEvents: 'none',
   };
@@ -249,13 +243,13 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
             onClick={handleSRClick}
             onMouseEnter={(e) => {
               if (refereeOptions.length > 0) {
-                (e.currentTarget as HTMLElement).style.backgroundColor = colors.surfaceHover;
+                (e.currentTarget as HTMLElement).style.backgroundColor = cssVars.colors.surfaceHover;
               }
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = hasReferee
-                ? colors.surfaceSolid
-                : colors.surfaceDark;
+                ? cssVars.colors.surfaceSolid
+                : cssVars.colors.surfaceDark;
             }}
             aria-label="Schiedsrichter ändern"
             aria-haspopup="listbox"

@@ -8,7 +8,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 
 // ---------------------------------------------------------------------------
@@ -65,79 +65,79 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const overlayStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: colors.overlayStrong,
+    background: cssVars.colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     zIndex: 1000,
   };
 
   const bannerStyle: CSSProperties = {
     width: '100%',
     maxWidth: '500px',
-    background: `linear-gradient(135deg, ${colors.panelGradientStart}, ${colors.panelGradientEnd})`,
-    borderRadius: borderRadius.xl,
-    border: `2px solid ${colors.warning}`,
-    boxShadow: `0 8px 32px ${colors.warning}30`,
+    background: `linear-gradient(135deg, ${cssVars.colors.panelGradientStart}, ${cssVars.colors.panelGradientEnd})`,
+    borderRadius: cssVars.borderRadius.xl,
+    border: `2px solid ${cssVars.colors.warning}`,
+    boxShadow: `0 8px 32px ${cssVars.colors.warning}30`,
     overflow: 'hidden',
   };
 
   const headerStyle: CSSProperties = {
-    background: `${colors.warning}20`,
-    padding: `${spacing.sm} ${spacing.lg}`,
+    background: `${cssVars.colors.warning}20`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    borderBottom: `1px solid ${colors.warning}40`,
+    gap: cssVars.spacing.sm,
+    borderBottom: `1px solid ${cssVars.colors.warning}40`,
   };
 
   const warningIconStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
   };
 
   const headerTextStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.warning,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
 
   const contentStyle: CSSProperties = {
-    padding: isMobile ? spacing.lg : spacing.xl,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.xl,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xl : '32px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.xl : '32px',
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
   };
 
   const teamNamesStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
   };
 
   const descriptionStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 1.5,
   };
@@ -146,19 +146,19 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const dividerStyle: CSSProperties = {
     width: '100%',
     height: '1px',
-    background: colors.border,
-    margin: `${spacing.sm} 0`,
+    background: cssVars.colors.border,
+    margin: `${cssVars.spacing.sm} 0`,
   };
 
   const secondaryActionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flexWrap: 'wrap',
     justifyContent: 'center',
   };
@@ -267,15 +267,15 @@ interface ButtonProps {
 const PrimaryButton: React.FC<ButtonProps> = ({ onClick, children }) => {
   const style: CSSProperties = {
     width: '100%',
-    padding: `${spacing.md} ${spacing.lg}`,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.onPrimary,
-    background: `linear-gradient(135deg, ${colors.primary}, ${colors.primaryHover})`,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.onPrimary,
+    background: `linear-gradient(135deg, ${cssVars.colors.primary}, ${cssVars.colors.primaryHover})`,
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
-    boxShadow: `0 4px 15px ${colors.primary}40`,
+    boxShadow: `0 4px 15px ${cssVars.colors.primary}40`,
     transition: 'all 0.15s ease',
   };
 
@@ -292,13 +292,13 @@ const SecondaryButton: React.FC<ButtonProps> = ({ onClick, children, variant = '
   const style: CSSProperties = {
     flex: 1,
     minWidth: '140px',
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: isGhost ? colors.textSecondary : colors.textPrimary,
-    background: isGhost ? 'transparent' : colors.surfaceLight,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: isGhost ? cssVars.colors.textSecondary : cssVars.colors.textPrimary,
+    background: isGhost ? 'transparent' : cssVars.colors.surfaceLight,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   };

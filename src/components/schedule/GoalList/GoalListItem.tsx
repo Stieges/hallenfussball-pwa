@@ -18,13 +18,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,17 +78,17 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.sm,
-    backgroundColor: needsEdit ? colors.warningLight : colors.surfaceLight,
-    borderRadius: borderRadius.sm,
-    border: needsEdit ? `1px solid ${colors.warning}` : 'none',
+    padding: cssVars.spacing.sm,
+    backgroundColor: needsEdit ? cssVars.colors.warningLight : cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.sm,
+    border: needsEdit ? `1px solid ${cssVars.colors.warning}` : 'none',
     transition: 'background-color 0.15s ease',
   };
 
   const infoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flex: 1,
     minWidth: 0,
   };
@@ -105,9 +99,9 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
   };
 
   const teamStyle: CSSProperties = {
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
-    fontSize: fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -115,39 +109,39 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
   };
 
   const numberStyle: CSSProperties = {
-    fontWeight: fontWeights.bold,
-    color: hasNumber ? colors.textPrimary : colors.warning,
-    fontSize: fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    color: hasNumber ? cssVars.colors.textPrimary : cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.sm,
     minWidth: '36px',
   };
 
   const assistsStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   };
 
   const timeStyle: CSSProperties = {
-    color: colors.textSecondary,
-    fontSize: fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
     fontVariantNumeric: 'tabular-nums',
     flexShrink: 0,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.xs,
-    marginLeft: spacing.sm,
+    gap: cssVars.spacing.xs,
+    marginLeft: cssVars.spacing.sm,
   };
 
   const iconButtonStyle: CSSProperties = {
-    padding: spacing.xs,
-    borderRadius: borderRadius.sm,
+    padding: cssVars.spacing.xs,
+    borderRadius: cssVars.borderRadius.sm,
     border: 'none',
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     cursor: disabled ? 'default' : 'pointer',
     fontSize: '14px',
     lineHeight: 1,

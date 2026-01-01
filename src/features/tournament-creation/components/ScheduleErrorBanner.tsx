@@ -6,7 +6,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 export interface ScheduleErrorBannerProps {
   /** Error message to display */
@@ -26,22 +26,22 @@ export const ScheduleErrorBanner: React.FC<ScheduleErrorBannerProps> = ({
   onDismiss,
 }) => {
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.xl,
-    padding: spacing.md,
-    background: colors.errorLight,
-    border: `2px solid ${colors.error}4d`, // 30% opacity
-    borderRadius: borderRadius.md,
+    marginBottom: cssVars.spacing.xl,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.errorLight,
+    border: `2px solid ${cssVars.colors.error}4d`, // 30% opacity
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const contentStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const iconStyle: CSSProperties = {
-    color: colors.error,
-    fontSize: fontSizes.xl,
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.xl,
     flexShrink: 0,
   };
 
@@ -50,27 +50,27 @@ export const ScheduleErrorBanner: React.FC<ScheduleErrorBannerProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    margin: `0 0 ${spacing.sm} 0`,
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.error,
+    margin: `0 0 ${cssVars.spacing.sm} 0`,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.error,
   };
 
   const messageStyle: CSSProperties = {
-    margin: `0 0 ${spacing.md} 0`,
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    margin: `0 0 ${cssVars.spacing.md} 0`,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
     lineHeight: '1.5',
   };
 
   const buttonStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    background: `${colors.error}33`, // 20% opacity
-    border: `1px solid ${colors.error}66`, // 40% opacity
-    borderRadius: borderRadius.sm,
-    color: colors.textPrimary,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: `${cssVars.colors.error}33`, // 20% opacity
+    border: `1px solid ${cssVars.colors.error}66`, // 40% opacity
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
   };
 

@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface TimeAdjustDialogProps {
@@ -128,7 +128,7 @@ export function TimeAdjustDialog({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M18 15l-6-6-6 6"
-                  stroke={colors.textSecondary}
+                  stroke={cssVars.colors.textSecondary}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -146,7 +146,7 @@ export function TimeAdjustDialog({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M6 9l6 6 6-6"
-                  stroke={colors.textSecondary}
+                  stroke={cssVars.colors.textSecondary}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -169,7 +169,7 @@ export function TimeAdjustDialog({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M18 15l-6-6-6 6"
-                  stroke={colors.textSecondary}
+                  stroke={cssVars.colors.textSecondary}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -187,7 +187,7 @@ export function TimeAdjustDialog({
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M6 9l6 6 6-6"
-                  stroke={colors.textSecondary}
+                  stroke={cssVars.colors.textSecondary}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -265,46 +265,46 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.overlayDialog,
+    backgroundColor: cssVars.colors.overlayDialog,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   },
   dialog: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
+    backgroundColor: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.xl,
+    padding: cssVars.spacing.xl,
     maxWidth: '360px',
     width: '100%',
     textAlign: 'center',
   },
   title: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     margin: 0,
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   },
   currentTime: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: 0,
-    marginBottom: spacing.xl,
+    marginBottom: cssVars.spacing.xl,
   },
   pickerContainer: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
-    marginBottom: spacing.lg,
+    gap: cssVars.spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   },
   pickerColumn: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   },
   pickerButton: {
     width: '48px',
@@ -312,81 +312,81 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: cssVars.colors.surface,
     border: 'none',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
   },
   pickerValue: {
     fontSize: '48px',
     fontWeight: 700,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
     lineHeight: 1,
-    padding: `${spacing.sm} 0`,
+    padding: `${cssVars.spacing.sm} 0`,
   },
   pickerLabel: {
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textTertiary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   pickerSeparator: {
     fontSize: '48px',
     fontWeight: 700,
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     alignSelf: 'center',
     marginTop: '-24px',
   },
   quickAdjustContainer: {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   },
   quickButton: {
-    padding: `${spacing.xs} ${spacing.md}`,
-    fontSize: fontSizes.sm,
-    backgroundColor: colors.surface,
-    color: colors.textSecondary,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.sm,
+    backgroundColor: cssVars.colors.surface,
+    color: cssVars.colors.textSecondary,
     border: 'none',
-    borderRadius: borderRadius.full,
+    borderRadius: cssVars.borderRadius.full,
     cursor: 'pointer',
   },
   changeIndicator: {
-    fontSize: fontSizes.sm,
-    color: colors.primary,
-    backgroundColor: `${colors.primary}20`,
-    padding: `${spacing.xs} ${spacing.md}`,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.primary,
+    backgroundColor: `${cssVars.colors.primary}20`,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.md,
+    marginBottom: cssVars.spacing.lg,
     display: 'inline-block',
   },
   buttonContainer: {
     display: 'flex',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   cancelButton: {
     flex: 1,
-    padding: `${spacing.md} ${spacing.lg}`,
-    fontSize: fontSizes.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    color: cssVars.colors.textSecondary,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: '48px',
   },
   confirmButton: {
     flex: 1,
-    padding: `${spacing.md} ${spacing.lg}`,
-    fontSize: fontSizes.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    backgroundColor: colors.primary,
-    color: colors.onPrimary,
+    backgroundColor: cssVars.colors.primary,
+    color: cssVars.colors.onPrimary,
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: '48px',
   },

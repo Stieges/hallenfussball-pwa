@@ -7,14 +7,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-  shadows,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import type { TournamentRole, TournamentMembership } from '../types/auth.types';
 import { RoleBadge } from './RoleBadge';
 
@@ -59,26 +52,26 @@ const statusConfig: Record<
   live: {
     label: 'Live',
     icon: '🔴',
-    color: colors.statusLive,
-    bgColor: colors.statusLiveBg,
+    color: cssVars.colors.statusLive,
+    bgColor: cssVars.colors.statusLiveBg,
   },
   upcoming: {
     label: 'Geplant',
     icon: '📅',
-    color: colors.statusUpcoming,
-    bgColor: colors.statusUpcomingBg,
+    color: cssVars.colors.statusUpcoming,
+    bgColor: cssVars.colors.statusUpcomingBg,
   },
   finished: {
     label: 'Abgeschlossen',
     icon: '✅',
-    color: colors.statusFinished,
-    bgColor: colors.statusFinishedBg,
+    color: cssVars.colors.statusFinished,
+    bgColor: cssVars.colors.statusFinishedBg,
   },
   draft: {
     label: 'Entwurf',
     icon: '📝',
-    color: colors.statusDraft,
-    bgColor: colors.statusDraftBg,
+    color: cssVars.colors.statusDraft,
+    bgColor: cssVars.colors.statusDraftBg,
   },
 };
 
@@ -171,14 +164,14 @@ const styles: Record<string, CSSProperties> = {
   card: {
     display: 'block',
     width: '100%',
-    padding: spacing.md,
-    background: colors.surface,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.lg,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     textAlign: 'left',
     transition: 'all 0.2s ease',
-    boxShadow: shadows.sm,
+    boxShadow: cssVars.shadows.sm,
     minHeight: '80px',
     // Reset button styles
     font: 'inherit',
@@ -187,67 +180,67 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   },
   titleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   icon: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
   },
   title: {
     margin: 0,
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   },
   arrow: {
-    fontSize: fontSizes.lg,
-    color: colors.textTertiary,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textTertiary,
   },
   content: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   },
   badgeRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   infoRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     flexWrap: 'wrap',
   },
   statusBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '2px',
-    padding: `2px ${spacing.xs}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
+    padding: `2px ${cssVars.spacing.xs}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
   },
   statusIcon: {
-    fontSize: fontSizes.xs,
+    fontSize: cssVars.fontSizes.xs,
   },
   separator: {
-    color: colors.textTertiary,
-    fontSize: fontSizes.sm,
+    color: cssVars.colors.textTertiary,
+    fontSize: cssVars.fontSizes.sm,
   },
   meta: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   },
   description: {
     margin: 0,
     marginTop: '2px',
-    fontSize: fontSizes.sm,
-    color: colors.textTertiary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textTertiary,
   },
 };
 

@@ -23,7 +23,7 @@ interface HistoryState {
   timestamp: number;
 }
 import { TimeSlot as TimeSlotType } from './types';
-import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Button } from '../../components/ui';
 
 // Hooks
@@ -74,23 +74,23 @@ interface ScheduleEditorProps {
 const containerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: spacing.lg,
+  gap: cssVars.spacing.lg,
   width: '100%',
 };
 
 const gridContainerStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: spacing.md,
-  backgroundColor: colors.surface,
-  borderRadius: borderRadius.lg,
-  padding: spacing.lg,
-  border: `1px solid ${colors.border}`,
+  gap: cssVars.spacing.md,
+  backgroundColor: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.lg,
+  padding: cssVars.spacing.lg,
+  border: `1px solid ${cssVars.colors.border}`,
 };
 
 const timeRowStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.md,
+  gap: cssVars.spacing.md,
   alignItems: 'stretch',
   minHeight: '120px', // Ensure consistent row height
 };
@@ -101,57 +101,57 @@ const timeHeaderStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontSize: fontSizes.md,
-  fontWeight: fontWeights.bold,
-  color: colors.primary,
-  backgroundColor: colors.background,
-  borderRadius: borderRadius.md,
-  padding: spacing.md,
-  border: `1px solid ${colors.border}`,
+  fontSize: cssVars.fontSizes.md,
+  fontWeight: cssVars.fontWeights.bold,
+  color: cssVars.colors.primary,
+  backgroundColor: cssVars.colors.background,
+  borderRadius: cssVars.borderRadius.md,
+  padding: cssVars.spacing.md,
+  border: `1px solid ${cssVars.colors.border}`,
 };
 
 const fieldsRowStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.md,
+  gap: cssVars.spacing.md,
   flex: 1,
   minWidth: 0, // Allow flex items to shrink
 };
 
 const fieldHeaderContainerStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.md,
-  marginBottom: spacing.md,
+  gap: cssVars.spacing.md,
+  marginBottom: cssVars.spacing.md,
   paddingLeft: '86px', // Offset for time header (70px + gap)
 };
 
 const fieldHeaderStyle: React.CSSProperties = {
   flex: 1,
   textAlign: 'center',
-  fontSize: fontSizes.md,
-  fontWeight: fontWeights.bold,
-  color: colors.background,
-  padding: spacing.md,
-  backgroundColor: colors.primary,
-  borderRadius: borderRadius.md,
+  fontSize: cssVars.fontSizes.md,
+  fontWeight: cssVars.fontWeights.bold,
+  color: cssVars.colors.background,
+  padding: cssVars.spacing.md,
+  backgroundColor: cssVars.colors.primary,
+  borderRadius: cssVars.borderRadius.md,
   minWidth: 0,
 };
 
 const statsContainerStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.md,
+  gap: cssVars.spacing.md,
   flexWrap: 'wrap',
-  padding: spacing.md,
-  backgroundColor: colors.surface,
-  borderRadius: borderRadius.md,
-  marginTop: spacing.md,
+  padding: cssVars.spacing.md,
+  backgroundColor: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.md,
+  marginTop: cssVars.spacing.md,
 };
 
 const statItemStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.xs,
-  fontSize: fontSizes.sm,
-  color: colors.textSecondary,
+  gap: cssVars.spacing.xs,
+  fontSize: cssVars.fontSizes.sm,
+  color: cssVars.colors.textSecondary,
 };
 
 // ============================================================================
@@ -550,7 +550,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
         {/* Auto-reassign buttons (edit mode only) */}
         {isEditing && tournament.refereeConfig?.mode === 'organizer' && (
-          <div style={{ display: 'flex', gap: spacing.sm, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: cssVars.spacing.sm, flexWrap: 'wrap' }}>
             <Button variant="ghost" size="sm" onClick={handleAutoReassign}>
               SR automatisch zuweisen
             </Button>
@@ -624,13 +624,13 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         {/* Referee Stats (edit mode only) */}
         {isEditing && refereeStats.length > 0 && (
           <div style={statsContainerStyle}>
-            <span style={{ ...statItemStyle, fontWeight: fontWeights.semibold }}>
+            <span style={{ ...statItemStyle, fontWeight: cssVars.fontWeights.semibold }}>
               SR-Auslastung:
             </span>
             {refereeStats.map(stat => (
               <div key={stat.refereeId} style={statItemStyle}>
                 <span>{stat.name}:</span>
-                <span style={{ fontWeight: fontWeights.medium }}>
+                <span style={{ fontWeight: cssVars.fontWeights.medium }}>
                   {stat.count} Spiele ({stat.percentage}%)
                 </span>
               </div>

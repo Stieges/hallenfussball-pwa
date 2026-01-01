@@ -22,13 +22,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 
 // ---------------------------------------------------------------------------
@@ -150,7 +144,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const headerStyle: CSSProperties = {
@@ -162,27 +156,27 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   const liveBadgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.liveBadgeBg,
-    color: colors.liveBadge,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    gap: cssVars.spacing.xs,
+    backgroundColor: cssVars.colors.liveBadgeBg,
+    color: cssVars.colors.liveBadge,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const liveDotStyle: CSSProperties = {
     width: 8,
     height: 8,
     borderRadius: '50%',
-    backgroundColor: colors.liveBadge,
+    backgroundColor: cssVars.colors.liveBadge,
     animation: 'pulse 2s ease-in-out infinite',
   };
 
   const timerStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.primary,
     fontVariantNumeric: 'tabular-nums',
   };
 
@@ -190,23 +184,23 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const teamScoreStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     minWidth: '80px',
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -217,25 +211,25 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   const scoreValueStyle: CSSProperties = {
     fontSize: '32px',
     fontWeight: 900,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     lineHeight: 1,
   };
 
   const scoreSeparatorStyle: CSSProperties = {
     fontSize: '24px',
-    fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textSecondary,
   };
 
   const eventsContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const eventsHeaderStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
@@ -243,9 +237,9 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   const eventItemStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.xs,
-    fontSize: fontSizes.sm,
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const eventIconStyle: CSSProperties = {
@@ -255,31 +249,31 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
 
   const eventTextStyle: CSSProperties = {
     flex: 1,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   };
 
   const eventTimeStyle: CSSProperties = {
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
     flexShrink: 0,
   };
 
   const noEventsStyle: CSSProperties = {
     textAlign: 'center',
-    padding: spacing.sm,
-    color: colors.textMuted,
-    fontSize: fontSizes.sm,
+    padding: cssVars.spacing.sm,
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'flex-end',
-    paddingTop: spacing.sm,
-    borderTop: `1px solid ${colors.border}`,
+    paddingTop: cssVars.spacing.sm,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   // ---------------------------------------------------------------------------

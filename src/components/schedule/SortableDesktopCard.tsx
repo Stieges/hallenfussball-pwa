@@ -8,7 +8,7 @@
 import { type CSSProperties } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { colors, fontSizes, fontWeights, borderRadius, spacing, spacingSemantics } from '../../design-tokens';
+import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
@@ -112,7 +112,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
     transform: CSS.Transform.toString(transform),
     transition,
     ...(isDragging ? { opacity: 0.5, zIndex: 0 } : {}),
@@ -121,20 +121,20 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   const rowWrapperStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'stretch',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     overflow: 'hidden',
     border: `1px solid ${
       isOver && !isDragging
-        ? colors.primary
+        ? cssVars.colors.primary
         : hasErrors
-          ? colors.error
+          ? cssVars.colors.error
           : hasConflicts
-            ? colors.warning
+            ? cssVars.colors.warning
             : hasUnsavedChanges
-              ? colors.editorDirtyBorder
-              : colors.border
+              ? cssVars.colors.editorDirtyBorder
+              : cssVars.colors.border
     }`,
-    boxShadow: isOver && !isDragging ? `0 0 12px ${colors.primaryGlowLight}` : undefined,
+    boxShadow: isOver && !isDragging ? `0 0 12px ${cssVars.colors.primaryGlowLight}` : undefined,
   };
 
   // Drag handle - touch target of 44px for accessibility
@@ -146,13 +146,13 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     minWidth: spacingSemantics.touchTarget,
     backgroundColor:
       isOver && !isDragging
-        ? colors.editorSwapActive
+        ? cssVars.colors.editorSwapActive
         : hasUnsavedChanges
-          ? colors.editorDirtyRowBg
-          : colors.editorEditModeRowBg,
+          ? cssVars.colors.editorDirtyRowBg
+          : cssVars.colors.editorEditModeRowBg,
     cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'not-allowed',
-    color: isLocked ? colors.textDisabled : colors.textSecondary,
-    fontSize: fontSizes.lg,
+    color: isLocked ? cssVars.colors.textDisabled : cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
     touchAction: 'none',
     flexShrink: 0,
   };
@@ -164,16 +164,16 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
       ? 'auto auto auto 1fr auto 1fr auto auto'
       : 'auto auto 1fr auto 1fr auto auto',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: `${spacing.sm} ${spacing.md}`,
+    gap: cssVars.spacing.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     backgroundColor:
       isOver && !isDragging
-        ? colors.editorSwapActive
+        ? cssVars.colors.editorSwapActive
         : hasUnsavedChanges
-          ? colors.editorDirtyRowBg
+          ? cssVars.colors.editorDirtyRowBg
           : status === 'running'
-            ? colors.statusLiveRowBg
-            : colors.surface,
+            ? cssVars.colors.statusLiveRowBg
+            : cssVars.colors.surface,
   };
 
   // Conflict indicator - touch target of 44px
@@ -181,69 +181,69 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: spacing.lg, // 24px visual indicator
-    height: spacing.lg,
+    width: cssVars.spacing.lg, // 24px visual indicator
+    height: cssVars.spacing.lg,
     borderRadius: '50%',
-    backgroundColor: hasErrors ? colors.error : colors.warning,
-    color: colors.onError,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
+    backgroundColor: hasErrors ? cssVars.colors.error : cssVars.colors.warning,
+    color: cssVars.colors.onError,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
     cursor: 'help',
     flexShrink: 0,
   };
 
   const srSelectStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    border: `1px solid ${hasPendingRef ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    border: `1px solid ${hasPendingRef ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    backgroundColor: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
     cursor: 'pointer',
     minWidth: 60,
     minHeight: spacingSemantics.touchTarget, // 44px touch target
   };
 
   const fieldSelectStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    backgroundColor: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
     cursor: 'pointer',
     minWidth: 60,
     minHeight: spacingSemantics.touchTarget, // 44px touch target
   };
 
   const timeStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: status === 'running' ? colors.primary : colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: status === 'running' ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
     minWidth: 50,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   };
 
   const vsStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-    padding: `0 ${spacing.sm}`,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textMuted,
+    padding: `0 ${cssVars.spacing.sm}`,
   };
 
   const groupStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textAlign: 'right',
     minWidth: 45,
   };
@@ -272,7 +272,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
               {conflicts.length}
             </div>
           )}
-          {!hasConflicts && <div style={{ width: spacing.lg }} />}
+          {!hasConflicts && <div style={{ width: cssVars.spacing.lg }} />}
 
           {/* SR Selector */}
           {showReferees && onRefereeChange && (

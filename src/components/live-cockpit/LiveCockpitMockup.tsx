@@ -11,7 +11,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimer } from '../../hooks';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent } from '../../types/tournament';
@@ -473,84 +473,84 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
-    background: colors.background,
-    color: colors.textPrimary,
+    background: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
   };
 
   const contentStyle: CSSProperties = {
-    padding: isMobile ? spacing.md : spacing.lg,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
     flex: 1,
   };
 
   // Match Header
   const matchHeaderStyle: CSSProperties = {
-    background: colors.surfaceSolid,
-    borderRadius: borderRadius.lg,
-    padding: `${spacing.md} ${spacing.lg}`,
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const matchInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const matchNumberStyle: CSSProperties = {
-    fontWeight: fontWeights.bold,
-    fontSize: fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
+    fontSize: cssVars.fontSizes.md,
   };
 
   const matchFieldStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const statusBadgeStyle: CSSProperties = {
     background: match.status === 'RUNNING'
-      ? colors.primaryLight
-      : colors.surfaceElevated,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+      ? cssVars.colors.primaryLight
+      : cssVars.colors.surfaceElevated,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
     fontSize: '11px',
-    fontWeight: fontWeights.semibold,
+    fontWeight: cssVars.fontWeights.semibold,
     textTransform: 'uppercase',
-    color: match.status === 'RUNNING' ? colors.primary : colors.textPrimary,
+    color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
   };
 
   // Next Banner
   const nextBannerStyle: CSSProperties = {
-    background: `linear-gradient(90deg, ${colors.dangerGradientStart} 0%, ${colors.dangerGradientEnd} 100%)`,
-    border: `1px solid ${colors.dangerBorder}`,
-    borderRadius: borderRadius.sm,
-    padding: `${spacing.sm} ${spacing.md}`,
-    fontSize: fontSizes.sm,
+    background: `linear-gradient(90deg, ${cssVars.colors.dangerGradientStart} 0%, ${cssVars.colors.dangerGradientEnd} 100%)`,
+    border: `1px solid ${cssVars.colors.dangerBorder}`,
+    borderRadius: cssVars.borderRadius.sm,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.sm,
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   // Main Grid
   const mainGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: isDesktop ? '1fr 300px' : '1fr',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   };
 
   // Scoreboard
   const scoreboardStyle: CSSProperties = {
-    background: colors.surfaceSolid,
-    borderRadius: borderRadius.lg,
-    padding: isMobile ? spacing.md : spacing.xl,
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
   };
 
   // Timer Row
@@ -558,41 +558,41 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     display: 'flex',
     alignItems: 'baseline',
     justifyContent: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+    gap: cssVars.spacing.md,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const timerLabelStyle: CSSProperties = {
     fontSize: '12px',
-    color: colors.textMuted,
+    color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '1px',
   };
 
   const timerStyle: CSSProperties = {
     fontSize: isMobile ? '48px' : '64px',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     fontVariantNumeric: 'tabular-nums',
     cursor: !isFinished ? 'pointer' : 'default',
   };
 
   const timerTotalStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textSecondary,
   };
 
   // Score Row
   const scoreRowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr auto 1fr',
-    gap: isMobile ? spacing.sm : spacing.lg,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
     alignItems: 'start',
   };
 
   const scoreDividerStyle: CSSProperties = {
     fontSize: '48px',
-    fontWeight: fontWeights.bold,
-    color: colors.textMuted,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textMuted,
     alignSelf: 'center',
     paddingTop: '60px',
   };
@@ -656,7 +656,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         {/* Next Banner */}
         {nextMatch && (
           <div style={nextBannerStyle}>
-            <span style={{ color: colors.error, fontWeight: fontWeights.semibold }}>
+            <span style={{ color: cssVars.colors.error, fontWeight: cssVars.fontWeights.semibold }}>
               Nächstes →
             </span>
             <span>
@@ -864,7 +864,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               ? match.awayTeam.name
               : ''
         }
-        teamColor={colors.primary}
+        teamColor={cssVars.colors.primary}
         autoDismissSeconds={10}
       />
 
@@ -896,11 +896,11 @@ const noMatchStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   minHeight: '300px',
-  background: colors.background,
+  background: cssVars.colors.background,
 };
 
 const noMatchTextStyle: CSSProperties = {
-  color: colors.textSecondary,
+  color: cssVars.colors.textSecondary,
   fontSize: '1.125rem',
 };
 

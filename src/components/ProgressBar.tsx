@@ -1,13 +1,13 @@
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 
 // Step Status Icons
 const CheckIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-    <circle cx="7" cy="7" r="6" fill={colors.primary} />
+    <circle cx="7" cy="7" r="6" fill={cssVars.colors.primary} />
     <path
       d="M4.5 7L6.5 9L9.5 5"
-      stroke={colors.onPrimary}
+      stroke={cssVars.colors.onPrimary}
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -17,14 +17,14 @@ const CheckIcon = () => (
 
 const CurrentIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-    <circle cx="7" cy="7" r="6" fill={colors.textPrimary} />
-    <circle cx="7" cy="7" r="3" fill={colors.surface} />
+    <circle cx="7" cy="7" r="6" fill={cssVars.colors.textPrimary} />
+    <circle cx="7" cy="7" r="3" fill={cssVars.colors.surface} />
   </svg>
 );
 
 const EmptyIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
-    <circle cx="7" cy="7" r="5.5" stroke={colors.textSecondary} strokeWidth="1" fill="none" />
+    <circle cx="7" cy="7" r="5.5" stroke={cssVars.colors.textSecondary} strokeWidth="1" fill="none" />
   </svg>
 );
 
@@ -80,16 +80,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const isClickableStep = clickable && onStepClick && (isVisited || isCurrent);
 
     return {
-      fontSize: fontSizes.xs,
-      fontWeight: isCurrent ? fontWeights.bold : fontWeights.semibold,
+      fontSize: cssVars.fontSizes.xs,
+      fontWeight: isCurrent ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
       color:
         currentStep > stepNum
-          ? colors.primary
+          ? cssVars.colors.primary
           : isCurrent
-          ? colors.textPrimary
+          ? cssVars.colors.textPrimary
           : hasErrors
-          ? colors.error
-          : colors.textSecondary,
+          ? cssVars.colors.error
+          : cssVars.colors.textSecondary,
       transition: 'all 0.3s ease',
       cursor: isClickableStep ? 'pointer' : 'default',
       position: 'relative',
@@ -122,7 +122,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     width: '6px',
     height: '6px',
     borderRadius: '50%',
-    background: colors.error,
+    background: cssVars.colors.error,
     display: 'inline-block',
     marginLeft: '2px',
   };
@@ -139,8 +139,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   return (
-    <div style={{ marginBottom: spacing.lg }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+    <div style={{ marginBottom: cssVars.spacing.lg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: cssVars.spacing.sm }}>
         {stepLabels.map((label, index) => {
           const stepNum = index + 1;
           const isVisited = isStepVisited(index);
@@ -170,8 +170,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <div
         style={{
           height: '4px',
-          background: colors.border,
-          borderRadius: borderRadius.sm,
+          background: cssVars.colors.border,
+          borderRadius: cssVars.borderRadius.sm,
           overflow: 'hidden',
         }}
       >
@@ -179,7 +179,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           style={{
             width: `${(currentStep / totalSteps) * 100}%`,
             height: '100%',
-            background: gradients.primary,
+            background: cssVars.gradients.primary,
             transition: 'width 0.3s ease',
           }}
         />

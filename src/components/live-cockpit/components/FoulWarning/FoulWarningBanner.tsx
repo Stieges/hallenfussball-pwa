@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { triggerHaptic } from '../../../../utils/haptics';
 
 interface FoulWarningBannerProps {
@@ -134,13 +134,13 @@ export function FoulWarningBanner({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     position: 'fixed',
-    top: spacing.lg,
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: colors.warningBannerBg,
-    borderRadius: borderRadius.lg,
-    border: `2px solid ${colors.warning}`,
-    boxShadow: `0 4px 20px ${colors.warningShadow}`,
+    top: cssVars.spacing.lg,
+    left: cssVars.spacing.lg,
+    right: cssVars.spacing.lg,
+    backgroundColor: cssVars.colors.warningBannerBg,
+    borderRadius: cssVars.borderRadius.lg,
+    border: `2px solid ${cssVars.colors.warning}`,
+    boxShadow: `0 4px 20px ${cssVars.colors.warningShadow}`,
     zIndex: 1100,
     overflow: 'hidden',
     transition: 'opacity 0.3s ease, transform 0.3s ease',
@@ -148,8 +148,8 @@ const styles: Record<string, React.CSSProperties> = {
   content: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
   },
   iconContainer: {
     position: 'relative',
@@ -167,10 +167,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.error,
-    color: colors.onError,
-    borderRadius: borderRadius.full,
-    fontSize: fontSizes.xs,
+    backgroundColor: cssVars.colors.error,
+    color: cssVars.colors.onError,
+    borderRadius: cssVars.borderRadius.full,
+    fontSize: cssVars.fontSizes.xs,
     fontWeight: 700,
     padding: `0 4px`,
   },
@@ -181,13 +181,13 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 2,
   },
   title: {
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 700,
-    color: colors.warning,
+    color: cssVars.colors.warning,
   },
   description: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     lineHeight: 1.3,
   },
   dismissButton: {
@@ -198,20 +198,20 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     backgroundColor: 'transparent',
     border: 'none',
-    borderRadius: borderRadius.md,
-    color: colors.textSecondary,
-    fontSize: fontSizes.md,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
     cursor: 'pointer',
     flexShrink: 0,
   },
   progressContainer: {
     height: 3,
-    backgroundColor: colors.warningBannerBgStrong,
+    backgroundColor: cssVars.colors.warningBannerBgStrong,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: colors.warning,
+    backgroundColor: cssVars.colors.warning,
     animation: 'shrinkWidth linear forwards',
   },
 };

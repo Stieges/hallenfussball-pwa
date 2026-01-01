@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
@@ -51,7 +51,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   };
 
   // ---------------------------------------------------------------------------

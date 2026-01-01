@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -248,8 +248,8 @@ export function SubstitutionDialog({
                 style={{
                   ...styles.numberInputSmall,
                   borderColor: activeField !== null && activeField.type === 'out' && activeField.index === index
-                    ? colors.error
-                    : colors.borderDefault,
+                    ? cssVars.colors.error
+                    : cssVars.colors.borderDefault,
                 }}
                 min={1}
                 max={99}
@@ -281,8 +281,8 @@ export function SubstitutionDialog({
                 style={{
                   ...styles.numberInputSmall,
                   borderColor: activeField !== null && activeField.type === 'in' && activeField.index === index
-                    ? colors.success
-                    : colors.borderDefault,
+                    ? cssVars.colors.success
+                    : cssVars.colors.borderDefault,
                 }}
                 min={1}
                 max={99}
@@ -309,14 +309,14 @@ export function SubstitutionDialog({
                 style={{
                   ...styles.quickNumberButton,
                   backgroundColor: isSelectedOut
-                    ? colors.errorLight
+                    ? cssVars.colors.errorLight
                     : isSelectedIn
-                      ? colors.successLight
-                      : colors.surface,
+                      ? cssVars.colors.successLight
+                      : cssVars.colors.surface,
                   borderColor: isSelectedOut
-                    ? colors.error
+                    ? cssVars.colors.error
                     : isSelectedIn
-                      ? colors.success
+                      ? cssVars.colors.success
                       : 'transparent',
                 }}
                 onClick={() => handleQuickNumber(num)}
@@ -349,22 +349,22 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: colors.overlayDialog,
+    backgroundColor: cssVars.colors.overlayDialog,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   },
   dialog: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
+    backgroundColor: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.xl,
+    padding: cssVars.spacing.xl,
     maxWidth: '400px',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -374,54 +374,54 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: colors.surface,
+    backgroundColor: cssVars.colors.surface,
     display: 'flex',
     alignItems: 'center',
   },
   timerBar: {
     height: '100%',
-    backgroundColor: colors.primary,
+    backgroundColor: cssVars.colors.primary,
     transition: 'width 1s linear',
   },
   timerText: {
     position: 'absolute',
-    right: spacing.sm,
+    right: cssVars.spacing.sm,
     top: 8,
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
   },
   iconHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: cssVars.spacing.sm,
+    marginTop: cssVars.spacing.sm,
   },
   swapIcon: {
     fontSize: '32px',
   },
   title: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   },
   teamSubtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: 0,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     margin: 0,
     textAlign: 'center',
   },
   section: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   sectionHeader: {
     display: 'flex',
@@ -429,14 +429,14 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
   },
   outLabel: {
-    color: colors.error,
+    color: cssVars.colors.error,
     fontWeight: 600,
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
   },
   inLabel: {
-    color: colors.success,
+    color: cssVars.colors.success,
     fontWeight: 600,
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
   },
   addButton: {
     width: 32,
@@ -444,103 +444,103 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
-    color: colors.textSecondary,
-    backgroundColor: colors.surface,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    backgroundColor: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
   },
   playerInputs: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   numberInputSmall: {
     width: 56,
     height: 48,
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 700,
     textAlign: 'center',
-    backgroundColor: colors.surface,
-    border: `2px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
+    backgroundColor: cssVars.colors.surface,
+    border: `2px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
     outline: 'none',
   },
   warningBanner: {
-    backgroundColor: colors.warningBannerBg,
-    color: colors.warning,
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
+    backgroundColor: cssVars.colors.warningBannerBg,
+    color: cssVars.colors.warning,
+    padding: cssVars.spacing.sm,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
     textAlign: 'center',
   },
   teamGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   teamButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    border: `2px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    padding: cssVars.spacing.lg,
+    backgroundColor: cssVars.colors.surface,
+    border: `2px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 56,
     transition: 'all 0.15s ease',
   },
   teamLabel: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
   },
   quickNumbers: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, 1fr)',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   quickNumberButton: {
     height: 44,
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
+    color: cssVars.colors.textPrimary,
+    backgroundColor: cssVars.colors.surface,
     border: '2px solid transparent',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
   actions: {
     display: 'flex',
-    gap: spacing.md,
-    marginTop: spacing.sm,
+    gap: cssVars.spacing.md,
+    marginTop: cssVars.spacing.sm,
   },
   cancelButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    color: cssVars.colors.textSecondary,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },
   confirmButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    backgroundColor: colors.success,
-    color: colors.onSuccess,
+    backgroundColor: cssVars.colors.success,
+    color: cssVars.colors.onSuccess,
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },

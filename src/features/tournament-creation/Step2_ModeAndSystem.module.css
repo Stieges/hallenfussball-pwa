@@ -3,8 +3,8 @@
 /* Base configuration grid */
 .configGrid {
   display: grid;
-  gap: 16px;
-  margin-top: 16px;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-md);
 }
 
 /* Mobile first: single column */

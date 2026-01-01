@@ -311,11 +311,14 @@
   /* ===========================================
      Gradients
      =========================================== */
+  --gradient-primary: linear-gradient(135deg, #00E676, #00B0FF);
   --gradient-primary-secondary: linear-gradient(135deg, #00E676, #00B0FF);
   --gradient-subtle: linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
   --gradient-subtle-hover: linear-gradient(135deg, rgba(0, 176, 255, 0.25), rgba(0, 230, 118, 0.25));
   --gradient-next-match: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1));
   --gradient-background-dark: radial-gradient(circle at top, #111827 0%, #020617 55%, #000 100%);
+  --gradient-surface: linear-gradient(135deg, rgba(0, 230, 118, 0.1), rgba(0, 176, 255, 0.1));
+  --gradient-card: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
 
   /* Spacing - 8pt Grid System (synced with theme.ts) */
   --spacing-xs: 4px;   /* 0.5x - half-unit for tight spacing */
@@ -330,6 +333,7 @@
   --border-radius-md: 8px;  /* 1x (was 12px) */
   --border-radius-lg: 16px; /* 2x */
   --border-radius-xl: 24px; /* 3x (was 20px) */
+  --border-radius-full: 9999px; /* Full rounding for pills/circles */
 
   /* Touch Targets - WCAG 2.5.5 Accessible Sizing */
   --touch-target-minimum: 44px;   /* WCAG 2.5.5 minimum */
@@ -416,6 +420,7 @@
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
 
   /* ===========================================
      Themeable Layer - Corporate Colors
@@ -653,6 +658,7 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.12);
 
   /* ===========================================
      Colors - Danger
@@ -736,11 +742,14 @@
   /* ===========================================
      Gradients
      =========================================== */
+  --gradient-primary: linear-gradient(135deg, #059669, #0096E6);
   --gradient-primary-secondary: linear-gradient(135deg, #059669, #0096E6);
   --gradient-subtle: linear-gradient(135deg, rgba(0, 150, 230, 0.08), rgba(5, 150, 105, 0.08));
   --gradient-subtle-hover: linear-gradient(135deg, rgba(0, 150, 230, 0.15), rgba(5, 150, 105, 0.15));
   --gradient-next-match: linear-gradient(135deg, rgba(5, 150, 105, 0.06), rgba(37, 99, 235, 0.06));
   --gradient-background-dark: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  --gradient-surface: linear-gradient(135deg, rgba(5, 150, 105, 0.06), rgba(37, 99, 235, 0.06));
+  --gradient-card: linear-gradient(135deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.01));
 
   /* ===========================================
      Theme Layer

@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { triggerHaptic } from '../../../../utils/haptics';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -107,7 +107,7 @@ export function HalftimeResetDialog({
               <span style={styles.foulTeamName}>{homeTeam.name}</span>
               <span style={{
                 ...styles.foulCount,
-                color: homeFouls >= 5 ? colors.error : colors.warning,
+                color: homeFouls >= 5 ? cssVars.colors.error : cssVars.colors.warning,
               }}>
                 {homeFouls}
               </span>
@@ -117,7 +117,7 @@ export function HalftimeResetDialog({
               <span style={styles.foulTeamName}>{awayTeam.name}</span>
               <span style={{
                 ...styles.foulCount,
-                color: awayFouls >= 5 ? colors.error : colors.warning,
+                color: awayFouls >= 5 ? cssVars.colors.error : cssVars.colors.warning,
               }}>
                 {awayFouls}
               </span>
@@ -187,69 +187,69 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: colors.overlayDialog,
+    backgroundColor: cssVars.colors.overlayDialog,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   },
   dialog: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
+    backgroundColor: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.xl,
+    padding: cssVars.spacing.xl,
     maxWidth: '400px',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   icon: {
     fontSize: '32px',
   },
   title: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   },
   subtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: 0,
   },
   foulsSection: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    backgroundColor: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: cssVars.spacing.md,
   },
   foulsTitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   },
   foulsGrid: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   foulTeam: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     minWidth: 80,
   },
   foulTeamName: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     maxWidth: 100,
     overflow: 'hidden',
@@ -257,33 +257,33 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   foulCount: {
-    fontSize: fontSizes.xxl,
+    fontSize: cssVars.fontSizes.xxl,
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
   },
   foulDivider: {
-    fontSize: fontSizes.xl,
-    color: colors.textMuted,
+    fontSize: cssVars.fontSizes.xl,
+    color: cssVars.colors.textMuted,
   },
   optionsSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   optionRow: {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
   },
   checkbox: {
     width: 24,
     height: 24,
     marginTop: 2,
-    accentColor: colors.primary,
+    accentColor: cssVars.colors.primary,
     cursor: 'pointer',
   },
   optionContent: {
@@ -292,51 +292,51 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 2,
   },
   optionTitle: {
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
   },
   optionDescription: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   },
   warningBanner: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    backgroundColor: colors.warningBannerBg,
-    borderRadius: borderRadius.md,
-    color: colors.warning,
-    fontSize: fontSizes.sm,
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.warningBannerBg,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.sm,
   },
   actions: {
     display: 'flex',
-    gap: spacing.md,
-    marginTop: spacing.sm,
+    gap: cssVars.spacing.md,
+    marginTop: cssVars.spacing.sm,
   },
   cancelButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    color: cssVars.colors.textSecondary,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },
   confirmButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    backgroundColor: colors.primary,
-    color: colors.onPrimary,
+    backgroundColor: cssVars.colors.primary,
+    color: cssVars.colors.onPrimary,
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },

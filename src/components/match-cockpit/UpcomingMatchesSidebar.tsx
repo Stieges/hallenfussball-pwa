@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Button, Card } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { calculateMinutesUntil } from '../../utils/timeHelpers';
@@ -29,25 +29,25 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
   const isMobile = useIsMobile();
 
   const cardHeaderStyle: CSSProperties = {
-    marginBottom: isMobile ? spacing.sm : spacing.md,
+    marginBottom: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
   };
 
   const cardTitleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     marginBottom: '2px',
   };
 
   const cardSubtitleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const matchesContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   return (
@@ -59,7 +59,7 @@ export const UpcomingMatchesSidebar: React.FC<UpcomingMatchesSidebarProps> = ({
 
       <div style={matchesContainerStyle}>
         {upcomingMatches.length === 0 ? (
-          <div style={{ padding: spacing.lg, textAlign: 'center', color: colors.textSecondary }}>
+          <div style={{ padding: cssVars.spacing.lg, textAlign: 'center', color: cssVars.colors.textSecondary }}>
             Keine anstehenden Spiele
           </div>
         ) : (
@@ -101,35 +101,35 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
   const isMobile = useIsMobile();
 
   const cardStyle: CSSProperties = {
-    borderRadius: borderRadius.lg,
-    padding: isMobile ? spacing.lg : spacing.md,
-    border: isHighlighted ? `1px solid ${colors.warning}` : `1px solid ${colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    border: isHighlighted ? `1px solid ${cssVars.colors.warning}` : `1px solid ${cssVars.colors.border}`,
     background: 'radial-gradient(circle at top left, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.96))',
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? spacing.sm : spacing.xs,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.xs,
     position: 'relative',
     overflow: 'hidden',
-    boxShadow: isHighlighted ? `0 10px 30px ${colors.warning}35` : 'none',
+    boxShadow: isHighlighted ? `0 10px 30px ${cssVars.colors.warning}35` : 'none',
   };
 
   const glowStyle: CSSProperties = {
     position: 'absolute',
     inset: '-40%',
-    background: `radial-gradient(circle at 10% 0, ${colors.warning}40, transparent 55%)`,
+    background: `radial-gradient(circle at 10% 0, ${cssVars.colors.warning}40, transparent 55%)`,
     pointerEvents: 'none',
     opacity: isHighlighted ? 0.5 : 0,
   };
 
   const pillStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
+    fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: colors.correctionText,
-    background: `${colors.warning}20`,
+    color: cssVars.colors.correctionText,
+    background: `${cssVars.colors.warning}20`,
     borderRadius: '999px',
-    padding: isMobile ? `6px ${spacing.md}` : `3px ${spacing.sm}`,
-    border: `1px solid ${colors.warning}80`,
+    padding: isMobile ? `6px ${cssVars.spacing.md}` : `3px ${cssVars.spacing.sm}`,
+    border: `1px solid ${cssVars.colors.warning}80`,
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
@@ -137,27 +137,27 @@ const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, minutesUntil, isHi
   };
 
   const timeStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
   };
 
   const teamsStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const metaStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const actionsStyle: CSSProperties = {
-    marginTop: spacing.xs,
+    marginTop: cssVars.spacing.xs,
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
     flexWrap: 'wrap',
-    gap: isMobile ? spacing.sm : '6px',
+    gap: isMobile ? cssVars.spacing.sm : '6px',
   };
 
   const getTimeLabel = () => {

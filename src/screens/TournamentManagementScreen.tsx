@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontFamilies, fontSizes, fontSizesMd3, fontWeights, spacing } from '../design-tokens';
+import { cssVars, fontFamilies, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -124,10 +124,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       <div style={loadingStyle}>
         {loadingError ? (
           <div>
-            <div style={{ ...loadingTextStyle, color: colors.error, marginBottom: '16px' }}>
+            <div style={{ ...loadingTextStyle, color: cssVars.colors.error, marginBottom: '16px' }}>
               ❌ Fehler beim Laden
             </div>
-            <div style={{ fontSize: fontSizes.md, color: colors.textSecondary }}>
+            <div style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }}>
               {loadingError}
             </div>
             {onBack && (
@@ -136,12 +136,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
                 style={{
                   marginTop: '24px',
                   padding: '12px 24px',
-                  background: colors.primary,
+                  background: cssVars.colors.primary,
                   color: 'white',
                   border: 'none',
-                  borderRadius: borderRadius.md,
+                  borderRadius: cssVars.borderRadius.md,
                   cursor: 'pointer',
-                  fontSize: fontSizes.md,
+                  fontSize: cssVars.fontSizes.md,
                 }}
               >
                 Zurück zum Dashboard
@@ -157,15 +157,15 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   const containerStyle: CSSProperties = {
     minHeight: '100vh',
-    background: colors.background,
+    background: cssVars.colors.background,
     display: 'flex',
     flexDirection: 'column',
   };
 
   const headerStyle: CSSProperties = {
-    padding: spacing.lg,
-    borderBottom: `1px solid ${colors.border}`,
-    background: colors.surface,
+    padding: cssVars.spacing.lg,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    background: cssVars.colors.surface,
     position: 'relative',
     display: 'flex',
     justifyContent: 'space-between',
@@ -178,11 +178,11 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   };
 
   const backButtonStyle: CSSProperties = {
-    padding: spacing.sm,
+    padding: cssVars.spacing.sm,
     background: 'transparent',
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
     fontSize: fontSizesMd3.headlineMedium,
     cursor: 'pointer',
     display: 'flex',
@@ -192,22 +192,22 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     height: '36px',
     transition: 'all 0.2s ease',
     flexShrink: 0,
-    marginRight: spacing.md,
+    marginRight: cssVars.spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xxl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    fontSize: cssVars.fontSizes.xxl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.xs,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -215,10 +215,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   const tabBarStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.xs,
-    padding: `0 ${spacing.lg}`,
-    borderBottom: `1px solid ${colors.border}`,
-    background: colors.surface,
+    gap: cssVars.spacing.xs,
+    padding: `0 ${cssVars.spacing.lg}`,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    background: cssVars.colors.surface,
     overflowX: 'auto',
     WebkitOverflowScrolling: 'touch',
     scrollbarWidth: 'none',
@@ -328,10 +328,10 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       {showDirtyWarning && (
         <div style={overlayStyle}>
           <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: colors.textPrimary }}>
+            <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
               Ungespeicherte Änderungen
             </h3>
-            <p style={{ margin: '0 0 24px 0', color: colors.textSecondary }}>
+            <p style={{ margin: '0 0 24px 0', color: cssVars.colors.textSecondary }}>
               Du hast Änderungen an den Turnier-Einstellungen vorgenommen, die noch nicht gespeichert wurden.
               Möchtest du die Änderungen verwerfen?
             </p>
@@ -402,13 +402,13 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
   const [isHovered, setIsHovered] = useState(false);
 
   const buttonStyle: CSSProperties = {
-    padding: `${spacing.md} ${spacing.lg}`,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: 'transparent',
     border: 'none',
-    borderBottom: isActive ? `3px solid ${colors.primary}` : '3px solid transparent',
-    color: isActive ? colors.primary : (isHovered ? colors.primary : colors.textSecondary),
-    fontSize: fontSizes.md,
-    fontWeight: isActive ? fontWeights.semibold : fontWeights.normal,
+    borderBottom: isActive ? `3px solid ${cssVars.colors.primary}` : '3px solid transparent',
+    color: isActive ? cssVars.colors.primary : (isHovered ? cssVars.colors.primary : cssVars.colors.textSecondary),
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.normal,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     fontFamily: fontFamilies.body,
@@ -428,7 +428,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          background: colors.warning,
+          background: cssVars.colors.warning,
           display: 'inline-block',
         }} title="Ungespeicherte Änderungen" />
       )}
@@ -445,12 +445,12 @@ const loadingStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: colors.background,
+  background: cssVars.colors.background,
 };
 
 const loadingTextStyle: CSSProperties = {
-  fontSize: fontSizes.xl,
-  color: colors.textSecondary,
+  fontSize: cssVars.fontSizes.xl,
+  color: cssVars.colors.textSecondary,
 };
 
 const overlayStyle: CSSProperties = {
@@ -467,22 +467,22 @@ const overlayStyle: CSSProperties = {
 };
 
 const dialogStyle: CSSProperties = {
-  background: colors.surface,
-  borderRadius: borderRadius.lg,
-  padding: spacing.xl,
+  background: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.lg,
+  padding: cssVars.spacing.xl,
   maxWidth: '400px',
   width: '90%',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
 };
 
 const dialogButtonStyle = (variant: 'secondary' | 'danger'): CSSProperties => ({
-  padding: `${spacing.sm} ${spacing.lg}`,
-  border: variant === 'secondary' ? `1px solid ${colors.border}` : 'none',
-  borderRadius: borderRadius.md,
-  fontSize: fontSizes.md,
-  fontWeight: fontWeights.semibold,
+  padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+  border: variant === 'secondary' ? `1px solid ${cssVars.colors.border}` : 'none',
+  borderRadius: cssVars.borderRadius.md,
+  fontSize: cssVars.fontSizes.md,
+  fontWeight: cssVars.fontWeights.semibold,
   cursor: 'pointer',
-  background: variant === 'danger' ? colors.error : 'transparent',
-  color: variant === 'danger' ? 'white' : colors.textSecondary,
+  background: variant === 'danger' ? cssVars.colors.error : 'transparent',
+  color: variant === 'danger' ? 'white' : cssVars.colors.textSecondary,
   transition: 'all 0.2s ease',
 });

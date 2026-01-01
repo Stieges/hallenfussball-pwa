@@ -8,7 +8,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
 
 export interface SidebarProps {
@@ -51,21 +51,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const panelStyle: CSSProperties = {
-    background: colors.surfaceSolid,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: cssVars.spacing.md,
   };
 
   const panelTitleStyle: CSSProperties = {
     fontSize: '11px',
-    color: colors.textMuted,
+    color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '1px',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   };
 
   // ---------------------------------------------------------------------------
@@ -73,19 +73,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // ---------------------------------------------------------------------------
 
   const penaltyCardStyle: CSSProperties = {
-    background: colors.warningBannerBg,
-    borderLeft: `3px solid ${colors.warning}`,
-    borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
-    padding: `${spacing.sm} ${spacing.md}`,
-    marginBottom: spacing.sm,
+    background: cssVars.colors.warningBannerBg,
+    borderLeft: `3px solid ${cssVars.colors.warning}`,
+    borderRadius: `0 ${cssVars.borderRadius.sm} ${cssVars.borderRadius.sm} 0`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    marginBottom: cssVars.spacing.sm,
     display: 'flex',
     justifyContent: 'space-between',
-    fontSize: fontSizes.sm,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const penaltyTimerStyle: CSSProperties = {
-    color: colors.warning,
-    fontWeight: fontWeights.bold,
+    color: cssVars.colors.warning,
+    fontWeight: cssVars.fontWeights.bold,
     fontVariantNumeric: 'tabular-nums',
   };
 
@@ -103,43 +103,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: `${spacing.sm} 0`,
-    borderBottom: `1px solid ${colors.borderSolid}`,
-    fontSize: fontSizes.sm,
+    padding: `${cssVars.spacing.sm} 0`,
+    borderBottom: `1px solid ${cssVars.colors.borderSolid}`,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const logEntryClickableStyle: CSSProperties = {
     ...logEntryStyle,
     cursor: 'pointer',
-    backgroundColor: colors.warningHighlight, // subtle warning highlight
-    margin: `0 -${spacing.sm}`,
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
+    backgroundColor: cssVars.colors.warningHighlight, // subtle warning highlight
+    margin: `0 -${cssVars.spacing.sm}`,
+    padding: cssVars.spacing.sm,
+    borderRadius: cssVars.borderRadius.sm,
     borderBottom: 'none',
-    marginBottom: spacing.xs,
+    marginBottom: cssVars.spacing.xs,
     transition: 'background-color 0.15s ease',
   };
 
   const logTimeStyle: CSSProperties = {
-    color: colors.textMuted,
+    color: cssVars.colors.textMuted,
     fontVariantNumeric: 'tabular-nums',
   };
 
   const incompleteWarningStyle: CSSProperties = {
-    color: colors.warning,
-    marginLeft: spacing.xs,
-    fontSize: fontSizes.sm,
+    color: cssVars.colors.warning,
+    marginLeft: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   // BUG-010: Edit button style
   const editButtonStyle: CSSProperties = {
     background: 'transparent',
     border: 'none',
-    padding: spacing.xs,
+    padding: cssVars.spacing.xs,
     cursor: 'pointer',
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-    borderRadius: borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textMuted,
+    borderRadius: cssVars.borderRadius.sm,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const logEntryRightStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const getEventIcon = (type: string): string => {
@@ -237,7 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={panelStyle}>
         <div style={panelTitleStyle}>Aktive Zeitstrafen</div>
         {activePenalties.length === 0 ? (
-          <div style={{ color: colors.textMuted, fontSize: fontSizes.sm }}>
+          <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
             Keine aktiven Strafen
           </div>
         ) : (
@@ -258,7 +258,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div style={panelStyle}>
         <div style={panelTitleStyle}>Ereignisse</div>
         {recentEvents.length === 0 ? (
-          <div style={{ color: colors.textMuted, fontSize: fontSizes.sm }}>
+          <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
             Noch keine Ereignisse
           </div>
         ) : (

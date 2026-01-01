@@ -13,7 +13,7 @@
 import { CSSProperties } from 'react';
 import { Button } from '../../../components/ui';
 import { ScheduleActionButtons } from '../../../components/ScheduleActionButtons';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament';
 import { GeneratedSchedule } from '../../../lib/scheduleGenerator';
 
@@ -73,45 +73,45 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.lg,
-    borderBottom: `1px solid ${colors.border}`,
-    gap: spacing.md,
+    padding: cssVars.spacing.lg,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    gap: cssVars.spacing.md,
     flexWrap: 'wrap',
   };
 
   const leftSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     flexWrap: 'wrap',
   };
 
   const editModeBadgeStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.editorDragActiveBg,
-    borderRadius: borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.primary,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    backgroundColor: cssVars.colors.editorDragActiveBg,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const viewToggleContainerStyle: CSSProperties = {
     display: 'flex',
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
+    backgroundColor: cssVars.colors.background,
+    borderRadius: cssVars.borderRadius.md,
     padding: '2px',
-    border: `1px solid ${colors.border}`,
-    marginLeft: isEditing ? spacing.md : 0,
+    border: `1px solid ${cssVars.colors.border}`,
+    marginLeft: isEditing ? cssVars.spacing.md : 0,
   };
 
   const getViewToggleButtonStyle = (mode: ScheduleViewMode): CSSProperties => ({
-    padding: `${spacing.xs} ${spacing.md}`,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
     border: 'none',
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
-    fontWeight: viewMode === mode ? fontWeights.semibold : fontWeights.medium,
-    backgroundColor: viewMode === mode ? colors.primary : 'transparent',
-    color: viewMode === mode ? colors.background : colors.textSecondary,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: viewMode === mode ? cssVars.fontWeights.semibold : cssVars.fontWeights.medium,
+    backgroundColor: viewMode === mode ? cssVars.colors.primary : 'transparent',
+    color: viewMode === mode ? cssVars.colors.background : cssVars.colors.textSecondary,
     cursor: 'pointer',
     transition: 'all 150ms ease',
   });

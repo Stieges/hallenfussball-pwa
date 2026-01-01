@@ -10,7 +10,7 @@
  */
 
 import { useState, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { SlideToConfirm } from '../SlideToConfirm';
 import type { MatchStatus } from '../../types';
 import type { Breakpoint } from '../../../../hooks';
@@ -80,18 +80,18 @@ export const FooterBar: React.FC<FooterBarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: isMobile ? spacing.sm : spacing.md,
-    background: colors.surfaceSolid,
-    borderTop: `1px solid ${colors.border}`,
-    boxShadow: `0 -2px 10px ${colors.shadowSoft}`,
+    gap: cssVars.spacing.sm,
+    padding: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
+    background: cssVars.colors.surfaceSolid,
+    borderTop: `1px solid ${cssVars.colors.border}`,
+    boxShadow: `0 -2px 10px ${cssVars.colors.shadowSoft}`,
     zIndex: 50,
     // Safe area padding is handled by CSS module class
   };
 
   const buttonContainerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
     maxWidth: '500px',
     justifyContent: 'center',
@@ -129,12 +129,12 @@ export const FooterBar: React.FC<FooterBarProps> = ({
     if (showSlideConfirm) {
       return (
         <footer style={footerStyle} className={styles.footerBar}>
-          <div style={{ ...buttonContainerStyle, flexDirection: 'column', gap: spacing.sm }}>
+          <div style={{ ...buttonContainerStyle, flexDirection: 'column', gap: cssVars.spacing.sm }}>
             <SlideToConfirm
               text="→ Zum Beenden schieben"
               confirmText="Spiel beendet!"
               onConfirm={handleFinishConfirm}
-              trackColor={colors.error}
+              trackColor={cssVars.colors.error}
             />
             <ActionButton
               onClick={() => setShowSlideConfirm(false)}
@@ -232,28 +232,28 @@ const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const getBackgroundColor = () => {
     switch (variant) {
-      case 'primary': return colors.primary;
-      case 'secondary': return colors.surfaceLight;
-      case 'danger': return colors.errorLight;
+      case 'primary': return cssVars.colors.primary;
+      case 'secondary': return cssVars.colors.surfaceLight;
+      case 'danger': return cssVars.colors.errorLight;
       case 'ghost': return 'transparent';
-      default: return colors.surface;
+      default: return cssVars.colors.surface;
     }
   };
 
   const getTextColor = () => {
     switch (variant) {
-      case 'primary': return colors.onPrimary;
-      case 'secondary': return colors.textPrimary;
-      case 'danger': return colors.error;
-      case 'ghost': return colors.textSecondary;
-      default: return colors.textPrimary;
+      case 'primary': return cssVars.colors.onPrimary;
+      case 'secondary': return cssVars.colors.textPrimary;
+      case 'danger': return cssVars.colors.error;
+      case 'ghost': return cssVars.colors.textSecondary;
+      default: return cssVars.colors.textPrimary;
     }
   };
 
   const getBorderColor = () => {
     switch (variant) {
-      case 'danger': return colors.error;
-      case 'ghost': return colors.border;
+      case 'danger': return cssVars.colors.error;
+      case 'ghost': return cssVars.colors.border;
       default: return 'transparent';
     }
   };
@@ -270,19 +270,19 @@ const ActionButton: React.FC<ActionButtonProps> = ({
   const buttonStyle: CSSProperties = {
     flex: fullWidth ? 1 : '0 0 auto',
     minHeight: size === 'large' ? '44px' : '40px',
-    padding: `${spacing.xs} ${spacing.md}`,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    fontSize: size === 'large' ? fontSizes.md : fontSizes.sm,
-    fontWeight: fontWeights.semibold,
+    gap: cssVars.spacing.xs,
+    fontSize: size === 'large' ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
     color: getTextColor(),
     background: getBackgroundColor(),
     border: `1px solid ${getBorderColor()}`,
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
-    boxShadow: variant === 'primary' ? `0 2px 8px ${colors.primary}40` : 'none',
+    boxShadow: variant === 'primary' ? `0 2px 8px ${cssVars.colors.primary}40` : 'none',
   };
 
   return (

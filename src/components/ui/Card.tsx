@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactNode } from 'react';
-import { borderRadius, colors, gradients, shadows, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 interface CardProps {
   children: ReactNode;
   style?: CSSProperties;
@@ -21,12 +21,12 @@ export const Card: React.FC<CardProps> = ({
   'data-testid': testId,
 }) => {
   const cardStyles: CSSProperties = {
-    background: gradients.card,
+    background: cssVars.gradients.card,
     backdropFilter: 'blur(10px)',
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    boxShadow: shadows.md,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: cssVars.spacing.xl,
+    boxShadow: cssVars.shadows.md,
     ...style,
   };
 

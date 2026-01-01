@@ -9,7 +9,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
@@ -184,23 +184,23 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
     width: '100%',
     maxWidth: '1080px',
     margin: '0 auto',
-    padding: isMobile ? spacing.md : spacing.lg,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? spacing.md : spacing.lg,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: isMobile ? spacing.sm : spacing.md,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: isMobile ? spacing.md : `${spacing.md} ${spacing.lg}`,
+    padding: isMobile ? cssVars.spacing.md : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     background: 'rgba(15, 23, 42, 0.96)',
-    borderRadius: isMobile ? borderRadius.lg : '999px',
-    border: `1px solid ${colors.border}`,
-    boxShadow: shadows.lg,
+    borderRadius: isMobile ? cssVars.borderRadius.lg : '999px',
+    border: `1px solid ${cssVars.colors.border}`,
+    boxShadow: cssVars.shadows.lg,
     backdropFilter: 'blur(18px)',
   };
 
@@ -212,23 +212,23 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   };
 
   const tournamentNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.sm : fontSizes.md,
-    fontWeight: fontWeights.semibold,
+    fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
     letterSpacing: '0.06em',
     textTransform: 'uppercase',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const fieldNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
   };
 
   const mainLayoutStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 2.1fr) minmax(0, 1.4fr)',
-    gap: isMobile ? spacing.md : spacing.lg,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
   };
 
   const nextMatch = upcomingMatches[0];
@@ -262,7 +262,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           <div style={tournamentNameStyle}>{tournamentName}</div>
           <div style={fieldNameStyle}>{fieldName} – Kampfgericht Cockpit</div>
         </div>
-        <div style={{ display: 'flex', gap: spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusChip
             status={currentMatch?.status ?? 'NOT_STARTED'}
             phaseLabel={currentMatch?.phaseLabel ?? ''}
@@ -324,10 +324,10 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
   const isMobile = useIsMobile();
 
   const chipStyle: CSSProperties = {
-    padding: isMobile ? `8px ${spacing.md}` : `6px ${spacing.md}`,
+    padding: isMobile ? `8px ${cssVars.spacing.md}` : `6px ${cssVars.spacing.md}`,
     borderRadius: '999px',
-    border: `1px solid ${colors.border}`,
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
+    border: `1px solid ${cssVars.colors.border}`,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     display: 'inline-flex',
@@ -340,8 +340,8 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
     width: isMobile ? '6px' : '8px',
     height: isMobile ? '6px' : '8px',
     borderRadius: '999px',
-    background: colors.primary,
-    boxShadow: `0 0 8px ${colors.primary}`,
+    background: cssVars.colors.primary,
+    boxShadow: `0 0 8px ${cssVars.colors.primary}`,
   };
 
   const getStatusText = () => {
@@ -375,14 +375,14 @@ const WarningChip: React.FC<WarningChipProps> = ({ message }) => {
   const isMobile = useIsMobile();
 
   const chipStyle: CSSProperties = {
-    padding: isMobile ? `8px ${spacing.md}` : `6px ${spacing.md}`,
+    padding: isMobile ? `8px ${cssVars.spacing.md}` : `6px ${cssVars.spacing.md}`,
     borderRadius: '999px',
-    border: `1px solid ${colors.warning}`,
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
+    border: `1px solid ${cssVars.colors.warning}`,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     background: `rgba(255, 145, 0, 0.1)`,
-    color: colors.warning,
+    color: cssVars.colors.warning,
   };
 
   return <div style={chipStyle}>{message}</div>;

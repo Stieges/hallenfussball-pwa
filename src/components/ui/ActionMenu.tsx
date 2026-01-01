@@ -12,7 +12,7 @@
  */
 
 import { CSSProperties, useEffect, useRef, useState, useCallback } from 'react';
-import { colors, spacing, borderRadius, fontSizes, fontWeights, shadows } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Icons } from './Icons';
 
 export interface ActionMenuItem {
@@ -102,9 +102,9 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     height: '36px',
     border: 'none',
     background: 'transparent',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     transition: 'all 0.2s ease',
   };
 
@@ -113,10 +113,10 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     top: 'calc(100% + 4px)',
     right: 0,
     minWidth: '180px',
-    background: colors.surface,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    boxShadow: shadows.lg,
+    background: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: cssVars.shadows.lg,
     zIndex: 1000,
     overflow: 'hidden',
     animation: 'menuFadeIn 0.15s ease-out',
@@ -125,19 +125,19 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
   const getItemStyle = (item: ActionMenuItem, isHovered: boolean): CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
-    padding: `${spacing.sm} ${spacing.md}`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     border: 'none',
-    background: isHovered ? colors.surfaceHover : 'transparent',
+    background: isHovered ? cssVars.colors.surfaceHover : 'transparent',
     cursor: item.disabled ? 'not-allowed' : 'pointer',
     color: item.disabled
-      ? colors.textMuted
+      ? cssVars.colors.textMuted
       : item.variant === 'danger'
-        ? colors.error
-        : colors.textPrimary,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
+        ? cssVars.colors.error
+        : cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
     textAlign: 'left',
     opacity: item.disabled ? 0.5 : 1,
     transition: 'background 0.15s ease',
@@ -154,12 +154,12 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
         aria-expanded={isOpen}
         data-testid={testId ? `${testId}-trigger` : undefined}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = colors.surfaceHover;
-          e.currentTarget.style.color = colors.textPrimary;
+          e.currentTarget.style.background = cssVars.colors.surfaceHover;
+          e.currentTarget.style.color = cssVars.colors.textPrimary;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = colors.textSecondary;
+          e.currentTarget.style.color = cssVars.colors.textSecondary;
         }}
       >
         <Icons.MoreVertical size={20} />

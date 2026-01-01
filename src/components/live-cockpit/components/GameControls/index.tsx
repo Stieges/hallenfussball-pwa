@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { MatchStatus } from '../../types';
 
@@ -51,47 +51,47 @@ export const GameControls: React.FC<GameControlsProps> = ({
 
   const containerStyle: CSSProperties = {
     display: 'flex',
-    gap: isMobile ? spacing.xs : spacing.md,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.md,
     justifyContent: 'center',
     flexWrap: 'wrap',
-    marginTop: spacing.lg,
-    paddingTop: spacing.lg,
-    borderTop: `1px solid ${colors.borderSolid}`,
+    marginTop: cssVars.spacing.lg,
+    paddingTop: cssVars.spacing.lg,
+    borderTop: `1px solid ${cssVars.colors.borderSolid}`,
   };
 
   // Button base
   const btnStyle: CSSProperties = {
     fontFamily: 'inherit',
-    border: `1px solid ${colors.borderSolid}`,
-    borderRadius: borderRadius.md,
-    padding: isMobile ? `${spacing.sm} ${spacing.md}` : spacing.md,
+    border: `1px solid ${cssVars.colors.borderSolid}`,
+    borderRadius: cssVars.borderRadius.md,
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : cssVars.spacing.md,
     fontSize: isMobile ? '12px' : '13px',
-    fontWeight: fontWeights.semibold,
+    fontWeight: cssVars.fontWeights.semibold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     background: 'transparent',
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     transition: 'all 0.15s',
   };
 
   const btnStartStyle: CSSProperties = {
     ...btnStyle,
-    background: colors.primary,
-    color: colors.onPrimary,
+    background: cssVars.colors.primary,
+    color: cssVars.colors.onPrimary,
     border: 'none',
-    padding: isMobile ? `${spacing.sm} ${spacing.lg}` : `${spacing.md} ${spacing.xl}`,
-    fontWeight: fontWeights.bold,
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.lg}` : `${cssVars.spacing.md} ${cssVars.spacing.xl}`,
+    fontWeight: cssVars.fontWeights.bold,
     minWidth: isMobile ? '100px' : '140px',
   };
 
   const btnEndStyle: CSSProperties = {
     ...btnStyle,
     background: 'transparent',
-    color: colors.error,
-    borderColor: colors.error,
+    color: cssVars.colors.error,
+    borderColor: cssVars.colors.error,
   };
 
   const btnUndoStyle: CSSProperties = {

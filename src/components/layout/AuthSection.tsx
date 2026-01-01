@@ -17,14 +17,7 @@ import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'reac
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-  shadows,
-} from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 
 interface AuthSectionProps {
   onNavigateToLogin: () => void;
@@ -376,7 +369,7 @@ const styles: Record<string, CSSProperties> = {
   container: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     position: 'relative',
   },
 
@@ -384,16 +377,16 @@ const styles: Record<string, CSSProperties> = {
   skeleton: {
     width: 80,
     height: 36,
-    background: colors.surfaceElevated,
-    borderRadius: borderRadius.md,
+    background: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.md,
     animation: 'pulse 1.5s ease-in-out infinite',
   },
 
   // User Name
   userName: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
   },
 
   // Avatar
@@ -401,7 +394,7 @@ const styles: Record<string, CSSProperties> = {
     width: 40,
     height: 40,
     borderRadius: '50%',
-    background: colors.primary,
+    background: cssVars.colors.primary,
     border: 'none',
     cursor: 'pointer',
     display: 'flex',
@@ -411,9 +404,9 @@ const styles: Record<string, CSSProperties> = {
   },
 
   avatarText: {
-    color: colors.onPrimary,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
+    color: cssVars.colors.onPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
     textTransform: 'uppercase',
   },
 
@@ -422,12 +415,12 @@ const styles: Record<string, CSSProperties> = {
     position: 'absolute',
     top: '100%',
     right: 0,
-    marginTop: spacing.xs,
+    marginTop: cssVars.spacing.xs,
     minWidth: 240,
-    background: colors.surface,
-    borderRadius: borderRadius.md,
-    boxShadow: shadows.lg,
-    border: `1px solid ${colors.border}`,
+    background: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: cssVars.shadows.lg,
+    border: `1px solid ${cssVars.colors.border}`,
     overflow: 'hidden',
     zIndex: 1000,
   },
@@ -435,16 +428,16 @@ const styles: Record<string, CSSProperties> = {
   dropdownHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    background: colors.surfaceElevated,
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.surfaceElevated,
   },
 
   dropdownAvatar: {
     width: 40,
     height: 40,
     borderRadius: '50%',
-    background: colors.primary,
+    background: cssVars.colors.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -458,17 +451,17 @@ const styles: Record<string, CSSProperties> = {
   },
 
   dropdownUserName: {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
 
   dropdownUserEmail: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -476,30 +469,30 @@ const styles: Record<string, CSSProperties> = {
 
   dropdownDivider: {
     height: 1,
-    background: colors.border,
+    background: cssVars.colors.border,
   },
 
   dropdownItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
-    padding: `${spacing.sm}px ${spacing.md}px`,
+    padding: `${cssVars.spacing.sm}px ${cssVars.spacing.md}px`,
     background: 'transparent',
     border: 'none',
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
     cursor: 'pointer',
     textAlign: 'left',
     transition: 'background 0.2s ease',
   },
 
   dropdownItemDanger: {
-    color: colors.error,
+    color: cssVars.colors.error,
   },
 
   dropdownIcon: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     width: 24,
     textAlign: 'center',
   },
@@ -508,22 +501,22 @@ const styles: Record<string, CSSProperties> = {
   guestBadge: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     height: 36,
-    padding: `0 ${spacing.sm}px`,
-    background: colors.surfaceElevated,
-    color: colors.textTertiary,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    borderRadius: borderRadius.full,
+    padding: `0 ${cssVars.spacing.sm}px`,
+    background: cssVars.colors.surfaceElevated,
+    color: cssVars.colors.textTertiary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    borderRadius: cssVars.borderRadius.full,
   },
 
   guestIcon: {
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
   },
 
   guestInfoIcon: {
-    fontSize: fontSizes.xs,
+    fontSize: cssVars.fontSizes.xs,
     opacity: 0.6,
   },
 
@@ -533,20 +526,20 @@ const styles: Record<string, CSSProperties> = {
     right: 2,
     width: 8,
     height: 8,
-    background: colors.warning,
+    background: cssVars.colors.warning,
     borderRadius: '50%',
-    border: `2px solid ${colors.background}`,
+    border: `2px solid ${cssVars.colors.background}`,
   },
 
   // Buttons
   ghostButton: {
     height: 40,
-    padding: `0 ${spacing.md}px`,
+    padding: `0 ${cssVars.spacing.md}px`,
     background: 'transparent',
-    color: colors.textSecondary,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.medium,
-    borderRadius: borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.medium,
+    borderRadius: cssVars.borderRadius.md,
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -554,12 +547,12 @@ const styles: Record<string, CSSProperties> = {
 
   primaryButton: {
     height: 40,
-    padding: `0 ${spacing.lg}px`,
-    background: colors.primary,
-    color: colors.onPrimary,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    borderRadius: borderRadius.md,
+    padding: `0 ${cssVars.spacing.lg}px`,
+    background: cssVars.colors.primary,
+    color: cssVars.colors.onPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    borderRadius: cssVars.borderRadius.md,
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -575,12 +568,12 @@ const styles: Record<string, CSSProperties> = {
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     position: 'relative',
   },
 
   mobileIcon: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
   },
 };
 

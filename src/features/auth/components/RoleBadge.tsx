@@ -12,7 +12,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import type { TournamentRole } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
 
@@ -24,26 +24,26 @@ const roleColors: Record<
   { background: string; text: string; border?: string }
 > = {
   owner: {
-    background: colors.primary,
-    text: colors.onPrimary,
+    background: cssVars.colors.primary,
+    text: cssVars.colors.onPrimary,
   },
   'co-admin': {
-    background: colors.warning,
-    text: colors.onWarning,
+    background: cssVars.colors.warning,
+    text: cssVars.colors.onWarning,
   },
   trainer: {
-    background: colors.info,
-    text: colors.onPrimary,
+    background: cssVars.colors.info,
+    text: cssVars.colors.onPrimary,
   },
   collaborator: {
-    background: colors.surfaceLight,
-    text: colors.textSecondary,
-    border: colors.border,
+    background: cssVars.colors.surfaceLight,
+    text: cssVars.colors.textSecondary,
+    border: cssVars.colors.border,
   },
   viewer: {
-    background: colors.surface,
-    text: colors.textTertiary,
-    border: colors.border,
+    background: cssVars.colors.surface,
+    text: cssVars.colors.textTertiary,
+    border: cssVars.colors.border,
   },
 };
 
@@ -85,16 +85,16 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
 
   const sizeStyles: Record<'sm' | 'md' | 'lg', CSSProperties> = {
     sm: {
-      padding: `2px ${spacing.xs}`,
-      fontSize: fontSizes.xs,
+      padding: `2px ${cssVars.spacing.xs}`,
+      fontSize: cssVars.fontSizes.xs,
     },
     md: {
-      padding: `${spacing.xs} ${spacing.sm}`,
-      fontSize: fontSizes.sm,
+      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+      fontSize: cssVars.fontSizes.sm,
     },
     lg: {
-      padding: `${spacing.sm} ${spacing.md}`,
-      fontSize: fontSizes.md,
+      padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+      fontSize: cssVars.fontSizes.md,
     },
   };
 
@@ -106,8 +106,8 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
     backgroundColor: roleColor.background,
     color: roleColor.text,
     border: roleColor.border ? `1px solid ${roleColor.border}` : 'none',
-    borderRadius: borderRadius.full,
-    fontWeight: fontWeights.medium,
+    borderRadius: cssVars.borderRadius.full,
+    fontWeight: cssVars.fontWeights.medium,
     whiteSpace: 'nowrap',
     ...sizeStyles[size],
     ...style,

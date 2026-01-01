@@ -8,6 +8,7 @@ import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
+import { ThemeProvider } from './hooks/useTheme';
 import {
   GuestBanner,
   LoginScreen,
@@ -294,6 +295,8 @@ function AppContent() {
           <LoginScreen
             onSuccess={() => setScreen('dashboard')}
             onNavigateToRegister={() => setScreen('register')}
+            onBack={() => setScreen('dashboard')}
+            onContinueAsGuest={() => setScreen('dashboard')}
           />
         )}
 
@@ -301,6 +304,7 @@ function AppContent() {
           <RegisterScreen
             onSuccess={() => setScreen('dashboard')}
             onNavigateToLogin={() => setScreen('login')}
+            onBack={() => setScreen('dashboard')}
           />
         )}
 
@@ -401,13 +405,15 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <StorageWarningBanner />
-        <OfflineBanner />
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider defaultTheme="system">
+      <AuthProvider>
+        <ToastProvider>
+          <StorageWarningBanner />
+          <OfflineBanner />
+          <AppContent />
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

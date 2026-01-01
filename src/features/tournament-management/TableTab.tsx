@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, fontSizes } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
@@ -35,8 +35,8 @@ export const TableTab: React.FC<TableTabProps> = ({
   const noGroupsStyle: CSSProperties = {
     textAlign: 'center',
     padding: isMobile ? '24px 12px' : '48px 24px',
-    color: colors.textSecondary,
-    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
+    color: cssVars.colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
   };
 
   if (!hasGroups) {

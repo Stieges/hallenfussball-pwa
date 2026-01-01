@@ -13,7 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, fontSizes, fontWeights, letterSpacing, spacing } from '../../design-tokens';
+import { cssVars, letterSpacing } from '../../design-tokens'
 import { ContactInfo } from '../../types/tournament';
 
 // Re-export for convenience
@@ -45,41 +45,41 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
 
   const containerStyle: CSSProperties = {
     marginTop: '40px',
-    paddingTop: spacing.lg,
-    borderTop: `2px solid ${colors.primary}`,
+    paddingTop: cssVars.spacing.lg,
+    borderTop: `2px solid ${cssVars.colors.primary}`,
   };
 
   const contentStyle: CSSProperties = {
     display: compact ? 'block' : 'flex',
     justifyContent: 'space-between',
     alignItems: compact ? 'flex-start' : 'flex-start',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
     flexWrap: 'wrap',
   };
 
   const sectionStyle: CSSProperties = {
     flex: compact ? 'none' : '1 1 auto',
     minWidth: compact ? '100%' : '200px',
-    marginBottom: compact ? spacing.md : 0,
+    marginBottom: compact ? cssVars.spacing.md : 0,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: letterSpacing.wide,
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
     lineHeight: 1.6,
   };
 
   const linkStyle: CSSProperties = {
-    color: colors.primary,
+    color: cssVars.colors.primary,
     textDecoration: 'none',
   };
 

@@ -22,13 +22,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ScoreStepper } from '../../ui/ScoreStepper';
 import { Button } from '../../ui/Button';
 
@@ -89,24 +83,24 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const steppersContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const disclosureStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.sm} 0`,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.sm} 0`,
     cursor: 'pointer',
-    color: colors.textSecondary,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
     transition: 'color 0.15s ease',
   };
 
@@ -116,20 +110,20 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
     justifyContent: 'center',
     minWidth: '20px',
     height: '20px',
-    padding: `0 ${spacing.xs}`,
-    backgroundColor: colors.primaryLight,
-    color: colors.primary,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.bold,
-    borderRadius: borderRadius.full,
+    padding: `0 ${cssVars.spacing.xs}`,
+    backgroundColor: cssVars.colors.primaryLight,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
+    borderRadius: cssVars.borderRadius.full,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'flex-end',
-    paddingTop: spacing.sm,
-    borderTop: `1px solid ${colors.border}`,
+    paddingTop: cssVars.spacing.sm,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   // ---------------------------------------------------------------------------

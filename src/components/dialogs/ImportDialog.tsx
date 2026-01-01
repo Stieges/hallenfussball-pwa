@@ -7,7 +7,7 @@
 
 import { useState, useRef, CSSProperties, DragEvent } from 'react';
 import { Dialog } from './Dialog';
-import { spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Tournament, ImportValidationResult } from '../../types/tournament';
 import { validateAndParseTournamentImport, detectImportFormat } from '../../utils/tournamentImporter';
 import { SelectStep, WarningsStep, PreviewStep, SuccessStep } from './ImportSteps';
@@ -121,7 +121,7 @@ export const ImportDialog = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xl,
+    gap: cssVars.spacing.xl,
   };
 
   const getStepTitle = (): string => {

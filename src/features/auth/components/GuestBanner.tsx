@@ -8,13 +8,7 @@
  */
 
 import React, { useState, CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { useAuth } from '../hooks/useAuth';
 
 interface GuestBannerProps {
@@ -105,16 +99,16 @@ const styles: Record<string, CSSProperties> = {
   banner: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
-    padding: spacing.md,
-    background: colors.warning + '15', // 15% opacity
-    border: `1px solid ${colors.warning}30`, // 30% opacity
-    borderRadius: borderRadius.md,
-    margin: spacing.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.warning + '15', // 15% opacity
+    border: `1px solid ${cssVars.colors.warning}30`, // 30% opacity
+    borderRadius: cssVars.borderRadius.md,
+    margin: cssVars.spacing.md,
   },
   content: {
     display: 'flex',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     alignItems: 'flex-start',
   },
   iconContainer: {
@@ -124,45 +118,45 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: colors.warning + '20',
-    borderRadius: borderRadius.full,
+    background: cssVars.colors.warning + '20',
+    borderRadius: cssVars.borderRadius.full,
   },
   icon: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
   },
   textContainer: {
     flex: 1,
   },
   title: {
     margin: 0,
-    marginBottom: spacing.xs,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    marginBottom: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   },
   description: {
     margin: 0,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     lineHeight: '1.5',
   },
   actions: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   registerButton: {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     height: '40px',
-    padding: `0 ${spacing.md}`,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.background,
-    background: colors.warning,
-    borderRadius: borderRadius.md,
+    padding: `0 ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.background,
+    background: cssVars.colors.warning,
+    borderRadius: cssVars.borderRadius.md,
     border: 'none',
     cursor: 'pointer',
     transition: 'opacity 0.2s ease',
@@ -176,10 +170,10 @@ const styles: Record<string, CSSProperties> = {
     padding: 0,
     border: 'none',
     background: 'transparent',
-    color: colors.textSecondary,
-    fontSize: fontSizes.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
     cursor: 'pointer',
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
     transition: 'background 0.2s ease',
   },
   // Compact variant
@@ -187,19 +181,19 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.xs} ${spacing.md}`,
-    background: colors.warning + '15',
-    borderBottom: `1px solid ${colors.warning}30`,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    background: cssVars.colors.warning + '15',
+    borderBottom: `1px solid ${cssVars.colors.warning}30`,
   },
   compactText: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   },
   compactLink: {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.warning,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
     background: 'none',
     border: 'none',
     padding: 0,

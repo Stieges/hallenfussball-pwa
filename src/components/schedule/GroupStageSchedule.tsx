@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable';
-import { colors, fontSizes, fontWeights, borderRadius, spacing, spacingSemantics } from '../../design-tokens';
+import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
@@ -373,9 +373,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     return (
       <div style={{
         textAlign: 'center',
-        padding: `${spacing.xl} ${spacing.md}`,
-        color: colors.textSecondary,
-        fontSize: fontSizes.lg
+        padding: `${cssVars.spacing.xl} ${cssVars.spacing.md}`,
+        color: cssVars.colors.textSecondary,
+        fontSize: cssVars.fontSizes.lg
       }}>
         Keine Spiele vorhanden
       </div>
@@ -423,14 +423,14 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Styles
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
-    marginBottom: spacing.md,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.primary,
+    marginBottom: cssVars.spacing.md,
   };
 
   // Get active match for drag overlay
@@ -438,7 +438,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Render desktop card list (non-edit mode)
   const renderDesktopCardContent = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
       {sortedMatches.map((match) => {
         const status = getMatchStatus(match);
         const isExpanded = expandedMatchId === match.id;
@@ -461,7 +461,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Render desktop cards for edit mode (with DnD support)
   const renderDesktopEditContent = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
       {sortedMatches.map((match) => {
         const status = getMatchStatus(match);
 
@@ -530,35 +530,35 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           <DragOverlay dropAnimation={null}>
             {activeMatch && (
               <div style={{
-                backgroundColor: colors.surface,
-                boxShadow: `0 8px 24px ${colors.surfaceDark}`,
-                borderRadius: borderRadius.md,
-                border: `3px solid ${colors.primary}`,
-                padding: `${spacing.sm} ${spacing.md}`,
+                backgroundColor: cssVars.colors.surface,
+                boxShadow: `0 8px 24px ${cssVars.colors.surfaceDark}`,
+                borderRadius: cssVars.borderRadius.md,
+                border: `3px solid ${cssVars.colors.primary}`,
+                padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
                 display: 'flex',
                 alignItems: 'center',
-                gap: spacing.md,
+                gap: cssVars.spacing.md,
                 minWidth: spacingSemantics.dialogSm,
                 maxWidth: spacingSemantics.dialogXl,
                 cursor: 'grabbing',
               }}>
-                <span style={{ color: colors.primary, fontSize: fontSizes.lg }}>⋮⋮</span>
-                <span style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+                <span style={{ color: cssVars.colors.primary, fontSize: cssVars.fontSizes.lg }}>⋮⋮</span>
+                <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
                   {activeMatch.time}
                 </span>
-                <span style={{ fontWeight: fontWeights.bold, flex: 1 }}>
+                <span style={{ fontWeight: cssVars.fontWeights.bold, flex: 1 }}>
                   {activeMatch.homeTeam}
-                  <span style={{ color: colors.textMuted, padding: `0 ${spacing.sm}` }}>vs</span>
+                  <span style={{ color: cssVars.colors.textMuted, padding: `0 ${cssVars.spacing.sm}` }}>vs</span>
                   {activeMatch.awayTeam}
                 </span>
                 {hasGroups && (
                   <span style={{
-                    backgroundColor: colors.primary,
-                    color: colors.background,
-                    padding: `2px ${spacing.sm}`,
-                    borderRadius: borderRadius.sm,
-                    fontSize: fontSizes.xs,
-                    fontWeight: fontWeights.semibold,
+                    backgroundColor: cssVars.colors.primary,
+                    color: cssVars.colors.background,
+                    padding: `2px ${cssVars.spacing.sm}`,
+                    borderRadius: cssVars.borderRadius.sm,
+                    fontSize: cssVars.fontSizes.xs,
+                    fontWeight: cssVars.fontWeights.semibold,
                   }}>
                     {activeMatch.group ? getGroupShortCode(activeMatch.group, tournament) : '-'}
                   </span>
@@ -636,27 +636,27 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
           <DragOverlay dropAnimation={null}>
             {activeMatch && (
               <div style={{
-                backgroundColor: colors.surface,
-                boxShadow: `0 8px 24px ${colors.surfaceDark}`,
-                borderRadius: borderRadius.md,
-                border: `3px solid ${colors.primary}`,
-                padding: spacing.md,
+                backgroundColor: cssVars.colors.surface,
+                boxShadow: `0 8px 24px ${cssVars.colors.surfaceDark}`,
+                borderRadius: cssVars.borderRadius.md,
+                border: `3px solid ${cssVars.colors.primary}`,
+                padding: cssVars.spacing.md,
                 display: 'flex',
                 alignItems: 'center',
-                gap: spacing.sm,
+                gap: cssVars.spacing.sm,
                 minWidth: '280px',
                 maxWidth: '100%',
                 cursor: 'grabbing',
               }}>
-                <span style={{ color: colors.primary, fontSize: fontSizes.lg }}>⋮⋮</span>
-                <span style={{ fontWeight: fontWeights.bold, color: colors.primary }}>
+                <span style={{ color: cssVars.colors.primary, fontSize: cssVars.fontSizes.lg }}>⋮⋮</span>
+                <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.primary }}>
                   #{activeMatch.matchNumber}
                 </span>
-                <span style={{ color: colors.textSecondary, fontSize: fontSizes.sm }}>
+                <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
                   {activeMatch.time}
                 </span>
-                <span style={{ fontWeight: fontWeights.semibold, flex: 1, fontSize: fontSizes.sm }}>
-                  {activeMatch.homeTeam} <span style={{ color: colors.textMuted }}>vs</span> {activeMatch.awayTeam}
+                <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1, fontSize: cssVars.fontSizes.sm }}>
+                  {activeMatch.homeTeam} <span style={{ color: cssVars.colors.textMuted }}>vs</span> {activeMatch.awayTeam}
                 </span>
               </div>
             )}
@@ -684,7 +684,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             };
 
             return (
-              <div key={match.id} style={{ marginBottom: spacing.sm }}>
+              <div key={match.id} style={{ marginBottom: cssVars.spacing.sm }}>
                 <MatchCard
                   {...cardProps}
                   onCardClick={() => handleCardClick(match.id)}
@@ -716,9 +716,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
         /* Mobile correction button hover */
         .correction-btn-mobile:hover {
-          background: ${colors.primary} !important;
+          background: ${cssVars.colors.primary} !important;
           color: white !important;
-          border-color: ${colors.primary} !important;
+          border-color: ${cssVars.colors.primary} !important;
         }
 
         /* Tablet: Keep table but adjust sizing */

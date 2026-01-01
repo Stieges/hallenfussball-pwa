@@ -1,5 +1,5 @@
 import { CSSProperties, ReactNode, useState } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 
 interface CollapsibleSectionProps {
   title: string;
@@ -30,28 +30,28 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          border: colors.borderActive,
-          bg: colors.primarySubtle,
-          headerBg: colors.primaryMedium,
+          border: cssVars.colors.borderActive,
+          bg: cssVars.colors.primarySubtle,
+          headerBg: cssVars.colors.primaryMedium,
         };
       case 'secondary':
         return {
-          border: colors.secondaryBorderActive,
-          bg: colors.secondarySubtle,
-          headerBg: colors.secondaryMedium,
+          border: cssVars.colors.secondaryBorderActive,
+          bg: cssVars.colors.secondarySubtle,
+          headerBg: cssVars.colors.secondaryMedium,
         };
       case 'live':
         return {
-          border: `${colors.statusLive}40`,
-          bg: colors.statusLiveBg,
-          headerBg: colors.statusLiveBg,
-          titleColor: colors.statusLive,
+          border: `${cssVars.colors.statusLive}40`,
+          bg: cssVars.colors.statusLiveBg,
+          headerBg: cssVars.colors.statusLiveBg,
+          titleColor: cssVars.colors.statusLive,
         };
       default:
         return {
-          border: colors.border,
+          border: cssVars.colors.border,
           bg: 'transparent',
-          headerBg: colors.surface,
+          headerBg: cssVars.colors.surface,
         };
     }
   };
@@ -59,9 +59,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const variantStyles = getVariantStyles();
 
   const containerStyle: CSSProperties = {
-    marginTop: spacing.lg,
+    marginTop: cssVars.spacing.lg,
     border: `1px solid ${variantStyles.border}`,
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     overflow: 'hidden',
     background: variantStyles.bg,
   };
@@ -69,8 +69,8 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
     background: variantStyles.headerBg,
     cursor: 'pointer',
     userSelect: 'none',
@@ -79,30 +79,30 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   const titleStyle: CSSProperties = {
     flex: 1,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: variantStyles.titleColor ?? colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: variantStyles.titleColor ?? cssVars.colors.textPrimary,
     margin: 0,
   };
 
   const badgeStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    background: colors.surfaceLight,
-    borderRadius: borderRadius.lg,
-    color: colors.textSecondary,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
+    background: cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.lg,
+    color: cssVars.colors.textSecondary,
   };
 
   const chevronStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     transition: 'transform 0.2s',
     transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
   };
 
   const contentStyle: CSSProperties = {
-    padding: isOpen ? spacing.md : `0 ${spacing.md}`,
+    padding: isOpen ? cssVars.spacing.md : `0 ${cssVars.spacing.md}`,
     maxHeight: isOpen ? '2000px' : '0',
     overflow: 'hidden',
     transition: 'all 0.3s ease-in-out',

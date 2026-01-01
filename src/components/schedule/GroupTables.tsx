@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './GroupTables.module.css';
@@ -30,8 +30,8 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
       <div className="group-tables-empty" style={{
         textAlign: 'center',
         padding: '48px 24px',
-        color: colors.textSecondary,
-        fontSize: fontSizes.lg,
+        color: cssVars.colors.textSecondary,
+        fontSize: cssVars.fontSizes.lg,
       }}>
         Noch keine Spiele gespielt.
         <br />
@@ -48,7 +48,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
       : '';
 
   return (
-    <div style={{ padding: spacing.lg }} className="group-tables-container">
+    <div style={{ padding: cssVars.spacing.lg }} className="group-tables-container">
       <div className={`${styles.tablesGrid} ${gridClass}`}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <StandingsTable
@@ -95,40 +95,40 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
   };
 
   const containerStyle: CSSProperties = {
-    background: colors.background,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
+    background: cssVars.colors.background,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    padding: cssVars.spacing.md,
     minWidth: 0,
     overflow: 'hidden',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.primary,
     marginBottom: '12px',
   };
 
   const tableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
   };
 
   const thStyle: CSSProperties = {
-    background: colors.primary,
-    color: colors.background,
+    background: cssVars.colors.primary,
+    color: cssVars.colors.background,
     padding: '10px 8px',
     textAlign: 'left',
-    fontWeight: fontWeights.semibold,
+    fontWeight: cssVars.fontWeights.semibold,
     fontSize: '13px',
   };
 
   const tdStyle: CSSProperties = {
     padding: '10px 8px',
-    borderBottom: `1px solid ${colors.border}`,
-    color: colors.textPrimary,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    color: cssVars.colors.textPrimary,
   };
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
@@ -166,10 +166,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
 
               return (
                 <tr key={standing.team.id}>
-                  <td style={{ ...tdStyle, fontWeight: fontWeights.semibold, textAlign: 'center' }}>
+                  <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, textAlign: 'center' }}>
                     {rank}
                   </td>
-                  <td style={{ ...tdStyle, fontWeight: fontWeights.semibold }}>
+                  <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
                     {standing.team.name}
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -177,9 +177,9 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <span style={{
-                      fontWeight: highlightWins ? fontWeights.bold : fontWeights.normal,
+                      fontWeight: highlightWins ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
                       padding: highlightWins ? '2px 6px' : '0',
-                      background: highlightWins ? colors.rankingHighlightBg : 'transparent',
+                      background: highlightWins ? cssVars.colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightWins ? '4px' : '0',
                     }}>
                       {standing.won}
@@ -193,9 +193,9 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <span style={{
-                      fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? fontWeights.bold : fontWeights.normal,
+                      fontWeight: (highlightGoalsFor || highlightGoalsAgainst) ? cssVars.fontWeights.bold : cssVars.fontWeights.normal,
                       padding: (highlightGoalsFor || highlightGoalsAgainst) ? '2px 6px' : '0',
-                      background: (highlightGoalsFor || highlightGoalsAgainst) ? colors.rankingHighlightBg : 'transparent',
+                      background: (highlightGoalsFor || highlightGoalsAgainst) ? cssVars.colors.rankingHighlightBg : 'transparent',
                       borderRadius: (highlightGoalsFor || highlightGoalsAgainst) ? '4px' : '0',
                     }}>
                       {standing.goalsFor}:{standing.goalsAgainst}
@@ -204,12 +204,12 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                   <td style={{
                     ...tdStyle,
                     textAlign: 'center',
-                    color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
+                    color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
                   }}>
                     <span style={{
-                      fontWeight: highlightGoalDiff ? fontWeights.bold : fontWeights.semibold,
+                      fontWeight: highlightGoalDiff ? cssVars.fontWeights.bold : cssVars.fontWeights.semibold,
                       padding: highlightGoalDiff ? '2px 6px' : '0',
-                      background: highlightGoalDiff ? colors.rankingHighlightBg : 'transparent',
+                      background: highlightGoalDiff ? cssVars.colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightGoalDiff ? '4px' : '0',
                     }}>
                       {goalDiff > 0 ? '+' : ''}{goalDiff}
@@ -217,10 +217,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <span style={{
-                      fontWeight: fontWeights.bold,
+                      fontWeight: cssVars.fontWeights.bold,
                       fontSize: '15px',
                       padding: highlightPoints ? '2px 6px' : '0',
-                      background: highlightPoints ? colors.rankingHighlightBg : 'transparent',
+                      background: highlightPoints ? cssVars.colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightPoints ? '4px' : '0',
                     }}>
                       {standing.points}
@@ -259,18 +259,18 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     onClick={() => toggleRowExpansion(teamKey)}
                     style={{ cursor: 'pointer' }}
                   >
-                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: fontWeights.bold }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: cssVars.fontWeights.bold }}>
                       {rank}
                     </td>
-                    <td style={{ ...tdStyle, fontWeight: fontWeights.semibold, fontSize: '14px' }}>
+                    <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: '14px' }}>
                       {standing.team.name}
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <span style={{
-                        fontWeight: fontWeights.bold,
+                        fontWeight: cssVars.fontWeights.bold,
                         fontSize: '15px',
                         padding: highlightPoints ? '2px 6px' : '0',
-                        background: highlightPoints ? colors.rankingHighlightBg : 'transparent',
+                        background: highlightPoints ? cssVars.colors.rankingHighlightBg : 'transparent',
                         borderRadius: highlightPoints ? '4px' : '0',
                       }}>
                         {standing.points}
@@ -279,20 +279,20 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <td style={{
                       ...tdStyle,
                       textAlign: 'center',
-                      color: goalDiff > 0 ? colors.primary : goalDiff < 0 ? colors.error : colors.textSecondary,
+                      color: goalDiff > 0 ? cssVars.colors.primary : goalDiff < 0 ? cssVars.colors.error : cssVars.colors.textSecondary,
                     }}>
                       <span style={{
-                        fontWeight: fontWeights.semibold,
+                        fontWeight: cssVars.fontWeights.semibold,
                         fontSize: '14px',
                         padding: highlightGoalDiff ? '2px 6px' : '0',
-                        background: highlightGoalDiff ? colors.rankingHighlightBg : 'transparent',
+                        background: highlightGoalDiff ? cssVars.colors.rankingHighlightBg : 'transparent',
                         borderRadius: highlightGoalDiff ? '4px' : '0',
                       }}>
                         {goalDiff > 0 ? '+' : ''}{goalDiff}
                       </span>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center', padding: '10px 4px' }}>
-                      <span style={{ fontSize: '16px', color: colors.primary }}>
+                      <span style={{ fontSize: '16px', color: cssVars.colors.primary }}>
                         {isExpanded ? '▼' : '▶'}
                       </span>
                     </td>
@@ -301,8 +301,8 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <tr key={`${teamKey}-details`}>
                       <td colSpan={5} style={{
                         padding: '12px',
-                        background: colors.rankingExpandedBg,
-                        borderBottom: `1px solid ${colors.border}`,
+                        background: cssVars.colors.rankingExpandedBg,
+                        borderBottom: `1px solid ${cssVars.colors.border}`,
                       }}>
                         <div style={{
                           display: 'grid',
@@ -311,18 +311,18 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                           fontSize: '13px',
                         }}>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Spiele</div>
-                            <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Spiele</div>
+                            <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.played}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Siege</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Siege</div>
                             <div style={{
-                              fontWeight: fontWeights.semibold,
-                              color: colors.textPrimary,
+                              fontWeight: cssVars.fontWeights.semibold,
+                              color: cssVars.colors.textPrimary,
                               padding: highlightWins ? '2px 6px' : '0',
-                              background: highlightWins ? colors.rankingHighlightBg : 'transparent',
+                              background: highlightWins ? cssVars.colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightWins ? '4px' : '0',
                               display: 'inline-block',
                             }}>
@@ -330,24 +330,24 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Unent.</div>
-                            <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Unent.</div>
+                            <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.drawn}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Niederl.</div>
-                            <div style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Niederl.</div>
+                            <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.lost}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore geschossen</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore geschossen</div>
                             <div style={{
-                              fontWeight: fontWeights.semibold,
-                              color: colors.textPrimary,
+                              fontWeight: cssVars.fontWeights.semibold,
+                              color: cssVars.colors.textPrimary,
                               padding: highlightGoalsFor ? '2px 6px' : '0',
-                              background: highlightGoalsFor ? colors.rankingHighlightBg : 'transparent',
+                              background: highlightGoalsFor ? cssVars.colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightGoalsFor ? '4px' : '0',
                               display: 'inline-block',
                             }}>
@@ -355,12 +355,12 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                             </div>
                           </div>
                           <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                            <div style={{ color: colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore kassiert</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Tore kassiert</div>
                             <div style={{
-                              fontWeight: fontWeights.semibold,
-                              color: colors.textPrimary,
+                              fontWeight: cssVars.fontWeights.semibold,
+                              color: cssVars.colors.textPrimary,
                               padding: highlightGoalsAgainst ? '2px 6px' : '0',
-                              background: highlightGoalsAgainst ? colors.rankingHighlightBg : 'transparent',
+                              background: highlightGoalsAgainst ? cssVars.colors.rankingHighlightBg : 'transparent',
                               borderRadius: highlightGoalsAgainst ? '4px' : '0',
                               display: 'inline-block',
                             }}>

@@ -7,13 +7,7 @@
  */
 
 import React, { useState, CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../../components/ui/Button';
 
 interface InviteLinkDialogProps {
@@ -134,79 +128,79 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-    padding: spacing.md,
+    padding: cssVars.spacing.md,
   },
   dialog: {
     width: '100%',
     maxWidth: '400px',
-    background: colors.surface,
-    borderRadius: borderRadius.lg,
+    background: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.lg,
     overflow: 'hidden',
   },
   header: {
-    padding: spacing.xl,
+    padding: cssVars.spacing.xl,
     textAlign: 'center',
-    borderBottom: `1px solid ${colors.border}`,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
   },
   successIcon: {
     width: '64px',
     height: '64px',
     margin: '0 auto',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.xxl,
-    color: colors.onPrimary,
-    background: colors.success,
-    borderRadius: borderRadius.full,
+    fontSize: cssVars.fontSizes.xxl,
+    color: cssVars.colors.onPrimary,
+    background: cssVars.colors.success,
+    borderRadius: cssVars.borderRadius.full,
   },
   title: {
     margin: 0,
-    marginBottom: spacing.xs,
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    marginBottom: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
   },
   subtitle: {
     margin: 0,
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
   },
   content: {
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   },
   linkBox: {
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   },
   linkInput: {
     width: '100%',
-    padding: spacing.md,
-    fontSize: fontSizes.sm,
-    color: colors.textPrimary,
-    background: colors.surfaceLight,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textPrimary,
+    background: cssVars.colors.surfaceLight,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
     fontFamily: 'monospace',
     boxSizing: 'border-box',
   },
   actions: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    gap: cssVars.spacing.sm,
+    marginBottom: cssVars.spacing.md,
   },
   copyButton: {
     minHeight: '48px',
   },
   hint: {
     margin: 0,
-    fontSize: fontSizes.sm,
-    color: colors.textTertiary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textTertiary,
     textAlign: 'center',
   },
   footer: {
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     paddingTop: 0,
   },
 };

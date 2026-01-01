@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Card } from '../ui';
 import { useToast } from '../ui/Toast';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -90,19 +90,19 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
     flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
     alignItems: isMobile ? 'flex-start' : 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
+    gap: cssVars.spacing.sm,
+    marginBottom: cssVars.spacing.md,
   };
 
   const cardTitleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const cardSubtitleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   return (
@@ -196,7 +196,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
           />
         </>
       ) : (
-        <div style={{ padding: spacing.xl, textAlign: 'center', color: colors.textSecondary }}>
+        <div style={{ padding: cssVars.spacing.xl, textAlign: 'center', color: cssVars.colors.textSecondary }}>
           Kein aktives Spiel vorhanden
         </div>
       )}

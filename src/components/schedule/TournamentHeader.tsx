@@ -3,7 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontSizesMd3 } from '../../design-tokens'
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
 
@@ -25,22 +25,22 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   const numberOfMatches = schedule.allMatches.length;
 
   const containerStyle: CSSProperties = {
-    marginBottom: spacing.xl,
-    borderBottom: `2px solid ${colors.primary}`,
-    paddingBottom: spacing.lg,
+    marginBottom: cssVars.spacing.xl,
+    borderBottom: `2px solid ${cssVars.colors.primary}`,
+    paddingBottom: cssVars.spacing.lg,
   };
 
   const headerFlexStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   };
 
   const titleStyle: CSSProperties = {
     fontSize: fontSizesMd3.displayMedium,
-    fontWeight: fontWeights.bold,
-    color: colors.primary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.primary,
     margin: 0,
     textAlign: 'center',
     flex: 1,
@@ -59,31 +59,31 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   };
 
   const metaGridStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: '12px',
-    padding: spacing.md,
-    background: colors.infoBannerBg,
-    borderRadius: borderRadius.md,
-    border: `1px solid ${colors.border}`,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.infoBannerBg,
+    borderRadius: cssVars.borderRadius.md,
+    border: `1px solid ${cssVars.colors.border}`,
   };
 
   const metaItemStyle: CSSProperties = {
     fontSize: '13px',
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     wordBreak: 'break-word', // Umbrechen bei langen Wörtern
   };
 
   const metaLabelStyle: CSSProperties = {
-    fontWeight: fontWeights.semibold,
-    marginRight: spacing.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    marginRight: cssVars.spacing.sm,
   };
 
   return (
@@ -96,7 +96,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
         {qrCodeUrl && (
           <div style={{ textAlign: 'center' }}>
             <img src={qrCodeUrl} alt="QR Code" style={qrCodeStyle} />
-            <div style={{ fontSize: fontSizesMd3.statLabel, color: colors.textSecondary, marginTop: spacing.xs }}>
+            <div style={{ fontSize: fontSizesMd3.statLabel, color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.xs }}>
               Live Ergebnisse
             </div>
           </div>

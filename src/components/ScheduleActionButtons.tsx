@@ -3,7 +3,7 @@ import { Button } from './ui/Button';
 import { Icons } from './ui/Icons';
 import { ShareDialog } from './dialogs/ShareDialog';
 import { PDFExportDialog } from './dialogs/PDFExportDialog';
-import { shadows, spacing } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
 
@@ -25,18 +25,18 @@ export const ScheduleActionButtons = ({
 
   const containerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     flexWrap: 'wrap',
   };
 
   // Responsive styles for mobile FAB buttons
   const fabContainerStyle: CSSProperties = {
     position: 'fixed',
-    bottom: spacing.lg,
-    right: spacing.lg,
+    bottom: cssVars.spacing.lg,
+    right: cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     zIndex: 100,
   };
 
@@ -90,15 +90,15 @@ export const ScheduleActionButtons = ({
         @media (max-width: 767px) {
           .schedule-action-buttons {
             position: fixed !important;
-            bottom: ${spacing.lg} !important;
-            right: ${spacing.lg} !important;
+            bottom: ${cssVars.spacing.lg} !important;
+            right: ${cssVars.spacing.lg} !important;
             flex-direction: column !important;
             z-index: 100 !important;
           }
 
           .schedule-action-buttons button {
             min-width: 120px;
-            box-shadow: ${shadows.lg};
+            box-shadow: ${cssVars.shadows.lg};
           }
         }
 

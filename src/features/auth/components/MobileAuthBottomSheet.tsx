@@ -11,7 +11,7 @@
 import React from 'react';
 import { BottomSheet, BottomSheetItem, Icons } from '../../../components/ui';
 import { useAuth } from '../hooks/useAuth';
-import { colors } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 interface MobileAuthBottomSheetProps {
   isOpen: boolean;
@@ -48,7 +48,7 @@ export const MobileAuthBottomSheet: React.FC<MobileAuthBottomSheetProps> = ({
     return (
       <BottomSheet isOpen={isOpen} onClose={onClose} title="Konto">
         <BottomSheetItem
-          icon={<Icons.UserPlus size={20} color={colors.primary} />}
+          icon={<Icons.UserPlus size={20} color={cssVars.colors.primary} />}
           label="Registrieren"
           description="Konto erstellen und Daten synchronisieren"
           onClick={handleRegister}
@@ -83,7 +83,7 @@ export const MobileAuthBottomSheet: React.FC<MobileAuthBottomSheetProps> = ({
         data-testid="bottomsheet-register"
       />
       <BottomSheetItem
-        icon={<Icons.Users size={20} color={colors.textTertiary} />}
+        icon={<Icons.Users size={20} color={cssVars.colors.textTertiary} />}
         label="Als Gast fortfahren"
         description="Ohne Konto, lokal auf diesem Gerät"
         onClick={handleContinueAsGuest}

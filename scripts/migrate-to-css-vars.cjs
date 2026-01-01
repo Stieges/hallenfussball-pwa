@@ -146,22 +146,6 @@ function migrateFile(filePath) {
     return { file: filePath, changes: 0, warnings: [], skipped: false };
   }
 
-  // Add cssVars to imports if not already present
-  if (!content.includes('cssVars')) {
-    // Find the first design-tokens import and add cssVars
-    content = content.replace(
-      /import\s*\{([^}]+)\}\s*from\s*(['"])(?:\.\.\/)*design-tokens(?:\/[^'"]*)?['"]/,
-      (match, imports, quote) => {
-        const importList = imports.split(',').map((s) => s.trim());
-        if (!importList.includes('cssVars')) {
-          importList.unshift('cssVars');
-        }
-        return `import { ${importList.join(', ')} } from ${quote}${match.includes('@/') ? '@/design-tokens' : match.match(/from\s*(['"])([^'"]+)['"]/)[2]}${quote}`;
-      }
-    );
-    changeCount++;
-  }
-
   // Replace token usage: colors.X -> cssVars.colors.X
   for (const token of importedLegacyTokens) {
     const cssVarCategory = TOKEN_MAPPING[token];
@@ -192,6 +176,49 @@ function migrateFile(filePath) {
     if (new RegExp(`}\\s*=\\s*${token}\\b`).test(content)) {
       warnings.push(`Destructuring '${token}' - manual review needed`);
     }
+  }
+
+  // Now clean up the imports: remove unused legacy tokens and add cssVars
+  // Find design-tokens import statement
+  const designTokensImportRegex =
+    /(import\s*\{)([^}]+)(\}\s*from\s*['"](?:@\/design-tokens|\.\.\/[^'"]*design-tokens[^'"]*)['"]);?/;
+  const importMatch = content.match(designTokensImportRegex);
+
+  if (importMatch) {
+    const [fullMatch, importStart, importedItems, importEnd] = importMatch;
+    const items = importedItems.split(',').map((s) => s.trim()).filter(Boolean);
+
+    // Filter out legacy tokens that are no longer used in the file
+    const newItems = items.filter((item) => {
+      const name = item.split(/\s+as\s+/)[0].trim();
+
+      // Keep cssVars and non-legacy imports
+      if (!TOKENS_TO_MIGRATE.includes(name)) {
+        return true;
+      }
+
+      // Check if token is still used in the file (after our replacements)
+      // Pattern: standalone token usage like colors.X (not cssVars.colors.X)
+      const stillUsedRegex = new RegExp(`(?<!cssVars\\.)(?<!\\w)${name}\\.(\\w+)`, 'g');
+      return stillUsedRegex.test(content);
+    });
+
+    // Add cssVars if not present
+    if (!newItems.includes('cssVars')) {
+      newItems.unshift('cssVars');
+    }
+
+    // Sort: cssVars first, then alphabetically
+    newItems.sort((a, b) => {
+      if (a === 'cssVars') return -1;
+      if (b === 'cssVars') return 1;
+      return a.localeCompare(b);
+    });
+
+    // Reconstruct the import statement
+    const newImport = `${importStart} ${newItems.join(', ')} ${importEnd}`;
+    content = content.replace(fullMatch, newImport);
+    changeCount++;
   }
 
   // Write file if changed and not dry-run

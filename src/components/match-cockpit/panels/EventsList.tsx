@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatTime } from '../utils/matchPanelUtils';
@@ -48,12 +48,12 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTop: `1px dashed ${colors.border}`,
+    marginTop: cssVars.spacing.md,
+    paddingTop: cssVars.spacing.md,
+    borderTop: `1px dashed ${cssVars.colors.border}`,
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const headerStyle: CSSProperties = {
@@ -61,21 +61,21 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
     alignItems: isMobile ? 'stretch' : 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   // MF-004: Semantic list styles (ul without default styling)
   const listStyle: CSSProperties = {
     maxHeight: isMobile ? '200px' : '140px',
     overflowY: 'auto',
-    paddingRight: spacing.xs,
+    paddingRight: cssVars.spacing.xs,
     listStyle: 'none',
     margin: 0,
     padding: 0,
@@ -84,52 +84,52 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
 
   const getEventItemStyle = (eventType: string): CSSProperties => {
     let backgroundColor: string = 'transparent';
-    let borderColor: string = colors.border;
+    let borderColor: string = cssVars.colors.border;
 
     if (eventType === 'GOAL') {
-      backgroundColor = colors.eventGoalBg;
-      borderColor = colors.eventGoalBorder;
+      backgroundColor = cssVars.colors.eventGoalBg;
+      borderColor = cssVars.colors.eventGoalBorder;
     } else if (eventType === 'STATUS_CHANGE') {
-      backgroundColor = colors.eventStatusBg;
-      borderColor = colors.eventStatusBorder;
+      backgroundColor = cssVars.colors.eventStatusBg;
+      borderColor = cssVars.colors.eventStatusBorder;
     } else if (eventType === 'RESULT_EDIT') {
-      backgroundColor = colors.eventEditBg;
-      borderColor = colors.eventEditBorder;
+      backgroundColor = cssVars.colors.eventEditBg;
+      borderColor = cssVars.colors.eventEditBorder;
     } else if (eventType === 'YELLOW_CARD') {
-      backgroundColor = colors.warningBannerBg;
-      borderColor = colors.warning;
+      backgroundColor = cssVars.colors.warningBannerBg;
+      borderColor = cssVars.colors.warning;
     } else if (eventType === 'RED_CARD') {
-      backgroundColor = colors.dangerGradientStart;
-      borderColor = colors.error;
+      backgroundColor = cssVars.colors.dangerGradientStart;
+      borderColor = cssVars.colors.error;
     } else if (eventType === 'TIME_PENALTY') {
-      backgroundColor = colors.warningBannerBg;
-      borderColor = colors.warning;
+      backgroundColor = cssVars.colors.warningBannerBg;
+      borderColor = cssVars.colors.warning;
     } else if (eventType === 'SUBSTITUTION') {
-      backgroundColor = colors.surfaceElevated;
-      borderColor = colors.border;
+      backgroundColor = cssVars.colors.surfaceElevated;
+      borderColor = cssVars.colors.border;
     } else if (eventType === 'FOUL') {
-      backgroundColor = colors.surfaceElevated;
-      borderColor = colors.border;
+      backgroundColor = cssVars.colors.surfaceElevated;
+      borderColor = cssVars.colors.border;
     }
 
     return {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'baseline',
-      gap: spacing.sm,
-      padding: `${spacing.xs} ${spacing.sm}`,
-      fontSize: fontSizes.sm,
+      gap: cssVars.spacing.sm,
+      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+      fontSize: cssVars.fontSizes.sm,
       borderBottom: `1px dashed ${borderColor}`,
       backgroundColor,
-      borderRadius: borderRadius.sm,
+      borderRadius: cssVars.borderRadius.sm,
       marginBottom: '2px',
     };
   };
 
   const timeStyle: CSSProperties = {
     fontFamily: 'ui-monospace, monospace',
-    color: colors.textSecondary,
-    fontSize: fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
     minWidth: '54px',
   };
 
@@ -138,9 +138,9 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   };
 
   const scoreStyle: CSSProperties = {
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
-    fontSize: fontSizes.xs,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.xs,
   };
 
   const getEventDescription = (event: MatchEvent) => {
@@ -203,7 +203,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: spacing.xs,
+          gap: cssVars.spacing.xs,
           width: isMobile ? '100%' : 'auto'
         }}>
           <Button

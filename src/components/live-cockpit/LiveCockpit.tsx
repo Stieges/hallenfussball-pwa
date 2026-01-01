@@ -23,7 +23,7 @@
  */
 
 import { useState, useCallback, useMemo, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useIsMobile, useMatchTimer } from '../../hooks';
 import type { LiveCockpitProps, LiveCockpitMode, TeamSide } from './types';
 import type { MatchEvent } from '../../types/tournament';
@@ -415,15 +415,15 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     flexDirection: 'column',
     height: '100vh', // Feste Höhe statt minHeight - verhindert Scrollen
     overflow: 'hidden', // Kein Overflow
-    background: colors.background,
-    color: colors.textPrimary,
+    background: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
   };
 
   // Responsive padding - KOMPAKT
   const getMainPadding = () => {
-    if (isMobile) {return spacing.sm;}
-    if (isTablet) {return spacing.md;}
-    return spacing.lg;
+    if (isMobile) {return cssVars.spacing.sm;}
+    if (isTablet) {return cssVars.spacing.md;}
+    return cssVars.spacing.lg;
   };
 
   const mainContentStyle: CSSProperties = {
@@ -433,7 +433,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     flexDirection: 'column',
     padding: getMainPadding(),
     paddingBottom: isMobile ? '60px' : '70px', // Platz für fixierten Footer
-    gap: isMobile ? spacing.xs : spacing.sm,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
     maxWidth: '1200px',
     margin: '0 auto',
     width: '100%',
@@ -710,7 +710,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               ? match.awayTeam.name
               : ''
         }
-        teamColor={colors.primary}
+        teamColor={cssVars.colors.primary}
         autoDismissSeconds={10}
       />
 
@@ -795,24 +795,24 @@ const NextMatchHint: React.FC<NextMatchHintProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    background: colors.infoLight,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.info}30`,
-    fontSize: fontSizes.xs,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: cssVars.colors.infoLight,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.info}30`,
+    fontSize: cssVars.fontSizes.xs,
   };
 
   return (
     <div style={containerStyle}>
-      <span style={{ color: colors.info, fontWeight: fontWeights.medium }}>
+      <span style={{ color: cssVars.colors.info, fontWeight: cssVars.fontWeights.medium }}>
         Nächstes →
       </span>
-      <span style={{ color: colors.textPrimary, fontWeight: fontWeights.semibold }}>
+      <span style={{ color: cssVars.colors.textPrimary, fontWeight: cssVars.fontWeights.semibold }}>
         {homeTeamName} vs {awayTeamName}
       </span>
       {scheduledTime && !isMobile && (
-        <span style={{ color: colors.textSecondary }}>({scheduledTime})</span>
+        <span style={{ color: cssVars.colors.textSecondary }}>({scheduledTime})</span>
       )}
     </div>
   );
@@ -851,15 +851,15 @@ const EventList: React.FC<EventListProps> = ({
     display: 'flex',
     flexDirection: 'column',
     gap: '2px',
-    padding: spacing.xs,
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.border}`,
+    padding: cssVars.spacing.xs,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.border}`,
   };
 
   const headerStyle: CSSProperties = {
     fontSize: '10px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   };
@@ -867,11 +867,11 @@ const EventList: React.FC<EventListProps> = ({
   const eventRowStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `2px ${spacing.xs}`,
-    background: colors.surface,
+    gap: cssVars.spacing.xs,
+    padding: `2px ${cssVars.spacing.xs}`,
+    background: cssVars.colors.surface,
     borderRadius: '2px',
-    fontSize: isMobile ? '11px' : fontSizes.xs,
+    fontSize: isMobile ? '11px' : cssVars.fontSizes.xs,
   };
 
   const eventIconStyle: CSSProperties = {
@@ -880,13 +880,13 @@ const EventList: React.FC<EventListProps> = ({
 
   const eventTimeStyle: CSSProperties = {
     fontSize: '10px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     minWidth: '32px',
   };
 
   const eventTextStyle: CSSProperties = {
     flex: 1,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
   };
 
   const getEventIcon = (type: string) => {
@@ -952,11 +952,11 @@ const noMatchStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   minHeight: '300px',
-  background: colors.background,
+  background: cssVars.colors.background,
 };
 
 const noMatchTextStyle: CSSProperties = {
-  color: colors.textSecondary,
+  color: cssVars.colors.textSecondary,
   fontSize: '1.125rem',
 };
 

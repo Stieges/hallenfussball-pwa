@@ -10,7 +10,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useCallback, useRef } from 'react';
-import { colors, fontFamilies, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies } from '../../design-tokens'
 import { MatchStatus } from '../../hooks/useLiveMatches';
 
 export interface NextMatch {
@@ -124,9 +124,9 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 100%)',
-    borderTop: `3px solid ${colors.accent}`,
+    borderTop: `3px solid ${cssVars.colors.accent}`,
     animation: isAnimatingOut
       ? 'slideDown 0.3s ease-out forwards'
       : 'slideUp 0.4s ease-out',
@@ -137,20 +137,20 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xl,
+    gap: cssVars.spacing.xl,
     maxWidth: '1200px',
     margin: '0 auto',
   };
 
   const labelStyle: CSSProperties = {
     fontSize: '18px',
-    fontWeight: fontWeights.bold,
-    color: colors.accent,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.accent,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const announcementIconStyle: CSSProperties = {
@@ -160,25 +160,25 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   const matchupStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   };
 
   const teamNameStyle: CSSProperties = {
     fontSize: '28px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     fontFamily: fontFamilies.heading,
   };
 
   const vsStyle: CSSProperties = {
     fontSize: '20px',
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textSecondary,
   };
 
   const metaStyle: CSSProperties = {
     fontSize: '16px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const estimatedMinutes = Math.ceil(remainingSeconds / 60);

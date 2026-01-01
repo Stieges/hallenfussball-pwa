@@ -5,7 +5,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { LiveMatch } from './MatchCockpit';
@@ -37,21 +37,21 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   };
 
   const containerStyle: CSSProperties = {
-    marginTop: spacing.md,
-    padding: isMobile ? spacing.lg : spacing.md,
-    borderRadius: borderRadius.lg,
-    border: `2px solid ${colors.secondary}`,
+    marginTop: cssVars.spacing.md,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    borderRadius: cssVars.borderRadius.lg,
+    border: `2px solid ${cssVars.colors.secondary}`,
     background: 'linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 120, 200, 0.1))',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
-    fontWeight: fontWeights.bold,
-    color: colors.secondary,
-    marginBottom: spacing.md,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.secondary,
+    marginBottom: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
   };
 
@@ -59,21 +59,21 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isMobile ? spacing.lg : spacing.xl,
-    marginBottom: spacing.md,
+    gap: isMobile ? cssVars.spacing.lg : cssVars.spacing.xl,
+    marginBottom: cssVars.spacing.md,
   };
 
   const teamScoreBlockStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
     maxWidth: '120px',
   };
@@ -81,18 +81,18 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const scoreControlsStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const scoreButtonStyle: CSSProperties = {
     width: isMobile ? '48px' : '36px',
     height: isMobile ? '48px' : '36px',
     borderRadius: '50%',
-    border: `1px solid ${colors.border}`,
-    background: colors.surfaceLight,
-    color: colors.textPrimary,
-    fontSize: isMobile ? fontSizes.xl : fontSizes.lg,
-    fontWeight: fontWeights.bold,
+    border: `1px solid ${cssVars.colors.border}`,
+    background: cssVars.colors.surfaceLight,
+    color: cssVars.colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.xl : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -102,36 +102,36 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const scoreDisplayStyle: CSSProperties = {
     fontSize: isMobile ? '48px' : '36px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     minWidth: isMobile ? '60px' : '48px',
     textAlign: 'center',
   };
 
   const vsStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.semibold,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
+    fontWeight: cssVars.fontWeights.semibold,
   };
 
   const regularScoreStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   };
 
   const errorStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.error,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.error,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const buttonsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
   };
 

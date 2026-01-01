@@ -12,7 +12,7 @@
  */
 
 import { useState, useMemo, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -144,7 +144,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const overlayStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: colors.background,
+    background: cssVars.colors.background,
     display: 'flex',
     flexDirection: 'column',
     zIndex: 1000,
@@ -152,29 +152,29 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    padding: isMobile ? spacing.md : spacing.lg,
-    borderBottom: `1px solid ${colors.border}`,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const contentStyle: CSSProperties = {
     flex: 1,
-    padding: isMobile ? spacing.md : spacing.xl,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xl,
+    gap: cssVars.spacing.xl,
     maxWidth: '600px',
     margin: '0 auto',
     width: '100%',
@@ -185,13 +185,13 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     flex: 1,
     textAlign: 'center',
   };
@@ -200,44 +200,44 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
-    padding: spacing.lg,
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.lg,
+    gap: cssVars.spacing.lg,
+    padding: cssVars.spacing.lg,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.lg,
     width: '100%',
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: isMobile ? '48px' : '64px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
   };
 
   const separatorStyle: CSSProperties = {
     fontSize: isMobile ? '32px' : '40px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const roundsContainerStyle: CSSProperties = {
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const roundRowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '60px 1fr 1fr',
-    gap: spacing.md,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    background: colors.surfaceDark,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.sm,
+    borderRadius: cssVars.borderRadius.md,
+    background: cssVars.colors.surfaceDark,
   };
 
   const roundLabelStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -247,65 +247,65 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     color: scored === null
-      ? colors.textMuted
+      ? cssVars.colors.textMuted
       : scored
-        ? colors.primary
-        : colors.error,
+        ? cssVars.colors.primary
+        : cssVars.colors.error,
   });
 
   const promptStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
-    padding: spacing.md,
-    background: colors.surfaceLight,
-    borderRadius: borderRadius.md,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.md,
     width: '100%',
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     width: '100%',
   };
 
   const actionButtonStyle = (variant: 'goal' | 'miss'): CSSProperties => ({
     flex: 1,
-    padding: isMobile ? spacing.lg : spacing.md,
-    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: variant === 'goal' ? colors.onPrimary : colors.textPrimary,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: variant === 'goal' ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
     background: variant === 'goal'
-      ? `linear-gradient(135deg, ${colors.primary}, ${colors.primaryHover})`
-      : colors.surfaceLight,
-    border: variant === 'miss' ? `1px solid ${colors.border}` : 'none',
-    borderRadius: borderRadius.lg,
+      ? `linear-gradient(135deg, ${cssVars.colors.primary}, ${cssVars.colors.primaryHover})`
+      : cssVars.colors.surfaceLight,
+    border: variant === 'miss' ? `1px solid ${cssVars.colors.border}` : 'none',
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   });
 
   const footerStyle: CSSProperties = {
-    padding: isMobile ? spacing.md : spacing.lg,
-    borderTop: `1px solid ${colors.border}`,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
+    borderTop: `1px solid ${cssVars.colors.border}`,
     display: 'flex',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     justifyContent: 'center',
   };
 
   const footerButtonStyle = (variant: 'primary' | 'secondary' | 'ghost'): CSSProperties => ({
-    padding: `${spacing.sm} ${spacing.lg}`,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: variant === 'primary' ? colors.onPrimary : colors.textSecondary,
-    background: variant === 'primary' ? colors.primary : 'transparent',
-    border: variant === 'ghost' ? `1px solid ${colors.border}` : 'none',
-    borderRadius: borderRadius.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: variant === 'primary' ? cssVars.colors.onPrimary : cssVars.colors.textSecondary,
+    background: variant === 'primary' ? cssVars.colors.primary : 'transparent',
+    border: variant === 'ghost' ? `1px solid ${cssVars.colors.border}` : 'none',
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   });
@@ -369,9 +369,9 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
         <div style={roundsContainerStyle}>
           {/* Header */}
           <div style={{ ...roundRowStyle, background: 'transparent' }}>
-            <span style={{ ...roundLabelStyle, fontWeight: fontWeights.semibold }}>Runde</span>
-            <span style={{ ...roundLabelStyle, fontWeight: fontWeights.semibold }}>{homeTeamName}</span>
-            <span style={{ ...roundLabelStyle, fontWeight: fontWeights.semibold }}>{awayTeamName}</span>
+            <span style={{ ...roundLabelStyle, fontWeight: cssVars.fontWeights.semibold }}>Runde</span>
+            <span style={{ ...roundLabelStyle, fontWeight: cssVars.fontWeights.semibold }}>{homeTeamName}</span>
+            <span style={{ ...roundLabelStyle, fontWeight: cssVars.fontWeights.semibold }}>{awayTeamName}</span>
           </div>
 
           {/* Rounds 1-5 (or more for sudden death) */}
@@ -380,7 +380,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
         {/* Current Turn Prompt or Decision */}
         {isDecided ? (
-          <div style={{ ...promptStyle, background: colors.primaryLight, color: colors.primary }}>
+          <div style={{ ...promptStyle, background: cssVars.colors.primaryLight, color: cssVars.colors.primary }}>
             ✓ {homeScore > awayScore ? homeTeamName : awayTeamName} gewinnt das Elfmeterschießen!
           </div>
         ) : (

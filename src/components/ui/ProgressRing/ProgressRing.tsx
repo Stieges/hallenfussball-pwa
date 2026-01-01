@@ -11,7 +11,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,9 +24,9 @@ export interface ProgressRingProps {
   size?: number;
   /** Ring stroke width in pixels (default: 3) */
   strokeWidth?: number;
-  /** Progress ring color (default: colors.primary) */
+  /** Progress ring color (default: cssVars.colors.primary) */
   color?: string;
-  /** Background ring color (default: colors.border) */
+  /** Background ring color (default: cssVars.colors.border) */
   backgroundColor?: string;
   /** Enable pulse animation for live state (default: true) */
   animated?: boolean;
@@ -59,8 +59,8 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   progress,
   size = 60,
   strokeWidth = 3,
-  color = colors.primary,
-  backgroundColor = colors.border,
+  color = cssVars.colors.primary,
+  backgroundColor = cssVars.colors.border,
   animated = true,
   children,
   className,
@@ -180,16 +180,16 @@ export const ScoreContent: React.FC<ScoreContentProps> = ({
   isLive = false,
 }) => {
   const scoreStyle: CSSProperties = {
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 900, // Extra bold for score display
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     lineHeight: 1,
   };
 
   const timerStyle: CSSProperties = {
     fontSize: '9px',
-    fontWeight: fontWeights.semibold,
-    color: isLive ? colors.primary : colors.textSecondary,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     lineHeight: 1,
     marginTop: '2px',
     fontVariantNumeric: 'tabular-nums',
@@ -211,9 +211,9 @@ export const ScoreContent: React.FC<ScoreContentProps> = ({
 
 export const VSContent: React.FC = () => {
   const vsStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textSecondary,
     lineHeight: 1,
   };
 

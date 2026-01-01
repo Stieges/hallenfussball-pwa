@@ -10,7 +10,7 @@
  */
 
 import { useState, useCallback, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { useLongPress, type Breakpoint } from '../../../../hooks';
 import { triggerHaptic } from '../../../../utils/haptics';
 import type { TeamSide } from '../../types';
@@ -54,14 +54,14 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'row',
-    gap: isMobile ? spacing.sm : spacing.md,
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
     width: '100%',
   };
 
   const teamSectionStyle: CSSProperties = {
     flex: 1,
     display: 'flex',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     alignItems: 'stretch',
   };
 
@@ -204,18 +204,18 @@ const GoalButton: React.FC<GoalButtonProps> = ({
     flexDirection: 'row', // Horizontal: Icon + Text
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    fontSize: isMobile ? fontSizes.md : fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: disabled ? colors.textDisabled : colors.onPrimary,
+    gap: cssVars.spacing.xs,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.onPrimary,
     background: disabled
-      ? colors.surfaceDark
-      : `linear-gradient(135deg, ${colors.primary}, ${colors.primaryHover})`,
-    border: disabled ? `1px solid ${colors.border}` : 'none',
-    borderRadius: borderRadius.md,
+      ? cssVars.colors.surfaceDark
+      : `linear-gradient(135deg, ${cssVars.colors.primary}, ${cssVars.colors.primaryHover})`,
+    border: disabled ? `1px solid ${cssVars.colors.border}` : 'none',
+    borderRadius: cssVars.borderRadius.md,
     cursor: disabled ? 'not-allowed' : 'pointer',
-    boxShadow: disabled ? 'none' : `0 2px 8px ${colors.primary}40`,
-    padding: isMobile ? `${spacing.xs} ${spacing.sm}` : spacing.sm,
+    boxShadow: disabled ? 'none' : `0 2px 8px ${cssVars.colors.primary}40`,
+    padding: isMobile ? `${cssVars.spacing.xs} ${cssVars.spacing.sm}` : cssVars.spacing.sm,
   };
 
   const iconStyle: CSSProperties = {
@@ -224,8 +224,8 @@ const GoalButton: React.FC<GoalButtonProps> = ({
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
-    fontWeight: fontWeights.semibold,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
     maxWidth: isMobile ? '70px' : '120px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -233,8 +233,8 @@ const GoalButton: React.FC<GoalButtonProps> = ({
   };
 
   const goalLabelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.normal,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.normal,
     opacity: 0.8,
     display: isMobile ? 'none' : 'inline', // Versteckt auf Mobile
   };
@@ -295,11 +295,11 @@ const MinusButton: React.FC<MinusButtonProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: isMobile ? '18px' : '20px',
-    fontWeight: fontWeights.semibold,
-    color: disabled ? colors.textDisabled : colors.error,
-    background: disabled ? colors.surfaceDark : colors.errorLight,
-    border: `1px solid ${disabled ? colors.border : colors.error}40`,
-    borderRadius: borderRadius.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.error,
+    background: disabled ? cssVars.colors.surfaceDark : cssVars.colors.errorLight,
+    border: `1px solid ${disabled ? cssVars.colors.border : cssVars.colors.error}40`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
   };

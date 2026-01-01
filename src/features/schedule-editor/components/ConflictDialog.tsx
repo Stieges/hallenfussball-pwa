@@ -12,7 +12,7 @@
 import React, { useMemo } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { Match } from '../../../types/tournament';
-import { colors, spacing, borderRadius, fontSizes, fontWeights, shadows } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../../components/ui';
 import { getConflictTypeLabel, groupConflictsByType } from '../utils/scheduleConflicts';
 
@@ -49,18 +49,18 @@ const overlayStyle: React.CSSProperties = {
   left: 0,
   right: 0,
   bottom: 0,
-  backgroundColor: colors.overlayStrong,
+  backgroundColor: cssVars.colors.overlayStrong,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: spacing.lg,
+  padding: cssVars.spacing.lg,
   zIndex: 1000,
 };
 
 const dialogStyle: React.CSSProperties = {
-  backgroundColor: colors.surface,
-  borderRadius: borderRadius.lg,
-  boxShadow: shadows.lg,
+  backgroundColor: cssVars.colors.surface,
+  borderRadius: cssVars.borderRadius.lg,
+  boxShadow: cssVars.shadows.lg,
   maxWidth: '600px',
   width: '100%',
   maxHeight: '80vh',
@@ -73,119 +73,119 @@ const headerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: spacing.lg,
-  borderBottom: `1px solid ${colors.border}`,
+  padding: cssVars.spacing.lg,
+  borderBottom: `1px solid ${cssVars.colors.border}`,
 };
 
 const titleStyle: React.CSSProperties = {
-  fontSize: fontSizes.lg,
-  fontWeight: fontWeights.semibold,
-  color: colors.textPrimary,
+  fontSize: cssVars.fontSizes.lg,
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.sm,
+  gap: cssVars.spacing.sm,
 };
 
 const closeButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
-  fontSize: fontSizes.xl,
-  color: colors.textSecondary,
+  fontSize: cssVars.fontSizes.xl,
+  color: cssVars.colors.textSecondary,
   cursor: 'pointer',
-  padding: spacing.xs,
+  padding: cssVars.spacing.xs,
   lineHeight: 1,
 };
 
 const contentStyle: React.CSSProperties = {
   flex: 1,
   overflow: 'auto',
-  padding: spacing.lg,
+  padding: cssVars.spacing.lg,
 };
 
 const footerStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'flex-end',
-  gap: spacing.sm,
-  padding: spacing.lg,
-  borderTop: `1px solid ${colors.border}`,
-  backgroundColor: colors.background,
+  gap: cssVars.spacing.sm,
+  padding: cssVars.spacing.lg,
+  borderTop: `1px solid ${cssVars.colors.border}`,
+  backgroundColor: cssVars.colors.background,
 };
 
 const summaryStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.md,
-  marginBottom: spacing.lg,
-  padding: spacing.md,
-  backgroundColor: colors.background,
-  borderRadius: borderRadius.md,
+  gap: cssVars.spacing.md,
+  marginBottom: cssVars.spacing.lg,
+  padding: cssVars.spacing.md,
+  backgroundColor: cssVars.colors.background,
+  borderRadius: cssVars.borderRadius.md,
 };
 
 const summaryItemStyle = (isError: boolean): React.CSSProperties => ({
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.xs,
-  fontSize: fontSizes.sm,
-  color: isError ? colors.error : colors.warning,
-  fontWeight: fontWeights.medium,
+  gap: cssVars.spacing.xs,
+  fontSize: cssVars.fontSizes.sm,
+  color: isError ? cssVars.colors.error : cssVars.colors.warning,
+  fontWeight: cssVars.fontWeights.medium,
 });
 
 const groupStyle: React.CSSProperties = {
-  marginBottom: spacing.lg,
+  marginBottom: cssVars.spacing.lg,
 };
 
 const groupHeaderStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.sm,
-  marginBottom: spacing.sm,
-  fontSize: fontSizes.md,
-  fontWeight: fontWeights.semibold,
-  color: colors.textPrimary,
+  gap: cssVars.spacing.sm,
+  marginBottom: cssVars.spacing.sm,
+  fontSize: cssVars.fontSizes.md,
+  fontWeight: cssVars.fontWeights.semibold,
+  color: cssVars.colors.textPrimary,
 };
 
 const conflictListStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  gap: spacing.sm,
+  gap: cssVars.spacing.sm,
 };
 
 const conflictItemStyle = (severity: 'error' | 'warning'): React.CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
-  gap: spacing.xs,
-  padding: spacing.md,
+  gap: cssVars.spacing.xs,
+  padding: cssVars.spacing.md,
   backgroundColor: severity === 'error'
-    ? colors.editorErrorRowBg
-    : colors.editorDirtyRowBg,
-  border: `1px solid ${severity === 'error' ? colors.error : colors.warning}`,
-  borderRadius: borderRadius.md,
+    ? cssVars.colors.editorErrorRowBg
+    : cssVars.colors.editorDirtyRowBg,
+  border: `1px solid ${severity === 'error' ? cssVars.colors.error : cssVars.colors.warning}`,
+  borderRadius: cssVars.borderRadius.md,
 });
 
 const conflictMessageStyle: React.CSSProperties = {
-  fontSize: fontSizes.sm,
-  color: colors.textPrimary,
+  fontSize: cssVars.fontSizes.sm,
+  color: cssVars.colors.textPrimary,
 };
 
 const conflictSuggestionStyle: React.CSSProperties = {
-  fontSize: fontSizes.xs,
-  color: colors.textSecondary,
+  fontSize: cssVars.fontSizes.xs,
+  color: cssVars.colors.textSecondary,
   fontStyle: 'italic',
 };
 
 const conflictMatchesStyle: React.CSSProperties = {
   display: 'flex',
-  gap: spacing.xs,
+  gap: cssVars.spacing.xs,
   flexWrap: 'wrap',
-  marginTop: spacing.xs,
+  marginTop: cssVars.spacing.xs,
 };
 
 const matchBadgeStyle: React.CSSProperties = {
-  fontSize: fontSizes.xs,
-  color: colors.textSecondary,
-  backgroundColor: colors.surface,
-  padding: `2px ${spacing.sm}`,
-  borderRadius: borderRadius.sm,
-  border: `1px solid ${colors.border}`,
+  fontSize: cssVars.fontSizes.xs,
+  color: cssVars.colors.textSecondary,
+  backgroundColor: cssVars.colors.surface,
+  padding: `2px ${cssVars.spacing.sm}`,
+  borderRadius: cssVars.borderRadius.sm,
+  border: `1px solid ${cssVars.colors.border}`,
 };
 
 const emptyStateStyle: React.CSSProperties = {
@@ -193,9 +193,9 @@ const emptyStateStyle: React.CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: spacing.xl,
+  padding: cssVars.spacing.xl,
   textAlign: 'center',
-  color: colors.textSecondary,
+  color: cssVars.colors.textSecondary,
 };
 
 // ============================================================================
@@ -275,11 +275,11 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
         <div style={contentStyle}>
           {conflicts.length === 0 ? (
             <div style={emptyStateStyle}>
-              <span style={{ fontSize: '48px', marginBottom: spacing.md }}>✅</span>
-              <p style={{ fontSize: fontSizes.md, fontWeight: fontWeights.medium }}>
+              <span style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>✅</span>
+              <p style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.medium }}>
                 Keine Konflikte gefunden
               </p>
-              <p style={{ fontSize: fontSizes.sm }}>
+              <p style={{ fontSize: cssVars.fontSizes.sm }}>
                 Der Spielplan ist konfliktfrei.
               </p>
             </div>
@@ -308,9 +308,9 @@ export const ConflictDialog: React.FC<ConflictDialogProps> = ({
                     <span>{getConflictTypeIcon(type)}</span>
                     <span>{getConflictTypeLabel(type)}</span>
                     <span style={{
-                      fontSize: fontSizes.sm,
-                      color: colors.textSecondary,
-                      fontWeight: fontWeights.normal
+                      fontSize: cssVars.fontSizes.sm,
+                      color: cssVars.colors.textSecondary,
+                      fontWeight: cssVars.fontWeights.normal
                     }}>
                       ({typeConflicts.length})
                     </span>
@@ -392,29 +392,29 @@ export const ConflictList: React.FC<ConflictListProps> = ({
   const listStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const itemStyle = (severity: 'error' | 'warning'): React.CSSProperties => ({
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.xs,
-    fontSize: fontSizes.sm,
-    color: severity === 'error' ? colors.error : colors.warning,
-    padding: spacing.xs,
+    gap: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
+    color: severity === 'error' ? cssVars.colors.error : cssVars.colors.warning,
+    padding: cssVars.spacing.xs,
     backgroundColor: severity === 'error'
-      ? colors.editorErrorRowBgLight
-      : colors.editorDirtyRowBgLight,
-    borderRadius: borderRadius.sm,
+      ? cssVars.colors.editorErrorRowBgLight
+      : cssVars.colors.editorDirtyRowBgLight,
+    borderRadius: cssVars.borderRadius.sm,
   });
 
   const moreButtonStyle: React.CSSProperties = {
     background: 'none',
     border: 'none',
-    color: colors.primary,
-    fontSize: fontSizes.sm,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.sm,
     cursor: 'pointer',
-    padding: spacing.xs,
+    padding: cssVars.spacing.xs,
     textAlign: 'left',
   };
 

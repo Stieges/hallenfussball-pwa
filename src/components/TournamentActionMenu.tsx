@@ -18,7 +18,7 @@ import { ActionMenu, ActionMenuItem } from './ui/ActionMenu';
 import { BottomSheet, BottomSheetItem } from './ui/BottomSheet';
 import { Icons } from './ui/Icons';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { colors, spacing, borderRadius } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 
 export type TournamentAction = 'open' | 'share' | 'delete' | 'restore' | 'permanentDelete';
 
@@ -125,9 +125,9 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
       height: '44px',
       border: 'none',
       background: 'transparent',
-      borderRadius: borderRadius.md,
+      borderRadius: cssVars.borderRadius.md,
       cursor: 'pointer',
-      color: colors.textSecondary,
+      color: cssVars.colors.textSecondary,
       transition: 'all 0.2s ease',
     };
 
@@ -157,7 +157,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
           onClose={() => setIsBottomSheetOpen(false)}
           title={tournament.title}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
             {actionItems.map((item) => (
               <BottomSheetItem
                 key={item.id}

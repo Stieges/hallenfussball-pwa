@@ -14,7 +14,7 @@ import { TrashTournamentCard } from '../components/TrashTournamentCard';
 import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
 import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../design-tokens';
+import { cssVars, fontFamilies } from '../design-tokens'
 import {
   categorizeTournaments,
   CategorizedTournaments,
@@ -166,9 +166,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const titleStyle: CSSProperties = {
     fontFamily: fontFamilies.heading,
-    fontSize: isMobile ? fontSizes.xxl : fontSizes.xxxl,
+    fontSize: isMobile ? cssVars.fontSizes.xxl : cssVars.fontSizes.xxxl,
     margin: 0,
-    background: gradients.primary,
+    background: cssVars.gradients.primary,
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
   };
@@ -179,8 +179,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const sectionHeaderStyle: CSSProperties = {
     fontSize: isMobile ? '18px' : '24px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     marginBottom: isMobile ? '12px' : '20px',
     display: 'flex',
     alignItems: 'center',
@@ -197,10 +197,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     padding: '40px 20px',
     textAlign: 'center',
     background: 'rgba(0,0,0,0.02)',
-    borderRadius: borderRadius.md,
-    border: `1px dashed ${colors.border}`,
-    color: colors.textSecondary,
-    fontSize: fontSizes.md,
+    borderRadius: cssVars.borderRadius.md,
+    border: `1px dashed ${cssVars.colors.border}`,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
   };
 
   return (
@@ -211,7 +211,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: isMobile ? spacing.sm : spacing.md,
+          gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
           flexDirection: isMobile ? 'column' : 'row',
           width: isMobile ? '100%' : 'auto',
         }}>
@@ -225,7 +225,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           {/* Action Buttons */}
           <div style={{
             display: 'flex',
-            gap: isMobile ? spacing.sm : spacing.md,
+            gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
             flexDirection: isMobile ? 'column' : 'row',
             width: isMobile ? '100%' : 'auto',
           }}>
@@ -234,9 +234,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               onClick={() => setShowImportDialog(true)}
               icon={<Icons.Upload />}
               style={{
-                padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
-                fontSize: isMobile ? fontSizes.sm : fontSizes.md,
-                fontWeight: fontWeights.medium,
+                padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+                fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+                fontWeight: cssVars.fontWeights.medium,
               }}
             >
               Importieren
@@ -245,9 +245,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               variant="primary"
               onClick={onCreateNew}
               style={{
-                padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.xl}`,
-                fontSize: isMobile ? fontSizes.sm : fontSizes.md,
-                fontWeight: fontWeights.bold,
+                padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.xl}`,
+                fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+                fontWeight: cssVars.fontWeights.bold,
               }}
             >
               + Neues Turnier
@@ -285,18 +285,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               style={{
                 padding: isMobile ? '40px 16px' : '60px 20px',
                 textAlign: 'center',
-                background: colors.surface,
-                borderRadius: borderRadius.lg,
-                border: `1px solid ${colors.border}`,
+                background: cssVars.colors.surface,
+                borderRadius: cssVars.borderRadius.lg,
+                border: `1px solid ${cssVars.colors.border}`,
               }}
             >
               <div style={{ marginBottom: '16px', opacity: 0.6 }}>
-                <Icons.Trophy size={isMobile ? 40 : 48} color={colors.textSecondary} />
+                <Icons.Trophy size={isMobile ? 40 : 48} color={cssVars.colors.textSecondary} />
               </div>
-              <h2 style={{ fontSize: isMobile ? fontSizes.lg : fontSizes.xl, marginBottom: '8px' }}>
+              <h2 style={{ fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl, marginBottom: '8px' }}>
                 Noch keine Turniere
               </h2>
-              <p style={{ color: colors.textSecondary, marginBottom: '24px', fontSize: isMobile ? fontSizes.sm : fontSizes.md }}>
+              <p style={{ color: cssVars.colors.textSecondary, marginBottom: '24px', fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md }}>
                 Erstelle dein erstes Turnier mit dem Button oben
               </p>
             </div>
@@ -313,18 +313,18 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <div style={{
                     padding: isMobile ? '40px 16px' : '60px 20px',
                     textAlign: 'center',
-                    background: colors.surface,
-                    borderRadius: borderRadius.md,
-                    border: `1px solid ${colors.border}`,
+                    background: cssVars.colors.surface,
+                    borderRadius: cssVars.borderRadius.md,
+                    border: `1px solid ${cssVars.colors.border}`,
                   }}>
-                    <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
-                      <Icons.Search size={40} color={colors.textSecondary} />
+                    <div style={{ marginBottom: cssVars.spacing.sm, opacity: 0.5 }}>
+                      <Icons.Search size={40} color={cssVars.colors.textSecondary} />
                     </div>
-                    <p style={{ margin: 0, color: colors.textSecondary }}>
+                    <p style={{ margin: 0, color: cssVars.colors.textSecondary }}>
                       Keine Turniere gefunden
                     </p>
                     {searchQuery && (
-                      <p style={{ margin: `${spacing.xs} 0 0`, fontSize: fontSizes.sm, color: colors.textMuted }}>
+                      <p style={{ margin: `${cssVars.spacing.xs} 0 0`, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textMuted }}>
                         Keine Ergebnisse für "{searchQuery}"
                       </p>
                     )}
@@ -335,7 +335,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {filteredCategorized.running.length > 0 && (
                 <CollapsibleSection
                   title="Aktuell laufende Turniere"
-                  icon={<Icons.Play size={20} color={colors.statusLive} />}
+                  icon={<Icons.Play size={20} color={cssVars.colors.statusLive} />}
                   badge={filteredCategorized.running.length}
                   defaultOpen={true}
                   variant="live"
@@ -359,7 +359,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {filteredCategorized.upcoming.length > 0 && (
                 <CollapsibleSection
                   title="Bevorstehende Turniere"
-                  icon={<Icons.Calendar size={20} color={colors.statusUpcoming} />}
+                  icon={<Icons.Calendar size={20} color={cssVars.colors.statusUpcoming} />}
                   badge={filteredCategorized.upcoming.length}
                   defaultOpen={filteredCategorized.running.length === 0}
                   testId="section-upcoming"
@@ -382,7 +382,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {filteredCategorized.draft.length > 0 && (
                 <CollapsibleSection
                   title="Gespeicherte Entwürfe"
-                  icon={<Icons.Save size={20} color={colors.statusDraft} />}
+                  icon={<Icons.Save size={20} color={cssVars.colors.statusDraft} />}
                   badge={filteredCategorized.draft.length}
                   defaultOpen={false}
                   testId="section-draft"
@@ -417,21 +417,21 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.sm,
-            marginBottom: spacing.md,
+            gap: cssVars.spacing.sm,
+            marginBottom: cssVars.spacing.md,
           }}>
-            <Icons.Archive size={24} color={colors.statusFinished} />
+            <Icons.Archive size={24} color={cssVars.colors.statusFinished} />
             <h2 style={{
-              fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-              fontWeight: fontWeights.bold,
-              color: colors.textPrimary,
+              fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+              fontWeight: cssVars.fontWeights.bold,
+              color: cssVars.colors.textPrimary,
               margin: 0,
             }}>
               Archiv
             </h2>
             <span style={{
-              fontSize: fontSizes.sm,
-              color: colors.textSecondary,
+              fontSize: cssVars.fontSizes.sm,
+              color: cssVars.colors.textSecondary,
             }}>
               ({categorized.finished.length} Turniere)
             </span>
@@ -439,11 +439,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           {categorized.finished.length === 0 ? (
             <div style={emptyStateStyle}>
-              <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
-                <Icons.Archive size={40} color={colors.textSecondary} />
+              <div style={{ marginBottom: cssVars.spacing.sm, opacity: 0.5 }}>
+                <Icons.Archive size={40} color={cssVars.colors.textSecondary} />
               </div>
               <p>Keine archivierten Turniere</p>
-              <p style={{ fontSize: fontSizes.sm, marginTop: spacing.xs }}>
+              <p style={{ fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.xs }}>
                 Abgeschlossene Turniere erscheinen hier automatisch.
               </p>
             </div>
@@ -455,7 +455,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                   <CollapsibleSection
                     key={year}
                     title={`${year}`}
-                    icon={<Icons.Calendar size={18} color={colors.textSecondary} />}
+                    icon={<Icons.Calendar size={18} color={cssVars.colors.textSecondary} />}
                     badge={tournamentsForYear.length}
                     defaultOpen={index === 0} // Most recent year expanded
                     testId={`archive-year-${year}`}
@@ -483,27 +483,27 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
         <div style={sectionStyle}>
           <h2 style={sectionHeaderStyle}>
             <span style={{ display: 'flex', alignItems: 'center' }}>
-              <Icons.Trash size={22} color={colors.statusWarning} />
+              <Icons.Trash size={22} color={cssVars.colors.statusWarning} />
             </span>
             Papierkorb
-            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: colors.textSecondary }}>
+            <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: cssVars.colors.textSecondary }}>
               ({trashedTournaments.length})
             </span>
           </h2>
           <p style={{
-            color: colors.textSecondary,
-            fontSize: fontSizes.sm,
-            marginBottom: spacing.md,
+            color: cssVars.colors.textSecondary,
+            fontSize: cssVars.fontSizes.sm,
+            marginBottom: cssVars.spacing.md,
           }}>
             Turniere werden nach {TRASH_RETENTION_DAYS} Tagen automatisch gelöscht.
           </p>
           {trashedTournaments.length === 0 ? (
             <div style={emptyStateStyle}>
-              <div style={{ marginBottom: spacing.sm, opacity: 0.5 }}>
-                <Icons.Trash size={40} color={colors.textSecondary} />
+              <div style={{ marginBottom: cssVars.spacing.sm, opacity: 0.5 }}>
+                <Icons.Trash size={40} color={cssVars.colors.textSecondary} />
               </div>
-              <p style={{ margin: 0, marginBottom: spacing.xs }}>Der Papierkorb ist leer</p>
-              <p style={{ fontSize: fontSizes.sm, margin: 0, color: colors.textMuted }}>
+              <p style={{ margin: 0, marginBottom: cssVars.spacing.xs }}>Der Papierkorb ist leer</p>
+              <p style={{ fontSize: cssVars.fontSizes.sm, margin: 0, color: cssVars.colors.textMuted }}>
                 Gelöschte Turniere können hier wiederhergestellt werden.
               </p>
             </div>
@@ -536,7 +536,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               </div>
               {/* Empty Trash Button - Only show if there are multiple items */}
               {trashedTournaments.length > 1 && onPermanentDelete && (
-                <div style={{ marginTop: spacing.lg, textAlign: 'center' }}>
+                <div style={{ marginTop: cssVars.spacing.lg, textAlign: 'center' }}>
                   <Button
                     variant="secondary"
                     onClick={() => {
@@ -551,8 +551,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     }}
                     icon={<Icons.Trash size={16} />}
                     style={{
-                      color: colors.error,
-                      borderColor: colors.errorBorder,
+                      color: cssVars.colors.error,
+                      borderColor: cssVars.colors.errorBorder,
                     }}
                   >
                     Papierkorb leeren ({trashedTournaments.length})

@@ -9,7 +9,7 @@
 
 import { CSSProperties } from 'react';
 import { Icons } from '../ui/Icons';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export type FilterChip = 'running' | 'upcoming' | 'finished' | 'draft';
@@ -34,25 +34,25 @@ const FILTER_CHIPS: ChipConfig[] = [
     id: 'running',
     label: 'Läuft',
     icon: <Icons.Play size={14} />,
-    color: colors.statusLive,
+    color: cssVars.colors.statusLive,
   },
   {
     id: 'upcoming',
     label: 'Bevorstehend',
     icon: <Icons.Calendar size={14} />,
-    color: colors.statusUpcoming,
+    color: cssVars.colors.statusUpcoming,
   },
   {
     id: 'finished',
     label: 'Beendet',
     icon: <Icons.Check size={14} />,
-    color: colors.statusFinished,
+    color: cssVars.colors.statusFinished,
   },
   {
     id: 'draft',
     label: 'Entwurf',
     icon: <Icons.Save size={14} />,
-    color: colors.statusDraft,
+    color: cssVars.colors.statusDraft,
   },
 ];
 
@@ -68,9 +68,9 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     alignItems: isMobile ? 'stretch' : 'center',
-    marginBottom: spacing.lg,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const searchContainerStyle: CSSProperties = {
@@ -81,10 +81,10 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   const searchIconStyle: CSSProperties = {
     position: 'absolute',
-    left: spacing.md,
+    left: cssVars.spacing.md,
     top: '50%',
     transform: 'translateY(-50%)',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     display: 'flex',
     alignItems: 'center',
     pointerEvents: 'none',
@@ -92,13 +92,13 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   const inputStyle: CSSProperties = {
     width: '100%',
-    padding: `${spacing.sm} ${spacing.md}`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     paddingLeft: '40px', // Space for icon
-    background: colors.inputBg,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
-    fontSize: fontSizes.md,
+    background: cssVars.colors.inputBg,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
     fontFamily: fontFamilies.body,
     outline: 'none',
     transition: 'border-color 0.2s ease',
@@ -106,24 +106,24 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   const clearButtonStyle: CSSProperties = {
     position: 'absolute',
-    right: spacing.sm,
+    right: cssVars.spacing.sm,
     top: '50%',
     transform: 'translateY(-50%)',
     background: 'none',
     border: 'none',
-    padding: spacing.xs,
+    padding: cssVars.spacing.xs,
     cursor: 'pointer',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     display: searchQuery ? 'flex' : 'none',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
     transition: 'color 0.2s',
   };
 
   const chipsContainerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flexWrap: 'wrap',
     alignItems: 'center',
   };
@@ -131,16 +131,16 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   const getChipStyle = (chip: ChipConfig, isActive: boolean): CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.lg,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.lg,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
-    border: `1px solid ${isActive ? chip.color : colors.border}`,
+    border: `1px solid ${isActive ? chip.color : cssVars.colors.border}`,
     background: isActive ? `${chip.color}15` : 'transparent',
-    color: isActive ? chip.color : colors.textSecondary,
+    color: isActive ? chip.color : cssVars.colors.textSecondary,
     whiteSpace: 'nowrap',
   });
 
@@ -158,10 +158,10 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           placeholder={placeholder}
           style={inputStyle}
           onFocus={(e) => {
-            e.target.style.borderColor = colors.primary;
+            e.target.style.borderColor = cssVars.colors.primary;
           }}
           onBlur={(e) => {
-            e.target.style.borderColor = colors.border;
+            e.target.style.borderColor = cssVars.colors.border;
           }}
           data-testid="search-input"
         />
@@ -179,11 +179,11 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
       {/* Filter Chips */}
       <div style={chipsContainerStyle}>
         <span style={{
-          fontSize: fontSizes.sm,
-          color: colors.textSecondary,
+          fontSize: cssVars.fontSizes.sm,
+          color: cssVars.colors.textSecondary,
           display: isMobile ? 'none' : 'flex',
           alignItems: 'center',
-          gap: spacing.xs,
+          gap: cssVars.spacing.xs,
         }}>
           <Icons.Filter size={14} />
           Filter:

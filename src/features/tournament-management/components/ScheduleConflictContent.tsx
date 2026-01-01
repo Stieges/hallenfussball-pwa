@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, spacing, fontWeights, borderRadius } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ScheduleConflict } from '../../schedule-editor';
 
 export interface ScheduleConflictContentProps {
@@ -21,30 +21,30 @@ export const ScheduleConflictContent: React.FC<ScheduleConflictContentProps> = (
   warningConflicts,
 }) => {
   const criticalSectionStyle: CSSProperties = {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.editorErrorRowBg,
-    border: `1px solid ${colors.error}`,
-    borderRadius: borderRadius.md,
+    marginBottom: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.editorErrorRowBg,
+    border: `1px solid ${cssVars.colors.error}`,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const criticalHeaderStyle: CSSProperties = {
-    fontWeight: fontWeights.semibold,
-    color: colors.error,
-    marginBottom: spacing.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.error,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const warningSectionStyle: CSSProperties = {
-    padding: spacing.md,
-    backgroundColor: colors.editorSwapBg,
-    border: `1px solid ${colors.warning}`,
-    borderRadius: borderRadius.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.editorSwapBg,
+    border: `1px solid ${cssVars.colors.warning}`,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const warningHeaderStyle: CSSProperties = {
-    fontWeight: fontWeights.semibold,
-    color: colors.warning,
-    marginBottom: spacing.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const listStyle: CSSProperties = {
@@ -53,8 +53,8 @@ export const ScheduleConflictContent: React.FC<ScheduleConflictContentProps> = (
   };
 
   const listItemStyle: CSSProperties = {
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.xs,
   };
 
   return (

@@ -2,7 +2,7 @@
  * StandingsDisplay - Zeigt Tabellen für Gruppen oder Gesamtturnier
  */
 import { CSSProperties } from 'react'
-import { colors, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
 
@@ -28,7 +28,7 @@ export const StandingsDisplay: React.FC<StandingsDisplayProps> = ({
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-        gap: spacing.xl,
+        gap: cssVars.spacing.xl,
       }}
     >
       {Array.from(groups)
@@ -68,25 +68,25 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
   }
 
   const thStyle: CSSProperties = {
-    background: colors.primary,
-    color: colors.background,
-    padding: `${spacing.lg} ${spacing.md}`,
+    background: cssVars.colors.primary,
+    color: cssVars.colors.background,
+    padding: `${cssVars.spacing.lg} ${cssVars.spacing.md}`,
     textAlign: 'left',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     fontSize: '20px',
   }
 
   const tdStyle: CSSProperties = {
-    padding: `${spacing.lg} ${spacing.md}`,
-    borderBottom: `2px solid ${colors.border}`,
+    padding: `${cssVars.spacing.lg} ${cssVars.spacing.md}`,
+    borderBottom: `2px solid ${cssVars.colors.border}`,
     fontSize: '20px',
   }
 
   const titleStyle: CSSProperties = {
     fontSize: '32px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.lg,
     textAlign: 'center',
   }
 
@@ -110,7 +110,7 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
               <td
                 style={{
                   ...tdStyle,
-                  fontWeight: fontWeights.bold,
+                  fontWeight: cssVars.fontWeights.bold,
                   textAlign: 'center',
                 }}
               >
@@ -130,8 +130,8 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
                 style={{
                   ...tdStyle,
                   textAlign: 'center',
-                  fontWeight: fontWeights.bold,
-                  color: colors.primary,
+                  fontWeight: cssVars.fontWeights.bold,
+                  color: cssVars.colors.primary,
                 }}
               >
                 {standing.points || 0}

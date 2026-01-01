@@ -9,7 +9,7 @@ import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
 import { generateFullSchedule } from '../lib/scheduleGenerator';
-import { borderRadius, colors, fontFamilies, fontSizes, fontSizesMd3, fontWeights, gradients, shadows, spacing } from '../design-tokens';
+import { cssVars, fontFamilies, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
 
@@ -39,14 +39,14 @@ const StepLoadingFallback: React.FC = () => (
     justifyContent: 'center',
     alignItems: 'center',
     minHeight: '200px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   }}>
     <div style={{ textAlign: 'center' }}>
       <div style={{
         width: '40px',
         height: '40px',
-        border: `3px solid ${colors.border}`,
-        borderTopColor: colors.primary,
+        border: `3px solid ${cssVars.colors.border}`,
+        borderTopColor: cssVars.colors.primary,
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
         margin: '0 auto 12px',
@@ -351,21 +351,21 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacing.lg,
+        marginBottom: cssVars.spacing.lg,
       }}>
         {/* Left: Back Button */}
         <button
           onClick={handleBackToDashboard}
           style={{
-            padding: `${spacing.sm} ${spacing.md}`,
+            padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
             background: 'transparent',
             border: 'none',
-            color: colors.textSecondary,
-            fontSize: fontSizes.md,
+            color: cssVars.colors.textSecondary,
+            fontSize: cssVars.fontSizes.md,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.sm,
+            gap: cssVars.spacing.sm,
           }}
         >
           <Icons.ChevronLeft />
@@ -390,20 +390,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           marginBottom: '16px',
           background: 'rgba(76, 175, 80, 0.1)',
           border: '1px solid rgba(76, 175, 80, 0.3)',
-          borderRadius: borderRadius.md,
+          borderRadius: cssVars.borderRadius.md,
         }}>
           <div>
-            <span style={{ fontWeight: fontWeights.semibold, color: colors.textPrimary }}>
+            <span style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
               Schnellbearbeitung
             </span>
-            <span style={{ marginLeft: '8px', color: colors.textSecondary, fontSize: fontSizes.sm }}>
+            <span style={{ marginLeft: '8px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
               Änderungen vornehmen und speichern
             </span>
           </div>
           <Button
             variant="primary"
             onClick={handlePublish}
-            style={{ background: colors.success }}
+            style={{ background: cssVars.colors.success }}
           >
             Speichern & Zurück
           </Button>
@@ -413,9 +413,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       <h1
         style={{
           fontFamily: fontFamilies.heading,
-          fontSize: fontSizes.xxxl,
+          fontSize: cssVars.fontSizes.xxxl,
           marginBottom: '32px',
-          background: gradients.primary,
+          background: cssVars.gradients.primary,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}
@@ -493,20 +493,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                 padding: '16px',
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: borderRadius.md,
+                borderRadius: cssVars.borderRadius.md,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ color: colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
+                <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
                   ⚠️
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3
                     style={{
                       margin: '0 0 8px 0',
-                      fontSize: fontSizes.lg,
-                      fontWeight: fontWeights.semibold,
-                      color: colors.error,
+                      fontSize: cssVars.fontSizes.lg,
+                      fontWeight: cssVars.fontWeights.semibold,
+                      color: cssVars.colors.error,
                     }}
                   >
                     Spielplan konnte nicht erstellt werden
@@ -514,8 +514,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <p
                     style={{
                       margin: '0 0 12px 0',
-                      fontSize: fontSizes.md,
-                      color: colors.textPrimary,
+                      fontSize: cssVars.fontSizes.md,
+                      color: cssVars.colors.textPrimary,
                       lineHeight: '1.5',
                     }}
                   >
@@ -524,13 +524,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <button
                     onClick={() => setScheduleError(null)}
                     style={{
-                      padding: `${spacing.xs} ${spacing.sm}`,
+                      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
                       background: 'rgba(239, 68, 68, 0.2)',
                       border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: borderRadius.sm,
-                      color: colors.textPrimary,
-                      fontSize: fontSizes.sm,
-                      fontWeight: fontWeights.medium,
+                      borderRadius: cssVars.borderRadius.sm,
+                      color: cssVars.colors.textPrimary,
+                      fontSize: cssVars.fontSizes.sm,
+                      fontWeight: cssVars.fontWeights.medium,
                       cursor: 'pointer',
                     }}
                   >
@@ -552,20 +552,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                 padding: '16px',
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: borderRadius.md,
+                borderRadius: cssVars.borderRadius.md,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ color: colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
+                <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
                   ⚠️
                 </div>
                 <div style={{ flex: 1 }}>
                   <h3
                     style={{
                       margin: '0 0 8px 0',
-                      fontSize: fontSizes.lg,
-                      fontWeight: fontWeights.semibold,
-                      color: colors.error,
+                      fontSize: cssVars.fontSizes.lg,
+                      fontWeight: cssVars.fontWeights.semibold,
+                      color: cssVars.colors.error,
                     }}
                   >
                     Turnier konnte nicht veröffentlicht werden
@@ -573,8 +573,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <p
                     style={{
                       margin: '0 0 12px 0',
-                      fontSize: fontSizes.md,
-                      color: colors.textPrimary,
+                      fontSize: cssVars.fontSizes.md,
+                      color: cssVars.colors.textPrimary,
                       lineHeight: '1.5',
                     }}
                   >
@@ -583,13 +583,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   <button
                     onClick={() => setScheduleError(null)}
                     style={{
-                      padding: `${spacing.xs} ${spacing.sm}`,
+                      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
                       background: 'rgba(239, 68, 68, 0.2)',
                       border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: borderRadius.sm,
-                      color: colors.textPrimary,
-                      fontSize: fontSizes.sm,
-                      fontWeight: fontWeights.medium,
+                      borderRadius: cssVars.borderRadius.sm,
+                      color: cssVars.colors.textPrimary,
+                      fontSize: cssVars.fontSizes.sm,
+                      fontWeight: cssVars.fontWeights.medium,
                       cursor: 'pointer',
                     }}
                   >
@@ -632,7 +632,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               Zurück
             </Button>
 
-            <div style={{ display: 'flex', gap: spacing.md }}>
+            <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
               {/* Speichern-Button - nur ab Step 2 anzeigen wenn grundlegende Daten vorhanden */}
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
@@ -669,11 +669,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
             right: '24px',
             padding: '12px 16px',
             background: 'rgba(0, 230, 118, 0.9)',
-            borderRadius: borderRadius.sm,
-            color: colors.background,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.medium,
-            boxShadow: shadows.lg,
+            borderRadius: cssVars.borderRadius.sm,
+            color: cssVars.colors.background,
+            fontSize: cssVars.fontSizes.sm,
+            fontWeight: cssVars.fontWeights.medium,
+            boxShadow: cssVars.shadows.lg,
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',

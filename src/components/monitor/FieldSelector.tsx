@@ -9,7 +9,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 export interface FieldSelectorProps {
   /** Total number of fields */
   numberOfFields: number;
@@ -37,9 +37,9 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
 
   const containerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
-    padding: spacing.md,
+    padding: cssVars.spacing.md,
     opacity: hidden ? 0 : 1,
     transition: 'opacity 0.3s ease',
     pointerEvents: hidden ? 'none' : 'auto',
@@ -49,20 +49,20 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
     const isActive = field === selectedField;
 
     return {
-      padding: `${spacing.sm} ${spacing.lg}`,
-      border: `2px solid ${isActive ? colors.primary : colors.border}`,
-      borderRadius: borderRadius.md,
+      padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+      border: `2px solid ${isActive ? cssVars.colors.primary : cssVars.colors.border}`,
+      borderRadius: cssVars.borderRadius.md,
       backgroundColor: isActive
         ? 'rgba(0,230,118,0.2)'
         : 'rgba(255,255,255,0.05)',
-      color: isActive ? colors.primary : colors.textPrimary,
-      fontSize: fontSizes.md,
-      fontWeight: isActive ? fontWeights.bold : fontWeights.medium,
+      color: isActive ? cssVars.colors.primary : cssVars.colors.textPrimary,
+      fontSize: cssVars.fontSizes.md,
+      fontWeight: isActive ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
       cursor: 'pointer',
       transition: 'all 0.2s ease',
       display: 'flex',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: cssVars.spacing.sm,
       position: 'relative' as const,
     };
   };
@@ -71,7 +71,7 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: colors.statusLive,
+    backgroundColor: cssVars.colors.statusLive,
     animation: 'liveDot 1s ease-in-out infinite',
   };
 
@@ -85,13 +85,13 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
             onClick={() => onSelectField(field)}
             onMouseEnter={(e) => {
               if (field !== selectedField) {
-                e.currentTarget.style.borderColor = colors.primary;
+                e.currentTarget.style.borderColor = cssVars.colors.primary;
                 e.currentTarget.style.backgroundColor = 'rgba(0,230,118,0.1)';
               }
             }}
             onMouseLeave={(e) => {
               if (field !== selectedField) {
-                e.currentTarget.style.borderColor = colors.border;
+                e.currentTarget.style.borderColor = cssVars.colors.border;
                 e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
               }
             }}

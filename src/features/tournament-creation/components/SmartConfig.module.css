@@ -1,20 +1,20 @@
 /* SmartConfig Component Styles */
 
 .container {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
 }
 
 .toggleButton {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: linear-gradient(135deg, rgba(0, 176, 255, 0.15), rgba(0, 230, 118, 0.15));
-  border: 1px solid rgba(0, 176, 255, 0.3);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--gradient-subtle);
+  border: 1px solid var(--color-secondary-border-active);
   border-radius: var(--border-radius-md);
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
   font-size: var(--font-size-label-lg);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
@@ -22,12 +22,12 @@
 }
 
 .toggleButton:hover {
-  background: linear-gradient(135deg, rgba(0, 176, 255, 0.25), rgba(0, 230, 118, 0.25));
-  border-color: rgba(0, 176, 255, 0.5);
+  background: var(--gradient-subtle-hover);
+  border-color: var(--color-secondary-border-strong);
 }
 
 .toggleButton:focus {
-  outline: 2px solid var(--color-secondary, #00b0ff);
+  outline: 2px solid var(--color-secondary);
   outline-offset: 2px;
 }
 
@@ -37,93 +37,113 @@
 }
 
 .panel {
-  margin-top: 16px;
-  padding: 16px;
-  background: rgba(0, 176, 255, 0.05);
-  border: 1px solid rgba(0, 176, 255, 0.2);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-secondary-subtle);
+  border: 1px solid var(--color-secondary-border);
   border-radius: var(--border-radius-md);
 }
 
 .inputGroup {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-md);
 }
 
 .inputLabel {
   display: block;
   font-size: var(--font-size-label-lg);
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
-  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
 }
 
 .inputRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-md);
   flex-wrap: wrap;
 }
 
-.hoursInput {
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+/* Time Input Wrapper (for hours and minutes) */
+.timeInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.hoursInput,
+.minutesInput {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-primary, #fff);
-  font-size: 14px;
-  width: 80px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  width: 64px;
   text-align: center;
+  /* Hide spinner arrows */
+  -moz-appearance: textfield;
 }
 
-.hoursInput:focus {
+.hoursInput::-webkit-outer-spin-button,
+.hoursInput::-webkit-inner-spin-button,
+.minutesInput::-webkit-outer-spin-button,
+.minutesInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.hoursInput:focus,
+.minutesInput:focus {
   outline: none;
-  border-color: var(--color-primary, #00e676);
+  border-color: var(--color-primary);
 }
 
-.hoursLabel {
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 14px;
+.timeUnit {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .calculateButton {
-  padding: 8px 16px;
-  background: var(--color-secondary, #00b0ff);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-secondary);
   border: none;
   border-radius: var(--border-radius-sm);
-  color: #000;
+  color: var(--color-on-secondary);
   font-size: var(--font-size-label-lg);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   margin-left: auto;
   transition: all 0.2s;
 }
 
 .calculateButton:hover {
-  background: var(--color-secondary-hover, #0091ea);
+  background: var(--color-secondary-hover);
 }
 
 .calculateButton:focus {
-  outline: 2px solid var(--color-secondary, #00b0ff);
+  outline: 2px solid var(--color-secondary);
   outline-offset: 2px;
 }
 
 .resultCard {
-  margin-top: 16px;
-  padding: 16px;
-  background: rgba(0, 230, 118, 0.1);
-  border: 1px solid rgba(0, 230, 118, 0.3);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-border-active);
   border-radius: var(--border-radius-sm);
 }
 
 .resultTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-primary, #00e676);
-  margin-bottom: 16px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-md);
 }
 
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .statItem {
@@ -131,55 +151,55 @@
 }
 
 .statLabel {
-  font-size: 11px;
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .statValue {
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--color-text-primary, #fff);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
 }
 
 .resultFooter {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(0, 230, 118, 0.2);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-primary-border);
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .applyButton {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
   width: 100%;
-  padding: 16px;
-  background: var(--color-primary, #00e676);
+  padding: var(--spacing-md);
+  background: var(--color-primary);
   border: none;
   border-radius: var(--border-radius-md);
-  color: #000;
-  font-size: 14px;
-  font-weight: 600;
+  color: var(--color-on-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .applyButton:hover {
-  background: var(--color-primary-hover, #00c853);
+  background: var(--color-primary-hover);
 }
 
 .applyButton:focus {
-  outline: 2px solid var(--color-primary, #00e676);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .warningText {
-  margin-top: 16px;
-  font-size: 12px;
-  color: var(--color-warning, #ff9100);
+  margin-top: var(--spacing-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
   line-height: 1.4;
 }
 
@@ -188,86 +208,86 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 8px 16px;
-  margin-bottom: 16px;
-  background: rgba(0, 230, 118, 0.08);
-  border: 1px solid rgba(0, 230, 118, 0.2);
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-border);
   border-radius: var(--border-radius-sm);
   flex-wrap: wrap;
 }
 
 .quickApplyLabel {
-  font-size: 12px;
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .quickApplyButton {
-  padding: 8px 16px;
-  background: rgba(0, 230, 118, 0.2);
-  border: 1px solid rgba(0, 230, 118, 0.4);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-primary-selected);
+  border: 1px solid var(--color-primary-border-strong);
   border-radius: var(--border-radius-sm);
-  color: var(--color-primary, #00e676);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
 
 .quickApplyButton:hover {
-  background: rgba(0, 230, 118, 0.3);
-  border-color: rgba(0, 230, 118, 0.6);
+  background: var(--color-primary-border-active);
+  border-color: var(--color-primary-glow-light);
 }
 
 .quickApplyButton:focus {
-  outline: 2px solid var(--color-primary, #00e676);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 /* Constraints Section */
 .constraintsSection {
-  margin-top: 16px;
-  padding: 16px;
-  background: rgba(255, 152, 0, 0.08);
-  border: 1px solid rgba(255, 152, 0, 0.25);
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-warning-subtle);
+  border: 1px solid var(--color-warning-border);
   border-radius: var(--border-radius-sm);
 }
 
 .constraintsHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   font-size: var(--font-size-label-lg);
-  font-weight: 600;
-  color: var(--color-warning, #ff9100);
-  margin-bottom: 4px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning);
+  margin-bottom: var(--spacing-xs);
 }
 
 .constraintsHint {
-  font-size: 11px;
-  color: var(--color-text-secondary, rgba(255, 255, 255, 0.6));
-  margin: 0 0 16px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--spacing-md) 0;
 }
 
 .constraintsList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .constraintRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   cursor: pointer;
-  padding: 8px;
+  padding: var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   transition: background 0.15s;
 }
 
 .constraintRow:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-surface-highlight);
 }
 
 .constraintCheckbox {
@@ -277,9 +297,9 @@
   appearance: none;
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 152, 0, 0.5);
+  border: 2px solid var(--color-warning-border-strong);
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--color-surface-dark);
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
@@ -287,13 +307,13 @@
 }
 
 .constraintCheckbox:hover {
-  border-color: var(--color-warning, #ff9100);
-  background: rgba(255, 152, 0, 0.1);
+  border-color: var(--color-warning);
+  background: var(--color-warning-light);
 }
 
 .constraintCheckbox:checked {
-  background: var(--color-warning, #ff9100);
-  border-color: var(--color-warning, #ff9100);
+  background: var(--color-warning);
+  border-color: var(--color-warning);
 }
 
 .constraintCheckbox:checked::after {
@@ -302,28 +322,28 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #000;
-  font-size: 12px;
-  font-weight: bold;
+  color: var(--color-on-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .constraintCheckbox:focus {
-  outline: 2px solid var(--color-warning, #ff9100);
+  outline: 2px solid var(--color-warning);
   outline-offset: 2px;
 }
 
 .constraintLabel {
   font-size: var(--font-size-label-lg);
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
   flex: 1;
 }
 
 .constraintSelect {
-  padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--border-radius-sm);
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
   font-size: var(--font-size-label-lg);
   min-width: 70px;
   cursor: pointer;
@@ -336,25 +356,31 @@
 
 .constraintSelect:focus {
   outline: none;
-  border-color: var(--color-warning, #ff9100);
+  border-color: var(--color-warning);
 }
 
 .constraintSelect option {
-  background: #1a1a2e;
-  color: #fff;
+  background: var(--color-background);
+  color: var(--color-text-primary);
 }
 
 /* Responsive */
 @media (max-width: 480px) {
   .inputRow {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+
+  .timeInputWrapper {
+    flex: 0 0 auto;
   }
 
   .calculateButton {
     margin-left: 0;
-    width: 100%;
-    margin-top: 8px;
+    flex: 1 1 100%;
+    margin-top: var(--spacing-sm);
   }
 
   .statsGrid {

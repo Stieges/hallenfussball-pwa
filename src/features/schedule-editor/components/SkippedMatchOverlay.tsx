@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Match } from '../../../types/tournament';
-import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../../components/ui';
 
 interface SkippedMatchOverlayProps {
@@ -39,37 +39,37 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: compact ? spacing.xs : spacing.sm,
-    backgroundColor: colors.overlayStrong,
-    borderRadius: borderRadius.md,
-    padding: compact ? spacing.sm : spacing.md,
+    gap: compact ? cssVars.spacing.xs : cssVars.spacing.sm,
+    backgroundColor: cssVars.colors.overlayStrong,
+    borderRadius: cssVars.borderRadius.md,
+    padding: compact ? cssVars.spacing.sm : cssVars.spacing.md,
     zIndex: 10,
   };
 
   const iconStyle: React.CSSProperties = {
     fontSize: compact ? '20px' : '28px',
-    color: colors.warning,
+    color: cssVars.colors.warning,
   };
 
   const labelStyle: React.CSSProperties = {
-    fontSize: compact ? fontSizes.sm : fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.warning,
+    fontSize: compact ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   };
 
   const reasonStyle: React.CSSProperties = {
-    fontSize: compact ? fontSizes.xs : fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: compact ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
     maxWidth: '200px',
   };
 
   const timestampStyle: React.CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginTop: cssVars.spacing.xs,
   };
 
   // Format timestamp if available
@@ -106,15 +106,15 @@ export const SkippedMatchOverlay: React.FC<SkippedMatchOverlayProps> = ({
       {showRestoreButton && (
         <div
           onClick={(e) => e.stopPropagation()}
-          style={{ marginTop: compact ? spacing.xs : spacing.sm }}
+          style={{ marginTop: compact ? cssVars.spacing.xs : cssVars.spacing.sm }}
         >
           <Button
             variant="ghost"
             size={compact ? 'sm' : 'md'}
             onClick={onUnskip}
             style={{
-              color: colors.textPrimary,
-              backgroundColor: colors.border,
+              color: cssVars.colors.textPrimary,
+              backgroundColor: cssVars.colors.border,
             }}
           >
             Wiederherstellen
@@ -136,13 +136,13 @@ export const SkippedBadge: React.FC<SkippedBadgeProps> = ({ reason }) => {
   const badgeStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.editorDirtyBg,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: colors.warning,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    backgroundColor: cssVars.colors.editorDirtyBg,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.warning,
   };
 
   return (

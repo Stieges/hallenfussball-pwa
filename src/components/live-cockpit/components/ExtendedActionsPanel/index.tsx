@@ -9,7 +9,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 
 // ---------------------------------------------------------------------------
@@ -50,27 +50,27 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     justifyContent: 'center',
-    padding: spacing.xs,
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.border}`,
+    padding: cssVars.spacing.xs,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.border}`,
   };
 
   const buttonStyle = (bgColor: string, textColor: string): CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    padding: isMobile ? `${spacing.xs} ${spacing.sm}` : `${spacing.xs} ${spacing.md}`,
+    gap: cssVars.spacing.xs,
+    padding: isMobile ? `${cssVars.spacing.xs} ${cssVars.spacing.sm}` : `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
     minHeight: '44px',
-    fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: disabled ? colors.textDisabled : textColor,
-    background: disabled ? colors.surfaceDark : bgColor,
-    border: `1px solid ${disabled ? colors.border : textColor}30`,
-    borderRadius: borderRadius.sm,
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: disabled ? cssVars.colors.textDisabled : textColor,
+    background: disabled ? cssVars.colors.surfaceDark : bgColor,
+    border: `1px solid ${disabled ? cssVars.colors.border : textColor}30`,
+    borderRadius: cssVars.borderRadius.sm,
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
   });
@@ -84,7 +84,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Score Correction */}
       {onEditScore && (
         <button
-          style={buttonStyle(colors.surface, colors.textPrimary)}
+          style={buttonStyle(cssVars.colors.surface, cssVars.colors.textPrimary)}
           onClick={onEditScore}
           disabled={disabled}
           type="button"
@@ -97,7 +97,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Time Adjustment */}
       {onAdjustTime && (
         <button
-          style={buttonStyle(colors.surface, colors.textPrimary)}
+          style={buttonStyle(cssVars.colors.surface, cssVars.colors.textPrimary)}
           onClick={onAdjustTime}
           disabled={disabled}
           type="button"
@@ -110,7 +110,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Yellow Card */}
       {onYellowCard && (
         <button
-          style={buttonStyle(colors.warningLight, colors.warning)}
+          style={buttonStyle(cssVars.colors.warningLight, cssVars.colors.warning)}
           onClick={onYellowCard}
           disabled={disabled}
           type="button"
@@ -123,7 +123,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Red Card */}
       {onRedCard && (
         <button
-          style={buttonStyle(colors.errorLight, colors.error)}
+          style={buttonStyle(cssVars.colors.errorLight, cssVars.colors.error)}
           onClick={onRedCard}
           disabled={disabled}
           type="button"
@@ -136,7 +136,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Time Penalty */}
       {onTimePenalty && (
         <button
-          style={buttonStyle(colors.surface, colors.warning)}
+          style={buttonStyle(cssVars.colors.surface, cssVars.colors.warning)}
           onClick={onTimePenalty}
           disabled={disabled}
           type="button"
@@ -149,7 +149,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
       {/* Substitution */}
       {onSubstitution && (
         <button
-          style={buttonStyle(colors.surface, colors.info)}
+          style={buttonStyle(cssVars.colors.surface, cssVars.colors.info)}
           onClick={onSubstitution}
           disabled={disabled}
           type="button"

@@ -8,7 +8,7 @@
 import { type CSSProperties } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { colors, fontSizes, fontWeights, borderRadius, spacing, spacingSemantics } from '../../design-tokens';
+import { cssVars, spacingSemantics } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
@@ -114,7 +114,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   // ---------------------------------------------------------------------------
 
   const wrapperStyle: CSSProperties = {
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
     transform: CSS.Transform.toString(transform),
     transition,
     ...(isDragging ? { opacity: 0.5, zIndex: 0 } : {}),
@@ -122,14 +122,14 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   };
 
   const mobileSelectStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.semibold,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.semibold,
     cursor: 'pointer',
-    backgroundColor: colors.background,
-    color: colors.textPrimary,
+    backgroundColor: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
     minHeight: spacingSemantics.touchTarget, // 44px accessible touch target
   };
 
@@ -189,22 +189,22 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
         <div
           style={{
             display: 'flex',
-            gap: spacing.sm,
-            marginTop: spacing.xs,
-            padding: `${spacing.xs} ${spacing.sm}`,
-            backgroundColor: colors.surfaceLight,
-            borderRadius: borderRadius.sm,
+            gap: cssVars.spacing.sm,
+            marginTop: cssVars.spacing.xs,
+            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+            backgroundColor: cssVars.colors.surfaceLight,
+            borderRadius: cssVars.borderRadius.sm,
           }}
         >
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>Feld</label>
+            <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>Feld</label>
             <select
               value={displayedField || 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
               style={{
                 ...mobileSelectStyle,
                 width: '100%',
-                border: `1px solid ${hasPendingField ? colors.primary : colors.border}`,
+                border: `1px solid ${hasPendingField ? cssVars.colors.primary : cssVars.colors.border}`,
               }}
             >
               {fieldOptions.map((opt) => (

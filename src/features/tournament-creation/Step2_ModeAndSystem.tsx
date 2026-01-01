@@ -1,6 +1,6 @@
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
@@ -109,8 +109,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   return (
     <Card>
       <h2 style={{
-        color: colors.textPrimary,
-        fontSize: fontSizes.xl,
+        color: cssVars.colors.textPrimary,
+        fontSize: cssVars.fontSizes.xl,
         margin: '0 0 24px 0'
       }}>
         Modus & Spielsystem
@@ -119,26 +119,26 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
       {/* TOUR-EDIT-STRUCTURE: Warning banner when structure is locked */}
       {structureFieldsLocked && (
         <div style={{
-          background: colors.correctionBg,
-          border: `2px solid ${colors.correctionBorder}`,
-          borderRadius: borderRadius.md,
-          padding: spacing.md,
-          marginBottom: spacing.lg,
+          background: cssVars.colors.correctionBg,
+          border: `2px solid ${cssVars.colors.correctionBorder}`,
+          borderRadius: cssVars.borderRadius.md,
+          padding: cssVars.spacing.md,
+          marginBottom: cssVars.spacing.lg,
         }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: spacing.sm }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.sm }}>
             <span style={{ fontSize: '20px' }}>🔒</span>
             <div style={{ flex: 1 }}>
               <div style={{
-                color: colors.correctionText,
-                fontWeight: fontWeights.semibold,
+                color: cssVars.colors.correctionText,
+                fontWeight: cssVars.fontWeights.semibold,
                 marginBottom: '4px'
               }}>
                 Strukturänderungen gesperrt
               </div>
               <div style={{
-                color: colors.textSecondary,
-                fontSize: fontSizes.sm,
-                marginBottom: spacing.md
+                color: cssVars.colors.textSecondary,
+                fontSize: cssVars.fontSizes.sm,
+                marginBottom: cssVars.spacing.md
               }}>
                 Das Turnier hat bereits Ergebnisse. Anzahl Teams, Felder und Gruppen können nicht mehr geändert werden.
               </div>
@@ -148,15 +148,15 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                   style={{
                     background: 'rgba(244, 67, 54, 0.15)',
                     border: '1px solid rgba(244, 67, 54, 0.4)',
-                    borderRadius: borderRadius.sm,
-                    padding: `${spacing.sm} ${spacing.md}`,
-                    color: colors.error,
-                    fontSize: fontSizes.sm,
-                    fontWeight: fontWeights.medium,
+                    borderRadius: cssVars.borderRadius.sm,
+                    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+                    color: cssVars.colors.error,
+                    fontSize: cssVars.fontSizes.sm,
+                    fontWeight: cssVars.fontWeights.medium,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: spacing.xs,
+                    gap: cssVars.spacing.xs,
                   }}
                 >
                   <span>🔄</span> Turnier zurücksetzen
@@ -239,16 +239,16 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SMART CONFIG - Prominent Section
               ============================================ */}
           <div style={{
-            marginTop: spacing.lg,
-            padding: spacing.md,
-            background: `linear-gradient(135deg, ${colors.secondarySubtle}, ${colors.primarySubtle})`,
-            border: `2px solid ${colors.secondaryBorderActive}`,
-            borderRadius: borderRadius.lg,
+            marginTop: cssVars.spacing.lg,
+            padding: cssVars.spacing.md,
+            background: `linear-gradient(135deg, ${cssVars.colors.secondarySubtle}, ${cssVars.colors.primarySubtle})`,
+            border: `2px solid ${cssVars.colors.secondaryBorderActive}`,
+            borderRadius: cssVars.borderRadius.lg,
           }}>
             <p style={{
-              color: colors.textSecondary,
-              fontSize: fontSizes.xs,
-              margin: `0 0 ${spacing.sm} 0`,
+              color: cssVars.colors.textSecondary,
+              fontSize: cssVars.fontSizes.xs,
+              margin: `0 0 ${cssVars.spacing.sm} 0`,
               textAlign: 'center',
             }}>
               💡 Tipp: Lass dir die optimale Konfiguration berechnen
@@ -270,19 +270,19 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: spacing.md,
-            marginTop: spacing.xl,
-            marginBottom: spacing.sm,
+            gap: cssVars.spacing.md,
+            marginTop: cssVars.spacing.xl,
+            marginBottom: cssVars.spacing.sm,
           }}>
             <div style={{
               flex: 1,
               height: '1px',
-              background: `linear-gradient(to right, transparent, ${colors.border}, ${colors.border})`,
+              background: `linear-gradient(to right, transparent, ${cssVars.colors.border}, ${cssVars.colors.border})`,
             }} />
             <span style={{
-              color: colors.textSecondary,
-              fontSize: fontSizes.xs,
-              fontWeight: fontWeights.medium,
+              color: cssVars.colors.textSecondary,
+              fontSize: cssVars.fontSizes.xs,
+              fontWeight: cssVars.fontWeights.medium,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
               whiteSpace: 'nowrap',
@@ -292,7 +292,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             <div style={{
               flex: 1,
               height: '1px',
-              background: `linear-gradient(to left, transparent, ${colors.border}, ${colors.border})`,
+              background: `linear-gradient(to left, transparent, ${cssVars.colors.border}, ${cssVars.colors.border})`,
             }} />
           </div>
 
@@ -399,20 +399,20 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           padding: '32px',
           textAlign: 'center',
           background: 'rgba(0,176,255,0.08)',
-          borderRadius: borderRadius.md,
+          borderRadius: cssVars.borderRadius.md,
           border: '1px solid rgba(0,176,255,0.2)',
           marginTop: '16px',
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
           <h3 style={{
-            color: colors.textPrimary,
+            color: cssVars.colors.textPrimary,
             fontSize: '18px',
             margin: '0 0 8px 0'
           }}>
             Mini-Fußball / Funino
           </h3>
           <p style={{
-            color: colors.textSecondary,
+            color: cssVars.colors.textSecondary,
             fontSize: '14px',
             margin: '0 0 16px 0',
             lineHeight: '1.5'
@@ -427,8 +427,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             border: '1px solid rgba(0,176,255,0.4)',
             borderRadius: '16px',
             fontSize: '12px',
-            fontWeight: fontWeights.semibold,
-            color: colors.secondary,
+            fontWeight: cssVars.fontWeights.semibold,
+            color: cssVars.colors.secondary,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
           }}>

@@ -1,6 +1,6 @@
 import { Card, Select, Input } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
-import { colors, fontSizes } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
@@ -13,7 +13,7 @@ interface Step3Props {
 export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => {
   return (
     <Card>
-      <h2 style={{ color: colors.textPrimary, fontSize: fontSizes.xl, margin: '0 0 24px 0' }}>
+      <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
         Stammdaten
       </h2>
 

@@ -17,7 +17,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { colors, spacing, fontSizes } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { useAuth } from '../hooks/useAuth';
 
 interface AuthGuardProps {
@@ -115,32 +115,32 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '200px',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   spinner: {
     width: '32px',
     height: '32px',
-    border: `3px solid ${colors.border}`,
-    borderTopColor: colors.primary,
+    border: `3px solid ${cssVars.colors.border}`,
+    borderTopColor: cssVars.colors.primary,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },
   loadingText: {
     margin: 0,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   },
   unauthenticated: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '200px',
-    padding: spacing.xl,
+    padding: cssVars.spacing.xl,
   },
   unauthText: {
     margin: 0,
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     textAlign: 'center',
   },
   forbidden: {
@@ -149,23 +149,23 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '300px',
-    padding: spacing.xl,
+    padding: cssVars.spacing.xl,
     textAlign: 'center',
   },
   forbiddenIcon: {
     fontSize: '48px',
-    marginBottom: spacing.md,
+    marginBottom: cssVars.spacing.md,
   },
   forbiddenTitle: {
     margin: 0,
-    marginBottom: spacing.sm,
-    fontSize: fontSizes.xl,
-    color: colors.textPrimary,
+    marginBottom: cssVars.spacing.sm,
+    fontSize: cssVars.fontSizes.xl,
+    color: cssVars.colors.textPrimary,
   },
   forbiddenText: {
     margin: 0,
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     maxWidth: '400px',
   },
 };

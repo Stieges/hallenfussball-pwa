@@ -18,13 +18,7 @@
  */
 
 import { type CSSProperties, useCallback } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,7 +55,7 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
   value,
   onChange,
   teamName,
-  avatarColor = colors.primary,
+  avatarColor = cssVars.colors.primary,
   min = 0,
   max = 99,
   disabled = false,
@@ -88,14 +82,14 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
   };
 
   const teamInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flex: 1,
     minWidth: 0, // Allow text truncation
   };
@@ -109,15 +103,15 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: Math.round(avatarSize * 0.4),
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
     flexShrink: 0,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -127,7 +121,7 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
   const controlsStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const buttonStyle = (isDisabled: boolean): CSSProperties => ({
@@ -137,11 +131,11 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '20px',
-    fontWeight: fontWeights.semibold,
-    color: isDisabled ? colors.textDisabled : colors.textPrimary,
-    backgroundColor: isDisabled ? colors.surfaceDark : colors.surfaceElevated,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: isDisabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
+    backgroundColor: isDisabled ? cssVars.colors.surfaceDark : cssVars.colors.surfaceElevated,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     opacity: isDisabled ? 0.5 : 1,
     transition: 'background-color 0.15s ease, transform 0.1s ease',
@@ -158,7 +152,7 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     textAlign: 'center',
     fontSize: '28px',
     fontWeight: 900,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
   };
 

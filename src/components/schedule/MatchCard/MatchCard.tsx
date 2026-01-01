@@ -17,13 +17,7 @@
  */
 
 import { type CSSProperties, useState, useCallback } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime, getTeamInitials } from './utils';
 
@@ -131,18 +125,18 @@ export const MatchCard: React.FC<MatchCardProps> = ({
 
   const cardStyle: CSSProperties = {
     backgroundColor: isLive
-      ? `linear-gradient(135deg, ${colors.primaryMedium}, ${colors.surface})`
-      : colors.surface,
+      ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
+      : cssVars.colors.surface,
     background: isLive
-      ? `linear-gradient(135deg, ${colors.primaryMedium}, ${colors.surface})`
-      : colors.surface,
-    border: `1px solid ${isLive ? colors.borderActive : colors.border}`,
-    borderRadius: borderRadius.lg,
+      ? `linear-gradient(135deg, ${cssVars.colors.primaryMedium}, ${cssVars.colors.surface})`
+      : cssVars.colors.surface,
+    border: `1px solid ${isLive ? cssVars.colors.borderActive : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
     overflow: 'hidden',
     cursor: disabled ? 'default' : 'pointer',
     transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
     boxShadow: isHovered && !disabled
-      ? `0 4px 12px ${colors.shadowMedium}`
+      ? `0 4px 12px ${cssVars.colors.shadowMedium}`
       : 'none',
   };
 
@@ -150,64 +144,64 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: `${spacing.xs} ${spacing.md}`,
-    borderBottom: `1px solid ${colors.border}`,
-    backgroundColor: colors.surfaceDark,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    backgroundColor: cssVars.colors.surfaceDark,
   };
 
   const timeStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: isLive ? colors.primary : colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: isLive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
   };
 
   const metaStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    gap: cssVars.spacing.sm,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
   };
 
   const bodyStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.md,
+    padding: cssVars.spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const teamsContainerStyle: CSSProperties = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const teamRowStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const avatarStyle: CSSProperties = {
     width: 40,
     height: 40,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primary,
+    borderRadius: cssVars.borderRadius.sm,
+    backgroundColor: cssVars.colors.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
     flexShrink: 0,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 800,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
@@ -216,27 +210,27 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const liveBadgeStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.primaryLight,
-    color: colors.primary,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.bold,
-    padding: `3px ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    gap: cssVars.spacing.xs,
+    backgroundColor: cssVars.colors.primaryLight,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
+    padding: `3px ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const liveDotStyle: CSSProperties = {
     width: 6,
     height: 6,
     borderRadius: '50%',
-    backgroundColor: colors.primary,
+    backgroundColor: cssVars.colors.primary,
     animation: 'pulse 2s ease-in-out infinite',
   };
 
   const expandStyle: CSSProperties = {
-    borderTop: `1px solid ${colors.border}`,
-    backgroundColor: colors.surfaceVariant,
-    padding: spacing.md,
+    borderTop: `1px solid ${cssVars.colors.border}`,
+    backgroundColor: cssVars.colors.surfaceVariant,
+    padding: cssVars.spacing.md,
   };
 
   // ---------------------------------------------------------------------------

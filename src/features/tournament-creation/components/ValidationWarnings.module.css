@@ -1,43 +1,43 @@
 /* ValidationWarnings Component Styles */
 
 .container {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .warningItem {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-label-lg);
   line-height: 1.4;
 }
 
 .warningItem.error {
-  background: rgba(255, 61, 87, 0.1);
-  border: 1px solid rgba(255, 61, 87, 0.3);
-  color: var(--color-error, #ff3d57);
+  background: var(--color-error-light);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
 }
 
 .warningItem.warning {
-  background: rgba(255, 145, 0, 0.1);
-  border: 1px solid rgba(255, 145, 0, 0.3);
-  color: var(--color-warning, #ff9100);
+  background: var(--color-warning-light);
+  border: 1px solid var(--color-warning-border-active);
+  color: var(--color-warning);
 }
 
 .warningItem.info {
-  background: rgba(0, 176, 255, 0.1);
-  border: 1px solid rgba(0, 176, 255, 0.3);
-  color: var(--color-secondary, #00b0ff);
+  background: var(--color-secondary-light);
+  border: 1px solid var(--color-secondary-border-active);
+  color: var(--color-secondary);
 }
 
 .icon {
   flex-shrink: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .message {

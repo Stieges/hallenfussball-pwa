@@ -1,6 +1,6 @@
 import { CSSProperties, useMemo } from 'react';
 import { Input } from '../../../components/ui';
-import { borderRadius, colors, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament, PointSystem } from '../../../types/tournament';
 
 interface PointSystemPickerProps {
@@ -58,8 +58,8 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   const presetButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '12px',
     background: isActive ? 'rgba(0,176,255,0.2)' : 'rgba(0,0,0,0.2)',
-    border: isActive ? `2px solid ${colors.secondary}` : '2px solid transparent',
-    borderRadius: borderRadius.sm,
+    border: isActive ? `2px solid ${cssVars.colors.secondary}` : '2px solid transparent',
+    borderRadius: cssVars.borderRadius.sm,
     textAlign: 'center',
     cursor: 'pointer',
     transition: 'all 0.2s',
@@ -68,20 +68,20 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   const containerStyle: CSSProperties = {
     marginTop: '32px',
     paddingTop: '24px',
-    borderTop: `1px solid ${colors.border}`,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   const customContainerStyle: CSSProperties = {
     marginTop: '16px',
     padding: '16px',
     background: 'rgba(0,176,255,0.08)',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     border: '1px solid rgba(0,176,255,0.2)',
   };
 
   return (
     <div style={containerStyle}>
-      <h3 style={{ color: colors.secondary, fontSize: '14px', margin: '0 0 16px 0' }}>
+      <h3 style={{ color: cssVars.colors.secondary, fontSize: '14px', margin: '0 0 16px 0' }}>
         Punktesystem
       </h3>
       <div className="point-system-presets" style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
@@ -97,10 +97,10 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               onClick={() => handlePresetClick(preset)}
               style={presetButtonStyle(isActive)}
             >
-              <div style={{ fontSize: '16px', fontWeight: '700', color: colors.textPrimary }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: cssVars.colors.textPrimary }}>
                 {preset.label}
               </div>
-              <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '2px' }}>
+              <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '2px' }}>
                 {preset.sublabel}
               </div>
             </button>
@@ -116,10 +116,10 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
           }}
           style={presetButtonStyle(isCustom)}
         >
-          <div style={{ fontSize: '16px', fontWeight: '700', color: colors.textPrimary }}>
+          <div style={{ fontSize: '16px', fontWeight: '700', color: cssVars.colors.textPrimary }}>
             ⚙️
           </div>
-          <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '2px' }}>
             Individuell
           </div>
         </button>
@@ -133,9 +133,9 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <label style={{
                 display: 'block',
                 marginBottom: '8px',
-                fontSize: fontSizes.sm,
-                color: colors.textSecondary,
-                fontWeight: fontWeights.medium
+                fontSize: cssVars.fontSizes.sm,
+                color: cssVars.colors.textSecondary,
+                fontWeight: cssVars.fontWeights.medium
               }}>
                 Sieg
               </label>
@@ -150,9 +150,9 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <label style={{
                 display: 'block',
                 marginBottom: '8px',
-                fontSize: fontSizes.sm,
-                color: colors.textSecondary,
-                fontWeight: fontWeights.medium
+                fontSize: cssVars.fontSizes.sm,
+                color: cssVars.colors.textSecondary,
+                fontWeight: cssVars.fontWeights.medium
               }}>
                 Unentschieden
               </label>
@@ -167,9 +167,9 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               <label style={{
                 display: 'block',
                 marginBottom: '8px',
-                fontSize: fontSizes.sm,
-                color: colors.textSecondary,
-                fontWeight: fontWeights.medium
+                fontSize: cssVars.fontSizes.sm,
+                color: cssVars.colors.textSecondary,
+                fontWeight: cssVars.fontWeights.medium
               }}>
                 Niederlage
               </label>
@@ -181,7 +181,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               />
             </div>
           </div>
-          <p style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
+          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
             Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)
           </p>
         </div>

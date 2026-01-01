@@ -1,5 +1,5 @@
 import { CSSProperties, useState } from 'react';
-import { borderRadius, colors, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../../config/sports';
@@ -74,12 +74,12 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
       gap: '12px',
       padding: '14px 16px',
       background: isSelected
-        ? isRecommended ? colors.accentLight : colors.warningLight
-        : isRecommended ? colors.surfaceDarkMedium : colors.surfaceDarkLight,
+        ? isRecommended ? cssVars.colors.accentLight : cssVars.colors.warningLight
+        : isRecommended ? cssVars.colors.surfaceDarkMedium : cssVars.colors.surfaceDarkLight,
       border: isSelected
-        ? `2px solid ${isRecommended ? colors.accent : colors.warning}`
-        : isRecommended ? `2px solid ${colors.accentBorder}` : `2px solid ${colors.border}`,
-      borderRadius: borderRadius.md,
+        ? `2px solid ${isRecommended ? cssVars.colors.accent : cssVars.colors.warning}`
+        : isRecommended ? `2px solid ${cssVars.colors.accentBorder}` : `2px solid ${cssVars.colors.border}`,
+      borderRadius: cssVars.borderRadius.md,
       cursor: 'pointer',
       transition: 'all 0.2s',
     };
@@ -96,14 +96,14 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             width: '18px',
             height: '18px',
             cursor: 'pointer',
-            accentColor: isRecommended ? colors.accent : colors.warning
+            accentColor: isRecommended ? cssVars.colors.accent : cssVars.colors.warning
           }}
         />
         <div style={{ flex: 1 }}>
           <div style={{
-            color: colors.textPrimary,
+            color: cssVars.colors.textPrimary,
             fontSize: '14px',
-            fontWeight: fontWeights.medium,
+            fontWeight: cssVars.fontWeights.medium,
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -111,12 +111,12 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             {isRecommended && <span>⭐</span>}
             {option.label}
           </div>
-          <div style={{ color: colors.textSecondary, fontSize: '12px', marginTop: '2px' }}>
+          <div style={{ color: cssVars.colors.textSecondary, fontSize: '12px', marginTop: '2px' }}>
             {option.description}
           </div>
           {option.explanation && (
             <div style={{
-              color: isRecommended ? colors.textSecondary : colors.warning,
+              color: isRecommended ? cssVars.colors.textSecondary : cssVars.colors.warning,
               fontSize: '11px',
               marginTop: '4px',
               fontStyle: 'italic'
@@ -130,11 +130,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   };
 
   return (
-    <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${colors.border}` }}>
-      <h3 style={{ color: colors.accent, fontSize: '14px', margin: '0 0 8px 0' }}>
+    <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${cssVars.colors.border}` }}>
+      <h3 style={{ color: cssVars.colors.accent, fontSize: '14px', margin: '0 0 8px 0' }}>
         Finalrunde
       </h3>
-      <p style={{ fontSize: '12px', color: colors.textSecondary, margin: '0 0 16px 0' }}>
+      <p style={{ fontSize: '12px', color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
         ⭐ = Empfohlen für {numberOfGroups} Gruppe{numberOfGroups > 1 ? 'n' : ''}
       </p>
 
@@ -151,10 +151,10 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             style={{
               width: '100%',
               padding: '10px 12px',
-              background: colors.surfaceDarkMedium,
-              border: `1px solid ${colors.border}`,
-              borderRadius: borderRadius.sm,
-              color: colors.textSecondary,
+              background: cssVars.colors.surfaceDarkMedium,
+              border: `1px solid ${cssVars.colors.border}`,
+              borderRadius: cssVars.borderRadius.sm,
+              color: cssVars.colors.textSecondary,
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -179,11 +179,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '16px',
           padding: '12px 16px',
-          background: colors.warningLight,
-          borderRadius: borderRadius.md,
-          border: `1px solid ${colors.warningBorder}`
+          background: cssVars.colors.warningLight,
+          borderRadius: cssVars.borderRadius.md,
+          border: `1px solid ${cssVars.colors.warningBorder}`
         }}>
-          <p style={{ fontSize: '12px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
+          <p style={{ fontSize: '12px', color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
             <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
             Mit {numberOfGroups} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
           </p>
@@ -194,11 +194,11 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '16px',
           padding: '12px 16px',
-          background: colors.secondaryLight,
-          borderRadius: borderRadius.md,
-          border: `1px solid ${colors.secondaryBorderActive}`
+          background: cssVars.colors.secondaryLight,
+          borderRadius: cssVars.borderRadius.md,
+          border: `1px solid ${cssVars.colors.secondaryBorderActive}`
         }}>
-          <p style={{ fontSize: '12px', color: colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
+          <p style={{ fontSize: '12px', color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
             <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
             {numberOfGroups === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
             {numberOfGroups >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
@@ -211,15 +211,15 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '20px',
           padding: '16px',
-          background: colors.accentMedium,
-          borderRadius: borderRadius.md,
-          border: `1px solid ${colors.accentLight}`
+          background: cssVars.colors.accentMedium,
+          borderRadius: cssVars.borderRadius.md,
+          border: `1px solid ${cssVars.colors.accentLight}`
         }}>
           <h4 style={{
-            color: colors.accent,
+            color: cssVars.colors.accent,
             fontSize: '13px',
             margin: '0 0 12px 0',
-            fontWeight: fontWeights.semibold
+            fontWeight: cssVars.fontWeights.semibold
           }}>
             Parallelisierung
           </h4>
@@ -230,9 +230,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelSemifinals ?? true}
                 onChange={(e) => handleParallelChange('parallelSemifinals', e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.accent }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
-              <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                 Halbfinale gleichzeitig austragen
               </span>
             </label>
@@ -244,9 +244,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelQuarterfinals ?? true}
                 onChange={(e) => handleParallelChange('parallelQuarterfinals', e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.accent }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
-              <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                 Viertelfinale gleichzeitig austragen
               </span>
             </label>
@@ -258,15 +258,15 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 type="checkbox"
                 checked={formData.finalsConfig?.parallelRoundOf16 ?? true}
                 onChange={(e) => handleParallelChange('parallelRoundOf16', e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.accent }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
-              <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                 Achtelfinale gleichzeitig austragen
               </span>
             </label>
           )}
 
-          <p style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
+          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
             Bei mehreren Feldern können Spiele gleichzeitig stattfinden
           </p>
         </div>
@@ -277,15 +277,15 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
         <div style={{
           marginTop: '20px',
           padding: '16px',
-          background: colors.secondaryMedium,
-          borderRadius: borderRadius.md,
-          border: `1px solid ${colors.infoBorder}`
+          background: cssVars.colors.secondaryMedium,
+          borderRadius: cssVars.borderRadius.md,
+          border: `1px solid ${cssVars.colors.infoBorder}`
         }}>
           <h4 style={{
-            color: colors.secondary,
+            color: cssVars.colors.secondary,
             fontSize: '13px',
             margin: '0 0 12px 0',
-            fontWeight: fontWeights.semibold
+            fontWeight: cssVars.fontWeights.semibold
           }}>
             ⚖️ Bei Unentschieden
           </h4>
@@ -297,13 +297,13 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 name="tiebreaker"
                 checked={currentTiebreaker === 'shootout'}
                 onChange={() => handleTiebreakerChange('shootout')}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.secondary }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
               />
               <div>
-                <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+                <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                   Direkt Strafstoßschießen
                 </span>
-                <span style={{ color: colors.textSecondary, fontSize: '11px', marginLeft: '8px' }}>
+                <span style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginLeft: '8px' }}>
                   (privates Turnier)
                 </span>
               </div>
@@ -315,13 +315,13 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 name="tiebreaker"
                 checked={currentTiebreaker === 'overtime-then-shootout'}
                 onChange={() => handleTiebreakerChange('overtime-then-shootout')}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.secondary }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
               />
               <div>
-                <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+                <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                   Verlängerung, dann Strafstoßschießen
                 </span>
-                <span style={{ color: colors.textSecondary, fontSize: '11px', marginLeft: '8px' }}>
+                <span style={{ color: cssVars.colors.textSecondary, fontSize: '11px', marginLeft: '8px' }}>
                   (offiziell)
                 </span>
               </div>
@@ -333,9 +333,9 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 name="tiebreaker"
                 checked={currentTiebreaker === 'goldenGoal'}
                 onChange={() => handleTiebreakerChange('goldenGoal')}
-                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: colors.secondary }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
               />
-              <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+              <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
                 Golden Goal
               </span>
             </label>
@@ -344,7 +344,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           {/* Duration input for overtime/golden goal */}
           {(currentTiebreaker === 'overtime-then-shootout' || currentTiebreaker === 'goldenGoal') && (
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ color: colors.textSecondary, fontSize: '13px' }}>
+              <span style={{ color: cssVars.colors.textSecondary, fontSize: '13px' }}>
                 {currentTiebreaker === 'goldenGoal' ? 'Golden Goal-Zeit:' : 'Verlängerung:'}
               </span>
               <input
@@ -356,15 +356,15 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{
                   width: '60px',
                   padding: '6px 10px',
-                  background: colors.inputBg,
-                  border: `1px solid ${colors.border}`,
-                  borderRadius: borderRadius.sm,
-                  color: colors.textPrimary,
+                  background: cssVars.colors.inputBg,
+                  border: `1px solid ${cssVars.colors.border}`,
+                  borderRadius: cssVars.borderRadius.sm,
+                  color: cssVars.colors.textPrimary,
                   fontSize: '14px',
                   textAlign: 'center',
                 }}
               />
-              <span style={{ color: colors.textSecondary, fontSize: '13px' }}>Minuten</span>
+              <span style={{ color: cssVars.colors.textSecondary, fontSize: '13px' }}>Minuten</span>
             </div>
           )}
         </div>

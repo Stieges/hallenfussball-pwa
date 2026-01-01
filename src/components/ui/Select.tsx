@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies } from '../../design-tokens'
 interface SelectOption {
   value: string | number;
   label: string;
@@ -27,24 +27,24 @@ export const Select: React.FC<SelectProps> = ({
   const containerStyles: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
     ...style,
   };
 
   const labelStyles: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textSecondary,
   };
 
   const selectStyles: CSSProperties = {
-    padding: `${spacing.md} ${spacing.lg}`,
-    background: colors.inputBg,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
-    fontSize: fontSizes.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    background: cssVars.colors.inputBg,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
     fontFamily: fontFamilies.body,
     outline: 'none',
     cursor: 'pointer',
@@ -57,7 +57,7 @@ export const Select: React.FC<SelectProps> = ({
       {label && (
         <label style={labelStyles}>
           {label}
-          {required && <span style={{ color: colors.error }}> *</span>}
+          {required && <span style={{ color: cssVars.colors.error }}> *</span>}
         </label>
       )}
       <select
@@ -67,10 +67,10 @@ export const Select: React.FC<SelectProps> = ({
         required={required}
         style={selectStyles}
         onFocus={(e) => {
-          e.target.style.borderColor = colors.primary;
+          e.target.style.borderColor = cssVars.colors.primary;
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = colors.border;
+          e.target.style.borderColor = cssVars.colors.border;
         }}
       >
         {options.map((option) => (

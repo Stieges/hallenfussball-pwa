@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, letterSpacing } from '../../design-tokens';
+import { cssVars, fontSizesMd3, letterSpacing } from '../../design-tokens'
 interface LiveBadgeProps {
   /** Optional compact mode for smaller displays */
   compact?: boolean;
@@ -23,12 +23,12 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
     alignItems: 'center',
     gap: compact ? '3px' : '5px',
     padding: compact ? '2px 6px' : '3px 8px',
-    background: colors.statusLiveBg,
-    border: `1px solid ${colors.statusLive}`,
-    borderRadius: borderRadius.sm,
-    fontSize: compact ? fontSizesMd3.statLabel : fontSizes.xs,
-    fontWeight: fontWeights.bold,
-    color: colors.statusLive,
+    background: cssVars.colors.statusLiveBg,
+    border: `1px solid ${cssVars.colors.statusLive}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: compact ? fontSizesMd3.statLabel : cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.statusLive,
     textTransform: 'uppercase',
     letterSpacing: letterSpacing.wide,
     animation: 'livePulse 2s ease-in-out infinite',
@@ -39,7 +39,7 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
     width: compact ? '5px' : '6px',
     height: compact ? '5px' : '6px',
     borderRadius: '50%',
-    background: colors.statusLive,
+    background: cssVars.colors.statusLive,
     animation: 'liveDot 1s ease-in-out infinite',
   };
 

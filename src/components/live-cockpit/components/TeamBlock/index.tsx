@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 
 // ---------------------------------------------------------------------------
@@ -63,55 +63,55 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
-    background: colors.surfaceElevated,
-    borderRadius: borderRadius.lg,
-    padding: isMobile ? spacing.sm : spacing.lg,
+    background: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? spacing.xs : spacing.sm,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
   };
 
   const headerStyle: CSSProperties = {
     textAlign: 'center',
-    marginBottom: isMobile ? spacing.xs : spacing.sm,
+    marginBottom: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
   };
 
   const teamNameStyle: CSSProperties = {
     fontSize: isMobile ? '14px' : '22px',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
   };
 
   const teamLabelStyle: CSSProperties = {
     fontSize: isMobile ? '10px' : '11px',
-    color: colors.textMuted,
+    color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: isMobile ? '64px' : '80px',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     textAlign: 'center',
     lineHeight: 1,
-    color: colors.textPrimary,
-    margin: `${spacing.sm} 0`,
+    color: cssVars.colors.textPrimary,
+    margin: `${cssVars.spacing.sm} 0`,
   };
 
   // Button base style
   const btnStyle: CSSProperties = {
     fontFamily: 'inherit',
-    border: `1px solid ${colors.borderSolid}`,
-    borderRadius: borderRadius.md,
-    padding: isMobile ? `${spacing.sm} ${spacing.xs}` : spacing.md,
+    border: `1px solid ${cssVars.colors.borderSolid}`,
+    borderRadius: cssVars.borderRadius.md,
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.xs}` : cssVars.spacing.md,
     fontSize: isMobile ? '12px' : '13px',
-    fontWeight: fontWeights.semibold,
+    fontWeight: cssVars.fontWeights.semibold,
     cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    background: colors.background,
-    color: disabled ? colors.textDisabled : colors.textPrimary,
+    gap: cssVars.spacing.xs,
+    background: cssVars.colors.background,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     opacity: disabled ? 0.5 : 1,
     transition: 'all 0.15s',
     // Mobile touch improvements - prevent 300ms delay and double-tap zoom
@@ -123,20 +123,20 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
 
   const btnGoalStyle: CSSProperties = {
     ...btnStyle,
-    background: colors.primary,
-    color: colors.onPrimary,
+    background: cssVars.colors.primary,
+    color: cssVars.colors.onPrimary,
     border: 'none',
-    padding: isMobile ? `${spacing.md} ${spacing.sm}` : spacing.lg,
+    padding: isMobile ? `${cssVars.spacing.md} ${cssVars.spacing.sm}` : cssVars.spacing.lg,
     fontSize: isMobile ? '14px' : '15px',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     flex: 1,
   };
 
   const btnMinusStyle: CSSProperties = {
     ...btnStyle,
-    background: colors.background,
-    color: disabled || !canDecrement ? colors.textDisabled : colors.error,
-    borderColor: disabled || !canDecrement ? colors.borderSolid : colors.error,
+    background: cssVars.colors.background,
+    color: disabled || !canDecrement ? cssVars.colors.textDisabled : cssVars.colors.error,
+    borderColor: disabled || !canDecrement ? cssVars.colors.borderSolid : cssVars.colors.error,
     minWidth: '44px', // WCAG: 44px minimum touch target
     opacity: disabled || !canDecrement ? 0.5 : 1,
     cursor: disabled || !canDecrement ? 'not-allowed' : 'pointer',
@@ -144,38 +144,38 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
 
   const btnPenaltyStyle: CSSProperties = {
     ...btnStyle,
-    background: colors.background,
-    borderColor: colors.warning,
-    color: colors.warning,
-    padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.md} ${spacing.lg}`,
+    background: cssVars.colors.background,
+    borderColor: cssVars.colors.warning,
+    color: cssVars.colors.warning,
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     fontSize: isMobile ? '12px' : '14px',
   };
 
   const btnYellowStyle: CSSProperties = {
     ...btnStyle,
-    color: disabled ? colors.textDisabled : colors.warning,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.warning,
   };
 
   const btnRedStyle: CSSProperties = {
     ...btnStyle,
-    color: disabled ? colors.textDisabled : colors.error,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.error,
   };
 
   const btnFoulStyle: CSSProperties = {
     ...btnStyle,
-    color: disabled ? colors.textDisabled : colors.textSecondary,
+    color: disabled ? cssVars.colors.textDisabled : cssVars.colors.textSecondary,
   };
 
   const goalRowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr auto',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const actionRowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   // ---------------------------------------------------------------------------
@@ -194,7 +194,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
       <div style={scoreStyle} data-testid={`score-${teamSide}`}>{score}</div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.xs }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cssVars.spacing.xs }}>
         {/* Goal + Minus */}
         <div style={goalRowStyle}>
           <button

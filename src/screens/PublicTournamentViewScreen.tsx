@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, CSSProperties } from 'react';
-import { colors, fontSizes, fontWeights, spacing } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
 import { calculateStandings } from '../utils/calculations';
@@ -117,8 +117,8 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
 
   const containerStyle: CSSProperties = {
     minHeight: '100vh',
-    background: `linear-gradient(135deg, ${colors.background} 0%, ${colors.backgroundDark} 100%)`,
-    padding: spacing.xl,
+    background: `linear-gradient(135deg, ${cssVars.colors.background} 0%, ${cssVars.colors.backgroundDark} 100%)`,
+    padding: cssVars.spacing.xl,
   };
 
   const contentStyle: CSSProperties = {
@@ -127,34 +127,34 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
   };
 
   const headerStyle: CSSProperties = {
-    marginBottom: spacing.xl,
+    marginBottom: cssVars.spacing.xl,
     textAlign: 'center',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xxxl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
+    fontSize: cssVars.fontSizes.xxxl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textSecondary,
   };
 
   const errorStyle: CSSProperties = {
     textAlign: 'center',
-    padding: spacing.xxl,
-    color: colors.error,
-    fontSize: fontSizes.lg,
+    padding: cssVars.spacing.xxl,
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.lg,
   };
 
   const loadingStyle: CSSProperties = {
     textAlign: 'center',
-    padding: spacing.xxl,
-    color: colors.textSecondary,
-    fontSize: fontSizes.lg,
+    padding: cssVars.spacing.xxl,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
   };
 
   // Error state
@@ -165,7 +165,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
           <Card>
             <div style={errorStyle}>
               <h2>❌ {loadingError}</h2>
-              <p style={{ marginTop: spacing.md, color: colors.textMuted }}>
+              <p style={{ marginTop: cssVars.spacing.md, color: cssVars.colors.textMuted }}>
                 Das Turnier konnte nicht gefunden werden oder wurde noch nicht freigegeben.
               </p>
             </div>
@@ -226,17 +226,17 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         {(tournament.hideScoresForPublic || tournament.hideRankingsForPublic) && (
           <div
             style={{
-              marginTop: spacing.xl,
+              marginTop: cssVars.spacing.xl,
               textAlign: 'center',
-              color: colors.textMuted,
-              fontSize: fontSizes.sm,
+              color: cssVars.colors.textMuted,
+              fontSize: cssVars.fontSizes.sm,
             }}
           >
             <p>
               {tournament.hideScoresForPublic && 'Spielstände werden nicht angezeigt. '}
               {tournament.hideRankingsForPublic && 'Tabellen werden nicht angezeigt.'}
             </p>
-            <p style={{ marginTop: spacing.xs }}>
+            <p style={{ marginTop: cssVars.spacing.xs }}>
               (Bambini-Modus aktiviert)
             </p>
           </div>

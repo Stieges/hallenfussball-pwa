@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { TournamentMode } from '../../../types/tournament';
 
 interface ModeSelectionProps {
@@ -27,12 +27,12 @@ const ModeButton: React.FC<ModeButtonProps> = ({
   const buttonStyle: CSSProperties = {
     padding: '20px',
     background: disabled
-      ? 'rgba(0,0,0,0.15)'
+      ? cssVars.colors.surfaceDarkLight
       : isSelected
-        ? 'rgba(0,230,118,0.2)'
-        : 'rgba(0,0,0,0.2)',
-    border: isSelected ? `2px solid ${colors.primary}` : '2px solid transparent',
-    borderRadius: borderRadius.md,
+        ? cssVars.colors.primarySelected
+        : cssVars.colors.surfaceDarkMedium,
+    border: isSelected ? `2px solid ${cssVars.colors.primary}` : '2px solid transparent',
+    borderRadius: cssVars.borderRadius.md,
     textAlign: 'left',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s',
@@ -53,22 +53,22 @@ const ModeButton: React.FC<ModeButtonProps> = ({
           top: '8px',
           right: '8px',
           padding: '2px 8px',
-          background: 'rgba(0,176,255,0.2)',
-          border: '1px solid rgba(0,176,255,0.4)',
+          background: cssVars.colors.secondarySelected,
+          border: `1px solid ${cssVars.colors.secondaryBorderActive}`,
           borderRadius: '12px',
-          fontSize: '10px',
-          fontWeight: fontWeights.semibold,
-          color: colors.secondary,
+          fontSize: '10px', // Smaller than cssVars.fontSizes.xs for badges
+          fontWeight: cssVars.fontWeights.semibold,
+          color: cssVars.colors.secondary,
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}>
           {badge}
         </span>
       )}
-      <div style={{ fontSize: '15px', fontWeight: '700', color: disabled ? colors.textSecondary : colors.textPrimary }}>
+      <div style={{ fontSize: cssVars.fontSizes.sm, fontWeight: '700', color: disabled ? cssVars.colors.textSecondary : cssVars.colors.textPrimary }}>
         {title}
       </div>
-      <div style={{ fontSize: '12px', color: colors.textSecondary, marginTop: '4px' }}>
+      <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '4px' }}>
         {subtitle}
       </div>
     </button>
@@ -84,9 +84,9 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
       <label style={{
         display: 'block',
         marginBottom: '12px',
-        fontSize: fontSizes.sm,
-        color: colors.textSecondary,
-        fontWeight: fontWeights.medium
+        fontSize: cssVars.fontSizes.sm,
+        color: cssVars.colors.textSecondary,
+        fontWeight: cssVars.fontWeights.medium
       }}>
         Turniermodus
       </label>

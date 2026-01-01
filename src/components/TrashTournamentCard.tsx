@@ -11,7 +11,7 @@
 import { CSSProperties } from 'react';
 import { Tournament } from '../types/tournament';
 import { Card, Button, Icons } from './ui';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 import { getCountdownStyle } from '../utils/tournamentCategories';
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -45,29 +45,29 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   const getCountdownColor = (): string => {
     switch (countdownStyle) {
       case 'danger':
-        return colors.error;
+        return cssVars.colors.error;
       case 'warning':
-        return colors.warning;
+        return cssVars.colors.warning;
       default:
-        return colors.textSecondary;
+        return cssVars.colors.textSecondary;
     }
   };
 
   const getCountdownBg = (): string => {
     switch (countdownStyle) {
       case 'danger':
-        return colors.errorLight;
+        return cssVars.colors.errorLight;
       case 'warning':
-        return colors.warningLight;
+        return cssVars.colors.warningLight;
       default:
-        return colors.surface;
+        return cssVars.colors.surface;
     }
   };
 
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     opacity: 0.9,
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${cssVars.colors.border}`,
     position: 'relative',
   };
 
@@ -76,7 +76,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
     flexDirection: isMobile ? 'column' : 'row',
     justifyContent: 'space-between',
     alignItems: isMobile ? 'stretch' : 'flex-start',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const infoStyle: CSSProperties = {
@@ -84,36 +84,36 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     margin: 0,
-    marginBottom: spacing.xs,
+    marginBottom: cssVars.spacing.xs,
   };
 
   const metaStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: 0,
-    marginBottom: spacing.sm,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const countdownContainerStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
     background: getCountdownBg(),
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
     color: getCountdownColor(),
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'row' : 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     minWidth: isMobile ? 'auto' : '160px',
   };
 
@@ -162,8 +162,8 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
             icon={<Icons.Trash size={16} />}
             style={{
               flex: isMobile ? 1 : 'none',
-              color: colors.error,
-              borderColor: colors.errorBorder,
+              color: cssVars.colors.error,
+              borderColor: cssVars.colors.errorBorder,
             }}
           >
             Endgültig löschen

@@ -1,5 +1,5 @@
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Tournament } from '../../../types/tournament';
 
 interface BambiniSettingsProps {
@@ -18,19 +18,19 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
   const summaryStyle: CSSProperties = {
     padding: '16px',
     background: 'rgba(255,145,0,0.1)',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     border: '1px solid rgba(255,145,0,0.3)',
     cursor: 'pointer',
     fontSize: '14px',
-    fontWeight: fontWeights.semibold,
-    color: colors.warning,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
   };
 
   const contentStyle: CSSProperties = {
     padding: '16px',
     marginTop: '12px',
     background: 'rgba(0,0,0,0.2)',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const checkboxLabelStyle: CSSProperties = {
@@ -44,7 +44,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
     width: '18px',
     height: '18px',
     cursor: 'pointer',
-    accentColor: colors.warning,
+    accentColor: cssVars.colors.warning,
   };
 
   return (
@@ -60,7 +60,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             onChange={(e) => onUpdate('hideScoresForPublic', e.target.checked)}
             style={checkboxStyle}
           />
-          <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+          <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
             Ergebnisse für Zuschauer verbergen
           </span>
         </label>
@@ -71,7 +71,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             onChange={(e) => onUpdate('hideRankingsForPublic', e.target.checked)}
             style={checkboxStyle}
           />
-          <span style={{ color: colors.textPrimary, fontSize: '13px' }}>
+          <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
             Tabellen für Zuschauer verbergen
           </span>
         </label>

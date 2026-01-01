@@ -17,7 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../../components/ui';
-import { colors, fontFamilies } from '../../../design-tokens';
+import { cssVars, fontFamilies } from '../../../design-tokens'
 import { PlacementCriterion } from '../../../types/tournament';
 
 interface PlacementLogicEditorProps {
@@ -63,14 +63,14 @@ const SortableItem: React.FC<SortableItemProps> = ({
     gap: '12px',
     padding: '12px 16px',
     background: isDragging
-      ? colors.secondaryLight
+      ? cssVars.colors.secondaryLight
       : criterion.enabled
-        ? colors.primaryMedium
-        : colors.surfaceDarkMedium,
+        ? cssVars.colors.primaryMedium
+        : cssVars.colors.surfaceDarkMedium,
     border: isDragging
-      ? `1px solid ${colors.secondaryBorderActive}`
+      ? `1px solid ${cssVars.colors.secondaryBorderActive}`
       : criterion.enabled
-        ? `1px solid ${colors.borderActive}`
+        ? `1px solid ${cssVars.colors.borderActive}`
         : '1px solid transparent',
     borderRadius: '10px',
     opacity: criterion.enabled ? 1 : 0.5,
@@ -84,13 +84,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
     gap: '2px',
     padding: '4px',
     cursor: 'grab',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const arrowButtonStyle = (disabled: boolean): CSSProperties => ({
     background: 'none',
     border: 'none',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     cursor: disabled ? 'not-allowed' : 'pointer',
     padding: '2px',
     opacity: disabled ? 0.3 : 1,
@@ -101,10 +101,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   const toggleButtonStyle: CSSProperties = {
     padding: '6px 12px',
-    background: criterion.enabled ? colors.primary : colors.border,
+    background: criterion.enabled ? cssVars.colors.primary : cssVars.colors.border,
     border: 'none',
     borderRadius: '6px',
-    color: criterion.enabled ? colors.background : colors.textSecondary,
+    color: criterion.enabled ? cssVars.colors.background : cssVars.colors.textSecondary,
     fontSize: '12px',
     fontWeight: 600,
     cursor: 'pointer',
@@ -166,7 +166,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
           style={{
             fontFamily: fontFamilies.heading,
             fontSize: '18px',
-            color: colors.primary,
+            color: cssVars.colors.primary,
             minWidth: '24px',
             textAlign: 'center',
           }}
@@ -176,7 +176,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </span>
 
         {/* Label */}
-        <span style={{ flex: 1, color: colors.textPrimary, fontSize: '14px' }}>
+        <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: '14px' }}>
           {criterion.label}
         </span>
 
@@ -240,14 +240,14 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    color: colors.primary,
+    color: cssVars.colors.primary,
     fontSize: '14px',
     margin: '0 0 8px 0',
   };
 
   const helpTextStyle: CSSProperties = {
     fontSize: '12px',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',

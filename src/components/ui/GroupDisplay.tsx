@@ -1,7 +1,7 @@
 import React, { CSSProperties } from 'react';
 import { TournamentGroup, Tournament } from '../../types/tournament';
 import { getGroupDisplayName, getGroupShortCode } from '../../utils/displayNames';
-import { borderRadius, colors, fontSizes, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 export type GroupDisplayVariant = 'full' | 'badge' | 'short';
 
 interface GroupDisplayProps {
@@ -54,11 +54,11 @@ export const GroupDisplay: React.FC<GroupDisplayProps> = ({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: `${spacing.xs} ${spacing.sm}`,
-            borderRadius: borderRadius.sm,
-            backgroundColor: colors.primary + '20',
-            color: colors.primary,
-            fontSize: fontSizes.sm,
+            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+            borderRadius: cssVars.borderRadius.sm,
+            backgroundColor: cssVars.colors.primary + '20',
+            color: cssVars.colors.primary,
+            fontSize: cssVars.fontSizes.sm,
             fontWeight: 600,
             minWidth: '2rem',
             ...style,

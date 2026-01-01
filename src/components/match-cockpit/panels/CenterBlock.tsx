@@ -6,7 +6,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useToast } from '../../ui/Toast';
 import { useIsMobile } from '../../../hooks/useIsMobile';
@@ -58,41 +58,41 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: isMobile ? spacing.md : spacing.sm,
-    padding: isMobile ? spacing.lg : spacing.sm,
-    background: isMobile ? `linear-gradient(135deg, ${colors.panelGradientStart}, ${colors.panelGradientEnd})` : 'transparent',
-    border: isMobile ? `1px solid ${colors.border}` : 'none',
-    borderRadius: isMobile ? borderRadius.lg : '0',
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.sm,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.sm,
+    background: isMobile ? `linear-gradient(135deg, ${cssVars.colors.panelGradientStart}, ${cssVars.colors.panelGradientEnd})` : 'transparent',
+    border: isMobile ? `1px solid ${cssVars.colors.border}` : 'none',
+    borderRadius: isMobile ? cssVars.borderRadius.lg : '0',
   };
 
   // MF-004: Button-Style für Timer (statt div)
   const timerButtonStyle: CSSProperties = {
     fontFamily: 'ui-monospace, monospace',
     fontSize: isMobile ? '40px' : '26px',
-    fontWeight: fontWeights.semibold,
-    padding: isMobile ? `${spacing.md} ${spacing.lg}` : `6px ${spacing.md}`,
-    borderRadius: borderRadius.full,
-    border: `1px solid ${colors.border}`,
-    background: `radial-gradient(circle at top, ${colors.timerGradientBg}, ${colors.backgroundDeep})`,
-    boxShadow: `0 0 25px ${colors.primary}40`,
+    fontWeight: cssVars.fontWeights.semibold,
+    padding: isMobile ? `${cssVars.spacing.md} ${cssVars.spacing.lg}` : `6px ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.full,
+    border: `1px solid ${cssVars.colors.border}`,
+    background: `radial-gradient(circle at top, ${cssVars.colors.timerGradientBg}, ${cssVars.colors.backgroundDeep})`,
+    boxShadow: `0 0 25px ${cssVars.colors.primary}40`,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minHeight: isMobile ? '60px' : 'auto',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
   };
 
   const phaseLabelStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const statusPillStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
-    padding: isMobile ? `${spacing.sm} ${spacing.md}` : `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.full,
+    fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
+    padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.full,
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
@@ -106,15 +106,15 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
   const dotStyle: CSSProperties = {
     width: isMobile ? '9px' : '7px',
     height: isMobile ? '9px' : '7px',
-    borderRadius: borderRadius.full,
+    borderRadius: cssVars.borderRadius.full,
     background: 'currentColor',
   };
 
   const controlsStyle: CSSProperties = {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: isMobile ? spacing.md : spacing.sm,
-    marginTop: spacing.sm,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.sm,
+    marginTop: cssVars.spacing.sm,
     justifyContent: 'center',
     width: isMobile ? '100%' : 'auto',
   };

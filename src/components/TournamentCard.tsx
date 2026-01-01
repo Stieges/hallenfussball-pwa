@@ -13,7 +13,7 @@
 import { CSSProperties } from 'react';
 import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
 import { Card } from './ui';
-import { borderRadius, colors, fontSizes, fontWeights, shadows, spacing } from '../design-tokens';
+import { cssVars } from '../design-tokens'
 import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 import { TournamentActionMenu } from './TournamentActionMenu';
@@ -101,43 +101,43 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
-    border: `1px solid ${colors.border}`,
+    border: `1px solid ${cssVars.colors.border}`,
     position: 'relative',
   };
 
   const cardHoverStyle: CSSProperties = {
     ...cardStyle,
     transform: 'translateY(-2px)',
-    boxShadow: shadows.md,
+    boxShadow: cssVars.shadows.md,
   };
 
   const headerStyle: CSSProperties = {
-    marginTop: spacing.xl, // Space below badge
-    marginBottom: spacing.md,
+    marginTop: cssVars.spacing.xl, // Space below badge
+    marginBottom: cssVars.spacing.md,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     margin: 0,
     paddingRight: '120px', // Space for badge(s)
   };
 
   const badgeContainerStyle: CSSProperties = {
     position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
+    top: cssVars.spacing.md,
+    right: cssVars.spacing.md,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const badgeStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.md}`,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.bold,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     whiteSpace: 'nowrap',
@@ -146,57 +146,57 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const getBadgeColor = (): { background: string; color: string } => {
     if (tournament.status === 'draft') {
       return {
-        background: colors.statusDraftBg,
-        color: colors.statusDraft,
+        background: cssVars.colors.statusDraftBg,
+        color: cssVars.colors.statusDraft,
       };
     }
     switch (categoryLabel) {
       case 'Läuft':
         return {
-          background: colors.statusLiveBg,
-          color: colors.statusLive,
+          background: cssVars.colors.statusLiveBg,
+          color: cssVars.colors.statusLive,
         };
       case 'Bevorstehend':
         return {
-          background: colors.statusUpcomingBg,
-          color: colors.statusUpcoming,
+          background: cssVars.colors.statusUpcomingBg,
+          color: cssVars.colors.statusUpcoming,
         };
       case 'Beendet':
         return {
-          background: colors.statusFinishedBg,
-          color: colors.statusFinished,
+          background: cssVars.colors.statusFinishedBg,
+          color: cssVars.colors.statusFinished,
         };
       default:
         return {
-          background: colors.surface,
-          color: colors.textSecondary,
+          background: cssVars.colors.surface,
+          color: cssVars.colors.textSecondary,
         };
     }
   };
 
   const infoGridStyle: CSSProperties = {
     display: 'grid',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const infoItemStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
+    fontSize: cssVars.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
+    color: cssVars.colors.textSecondary,
+    fontWeight: cssVars.fontWeights.medium,
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
+    fontWeight: cssVars.fontWeights.medium,
   };
 
   const badgeColors = getBadgeColor();
@@ -205,12 +205,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const hasActions = onClick !== undefined || onShare !== undefined || deleteHandler !== undefined;
 
   const externalBadgeStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
     fontSize: '10px',
-    fontWeight: fontWeights.medium,
-    background: colors.statusExternalBg,
-    color: colors.statusExternal,
+    fontWeight: cssVars.fontWeights.medium,
+    background: cssVars.colors.statusExternalBg,
+    color: cssVars.colors.statusExternal,
     whiteSpace: 'nowrap',
   };
 
@@ -309,8 +309,8 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               <dd style={{
                 ...valueStyle,
                 margin: 0,
-                fontSize: fontSizes.sm,
-                color: colors.textSecondary,
+                fontSize: cssVars.fontSizes.sm,
+                color: cssVars.colors.textSecondary,
               }}>
                 {formatPlacementLogic(tournament.placementLogic)}
               </dd>
@@ -320,12 +320,12 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           {tournament.status === 'draft' && (
             <div
               style={{
-                marginTop: spacing.sm,
-                padding: `${spacing.sm} ${spacing.md}`,
-                background: colors.statusDraftBg,
-                borderRadius: borderRadius.sm,
-                fontSize: fontSizes.sm,
-                color: colors.textSecondary,
+                marginTop: cssVars.spacing.sm,
+                padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+                background: cssVars.colors.statusDraftBg,
+                borderRadius: cssVars.borderRadius.sm,
+                fontSize: cssVars.fontSizes.sm,
+                color: cssVars.colors.textSecondary,
               }}
               role="status"
             >

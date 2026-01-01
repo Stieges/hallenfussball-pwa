@@ -17,7 +17,7 @@
  */
 
 import { useState, useEffect, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { Team, MatchStatus, MatchPlayPhase } from '../../types';
 import styles from '../../LiveCockpit.module.css';
@@ -122,11 +122,11 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: isMobile ? spacing.xs : spacing.sm,
-    padding: isMobile ? spacing.sm : spacing.md,
-    background: `linear-gradient(180deg, ${colors.surfaceSolid}, ${colors.surface})`,
-    borderRadius: borderRadius.lg,
-    border: `1px solid ${colors.border}`,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
+    padding: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
+    background: `linear-gradient(180deg, ${cssVars.colors.surfaceSolid}, ${cssVars.colors.surface})`,
+    borderRadius: cssVars.borderRadius.lg,
+    border: `1px solid ${cssVars.colors.border}`,
     width: '100%',
     maxWidth: '700px',
   };
@@ -136,25 +136,25 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.xs} ${spacing.md}`,
-    background: isRunning ? `${colors.primary}15` : colors.surfaceDark,
-    borderRadius: borderRadius.md,
-    border: isRunning ? `1px solid ${colors.primary}40` : `1px solid ${colors.border}`,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    background: isRunning ? `${cssVars.colors.primary}15` : cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.md,
+    border: isRunning ? `1px solid ${cssVars.colors.primary}40` : `1px solid ${cssVars.colors.border}`,
     cursor: onTimerClick ? 'pointer' : 'default',
   };
 
   const timerLabelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
   };
 
   const timerValueStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
     fontVariantNumeric: 'tabular-nums',
-    color: isRunning ? colors.primary : colors.textPrimary,
+    color: isRunning ? cssVars.colors.primary : cssVars.colors.textPrimary,
   };
 
   // Main scoreboard - three columns
@@ -162,9 +162,9 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'grid',
     gridTemplateColumns: '1fr auto 1fr',
     alignItems: 'center',
-    gap: isMobile ? spacing.xs : spacing.sm,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
     width: '100%',
-    padding: isMobile ? spacing.xs : spacing.sm,
+    padding: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
   };
 
   // Team column styles
@@ -172,21 +172,21 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: side === 'home' ? 'flex-end' : 'flex-start',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   });
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : isTablet ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.md : isTablet ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
     wordBreak: 'break-word',
     lineHeight: 1.1,
   };
 
   const teamLabelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   };
@@ -196,17 +196,17 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isMobile ? spacing.xs : spacing.sm,
-    padding: isMobile ? spacing.xs : spacing.sm,
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.md,
+    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
+    padding: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.md,
     minWidth: isMobile ? '80px' : '120px',
   };
 
   const scoreValueStyle: CSSProperties = {
     fontSize: isMobile ? '2rem' : isTablet ? '2.5rem' : '3rem',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
     lineHeight: 1,
     minWidth: isMobile ? '28px' : '40px',
@@ -215,19 +215,19 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
   const scoreSeparatorStyle: CSSProperties = {
     fontSize: isMobile ? '1.5rem' : '2rem',
-    fontWeight: fontWeights.normal,
-    color: colors.textSecondary,
+    fontWeight: cssVars.fontWeights.normal,
+    color: cssVars.colors.textSecondary,
     lineHeight: 1,
   };
 
   // Phase indicator
   const phaseIndicatorStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.warning,
-    background: colors.warningLight,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.warning,
+    background: cssVars.colors.warningLight,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
     textTransform: 'uppercase',
   };
 
@@ -240,8 +240,8 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
     width: '100%',
   };
 
@@ -249,32 +249,32 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isMobile ? spacing.md : spacing.lg,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
   };
 
   const compactScoreValueStyle: CSSProperties = {
     fontSize: isMobile ? '3.5rem' : isTablet ? '4rem' : '4.5rem',
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
     lineHeight: 1,
   };
 
   const compactSeparatorStyle: CSSProperties = {
     fontSize: isMobile ? '2rem' : '3rem',
-    fontWeight: fontWeights.normal,
-    color: colors.textSecondary,
+    fontWeight: cssVars.fontWeights.normal,
+    color: cssVars.colors.textSecondary,
     lineHeight: 1,
   };
 
   const compactTimerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    fontSize: isMobile ? fontSizes.lg : fontSizes.xl,
-    fontWeight: fontWeights.semibold,
+    gap: cssVars.spacing.xs,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.semibold,
     fontVariantNumeric: 'tabular-nums',
-    color: isRunning ? colors.primary : colors.textSecondary,
+    color: isRunning ? cssVars.colors.primary : cssVars.colors.textSecondary,
   };
 
   // ---------------------------------------------------------------------------
@@ -307,10 +307,10 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
         {/* Timer below score */}
         <div style={compactTimerStyle}>
-          {isRunning && <span style={{ color: colors.error }}>●</span>}
+          {isRunning && <span style={{ color: cssVars.colors.error }}>●</span>}
           <span aria-live="polite">{formatTime(elapsedSeconds)}</span>
           {status !== 'FINISHED' && (
-            <span style={{ color: colors.textSecondary }}>/ {formatTime(durationSeconds)}</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>/ {formatTime(durationSeconds)}</span>
           )}
         </div>
 
@@ -338,7 +338,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         onKeyDown={onTimerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTimerClick(); } } : undefined}
         aria-label={onTimerClick ? 'Zeit anpassen - klicken zum Bearbeiten' : undefined}
       >
-        {isRunning && <span style={{ color: colors.error }}>●</span>}
+        {isRunning && <span style={{ color: cssVars.colors.error }}>●</span>}
         <span style={timerLabelStyle}>
           {status === 'NOT_STARTED' ? 'Spielzeit' : status === 'FINISHED' ? 'Endstand' : 'LIVE'}
         </span>
@@ -393,7 +393,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
 
       {/* Additional scores for overtime/penalty */}
       {(overtimeScore || penaltyScore) && (
-        <div style={{ display: 'flex', gap: spacing.md, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: cssVars.spacing.md, flexWrap: 'wrap', justifyContent: 'center' }}>
           {overtimeScore && (
             <AdditionalScore
               label="Verlängerung"
@@ -432,22 +432,22 @@ const AdditionalScore: React.FC<AdditionalScoreProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.xs} ${spacing.md}`,
-    background: colors.surfaceDark,
-    borderRadius: borderRadius.md,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    background: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.md,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     textTransform: 'uppercase',
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     fontVariantNumeric: 'tabular-nums',
   };
 

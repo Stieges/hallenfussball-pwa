@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { SportId, SportConfig, getAvailableSports } from '../../../config/sports';
 
 interface SportSelectorProps {
@@ -30,9 +30,9 @@ const SportCard: React.FC<SportCardProps> = ({
 }) => {
   const cardStyle: CSSProperties = {
     padding: '24px 20px',
-    background: isSelected ? 'rgba(0,230,118,0.2)' : 'rgba(0,0,0,0.2)',
-    border: isSelected ? `2px solid ${colors.primary}` : '2px solid transparent',
-    borderRadius: borderRadius.md,
+    background: isSelected ? cssVars.colors.primarySelected : cssVars.colors.surfaceDarkMedium,
+    border: isSelected ? `2px solid ${cssVars.colors.primary}` : '2px solid transparent',
+    borderRadius: cssVars.borderRadius.md,
     textAlign: 'center',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.2s',
@@ -73,20 +73,20 @@ const SportCard: React.FC<SportCardProps> = ({
       role="radio"
       aria-checked={isSelected}
     >
-      <div style={{ fontSize: '32px', marginBottom: '12px' }}>
+      <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '12px' }}>
         {sport.icon}
       </div>
       <div style={{
-        fontSize: '16px',
+        fontSize: cssVars.fontSizes.md,
         fontWeight: '700',
-        color: colors.textPrimary,
+        color: cssVars.colors.textPrimary,
         textTransform: 'uppercase',
       }}>
         {sport.name}
       </div>
       <div style={{
-        fontSize: '12px',
-        color: colors.textSecondary,
+        fontSize: cssVars.fontSizes.xs,
+        color: cssVars.colors.textSecondary,
         marginTop: '4px',
       }}>
         {getSubtitle()}

@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useState, useRef, useMemo, useCallback } from 'react';
-import { borderRadius, colors, fontFamilies, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
 
 export interface GoalAnimationProps {
@@ -35,7 +35,7 @@ const preGeneratedConfetti = Array.from({ length: CONFETTI_COUNT }, (_, i) => ({
   isCircle: i % 2 === 0,
 }));
 
-// Use design tokens for confetti colors
+// Use design tokens for confetti colors (array - not CSS variable compatible)
 const CONFETTI_COLORS = colors.confettiColors;
 
 export const GoalAnimation: React.FC<GoalAnimationProps> = ({
@@ -130,10 +130,10 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     padding: 'clamp(24px, 4vw, 48px)',
     background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.97) 0%, rgba(0, 180, 90, 0.97) 100%)',
-    borderRadius: borderRadius.xl,
+    borderRadius: cssVars.borderRadius.xl,
     boxShadow: '0 0 100px rgba(0, 230, 118, 0.7), 0 20px 60px rgba(0, 0, 0, 0.5)',
     transformOrigin: isHomeSide ? 'left center' : 'right center',
     maxWidth: 'clamp(300px, 30vw, 450px)',
@@ -146,8 +146,8 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
 
   const goalTextStyle: CSSProperties = {
     fontSize: 'clamp(40px, 6vw, 72px)',
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
     fontFamily: fontFamilies.heading,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
@@ -156,17 +156,17 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
 
   const teamNameStyle: CSSProperties = {
     fontSize: 'clamp(20px, 3vw, 32px)',
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
     opacity: 0.9,
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: 'clamp(28px, 4vw, 48px)',
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
     fontFamily: fontFamilies.heading,
-    marginTop: spacing.xs,
+    marginTop: cssVars.spacing.xs,
   };
 
   return (

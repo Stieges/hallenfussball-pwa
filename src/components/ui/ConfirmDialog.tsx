@@ -7,7 +7,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
-import { borderRadius, colors, fontSizes, fontSizesMd3, fontWeights, spacing, shadowSemantics } from '../../design-tokens';
+import { cssVars, fontSizesMd3, shadowSemantics } from '../../design-tokens'
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 /** Secondary action button configuration */
@@ -106,21 +106,21 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const variantColors = {
     warning: {
       icon: '⚠️',
-      accent: colors.warning,
-      confirmBg: colors.warning,
-      confirmHover: colors.warningHover,
+      accent: cssVars.colors.warning,
+      confirmBg: cssVars.colors.warning,
+      confirmHover: cssVars.colors.warningHover,
     },
     danger: {
       icon: '🚨',
-      accent: colors.error,
-      confirmBg: colors.error,
-      confirmHover: colors.errorHover,
+      accent: cssVars.colors.error,
+      confirmBg: cssVars.colors.error,
+      confirmHover: cssVars.colors.errorHover,
     },
     info: {
       icon: 'ℹ️',
-      accent: colors.primary,
-      confirmBg: colors.primary,
-      confirmHover: colors.primaryHover,
+      accent: cssVars.colors.primary,
+      confirmBg: cssVars.colors.primary,
+      confirmHover: cssVars.colors.primaryHover,
     },
   };
 
@@ -132,18 +132,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.overlayStrong,
+    backgroundColor: cssVars.colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     animation: 'fadeIn 0.15s ease-out',
   };
 
   const dialogStyle: CSSProperties = {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    backgroundColor: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.lg,
     border: `2px solid ${variantConfig.accent}`,
     boxShadow: `${shadowSemantics.dialog}, 0 0 15px ${variantConfig.accent}40`,
     maxWidth: '480px',
@@ -155,9 +155,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const headerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottom: `1px solid ${colors.border}`,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.lg,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
     backgroundColor: `${variantConfig.accent}15`,
   };
 
@@ -166,48 +166,48 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   };
 
   const bodyStyle: CSSProperties = {
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
     lineHeight: 1.6,
     whiteSpace: 'pre-line',
     margin: 0,
   };
 
   const detailsStyle: CSSProperties = {
-    marginTop: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceDarkMedium,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    marginTop: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.surfaceDarkMedium,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     fontFamily: 'monospace',
   };
 
   const footerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'flex-end',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderTop: `1px solid ${colors.border}`,
-    backgroundColor: colors.surfaceDarkLight,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.lg,
+    borderTop: `1px solid ${cssVars.colors.border}`,
+    backgroundColor: cssVars.colors.surfaceDarkLight,
   };
 
   const buttonBaseStyle: CSSProperties = {
-    padding: `${spacing.sm} ${spacing.xl}`,
-    borderRadius: borderRadius.md,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
+    borderRadius: cssVars.borderRadius.md,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     minWidth: '120px',
@@ -217,15 +217,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const cancelButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: 'transparent',
-    border: `1px solid ${colors.border}`,
-    color: colors.textPrimary,
+    border: `1px solid ${cssVars.colors.border}`,
+    color: cssVars.colors.textPrimary,
   };
 
   const confirmButtonStyle: CSSProperties = {
     ...buttonBaseStyle,
     backgroundColor: variantConfig.confirmBg,
     border: `1px solid ${variantConfig.confirmBg}`,
-    color: colors.onWarning,
+    color: cssVars.colors.onWarning,
   };
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -264,7 +264,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               style={cancelButtonStyle}
               onClick={effectiveOnCancel}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.surfaceLight;
+                e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -277,13 +277,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                 style={{
                   ...cancelButtonStyle,
                   ...(secondaryAction.variant === 'danger' && {
-                    borderColor: colors.error,
-                    color: colors.error,
+                    borderColor: cssVars.colors.error,
+                    color: cssVars.colors.error,
                   }),
                 }}
                 onClick={handleSecondaryAction}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = colors.surfaceLight;
+                  e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';

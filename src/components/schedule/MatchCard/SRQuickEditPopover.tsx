@@ -12,13 +12,7 @@
  */
 
 import { type CSSProperties, useState, useRef, useEffect, useCallback } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,10 +150,10 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
     top: position.top,
     left: position.left,
     zIndex: 1000,
-    backgroundColor: colors.surfaceSolid,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.lg,
-    boxShadow: `0 8px 24px ${colors.shadowMedium}`,
+    backgroundColor: cssVars.colors.surfaceSolid,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
+    boxShadow: `0 8px 24px ${cssVars.colors.shadowMedium}`,
     minWidth: '180px',
     maxWidth: '280px',
     maxHeight: '300px',
@@ -167,17 +161,17 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
   };
 
   const headerStyle: CSSProperties = {
-    padding: `${spacing.sm} ${spacing.md}`,
-    borderBottom: `1px solid ${colors.border}`,
-    backgroundColor: colors.surfaceDark,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    backgroundColor: cssVars.colors.surfaceDark,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
   };
 
   const listStyle: CSSProperties = {
     listStyle: 'none',
-    padding: spacing.xs,
+    padding: cssVars.spacing.xs,
     margin: 0,
     maxHeight: '240px',
     overflowY: 'auto',
@@ -187,25 +181,25 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: `${spacing.sm} ${spacing.md}`,
-    borderRadius: borderRadius.md,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.md,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
-    backgroundColor: isSelected ? colors.primaryLight : 'transparent',
-    color: isDisabled ? colors.textDisabled : colors.textPrimary,
+    backgroundColor: isSelected ? cssVars.colors.primaryLight : 'transparent',
+    color: isDisabled ? cssVars.colors.textDisabled : cssVars.colors.textPrimary,
     opacity: isDisabled ? 0.6 : 1,
-    fontSize: fontSizes.sm,
+    fontSize: cssVars.fontSizes.sm,
     transition: 'background-color 0.15s ease',
   });
 
   const checkmarkStyle: CSSProperties = {
-    color: colors.primary,
-    fontWeight: fontWeights.bold,
+    color: cssVars.colors.primary,
+    fontWeight: cssVars.fontWeights.bold,
   };
 
   const disabledHintStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginLeft: spacing.sm,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginLeft: cssVars.spacing.sm,
   };
 
   // ---------------------------------------------------------------------------
@@ -234,13 +228,13 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
                 onMouseEnter={(e) => {
                   if (!isDisabled) {
                     (e.currentTarget as HTMLElement).style.backgroundColor = isSelected
-                      ? colors.primaryLight
-                      : colors.surfaceHover;
+                      ? cssVars.colors.primaryLight
+                      : cssVars.colors.surfaceHover;
                   }
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.backgroundColor = isSelected
-                    ? colors.primaryLight
+                    ? cssVars.colors.primaryLight
                     : 'transparent';
                 }}
                 role="option"

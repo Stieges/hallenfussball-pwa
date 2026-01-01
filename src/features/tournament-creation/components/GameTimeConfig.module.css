@@ -3,7 +3,7 @@
 /* Time configuration grid */
 .timeGrid {
   display: grid;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 /* Mobile first: single column for precise touch control */
@@ -27,12 +27,12 @@
 
 /* Halftime section responsive */
 .halftimeSection {
-  margin-top: 16px;
+  margin-top: var(--spacing-md);
 }
 
 /* On mobile, make halftime full width */
 @media (max-width: 480px) {
   .halftimeSection {
-    margin-top: 16px;
+    margin-top: var(--spacing-md);
   }
 }

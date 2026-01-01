@@ -19,7 +19,7 @@
 import { useCallback, CSSProperties, useState, useMemo } from 'react';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
-import { colors } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
 import {
   useScheduleHistory,
@@ -215,8 +215,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   };
 
   const editModeCardStyle: CSSProperties = isEditing ? {
-    border: `3px solid ${colors.primary}`,
-    boxShadow: `0 0 0 4px ${colors.secondaryLight}`,
+    border: `3px solid ${cssVars.colors.primary}`,
+    boxShadow: `0 0 0 4px ${cssVars.colors.secondaryLight}`,
   } : {};
 
   // Build finished matches set for display

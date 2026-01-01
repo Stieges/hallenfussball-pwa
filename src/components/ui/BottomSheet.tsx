@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback } from 'react';
-import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -50,7 +50,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const overlayStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: colors.overlay,
+    background: cssVars.colors.overlay,
     zIndex: 1100,
     display: 'flex',
     flexDirection: 'column',
@@ -59,7 +59,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   };
 
   const sheetStyle: CSSProperties = {
-    background: colors.surface,
+    background: cssVars.colors.surface,
     borderRadius: '16px 16px 0 0',
     maxHeight: '80vh',
     overflow: 'auto',
@@ -70,28 +70,28 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const handleStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'center',
-    padding: `${spacing.sm} 0`,
+    padding: `${cssVars.spacing.sm} 0`,
     cursor: 'grab',
   };
 
   const handleBarStyle: CSSProperties = {
     width: '32px',
     height: '4px',
-    background: colors.border,
-    borderRadius: borderRadius.full,
+    background: cssVars.colors.border,
+    borderRadius: cssVars.borderRadius.full,
   };
 
   const titleStyle: CSSProperties = {
-    padding: `0 ${spacing.lg} ${spacing.md}`,
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
-    borderBottom: `1px solid ${colors.border}`,
+    padding: `0 ${cssVars.spacing.lg} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
     margin: 0,
   };
 
   const contentStyle: CSSProperties = {
-    padding: spacing.md,
+    padding: cssVars.spacing.md,
   };
 
   return (
@@ -164,12 +164,12 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
   const itemStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
     cursor: 'pointer',
-    background: isActive ? colors.secondaryLight : 'transparent',
+    background: isActive ? cssVars.colors.secondaryLight : 'transparent',
     border: 'none',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     width: '100%',
     textAlign: 'left',
     transition: 'background 0.2s ease',
@@ -183,9 +183,9 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
     justifyContent: 'center',
     width: '40px',
     height: '40px',
-    borderRadius: borderRadius.md,
-    background: isActive ? colors.primary : colors.surfaceLight,
-    color: isActive ? 'white' : colors.textSecondary,
+    borderRadius: cssVars.borderRadius.md,
+    background: isActive ? cssVars.colors.primary : cssVars.colors.surfaceLight,
+    color: isActive ? 'white' : cssVars.colors.textSecondary,
   };
 
   const textContainerStyle: CSSProperties = {
@@ -193,15 +193,15 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   };
 
   const descriptionStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: '2px 0 0',
   };
 
@@ -211,11 +211,11 @@ export const BottomSheetItem: React.FC<BottomSheetItemProps> = ({
       onClick={onClick}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = colors.surfaceHover;
+          e.currentTarget.style.background = cssVars.colors.surfaceHover;
         }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = isActive ? colors.secondaryLight : 'transparent';
+        e.currentTarget.style.background = isActive ? cssVars.colors.secondaryLight : 'transparent';
       }}
       data-testid={testId}
     >

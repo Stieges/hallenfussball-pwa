@@ -20,13 +20,7 @@
  */
 
 import { type CSSProperties, useState, useEffect } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Dialog } from '../../dialogs/Dialog';
 import { Button } from '../../ui/Button';
 
@@ -118,65 +112,65 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
   const formStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const fieldStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textSecondary,
   };
 
   const teamToggleStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const teamButtonStyle = (isSelected: boolean): CSSProperties => ({
     flex: 1,
-    padding: spacing.md,
-    backgroundColor: isSelected ? colors.primary : colors.surface,
-    color: isSelected ? colors.onPrimary : colors.textPrimary,
-    border: `2px solid ${isSelected ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.md,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
+    padding: cssVars.spacing.md,
+    backgroundColor: isSelected ? cssVars.colors.primary : cssVars.colors.surface,
+    color: isSelected ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
+    border: `2px solid ${isSelected ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     textAlign: 'center',
   });
 
   const inputStyle: CSSProperties = {
-    padding: spacing.md,
-    backgroundColor: colors.inputBg,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: cssVars.colors.inputBg,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
     fontVariantNumeric: 'tabular-nums',
     outline: 'none',
     transition: 'border-color 0.15s ease',
   };
 
   const hintStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginTop: cssVars.spacing.xs,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'flex-end',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTop: `1px solid ${colors.border}`,
+    marginTop: cssVars.spacing.md,
+    paddingTop: cssVars.spacing.md,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   // ---------------------------------------------------------------------------

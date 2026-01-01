@@ -6,7 +6,7 @@
  */
 
 import { CSSProperties, ReactNode } from 'react';
-import { colors, fontWeights, fontSizes, FontSizeKey } from '../../../design-tokens';
+import { cssVars, fontWeights, fontSizes, FontSizeKey } from '../../../design-tokens'
 
 export interface HighlightedCellProps {
   /** Wert der angezeigt wird */
@@ -37,7 +37,7 @@ export interface HighlightedCellProps {
  * // Tordifferenz mit Farbe
  * <HighlightedCell
  *   highlight={highlightGoalDiff}
- *   color={goalDiff > 0 ? colors.primary : colors.error}
+ *   color={goalDiff > 0 ? cssVars.colors.primary : cssVars.colors.error}
  * >
  *   {goalDiff > 0 ? '+' : ''}{goalDiff}
  * </HighlightedCell>
@@ -56,7 +56,7 @@ export const HighlightedCell: React.FC<HighlightedCellProps> = ({
   const style: CSSProperties = {
     fontWeight: highlight ? fontWeights[highlightWeight] : fontWeights[baseWeight],
     padding: highlight ? padding : '0',
-    background: highlight ? colors.rankingHighlightBg : 'transparent',
+    background: highlight ? cssVars.colors.rankingHighlightBg : 'transparent',
     borderRadius: highlight ? '4px' : '0',
     ...(color && { color }),
     ...(fontSize && { fontSize: fontSizes[fontSize] }),

@@ -21,13 +21,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { GoalListItem } from './GoalListItem';
 import { Button } from '../../ui/Button';
 
@@ -104,24 +98,24 @@ export const GoalList: React.FC<GoalListProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: compact ? spacing.xs : spacing.sm,
+    gap: compact ? cssVars.spacing.xs : cssVars.spacing.sm,
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: compact ? spacing.xs : spacing.sm,
-    borderBottom: `1px solid ${colors.border}`,
+    paddingBottom: compact ? cssVars.spacing.xs : cssVars.spacing.sm,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
   };
 
   const headerTextStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
+    gap: cssVars.spacing.sm,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textSecondary,
   };
 
   const countBadgeStyle: CSSProperties = {
@@ -130,34 +124,34 @@ export const GoalList: React.FC<GoalListProps> = ({
     justifyContent: 'center',
     minWidth: '20px',
     height: '20px',
-    padding: `0 ${spacing.xs}`,
-    backgroundColor: colors.primaryLight,
-    color: colors.primary,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.bold,
-    borderRadius: borderRadius.full,
+    padding: `0 ${cssVars.spacing.xs}`,
+    backgroundColor: cssVars.colors.primaryLight,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.bold,
+    borderRadius: cssVars.borderRadius.full,
   };
 
   const incompleteBadgeStyle: CSSProperties = {
     ...countBadgeStyle,
-    backgroundColor: colors.warningLight,
-    color: colors.warning,
+    backgroundColor: cssVars.colors.warningLight,
+    color: cssVars.colors.warning,
   };
 
   const listStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     maxHeight: `${maxHeight}px`,
     overflowY: 'auto',
-    paddingRight: spacing.xs,
+    paddingRight: cssVars.spacing.xs,
   };
 
   const emptyStyle: CSSProperties = {
     textAlign: 'center',
-    padding: compact ? spacing.sm : spacing.md,
-    color: colors.textMuted,
-    fontSize: fontSizes.sm,
+    padding: compact ? cssVars.spacing.sm : cssVars.spacing.md,
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   // ---------------------------------------------------------------------------

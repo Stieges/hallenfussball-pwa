@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Button } from '../../../components/ui';
-import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ScheduleConflict } from '../types';
 
 interface EditorToolbarProps {
@@ -59,60 +59,60 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
-    padding: spacing.md,
-    backgroundColor: isEditing ? colors.editorEditModeBg : colors.surface,
-    borderRadius: borderRadius.md,
-    border: `1px solid ${isEditing ? colors.success : colors.border}`,
-    marginBottom: spacing.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
+    backgroundColor: isEditing ? cssVars.colors.editorEditModeBg : cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.md,
+    border: `1px solid ${isEditing ? cssVars.colors.success : cssVars.colors.border}`,
+    marginBottom: cssVars.spacing.md,
   };
 
   const leftSectionStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const rightSectionStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const modeIndicatorStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
-    backgroundColor: isEditing ? colors.editorEditModeHover : 'transparent',
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: isEditing ? colors.success : colors.textSecondary,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
+    backgroundColor: isEditing ? cssVars.colors.editorEditModeHover : 'transparent',
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: isEditing ? cssVars.colors.success : cssVars.colors.textSecondary,
   };
 
   const conflictBadgeStyle = (severity: 'error' | 'warning'): React.CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
-    backgroundColor: severity === 'error' ? colors.errorLight : colors.editorDirtyBg,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: severity === 'error' ? colors.error : colors.warning,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
+    backgroundColor: severity === 'error' ? cssVars.colors.errorLight : cssVars.colors.editorDirtyBg,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
+    color: severity === 'error' ? cssVars.colors.error : cssVars.colors.warning,
   });
 
   const separatorStyle: React.CSSProperties = {
     width: '1px',
     height: '24px',
-    backgroundColor: colors.border,
-    margin: `0 ${spacing.xs}`,
+    backgroundColor: cssVars.colors.border,
+    margin: `0 ${cssVars.spacing.xs}`,
   };
 
   const iconButtonStyle: React.CSSProperties = {
     minWidth: '36px',
-    padding: spacing.sm,
+    padding: cssVars.spacing.sm,
   };
 
   return (
@@ -236,24 +236,24 @@ export const EditorToolbarCompact: React.FC<EditorToolbarCompactProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.sm,
-    backgroundColor: isEditing ? colors.editorEditModeBg : colors.surface,
-    borderRadius: borderRadius.sm,
+    padding: cssVars.spacing.sm,
+    backgroundColor: isEditing ? cssVars.colors.editorEditModeBg : cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const statusStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    fontSize: fontSizes.sm,
+    gap: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   return (
     <div style={containerStyle}>
       <div style={statusStyle}>
         <span>{isEditing ? '✏️' : '👁️'}</span>
-        {isDirty && <span style={{ color: colors.warning }}>●</span>}
-        {errorCount > 0 && <span style={{ color: colors.error }}>⚠️ {errorCount}</span>}
+        {isDirty && <span style={{ color: cssVars.colors.warning }}>●</span>}
+        {errorCount > 0 && <span style={{ color: cssVars.colors.error }}>⚠️ {errorCount}</span>}
       </div>
 
       {!readOnly && (

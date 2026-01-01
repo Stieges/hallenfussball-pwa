@@ -8,7 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { LiveMatch } from './MatchCockpit';
@@ -36,49 +36,49 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const overtimeMinutes = Math.round((match.overtimeDurationSeconds ?? 300) / 60);
 
   const containerStyle: CSSProperties = {
-    marginTop: spacing.md,
-    padding: isMobile ? spacing.lg : spacing.md,
-    borderRadius: borderRadius.lg,
-    border: `2px solid ${colors.warning}`,
+    marginTop: cssVars.spacing.md,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    borderRadius: cssVars.borderRadius.lg,
+    border: `2px solid ${cssVars.colors.warning}`,
     background: 'linear-gradient(135deg, rgba(255, 145, 0, 0.15), rgba(255, 100, 0, 0.1))',
     animation: 'pulse 2s ease-in-out infinite',
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.lg : fontSizes.md,
-    fontWeight: fontWeights.bold,
-    color: colors.warning,
-    marginBottom: spacing.sm,
+    fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.warning,
+    marginBottom: cssVars.spacing.sm,
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xl : fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.xl : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     textAlign: 'center',
-    margin: `${spacing.md} 0`,
+    margin: `${cssVars.spacing.md} 0`,
   };
 
   const messageStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.md : fontSizes.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
+    fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+    marginBottom: cssVars.spacing.md,
     lineHeight: 1.5,
   };
 
   const buttonsStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const buttonRowStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isMobile ? 'column' : 'row',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const getTitle = () => {

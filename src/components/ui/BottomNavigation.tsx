@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Icons } from './Icons';
 
 export type BottomNavTab = 'schedule' | 'tabellen' | 'management' | 'more';
@@ -46,8 +46,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     display: 'flex',
     justifyContent: 'space-around',
     alignItems: 'center',
-    background: colors.surface,
-    borderTop: `1px solid ${colors.border}`,
+    background: cssVars.colors.surface,
+    borderTop: `1px solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     zIndex: 1000,
     height: '56px',
@@ -60,11 +60,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     justifyContent: 'center',
     flex: 1,
     height: '100%',
-    padding: `${spacing.xs} 0`,
+    padding: `${cssVars.spacing.xs} 0`,
     cursor: 'pointer',
     background: 'transparent',
     border: 'none',
-    color: isActive ? colors.primary : colors.textSecondary,
+    color: isActive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     transition: 'color 0.2s ease',
     gap: '2px',
     // Touch target minimum 44px
@@ -73,8 +73,8 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   });
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
     lineHeight: 1,
     marginTop: '2px',
   };
@@ -97,7 +97,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           >
             <IconComponent
               size={24}
-              color={isActive ? colors.primary : colors.textSecondary}
+              color={isActive ? cssVars.colors.primary : cssVars.colors.textSecondary}
             />
             <span style={labelStyle}>{item.label}</span>
           </button>

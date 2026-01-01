@@ -15,7 +15,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import { colors, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { triggerHaptic } from '../../../../utils/haptics';
 
 interface SlideToConfirmProps {
@@ -39,8 +39,8 @@ export function SlideToConfirm({
   text = 'Zum Beenden schieben',
   confirmText = 'Beendet!',
   onConfirm,
-  trackColor = colors.error,
-  thumbColor = colors.onError,
+  trackColor = cssVars.colors.error,
+  thumbColor = cssVars.colors.onError,
   disabled = false,
   threshold = 0.9,
 }: SlideToConfirmProps) {
@@ -137,7 +137,7 @@ export function SlideToConfirm({
       ref={trackRef}
       style={{
         ...styles.track,
-        backgroundColor: isConfirmed ? colors.success : trackColor,
+        backgroundColor: isConfirmed ? cssVars.colors.success : trackColor,
         opacity: disabled ? 0.5 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
       }}
@@ -152,7 +152,7 @@ export function SlideToConfirm({
         style={{
           ...styles.progressFill,
           width: `${progress * 100}%`,
-          backgroundColor: isConfirmed ? colors.success : `${thumbColor}30`,
+          backgroundColor: isConfirmed ? cssVars.colors.success : `${thumbColor}30`,
         }}
       />
 
@@ -195,7 +195,7 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     width: '100%',
     height: 56,
-    borderRadius: borderRadius.full,
+    borderRadius: cssVars.borderRadius.full,
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
@@ -213,7 +213,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   text: {
     position: 'relative',
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
     color: 'white',
     textTransform: 'uppercase',
@@ -227,22 +227,22 @@ const styles: Record<string, React.CSSProperties> = {
     top: 0,
     width: 56,
     height: 56,
-    borderRadius: borderRadius.full,
+    borderRadius: cssVars.borderRadius.full,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: `0 2px 8px ${colors.shadowMedium}`,
+    boxShadow: `0 2px 8px ${cssVars.colors.shadowMedium}`,
     cursor: 'grab',
     zIndex: 1,
   },
   thumbIcon: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: 700,
-    color: colors.error,
+    color: cssVars.colors.error,
   },
   checkmark: {
     position: 'absolute',
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: 700,
     color: 'white',
   },

@@ -20,11 +20,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
-import {
-  colors,
-  fontSizes,
-  fontWeights,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ProgressRing } from '../../ui/ProgressRing';
 
 // ---------------------------------------------------------------------------
@@ -93,28 +89,28 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceDark,
-    border: `2px solid ${isLive ? colors.primary : isHovered ? colors.primary : colors.border}`,
+    backgroundColor: cssVars.colors.surfaceDark,
+    border: `2px solid ${isLive ? cssVars.colors.primary : isHovered ? cssVars.colors.primary : cssVars.colors.border}`,
     transition: 'border-color 0.15s ease',
   };
 
   const vsStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textSecondary,
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 900,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     lineHeight: 1,
   };
 
   const timerStyle: CSSProperties = {
     fontSize: '9px',
-    fontWeight: fontWeights.semibold,
-    color: colors.primary,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.primary,
     lineHeight: 1,
     marginTop: '2px',
     fontVariantNumeric: 'tabular-nums',
@@ -158,8 +154,8 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
           progress={progress}
           size={size}
           strokeWidth={3}
-          color={colors.primary}
-          backgroundColor={colors.border}
+          color={cssVars.colors.primary}
+          backgroundColor={cssVars.colors.border}
           animated={true}
         >
           <span style={scoreStyle}>
@@ -210,7 +206,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
           {homeScore}:{awayScore}
         </span>
         {isFinished && (
-          <span style={{ ...timerStyle, color: colors.textSecondary }}>
+          <span style={{ ...timerStyle, color: cssVars.colors.textSecondary }}>
             Ende
           </span>
         )}

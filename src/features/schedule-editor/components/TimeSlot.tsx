@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { colors, spacing, borderRadius, fontSizes } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { createSlotId } from '../hooks/useDragDrop';
 
 // ============================================================================
@@ -73,34 +73,34 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
     flex: 1, // KEY: Fill available width
     minHeight: hasMatch ? 'auto' : '80px',
     minWidth: 0, // Allow shrinking below content size
-    padding: hasMatch ? 0 : spacing.sm,
+    padding: hasMatch ? 0 : cssVars.spacing.sm,
     backgroundColor: isSwapTarget
-      ? colors.editorSwapBg // Orange for swap
+      ? cssVars.colors.editorSwapBg // Orange for swap
       : isDropTarget
-        ? colors.secondaryLight
+        ? cssVars.colors.secondaryLight
         : isHighlighted
-          ? colors.editorDropTargetBg
+          ? cssVars.colors.editorDropTargetBg
           : hasMatch
-            ? colors.surface
-            : colors.background,
+            ? cssVars.colors.surface
+            : cssVars.colors.background,
     border: isSwapTarget
-      ? `2px solid ${colors.warning}` // Orange border for swap
+      ? `2px solid ${cssVars.colors.warning}` // Orange border for swap
       : isDropTarget
-        ? `2px solid ${colors.primary}`
+        ? `2px solid ${cssVars.colors.primary}`
         : isHighlighted
-          ? `2px dashed ${colors.secondary}`
+          ? `2px dashed ${cssVars.colors.secondary}`
           : hasMatch
-            ? `1px solid ${colors.border}`
-            : `2px dashed ${colors.border}`,
-    borderRadius: borderRadius.md,
+            ? `1px solid ${cssVars.colors.border}`
+            : `2px dashed ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
     transition: 'all 150ms ease',
     display: 'flex',
     alignItems: 'stretch', // Match cards fill full height
     justifyContent: 'stretch', // Match cards fill full width
     boxShadow: isSwapTarget
-      ? `0 0 0 3px ${colors.editorSwapActive}, inset 0 0 20px ${colors.editorSwapBg}`
+      ? `0 0 0 3px ${cssVars.colors.editorSwapActive}, inset 0 0 20px ${cssVars.colors.editorSwapBg}`
       : isDropTarget
-        ? `0 0 0 3px ${colors.secondaryLight}, inset 0 0 20px ${colors.editorDropTargetBg}`
+        ? `0 0 0 3px ${cssVars.colors.secondaryLight}, inset 0 0 20px ${cssVars.colors.editorDropTargetBg}`
         : 'none',
   };
 
@@ -109,9 +109,9 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    color: isDropTarget ? colors.primary : colors.textSecondary,
-    fontSize: fontSizes.sm,
+    gap: cssVars.spacing.xs,
+    color: isDropTarget ? cssVars.colors.primary : cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
     textAlign: 'center',
     opacity: isDragActive ? 1 : 0.5,
   };
@@ -173,9 +173,9 @@ export const TimeSlotCompact: React.FC<TimeSlotCompactProps> = ({
 
   const style: React.CSSProperties = {
     minHeight: hasMatch ? 'auto' : '40px',
-    backgroundColor: isOver ? colors.editorDragActiveBg : 'transparent',
-    border: hasMatch ? 'none' : `1px dashed ${isOver ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.sm,
+    backgroundColor: isOver ? cssVars.colors.editorDragActiveBg : 'transparent',
+    border: hasMatch ? 'none' : `1px dashed ${isOver ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -183,7 +183,7 @@ export const TimeSlotCompact: React.FC<TimeSlotCompactProps> = ({
 
   return (
     <div ref={setNodeRef} style={style}>
-      {hasMatch ? children : <span style={{ fontSize: fontSizes.xs, color: colors.textMuted }}>—</span>}
+      {hasMatch ? children : <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>—</span>}
     </div>
   );
 };

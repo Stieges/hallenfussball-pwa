@@ -1,6 +1,6 @@
 import { Card, Button, Input, Icons } from '../../components/ui';
 import { Tournament, Team } from '../../types/tournament';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import styles from './Step4_Teams.module.css';
@@ -156,7 +156,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
 
   return (
     <Card>
-      <h2 style={{ color: colors.textPrimary, fontSize: fontSizes.xl, margin: '0 0 24px 0' }}>
+      <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
         Teams
       </h2>
 
@@ -190,12 +190,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           style={{
             padding: '40px 20px',
             textAlign: 'center',
-            background: colors.surfaceDarkMedium,
-            borderRadius: borderRadius.md,
-            border: `1px dashed ${colors.border}`,
+            background: cssVars.colors.surfaceDarkMedium,
+            borderRadius: cssVars.borderRadius.md,
+            border: `1px dashed ${cssVars.colors.border}`,
           }}
         >
-          <p style={{ color: colors.textSecondary, margin: 0 }}>
+          <p style={{ color: cssVars.colors.textSecondary, margin: 0 }}>
             Noch keine Teams hinzugefügt
           </p>
         </div>
@@ -222,9 +222,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     />
                     {hasError && (
                       <p style={{
-                        margin: `${spacing.xs} 0 0 0`,
-                        color: colors.error,
-                        fontSize: fontSizes.xs,
+                        margin: `${cssVars.spacing.xs} 0 0 0`,
+                        color: cssVars.colors.error,
+                        fontSize: cssVars.fontSizes.xs,
                       }}>
                         Dieser Name wird bereits verwendet
                       </p>
@@ -283,17 +283,17 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               style={{
                 padding: '12px 16px',
                 background: warning.type === 'error'
-                  ? colors.errorLight
+                  ? cssVars.colors.errorLight
                   : warning.type === 'warning'
-                    ? colors.warningLight
-                    : colors.infoLight,
-                borderRadius: borderRadius.md,
+                    ? cssVars.colors.warningLight
+                    : cssVars.colors.infoLight,
+                borderRadius: cssVars.borderRadius.md,
                 border: `1px solid ${
                   warning.type === 'error'
-                    ? colors.errorBorder
+                    ? cssVars.colors.errorBorder
                     : warning.type === 'warning'
-                      ? colors.warningBorder
-                      : colors.infoBorder
+                      ? cssVars.colors.warningBorder
+                      : cssVars.colors.infoBorder
                 }`,
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -307,18 +307,18 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               <div style={{ flex: 1 }}>
                 <div style={{
                   color: warning.type === 'error'
-                    ? colors.error
+                    ? cssVars.colors.error
                     : warning.type === 'warning'
-                      ? colors.warning
-                      : colors.textPrimary,
-                  fontSize: fontSizes.sm,
-                  fontWeight: fontWeights.medium,
+                      ? cssVars.colors.warning
+                      : cssVars.colors.textPrimary,
+                  fontSize: cssVars.fontSizes.sm,
+                  fontWeight: cssVars.fontWeights.medium,
                 }}>
                   {warning.message}
                 </div>
                 {warning.action && (
                   <div style={{
-                    color: colors.textSecondary,
+                    color: cssVars.colors.textSecondary,
                     fontSize: '12px',
                     marginTop: '4px',
                   }}>
@@ -336,12 +336,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           style={{
             marginTop: '16px',
             padding: '12px',
-            background: colors.secondaryLight,
-            borderRadius: borderRadius.md,
-            border: `1px solid ${colors.secondaryBorderActive}`,
+            background: cssVars.colors.secondaryLight,
+            borderRadius: cssVars.borderRadius.md,
+            border: `1px solid ${cssVars.colors.secondaryBorderActive}`,
           }}
         >
-          <div style={{ fontSize: fontSizes.sm, color: colors.textSecondary }}>
+          <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
             {teams.length} Team{teams.length !== 1 ? 's' : ''} hinzugefügt
             {canAssignGroups && ` • Gruppen können jetzt zugewiesen werden`}
           </div>

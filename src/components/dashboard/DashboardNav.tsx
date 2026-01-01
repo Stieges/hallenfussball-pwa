@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius, shadows } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -88,12 +88,12 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     display: 'flex',
     justifyContent: 'space-around',
     alignItems: 'center',
-    background: colors.surface,
-    borderTop: `1px solid ${colors.border}`,
+    background: cssVars.colors.surface,
+    borderTop: `1px solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     zIndex: 1000,
     height: '64px',
-    boxShadow: shadows.lg,
+    boxShadow: cssVars.shadows.lg,
   };
 
   const itemStyle = (isActive: boolean): CSSProperties => ({
@@ -103,11 +103,11 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     justifyContent: 'center',
     flex: 1,
     height: '100%',
-    padding: `${spacing.xs} 0`,
+    padding: `${cssVars.spacing.xs} 0`,
     cursor: 'pointer',
     background: 'transparent',
     border: 'none',
-    color: isActive ? colors.primary : colors.textSecondary,
+    color: isActive ? cssVars.colors.primary : cssVars.colors.textSecondary,
     transition: 'color 0.2s ease, transform 0.1s ease',
     gap: '4px',
     minWidth: '64px',
@@ -122,14 +122,14 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
     justifyContent: 'center',
     width: '48px',
     height: '28px',
-    borderRadius: borderRadius.full,
-    background: isActive ? `${colors.primary}15` : 'transparent',
+    borderRadius: cssVars.borderRadius.full,
+    background: isActive ? `${cssVars.colors.primary}15` : 'transparent',
     transition: 'background 0.2s ease',
   });
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
     lineHeight: 1,
   };
 
@@ -151,7 +151,7 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
             <div style={iconContainerStyle(isActive)}>
               <IconComponent
                 size={24}
-                color={isActive ? colors.primary : colors.textSecondary}
+                color={isActive ? cssVars.colors.primary : cssVars.colors.textSecondary}
               />
               {item.badge !== undefined && item.badge > 0 && (
                 <Badge count={item.badge} type={item.badgeType} />
@@ -172,26 +172,26 @@ const MobileNav: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) =
 const DesktopTabs: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange }) => {
   const containerStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.xs,
-    background: colors.surfaceElevated,
-    padding: spacing.xs,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.lg,
+    gap: cssVars.spacing.xs,
+    background: cssVars.colors.surfaceElevated,
+    padding: cssVars.spacing.xs,
+    borderRadius: cssVars.borderRadius.lg,
+    marginBottom: cssVars.spacing.lg,
   };
 
   const tabStyle = (isActive: boolean): CSSProperties => ({
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.sm} ${spacing.lg}`,
-    borderRadius: borderRadius.md,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+    borderRadius: cssVars.borderRadius.md,
     border: 'none',
     cursor: 'pointer',
-    fontSize: fontSizes.md,
-    fontWeight: isActive ? fontWeights.semibold : fontWeights.medium,
-    color: isActive ? colors.primary : colors.textSecondary,
-    background: isActive ? colors.surface : 'transparent',
-    boxShadow: isActive ? shadows.sm : 'none',
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: isActive ? cssVars.fontWeights.semibold : cssVars.fontWeights.medium,
+    color: isActive ? cssVars.colors.primary : cssVars.colors.textSecondary,
+    background: isActive ? cssVars.colors.surface : 'transparent',
+    boxShadow: isActive ? cssVars.shadows.sm : 'none',
     transition: 'all 0.2s ease',
     position: 'relative',
   });
@@ -212,7 +212,7 @@ const DesktopTabs: React.FC<NavItemsProps> = ({ items, activeTab, onTabChange })
           >
             <IconComponent
               size={20}
-              color={isActive ? colors.primary : colors.textSecondary}
+              color={isActive ? cssVars.colors.primary : cssVars.colors.textSecondary}
             />
             <span>{item.label}</span>
             {item.badge !== undefined && item.badge > 0 && (
@@ -246,12 +246,12 @@ const Badge: React.FC<BadgeProps> = ({ count, type = 'count', inline = false }) 
         minWidth: '20px',
         height: '20px',
         padding: '0 6px',
-        borderRadius: borderRadius.full,
-        fontSize: fontSizes.xs,
-        fontWeight: fontWeights.semibold,
-        background: isWarning ? colors.statusWarning : colors.textSecondary,
-        color: isWarning ? colors.textOnDark : colors.surface,
-        marginLeft: spacing.xs,
+        borderRadius: cssVars.borderRadius.full,
+        fontSize: cssVars.fontSizes.xs,
+        fontWeight: cssVars.fontWeights.semibold,
+        background: isWarning ? cssVars.colors.statusWarning : cssVars.colors.textSecondary,
+        color: isWarning ? cssVars.colors.textOnDark : cssVars.colors.surface,
+        marginLeft: cssVars.spacing.xs,
       }
     : {
         position: 'absolute',
@@ -260,15 +260,15 @@ const Badge: React.FC<BadgeProps> = ({ count, type = 'count', inline = false }) 
         minWidth: '18px',
         height: '18px',
         padding: '0 4px',
-        borderRadius: borderRadius.full,
+        borderRadius: cssVars.borderRadius.full,
         fontSize: '10px',
-        fontWeight: fontWeights.bold,
-        background: isWarning ? colors.statusWarning : colors.primary,
-        color: colors.textOnDark,
+        fontWeight: cssVars.fontWeights.bold,
+        background: isWarning ? cssVars.colors.statusWarning : cssVars.colors.primary,
+        color: cssVars.colors.textOnDark,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        border: `2px solid ${colors.surface}`,
+        border: `2px solid ${cssVars.colors.surface}`,
       };
 
   return (

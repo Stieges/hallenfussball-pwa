@@ -1,5 +1,5 @@
 import React, { CSSProperties, ReactNode, useState, useEffect } from 'react';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, gradients, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies } from '../../design-tokens'
 import { transitions } from '../../styles/motion';
 
 interface ButtonProps {
@@ -70,10 +70,10 @@ export const Button: React.FC<ButtonProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     border: 'none',
-    borderRadius: borderRadius.md,
-    fontWeight: fontWeights.bold,
+    borderRadius: cssVars.borderRadius.md,
+    fontWeight: cssVars.fontWeights.bold,
     cursor: isDisabled ? 'not-allowed' : 'pointer',
     transition: `all 0.2s ease, ${transitions.buttonPress}`,
     fontFamily: fontFamilies.body,
@@ -85,39 +85,39 @@ export const Button: React.FC<ButtonProps> = ({
 
   const sizeStyles: Record<string, CSSProperties> = {
     sm: {
-      padding: `${spacing.sm} ${spacing.md}`,
-      fontSize: fontSizes.sm,
+      padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+      fontSize: cssVars.fontSizes.sm,
       minHeight: '44px', // WCAG: 44px minimum touch target
     },
     md: {
-      padding: `${spacing.md} ${spacing.lg}`,
-      fontSize: fontSizes.md,
+      padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+      fontSize: cssVars.fontSizes.md,
       minHeight: '44px', // WCAG: 44px minimum touch target
     },
     lg: {
-      padding: `${spacing.lg} ${spacing.xl}`,
-      fontSize: fontSizes.lg,
+      padding: `${cssVars.spacing.lg} ${cssVars.spacing.xl}`,
+      fontSize: cssVars.fontSizes.lg,
       minHeight: '48px', // Larger touch target for primary actions
     },
   };
 
   const variantStyles: Record<string, CSSProperties> = {
     primary: {
-      background: gradients.primary,
-      color: colors.background,
+      background: cssVars.gradients.primary,
+      color: cssVars.colors.background,
     },
     secondary: {
-      background: colors.surface,
-      color: colors.textPrimary,
-      border: `1px solid ${colors.border}`,
+      background: cssVars.colors.surface,
+      color: cssVars.colors.textPrimary,
+      border: `1px solid ${cssVars.colors.border}`,
     },
     ghost: {
       background: 'transparent',
-      color: colors.textSecondary,
+      color: cssVars.colors.textSecondary,
     },
     danger: {
-      background: colors.error,
-      color: colors.textPrimary,
+      background: cssVars.colors.error,
+      color: cssVars.colors.textPrimary,
     },
   };
 

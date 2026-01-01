@@ -1,5 +1,5 @@
 import React, { CSSProperties } from 'react';
-import { borderRadius, colors, fontFamilies, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars, fontFamilies } from '../../design-tokens'
 interface InputProps {
   label?: string;
   type?: 'text' | 'number' | 'email' | 'tel' | 'date' | 'time';
@@ -35,24 +35,24 @@ export const Input: React.FC<InputProps> = ({
   const containerStyles: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     width: '100%',
     ...style,
   };
 
   const labelStyles: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textSecondary,
   };
 
   const inputStyles: CSSProperties = {
-    padding: `${spacing.md} ${spacing.lg}`,
-    background: colors.inputBg,
-    border: `1px solid ${error ? colors.error : colors.border}`,
-    borderRadius: borderRadius.md,
-    color: colors.textPrimary,
-    fontSize: fontSizes.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    background: cssVars.colors.inputBg,
+    border: `1px solid ${error ? cssVars.colors.error : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
     fontFamily: fontFamilies.body,
     outline: 'none',
     transition: 'border-color 0.2s ease',
@@ -64,7 +64,7 @@ export const Input: React.FC<InputProps> = ({
       {label && (
         <label style={labelStyles}>
           {label}
-          {required && <span style={{ color: colors.error }}> *</span>}
+          {required && <span style={{ color: cssVars.colors.error }}> *</span>}
         </label>
       )}
       <input
@@ -81,11 +81,11 @@ export const Input: React.FC<InputProps> = ({
         style={inputStyles}
         onFocus={(e) => {
           if (!error) {
-            e.target.style.borderColor = colors.primary;
+            e.target.style.borderColor = cssVars.colors.primary;
           }
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = error ? colors.error : colors.border;
+          e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.border;
         }}
       />
     </div>

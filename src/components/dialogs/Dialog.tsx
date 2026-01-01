@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { borderRadius, colors, fontSizes, fontWeights, gradients, shadows, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
 
 export interface DialogProps {
@@ -59,21 +59,21 @@ export const Dialog = ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.overlayStrong,
+    backgroundColor: cssVars.colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     overflowY: 'auto',
   };
 
   const modalStyle: CSSProperties = {
-    background: gradients.card,
+    background: cssVars.gradients.card,
     backdropFilter: 'blur(20px)',
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.lg,
-    boxShadow: shadows.lg,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
+    boxShadow: cssVars.shadows.lg,
     width: '100%',
     maxWidth: maxWidth,
     maxHeight: '90vh',
@@ -86,14 +86,14 @@ export const Dialog = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.xl,
-    borderBottom: `1px solid ${colors.border}`,
+    padding: cssVars.spacing.xl,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: fontSizes.xl,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   };
 
@@ -101,17 +101,17 @@ export const Dialog = ({
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    padding: spacing.sm,
+    padding: cssVars.spacing.sm,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
     transition: 'background-color 0.2s',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const contentStyle: CSSProperties = {
-    padding: spacing.xl,
+    padding: cssVars.spacing.xl,
   };
 
   const dialog = (
@@ -124,7 +124,7 @@ export const Dialog = ({
             onClick={onClose}
             aria-label="Schließen"
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = colors.surfaceHover;
+              e.currentTarget.style.backgroundColor = cssVars.colors.surfaceHover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';

@@ -21,13 +21,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 
 // ---------------------------------------------------------------------------
@@ -95,7 +89,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     textAlign: 'center',
   };
 
@@ -103,34 +97,34 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.md,
   };
 
   const teamContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const avatarStyle: CSSProperties = {
     width: 48,
     height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
+    borderRadius: cssVars.borderRadius.md,
+    backgroundColor: cssVars.colors.primary,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.onPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     maxWidth: '100px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -138,38 +132,38 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
   };
 
   const vsStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textSecondary,
   };
 
   const metaStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'center',
-    gap: spacing.md,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    gap: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const questionStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
-    padding: `${spacing.sm} 0`,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
+    padding: `${cssVars.spacing.sm} 0`,
   };
 
   const hintStyle: CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textMuted,
-    marginTop: `-${spacing.xs}`,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginTop: `-${cssVars.spacing.xs}`,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
-    paddingTop: spacing.sm,
-    borderTop: `1px solid ${colors.border}`,
+    paddingTop: cssVars.spacing.sm,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   // ---------------------------------------------------------------------------

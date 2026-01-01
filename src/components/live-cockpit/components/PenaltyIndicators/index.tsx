@@ -11,7 +11,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty } from '../../../../types/tournament';
 
 interface Team {
@@ -111,9 +111,9 @@ export function PenaltyIndicators({
             style={{
               ...styles.penaltyBadge,
               backgroundColor: isExpiring
-                ? colors.warningLight
-                : colors.surface,
-              borderColor: isExpiring ? colors.warning : colors.borderDefault,
+                ? cssVars.colors.warningLight
+                : cssVars.colors.surface,
+              borderColor: isExpiring ? cssVars.colors.warning : cssVars.colors.borderDefault,
             }}
           >
             <span style={styles.icon}>⏱️</span>
@@ -126,7 +126,7 @@ export function PenaltyIndicators({
             <span
               style={{
                 ...styles.countdown,
-                color: isExpiring ? colors.warning : colors.textPrimary,
+                color: isExpiring ? cssVars.colors.warning : cssVars.colors.textPrimary,
               }}
             >
               {formatTime(remaining)}
@@ -142,38 +142,38 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'center',
-    padding: `${spacing.sm} ${spacing.md}`,
-    backgroundColor: colors.surfaceDark,
-    borderRadius: borderRadius.lg,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    backgroundColor: cssVars.colors.surfaceDark,
+    borderRadius: cssVars.borderRadius.lg,
     maxWidth: '100%',
   },
   penaltyBadge: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: colors.surface,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.md,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    backgroundColor: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.md,
     transition: 'all 0.3s ease',
   },
   icon: {
-    fontSize: fontSizes.sm,
+    fontSize: cssVars.fontSizes.sm,
   },
   playerInfo: {
-    fontSize: fontSizes.sm,
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: 600,
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   },
   teamLabel: {
-    marginLeft: spacing.xs,
-    fontSize: fontSizes.xs,
-    color: colors.textTertiary,
+    marginLeft: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textTertiary,
   },
   countdown: {
-    fontSize: fontSizes.sm,
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: 700,
     fontVariantNumeric: 'tabular-nums',
     minWidth: '45px',

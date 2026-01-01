@@ -1,7 +1,7 @@
 import { useState, CSSProperties } from 'react';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
 import { GeneratedSchedule } from '../../lib/scheduleGenerator';
 import { Standing, Tournament } from '../../types/tournament';
@@ -88,35 +88,35 @@ export const PDFExportDialog = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xl,
+    gap: cssVars.spacing.xl,
   };
 
   const optionsSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   };
 
   const radioGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
-    marginBottom: spacing.sm,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
+    fontWeight: cssVars.fontWeights.medium,
+    marginBottom: cssVars.spacing.sm,
   };
 
   const radioOptionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: `${spacing.md} ${spacing.md}`,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.border}`,
+    gap: cssVars.spacing.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.border}`,
     cursor: 'pointer',
     transition: 'all 0.2s',
     minHeight: '60px',
@@ -127,29 +127,29 @@ export const PDFExportDialog = ({
     height: '22px',
     minWidth: '22px',
     cursor: 'pointer',
-    accentColor: colors.primary,
+    accentColor: cssVars.colors.primary,
   };
 
   const radioLabelTextStyle: CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
     cursor: 'pointer',
     flex: 1,
   };
 
   const radioDescStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textMuted,
+    marginTop: cssVars.spacing.xs,
   };
 
   const checkboxSectionStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: `${spacing.md} ${spacing.md}`,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.border}`,
+    gap: cssVars.spacing.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.md}`,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.border}`,
     cursor: 'pointer',
     minHeight: '60px',
   };
@@ -157,16 +157,16 @@ export const PDFExportDialog = ({
   const buttonGroupStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const errorStyle: CSSProperties = {
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    background: colors.errorLight,
-    border: `1px solid ${colors.error}`,
-    color: colors.error,
-    fontSize: fontSizes.sm,
+    padding: cssVars.spacing.md,
+    borderRadius: cssVars.borderRadius.sm,
+    background: cssVars.colors.errorLight,
+    border: `1px solid ${cssVars.colors.error}`,
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   return (
@@ -181,8 +181,8 @@ export const PDFExportDialog = ({
               <label
                 style={{
                   ...radioOptionStyle,
-                  borderColor: includeScores ? colors.primary : colors.border,
-                  background: includeScores ? colors.rankingPlacementBg : 'transparent',
+                  borderColor: includeScores ? cssVars.colors.primary : cssVars.colors.border,
+                  background: includeScores ? cssVars.colors.rankingPlacementBg : 'transparent',
                 }}
               >
                 <input
@@ -201,8 +201,8 @@ export const PDFExportDialog = ({
               <label
                 style={{
                   ...radioOptionStyle,
-                  borderColor: !includeScores ? colors.primary : colors.border,
-                  background: !includeScores ? colors.rankingPlacementBg : 'transparent',
+                  borderColor: !includeScores ? cssVars.colors.primary : cssVars.colors.border,
+                  background: !includeScores ? cssVars.colors.rankingPlacementBg : 'transparent',
                 }}
               >
                 <input
@@ -224,8 +224,8 @@ export const PDFExportDialog = ({
           <label
             style={{
               ...checkboxSectionStyle,
-              borderColor: includeStandings ? colors.primary : colors.border,
-              background: includeStandings ? colors.rankingPlacementBg : 'transparent',
+              borderColor: includeStandings ? cssVars.colors.primary : cssVars.colors.border,
+              background: includeStandings ? cssVars.colors.rankingPlacementBg : 'transparent',
             }}
           >
             <input

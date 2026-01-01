@@ -10,13 +10,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import type { ScheduleConflict, ConflictType } from '../../../features/schedule-editor/types';
 
 // ---------------------------------------------------------------------------
@@ -117,7 +111,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
     md: {
       width: 24,
       height: 24,
-      fontSize: fontSizes.xs,
+      fontSize: cssVars.fontSizes.xs,
     },
   };
 
@@ -153,14 +147,14 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: severity === 'error' ? colors.error : colors.warning,
-    color: severity === 'error' ? colors.onError : colors.onWarning,
-    borderRadius: borderRadius.full,
-    fontWeight: fontWeights.bold,
+    backgroundColor: severity === 'error' ? cssVars.colors.error : cssVars.colors.warning,
+    color: severity === 'error' ? cssVars.colors.onError : cssVars.colors.onWarning,
+    borderRadius: cssVars.borderRadius.full,
+    fontWeight: cssVars.fontWeights.bold,
     cursor: showTooltip ? 'help' : 'default',
     zIndex: 10,
-    boxShadow: `0 2px 4px ${colors.shadowSoft}`,
-    border: `2px solid ${colors.surface}`,
+    boxShadow: `0 2px 4px ${cssVars.colors.shadowSoft}`,
+    border: `2px solid ${cssVars.colors.surface}`,
   };
 
   const tooltipContainerStyle: CSSProperties = {
@@ -173,12 +167,12 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
     bottom: '100%',
     left: '50%',
     transform: 'translateX(-50%)',
-    marginBottom: spacing.sm,
-    padding: `${spacing.sm} ${spacing.md}`,
-    backgroundColor: colors.surfaceSolid,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    boxShadow: `0 4px 12px ${colors.shadowMedium}`,
+    marginBottom: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    backgroundColor: cssVars.colors.surfaceSolid,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
     minWidth: '200px',
     maxWidth: '300px',
     zIndex: 100,
@@ -191,11 +185,11 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   const tooltipHeaderStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.bold,
-    color: severity === 'error' ? colors.error : colors.warning,
+    gap: cssVars.spacing.xs,
+    marginBottom: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.bold,
+    color: severity === 'error' ? cssVars.colors.error : cssVars.colors.warning,
   };
 
   const conflictListStyle: CSSProperties = {
@@ -207,16 +201,16 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   const conflictItemStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.xs,
-    padding: `${spacing.xs} 0`,
-    borderTop: `1px solid ${colors.borderSubtle}`,
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} 0`,
+    borderTop: `1px solid ${cssVars.colors.borderSubtle}`,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   };
 
   const conflictIconStyle: CSSProperties = {
     flexShrink: 0,
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
   };
 
   const conflictTextStyle: CSSProperties = {
@@ -224,8 +218,8 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   };
 
   const conflictTypeStyle: CSSProperties = {
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
     display: 'block',
     marginBottom: '2px',
   };

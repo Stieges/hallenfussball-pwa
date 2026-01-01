@@ -11,7 +11,7 @@
  */
 
 import { CSSProperties, useEffect, useRef, useCallback, useState } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 export interface FullscreenControlsProps {
   /** Whether currently in fullscreen mode */
   isFullscreen: boolean;
@@ -138,7 +138,7 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
     zIndex: 1000,
     opacity: isVisible ? 1 : 0,
     transform: isVisible ? 'translateY(0)' : 'translateY(-10px)',
@@ -152,20 +152,20 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
   const childrenContainerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const buttonStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: `${spacing.sm} ${spacing.lg}`,
+    gap: cssVars.spacing.sm,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
     background: 'rgba(0, 230, 118, 0.15)',
-    border: `2px solid ${colors.primary}`,
-    borderRadius: borderRadius.md,
-    color: colors.primary,
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.bold,
+    border: `2px solid ${cssVars.colors.primary}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.bold,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     backdropFilter: 'blur(4px)',

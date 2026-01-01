@@ -9,7 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Match, Team, RefereeConfig } from '../../../types/tournament';
-import { colors, spacing, borderRadius, fontSizes, fontWeights } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ScheduleConflict } from '../types';
 
 // ============================================================================
@@ -53,20 +53,20 @@ interface SelectOption {
 const containerStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.sm,
+  gap: cssVars.spacing.sm,
   flexWrap: 'wrap',
 };
 
 const fieldGroupStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: spacing.xs,
+  gap: cssVars.spacing.xs,
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: fontSizes.xs,
-  color: colors.textSecondary,
-  fontWeight: fontWeights.medium,
+  fontSize: cssVars.fontSizes.xs,
+  color: cssVars.colors.textSecondary,
+  fontWeight: cssVars.fontWeights.medium,
   minWidth: '30px',
 };
 
@@ -76,13 +76,13 @@ const selectContainerStyle: React.CSSProperties = {
 
 const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties => ({
   appearance: 'none',
-  padding: `${spacing.xs} ${spacing.md} ${spacing.xs} ${spacing.sm}`,
-  fontSize: fontSizes.sm,
-  fontWeight: fontWeights.medium,
-  color: hasConflict ? colors.error : colors.textPrimary,
-  backgroundColor: hasConflict ? colors.editorErrorRowBg : colors.surface,
-  border: `1px solid ${hasConflict ? colors.error : isOpen ? colors.primary : colors.border}`,
-  borderRadius: borderRadius.sm,
+  padding: `${cssVars.spacing.xs} ${cssVars.spacing.md} ${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+  fontSize: cssVars.fontSizes.sm,
+  fontWeight: cssVars.fontWeights.medium,
+  color: hasConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
+  backgroundColor: hasConflict ? cssVars.colors.editorErrorRowBg : cssVars.colors.surface,
+  border: `1px solid ${hasConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.border}`,
+  borderRadius: cssVars.borderRadius.sm,
   cursor: 'pointer',
   minWidth: '80px',
   outline: 'none',
@@ -91,12 +91,12 @@ const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties
 
 const selectArrowStyle: React.CSSProperties = {
   position: 'absolute',
-  right: spacing.xs,
+  right: cssVars.spacing.xs,
   top: '50%',
   transform: 'translateY(-50%)',
   pointerEvents: 'none',
-  fontSize: fontSizes.xs,
-  color: colors.textSecondary,
+  fontSize: cssVars.fontSizes.xs,
+  color: cssVars.colors.textSecondary,
 };
 
 const disabledStyle: React.CSSProperties = {
@@ -259,14 +259,14 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
         {showRefereeSelector && (
           <div style={fieldGroupStyle}>
             <span style={labelStyle}>SR:</span>
-            <span style={{ fontSize: fontSizes.sm }}>
+            <span style={{ fontSize: cssVars.fontSizes.sm }}>
               {currentRefereeOption?.label ?? '—'}
             </span>
           </div>
         )}
         <div style={fieldGroupStyle}>
           <span style={labelStyle}>Feld:</span>
-          <span style={{ fontSize: fontSizes.sm }}>
+          <span style={{ fontSize: cssVars.fontSizes.sm }}>
             {currentFieldOption?.label ?? `Feld ${currentField}`}
           </span>
         </div>
@@ -297,9 +297,9 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
                   key={option.value ?? 'none'}
                   value={option.value ?? ''}
                   style={{
-                    color: option.hasConflict ? colors.error : 'inherit',
+                    color: option.hasConflict ? cssVars.colors.error : 'inherit',
                     backgroundColor: option.hasConflict
-                      ? colors.editorErrorRowBg
+                      ? cssVars.colors.editorErrorRowBg
                       : 'inherit',
                   }}
                 >
@@ -333,9 +333,9 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
                 key={option.value}
                 value={option.value}
                 style={{
-                  color: option.hasConflict ? colors.error : 'inherit',
+                  color: option.hasConflict ? cssVars.colors.error : 'inherit',
                   backgroundColor: option.hasConflict
-                    ? colors.editorErrorRowBg
+                    ? cssVars.colors.editorErrorRowBg
                     : 'inherit',
                 }}
               >
@@ -386,13 +386,13 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
 
   const compactSelectStyle: React.CSSProperties = {
     appearance: 'none',
-    padding: size === 'sm' ? '2px 16px 2px 4px' : `${spacing.xs} ${spacing.md} ${spacing.xs} ${spacing.sm}`,
-    fontSize: size === 'sm' ? fontSizes.xs : fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: showConflict ? colors.error : colors.textPrimary,
-    backgroundColor: showConflict ? colors.editorErrorRowBg : 'transparent',
-    border: `1px solid ${showConflict ? colors.error : isOpen ? colors.primary : colors.border}`,
-    borderRadius: borderRadius.sm,
+    padding: size === 'sm' ? '2px 16px 2px 4px' : `${cssVars.spacing.xs} ${cssVars.spacing.md} ${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    fontSize: size === 'sm' ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: showConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
+    backgroundColor: showConflict ? cssVars.colors.editorErrorRowBg : 'transparent',
+    border: `1px solid ${showConflict ? cssVars.colors.error : isOpen ? cssVars.colors.primary : cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.sm,
     cursor: enabled ? 'pointer' : 'not-allowed',
     minWidth: size === 'sm' ? '50px' : '70px',
     outline: 'none',
@@ -403,8 +403,8 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
     return (
       <span
         style={{
-          fontSize: size === 'sm' ? fontSizes.xs : fontSizes.sm,
-          color: showConflict ? colors.error : colors.textSecondary,
+          fontSize: size === 'sm' ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
+          color: showConflict ? cssVars.colors.error : cssVars.colors.textSecondary,
         }}
       >
         {currentOption?.label ?? '—'}
@@ -438,7 +438,7 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
           transform: 'translateY(-50%)',
           pointerEvents: 'none',
           fontSize: '8px',
-          color: colors.textSecondary,
+          color: cssVars.colors.textSecondary,
         }}
       >
         ▼

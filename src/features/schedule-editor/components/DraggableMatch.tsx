@@ -10,7 +10,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Match, Team } from '../../../types/tournament';
 import { ScheduleConflict } from '../types';
-import { colors, spacing, borderRadius, fontSizes, fontWeights, shadows } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { SkippedMatchOverlay, SkippedBadge } from './SkippedMatchOverlay';
 
 // ============================================================================
@@ -116,36 +116,36 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   const cardStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs, // Reduced gap for compact layout
-    padding: spacing.md,
+    gap: cssVars.spacing.xs, // Reduced gap for compact layout
+    padding: cssVars.spacing.md,
     height: '100%', // Fill parent height
     boxSizing: 'border-box',
     backgroundColor: isDragging
-      ? colors.secondaryLight // Light blue tint when dragging
+      ? cssVars.colors.secondaryLight // Light blue tint when dragging
       : isSelected
-        ? colors.statusLiveRowBg
+        ? cssVars.colors.statusLiveRowBg
         : isFinished
-          ? colors.editorEditModeRowBg
+          ? cssVars.colors.editorEditModeRowBg
           : isRunning
-            ? colors.editorDirtyRowBg
-            : colors.surface,
+            ? cssVars.colors.editorDirtyRowBg
+            : cssVars.colors.surface,
     border: isDragging
-      ? `3px dashed ${colors.primary}` // Dashed border when dragging
+      ? `3px dashed ${cssVars.colors.primary}` // Dashed border when dragging
       : `2px solid ${
           isSelected
-            ? colors.primary
+            ? cssVars.colors.primary
             : hasErrors
-              ? colors.error
+              ? cssVars.colors.error
               : hasWarnings
-                ? colors.warning
-                : colors.border
+                ? cssVars.colors.warning
+                : cssVars.colors.border
         }`,
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     boxShadow: isDragging
       ? 'none' // No shadow when dragging - simpler look
       : isSelected
-        ? shadows.md
-        : shadows.sm,
+        ? cssVars.shadows.md
+        : cssVars.shadows.sm,
     cursor: canDrag ? (isDragging ? 'grabbing' : 'grab') : 'default',
     overflow: 'hidden',
   };
@@ -154,18 +154,18 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const matchNumberStyle: React.CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    fontWeight: cssVars.fontWeights.medium,
   };
 
   const timeStyle: React.CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
   };
 
   // Horizontal layout: "Team A vs Team B" or "Team A 2:1 Team B"
@@ -174,15 +174,15 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     flexDirection: 'row', // HORIZONTAL layout
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
     flex: 1,
-    padding: `${spacing.sm} 0`,
+    padding: `${cssVars.spacing.sm} 0`,
   };
 
   const teamStyle: React.CSSProperties = {
-    fontSize: fontSizes.md,
-    fontWeight: fontWeights.semibold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.md,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
@@ -201,10 +201,10 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
   };
 
   const vsStyle: React.CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.medium,
-    color: colors.textMuted,
-    padding: `0 ${spacing.sm}`,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textMuted,
+    padding: `0 ${cssVars.spacing.sm}`,
     flexShrink: 0,
   };
 
@@ -212,49 +212,49 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.md}`,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    border: `1px solid ${colors.border}`,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    backgroundColor: cssVars.colors.background,
+    borderRadius: cssVars.borderRadius.sm,
+    border: `1px solid ${cssVars.colors.border}`,
     flexShrink: 0,
   };
 
   const scoreStyle: React.CSSProperties = {
-    fontSize: fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
     minWidth: '20px',
     textAlign: 'center',
   };
 
   const scoreSeparatorStyle: React.CSSProperties = {
-    fontSize: fontSizes.md,
-    color: colors.textMuted,
-    fontWeight: fontWeights.medium,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textMuted,
+    fontWeight: cssVars.fontWeights.medium,
   };
 
   const footerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     marginTop: 'auto',
-    paddingTop: spacing.sm,
-    borderTop: `1px solid ${colors.border}`,
+    paddingTop: cssVars.spacing.sm,
+    borderTop: `1px solid ${cssVars.colors.border}`,
   };
 
   const fieldBadgeStyle: React.CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
-    backgroundColor: colors.background,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    borderRadius: borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    backgroundColor: cssVars.colors.background,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
   };
 
   const conflictIndicatorStyle: React.CSSProperties = {
     display: 'flex',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const dragHandleStyle: React.CSSProperties = {
@@ -263,12 +263,12 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     justifyContent: 'center',
     width: '28px',
     height: '28px',
-    color: colors.primary,
-    backgroundColor: colors.editorDragActiveBg,
-    borderRadius: borderRadius.sm,
+    color: cssVars.colors.primary,
+    backgroundColor: cssVars.colors.editorDragActiveBg,
+    borderRadius: cssVars.borderRadius.sm,
     cursor: 'grab',
     fontSize: '16px',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
   };
 
   // =========================================================================
@@ -330,7 +330,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
 
           {/* Referee */}
           {match.referee && (
-            <span style={{ fontSize: fontSizes.xs, color: colors.textSecondary }}>
+            <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
               SR {match.referee}
             </span>
           )}

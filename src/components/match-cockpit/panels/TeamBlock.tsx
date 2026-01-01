@@ -5,7 +5,7 @@
  */
 
 import React, { CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { MatchStatus } from '../MatchCockpit';
@@ -32,39 +32,39 @@ const TeamBlockComponent: React.FC<TeamBlockProps> = ({
   const isMobile = useIsMobile();
 
   const blockStyle: CSSProperties = {
-    padding: isMobile ? spacing.lg : spacing.md,
-    borderRadius: borderRadius.lg,
-    background: `linear-gradient(135deg, ${colors.panelGradientStart}, ${colors.panelGradientEnd})`,
-    border: `1px solid ${colors.border}`,
+    padding: isMobile ? cssVars.spacing.lg : cssVars.spacing.md,
+    borderRadius: cssVars.borderRadius.lg,
+    background: `linear-gradient(135deg, ${cssVars.colors.panelGradientStart}, ${cssVars.colors.panelGradientEnd})`,
+    border: `1px solid ${cssVars.colors.border}`,
     display: 'flex',
     flexDirection: 'column',
-    gap: isMobile ? spacing.sm : '6px',
+    gap: isMobile ? cssVars.spacing.sm : '6px',
     alignItems: isMobile ? 'flex-start' : (align === 'right' ? 'flex-end' : 'flex-start'),
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
+    fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.xs,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? fontSizes.xl : fontSizes.lg,
-    fontWeight: fontWeights.bold,
-    color: colors.textPrimary,
+    fontSize: isMobile ? cssVars.fontSizes.xl : cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textPrimary,
   };
 
   const scoreStyle: CSSProperties = {
     fontSize: isMobile ? '48px' : '30px',
-    fontWeight: fontWeights.bold,
+    fontWeight: cssVars.fontWeights.bold,
     marginTop: '2px',
   };
 
   const controlsStyle: CSSProperties = {
-    marginTop: spacing.xs,
+    marginTop: cssVars.spacing.xs,
     display: 'flex',
-    gap: isMobile ? spacing.sm : '6px',
+    gap: isMobile ? cssVars.spacing.sm : '6px',
     flexWrap: 'wrap',
     width: isMobile ? '100%' : 'auto',
   };

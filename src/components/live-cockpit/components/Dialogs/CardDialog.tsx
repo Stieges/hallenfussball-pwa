@@ -9,12 +9,12 @@
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §5.2
  *
  * Card colors:
- * - Yellow: colors.accent (#FFD700)
- * - Red: colors.error
+ * - Yellow: cssVars.colors.accent (#FFD700)
+ * - Red: cssVars.colors.error
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -47,8 +47,8 @@ interface CardDialogProps {
 
 // Card type colors
 const cardColors = {
-  YELLOW: colors.accent, // #FFD700
-  RED: colors.error,
+  YELLOW: cssVars.colors.accent, // #FFD700
+  RED: cssVars.colors.error,
 } as const;
 
 export function CardDialog({
@@ -311,10 +311,10 @@ export function CardDialog({
               ...styles.quickNumberButton,
               backgroundColor:
                 playerNumber === String(num)
-                  ? colors.primaryLight
-                  : colors.surface,
+                  ? cssVars.colors.primaryLight
+                  : cssVars.colors.surface,
               borderColor:
-                playerNumber === String(num) ? colors.primary : 'transparent',
+                playerNumber === String(num) ? cssVars.colors.primary : 'transparent',
             }}
             onClick={() => {
               setPlayerNumber(String(num));
@@ -338,7 +338,7 @@ export function CardDialog({
             ...styles.confirmButton,
             backgroundColor:
               cardType === 'YELLOW' ? cardColors.YELLOW : cardColors.RED,
-            color: cardType === 'YELLOW' ? colors.onWarning : colors.onError,
+            color: cardType === 'YELLOW' ? cssVars.colors.onWarning : cssVars.colors.onError,
           }}
           onClick={handleConfirm}
           disabled={!playerNumber.trim()}
@@ -365,7 +365,7 @@ export function CardDialog({
               style={{
                 ...styles.timerProgress,
                 width: `${progressPercent}%`,
-                backgroundColor: remainingSeconds <= 3 ? colors.error : colors.primary,
+                backgroundColor: remainingSeconds <= 3 ? cssVars.colors.error : cssVars.colors.primary,
               }}
             />
           </div>
@@ -382,23 +382,23 @@ const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: colors.overlayDialog,
+    backgroundColor: cssVars.colors.overlayDialog,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
-    padding: spacing.lg,
+    padding: cssVars.spacing.lg,
   },
   dialog: {
     position: 'relative', // BUG-007: Needed for timer progress bar
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
+    backgroundColor: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.xl,
+    padding: cssVars.spacing.xl,
     maxWidth: '400px',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.lg,
+    gap: cssVars.spacing.lg,
   },
   headerWithBack: {
     display: 'flex',
@@ -411,17 +411,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.xl,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xl,
+    color: cssVars.colors.textSecondary,
     backgroundColor: 'transparent',
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
   },
   headerContent: {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   cardBadge: {
     width: 24,
@@ -429,43 +429,43 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 4,
   },
   title: {
-    fontSize: fontSizes.xl,
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     margin: 0,
     textAlign: 'center',
   },
   titleSmall: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
     margin: 0,
   },
   teamSubtitle: {
-    fontSize: fontSizes.sm,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
     margin: 0,
   },
   subtitle: {
-    fontSize: fontSizes.md,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textSecondary,
     margin: 0,
     textAlign: 'center',
   },
   cardTypeGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   cardTypeButton: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.xl,
+    gap: cssVars.spacing.md,
+    padding: cssVars.spacing.xl,
     border: '2px solid',
-    borderRadius: borderRadius.xl,
+    borderRadius: cssVars.borderRadius.xl,
     cursor: 'pointer',
     minHeight: 120,
     transition: 'transform 0.15s ease',
@@ -474,33 +474,33 @@ const styles: Record<string, React.CSSProperties> = {
     width: 48,
     height: 64,
     borderRadius: 6,
-    boxShadow: `0 4px 12px ${colors.shadowMedium}`,
+    boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
   },
   cardTypeLabel: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
   },
   teamGrid: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   },
   teamButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    border: `2px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    padding: cssVars.spacing.lg,
+    backgroundColor: cssVars.colors.surface,
+    border: `2px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 56,
     transition: 'all 0.15s ease',
   },
   teamLabel: {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: 600,
-    color: colors.textPrimary,
+    color: cssVars.colors.textPrimary,
   },
   inputContainer: {
     display: 'flex',
@@ -509,67 +509,67 @@ const styles: Record<string, React.CSSProperties> = {
   numberInput: {
     width: 100,
     height: 64,
-    fontSize: fontSizes.xxl,
+    fontSize: cssVars.fontSizes.xxl,
     fontWeight: 700,
     textAlign: 'center',
-    backgroundColor: colors.surface,
-    border: `2px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
-    color: colors.textPrimary,
+    backgroundColor: cssVars.colors.surface,
+    border: `2px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
+    color: cssVars.colors.textPrimary,
     outline: 'none',
   },
   quickNumbers: {
     display: 'grid',
     gridTemplateColumns: 'repeat(6, 1fr)',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   },
   quickNumberButton: {
     height: 44,
-    fontSize: fontSizes.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
+    color: cssVars.colors.textPrimary,
+    backgroundColor: cssVars.colors.surface,
     border: '2px solid transparent',
-    borderRadius: borderRadius.md,
+    borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
   },
   actions: {
     display: 'flex',
-    gap: spacing.md,
-    marginTop: spacing.sm,
+    gap: cssVars.spacing.md,
+    marginTop: cssVars.spacing.sm,
   },
   cancelButton: {
     width: '100%',
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    color: cssVars.colors.textSecondary,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },
   skipButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 500,
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
-    border: `1px solid ${colors.borderDefault}`,
-    borderRadius: borderRadius.lg,
+    color: cssVars.colors.textSecondary,
+    border: `1px solid ${cssVars.colors.borderDefault}`,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },
   confirmButton: {
     flex: 1,
-    padding: spacing.md,
-    fontSize: fontSizes.md,
+    padding: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.md,
     fontWeight: 600,
     border: 'none',
-    borderRadius: borderRadius.lg,
+    borderRadius: cssVars.borderRadius.lg,
     cursor: 'pointer',
     minHeight: 48,
   },
@@ -580,8 +580,8 @@ const styles: Record<string, React.CSSProperties> = {
     left: 0,
     right: 0,
     height: '4px',
-    backgroundColor: colors.surface,
-    borderRadius: `${borderRadius.xl} ${borderRadius.xl} 0 0`,
+    backgroundColor: cssVars.colors.surface,
+    borderRadius: `${cssVars.borderRadius.xl} ${cssVars.borderRadius.xl} 0 0`,
     overflow: 'hidden',
   },
   timerProgress: {

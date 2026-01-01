@@ -23,13 +23,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
-import {
-  colors,
-  spacing,
-  fontSizes,
-  fontWeights,
-  borderRadius,
-} from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { ScoreStepper } from '../../ui/ScoreStepper';
 import { Button } from '../../ui/Button';
 
@@ -119,20 +113,20 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: isDesktop ? 'row' : 'column',
-    gap: spacing.md,
+    gap: cssVars.spacing.md,
   };
 
   const scoresSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flex: isDesktop ? '0 0 50%' : undefined,
   };
 
   const goalsSectionStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     flex: isDesktop ? '1' : undefined,
   };
 
@@ -140,20 +134,20 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: spacing.xs,
-    borderBottom: `1px solid ${colors.border}`,
+    paddingBottom: cssVars.spacing.xs,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
   };
 
   const goalsHeaderTextStyle: CSSProperties = {
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textSecondary,
   };
 
   const goalsListStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
     maxHeight: '200px',
     overflowY: 'auto',
   };
@@ -162,45 +156,45 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.sm,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.sm,
+    padding: cssVars.spacing.sm,
+    backgroundColor: cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const goalInfoStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
   };
 
   const goalTeamStyle: CSSProperties = {
-    fontWeight: fontWeights.medium,
-    color: colors.textPrimary,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textPrimary,
   };
 
   const goalNumberStyle = (hasNumber: boolean): CSSProperties => ({
-    fontWeight: fontWeights.bold,
-    color: hasNumber ? colors.textPrimary : colors.warning,
+    fontWeight: cssVars.fontWeights.bold,
+    color: hasNumber ? cssVars.colors.textPrimary : cssVars.colors.warning,
     minWidth: '36px',
   });
 
   const goalTimeStyle: CSSProperties = {
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     fontVariantNumeric: 'tabular-nums',
   };
 
   const goalActionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const iconButtonStyle: CSSProperties = {
-    padding: spacing.xs,
-    borderRadius: borderRadius.sm,
+    padding: cssVars.spacing.xs,
+    borderRadius: cssVars.borderRadius.sm,
     border: 'none',
     backgroundColor: 'transparent',
-    color: colors.textSecondary,
+    color: cssVars.colors.textSecondary,
     cursor: 'pointer',
     fontSize: '14px',
     lineHeight: 1,
@@ -214,17 +208,17 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
 
   const emptyGoalsStyle: CSSProperties = {
     textAlign: 'center',
-    padding: spacing.md,
-    color: colors.textMuted,
-    fontSize: fontSizes.sm,
+    padding: cssVars.spacing.md,
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.sm,
   };
 
   const actionsStyle: CSSProperties = {
     display: 'flex',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     justifyContent: 'flex-end',
-    paddingTop: spacing.sm,
-    borderTop: `1px solid ${colors.border}`,
+    paddingTop: cssVars.spacing.sm,
+    borderTop: `1px solid ${cssVars.colors.border}`,
     marginTop: isDesktop ? 'auto' : undefined,
   };
 

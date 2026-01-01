@@ -6,7 +6,7 @@
  */
 
 import React, { CSSProperties, useRef, useEffect } from 'react';
-import { spacing } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { LiveMatch } from '../MatchCockpit';
 import { TeamBlock } from './TeamBlock';
@@ -68,10 +68,10 @@ const ScoreboardComponent: React.FC<ScoreboardProps> = ({
   }, [match.homeScore, match.awayScore, match.homeTeam.name, match.awayTeam.name]);
 
   const scoreboardStyle: CSSProperties = {
-    marginTop: spacing.sm,
+    marginTop: cssVars.spacing.sm,
     display: 'grid',
     gridTemplateColumns: isMobile ? '1fr' : '1.4fr auto 1.4fr',
-    gap: isMobile ? spacing.md : spacing.sm,
+    gap: isMobile ? cssVars.spacing.md : cssVars.spacing.sm,
     alignItems: 'center',
   };
 

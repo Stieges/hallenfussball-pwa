@@ -1,5 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
-import { borderRadius, colors, fontSizes, fontWeights, spacing } from '../../design-tokens';
+import { cssVars } from '../../design-tokens'
 interface MatchScoreCellProps {
   matchId: string;
   scoreA: number | undefined;
@@ -60,16 +60,16 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
     };
 
     const scoreStyle: CSSProperties = {
-      fontWeight: fontWeights.bold,
-      fontSize: fontSizes.md,
+      fontWeight: cssVars.fontWeights.bold,
+      fontSize: cssVars.fontSizes.md,
     };
 
     const buttonStyle: CSSProperties = {
       background: 'transparent',
-      border: `1px solid ${colors.border}`,
-      borderRadius: borderRadius.sm,
-      color: colors.textSecondary,
-      fontSize: fontSizes.xs,
+      border: `1px solid ${cssVars.colors.border}`,
+      borderRadius: cssVars.borderRadius.sm,
+      color: cssVars.colors.textSecondary,
+      fontSize: cssVars.fontSizes.xs,
       padding: '3px 8px',
       cursor: 'pointer',
       transition: 'all 0.2s ease',
@@ -100,9 +100,9 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
         <style>{`
           .correction-button:hover {
-            background: ${colors.primary};
+            background: ${cssVars.colors.primary};
             color: white;
-            border-color: ${colors.primary};
+            border-color: ${cssVars.colors.primary};
           }
 
           @media (max-width: 767px) {
@@ -124,7 +124,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   if (editable || inCorrectionMode) {
     const inputContainerStyle: CSSProperties = {
       display: 'flex',
-      gap: spacing.xs,
+      gap: cssVars.spacing.xs,
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative' as const,
@@ -132,25 +132,25 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
 
     const inputStyle: CSSProperties = {
       width: '40px',
-      padding: spacing.xs,
+      padding: cssVars.spacing.xs,
       border: inCorrectionMode
-        ? `2px solid ${colors.warning}`
-        : `1px solid ${colors.border}`,
-      borderRadius: borderRadius.sm,
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.bold,
+        ? `2px solid ${cssVars.colors.warning}`
+        : `1px solid ${cssVars.colors.border}`,
+      borderRadius: cssVars.borderRadius.sm,
+      fontSize: cssVars.fontSizes.sm,
+      fontWeight: cssVars.fontWeights.bold,
       textAlign: 'center' as const,
       backgroundColor: inCorrectionMode
-        ? colors.warningLight
-        : colors.background,
-      color: colors.textPrimary,
+        ? cssVars.colors.warningLight
+        : cssVars.colors.background,
+      color: cssVars.colors.textPrimary,
     };
 
     const iconStyle: CSSProperties = {
       position: 'absolute' as const,
       top: '-8px',
       right: '-8px',
-      fontSize: fontSizes.lg,
+      fontSize: cssVars.fontSizes.lg,
     };
 
     return (

@@ -222,6 +222,14 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   gradientErrorLight: 'var(--color-gradient-error-light)',
   gradientPrimaryLight: 'var(--color-gradient-primary-light)',
+  gradientNextMatch: 'var(--gradient-next-match)',
+  backgroundGradientDark: 'var(--gradient-background-dark)',
+
+  // ---------------------------------------------------------------------------
+  // Special (non-CSS-variable fallbacks for complex types)
+  // ---------------------------------------------------------------------------
+  // Note: confettiColors is an array and cannot be a CSS variable.
+  // Use the original `colors.confettiColors` for this property.
 
   // ---------------------------------------------------------------------------
   // Schedule Editor Colors
@@ -293,11 +301,14 @@ export const cssColors = {
 // =============================================================================
 
 export const cssGradients = {
+  primary: 'var(--gradient-primary)',
   primarySecondary: 'var(--gradient-primary-secondary)',
   subtle: 'var(--gradient-subtle)',
   subtleHover: 'var(--gradient-subtle-hover)',
   nextMatch: 'var(--gradient-next-match)',
   backgroundDark: 'var(--gradient-background-dark)',
+  card: 'var(--gradient-card)',
+  surface: 'var(--gradient-surface)',
 } as const;
 
 // =============================================================================
@@ -322,6 +333,7 @@ export const cssBorderRadius = {
   md: 'var(--border-radius-md)',
   lg: 'var(--border-radius-lg)',
   xl: 'var(--border-radius-xl)',
+  full: 'var(--border-radius-full)',
 } as const;
 
 // =============================================================================
@@ -332,6 +344,7 @@ export const cssShadows = {
   sm: 'var(--shadow-sm)',
   md: 'var(--shadow-md)',
   lg: 'var(--shadow-lg)',
+  xl: 'var(--shadow-xl)',
 } as const;
 
 // =============================================================================

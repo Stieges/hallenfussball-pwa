@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, fontWeights, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,30 +33,30 @@ export const FoulBar: React.FC<FoulBarProps> = ({
 }) => {
   const getFoulStyle = (fouls: number): CSSProperties => {
     const baseStyle: CSSProperties = {
-      padding: `2px ${spacing.sm}`,
-      borderRadius: borderRadius.sm,
-      fontWeight: fontWeights.bold,
-      fontSize: fontSizes.sm,
+      padding: `2px ${cssVars.spacing.sm}`,
+      borderRadius: cssVars.borderRadius.sm,
+      fontWeight: cssVars.fontWeights.bold,
+      fontSize: cssVars.fontSizes.sm,
     };
 
     if (fouls >= 5) {
       return {
         ...baseStyle,
-        background: colors.dangerHighlight,
-        color: colors.error,
+        background: cssVars.colors.dangerHighlight,
+        color: cssVars.colors.error,
       };
     }
     if (fouls >= 4) {
       return {
         ...baseStyle,
-        background: colors.warningBannerBg,
-        color: colors.warning,
+        background: cssVars.colors.warningBannerBg,
+        color: cssVars.colors.warning,
       };
     }
     return {
       ...baseStyle,
-      background: colors.surfaceElevated,
-      color: colors.textPrimary,
+      background: cssVars.colors.surfaceElevated,
+      color: cssVars.colors.textPrimary,
     };
   };
 
@@ -68,20 +68,20 @@ export const FoulBar: React.FC<FoulBarProps> = ({
     const containerStyle: CSSProperties = {
       display: 'flex',
       justifyContent: 'space-between',
-      padding: `${spacing.sm} ${spacing.md}`,
-      background: colors.surfaceSolid,
-      borderBottom: `1px solid ${colors.borderSolid}`,
-      fontSize: fontSizes.xs,
+      padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+      background: cssVars.colors.surfaceSolid,
+      borderBottom: `1px solid ${cssVars.colors.borderSolid}`,
+      fontSize: cssVars.fontSizes.xs,
     };
 
     const teamStyle: CSSProperties = {
       display: 'flex',
       alignItems: 'center',
-      gap: spacing.sm,
+      gap: cssVars.spacing.sm,
     };
 
     const labelStyle: CSSProperties = {
-      color: colors.textMuted,
+      color: cssVars.colors.textMuted,
       textTransform: 'uppercase',
       fontSize: '11px',
     };
@@ -108,16 +108,16 @@ export const FoulBar: React.FC<FoulBarProps> = ({
   const inlineStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    fontSize: fontSizes.sm,
-    fontWeight: fontWeights.semibold,
+    gap: cssVars.spacing.md,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
   };
 
   return (
     <div style={inlineStyle}>
-      <span style={{ color: colors.textSecondary }}>Fouls:</span>
+      <span style={{ color: cssVars.colors.textSecondary }}>Fouls:</span>
       <span style={getFoulStyle(homeFouls)}>{homeFouls}</span>
-      <span style={{ color: colors.textMuted }}>–</span>
+      <span style={{ color: cssVars.colors.textMuted }}>–</span>
       <span style={getFoulStyle(awayFouls)}>{awayFouls}</span>
     </div>
   );

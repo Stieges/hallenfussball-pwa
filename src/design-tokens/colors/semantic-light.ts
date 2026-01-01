@@ -20,18 +20,22 @@ export const semanticColorsLight = {
   primaryLight: 'rgba(5, 150, 105, 0.12)',
   primaryMedium: 'rgba(5, 150, 105, 0.08)',
   primarySubtle: 'rgba(5, 150, 105, 0.04)',
+  primarySelected: 'rgba(5, 150, 105, 0.18)', // For selected cards/buttons
 
   secondary: palette.blue[600],
   secondaryHover: palette.blue[700],
   secondaryLight: 'rgba(0, 150, 230, 0.12)',
   secondaryMedium: 'rgba(0, 150, 230, 0.08)',
   secondarySubtle: 'rgba(0, 150, 230, 0.04)',
+  secondarySelected: 'rgba(0, 150, 230, 0.18)', // For selected info states
+  secondaryBadge: 'rgba(0, 150, 230, 0.06)', // For subtle info badges
   secondaryBorderActive: 'rgba(0, 150, 230, 0.25)',
 
   accent: palette.amber[600],
   accentLight: 'rgba(217, 119, 6, 0.15)',
   accentMedium: 'rgba(217, 119, 6, 0.08)',
   accentSubtle: 'rgba(217, 119, 6, 0.05)',
+  accentBadge: 'rgba(217, 119, 6, 0.06)', // For subtle accent badges
   accentBorder: 'rgba(217, 119, 6, 0.25)',
 
   // ---------------------------------------------------------------------------
@@ -81,6 +85,7 @@ export const semanticColorsLight = {
   warning: palette.amber[600],
   warningHover: palette.amber[700],
   warningLight: 'rgba(217, 119, 6, 0.1)',
+  warningSelected: 'rgba(217, 119, 6, 0.18)', // For selected warning states
   warningBorder: 'rgba(217, 119, 6, 0.25)',
 
   success: palette.emerald[600],

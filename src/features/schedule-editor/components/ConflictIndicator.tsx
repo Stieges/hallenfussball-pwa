@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { ScheduleConflict, ConflictType } from '../types';
 import { getConflictTypeLabel } from '../utils/scheduleConflicts';
-import { colors, spacing, borderRadius, fontSizes, fontWeights, shadows } from '../../../design-tokens';
+import { cssVars } from '../../../design-tokens'
 
 // ============================================================================
 // Types
@@ -40,13 +40,13 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({ conflict, onClick 
   const badgeStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
-    gap: spacing.xs,
-    padding: `${spacing.xs} ${spacing.sm}`,
-    backgroundColor: isError ? colors.errorLight : colors.editorDirtyBg,
-    borderRadius: borderRadius.sm,
-    fontSize: fontSizes.xs,
-    fontWeight: fontWeights.medium,
-    color: isError ? colors.error : colors.warning,
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    backgroundColor: isError ? cssVars.colors.errorLight : cssVars.colors.editorDirtyBg,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.medium,
+    color: isError ? cssVars.colors.error : cssVars.colors.warning,
     cursor: onClick ? 'pointer' : 'default',
   };
 
@@ -94,7 +94,7 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
     const containerStyle: React.CSSProperties = {
       display: 'inline-flex',
       alignItems: 'center',
-      gap: spacing.xs,
+      gap: cssVars.spacing.xs,
       position: 'relative',
     };
 
@@ -104,12 +104,12 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
       justifyContent: 'center',
       minWidth: '20px',
       height: '20px',
-      padding: `0 ${spacing.xs}`,
-      backgroundColor: isError ? colors.error : colors.warning,
-      color: isError ? colors.onError : colors.onWarning,
+      padding: `0 ${cssVars.spacing.xs}`,
+      backgroundColor: isError ? cssVars.colors.error : cssVars.colors.warning,
+      color: isError ? cssVars.colors.onError : cssVars.colors.onWarning,
       borderRadius: '10px',
-      fontSize: fontSizes.xs,
-      fontWeight: fontWeights.bold,
+      fontSize: cssVars.fontSizes.xs,
+      fontWeight: cssVars.fontWeights.bold,
     });
 
     return (
@@ -145,13 +145,13 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
     const containerStyle: React.CSSProperties = {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: spacing.xs,
+      gap: cssVars.spacing.xs,
       alignItems: 'center',
     };
 
     const moreStyle: React.CSSProperties = {
-      fontSize: fontSizes.xs,
-      color: colors.textSecondary,
+      fontSize: cssVars.fontSizes.xs,
+      color: cssVars.colors.textSecondary,
     };
 
     return (
@@ -173,33 +173,33 @@ export const ConflictIndicator: React.FC<ConflictIndicatorProps> = ({
   const containerStyle: React.CSSProperties = {
       display: 'flex',
       flexDirection: 'column',
-      gap: spacing.sm,
+      gap: cssVars.spacing.sm,
     };
 
     const itemStyle = (isError: boolean): React.CSSProperties => ({
       display: 'flex',
       flexDirection: 'column',
-      gap: spacing.xs,
-      padding: spacing.sm,
-      backgroundColor: isError ? colors.editorErrorRowBg : colors.editorDirtyRowBg,
-      borderLeft: `3px solid ${isError ? colors.error : colors.warning}`,
-      borderRadius: `0 ${borderRadius.sm} ${borderRadius.sm} 0`,
+      gap: cssVars.spacing.xs,
+      padding: cssVars.spacing.sm,
+      backgroundColor: isError ? cssVars.colors.editorErrorRowBg : cssVars.colors.editorDirtyRowBg,
+      borderLeft: `3px solid ${isError ? cssVars.colors.error : cssVars.colors.warning}`,
+      borderRadius: `0 ${cssVars.borderRadius.sm} ${cssVars.borderRadius.sm} 0`,
     });
 
     const titleStyle: React.CSSProperties = {
-      fontSize: fontSizes.sm,
-      fontWeight: fontWeights.semibold,
-      color: colors.textPrimary,
+      fontSize: cssVars.fontSizes.sm,
+      fontWeight: cssVars.fontWeights.semibold,
+      color: cssVars.colors.textPrimary,
     };
 
     const messageStyle: React.CSSProperties = {
-      fontSize: fontSizes.sm,
-      color: colors.textSecondary,
+      fontSize: cssVars.fontSizes.sm,
+      color: cssVars.colors.textSecondary,
     };
 
     const suggestionStyle: React.CSSProperties = {
-      fontSize: fontSizes.xs,
-      color: colors.primary,
+      fontSize: cssVars.fontSizes.xs,
+      color: cssVars.colors.primary,
       fontStyle: 'italic',
     };
 
@@ -235,12 +235,12 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({ conflicts }) => {
     top: '100%',
     left: '50%',
     transform: 'translateX(-50%)',
-    marginTop: spacing.xs,
-    padding: spacing.sm,
-    backgroundColor: colors.surface,
-    border: `1px solid ${colors.border}`,
-    borderRadius: borderRadius.md,
-    boxShadow: shadows.lg,
+    marginTop: cssVars.spacing.xs,
+    padding: cssVars.spacing.sm,
+    backgroundColor: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: cssVars.shadows.lg,
     zIndex: 1000,
     minWidth: '200px',
     maxWidth: '300px',
@@ -249,15 +249,15 @@ const ConflictTooltip: React.FC<ConflictTooltipProps> = ({ conflicts }) => {
   const listStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   const itemStyle: React.CSSProperties = {
-    fontSize: fontSizes.xs,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
     display: 'flex',
     alignItems: 'flex-start',
-    gap: spacing.xs,
+    gap: cssVars.spacing.xs,
   };
 
   return (

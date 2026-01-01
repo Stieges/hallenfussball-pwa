@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState, type CSSProperties } from 'react';
-import { colors, spacing, fontSizes, borderRadius } from '../../../../design-tokens';
+import { cssVars } from '../../../../design-tokens'
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -51,27 +51,27 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     switch (toast.type) {
       case 'success':
         return {
-          bg: `${colors.success}15`,
-          border: colors.success,
+          bg: `${cssVars.colors.success}15`,
+          border: cssVars.colors.success,
           icon: '✓',
         };
       case 'warning':
         return {
-          bg: `${colors.warning}15`,
-          border: colors.warning,
+          bg: `${cssVars.colors.warning}15`,
+          border: cssVars.colors.warning,
           icon: '⚠',
         };
       case 'error':
         return {
-          bg: `${colors.error}15`,
-          border: colors.error,
+          bg: `${cssVars.colors.error}15`,
+          border: cssVars.colors.error,
           icon: '✕',
         };
       case 'info':
       default:
         return {
-          bg: `${colors.info}15`,
-          border: colors.info,
+          bg: `${cssVars.colors.info}15`,
+          border: cssVars.colors.info,
           icon: 'ℹ',
         };
     }
@@ -82,12 +82,12 @@ export function Toast({ toast, onDismiss }: ToastProps) {
   const containerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: spacing.md,
-    padding: `${spacing.md} ${spacing.lg}`,
+    gap: cssVars.spacing.md,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
     backgroundColor: typeStyles.bg,
     borderLeft: `4px solid ${typeStyles.border}`,
-    borderRadius: borderRadius.md,
-    boxShadow: `0 4px 12px ${colors.shadowMedium}`,
+    borderRadius: cssVars.borderRadius.md,
+    boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
     transform: isVisible && !isLeaving ? 'translateY(0)' : 'translateY(-20px)',
     opacity: isVisible && !isLeaving ? 1 : 0,
     transition: 'all 0.2s ease-out',
@@ -95,24 +95,24 @@ export function Toast({ toast, onDismiss }: ToastProps) {
   };
 
   const iconStyle: CSSProperties = {
-    fontSize: fontSizes.lg,
+    fontSize: cssVars.fontSizes.lg,
     color: typeStyles.border,
   };
 
   const messageStyle: CSSProperties = {
     flex: 1,
-    fontSize: fontSizes.sm,
-    color: colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textPrimary,
   };
 
   const actionStyle: CSSProperties = {
-    padding: `${spacing.xs} ${spacing.sm}`,
-    fontSize: fontSizes.sm,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: 600,
     color: typeStyles.border,
     backgroundColor: 'transparent',
     border: `1px solid ${typeStyles.border}`,
-    borderRadius: borderRadius.sm,
+    borderRadius: cssVars.borderRadius.sm,
     cursor: 'pointer',
   };
 
@@ -122,8 +122,8 @@ export function Toast({ toast, onDismiss }: ToastProps) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: fontSizes.lg,
-    color: colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textSecondary,
     backgroundColor: 'transparent',
     border: 'none',
     cursor: 'pointer',
@@ -159,12 +159,12 @@ export function ToastContainer({ toasts, onDismiss }: ToastContainerProps) {
 
   const containerStyle: CSSProperties = {
     position: 'fixed',
-    top: spacing.lg,
+    top: cssVars.spacing.lg,
     left: '50%',
     transform: 'translateX(-50%)',
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing.sm,
+    gap: cssVars.spacing.sm,
     zIndex: 2000,
     pointerEvents: 'none',
   };
