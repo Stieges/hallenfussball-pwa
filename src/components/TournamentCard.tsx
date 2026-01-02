@@ -64,6 +64,8 @@ interface TournamentCardProps {
   onDelete?: () => void;
   /** Soft delete callback (moves to trash) */
   onSoftDelete?: () => void;
+  /** Copy/duplicate callback */
+  onCopy?: () => void;
   /** Share callback */
   onShare?: () => void;
   /** Test ID for E2E tests */
@@ -76,6 +78,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   categoryLabel,
   onDelete,
   onSoftDelete,
+  onCopy,
   onShare,
   testId,
 }) => {
@@ -202,7 +205,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   const badgeColors = getBadgeColor();
 
   // Check if we need to show action menu (has any action handlers)
-  const hasActions = onClick !== undefined || onShare !== undefined || deleteHandler !== undefined;
+  const hasActions = onClick !== undefined || onCopy !== undefined || onShare !== undefined || deleteHandler !== undefined;
 
   const externalBadgeStyle: CSSProperties = {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
@@ -263,6 +266,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
                 tournament={tournament}
                 category={category}
                 onOpen={onClick}
+                onCopy={onCopy}
                 onShare={onShare}
                 onDelete={deleteHandler}
                 testId={`tournament-${tournament.id}-actions`}

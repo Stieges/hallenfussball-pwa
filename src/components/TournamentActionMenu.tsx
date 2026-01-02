@@ -20,7 +20,7 @@ import { Icons } from './ui/Icons';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cssVars } from '../design-tokens'
 
-export type TournamentAction = 'open' | 'share' | 'delete' | 'restore' | 'permanentDelete';
+export type TournamentAction = 'open' | 'copy' | 'share' | 'delete' | 'restore' | 'permanentDelete';
 
 interface TournamentActionMenuProps {
   tournament: Tournament;
@@ -28,6 +28,7 @@ interface TournamentActionMenuProps {
   category: 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
   /** Callbacks for each action */
   onOpen?: () => void;
+  onCopy?: () => void;
   onShare?: () => void;
   onDelete?: () => void;
   onRestore?: () => void;
@@ -40,6 +41,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
   tournament,
   category,
   onOpen,
+  onCopy,
   onShare,
   onDelete,
   onRestore,
@@ -60,6 +62,16 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
         label: 'Öffnen',
         icon: <Icons.ExternalLink size={18} />,
         onClick: onOpen,
+      });
+    }
+
+    // "Copy" action - available for all except trashed
+    if (category !== 'trashed' && onCopy) {
+      items.push({
+        id: 'copy',
+        label: 'Kopieren',
+        icon: <Icons.Copy size={18} />,
+        onClick: onCopy,
       });
     }
 
