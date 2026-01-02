@@ -372,7 +372,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timerProgress: {
     height: '100%',
-    transition: 'width 0.3s linear, background-color 0.3s ease',
+    transition: 'width 1s linear, background-color 0.3s ease',
   },
   iconHeader: {
     display: 'flex',
