@@ -16,6 +16,7 @@ import {
   UserProfileScreen,
   InviteAcceptScreen,
 } from './features/auth/components';
+import { Footer } from './components/layout';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -29,6 +30,12 @@ const TournamentManagementScreen = lazy(() =>
 );
 const PublicTournamentViewScreen = lazy(() =>
   import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen }))
+);
+const ImpressumScreen = lazy(() =>
+  import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen }))
+);
+const DatenschutzScreen = lazy(() =>
+  import('./screens/DatenschutzScreen').then(m => ({ default: m.DatenschutzScreen }))
 );
 
 // Loading fallback component
@@ -65,7 +72,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'invite';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'invite' | 'impressum' | 'datenschutz';
 
 function AppContent() {
   const { showError } = useToast();
@@ -394,7 +401,36 @@ function AppContent() {
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
         )}
+
+        {/* Legal Screens */}
+        {screen === 'impressum' && (
+          <ImpressumScreen onBack={() => setScreen('dashboard')} />
+        )}
+
+        {screen === 'datenschutz' && (
+          <DatenschutzScreen
+            onBack={() => setScreen('dashboard')}
+            onOpenCookieSettings={() => {
+              // TODO: Integrate with Cookie Banner when implemented
+              // Cookie banner will be added in a future commit
+            }}
+          />
+        )}
       </Suspense>
+
+      {/* Footer - shown on dashboard only */}
+      {screen === 'dashboard' && (
+        <Footer
+          onNavigate={(target) => {
+            if (target === 'impressum') {setScreen('impressum');}
+            if (target === 'datenschutz') {setScreen('datenschutz');}
+          }}
+          onOpenCookieSettings={() => {
+            // TODO: Integrate with Cookie Banner when implemented
+            // Cookie banner will be added in a future commit
+          }}
+        />
+      )}
 
       {/* Confirm Dialogs */}
       <ConfirmDialog {...softDeleteDialog.dialogProps} />
