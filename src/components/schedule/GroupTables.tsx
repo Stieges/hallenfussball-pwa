@@ -220,7 +220,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     <span style={{
                       fontWeight: cssVars.fontWeights.bold,
-                      fontSize: '15px',
+                      fontSize: cssVars.fontSizes.md,
                       padding: highlightPoints ? '2px 6px' : '0',
                       background: highlightPoints ? cssVars.colors.rankingHighlightBg : 'transparent',
                       borderRadius: highlightPoints ? '4px' : '0',
@@ -270,7 +270,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <span style={{
                         fontWeight: cssVars.fontWeights.bold,
-                        fontSize: '15px',
+                        fontSize: cssVars.fontSizes.md,
                         padding: highlightPoints ? '2px 6px' : '0',
                         background: highlightPoints ? cssVars.colors.rankingHighlightBg : 'transparent',
                         borderRadius: highlightPoints ? '4px' : '0',

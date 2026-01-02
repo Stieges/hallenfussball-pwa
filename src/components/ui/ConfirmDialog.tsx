@@ -191,7 +191,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
-    fontFamily: 'monospace',
+    fontFamily: cssVars.fontFamilies.mono,
   };
 
   const footerStyle: CSSProperties = {

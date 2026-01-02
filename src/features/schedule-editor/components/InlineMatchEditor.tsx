@@ -450,7 +450,7 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
           top: '50%',
           transform: 'translateY(-50%)',
           pointerEvents: 'none',
-          fontSize: '8px',
+          fontSize: cssVars.fontSizes.xs,
           color: cssVars.colors.textSecondary,
         }}
       >

@@ -45,7 +45,7 @@ export const sectionStyles = {
     color: cssVars.colors.warning,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.sm,
-    fontFamily: 'monospace',
+    fontFamily: cssVars.fontFamilies.mono,
     fontSize: cssVars.fontSizes.sm,
   } as CSSProperties,
 

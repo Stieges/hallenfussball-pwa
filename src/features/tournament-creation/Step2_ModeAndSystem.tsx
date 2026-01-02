@@ -1,6 +1,6 @@
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
-import { cssVars } from '../../design-tokens'
+import { cssVars, displaySizes } from '../../design-tokens'
 import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
@@ -126,7 +126,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           marginBottom: cssVars.spacing.lg,
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.sm }}>
-            <span style={{ fontSize: '20px' }}>🔒</span>
+            <span style={{ fontSize: cssVars.fontSizes.xl }}>🔒</span>
             <div style={{ flex: 1 }}>
               <div style={{
                 color: cssVars.colors.correctionText,
@@ -403,7 +403,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           border: '1px solid rgba(0,176,255,0.2)',
           marginTop: '16px',
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
+          <div style={{ fontSize: displaySizes.lg, marginBottom: '16px' }}>🚧</div>
           <h3 style={{
             color: cssVars.colors.textPrimary,
             fontSize: cssVars.fontSizes.xl,

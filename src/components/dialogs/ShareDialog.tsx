@@ -134,7 +134,7 @@ export const ShareDialog = ({
     background: cssVars.colors.surface,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.sm,
-    fontFamily: 'monospace',
+    fontFamily: cssVars.fontFamilies.mono,
     cursor: 'text',
     wordBreak: 'break-all',
   };

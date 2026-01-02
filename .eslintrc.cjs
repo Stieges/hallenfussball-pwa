@@ -66,6 +66,11 @@ module.exports = {
     // See: docs/concepts/THEME-MIGRATION-KOMPLETT.md
     'local-rules/prefer-css-vars': 'warn',
 
+    // Typography Enforcement
+    // Prevents hardcoded px font sizes and font families
+    // Ensures Inter font and rem-based sizing via design tokens
+    'local-rules/no-hardcoded-font-styles': 'warn',
+
     // Temporarily relaxed for existing codebase
     '@typescript-eslint/no-unnecessary-condition': 'warn',
     '@typescript-eslint/no-confusing-void-expression': 'off',

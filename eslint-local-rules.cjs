@@ -11,4 +11,5 @@
 
 module.exports = {
   'prefer-css-vars': require('./eslint-rules/prefer-css-vars.cjs'),
+  'no-hardcoded-font-styles': require('./eslint-rules/no-hardcoded-font-styles.cjs'),
 };
