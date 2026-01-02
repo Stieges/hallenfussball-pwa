@@ -143,7 +143,7 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: '18px',
+    fontSize: cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.accent,
     textTransform: 'uppercase',
@@ -154,7 +154,7 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   };
 
   const announcementIconStyle: CSSProperties = {
-    fontSize: '24px',
+    fontSize: cssVars.fontSizes.xxl,
   };
 
   const matchupStyle: CSSProperties = {
@@ -177,7 +177,7 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   };
 
   const metaStyle: CSSProperties = {
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textSecondary,
   };
 

@@ -65,7 +65,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
     role="alert"
   >
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-      <span style={{ fontSize: '24px' }} aria-hidden="true">
+      <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">
         ⚠️
       </span>
       <div style={{ flex: 1 }}>
@@ -97,7 +97,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               padding: '12px',
               background: 'rgba(0, 0, 0, 0.3)',
               borderRadius: cssVars.borderRadius.sm,
-              fontSize: '12px',
+              fontSize: cssVars.fontSizes.sm,
               color: cssVars.colors.textSecondary,
               overflow: 'auto',
               maxHeight: '120px',
@@ -117,7 +117,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               border: 'none',
               borderRadius: cssVars.borderRadius.sm,
               color: cssVars.colors.onPrimary,
-              fontSize: '14px',
+              fontSize: cssVars.fontSizes.md,
               fontWeight: cssVars.fontWeights.semibold,
               cursor: 'pointer',
             }}
@@ -132,7 +132,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               border: `1px solid ${cssVars.colors.border}`,
               borderRadius: cssVars.borderRadius.sm,
               color: cssVars.colors.textPrimary,
-              fontSize: '14px',
+              fontSize: cssVars.fontSizes.md,
               fontWeight: cssVars.fontWeights.medium,
               cursor: 'pointer',
             }}

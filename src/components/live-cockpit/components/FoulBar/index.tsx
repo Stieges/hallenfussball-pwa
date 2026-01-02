@@ -83,7 +83,7 @@ export const FoulBar: React.FC<FoulBarProps> = ({
     const labelStyle: CSSProperties = {
       color: cssVars.colors.textMuted,
       textTransform: 'uppercase',
-      fontSize: '11px',
+      fontSize: cssVars.fontSizes.xs,
     };
 
     return (

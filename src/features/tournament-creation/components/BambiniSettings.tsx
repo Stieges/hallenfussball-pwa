@@ -21,7 +21,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
     borderRadius: cssVars.borderRadius.md,
     border: '1px solid rgba(255,145,0,0.3)',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.warning,
   };
@@ -60,7 +60,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             onChange={(e) => onUpdate('hideScoresForPublic', e.target.checked)}
             style={checkboxStyle}
           />
-          <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
+          <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
             Ergebnisse für Zuschauer verbergen
           </span>
         </label>
@@ -71,7 +71,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             onChange={(e) => onUpdate('hideRankingsForPublic', e.target.checked)}
             style={checkboxStyle}
           />
-          <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
+          <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
             Tabellen für Zuschauer verbergen
           </span>
         </label>

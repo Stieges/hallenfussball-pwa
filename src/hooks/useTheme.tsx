@@ -30,12 +30,12 @@ import { semanticColorsDark, semanticColorsLight, type Theme, type SemanticColor
 // ---------------------------------------------------------------------------
 
 export interface ThemeContextValue {
-  /** Current theme setting ('light', 'dark', or 'system') */
+  /** Current theme setting ('light', 'dark', 'system', or 'high-contrast') */
   theme: Theme;
   /** Set the theme */
   setTheme: (theme: Theme) => void;
-  /** Resolved theme (always 'light' or 'dark', resolves 'system' to actual) */
-  resolvedTheme: 'light' | 'dark';
+  /** Resolved theme (resolves 'system' to actual, 'high-contrast' stays as-is) */
+  resolvedTheme: 'light' | 'dark' | 'high-contrast';
   /** Current theme's semantic colors */
   colors: SemanticColors;
   /** Toggle between light and dark (ignores system) */
@@ -95,12 +95,15 @@ export const ThemeProvider = ({
     };
   }, []);
 
-  // Resolve 'system' to actual theme
-  const resolvedTheme = useMemo((): 'light' | 'dark' => {
-    return theme === 'system' ? systemTheme : theme;
+  // Resolve 'system' to actual theme, 'high-contrast' stays as-is
+  const resolvedTheme = useMemo((): 'light' | 'dark' | 'high-contrast' => {
+    if (theme === 'system') {
+      return systemTheme;
+    }
+    return theme;
   }, [theme, systemTheme]);
 
-  // Get colors based on resolved theme
+  // Get colors based on resolved theme (high-contrast uses dark colors as base)
   const colors = useMemo(() => {
     return resolvedTheme === 'light' ? semanticColorsLight : semanticColorsDark;
   }, [resolvedTheme]);
@@ -113,16 +116,19 @@ export const ThemeProvider = ({
     root.setAttribute('data-theme', resolvedTheme);
 
     // Add/remove class for styling
-    root.classList.remove('light', 'dark');
+    root.classList.remove('light', 'dark', 'high-contrast');
     root.classList.add(resolvedTheme);
 
     // Update meta theme-color for mobile browsers
+    // High-contrast uses black background
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        'content',
-        resolvedTheme === 'light' ? semanticColorsLight.background : semanticColorsDark.background
-      );
+      const bgColor = resolvedTheme === 'light'
+        ? semanticColorsLight.background
+        : resolvedTheme === 'high-contrast'
+          ? '#000000'
+          : semanticColorsDark.background;
+      metaThemeColor.setAttribute('content', bgColor);
     }
   }, [resolvedTheme]);
 

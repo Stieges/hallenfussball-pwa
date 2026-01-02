@@ -384,7 +384,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '32px',
   },
   timerIconSmall: {
-    fontSize: '24px',
+    fontSize: cssVars.fontSizes.xxl,
   },
   headerWithBack: {
     display: 'flex',

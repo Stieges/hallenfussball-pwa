@@ -121,18 +121,18 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   return (
     <div style={containerStyle}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '14px' }}>
+        <span style={{ fontSize: cssVars.fontSizes.md }}>
           {isCritical ? '⚠️' : isWarning ? '⏰' : '📊'}
         </span>
         <div>
           <span style={{
             color: titleColor,
-            fontSize: '14px',
+            fontSize: cssVars.fontSizes.md,
             fontWeight: cssVars.fontWeights.semibold,
           }}>
             Geschätzte Turnierdauer: {hours > 0 ? `${hours}h ` : ''}{minutes}min
           </span>
-          <span style={{ color: cssVars.colors.textSecondary, fontSize: '13px', marginLeft: '8px' }}>
+          <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md, marginLeft: '8px' }}>
             ({groupPhaseMatches + finalsMatches} Spiele, {fields} {fields === 1 ? 'Feld' : 'Felder'})
           </span>
         </div>
@@ -144,7 +144,7 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
           display: 'flex',
           gap: '16px',
           marginTop: '8px',
-          fontSize: '12px',
+          fontSize: cssVars.fontSizes.sm,
           color: cssVars.colors.textSecondary
         }}>
           <span>Gruppenphase: {groupPhaseMatches} Spiele (~{Math.floor(groupPhaseMinutes / 60)}h {groupPhaseMinutes % 60}min)</span>
@@ -153,12 +153,12 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
       )}
 
       {isCritical && (
-        <p style={{ fontSize: '12px', color: cssVars.colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
+        <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
           Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {Math.ceil(fields * (totalMinutes / 360))} Felder oder Spieldauer auf {Math.max(5, groupGameDuration - 3)} Min reduzieren.
         </p>
       )}
       {isWarning && !isCritical && (
-        <p style={{ fontSize: '12px', color: cssVars.colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
+        <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
           Tipp: Mit {fields + 1} Feldern ca. {Math.round((totalMinutes / (fields + 1)) / 60 * 10) / 10}h oder mit {Math.max(5, groupGameDuration - 2)} Min Spieldauer verkürzt sich die Dauer.
         </p>
       )}

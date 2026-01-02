@@ -81,7 +81,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
 
   return (
     <div style={containerStyle}>
-      <h3 style={{ color: cssVars.colors.secondary, fontSize: '14px', margin: '0 0 16px 0' }}>
+      <h3 style={{ color: cssVars.colors.secondary, fontSize: cssVars.fontSizes.md, margin: '0 0 16px 0' }}>
         Punktesystem
       </h3>
       <div className="point-system-presets" style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
@@ -97,10 +97,10 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               onClick={() => handlePresetClick(preset)}
               style={presetButtonStyle(isActive)}
             >
-              <div style={{ fontSize: '16px', fontWeight: '700', color: cssVars.colors.textPrimary }}>
+              <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: '700', color: cssVars.colors.textPrimary }}>
                 {preset.label}
               </div>
-              <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '2px' }}>
+              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
                 {preset.sublabel}
               </div>
             </button>
@@ -116,10 +116,10 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
           }}
           style={presetButtonStyle(isCustom)}
         >
-          <div style={{ fontSize: '16px', fontWeight: '700', color: cssVars.colors.textPrimary }}>
+          <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: '700', color: cssVars.colors.textPrimary }}>
             ⚙️
           </div>
-          <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '2px' }}>
+          <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
             Individuell
           </div>
         </button>
@@ -181,7 +181,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
               />
             </div>
           </div>
-          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
+          <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
             Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)
           </p>
         </div>

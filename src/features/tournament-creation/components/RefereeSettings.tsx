@@ -142,7 +142,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
   return (
     <div style={containerStyle}>
       <h3 style={{
-        fontSize: '16px',
+        fontSize: cssVars.fontSizes.lg,
         fontWeight: cssVars.fontWeights.semibold,
         color: cssVars.colors.textPrimary,
         marginBottom: '16px'
@@ -160,7 +160,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           { value: 'teams', label: 'Teams stellen SR (nach eigenem Spiel)' },
         ]}
       />
-      <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
+      <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
         <strong>Veranstalter-Modus:</strong> Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).{' '}
         <strong>Teams-Modus:</strong> Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld.
       </p>
@@ -186,7 +186,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               mode="stepper"
             />
           </div>
-          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
             Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt.
             "Max. zusammenhängende Partien = 1" bedeutet keine direkt aufeinanderfolgenden Einsätze.
           </p>
@@ -199,7 +199,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               onChange={(e) => handleNamesToggle(e.target.checked)}
               style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
             />
-            <span style={{ color: cssVars.colors.textPrimary, fontSize: '14px', fontWeight: cssVars.fontWeights.medium }}>
+            <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.medium }}>
               Namen der Schiedsrichter angeben
             </span>
           </label>
@@ -207,7 +207,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           {/* Name Inputs */}
           {hasNames && (
             <div style={namesContainerStyle}>
-              <h4 style={{ color: cssVars.colors.textPrimary, fontSize: '13px', margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
+              <h4 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm, margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
                 Schiedsrichter-Namen
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -230,7 +230,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                         <p style={{
                           margin: `${cssVars.spacing.xs} 0 0 0`,
                           color: cssVars.colors.error,
-                          fontSize: '11px',
+                          fontSize: cssVars.fontSizes.xs,
                         }}>
                           Dieser Name wird bereits verwendet
                         </p>
@@ -239,7 +239,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                   );
                 })}
               </div>
-              <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
+              <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
                 Die Namen erscheinen später im Spielplan statt "SR1", "SR2", etc.
               </p>
             </div>
@@ -260,7 +260,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               { value: 'nonParticipatingTeams', label: 'Unbeteiligte Teams (nicht im aktuellen Spiel)' },
             ]}
           />
-          <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
+          <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
             <strong>Ausgeschiedene Teams:</strong> Nur Teams, die nicht in der Finalrunde spielen.{' '}
             <strong>Unbeteiligte Teams:</strong> Teams die aktuell nicht im Finalspiel stehen (flexibler).
           </p>

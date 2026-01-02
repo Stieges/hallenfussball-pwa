@@ -23,6 +23,7 @@ interface AuthSectionProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 /**
@@ -71,6 +72,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToProfile,
+  onNavigateToSettings,
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout } = useAuth();
   const isMobile = useIsMobile();
@@ -233,10 +235,25 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               Mein Profil
             </button>
 
+            <button
+              ref={(el) => { menuItemsRef.current[1] = el; }}
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setDropdownOpen(false);
+                onNavigateToSettings?.();
+              }}
+              style={styles.dropdownItem}
+              data-testid="auth-settings-button"
+            >
+              <span style={styles.dropdownIcon}>⚙️</span>
+              Einstellungen
+            </button>
+
             <div style={styles.dropdownDivider} />
 
             <button
-              ref={(el) => { menuItemsRef.current[1] = el; }}
+              ref={(el) => { menuItemsRef.current[2] = el; }}
               type="button"
               role="menuitem"
               onClick={() => {

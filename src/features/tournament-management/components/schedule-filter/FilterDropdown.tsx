@@ -51,7 +51,8 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   };
 
   const selectStyle: CSSProperties = {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    height: cssVars.touchTargets.minimum,
+    padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
     border: `1px solid ${value !== null ? cssVars.colors.primary : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
@@ -61,8 +62,12 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     // outline handled by global.css focus-visible styles
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'border-color 0.2s ease',
-    minHeight: '44px',
     opacity: disabled ? 0.5 : 1,
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: cssVars.touchTargets.minimum,
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

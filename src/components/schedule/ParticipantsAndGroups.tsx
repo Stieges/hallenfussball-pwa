@@ -75,7 +75,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const teamItemStyle: CSSProperties = {
     padding: '6px 0',
-    fontSize: '13px',
+    fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     borderBottom: `1px solid ${cssVars.colors.border}`,
   };

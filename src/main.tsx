@@ -1,5 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+
+// Font: Inter Variable (self-hosted via @fontsource for offline capability)
+import '@fontsource-variable/inter';
+
 import App from './App';
 import './styles/global.css';
 

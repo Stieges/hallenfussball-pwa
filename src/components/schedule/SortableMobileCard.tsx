@@ -125,7 +125,8 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   };
 
   const mobileSelectStyle: CSSProperties = {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    height: spacingSemantics.touchTarget, // 44px accessible touch target
+    padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xs,
@@ -133,7 +134,11 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     cursor: 'pointer',
     backgroundColor: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
-    minHeight: spacingSemantics.touchTarget, // 44px accessible touch target
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: spacingSemantics.touchTarget,
   };
 
   // ---------------------------------------------------------------------------

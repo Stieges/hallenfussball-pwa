@@ -370,11 +370,11 @@
      Synced with src/styles/typography.ts
      =========================================== */
 
-  /* Font Families */
+  /* Font Families - Inter Variable (self-hosted via @fontsource) */
   --font-display: "Bebas Neue", Impact, "Arial Black", sans-serif;
-  --font-heading: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --font-heading: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Font Sizes - MD3 Scale */
   --font-size-display-lg: 48px;
@@ -399,14 +399,30 @@
 
   --font-size-stat-label: 10px;
 
-  /* Legacy Font Size Aliases (for backward compatibility) */
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-md: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  --font-size-xxl: 24px;
-  --font-size-xxxl: 28px;
+  /* ===========================================
+     Body & UI Font Sizes (rem - SCALABLE)
+     These scale when html font-size changes
+     =========================================== */
+  --font-size-xs: 0.6875rem;   /* 11px @ 16px base */
+  --font-size-sm: 0.75rem;     /* 12px @ 16px base */
+  --font-size-md: 0.875rem;    /* 14px @ 16px base */
+  --font-size-lg: 1rem;        /* 16px @ 16px base */
+  --font-size-xl: 1.125rem;    /* 18px @ 16px base */
+  --font-size-xxl: 1.5rem;     /* 24px @ 16px base */
+  --font-size-xxxl: 1.75rem;   /* 28px @ 16px base */
+
+  /* ===========================================
+     Score Sizes (px - FIXED, do NOT scale)
+     Used for match scores, must stay readable
+     on sports fields regardless of preferences.
+     =========================================== */
+  --font-size-score-sm: 40px;
+  --font-size-score-md: 56px;
+  --font-size-score-lg: 72px;
+  --font-size-score-xl: 90px;
+
+  /* Timer Size (px - FIXED) */
+  --font-size-timer: 72px;
 
   /* Line Heights - 8pt Grid Aligned */
   --line-height-display-lg: 56px;
@@ -455,6 +471,28 @@
 
   /* Theme Gradient */
   --theme-gradient: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+}
+
+/* ============================================
+   Font Size Scaling (User Preference)
+   Controlled via html[data-font-size] attribute
+   set in Settings. rem values scale with base.
+   ============================================ */
+html[data-font-size="small"] {
+  font-size: 14px;
+}
+
+html[data-font-size="normal"],
+html:not([data-font-size]) {
+  font-size: 16px;
+}
+
+html[data-font-size="large"] {
+  font-size: 18px;
+}
+
+html[data-font-size="x-large"] {
+  font-size: 20px;
 }
 
 /* ============================================
@@ -828,6 +866,87 @@
   color: #9CA3AF;
 }
 
+/* ============================================
+   High Contrast Theme Variables
+   Based on dark theme but with maximum contrast
+   for readability in bright sunlight (sports fields)
+
+   Key changes:
+   - Secondary text: Yellow #FFFF00 (visible in sunlight)
+   - Pure white primary text
+   - Stronger borders
+   ============================================ */
+[data-theme="high-contrast"] {
+  color-scheme: dark;
+
+  /* ===========================================
+     Colors - Text (Maximum Contrast)
+     =========================================== */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #FFFF00;
+  --color-text-muted: rgba(255, 255, 255, 0.7);
+  --color-text-placeholder: #FFFF00;
+  --color-text-disabled: #888888;
+  --color-text-tertiary: #FFFF00;
+
+  /* ===========================================
+     Colors - Borders (Stronger)
+     =========================================== */
+  --color-border: rgba(255, 255, 255, 0.3);
+  --color-border-light: #888888;
+  --color-border-solid: #666666;
+  --color-border-subtle: rgba(255, 255, 255, 0.15);
+  --color-border-default: rgba(255, 255, 255, 0.25);
+  --color-border-strong: #AAAAAA;
+
+  /* ===========================================
+     Colors - Primary (Brighter Green)
+     =========================================== */
+  --color-primary: #00FF88;
+  --color-primary-dark: #00E676;
+  --color-primary-hover: #00FF88;
+  --color-primary-light: rgba(0, 255, 136, 0.2);
+  --color-primary-border: rgba(0, 255, 136, 0.4);
+
+  /* ===========================================
+     Colors - Background (Pure Black for contrast)
+     =========================================== */
+  --color-background: #000000;
+  --color-background-dark: #000000;
+  --color-background-deep: #000000;
+  --color-surface: rgba(255, 255, 255, 0.08);
+  --color-surface-solid: #1A1A1A;
+  --color-surface-elevated: #222222;
+
+  /* ===========================================
+     Focus Ring (Very Visible)
+     =========================================== */
+  --color-focus: #00FF88;
+  --color-focus-ring: rgba(0, 255, 136, 0.4);
+}
+
+/* High contrast body adjustments */
+[data-theme="high-contrast"] body {
+  background: #000000;
+  color: #FFFFFF;
+}
+
+/* High contrast scrollbar */
+[data-theme="high-contrast"] ::-webkit-scrollbar-track {
+  background: #222222;
+}
+
+[data-theme="high-contrast"] ::-webkit-scrollbar-thumb {
+  background: #00FF88;
+}
+
+/* High contrast input placeholders */
+[data-theme="high-contrast"] input::placeholder,
+[data-theme="high-contrast"] textarea::placeholder {
+  color: #FFFF00;
+  opacity: 1;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -836,13 +955,22 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #0A1628;
   color: #FFFFFF;
+}
+
+/* ===========================================
+   Tabular Figures for Scores, Timers, Tables
+   Inter supports font-variant-numeric for
+   consistent number widths (important for
+   scoreboards and timers)
+   =========================================== */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 #root {

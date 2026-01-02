@@ -76,7 +76,8 @@ const selectContainerStyle: React.CSSProperties = {
 
 const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties => ({
   appearance: 'none',
-  padding: `${cssVars.spacing.xs} ${cssVars.spacing.md} ${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+  height: '32px',
+  padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
   fontSize: cssVars.fontSizes.sm,
   fontWeight: cssVars.fontWeights.medium,
   color: hasConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
@@ -87,6 +88,11 @@ const selectStyle = (hasConflict: boolean, isOpen: boolean): React.CSSProperties
   minWidth: '80px',
   outline: 'none',
   transition: 'border-color 0.15s ease',
+  // Fix: Prevent all options from rendering at once
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  lineHeight: '32px',
 });
 
 const selectArrowStyle: React.CSSProperties = {
@@ -384,9 +390,11 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
 
   const showConflict = hasConflict || currentOption?.hasConflict;
 
+  const compactHeight = size === 'sm' ? '24px' : '28px';
   const compactSelectStyle: React.CSSProperties = {
     appearance: 'none',
-    padding: size === 'sm' ? '2px 16px 2px 4px' : `${cssVars.spacing.xs} ${cssVars.spacing.md} ${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    height: compactHeight,
+    padding: size === 'sm' ? '0 16px 0 4px' : `0 ${cssVars.spacing.md} 0 ${cssVars.spacing.sm}`,
     fontSize: size === 'sm' ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.medium,
     color: showConflict ? cssVars.colors.error : cssVars.colors.textPrimary,
@@ -397,6 +405,11 @@ export const CompactInlineEditor: React.FC<CompactInlineEditorProps> = ({
     minWidth: size === 'sm' ? '50px' : '70px',
     outline: 'none',
     opacity: enabled ? 1 : 0.6,
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: compactHeight,
   };
 
   if (!enabled) {

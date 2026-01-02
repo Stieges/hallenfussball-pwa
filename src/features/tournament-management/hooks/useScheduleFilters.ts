@@ -5,13 +5,14 @@
  * - Active filters (controls match list)
  * - Draft filters (only while BottomSheet is open)
  * - BottomSheet open/close state
+ * - URL synchronization for shareable filter links
  *
  * Implements Draft-State pattern to prevent data loss on accidental close.
  *
  * @see docs/concepts/SPIELPLAN-FILTER-KONZEPT.md Section 6
  */
 
-import { useReducer, useCallback, useMemo } from 'react';
+import { useReducer, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ScheduleFilters,
   FilterState,
@@ -20,6 +21,7 @@ import {
 } from '../../../types/scheduleFilters';
 import { Match, Team, Tournament } from '../../../types/tournament';
 import { filterMatches, countActiveFilters, hasActiveFilters } from '../../../utils/filterMatches';
+import { useURLFilterSync } from '../../../hooks/useURLFilterSync';
 
 // ---------------------------------------------------------------------------
 // Storage Keys
@@ -133,6 +135,8 @@ export interface UseScheduleFiltersOptions {
   tournamentId: string;
   /** Enable sessionStorage persistence (default: true) */
   enablePersistence?: boolean;
+  /** Enable URL query parameter sync (default: true) */
+  enableURLSync?: boolean;
 }
 
 export interface UseScheduleFiltersReturn {
@@ -181,19 +185,47 @@ export interface UseScheduleFiltersReturn {
 export function useScheduleFilters(
   options: UseScheduleFiltersOptions
 ): UseScheduleFiltersReturn {
-  const { tournamentId, enablePersistence = true } = options;
+  const { tournamentId, enablePersistence = true, enableURLSync = true } = options;
 
-  // Initialize state with persisted filters if available
+  // URL sync hook
+  const { getInitialFilters, syncToURL } = useURLFilterSync({
+    enabled: enableURLSync,
+  });
+
+  // Track if initial URL filters have been applied
+  const initializedFromURL = useRef(false);
+
+  // Initialize state with filters from URL > sessionStorage > defaults
   const initialState: FilterState = useMemo(() => {
+    // Priority: URL params > sessionStorage > defaults
+    const urlFilters = enableURLSync ? getInitialFilters() : {};
+    const hasURL = Object.keys(urlFilters).length > 0;
+
+    if (hasURL) {
+      initializedFromURL.current = true;
+      return {
+        activeFilters: { ...DEFAULT_FILTERS, ...urlFilters },
+        draftFilters: null,
+        isSheetOpen: false,
+      };
+    }
+
     const persisted = enablePersistence ? loadFiltersFromStorage(tournamentId) : null;
     return {
       activeFilters: persisted ?? { ...DEFAULT_FILTERS },
       draftFilters: null,
       isSheetOpen: false,
     };
-  }, [tournamentId, enablePersistence]);
+  }, [tournamentId, enablePersistence, enableURLSync, getInitialFilters]);
 
   const [state, dispatch] = useReducer(filterReducer, initialState);
+
+  // Sync filters to URL when they change
+  useEffect(() => {
+    if (enableURLSync) {
+      syncToURL(state.activeFilters);
+    }
+  }, [enableURLSync, syncToURL, state.activeFilters]);
 
   // ---------------------------------------------------------------------------
   // Sheet Actions

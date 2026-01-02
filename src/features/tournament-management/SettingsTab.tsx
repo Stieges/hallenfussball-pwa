@@ -294,7 +294,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               Metadaten bearbeiten
             </h2>
             {isFormCollapsed && (
-              <p style={{ fontSize: '12px', color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
+              <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
                 Turniername, Ort, Datum & Zeit anpassen • Klicken zum Aufklappen
               </p>
             )}
@@ -422,7 +422,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             {/* Info-Box für nicht-editierbare Felder */}
             <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
-                <span style={{ fontSize: '24px' }}>ℹ️</span>
+                <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
                 <div>
                   <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
                     Nicht änderbare Einstellungen
@@ -448,7 +448,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
         {onEditInWizard && (
           <Card style={{ marginTop: cssVars.spacing.lg, background: cssVars.colors.warningBannerBg, border: `1px solid ${cssVars.colors.warningBannerBorder}` }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
-              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>
               <div style={{ flex: 1 }}>
                 <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
                   Erweiterte Bearbeitung

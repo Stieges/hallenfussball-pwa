@@ -66,6 +66,7 @@ interface TournamentCreationScreenProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> = ({
@@ -76,6 +77,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToProfile,
+  onNavigateToSettings,
 }) => {
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
@@ -383,6 +385,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           onNavigateToLogin={onNavigateToLogin}
           onNavigateToRegister={onNavigateToRegister}
           onNavigateToProfile={onNavigateToProfile}
+          onNavigateToSettings={onNavigateToSettings}
         />
       </header>
 

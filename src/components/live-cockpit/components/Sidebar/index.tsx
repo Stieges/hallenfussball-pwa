@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const panelTitleStyle: CSSProperties = {
-    fontSize: '11px',
+    fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '1px',

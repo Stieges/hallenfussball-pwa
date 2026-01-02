@@ -339,7 +339,8 @@
 }
 
 .constraintSelect {
-  padding: var(--spacing-xs) var(--spacing-sm);
+  height: 32px;
+  padding: 0 var(--spacing-lg) 0 var(--spacing-sm);
   background: var(--color-surface-dark);
   border: 1px solid var(--color-border-light);
   border-radius: var(--border-radius-sm);
@@ -347,6 +348,11 @@
   font-size: var(--font-size-label-lg);
   min-width: 70px;
   cursor: pointer;
+  /* Fix: Prevent all options from rendering at once */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 32px;
 }
 
 .constraintSelect:disabled {

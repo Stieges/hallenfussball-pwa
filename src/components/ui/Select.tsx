@@ -42,7 +42,8 @@ export const Select: React.FC<SelectProps> = ({
   };
 
   const selectStyles: CSSProperties = {
-    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    height: cssVars.touchTargets.minimum,
+    padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
@@ -53,6 +54,11 @@ export const Select: React.FC<SelectProps> = ({
     cursor: 'pointer',
     transition: 'border-color 0.2s ease',
     width: '100%',
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: cssVars.touchTargets.minimum,
   };
 
   return (

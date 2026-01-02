@@ -157,7 +157,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   const subtitleStyle: CSSProperties = {
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     opacity: 0.9,
     margin: 0,
   };
@@ -186,14 +186,14 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
   };
 
   const labelStyle: CSSProperties = {
-    fontSize: '12px',
+    fontSize: cssVars.fontSizes.sm,
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     opacity: 0.7,
   };
 
   const valueStyle: CSSProperties = {
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: cssVars.fontWeights.semibold,
   };
 
@@ -208,7 +208,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               background: 'rgba(255,215,0,0.9)',
               color: cssVars.colors.onWarning,
               borderRadius: cssVars.borderRadius.sm,
-              fontSize: '12px',
+              fontSize: cssVars.fontSizes.sm,
               fontWeight: cssVars.fontWeights.bold,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
@@ -222,7 +222,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           {currentTournament.ageClass} • {currentTournament.date} • {getLocationName(currentTournament)}
         </p>
         {getLocationAddressLine(currentTournament) && (
-          <p style={{ ...subtitleStyle, fontSize: '14px', marginTop: '4px', opacity: 0.8 }}>
+          <p style={{ ...subtitleStyle, fontSize: cssVars.fontSizes.md, marginTop: '4px', opacity: 0.8 }}>
             {getLocationAddressLine(currentTournament)}
           </p>
         )}
@@ -273,7 +273,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           >
             Generierter Spielplan
           </h2>
-          <p style={{ fontSize: '14px', color: cssVars.colors.textSecondary, margin: 0 }}>
+          <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, margin: 0 }}>
             Überprüfe den Spielplan und gib das Turnier frei, um es in der Übersicht sichtbar zu
             machen.
           </p>
@@ -284,10 +284,10 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
          currentTournament.finalsConfig?.preset &&
          currentTournament.finalsConfig.preset !== 'none' && (
           <div className="finals-config-box" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: cssVars.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
-            <h3 style={{ color: cssVars.colors.accent, fontSize: '14px', margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
+            <h3 style={{ color: cssVars.colors.accent, fontSize: cssVars.fontSizes.md, margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
               Finalrunden-Einstellungen
             </h3>
-            <p style={{ fontSize: '13px', color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
+            <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
               Preset: <strong>{
                 currentTournament.finalsConfig.preset === 'final-only' ? 'Nur Finale' :
                 currentTournament.finalsConfig.preset === 'top-4' ? 'Top 4 (Halbfinale + Finale)' :
@@ -300,7 +300,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
             {currentTournament.finalsConfig.preset === 'top-8' && (currentTournament.numberOfGroups ?? 2) < 4 && (
               <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(255,165,0,0.12)', borderRadius: cssVars.borderRadius.sm, border: '1px solid rgba(255,165,0,0.3)' }}>
-                <p style={{ fontSize: '11px', color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
+                <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ⚠️ <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
                   Mit {currentTournament.numberOfGroups ?? 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
                 </p>
@@ -310,7 +310,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             {/* Info: Alle Plätze */}
             {currentTournament.finalsConfig.preset === 'all-places' && (
               <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,176,255,0.12)', borderRadius: cssVars.borderRadius.sm, border: '1px solid rgba(0,176,255,0.3)' }}>
-                <p style={{ fontSize: '11px', color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
+                <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ℹ️ <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
                   {(currentTournament.numberOfGroups ?? 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
                   {(currentTournament.numberOfGroups ?? 2) >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
@@ -333,7 +333,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                     }}
                     style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
                   />
-                  <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
+                  <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
                     Halbfinale gleichzeitig austragen
                   </span>
                 </label>
@@ -352,7 +352,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
                       }}
                       style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
                     />
-                    <span style={{ color: cssVars.colors.textPrimary, fontSize: '13px' }}>
+                    <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
                       Viertelfinale gleichzeitig austragen
                     </span>
                   </label>
@@ -391,7 +391,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
             variant="primary"
             onClick={onPublish}
             style={{
-              fontSize: '16px',
+              fontSize: cssVars.fontSizes.lg,
               padding: '14px 32px',
               fontWeight: cssVars.fontWeights.bold,
             }}
@@ -413,7 +413,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
       >
         <p
           style={{
-            fontSize: '13px',
+            fontSize: cssVars.fontSizes.sm,
             color: cssVars.colors.textSecondary,
             margin: 0,
             lineHeight: '1.6',
@@ -471,7 +471,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           }
 
           .finals-config-box h3 {
-            font-size: 13px !important;
+            font-size: 12px !important;
           }
 
           .finals-config-box p {
@@ -503,7 +503,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           }
 
           .tournament-preview-header p {
-            font-size: 13px !important;
+            font-size: 12px !important;
           }
 
           /* Stack info grid vertically on very small screens */

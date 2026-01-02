@@ -12,36 +12,74 @@
 // =============================================================================
 
 export const fontFamilies = {
-  /** Display typography - for large, impactful headlines */
+  /** Display typography - for large, impactful headlines (Bebas Neue) */
   display: '"Bebas Neue", Impact, "Arial Black", sans-serif',
-  /** Heading typography - for section headers */
-  heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  /** Body typography - for paragraphs and general text */
-  body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  /** Monospace - for code and technical content */
-  mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, monospace',
+  /** Heading typography - Inter Variable (self-hosted for offline capability) */
+  heading: '"Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  /** Body typography - Inter Variable (self-hosted for offline capability) */
+  body: '"Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  /** Monospace - for code, timers, and scores (tabular figures) */
+  mono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
 } as const;
 
 // =============================================================================
-// Font Sizes (Legacy semantic names - xs, sm, md, lg, xl, xxl, xxxl)
+// Font Sizes - Body & UI (rem - SCALABLE via html font-size)
+// These scale when the user changes their font-size preference
 // =============================================================================
 
 export const fontSizes = {
-  /** 11px - Extra small (labels, badges) */
-  xs: '11px',
-  /** 12px - Small (secondary text) */
-  sm: '12px',
-  /** 14px - Medium (body text) */
-  md: '14px',
-  /** 16px - Large (emphasized body) */
-  lg: '16px',
-  /** 18px - Extra large (titles) */
-  xl: '18px',
-  /** 24px - Double extra large (headlines) */
-  xxl: '24px',
-  /** 28px - Triple extra large (display) */
-  xxxl: '28px',
+  /** 11px @ 16px base - Extra small (labels, badges) */
+  xs: '0.6875rem',
+  /** 12px @ 16px base - Small (secondary text) */
+  sm: '0.75rem',
+  /** 14px @ 16px base - Medium (body text) */
+  md: '0.875rem',
+  /** 16px @ 16px base - Large (emphasized body) */
+  lg: '1rem',
+  /** 18px @ 16px base - Extra large (titles) */
+  xl: '1.125rem',
+  /** 24px @ 16px base - Double extra large (headlines) */
+  xxl: '1.5rem',
+  /** 28px @ 16px base - Triple extra large (display) */
+  xxxl: '1.75rem',
 } as const;
+
+// =============================================================================
+// Display Sizes (px - FIXED, do NOT scale)
+// Used for large headlines with Bebas Neue display font
+// =============================================================================
+
+export const displaySizes = {
+  /** 28px - Small display headlines */
+  sm: '28px',
+  /** 36px - Medium display headlines */
+  md: '36px',
+  /** 48px - Large display headlines */
+  lg: '48px',
+} as const;
+
+// =============================================================================
+// Score Sizes (px - FIXED, do NOT scale)
+// Used for match scores in live cockpit, scoreboards, monitors
+// Must remain fixed for readability on sports fields
+// =============================================================================
+
+export const scoreSizes = {
+  /** 40px - Small scores (compact views) */
+  sm: '40px',
+  /** 56px - Medium scores (standard match cards) */
+  md: '56px',
+  /** 72px - Large scores (live cockpit) */
+  lg: '72px',
+  /** 90px - Extra large scores (TV/monitor views) */
+  xl: '90px',
+} as const;
+
+// =============================================================================
+// Timer Size (px - FIXED)
+// =============================================================================
+
+export const timerSize = '72px';
 
 // =============================================================================
 // MD3 Font Sizes Scale (for new code using MD3 conventions)
@@ -267,6 +305,8 @@ export const typography = {
 // =============================================================================
 
 export type FontSizeKey = keyof typeof fontSizes;
+export type DisplaySizeKey = keyof typeof displaySizes;
+export type ScoreSizeKey = keyof typeof scoreSizes;
 export type FontWeightKey = keyof typeof fontWeights;
 export type Typography = typeof typography;
 export type TypographyKey = keyof Typography;

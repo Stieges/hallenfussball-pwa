@@ -391,7 +391,8 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   };
 
   const mobileSelectStyle: CSSProperties = {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    height: '32px',
+    padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
@@ -399,7 +400,11 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     cursor: 'pointer',
     backgroundColor: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
-    minHeight: '32px',
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: '32px',
   };
 
   // Render table content

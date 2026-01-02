@@ -50,6 +50,15 @@ const EXCLUDED_PROPERTIES = new Set([
   'gradientNextMatch', // CSS gradient string
 ]);
 
+/**
+ * Overlay themes that only override specific variables from the base theme.
+ * These themes inherit from dark theme and only need to define overrides.
+ * The sync check will skip these themes.
+ */
+const OVERLAY_THEMES = new Set([
+  'high-contrast', // Overlay on dark theme with enhanced contrast
+]);
+
 // =============================================================================
 // DYNAMIC DISCOVERY
 // =============================================================================
@@ -270,7 +279,9 @@ function main() {
   const cssThemeBlocks = discoverCssThemeBlocks();
   console.log(`\n   Found ${cssThemeBlocks.length} CSS theme blocks:`);
   cssThemeBlocks.forEach((b) => {
-    console.log(`     - ${b.name}: ${b.variables.length} variables (${b.selector})`);
+    const isOverlay = OVERLAY_THEMES.has(b.name);
+    const suffix = isOverlay ? ' [overlay]' : '';
+    console.log(`     - ${b.name}: ${b.variables.length} variables (${b.selector})${suffix}`);
   });
 
   console.log('');
@@ -311,10 +322,15 @@ function main() {
     checkSync(`semantic (${sourceOfTruth.name})`, sourceOfTruth.properties, 'cssVars.ts', cssVarsProps)
   );
 
-  // Check 3: Each CSS theme block has all variables
+  // Check 3: Each CSS theme block has all variables (skip overlay themes)
   const cssVarsAsKebab = cssVarsProps.map((p) => toKebabCase(p));
 
   for (const block of cssThemeBlocks) {
+    // Skip overlay themes - they only override specific variables
+    if (OVERLAY_THEMES.has(block.name)) {
+      console.log(`   ⏭️  Skipping overlay theme: ${block.selector} (${block.variables.length} overrides)`);
+      continue;
+    }
     results.push(checkSync('cssVars.ts', cssVarsAsKebab, `global.css ${block.selector}`, block.variables));
   }
 

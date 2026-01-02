@@ -103,7 +103,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     border: `1px solid ${cssVars.colors.borderSolid}`,
     borderRadius: cssVars.borderRadius.md,
     padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.xs}` : cssVars.spacing.md,
-    fontSize: isMobile ? '12px' : '13px',
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'flex',

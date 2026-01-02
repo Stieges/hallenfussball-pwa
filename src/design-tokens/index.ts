@@ -49,7 +49,13 @@ export {
   lineHeights,
   letterSpacing,
   typography,
+  // Fixed-size tokens (px - do NOT scale with font-size preference)
+  displaySizes,
+  scoreSizes,
+  timerSize,
   type FontSizeKey,
+  type DisplaySizeKey,
+  type ScoreSizeKey,
   type FontWeightKey,
   type Typography,
   type TypographyKey,
@@ -118,7 +124,7 @@ export {
 import { colors } from './colors';
 import { spacing, spacingSemantics } from './spacing';
 import { touchTargets, iconSizes, inputHeights, buttonHeights, layoutHeights } from './sizing';
-import { fontFamilies, fontSizes, fontWeights, lineHeights, typography } from './typography';
+import { fontFamilies, fontSizes, fontWeights, lineHeights, typography, displaySizes, scoreSizes, timerSize } from './typography';
 import { shadows, shadowSemantics } from './shadows';
 import { radii, radiiSemantics } from './radii';
 import { durations, easings, transitions, animations } from './motion';
@@ -137,6 +143,10 @@ export const tokens = {
   fontWeights,
   lineHeights,
   typography,
+  // Fixed-size tokens (px - do NOT scale)
+  displaySizes,
+  scoreSizes,
+  timerSize,
   shadows,
   shadowSemantics,
   radii,

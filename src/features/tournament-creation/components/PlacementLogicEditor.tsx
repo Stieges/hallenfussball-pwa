@@ -105,7 +105,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
     border: 'none',
     borderRadius: '6px',
     color: criterion.enabled ? cssVars.colors.background : cssVars.colors.textSecondary,
-    fontSize: '12px',
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.2s',
@@ -165,7 +165,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         <span
           style={{
             fontFamily: cssVars.fontFamilies.heading,
-            fontSize: '18px',
+            fontSize: cssVars.fontSizes.xl,
             color: cssVars.colors.primary,
             minWidth: '24px',
             textAlign: 'center',
@@ -176,7 +176,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
         </span>
 
         {/* Label */}
-        <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: '14px' }}>
+        <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }}>
           {criterion.label}
         </span>
 
@@ -241,12 +241,12 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
 
   const headerStyle: CSSProperties = {
     color: cssVars.colors.primary,
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     margin: '0 0 8px 0',
   };
 
   const helpTextStyle: CSSProperties = {
-    fontSize: '12px',
+    fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
     marginBottom: '16px',
     display: 'flex',

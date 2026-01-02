@@ -69,7 +69,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
     borderRadius: cssVars.borderRadius.md,
     padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : cssVars.spacing.md,
     minHeight: '44px', // WCAG Touch Target
-    fontSize: isMobile ? cssVars.fontSizes.sm : '13px',
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     cursor: 'pointer',
     display: 'flex',

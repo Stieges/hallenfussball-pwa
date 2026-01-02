@@ -28,12 +28,31 @@ const EXCLUDED_PROPERTIES = new Set([
   'gradientNextMatch', // CSS gradient string
 ]);
 
+/**
+ * Overlay themes that only override specific variables from the base theme.
+ * These themes inherit from dark theme and only need to define overrides.
+ * The sync tests will skip these themes for full variable checks.
+ */
+const OVERLAY_THEMES = new Set([
+  'high-contrast', // Overlay on dark theme with enhanced contrast
+]);
+
 // =============================================================================
 // HELPERS
 // =============================================================================
 
 function toKebabCase(str: string): string {
   return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+function getThemeNameFromSelector(selector: string): string {
+  if (selector === ':root') {return 'dark';}
+  const match = selector.match(/\[data-theme="([^"]+)"\]/);
+  return match?.[1] || '';
+}
+
+function isOverlayTheme(selector: string): boolean {
+  return OVERLAY_THEMES.has(getThemeNameFromSelector(selector));
 }
 
 function getColorsDir(): string {
@@ -238,7 +257,10 @@ describe('Design Token Synchronization', () => {
   describe('global.css sync', () => {
     const cssVarsAsKebab = cssVarsColors.map((p) => toKebabCase(p));
 
-    cssThemeSelectors.forEach((selector) => {
+    // Filter out overlay themes - they only define overrides
+    const fullThemeSelectors = cssThemeSelectors.filter((s) => !isOverlayTheme(s));
+
+    fullThemeSelectors.forEach((selector) => {
       test(`${selector} has all CSS variables`, () => {
         const cssVars = extractCssVariables(selector);
         const missing = cssVarsAsKebab.filter((v) => !cssVars.includes(v));
@@ -256,6 +278,21 @@ describe('Design Token Synchronization', () => {
         expect(
           extra,
           `global.css ${selector} has extra: ${extra.map((v) => `--color-${v}`).join(', ')}`
+        ).toEqual([]);
+      });
+    });
+
+    // Test overlay themes only check their variables are valid (subset of full theme)
+    const overlaySelectors = cssThemeSelectors.filter((s) => isOverlayTheme(s));
+
+    overlaySelectors.forEach((selector) => {
+      test(`${selector} (overlay) has only valid CSS variables`, () => {
+        const cssVars = extractCssVariables(selector);
+        const invalid = cssVars.filter((v) => !cssVarsAsKebab.includes(v));
+
+        expect(
+          invalid,
+          `global.css ${selector} has invalid variables: ${invalid.map((v) => `--color-${v}`).join(', ')}`
         ).toEqual([]);
       });
     });
@@ -297,8 +334,11 @@ describe('Design Token Synchronization', () => {
       expect(cssVarsColors.length).toBe(sourceProperties.length);
     });
 
-    test('CSS theme blocks have same variable count', () => {
-      const counts = cssThemeSelectors.map((s) => ({
+    test('CSS theme blocks have same variable count (excluding overlay themes)', () => {
+      // Filter out overlay themes - they only define overrides
+      const fullThemeSelectors = cssThemeSelectors.filter((s) => !isOverlayTheme(s));
+
+      const counts = fullThemeSelectors.map((s) => ({
         selector: s,
         count: extractCssVariables(s).length,
       }));

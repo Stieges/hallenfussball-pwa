@@ -38,6 +38,9 @@ const ImpressumScreen = lazy(() =>
 const DatenschutzScreen = lazy(() =>
   import('./screens/DatenschutzScreen').then(m => ({ default: m.DatenschutzScreen }))
 );
+const SettingsScreen = lazy(() =>
+  import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen }))
+);
 
 // Loading fallback component
 const ScreenLoader = () => (
@@ -73,7 +76,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'invite' | 'impressum' | 'datenschutz';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz';
 
 function AppContent() {
   const { showError } = useToast();
@@ -380,6 +383,15 @@ function AppContent() {
         {screen === 'profile' && (
           <UserProfileScreen
             onBack={() => setScreen('dashboard')}
+            onOpenSettings={() => setScreen('settings')}
+          />
+        )}
+
+        {screen === 'settings' && (
+          <SettingsScreen
+            onBack={() => setScreen('dashboard')}
+            onNavigateToImpressum={() => setScreen('impressum')}
+            onNavigateToDatenschutz={() => setScreen('datenschutz')}
           />
         )}
 
@@ -411,6 +423,7 @@ function AppContent() {
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
             onNavigateToProfile={() => setScreen('profile')}
+            onNavigateToSettings={() => setScreen('settings')}
           />
         )}
 
@@ -447,6 +460,7 @@ function AppContent() {
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
             onNavigateToProfile={() => setScreen('profile')}
+            onNavigateToSettings={() => setScreen('settings')}
           />
         )}
 
@@ -458,6 +472,7 @@ function AppContent() {
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
             onNavigateToProfile={() => setScreen('profile')}
+            onNavigateToSettings={() => setScreen('settings')}
           />
         )}
 
@@ -481,8 +496,8 @@ function AppContent() {
         )}
       </Suspense>
 
-      {/* Footer - shown on dashboard only */}
-      {screen === 'dashboard' && (
+      {/* Footer - shown on main screens (not on public/invite flows) */}
+      {['dashboard', 'create', 'view', 'profile', 'settings', 'login', 'register'].includes(screen) && (
         <Footer
           onNavigate={(target) => {
             if (target === 'impressum') {setScreen('impressum');}

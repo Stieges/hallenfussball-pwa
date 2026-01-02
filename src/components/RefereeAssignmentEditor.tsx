@@ -183,7 +183,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   };
 
   const titleStyle: CSSProperties = {
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.accent,
     margin: 0,
@@ -246,13 +246,13 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
   });
 
   const matchNumberStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.primary,
   };
 
   const matchInfoStyle: CSSProperties = {
-    fontSize: '13px',
+    fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
   };
 
@@ -265,7 +265,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
             🟨 Manuelle Schiedsrichter-Zuweisung
           </h3>
           {isCollapsed && (
-            <p style={{ fontSize: '12px', color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
+            <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
               Klicken zum Aufklappen
             </p>
           )}
@@ -275,7 +275,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
             <Button
               variant="secondary"
               onClick={onResetAssignments}
-              style={{ fontSize: '12px', padding: '8px 16px' }}
+              style={{ fontSize: cssVars.fontSizes.sm, padding: '8px 16px' }}
             >
               Automatische Zuweisung wiederherstellen
             </Button>
@@ -289,7 +289,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       {/* Referee Drag Source */}
       {refereeConfig.mode === 'organizer' && (
         <>
-          <p style={{ fontSize: '13px', fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginBottom: '12px' }}>
+          <p style={{ fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginBottom: '12px' }}>
             Verfügbare Schiedsrichter:
           </p>
           <div style={refereeGridStyle}>
@@ -304,10 +304,10 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                   ...(draggedReferee === refNum ? refereeCardDraggingStyle : {}),
                 }}
               >
-                <div style={{ fontSize: '14px', fontWeight: cssVars.fontWeights.bold, marginBottom: '4px' }}>
+                <div style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold, marginBottom: '4px' }}>
                   {refereeConfig.refereeNames?.[refNum] || `SR ${refNum}`}
                 </div>
-                <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary }}>
+                <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
                   {refereeWorkload[refNum] ?? 0} Spiele
                 </div>
               </div>
@@ -317,7 +317,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       )}
 
       {/* Matches List with Dropzones */}
-      <p style={{ fontSize: '13px', fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginTop: '24px', marginBottom: '12px' }}>
+      <p style={{ fontSize: cssVars.fontSizes.sm, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary, marginTop: '24px', marginBottom: '12px' }}>
         Spiele:
       </p>
       <div style={matchesListStyle}>
@@ -336,7 +336,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
               <div style={{ fontWeight: cssVars.fontWeights.semibold }}>
                 {match.homeTeam} - {match.awayTeam}
               </div>
-              <div style={{ fontSize: '11px', color: cssVars.colors.textSecondary }}>
+              <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
                 {match.time} • Feld {match.field}
               </div>
             </div>

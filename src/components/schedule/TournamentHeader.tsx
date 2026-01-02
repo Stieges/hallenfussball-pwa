@@ -76,7 +76,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   };
 
   const metaItemStyle: CSSProperties = {
-    fontSize: '13px',
+    fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     wordBreak: 'break-word', // Umbrechen bei langen Wörtern
   };

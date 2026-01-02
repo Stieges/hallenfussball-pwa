@@ -94,7 +94,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           border: 'none',
           color: cssVars.colors.primary,
           cursor: 'pointer',
-          fontSize: '13px',
+          fontSize: cssVars.fontSizes.sm,
           padding: '8px 0',
           display: 'flex',
           alignItems: 'center',
@@ -156,7 +156,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
 
           <p
             style={{
-              fontSize: '11px',
+              fontSize: cssVars.fontSizes.xs,
               color: cssVars.colors.textSecondary,
               marginTop: '12px',
               marginBottom: 0,

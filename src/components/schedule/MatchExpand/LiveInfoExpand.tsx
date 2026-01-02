@@ -216,7 +216,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   };
 
   const scoreSeparatorStyle: CSSProperties = {
-    fontSize: '24px',
+    fontSize: cssVars.fontSizes.xxl,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textSecondary,
   };
@@ -243,7 +243,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   };
 
   const eventIconStyle: CSSProperties = {
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     flexShrink: 0,
   };
 

@@ -267,7 +267,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     backgroundColor: cssVars.colors.editorDragActiveBg,
     borderRadius: cssVars.borderRadius.sm,
     cursor: 'grab',
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     fontWeight: cssVars.fontWeights.bold,
   };
 

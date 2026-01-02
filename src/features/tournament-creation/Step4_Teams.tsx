@@ -244,19 +244,21 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                 {canAssignGroups && (
                   <div className={styles.teamRowSecondary}>
                     <span className={styles.groupLabel}>Gruppe:</span>
-                    <select
-                      value={team.group ?? ''}
-                      onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
-                      className={styles.groupSelect}
-                      aria-label={`Gruppe für ${team.name}`}
-                    >
-                      <option value="">Keine Gruppe</option>
-                      {(formData.groups ?? groupLabels.map(id => ({ id }))).map(group => (
-                        <option key={group.id} value={group.id}>
-                          {getGroupDisplayName(group)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className={styles.groupSelectWrapper}>
+                      <select
+                        value={team.group ?? ''}
+                        onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
+                        className={styles.groupSelect}
+                        aria-label={`Gruppe für ${team.name}`}
+                      >
+                        <option value="">Keine Gruppe</option>
+                        {(formData.groups ?? groupLabels.map(id => ({ id }))).map(group => (
+                          <option key={group.id} value={group.id}>
+                            {getGroupDisplayName(group)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
@@ -301,7 +303,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               }}
               role={warning.type === 'error' ? 'alert' : 'status'}
             >
-              <span style={{ fontSize: '16px', flexShrink: 0 }} aria-hidden="true">
+              <span style={{ fontSize: cssVars.fontSizes.lg, flexShrink: 0 }} aria-hidden="true">
                 {warning.type === 'error' ? '❌' : warning.type === 'warning' ? '⚠️' : 'ℹ️'}
               </span>
               <div style={{ flex: 1 }}>
@@ -319,7 +321,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                 {warning.action && (
                   <div style={{
                     color: cssVars.colors.textSecondary,
-                    fontSize: '12px',
+                    fontSize: cssVars.fontSizes.sm,
                     marginTop: '4px',
                   }}>
                     {warning.action}

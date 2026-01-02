@@ -20,8 +20,8 @@ export { semanticColorsLight } from './semantic-light';
 // Default export is dark mode (for backward compatibility)
 export { semanticColorsDark as colors } from './semantic';
 
-// Theme type
-export type Theme = 'light' | 'dark' | 'system';
+// Theme type (high-contrast is a variant of dark with enhanced visibility)
+export type Theme = 'light' | 'dark' | 'system' | 'high-contrast';
 
 // Get colors by theme
 export const getColorsByTheme = (theme: 'light' | 'dark') => {

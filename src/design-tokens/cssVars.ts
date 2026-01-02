@@ -363,7 +363,7 @@ export const cssFontFamilies = {
 // =============================================================================
 
 export const cssFontSizes = {
-  // Display
+  // Display (px - FIXED, used with Bebas Neue)
   displayLg: 'var(--font-size-display-lg)',
   displayMd: 'var(--font-size-display-md)',
   displaySm: 'var(--font-size-display-sm)',
@@ -391,7 +391,7 @@ export const cssFontSizes = {
   // Special
   statLabel: 'var(--font-size-stat-label)',
 
-  // Legacy aliases (for backward compatibility)
+  // Legacy aliases (rem - SCALABLE via html font-size)
   xs: 'var(--font-size-xs)',
   sm: 'var(--font-size-sm)',
   md: 'var(--font-size-md)',
@@ -400,6 +400,24 @@ export const cssFontSizes = {
   xxl: 'var(--font-size-xxl)',
   xxxl: 'var(--font-size-xxxl)',
 } as const;
+
+// =============================================================================
+// Score Sizes (px - FIXED, do NOT scale)
+// Used for match scores in live cockpit, scoreboards, monitors
+// =============================================================================
+
+export const cssScoreSizes = {
+  sm: 'var(--font-size-score-sm)',
+  md: 'var(--font-size-score-md)',
+  lg: 'var(--font-size-score-lg)',
+  xl: 'var(--font-size-score-xl)',
+} as const;
+
+// =============================================================================
+// Timer Size (px - FIXED)
+// =============================================================================
+
+export const cssTimerSize = 'var(--font-size-timer)';
 
 // =============================================================================
 // Typography - Line Heights
@@ -503,6 +521,9 @@ export const cssVars = {
   shadows: cssShadows,
   fontFamilies: cssFontFamilies,
   fontSizes: cssFontSizes,
+  // Fixed-size tokens (px - do NOT scale with font-size preference)
+  scoreSizes: cssScoreSizes,
+  timerSize: cssTimerSize,
   lineHeights: cssLineHeights,
   fontWeights: cssFontWeights,
   touchTargets: cssTouchTargets,

@@ -94,7 +94,7 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
   };
 
   const iconStyle: CSSProperties = {
-    fontSize: '16px',
+    fontSize: cssVars.fontSizes.lg,
     flexShrink: 0,
   };
 
@@ -143,7 +143,7 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
     backgroundColor: 'transparent',
     color: cssVars.colors.textSecondary,
     cursor: disabled ? 'default' : 'pointer',
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     lineHeight: 1,
     transition: 'color 0.15s ease, background-color 0.15s ease',
     minWidth: '32px',

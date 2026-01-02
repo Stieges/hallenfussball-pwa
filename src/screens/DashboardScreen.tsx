@@ -45,6 +45,7 @@ interface DashboardScreenProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({
@@ -60,6 +61,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToProfile,
+  onNavigateToSettings,
 }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>('turniere');
@@ -223,6 +225,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             onNavigateToLogin={onNavigateToLogin}
             onNavigateToRegister={onNavigateToRegister}
             onNavigateToProfile={onNavigateToProfile}
+            onNavigateToSettings={onNavigateToSettings}
           />
 
           {/* Action Buttons */}

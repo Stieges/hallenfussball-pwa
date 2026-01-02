@@ -406,14 +406,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚧</div>
           <h3 style={{
             color: cssVars.colors.textPrimary,
-            fontSize: '18px',
+            fontSize: cssVars.fontSizes.xl,
             margin: '0 0 8px 0'
           }}>
             Mini-Fußball / Funino
           </h3>
           <p style={{
             color: cssVars.colors.textSecondary,
-            fontSize: '14px',
+            fontSize: cssVars.fontSizes.md,
             margin: '0 0 16px 0',
             lineHeight: '1.5'
           }}>
@@ -426,7 +426,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             background: 'rgba(0,176,255,0.2)',
             border: '1px solid rgba(0,176,255,0.4)',
             borderRadius: '16px',
-            fontSize: '12px',
+            fontSize: cssVars.fontSizes.sm,
             fontWeight: cssVars.fontWeights.semibold,
             color: cssVars.colors.secondary,
             textTransform: 'uppercase',

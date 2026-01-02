@@ -196,12 +196,12 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
       >
         {isFullscreen ? (
           <>
-            <span style={{ fontSize: '18px' }}>✕</span>
+            <span style={{ fontSize: cssVars.fontSizes.xl }}>✕</span>
             <span>Beenden</span>
           </>
         ) : (
           <>
-            <span style={{ fontSize: '18px' }}>⛶</span>
+            <span style={{ fontSize: cssVars.fontSizes.xl }}>⛶</span>
             <span>Vollbild</span>
           </>
         )}

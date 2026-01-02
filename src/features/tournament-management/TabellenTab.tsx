@@ -353,7 +353,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
           border: `1px solid ${cssVars.colors.primary}40`,
         }}>
           <div style={{
-            fontSize: isMobile ? '13px' : cssVars.fontSizes.sm,
+            fontSize: cssVars.fontSizes.sm,
             fontWeight: cssVars.fontWeights.semibold,
             color: cssVars.colors.primary,
             marginBottom: '6px',

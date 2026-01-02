@@ -192,7 +192,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   };
 
   const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
-    fontSize: '11px',
+    fontSize: cssVars.fontSizes.xs,
     padding: '2px 8px',
     borderRadius: cssVars.borderRadius.sm,
     background: bgColor,
@@ -250,7 +250,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px' }}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: cssVars.fontSizes.lg }}
             >
               ✕
             </button>
@@ -261,7 +261,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {/* Info Box */}
       <Card style={{ marginBottom: cssVars.spacing.lg, background: cssVars.colors.infoBannerBg }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.md }}>
-          <span style={{ fontSize: '24px' }}>ℹ️</span>
+          <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
           <div>
             <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
               Team-Bearbeitung
@@ -382,7 +382,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     </span>
                   )}
                   {team.removedAt && (
-                    <span style={{ fontSize: '11px', color: cssVars.colors.textSecondary }}>
+                    <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
                       Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
                     </span>
                   )}

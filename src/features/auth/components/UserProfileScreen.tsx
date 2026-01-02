@@ -348,14 +348,20 @@ const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.textSecondary,
   },
   sortSelect: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    height: '32px',
+    padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     cursor: 'pointer',
-  },
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: '32px',
+  } as CSSProperties,
   loadingState: {
     padding: cssVars.spacing.xl,
     textAlign: 'center',

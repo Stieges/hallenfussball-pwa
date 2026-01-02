@@ -36,6 +36,7 @@ interface TournamentManagementScreenProps {
   onNavigateToLogin: () => void;
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
+  onNavigateToSettings?: () => void;
 }
 
 type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'teams' | 'settings';
@@ -47,6 +48,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToProfile,
+  onNavigateToSettings,
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('schedule');
 
@@ -259,6 +261,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           onNavigateToLogin={onNavigateToLogin}
           onNavigateToRegister={onNavigateToRegister}
           onNavigateToProfile={onNavigateToProfile}
+          onNavigateToSettings={onNavigateToSettings}
         />
       </header>
 

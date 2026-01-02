@@ -161,13 +161,19 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
   const selectStyle: CSSProperties = {
     width: '100%',
-    padding: cssVars.spacing.md,
+    height: cssVars.touchTargets.minimum,
+    padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     fontSize: cssVars.fontSizes.md,
     backgroundColor: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
     cursor: 'pointer',
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: cssVars.touchTargets.minimum,
   };
 
   const textareaStyle: CSSProperties = {

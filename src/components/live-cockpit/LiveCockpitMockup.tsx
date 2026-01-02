@@ -526,7 +526,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
       : cssVars.colors.surfaceElevated,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
     borderRadius: cssVars.borderRadius.sm,
-    fontSize: '11px',
+    fontSize: cssVars.fontSizes.xs,
     fontWeight: cssVars.fontWeights.semibold,
     textTransform: 'uppercase',
     color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
@@ -567,7 +567,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   };
 
   const timerLabelStyle: CSSProperties = {
-    fontSize: '12px',
+    fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: '1px',

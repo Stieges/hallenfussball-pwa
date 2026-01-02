@@ -196,7 +196,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
     backgroundColor: 'transparent',
     color: cssVars.colors.textSecondary,
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: cssVars.fontSizes.md,
     lineHeight: 1,
     transition: 'color 0.15s ease, background-color 0.15s ease',
     minWidth: '32px',

@@ -1,5 +1,6 @@
 import { Tournament } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
+import { cssVars } from '../../../design-tokens';
 import styles from './ValidationWarnings.module.css';
 
 interface ValidationWarningsProps {
@@ -164,7 +165,7 @@ export const ValidationWarnings: React.FC<ValidationWarningsProps> = ({ formData
           <div className={styles.message}>
             <div>{issue.message}</div>
             {issue.suggestion && (
-              <div style={{ marginTop: '4px', opacity: 0.8, fontSize: '12px' }}>
+              <div style={{ marginTop: '4px', opacity: 0.8, fontSize: cssVars.fontSizes.sm }}>
                 {issue.suggestion}
               </div>
             )}

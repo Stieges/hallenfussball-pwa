@@ -28,7 +28,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
 
   const headerStyle: CSSProperties = {
     color: isGroupPhase ? cssVars.colors.primary : cssVars.colors.accent,
-    fontSize: '13px',
+    fontSize: cssVars.fontSizes.sm,
     margin: '0 0 12px 0',
     fontWeight: cssVars.fontWeights.semibold,
   };
@@ -76,7 +76,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
               suffix="Min"
               mode="stepper"
             />
-            <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
+            <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
               Das Spiel wird in {formData.gamePeriods} Abschnitte à {Math.floor((formData.groupPhaseGameDuration ?? 10) / (formData.gamePeriods ?? 1))} Min. unterteilt
             </p>
           </div>
@@ -120,7 +120,7 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
           mode="stepper"
         />
       </div>
-      <p style={{ fontSize: '11px', color: cssVars.colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
+      <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '8px', lineHeight: '1.4' }}>
         Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde
       </p>
     </div>

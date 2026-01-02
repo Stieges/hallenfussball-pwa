@@ -224,13 +224,18 @@ const styles: Record<string, CSSProperties> = {
   },
   select: {
     height: '48px',
-    padding: `0 ${cssVars.spacing.md}`,
+    padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     outline: 'none',
+    // Fix: Prevent all options from rendering at once
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    lineHeight: '48px',
   },
   teamList: {
     display: 'flex',
