@@ -15,3 +15,6 @@ export { usePendingChanges } from './usePendingChanges';
 export type { PendingChangesControls, PendingChanges } from './usePendingChanges';
 
 export { useScheduleTabActions } from './useScheduleTabActions';
+
+export { useScheduleFilters, getFilterOptions } from './useScheduleFilters';
+export type { UseScheduleFiltersOptions, UseScheduleFiltersReturn, FilterOptions } from './useScheduleFilters';

@@ -27,6 +27,8 @@ import {
   useCorrectionMode,
   usePendingChanges,
   useScheduleTabActions,
+  useScheduleFilters,
+  getFilterOptions,
 } from './hooks';
 import { isMatchFinished, getTeamName } from './utils';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
@@ -38,6 +40,7 @@ import { CorrectionDialog } from '../../components/dialogs';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useAppSettings } from '../../hooks/useUserProfile';
 import { usePermissions } from '../../hooks/usePermissions';
+import { ScheduleFilterBar, EmptyFilterState } from './components/schedule-filter';
 
 interface ScheduleTabProps {
   tournament: Tournament;
@@ -108,6 +111,40 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const { runningMatchIds } = useRunningMatches({
     tournamentId: tournament.id,
   });
+
+  // US-VIEWER-FILTERS: Schedule filtering
+  const filterOptions = useMemo(() => getFilterOptions(tournament), [tournament]);
+  const {
+    filters,
+    draftFilters,
+    isSheetOpen,
+    openSheet,
+    closeSheet,
+    applyDraft,
+    resetDraft,
+    updateDraft,
+    updateFilters,
+    resetFilters,
+    activeFilterCount,
+    hasFilters,
+    getFilteredMatches,
+    getMatchCount,
+  } = useScheduleFilters({
+    tournamentId: tournament.id,
+    enablePersistence: true,
+  });
+
+  // Get filtered matches for display
+  const filteredMatches = useMemo(
+    () => getFilteredMatches(tournament.matches, tournament.teams),
+    [getFilteredMatches, tournament.matches, tournament.teams]
+  );
+
+  // Build set of visible match IDs for ScheduleDisplay
+  const visibleMatchIds = useMemo(
+    () => new Set(filteredMatches.map(m => m.id)),
+    [filteredMatches]
+  );
 
   // Correction mode state and handlers
   const {
@@ -264,25 +301,56 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             standings={currentStandings}
           />
 
+          {/* US-VIEWER-FILTERS: Filter Bar */}
+          {viewMode === 'table' && (
+            <ScheduleFilterBar
+              filters={filters}
+              draftFilters={draftFilters}
+              activeFilterCount={activeFilterCount}
+              onFilterChange={updateFilters}
+              onReset={resetFilters}
+              isSheetOpen={isSheetOpen}
+              onOpenSheet={openSheet}
+              onCloseSheet={closeSheet}
+              onApplySheet={applyDraft}
+              onResetDraft={resetDraft}
+              onDraftChange={updateDraft}
+              filterOptions={filterOptions}
+              matches={tournament.matches}
+              teams={tournament.teams}
+              getMatchCount={getMatchCount}
+              style={{ marginBottom: cssVars.spacing.md }}
+              data-testid="schedule-filter-bar"
+            />
+          )}
+
           {/* Conditional rendering based on view mode */}
           {viewMode === 'table' ? (
-            <ScheduleDisplay
-              schedule={schedule}
-              currentStandings={currentStandings}
-              currentMatches={tournament.matches}
-              editable={true}
-              editingSchedule={isEditing}
-              pendingChanges={isEditing ? pendingChanges : undefined}
-              onScoreChange={handleScoreChange}
-              onRefereeChange={handleRefereeAssignment}
-              onFieldChange={handleFieldChange}
-              onMatchSwap={isEditing ? handleMatchSwap : undefined}
-              finishedMatches={finishedMatchIds}
-              correctionMatchId={correctionState?.matchId ?? null}
-              onStartCorrection={handleStartCorrection}
-              runningMatchIds={runningMatchIds}
-              onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
-            />
+            hasFilters && filteredMatches.length === 0 ? (
+              <EmptyFilterState
+                onReset={resetFilters}
+                data-testid="empty-filter-state"
+              />
+            ) : (
+              <ScheduleDisplay
+                schedule={schedule}
+                currentStandings={currentStandings}
+                currentMatches={tournament.matches}
+                editable={true}
+                editingSchedule={isEditing}
+                pendingChanges={isEditing ? pendingChanges : undefined}
+                onScoreChange={handleScoreChange}
+                onRefereeChange={handleRefereeAssignment}
+                onFieldChange={handleFieldChange}
+                onMatchSwap={isEditing ? handleMatchSwap : undefined}
+                finishedMatches={finishedMatchIds}
+                correctionMatchId={correctionState?.matchId ?? null}
+                onStartCorrection={handleStartCorrection}
+                runningMatchIds={runningMatchIds}
+                onNavigateToCockpit={onNavigateToCockpit ? handleNavigateToCockpit : undefined}
+                visibleMatchIds={hasFilters ? visibleMatchIds : undefined}
+              />
+            )
           ) : (
             <ScheduleEditor
               tournament={tournament}

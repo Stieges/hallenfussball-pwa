@@ -48,3 +48,6 @@ export { useTheme, ThemeProvider, type Theme, type ThemeContextValue } from './u
 // Accessibility
 export { useHighContrast } from './useHighContrast'
 export { useFontScale, FONT_SCALES, FONT_SCALE_LABELS } from './useFontScale'
+
+// Scroll & Viewport
+export { useScrollDirection, type ScrollDirection, type UseScrollDirectionOptions, type UseScrollDirectionReturn } from './useScrollDirection'

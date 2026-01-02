@@ -67,6 +67,8 @@ interface ScheduleDisplayProps {
   onMatchSwap?: (matchId1: string, matchId2: string) => void;
   /** Callback to navigate to cockpit with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
+  /** US-VIEWER-FILTERS: Set of visible match IDs (for filtering). If undefined, all matches are visible. */
+  visibleMatchIds?: Set<string>;
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -90,6 +92,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   runningMatchIds,
   onMatchSwap,
   onNavigateToCockpit,
+  visibleMatchIds,
 }) => {
   const standings = currentStandings ?? schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -167,6 +170,17 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     });
   }, [finalMatches, currentMatches, schedule.teams]);
 
+  // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
+  const filteredGroupPhaseMatches = useMemo(() => {
+    if (!visibleMatchIds) {return groupPhaseMatches;}
+    return groupPhaseMatches.filter(m => visibleMatchIds.has(m.id));
+  }, [groupPhaseMatches, visibleMatchIds]);
+
+  const filteredFinalPhaseMatches = useMemo(() => {
+    if (!visibleMatchIds) {return finalPhaseMatches;}
+    return finalPhaseMatches.filter(m => visibleMatchIds.has(m.id));
+  }, [finalPhaseMatches, visibleMatchIds]);
+
   // Container Style - full width, parent controls maxWidth
   const containerStyle: CSSProperties = {
     width: '100%',
@@ -196,9 +210,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Group Stage Schedule */}
-      {groupPhaseMatches.length > 0 && (
+      {filteredGroupPhaseMatches.length > 0 && (
         <GroupStageSchedule
-          matches={groupPhaseMatches}
+          matches={filteredGroupPhaseMatches}
           hasGroups={hasGroups}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
@@ -230,9 +244,9 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       )}
 
       {/* Final Stage Schedule */}
-      {finalPhaseMatches.length > 0 && (
+      {filteredFinalPhaseMatches.length > 0 && (
         <FinalStageSchedule
-          matches={finalPhaseMatches}
+          matches={filteredFinalPhaseMatches}
           refereeConfig={schedule.refereeConfig}
           numberOfFields={schedule.numberOfFields}
           editable={editable}
