@@ -15,6 +15,8 @@ interface InputProps {
   style?: CSSProperties;
   /** Zeigt einen Fehlerzustand an (roter Rahmen) */
   error?: boolean;
+  /** Test ID for E2E testing */
+  'data-testid'?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -31,6 +33,7 @@ export const Input: React.FC<InputProps> = ({
   list,
   style = {},
   error = false,
+  'data-testid': testId,
 }) => {
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -79,6 +82,7 @@ export const Input: React.FC<InputProps> = ({
         required={required}
         list={list}
         style={inputStyles}
+        data-testid={testId}
         onFocus={(e) => {
           if (!error) {
             e.target.style.borderColor = cssVars.colors.primary;

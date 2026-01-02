@@ -13,10 +13,18 @@
  * Design: Konzept §4 (Datenschutzerklärung)
  */
 
-import { type CSSProperties } from 'react';
 import { LegalPageLayout } from './legal/LegalPageLayout';
 import { LEGAL_CONFIG, isPlaceholder } from '../config/legal';
-import { cssVars } from '../design-tokens';
+import {
+  Section,
+  Subsection,
+  Paragraph,
+  Strong,
+  BulletList,
+  DataTable,
+  ExternalLink,
+} from './legal/DatenschutzSections';
+import { sectionStyles } from './legal/legalStyles';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,116 +37,22 @@ interface DatenschutzScreenProps {
 }
 
 // ---------------------------------------------------------------------------
+// Helper
+// ---------------------------------------------------------------------------
+
+function PlaceholderText({ text }: { text: string }) {
+  if (isPlaceholder(text)) {
+    return <span style={sectionStyles.placeholder}>{text}</span>;
+  }
+  return <>{text}</>;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function DatenschutzScreen({ onBack, onOpenCookieSettings }: DatenschutzScreenProps) {
   const { company, contact, supervisoryAuthority } = LEGAL_CONFIG;
-
-  // ---------------------------------------------------------------------------
-  // Styles
-  // ---------------------------------------------------------------------------
-
-  const sectionStyle: CSSProperties = {
-    marginBottom: cssVars.spacing.xl,
-  };
-
-  const h2Style: CSSProperties = {
-    fontSize: cssVars.fontSizes.xl,
-    fontWeight: cssVars.fontWeights.semibold,
-    marginBottom: cssVars.spacing.md,
-    marginTop: cssVars.spacing.xl,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const h3Style: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    fontWeight: cssVars.fontWeights.medium,
-    marginBottom: cssVars.spacing.sm,
-    marginTop: cssVars.spacing.lg,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const paragraphStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    lineHeight: 1.6,
-    color: cssVars.colors.textSecondary,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const strongStyle: CSSProperties = {
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const placeholderStyle: CSSProperties = {
-    backgroundColor: cssVars.colors.warningLight,
-    color: cssVars.colors.warning,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-    fontFamily: 'monospace',
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const linkStyle: CSSProperties = {
-    color: cssVars.colors.primary,
-    textDecoration: 'underline',
-  };
-
-  const buttonLinkStyle: CSSProperties = {
-    ...linkStyle,
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    font: 'inherit',
-    cursor: 'pointer',
-  };
-
-  const tableStyle: CSSProperties = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const thStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    textAlign: 'left',
-    fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const tdStyle: CSSProperties = {
-    padding: cssVars.spacing.sm,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-  };
-
-  const listStyle: CSSProperties = {
-    paddingLeft: cssVars.spacing.lg,
-    marginBottom: cssVars.spacing.md,
-  };
-
-  const listItemStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    lineHeight: 1.6,
-    color: cssVars.colors.textSecondary,
-    marginBottom: cssVars.spacing.xs,
-  };
-
-  // Helper to render text with placeholder styling
-  const renderText = (text: string) => {
-    if (isPlaceholder(text)) {
-      return <span style={placeholderStyle}>{text}</span>;
-    }
-    return text;
-  };
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
 
   return (
     <LegalPageLayout
@@ -147,400 +61,295 @@ export function DatenschutzScreen({ onBack, onOpenCookieSettings }: DatenschutzS
       onBack={onBack}
     >
       {/* 1. Verantwortlicher */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>1. Verantwortlicher</h2>
-        <p style={paragraphStyle}>
-          <span style={strongStyle}>{renderText(company.name)}</span><br />
-          {renderText(company.street)}, {renderText(company.city)}<br />
-          E-Mail: {renderText(contact.email)}
-        </p>
-      </section>
+      <Section number={1} title="Verantwortlicher">
+        <Paragraph>
+          <Strong><PlaceholderText text={company.name} /></Strong><br />
+          <PlaceholderText text={company.street} />, <PlaceholderText text={company.city} /><br />
+          E-Mail: <PlaceholderText text={contact.email} />
+        </Paragraph>
+      </Section>
 
       {/* 2. Übersicht der Verarbeitungen */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>2. Übersicht der Verarbeitungen</h2>
-        <p style={paragraphStyle}>
+      <Section number={2} title="Übersicht der Verarbeitungen">
+        <Paragraph>
           Wir verarbeiten personenbezogene Daten nur, soweit dies zur Bereitstellung einer
           funktionsfähigen App sowie unserer Inhalte und Leistungen erforderlich ist.
-        </p>
+        </Paragraph>
 
-        <h3 style={h3Style}>Arten der verarbeiteten Daten</h3>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Bestandsdaten (z.B. Namen, E-Mail-Adressen)</li>
-          <li style={listItemStyle}>Nutzungsdaten (z.B. besuchte Seiten, Zugriffszeiten)</li>
-          <li style={listItemStyle}>Meta-/Kommunikationsdaten (z.B. Geräte-Informationen, IP-Adressen)</li>
-        </ul>
+        <Subsection title="Arten der verarbeiteten Daten">
+          <BulletList items={[
+            'Bestandsdaten (z.B. Namen, E-Mail-Adressen)',
+            'Nutzungsdaten (z.B. besuchte Seiten, Zugriffszeiten)',
+            'Meta-/Kommunikationsdaten (z.B. Geräte-Informationen, IP-Adressen)',
+          ]} />
+        </Subsection>
 
-        <h3 style={h3Style}>Kategorien betroffener Personen</h3>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Nutzer der App (Turnierveranstalter, Trainer, Zuschauer)</li>
-        </ul>
+        <Subsection title="Kategorien betroffener Personen">
+          <BulletList items={[
+            'Nutzer der App (Turnierveranstalter, Trainer, Zuschauer)',
+          ]} />
+        </Subsection>
 
-        <h3 style={h3Style}>Zwecke der Verarbeitung</h3>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Bereitstellung der App und ihrer Funktionen</li>
-          <li style={listItemStyle}>Sicherheitsmaßnahmen</li>
-          <li style={listItemStyle}>Reichweitenmessung und Analyse (nur mit Einwilligung)</li>
-        </ul>
-      </section>
+        <Subsection title="Zwecke der Verarbeitung">
+          <BulletList items={[
+            'Bereitstellung der App und ihrer Funktionen',
+            'Sicherheitsmaßnahmen',
+            'Reichweitenmessung und Analyse (nur mit Einwilligung)',
+          ]} />
+        </Subsection>
+      </Section>
 
       {/* 3. Rechtsgrundlagen */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>3. Rechtsgrundlagen</h2>
-        <p style={paragraphStyle}>
+      <Section number={3} title="Rechtsgrundlagen">
+        <Paragraph>
           Wir verarbeiten Ihre Daten auf Basis folgender Rechtsgrundlagen:
-        </p>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Rechtsgrundlage</th>
-              <th style={thStyle}>Anwendungsfall</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={tdStyle}><strong>Art. 6 Abs. 1 lit. a DSGVO</strong></td>
-              <td style={tdStyle}>Einwilligung (z.B. für Analytics)</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Art. 6 Abs. 1 lit. b DSGVO</strong></td>
-              <td style={tdStyle}>Vertragserfüllung (z.B. Account-Verwaltung)</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Art. 6 Abs. 1 lit. f DSGVO</strong></td>
-              <td style={tdStyle}>Berechtigte Interessen (z.B. Sicherheit)</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+        </Paragraph>
+        <DataTable
+          headers={['Rechtsgrundlage', 'Anwendungsfall']}
+          rows={[
+            [<strong key="a">Art. 6 Abs. 1 lit. a DSGVO</strong>, 'Einwilligung (z.B. für Analytics)'],
+            [<strong key="b">Art. 6 Abs. 1 lit. b DSGVO</strong>, 'Vertragserfüllung (z.B. Account-Verwaltung)'],
+            [<strong key="f">Art. 6 Abs. 1 lit. f DSGVO</strong>, 'Berechtigte Interessen (z.B. Sicherheit)'],
+          ]}
+        />
+      </Section>
 
       {/* 4. Hosting */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>4. Hosting</h2>
-        <p style={paragraphStyle}>
+      <Section number={4} title="Hosting">
+        <Paragraph>
           Unsere App wird gehostet bei:
-        </p>
-        <p style={paragraphStyle}>
-          <span style={strongStyle}>Vercel Inc.</span><br />
+        </Paragraph>
+        <Paragraph>
+          <Strong>Vercel Inc.</Strong><br />
           340 S Lemon Ave #4133<br />
           Walnut, CA 91789, USA
-        </p>
-        <p style={paragraphStyle}>
+        </Paragraph>
+        <Paragraph>
           Vercel verarbeitet Zugriffsdaten (IP-Adresse, Zeitpunkt des Zugriffs) zur Bereitstellung
           der App. Die Verarbeitung erfolgt auf Basis unserer berechtigten Interessen
           (Art. 6 Abs. 1 lit. f DSGVO).
-        </p>
-        <p style={paragraphStyle}>
+        </Paragraph>
+        <Paragraph>
           Weitere Informationen:{' '}
-          <a
-            href="https://vercel.com/legal/privacy-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={linkStyle}
-          >
+          <ExternalLink href="https://vercel.com/legal/privacy-policy">
             https://vercel.com/legal/privacy-policy
-          </a>
-        </p>
-      </section>
+          </ExternalLink>
+        </Paragraph>
+      </Section>
 
       {/* 5. Cookies und Speichertechnologien */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>5. Cookies und Speichertechnologien</h2>
+      <Section number={5} title="Cookies und Speichertechnologien">
+        <Subsection title="5.1 Notwendige Cookies und lokale Speicherung">
+          <Paragraph>
+            Wir verwenden technisch notwendige Cookies und localStorage für:
+          </Paragraph>
+          <DataTable
+            headers={['Speicher', 'Zweck', 'Speicherdauer']}
+            rows={[
+              [<code key="auth">sb-*-auth-token</code>, 'Login-Session (Supabase)', 'Sitzung'],
+              [<code key="consent">spielplan_cookie_consent</code>, 'Ihre Cookie-Einstellungen', '1 Jahr'],
+              [<code key="storage">localStorage</code>, 'Turnierdaten (offline verfügbar)', 'Bis zur Löschung'],
+            ]}
+          />
+          <Paragraph>
+            <strong>Rechtsgrundlage:</strong> Diese Speicherung ist technisch erforderlich
+            (§ 25 Abs. 2 Nr. 2 TDDDG) und bedarf keiner Einwilligung.
+          </Paragraph>
+        </Subsection>
 
-        <h3 style={h3Style}>5.1 Notwendige Cookies und lokale Speicherung</h3>
-        <p style={paragraphStyle}>
-          Wir verwenden technisch notwendige Cookies und localStorage für:
-        </p>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Speicher</th>
-              <th style={thStyle}>Zweck</th>
-              <th style={thStyle}>Speicherdauer</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={tdStyle}><code>sb-*-auth-token</code></td>
-              <td style={tdStyle}>Login-Session (Supabase)</td>
-              <td style={tdStyle}>Sitzung</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><code>spielplan_cookie_consent</code></td>
-              <td style={tdStyle}>Ihre Cookie-Einstellungen</td>
-              <td style={tdStyle}>1 Jahr</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><code>localStorage</code></td>
-              <td style={tdStyle}>Turnierdaten (offline verfügbar)</td>
-              <td style={tdStyle}>Bis zur Löschung</td>
-            </tr>
-          </tbody>
-        </table>
-        <p style={paragraphStyle}>
-          <strong>Rechtsgrundlage:</strong> Diese Speicherung ist technisch erforderlich
-          (§ 25 Abs. 2 Nr. 2 TDDDG) und bedarf keiner Einwilligung.
-        </p>
-
-        <h3 style={h3Style}>5.2 Analyse-Cookies (Google Analytics 4)</h3>
-        <p style={paragraphStyle}>
-          Mit Ihrer Einwilligung nutzen wir Google Analytics 4, einen Webanalysedienst der
-          Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland.
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Zweck:</strong> Analyse der Nutzung unserer App zur Verbesserung des Angebots.
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Verarbeitete Daten:</strong>
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Gekürzte IP-Adresse (IP-Anonymisierung aktiv)</li>
-          <li style={listItemStyle}>Besuchte Seiten und Verweildauer</li>
-          <li style={listItemStyle}>Geräte- und Browserinformationen</li>
-          <li style={listItemStyle}>Ungefährer Standort (Land/Region)</li>
-        </ul>
-        <p style={paragraphStyle}>
-          <strong>Cookies:</strong>
-        </p>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Cookie</th>
-              <th style={thStyle}>Zweck</th>
-              <th style={thStyle}>Speicherdauer</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={tdStyle}><code>_ga</code></td>
-              <td style={tdStyle}>Unterscheidung von Nutzern</td>
-              <td style={tdStyle}>2 Jahre</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><code>_ga_*</code></td>
-              <td style={tdStyle}>Session-Status</td>
-              <td style={tdStyle}>2 Jahre</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><code>_gid</code></td>
-              <td style={tdStyle}>Unterscheidung von Nutzern</td>
-              <td style={tdStyle}>24 Stunden</td>
-            </tr>
-          </tbody>
-        </table>
-        <p style={paragraphStyle}>
-          <strong>Rechtsgrundlage:</strong> Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO,
-          § 25 Abs. 1 TDDDG).
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Einwilligung widerrufen:</strong> Sie können Ihre Einwilligung jederzeit über{' '}
-          {onOpenCookieSettings ? (
-            <button
-              type="button"
-              style={buttonLinkStyle}
-              onClick={onOpenCookieSettings}
-            >
-              Cookie-Einstellungen
-            </button>
-          ) : (
-            <span>"Cookie-Einstellungen" im Footer</span>
-          )}{' '}
-          widerrufen. Nach dem Widerruf werden die Analyse-Cookies gelöscht und keine weiteren
-          Daten mehr erfasst.
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Datenübermittlung in die USA:</strong> Google kann Daten in die USA übermitteln.
-          Google ist unter dem EU-US Data Privacy Framework zertifiziert.
-        </p>
-        <p style={paragraphStyle}>
-          Weitere Informationen:{' '}
-          <a
-            href="https://policies.google.com/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={linkStyle}
-          >
-            https://policies.google.com/privacy
-          </a>
-        </p>
-      </section>
+        <Subsection title="5.2 Analyse-Cookies (Google Analytics 4)">
+          <Paragraph>
+            Mit Ihrer Einwilligung nutzen wir Google Analytics 4, einen Webanalysedienst der
+            Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland.
+          </Paragraph>
+          <Paragraph>
+            <strong>Zweck:</strong> Analyse der Nutzung unserer App zur Verbesserung des Angebots.
+          </Paragraph>
+          <Paragraph>
+            <strong>Verarbeitete Daten:</strong>
+          </Paragraph>
+          <BulletList items={[
+            'Gekürzte IP-Adresse (IP-Anonymisierung aktiv)',
+            'Besuchte Seiten und Verweildauer',
+            'Geräte- und Browserinformationen',
+            'Ungefährer Standort (Land/Region)',
+          ]} />
+          <Paragraph>
+            <strong>Cookies:</strong>
+          </Paragraph>
+          <DataTable
+            headers={['Cookie', 'Zweck', 'Speicherdauer']}
+            rows={[
+              [<code key="ga">_ga</code>, 'Unterscheidung von Nutzern', '2 Jahre'],
+              [<code key="ga_">_ga_*</code>, 'Session-Status', '2 Jahre'],
+              [<code key="gid">_gid</code>, 'Unterscheidung von Nutzern', '24 Stunden'],
+            ]}
+          />
+          <Paragraph>
+            <strong>Rechtsgrundlage:</strong> Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO,
+            § 25 Abs. 1 TDDDG).
+          </Paragraph>
+          <Paragraph>
+            <strong>Einwilligung widerrufen:</strong> Sie können Ihre Einwilligung jederzeit über{' '}
+            {onOpenCookieSettings ? (
+              <button
+                type="button"
+                style={sectionStyles.buttonLink}
+                onClick={onOpenCookieSettings}
+                data-testid="cookie-settings-link"
+              >
+                Cookie-Einstellungen
+              </button>
+            ) : (
+              <span>"Cookie-Einstellungen" im Footer</span>
+            )}{' '}
+            widerrufen. Nach dem Widerruf werden die Analyse-Cookies gelöscht und keine weiteren
+            Daten mehr erfasst.
+          </Paragraph>
+          <Paragraph>
+            <strong>Datenübermittlung in die USA:</strong> Google kann Daten in die USA übermitteln.
+            Google ist unter dem EU-US Data Privacy Framework zertifiziert.
+          </Paragraph>
+          <Paragraph>
+            Weitere Informationen:{' '}
+            <ExternalLink href="https://policies.google.com/privacy">
+              https://policies.google.com/privacy
+            </ExternalLink>
+          </Paragraph>
+        </Subsection>
+      </Section>
 
       {/* 6. Kontaktaufnahme */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>6. Kontaktaufnahme</h2>
-        <p style={paragraphStyle}>
+      <Section number={6} title="Kontaktaufnahme">
+        <Paragraph>
           Wenn Sie uns per E-Mail kontaktieren, verarbeiten wir Ihre Angaben zur Bearbeitung
           Ihrer Anfrage.
-        </p>
-        <p style={paragraphStyle}>
+        </Paragraph>
+        <Paragraph>
           <strong>Rechtsgrundlage:</strong> Berechtigte Interessen (Art. 6 Abs. 1 lit. f DSGVO)
           bzw. Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
-        </p>
-        <p style={paragraphStyle}>
+        </Paragraph>
+        <Paragraph>
           <strong>Speicherdauer:</strong> Ihre Daten werden gelöscht, sobald die Anfrage
           abschließend bearbeitet ist, es sei denn, gesetzliche Aufbewahrungspflichten bestehen.
-        </p>
-      </section>
+        </Paragraph>
+      </Section>
 
       {/* 7. Registrierung und Anmeldung */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>7. Registrierung und Anmeldung</h2>
+      <Section number={7} title="Registrierung und Anmeldung">
+        <Subsection title="7.1 Account-Erstellung">
+          <Paragraph>
+            Bei der Registrierung verarbeiten wir:
+          </Paragraph>
+          <BulletList items={[
+            'E-Mail-Adresse',
+            'Passwort (verschlüsselt gespeichert)',
+            'Zeitpunkt der Registrierung',
+          ]} />
+          <Paragraph>
+            <strong>Zweck:</strong> Bereitstellung eines Nutzerkontos und der App-Funktionen.
+          </Paragraph>
+          <Paragraph>
+            <strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
+          </Paragraph>
+        </Subsection>
 
-        <h3 style={h3Style}>7.1 Account-Erstellung</h3>
-        <p style={paragraphStyle}>
-          Bei der Registrierung verarbeiten wir:
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>E-Mail-Adresse</li>
-          <li style={listItemStyle}>Passwort (verschlüsselt gespeichert)</li>
-          <li style={listItemStyle}>Zeitpunkt der Registrierung</li>
-        </ul>
-        <p style={paragraphStyle}>
-          <strong>Zweck:</strong> Bereitstellung eines Nutzerkontos und der App-Funktionen.
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
-        </p>
-
-        <h3 style={h3Style}>7.2 Authentifizierung über Supabase</h3>
-        <p style={paragraphStyle}>
-          Wir nutzen Supabase für die Authentifizierung:
-        </p>
-        <p style={paragraphStyle}>
-          <span style={strongStyle}>Supabase Inc.</span><br />
-          970 Toa Payoh North #07-04<br />
-          Singapore 318992
-        </p>
-        <p style={paragraphStyle}>
-          Supabase speichert Ihre Anmeldedaten sicher und stellt Session-Tokens bereit.
-        </p>
-        <p style={paragraphStyle}>
-          Weitere Informationen:{' '}
-          <a
-            href="https://supabase.com/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={linkStyle}
-          >
-            https://supabase.com/privacy
-          </a>
-        </p>
-      </section>
+        <Subsection title="7.2 Authentifizierung über Supabase">
+          <Paragraph>
+            Wir nutzen Supabase für die Authentifizierung:
+          </Paragraph>
+          <Paragraph>
+            <Strong>Supabase Inc.</Strong><br />
+            970 Toa Payoh North #07-04<br />
+            Singapore 318992
+          </Paragraph>
+          <Paragraph>
+            Supabase speichert Ihre Anmeldedaten sicher und stellt Session-Tokens bereit.
+          </Paragraph>
+          <Paragraph>
+            Weitere Informationen:{' '}
+            <ExternalLink href="https://supabase.com/privacy">
+              https://supabase.com/privacy
+            </ExternalLink>
+          </Paragraph>
+        </Subsection>
+      </Section>
 
       {/* 8. Datenverarbeitung in der App */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>8. Datenverarbeitung in der App</h2>
+      <Section number={8} title="Datenverarbeitung in der App">
+        <Subsection title="8.1 Turnierdaten">
+          <Paragraph>
+            Die von Ihnen erstellten Turniere, Teams und Spielergebnisse werden gespeichert:
+          </Paragraph>
+          <BulletList items={[
+            <><strong>Lokal:</strong> Im localStorage Ihres Browsers (für Offline-Nutzung)</>,
+            <><strong>Online:</strong> In der Supabase-Datenbank (für Synchronisation)</>,
+          ]} />
+          <Paragraph>
+            <strong>Zweck:</strong> Bereitstellung der Turnierverwaltungsfunktionen.
+          </Paragraph>
+          <Paragraph>
+            <strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
+          </Paragraph>
+        </Subsection>
 
-        <h3 style={h3Style}>8.1 Turnierdaten</h3>
-        <p style={paragraphStyle}>
-          Die von Ihnen erstellten Turniere, Teams und Spielergebnisse werden gespeichert:
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}><strong>Lokal:</strong> Im localStorage Ihres Browsers (für Offline-Nutzung)</li>
-          <li style={listItemStyle}><strong>Online:</strong> In der Supabase-Datenbank (für Synchronisation)</li>
-        </ul>
-        <p style={paragraphStyle}>
-          <strong>Zweck:</strong> Bereitstellung der Turnierverwaltungsfunktionen.
-        </p>
-        <p style={paragraphStyle}>
-          <strong>Rechtsgrundlage:</strong> Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).
-        </p>
-
-        <h3 style={h3Style}>8.2 Keine Weitergabe an Dritte</h3>
-        <p style={paragraphStyle}>
-          Ihre Turnierdaten werden nicht an Dritte weitergegeben, außer:
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Sie teilen ein Turnier aktiv (öffentlicher Link)</li>
-          <li style={listItemStyle}>Es besteht eine gesetzliche Verpflichtung</li>
-        </ul>
-      </section>
+        <Subsection title="8.2 Keine Weitergabe an Dritte">
+          <Paragraph>
+            Ihre Turnierdaten werden nicht an Dritte weitergegeben, außer:
+          </Paragraph>
+          <BulletList items={[
+            'Sie teilen ein Turnier aktiv (öffentlicher Link)',
+            'Es besteht eine gesetzliche Verpflichtung',
+          ]} />
+        </Subsection>
+      </Section>
 
       {/* 9. Ihre Rechte */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>9. Ihre Rechte</h2>
-        <p style={paragraphStyle}>
+      <Section number={9} title="Ihre Rechte">
+        <Paragraph>
           Sie haben folgende Rechte bezüglich Ihrer personenbezogenen Daten:
-        </p>
-        <table style={tableStyle}>
-          <thead>
-            <tr>
-              <th style={thStyle}>Recht</th>
-              <th style={thStyle}>Beschreibung</th>
-              <th style={thStyle}>Artikel</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={tdStyle}><strong>Auskunft</strong></td>
-              <td style={tdStyle}>Welche Daten wir über Sie speichern</td>
-              <td style={tdStyle}>Art. 15 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Berichtigung</strong></td>
-              <td style={tdStyle}>Korrektur unrichtiger Daten</td>
-              <td style={tdStyle}>Art. 16 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Löschung</strong></td>
-              <td style={tdStyle}>Löschung Ihrer Daten</td>
-              <td style={tdStyle}>Art. 17 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Einschränkung</strong></td>
-              <td style={tdStyle}>Einschränkung der Verarbeitung</td>
-              <td style={tdStyle}>Art. 18 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Datenübertragbarkeit</strong></td>
-              <td style={tdStyle}>Export Ihrer Daten</td>
-              <td style={tdStyle}>Art. 20 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Widerspruch</strong></td>
-              <td style={tdStyle}>Widerspruch gegen Verarbeitung</td>
-              <td style={tdStyle}>Art. 21 DSGVO</td>
-            </tr>
-            <tr>
-              <td style={tdStyle}><strong>Widerruf</strong></td>
-              <td style={tdStyle}>Widerruf erteilter Einwilligungen</td>
-              <td style={tdStyle}>Art. 7 Abs. 3 DSGVO</td>
-            </tr>
-          </tbody>
-        </table>
+        </Paragraph>
+        <DataTable
+          headers={['Recht', 'Beschreibung', 'Artikel']}
+          rows={[
+            [<strong key="auskunft">Auskunft</strong>, 'Welche Daten wir über Sie speichern', 'Art. 15 DSGVO'],
+            [<strong key="berichtigung">Berichtigung</strong>, 'Korrektur unrichtiger Daten', 'Art. 16 DSGVO'],
+            [<strong key="loeschung">Löschung</strong>, 'Löschung Ihrer Daten', 'Art. 17 DSGVO'],
+            [<strong key="einschraenkung">Einschränkung</strong>, 'Einschränkung der Verarbeitung', 'Art. 18 DSGVO'],
+            [<strong key="datenuebertragbarkeit">Datenübertragbarkeit</strong>, 'Export Ihrer Daten', 'Art. 20 DSGVO'],
+            [<strong key="widerspruch">Widerspruch</strong>, 'Widerspruch gegen Verarbeitung', 'Art. 21 DSGVO'],
+            [<strong key="widerruf">Widerruf</strong>, 'Widerruf erteilter Einwilligungen', 'Art. 7 Abs. 3 DSGVO'],
+          ]}
+        />
 
-        <h3 style={h3Style}>Ausübung Ihrer Rechte</h3>
-        <p style={paragraphStyle}>
-          Kontaktieren Sie uns per E-Mail: {renderText(contact.email)}
-        </p>
+        <Subsection title="Ausübung Ihrer Rechte">
+          <Paragraph>
+            Kontaktieren Sie uns per E-Mail: <PlaceholderText text={contact.email} />
+          </Paragraph>
+        </Subsection>
 
-        <h3 style={h3Style}>Beschwerderecht</h3>
-        <p style={paragraphStyle}>
-          Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren:
-        </p>
-        <p style={paragraphStyle}>
-          <span style={strongStyle}>{renderText(supervisoryAuthority.name)}</span><br />
-          {renderText(supervisoryAuthority.address)}<br />
-          <a
-            href={isPlaceholder(supervisoryAuthority.url) ? '#' : supervisoryAuthority.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={linkStyle}
-          >
-            {renderText(supervisoryAuthority.url)}
-          </a>
-        </p>
-      </section>
+        <Subsection title="Beschwerderecht">
+          <Paragraph>
+            Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde zu beschweren:
+          </Paragraph>
+          <Paragraph>
+            <Strong><PlaceholderText text={supervisoryAuthority.name} /></Strong><br />
+            <PlaceholderText text={supervisoryAuthority.address} /><br />
+            <ExternalLink href={isPlaceholder(supervisoryAuthority.url) ? '#' : supervisoryAuthority.url}>
+              <PlaceholderText text={supervisoryAuthority.url} />
+            </ExternalLink>
+          </Paragraph>
+        </Subsection>
+      </Section>
 
       {/* 10. Änderungen */}
-      <section style={sectionStyle}>
-        <h2 style={h2Style}>10. Änderungen dieser Datenschutzerklärung</h2>
-        <p style={paragraphStyle}>
+      <Section number={10} title="Änderungen dieser Datenschutzerklärung">
+        <Paragraph>
           Wir behalten uns vor, diese Datenschutzerklärung anzupassen, um sie an geänderte
           Rechtslagen oder Änderungen unserer App anzupassen. Die aktuelle Version finden Sie
           stets auf dieser Seite.
-        </p>
-      </section>
+        </Paragraph>
+      </Section>
     </LegalPageLayout>
   );
 }

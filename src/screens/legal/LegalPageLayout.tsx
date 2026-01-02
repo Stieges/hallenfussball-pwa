@@ -78,6 +78,7 @@ export function LegalPageLayout({
     fontFamily: 'inherit',
     cursor: 'pointer',
     transition: 'all 0.15s ease',
+    minHeight: '44px',
   };
 
   const titleStyle: CSSProperties = {
@@ -108,6 +109,7 @@ export function LegalPageLayout({
           style={backButtonStyle}
           onClick={onBack}
           aria-label="Zurück zur vorherigen Seite"
+          data-testid="legal-back-button"
         >
           ← Zurück
         </button>

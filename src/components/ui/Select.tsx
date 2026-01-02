@@ -13,6 +13,8 @@ interface SelectProps {
   disabled?: boolean;
   required?: boolean;
   style?: CSSProperties;
+  /** Test ID for E2E testing */
+  'data-testid'?: string;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -23,6 +25,7 @@ export const Select: React.FC<SelectProps> = ({
   disabled = false,
   required = false,
   style = {},
+  'data-testid': testId,
 }) => {
   const containerStyles: CSSProperties = {
     display: 'flex',
@@ -66,6 +69,7 @@ export const Select: React.FC<SelectProps> = ({
         disabled={disabled}
         required={required}
         style={selectStyles}
+        data-testid={testId}
         onFocus={(e) => {
           e.target.style.borderColor = cssVars.colors.primary;
         }}

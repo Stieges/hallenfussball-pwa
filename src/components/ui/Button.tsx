@@ -20,6 +20,8 @@ interface ButtonProps {
   pressEffect?: boolean;
   /** Loading state - shows spinner and disables button */
   loading?: boolean;
+  /** Test ID for E2E testing */
+  'data-testid'?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -36,6 +38,7 @@ export const Button: React.FC<ButtonProps> = ({
   type = 'button',
   pressEffect = true,
   loading = false,
+  'data-testid': testId,
 }) => {
   const [isPressed, setIsPressed] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -153,6 +156,7 @@ export const Button: React.FC<ButtonProps> = ({
       aria-label={ariaLabel}
       aria-disabled={isDisabled}
       aria-busy={loading}
+      data-testid={testId}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
       onMouseLeave={handlePressEnd}

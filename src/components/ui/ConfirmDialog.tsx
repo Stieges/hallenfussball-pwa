@@ -263,6 +263,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             <button
               style={cancelButtonStyle}
               onClick={effectiveOnCancel}
+              data-testid="confirm-dialog-cancel"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
               }}
@@ -282,6 +283,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                   }),
                 }}
                 onClick={handleSecondaryAction}
+                data-testid="confirm-dialog-secondary"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = cssVars.colors.surfaceLight;
                 }}
@@ -296,6 +298,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               ref={confirmButtonRef}
               style={confirmButtonStyle}
               onClick={onConfirm}
+              data-testid="confirm-dialog-confirm"
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = variantConfig.confirmHover;
               }}

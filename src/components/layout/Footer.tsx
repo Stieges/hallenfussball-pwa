@@ -80,8 +80,11 @@ export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
     cursor: 'pointer',
     background: 'none',
     border: 'none',
-    padding: 0,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
     font: 'inherit',
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
   };
 
   const separatorStyle: CSSProperties = {
@@ -104,6 +107,7 @@ export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
           style={linkStyle}
           onClick={handleImpressumClick}
           aria-label="Impressum öffnen"
+          data-testid="footer-impressum-link"
         >
           Impressum
         </button>
@@ -113,6 +117,7 @@ export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
           style={linkStyle}
           onClick={handleDatenschutzClick}
           aria-label="Datenschutzerklärung öffnen"
+          data-testid="footer-datenschutz-link"
         >
           Datenschutz
         </button>
@@ -122,6 +127,7 @@ export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
           style={linkStyle}
           onClick={handleCookieSettingsClick}
           aria-label="Cookie-Einstellungen öffnen"
+          data-testid="footer-cookie-settings-link"
         >
           Cookie-Einstellungen
         </button>
