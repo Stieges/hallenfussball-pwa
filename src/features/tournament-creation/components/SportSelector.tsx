@@ -62,7 +62,7 @@ const SportCard: React.FC<SportCardProps> = ({
       style={cardStyle}
       onMouseEnter={(e) => {
         if (!isSelected && !disabled) {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+          e.currentTarget.style.borderColor = cssVars.colors.borderMedium;
         }
       }}
       onMouseLeave={(e) => {

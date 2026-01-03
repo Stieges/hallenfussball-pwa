@@ -53,7 +53,7 @@ const SelectionButton: React.FC<SelectionButtonProps> = ({
       onClick={onClick}
       style={buttonStyle}
       onMouseEnter={(e) => {
-        if (!isSelected) {e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';}
+        if (!isSelected) {e.currentTarget.style.borderColor = cssVars.colors.borderMedium;}
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {e.currentTarget.style.borderColor = 'transparent';}

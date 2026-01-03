@@ -79,7 +79,9 @@
   --color-accent-medium: rgba(255, 215, 0, 0.1);
   --color-accent-subtle: rgba(255, 215, 0, 0.05);
   --color-accent-badge: rgba(255, 215, 0, 0.08);
+  --color-accent-badge-solid: rgba(255, 215, 0, 0.9);
   --color-accent-border: rgba(255, 215, 0, 0.3);
+  --color-accent-border-active: rgba(255, 215, 0, 0.4);
 
   /* ===========================================
      Colors - Background
@@ -87,13 +89,15 @@
   --color-background: #0A1628;
   --color-background-dark: #0d1d35;
   --color-background-deep: #020617;
+  --color-surface-subtle: rgba(255, 255, 255, 0.03);
   --color-surface: rgba(255, 255, 255, 0.05);
   --color-surface-light: rgba(255, 255, 255, 0.1);
   --color-surface-solid: #1E293B;
   --color-surface-hover: rgba(255, 255, 255, 0.08);
   --color-surface-dark: rgba(0, 0, 0, 0.3);
-  --color-surface-dark-medium: rgba(0, 0, 0, 0.2);
   --color-surface-dark-light: rgba(0, 0, 0, 0.1);
+  --color-surface-dark-subtle: rgba(0, 0, 0, 0.15);
+  --color-surface-dark-medium: rgba(0, 0, 0, 0.2);
   --color-surface-variant: #475569;
   --color-surface-elevated: #1E293B;
   --color-surface-highlight: rgba(255, 255, 255, 0.05);
@@ -123,6 +127,7 @@
      =========================================== */
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-light: #64748B;
+  --color-border-medium: rgba(255, 255, 255, 0.2);
   --color-border-active: rgba(0, 230, 118, 0.3);
   --color-border-solid: #334155;
   --color-border-subtle: rgba(255, 255, 255, 0.06);
@@ -134,6 +139,7 @@
      =========================================== */
   --color-error: #FF5252;
   --color-error-hover: #FF1744;
+  --color-error-subtle: rgba(255, 82, 82, 0.1);
   --color-error-light: rgba(255, 82, 82, 0.15);
   --color-error-medium: rgba(255, 82, 82, 0.2);
   --color-error-border: rgba(255, 82, 82, 0.3);
@@ -232,10 +238,12 @@
   /* ===========================================
      Colors - Danger
      =========================================== */
+  --color-danger-subtle: rgba(244, 67, 54, 0.15);
   --color-danger-highlight: rgba(248, 81, 73, 0.15);
   --color-danger-gradient-start: rgba(248, 81, 73, 0.2);
   --color-danger-gradient-end: rgba(248, 81, 73, 0.05);
   --color-danger-border: rgba(248, 81, 73, 0.3);
+  --color-danger-border-strong: rgba(244, 67, 54, 0.4);
   --color-danger-action-bg: rgba(244, 67, 54, 0.1);
 
   /* ===========================================
@@ -451,6 +459,10 @@
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
   --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.5);
 
+  /* Focus Shadows - A11y (keyboard navigation) */
+  --shadow-focus: 0 0 0 4px rgba(0, 230, 118, 0.2);
+  --shadow-focus-error: 0 0 0 4px rgba(255, 82, 82, 0.2);
+
   /* ===========================================
      Themeable Layer - Corporate Colors
      These can be overridden at runtime via JS
@@ -569,7 +581,9 @@ html[data-font-size="x-large"] {
   --color-accent-medium: rgba(217, 119, 6, 0.08);
   --color-accent-subtle: rgba(217, 119, 6, 0.05);
   --color-accent-badge: rgba(217, 119, 6, 0.06);
+  --color-accent-badge-solid: rgba(245, 158, 11, 0.85);
   --color-accent-border: rgba(217, 119, 6, 0.25);
+  --color-accent-border-active: rgba(217, 119, 6, 0.35);
 
   /* ===========================================
      Colors - Background
@@ -577,13 +591,15 @@ html[data-font-size="x-large"] {
   --color-background: #FFFFFF;
   --color-background-dark: #F1F5F9;
   --color-background-deep: #F8FAFC;
+  --color-surface-subtle: rgba(0, 0, 0, 0.01);
   --color-surface: #F8FAFC;
   --color-surface-light: #F1F5F9;
   --color-surface-solid: #F8FAFC;
   --color-surface-hover: #F1F5F9;
   --color-surface-dark: #F1F5F9;
-  --color-surface-dark-medium: #F1F5F9;
   --color-surface-dark-light: #F8FAFC;
+  --color-surface-dark-subtle: rgba(0, 0, 0, 0.05);
+  --color-surface-dark-medium: #F1F5F9;
   --color-surface-variant: #E2E8F0;
   --color-surface-elevated: #FFFFFF;
   --color-surface-highlight: rgba(0, 0, 0, 0.03);
@@ -613,6 +629,7 @@ html[data-font-size="x-large"] {
      =========================================== */
   --color-border: #E2E8F0;
   --color-border-light: #E2E8F0;
+  --color-border-medium: #CBD5E1;
   --color-border-active: rgba(5, 150, 105, 0.4);
   --color-border-solid: #CBD5E1;
   --color-border-subtle: #F1F5F9;
@@ -624,6 +641,7 @@ html[data-font-size="x-large"] {
      =========================================== */
   --color-error: #DC2626;
   --color-error-hover: #B91C1C;
+  --color-error-subtle: rgba(220, 38, 38, 0.06);
   --color-error-light: rgba(220, 38, 38, 0.1);
   --color-error-medium: rgba(220, 38, 38, 0.15);
   --color-error-border: rgba(220, 38, 38, 0.25);
@@ -723,13 +741,19 @@ html[data-font-size="x-large"] {
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
   --shadow-xl: 0 25px 50px rgba(0, 0, 0, 0.12);
 
+  /* Focus Shadows - A11y (keyboard navigation) */
+  --shadow-focus: 0 0 0 4px rgba(5, 150, 105, 0.25);
+  --shadow-focus-error: 0 0 0 4px rgba(220, 38, 38, 0.2);
+
   /* ===========================================
      Colors - Danger
      =========================================== */
+  --color-danger-subtle: rgba(220, 38, 38, 0.08);
   --color-danger-highlight: rgba(220, 38, 38, 0.08);
   --color-danger-gradient-start: rgba(220, 38, 38, 0.12);
   --color-danger-gradient-end: rgba(220, 38, 38, 0.03);
   --color-danger-border: rgba(220, 38, 38, 0.2);
+  --color-danger-border-strong: rgba(220, 38, 38, 0.35);
   --color-danger-action-bg: rgba(220, 38, 38, 0.06);
 
   /* ===========================================
@@ -923,6 +947,10 @@ html[data-font-size="x-large"] {
      =========================================== */
   --color-focus: #00FF88;
   --color-focus-ring: rgba(0, 255, 136, 0.4);
+
+  /* Focus Shadows - A11y (keyboard navigation) */
+  --shadow-focus: 0 0 0 4px rgba(0, 255, 136, 0.4);
+  --shadow-focus-error: 0 0 0 4px rgba(255, 82, 82, 0.4);
 }
 
 /* High contrast body adjustments */
@@ -1263,7 +1291,15 @@ textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--color-primary-selected);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Error state focus (for inputs with aria-invalid) */
+input[aria-invalid="true"]:focus-visible,
+select[aria-invalid="true"]:focus-visible,
+textarea[aria-invalid="true"]:focus-visible {
+  outline-color: var(--color-error);
+  box-shadow: var(--shadow-focus-error);
 }
 
 /* Cards and clickable containers */

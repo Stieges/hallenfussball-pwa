@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2025-12-30 (Dashboard + User-Menu IST-Analyse erstellt)
+> **Letzte Aktualisierung:** 2026-01-02 (TODO Status-Check + Typography ESLint Rule)
 
 ---
 
@@ -121,7 +121,7 @@
 
 | ID | Issue | Datei | Status |
 |----|-------|-------|--------|
-| M1 | ESC-Handler für Dialoge verifizieren | `components/ui/ConfirmDialog.tsx`, etc. | ⬜ Offen (30 Min) |
+| ~~M1~~ | ~~ESC-Handler für Dialoge~~ | `ConfirmDialog`, `BottomSheet`, `ActionMenu` | ⚠️ Teilweise (weitere Dialoge prüfen) |
 | M2 | Keyboard Shortcuts undokumentiert | Docs | ⬜ Offen (1h) |
 | ~~M3~~ | ~~`touch-action: manipulation` fehlt in Button~~ | `src/components/ui/Button.tsx` | ✅ Erledigt |
 | M4 | Focus-Outline kontrastreicher | `Button.tsx`, `Input.tsx` | ⬜ Offen (30 Min) |
@@ -160,7 +160,7 @@
 
 | Aufgabe | Priorität | Betroffene Dateien |
 |---------|-----------|-------------------|
-| **Wizard: 100+ hardcoded rgba() migrieren** | Hoch | `features/tournament-creation/**` – IST-Analyse: [WIZARD-IST-ANALYSE.md](analysis/WIZARD-IST-ANALYSE.md) |
+| **Wizard: ~35 hardcoded rgba() migrieren** | Hoch | `features/tournament-creation/**` – IST-Analyse: [WIZARD-IST-ANALYSE.md](analysis/WIZARD-IST-ANALYSE.md) |
 | Wizard: Neue Subtle/Border Tokens erstellen | Hoch | `design-tokens/colors/semantic.ts` – primarySubtle, secondarySubtle, warningSubtle, goldSubtle + Border-Varianten |
 | ~~Live-Cockpit: LiveCockpit.tsx aufteilen~~ | ❌ Obsolet | `LiveCockpit.tsx` ist @deprecated – Produktion nutzt `LiveCockpitMockup.tsx` |
 | Live-Cockpit: Dialog-Code extrahieren (~300 LOC) | Mittel | `live-cockpit/components/Dialogs/*.tsx` – DialogBase, TeamSelector, PlayerNumberInput |
@@ -226,6 +226,8 @@
 
 | Aufgabe | Erledigt am | Commit |
 |---------|-------------|--------|
+| ESLint Rule: `no-hardcoded-font-styles` | 2026-01-02 | `8d2aa0e` – Verhindert hardcoded px/font-family, erzwingt cssVars.fontSizes/fontFamilies |
+| Typography + Settings + URL-Filter | 2026-01-02 | `f277bc0` – Inter Font, rem-Scaling, High-Contrast Theme, useURLFilterSync |
 | Dashboard IST-Analyse | 2025-12-30 | [DASHBOARD-IST-ANALYSE.md](analysis/DASHBOARD-IST-ANALYSE.md) |
 | User-Menu IST-Analyse | 2025-12-30 | [USER-MENU-IST-ANALYSE.md](analysis/USER-MENU-IST-ANALYSE.md) |
 | Papierkorb-Konzept erstellt | 2025-12-30 | [PAPIERKORB-KONZEPT.md](concepts/PAPIERKORB-KONZEPT.md) |

@@ -47,18 +47,22 @@ export const semanticColorsDark = {
   accentMedium: 'rgba(255, 215, 0, 0.1)',
   accentSubtle: 'rgba(255, 215, 0, 0.05)',
   accentBadge: 'rgba(255, 215, 0, 0.08)', // For subtle accent badges
+  accentBadgeSolid: 'rgba(255, 215, 0, 0.9)', // For solid gold badges (draft status)
   accentBorder: 'rgba(255, 215, 0, 0.3)',
+  accentBorderActive: 'rgba(255, 215, 0, 0.4)', // For active/hover gold borders
 
   // ---------------------------------------------------------------------------
   // Background Colors
   // ---------------------------------------------------------------------------
   background: palette.neutral[950],
+  surfaceSubtle: 'rgba(255, 255, 255, 0.03)', // For very subtle backgrounds
   surface: 'rgba(255, 255, 255, 0.05)',
   surfaceLight: 'rgba(255, 255, 255, 0.1)',
   surfaceSolid: palette.neutral[800],
   surfaceHover: 'rgba(255, 255, 255, 0.08)',
   surfaceDark: 'rgba(0, 0, 0, 0.3)',
   surfaceDarkLight: 'rgba(0, 0, 0, 0.1)',
+  surfaceDarkSubtle: 'rgba(0, 0, 0, 0.15)', // For subtle dark overlays
   surfaceDarkMedium: 'rgba(0, 0, 0, 0.2)',
   surfaceVariant: palette.neutral[700],
   surfaceElevated: palette.neutral[800], // For elevated cards
@@ -79,6 +83,7 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   border: 'rgba(255, 255, 255, 0.1)',
   borderLight: palette.neutral[600],
+  borderMedium: 'rgba(255, 255, 255, 0.2)', // For medium-strength light borders
   borderActive: 'rgba(0, 230, 118, 0.3)',
   borderSolid: palette.neutral[700],
   borderSubtle: 'rgba(255, 255, 255, 0.06)',
@@ -90,6 +95,7 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   error: palette.red[400],
   errorHover: palette.red[500],
+  errorSubtle: 'rgba(255, 82, 82, 0.1)', // For subtle error backgrounds
   errorLight: 'rgba(255, 82, 82, 0.15)',
   errorMedium: 'rgba(255, 82, 82, 0.2)',
   errorBorder: 'rgba(255, 82, 82, 0.3)',
@@ -185,12 +191,15 @@ export const semanticColorsDark = {
   primaryGlow: 'rgba(0, 230, 118, 0.5)',
   primaryGlowLight: 'rgba(0, 230, 118, 0.2)',
   errorGlow: 'rgba(255, 82, 82, 0.25)',
+  dangerSubtle: 'rgba(244, 67, 54, 0.15)', // For subtle danger backgrounds
+
   warningShadow: 'rgba(255, 193, 7, 0.3)',
   warningHighlight: 'rgba(255, 193, 7, 0.08)',
   dangerHighlight: 'rgba(248, 81, 73, 0.15)',
   dangerGradientStart: 'rgba(248, 81, 73, 0.2)',
   dangerGradientEnd: 'rgba(248, 81, 73, 0.05)',
   dangerBorder: 'rgba(248, 81, 73, 0.3)',
+  dangerBorderStrong: 'rgba(244, 67, 54, 0.4)', // For strong danger borders
   surfaceHighlight: 'rgba(255, 255, 255, 0.05)',
 
   backgroundDark: '#0d1d35',

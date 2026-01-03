@@ -146,8 +146,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 <button
                   onClick={onResetTournament}
                   style={{
-                    background: 'rgba(244, 67, 54, 0.15)',
-                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    background: cssVars.colors.dangerSubtle,
+                    border: `1px solid ${cssVars.colors.dangerBorderStrong}`,
                     borderRadius: cssVars.borderRadius.sm,
                     padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
                     color: cssVars.colors.error,
@@ -398,9 +398,9 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
         <div style={{
           padding: '32px',
           textAlign: 'center',
-          background: 'rgba(0,176,255,0.08)',
+          background: cssVars.colors.secondaryBadge,
           borderRadius: cssVars.borderRadius.md,
-          border: '1px solid rgba(0,176,255,0.2)',
+          border: `1px solid ${cssVars.colors.secondaryBorder}`,
           marginTop: '16px',
         }}>
           <div style={{ fontSize: displaySizes.lg, marginBottom: '16px' }}>🚧</div>
@@ -423,8 +423,8 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           <span style={{
             display: 'inline-block',
             padding: '6px 16px',
-            background: 'rgba(0,176,255,0.2)',
-            border: '1px solid rgba(0,176,255,0.4)',
+            background: cssVars.colors.secondarySelected,
+            border: `1px solid ${cssVars.colors.secondaryBorderStrong}`,
             borderRadius: '16px',
             fontSize: cssVars.fontSizes.sm,
             fontWeight: cssVars.fontWeights.semibold,

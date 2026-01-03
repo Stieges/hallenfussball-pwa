@@ -17,9 +17,9 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
 
   const summaryStyle: CSSProperties = {
     padding: '16px',
-    background: 'rgba(255,145,0,0.1)',
+    background: cssVars.colors.warningMedium,
     borderRadius: cssVars.borderRadius.md,
-    border: '1px solid rgba(255,145,0,0.3)',
+    border: `1px solid ${cssVars.colors.warningBorder}`,
     cursor: 'pointer',
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
@@ -29,7 +29,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
   const contentStyle: CSSProperties = {
     padding: '16px',
     marginTop: '12px',
-    background: 'rgba(0,0,0,0.2)',
+    background: cssVars.colors.surfaceDarkMedium,
     borderRadius: cssVars.borderRadius.md,
   };
 

@@ -58,7 +58,9 @@ export const cssColors = {
   accentMedium: 'var(--color-accent-medium)',
   accentSubtle: 'var(--color-accent-subtle)',
   accentBadge: 'var(--color-accent-badge)',
+  accentBadgeSolid: 'var(--color-accent-badge-solid)',
   accentBorder: 'var(--color-accent-border)',
+  accentBorderActive: 'var(--color-accent-border-active)',
 
   // ---------------------------------------------------------------------------
   // Background Colors
@@ -66,13 +68,15 @@ export const cssColors = {
   background: 'var(--color-background)',
   backgroundDark: 'var(--color-background-dark)',
   backgroundDeep: 'var(--color-background-deep)',
+  surfaceSubtle: 'var(--color-surface-subtle)',
   surface: 'var(--color-surface)',
   surfaceLight: 'var(--color-surface-light)',
   surfaceSolid: 'var(--color-surface-solid)',
   surfaceHover: 'var(--color-surface-hover)',
   surfaceDark: 'var(--color-surface-dark)',
-  surfaceDarkMedium: 'var(--color-surface-dark-medium)',
   surfaceDarkLight: 'var(--color-surface-dark-light)',
+  surfaceDarkSubtle: 'var(--color-surface-dark-subtle)',
+  surfaceDarkMedium: 'var(--color-surface-dark-medium)',
   surfaceVariant: 'var(--color-surface-variant)',
   surfaceElevated: 'var(--color-surface-elevated)',
   surfaceHighlight: 'var(--color-surface-highlight)',
@@ -102,6 +106,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   border: 'var(--color-border)',
   borderLight: 'var(--color-border-light)',
+  borderMedium: 'var(--color-border-medium)',
   borderActive: 'var(--color-border-active)',
   borderSolid: 'var(--color-border-solid)',
   borderSubtle: 'var(--color-border-subtle)',
@@ -113,6 +118,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   error: 'var(--color-error)',
   errorHover: 'var(--color-error-hover)',
+  errorSubtle: 'var(--color-error-subtle)',
   errorLight: 'var(--color-error-light)',
   errorMedium: 'var(--color-error-medium)',
   errorBorder: 'var(--color-error-border)',
@@ -211,10 +217,12 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   // Danger Colors
   // ---------------------------------------------------------------------------
+  dangerSubtle: 'var(--color-danger-subtle)',
   dangerHighlight: 'var(--color-danger-highlight)',
   dangerGradientStart: 'var(--color-danger-gradient-start)',
   dangerGradientEnd: 'var(--color-danger-gradient-end)',
   dangerBorder: 'var(--color-danger-border)',
+  dangerBorderStrong: 'var(--color-danger-border-strong)',
   dangerActionBg: 'var(--color-danger-action-bg)',
 
   // ---------------------------------------------------------------------------

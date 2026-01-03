@@ -57,7 +57,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
 
   const presetButtonStyle = (isActive: boolean): CSSProperties => ({
     padding: '12px',
-    background: isActive ? 'rgba(0,176,255,0.2)' : 'rgba(0,0,0,0.2)',
+    background: isActive ? cssVars.colors.secondarySelected : cssVars.colors.surfaceDarkMedium,
     border: isActive ? `2px solid ${cssVars.colors.secondary}` : '2px solid transparent',
     borderRadius: cssVars.borderRadius.sm,
     textAlign: 'center',
@@ -74,9 +74,9 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   const customContainerStyle: CSSProperties = {
     marginTop: '16px',
     padding: '16px',
-    background: 'rgba(0,176,255,0.08)',
+    background: cssVars.colors.secondaryBadge,
     borderRadius: cssVars.borderRadius.md,
-    border: '1px solid rgba(0,176,255,0.2)',
+    border: `1px solid ${cssVars.colors.secondaryBorder}`,
   };
 
   return (

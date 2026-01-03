@@ -96,15 +96,15 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
   const organizerSettingsStyle: CSSProperties = {
     marginTop: '16px',
     padding: '16px',
-    background: 'rgba(255,215,0,0.08)',
+    background: cssVars.colors.accentBadge,
     borderRadius: cssVars.borderRadius.md,
-    border: '1px solid rgba(255,215,0,0.2)',
+    border: `1px solid ${cssVars.colors.accentLight}`,
   };
 
   const namesContainerStyle: CSSProperties = {
     marginTop: '12px',
     padding: '12px',
-    background: 'rgba(0,0,0,0.15)',
+    background: cssVars.colors.surfaceDarkSubtle,
     borderRadius: cssVars.borderRadius.sm,
   };
 

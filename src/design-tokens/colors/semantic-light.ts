@@ -41,18 +41,22 @@ export const semanticColorsLight = {
   accentMedium: 'rgba(217, 119, 6, 0.08)',
   accentSubtle: 'rgba(217, 119, 6, 0.05)',
   accentBadge: 'rgba(217, 119, 6, 0.06)', // For subtle accent badges
+  accentBadgeSolid: 'rgba(245, 158, 11, 0.85)', // For solid gold badges (draft status)
   accentBorder: 'rgba(217, 119, 6, 0.25)',
+  accentBorderActive: 'rgba(217, 119, 6, 0.35)', // For active/hover gold borders
 
   // ---------------------------------------------------------------------------
   // Background Colors
   // ---------------------------------------------------------------------------
   background: palette.neutral[0], // Pure white
+  surfaceSubtle: 'rgba(0, 0, 0, 0.01)', // For very subtle backgrounds
   surface: palette.neutral[50], // Soft gray
   surfaceLight: palette.neutral[100],
   surfaceSolid: palette.neutral[50],
   surfaceHover: palette.neutral[100],
   surfaceDark: palette.neutral[100],
   surfaceDarkLight: palette.neutral[50],
+  surfaceDarkSubtle: 'rgba(0, 0, 0, 0.05)', // For subtle dark overlays
   surfaceDarkMedium: palette.neutral[100],
   surfaceVariant: palette.neutral[200],
   surfaceElevated: palette.neutral[0], // White with shadow
@@ -73,6 +77,7 @@ export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
   border: palette.neutral[200],
   borderLight: palette.neutral[200],
+  borderMedium: palette.neutral[300], // For medium-strength borders
   borderActive: 'rgba(5, 150, 105, 0.4)',
   borderSolid: palette.neutral[300],
   borderSubtle: palette.neutral[100],
@@ -84,6 +89,7 @@ export const semanticColorsLight = {
   // ---------------------------------------------------------------------------
   error: palette.red[600],
   errorHover: palette.red[700],
+  errorSubtle: 'rgba(220, 38, 38, 0.06)', // For subtle error backgrounds
   errorLight: 'rgba(220, 38, 38, 0.1)',
   errorMedium: 'rgba(220, 38, 38, 0.15)',
   errorBorder: 'rgba(220, 38, 38, 0.25)',
@@ -179,12 +185,15 @@ export const semanticColorsLight = {
   primaryGlow: 'rgba(5, 150, 105, 0.3)',
   primaryGlowLight: 'rgba(5, 150, 105, 0.15)',
   errorGlow: 'rgba(220, 38, 38, 0.15)',
+  dangerSubtle: 'rgba(220, 38, 38, 0.08)', // For subtle danger backgrounds
+
   warningShadow: 'rgba(245, 158, 11, 0.2)',
   warningHighlight: 'rgba(245, 158, 11, 0.05)',
   dangerHighlight: 'rgba(220, 38, 38, 0.08)',
   dangerGradientStart: 'rgba(220, 38, 38, 0.12)',
   dangerGradientEnd: 'rgba(220, 38, 38, 0.03)',
   dangerBorder: 'rgba(220, 38, 38, 0.2)',
+  dangerBorderStrong: 'rgba(220, 38, 38, 0.35)', // For strong danger borders
   surfaceHighlight: 'rgba(0, 0, 0, 0.03)',
 
   backgroundDark: palette.neutral[100],

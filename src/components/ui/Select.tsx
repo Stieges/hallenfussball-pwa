@@ -13,6 +13,8 @@ interface SelectProps {
   disabled?: boolean;
   required?: boolean;
   style?: CSSProperties;
+  /** Zeigt einen Fehlerzustand an (roter Rahmen) */
+  error?: boolean;
   /** Test ID for E2E testing */
   'data-testid'?: string;
 }
@@ -25,6 +27,7 @@ export const Select: React.FC<SelectProps> = ({
   disabled = false,
   required = false,
   style = {},
+  error = false,
   'data-testid': testId,
 }) => {
   const containerStyles: CSSProperties = {
@@ -45,14 +48,14 @@ export const Select: React.FC<SelectProps> = ({
     height: cssVars.touchTargets.minimum,
     padding: `0 ${cssVars.spacing.xl} 0 ${cssVars.spacing.md}`,
     background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
+    border: `1px solid ${error ? cssVars.colors.error : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.md,
     fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     cursor: 'pointer',
-    transition: 'border-color 0.2s ease',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
     width: '100%',
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
@@ -76,11 +79,14 @@ export const Select: React.FC<SelectProps> = ({
         required={required}
         style={selectStyles}
         data-testid={testId}
+        aria-invalid={error || undefined}
         onFocus={(e) => {
-          e.target.style.borderColor = cssVars.colors.primary;
+          if (!error) {
+            e.target.style.borderColor = cssVars.colors.primary;
+          }
         }}
         onBlur={(e) => {
-          e.target.style.borderColor = cssVars.colors.border;
+          e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.border;
         }}
       >
         {options.map((option) => (

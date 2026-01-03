@@ -381,7 +381,7 @@ test.describe('Live Cockpit', () => {
     await page.waitForTimeout(500);
 
     // WHEN - Navigate to Spielplan tab to verify results
-    await page.getByText('Spielplan').click({ force: true });
+    await page.getByRole('button', { name: 'Spielplan' }).click({ force: true });
     await page.waitForTimeout(500);
 
     // THEN - Should see the result "2:1" in the schedule

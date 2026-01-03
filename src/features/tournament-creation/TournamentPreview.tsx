@@ -205,7 +205,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           <span
             style={{
               padding: '6px 12px',
-              background: 'rgba(255,215,0,0.9)',
+              background: cssVars.colors.accentBadgeSolid,
               color: cssVars.colors.onWarning,
               borderRadius: cssVars.borderRadius.sm,
               fontSize: cssVars.fontSizes.sm,
@@ -283,7 +283,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         {currentTournament.groupSystem === 'groupsAndFinals' &&
          currentTournament.finalsConfig?.preset &&
          currentTournament.finalsConfig.preset !== 'none' && (
-          <div className="finals-config-box" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(255,215,0,0.08)', borderRadius: cssVars.borderRadius.md, border: '1px solid rgba(255,215,0,0.2)' }}>
+          <div className="finals-config-box" style={{ marginBottom: '24px', padding: '16px', background: cssVars.colors.accentBadge, borderRadius: cssVars.borderRadius.md, border: `1px solid ${cssVars.colors.accentLight}` }}>
             <h3 style={{ color: cssVars.colors.accent, fontSize: cssVars.fontSizes.md, margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
               Finalrunden-Einstellungen
             </h3>
@@ -299,7 +299,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
             {/* Warnung: Top-8 benötigt mindestens 4 Gruppen */}
             {currentTournament.finalsConfig.preset === 'top-8' && (currentTournament.numberOfGroups ?? 2) < 4 && (
-              <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(255,165,0,0.12)', borderRadius: cssVars.borderRadius.sm, border: '1px solid rgba(255,165,0,0.3)' }}>
+              <div style={{ marginTop: '12px', padding: '10px 12px', background: cssVars.colors.correctionBg, borderRadius: cssVars.borderRadius.sm, border: `1px solid ${cssVars.colors.warningBorder}` }}>
                 <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ⚠️ <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
                   Mit {currentTournament.numberOfGroups ?? 2} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
@@ -309,7 +309,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
             {/* Info: Alle Plätze */}
             {currentTournament.finalsConfig.preset === 'all-places' && (
-              <div style={{ marginTop: '12px', padding: '10px 12px', background: 'rgba(0,176,255,0.12)', borderRadius: cssVars.borderRadius.sm, border: '1px solid rgba(0,176,255,0.3)' }}>
+              <div style={{ marginTop: '12px', padding: '10px 12px', background: cssVars.colors.secondaryMedium, borderRadius: cssVars.borderRadius.sm, border: `1px solid ${cssVars.colors.secondaryBorderActive}` }}>
                 <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
                   ℹ️ <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
                   {(currentTournament.numberOfGroups ?? 2) === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
@@ -406,8 +406,8 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         style={{
           marginTop: '24px',
           padding: '16px',
-          background: 'rgba(0,176,255,0.08)',
-          border: '1px solid rgba(0,176,255,0.2)',
+          background: cssVars.colors.secondaryBadge,
+          border: `1px solid ${cssVars.colors.secondaryBorder}`,
           borderRadius: cssVars.borderRadius.md,
         }}
       >

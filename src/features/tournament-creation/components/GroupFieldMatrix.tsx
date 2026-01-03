@@ -34,7 +34,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
             gap: cssVars.spacing.sm,
             alignItems: 'center',
             padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: cssVars.colors.surface,
             borderBottom: `1px solid ${cssVars.colors.border}`,
           }}
         >
@@ -69,7 +69,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                 gap: cssVars.spacing.sm,
                 alignItems: 'center',
                 padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-                backgroundColor: isEvenRow ? 'transparent' : 'rgba(255,255,255,0.03)',
+                backgroundColor: isEvenRow ? 'transparent' : cssVars.colors.surfaceSubtle,
                 transition: 'background-color 0.15s ease',
               }}
             >
@@ -103,8 +103,8 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                         borderRadius: cssVars.borderRadius.md,
                         backgroundColor: isAllowed
                           ? cssVars.colors.primary
-                          : 'rgba(255,255,255,0.05)',
-                        border: `2px solid ${isAllowed ? cssVars.colors.primary : 'rgba(255,255,255,0.2)'}`,
+                          : cssVars.colors.surface,
+                        border: `2px solid ${isAllowed ? cssVars.colors.primary : cssVars.colors.borderMedium}`,
                         cursor: isOnlyOne ? 'not-allowed' : 'pointer',
                         opacity: isOnlyOne ? 0.5 : 1,
                         transition: 'all 0.2s ease',

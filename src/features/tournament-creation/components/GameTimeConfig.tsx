@@ -21,9 +21,9 @@ export const GameTimeConfig: React.FC<GameTimeConfigProps> = ({
   const containerStyle: CSSProperties = {
     marginTop: '16px',
     padding: '16px',
-    background: isGroupPhase ? 'rgba(0,230,118,0.05)' : 'rgba(255,215,0,0.08)',
+    background: isGroupPhase ? cssVars.colors.primarySubtle : cssVars.colors.accentBadge,
     borderRadius: cssVars.borderRadius.md,
-    border: `1px solid ${isGroupPhase ? 'rgba(0,230,118,0.15)' : 'rgba(255,215,0,0.3)'}`,
+    border: `1px solid ${isGroupPhase ? cssVars.colors.primaryLight : cssVars.colors.accentBorder}`,
   };
 
   const headerStyle: CSSProperties = {

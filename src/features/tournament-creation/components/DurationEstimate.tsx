@@ -98,17 +98,17 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
     marginTop: '16px',
     padding: '12px 16px',
     background: isCritical
-      ? 'rgba(255,82,82,0.1)'
+      ? cssVars.colors.errorSubtle
       : isWarning
-        ? 'rgba(255,145,0,0.1)'
-        : 'rgba(0,176,255,0.08)',
+        ? cssVars.colors.warningMedium
+        : cssVars.colors.secondaryBadge,
     borderRadius: cssVars.borderRadius.md,
     border: `1px solid ${
       isCritical
-        ? 'rgba(255,82,82,0.3)'
+        ? cssVars.colors.errorBorder
         : isWarning
-          ? 'rgba(255,145,0,0.3)'
-          : 'rgba(0,176,255,0.2)'
+          ? cssVars.colors.warningBorder
+          : cssVars.colors.secondaryBorder
     }`,
   };
 
