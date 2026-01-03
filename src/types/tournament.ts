@@ -364,6 +364,14 @@ export interface Tournament {
   groups?: TournamentGroup[];    // Gruppenkonfiguration mit Namen und Feld-Zuordnung
   fields?: TournamentField[];    // Feldkonfiguration mit benutzerdefinierten Namen
 
+  // MON-KONF-01: Monitor-Konfigurator
+  /** Monitor-Konfigurationen für Display-Setups */
+  monitors?: import('./monitor').TournamentMonitor[];
+  /** Zentral verwaltete Sponsoren (Single Source of Truth) */
+  sponsors?: import('./sponsor').Sponsor[];
+  /** Monitor-Vorlagen (Phase 2) */
+  monitorTemplates?: import('./monitor').MonitorTemplate[];
+
   // Legacy fields (will be migrated)
   finals: Finals;
   playoffConfig?: PlayoffConfig;

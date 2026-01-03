@@ -101,6 +101,26 @@ export {
 
 export { gradients, type GradientToken } from './gradients';
 
+// =============================================================================
+// Display Tokens (TV-optimierte Darstellung für Monitor-Konfigurator)
+// =============================================================================
+
+export {
+  displayTokens,
+  displayFontSizes,
+  displayColors,
+  displaySpacing,
+  displayTransitions,
+  displayLayout,
+  displayEffects,
+  displayColorSchemes,
+  type DisplayTokens,
+  type DisplayFontSizeKey,
+  type DisplayColorKey,
+  type DisplaySpacingKey,
+  type DisplayColorSchemeKey,
+} from './display';
+
 export {
   touchTargets,
   touchTargetValues,
@@ -130,6 +150,7 @@ import { radii, radiiSemantics } from './radii';
 import { durations, easings, transitions, animations } from './motion';
 import { breakpoints, mediaQueries, containerWidths } from './breakpoints';
 import { gradients } from './gradients';
+import { displayTokens as displayTokensImport } from './display';
 
 /**
  * All tokens as a single object
@@ -164,6 +185,8 @@ export const tokens = {
   inputHeights,
   buttonHeights,
   layoutHeights,
+  // Display tokens for TV/Monitor display
+  display: displayTokensImport,
 } as const;
 
 export type Tokens = typeof tokens;

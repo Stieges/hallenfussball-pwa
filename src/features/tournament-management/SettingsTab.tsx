@@ -13,13 +13,15 @@
  * - Kommuniziert Dirty-State an Parent für Tab-Wechsel-Warnung
  */
 
-import { useState, useEffect, useMemo, CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
 import { Card, Input, Combobox } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
 import { LocationForm } from '../../components/LocationForm';
 import { ContactForm } from '../../components/ContactForm';
+import { SponsorManagement } from './SponsorManagement';
+import { FieldManagement } from './FieldManagement';
 
 interface SettingsTabProps {
   tournament: Tournament;
@@ -194,6 +196,11 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
       onEditInWizard(draftTournament, targetStep);
     }
   };
+
+  // Async Tournament Update Handler für SponsorManagement
+  const handleAsyncTournamentUpdate = useCallback(async (updatedTournament: Tournament) => {
+    onTournamentUpdate(updatedTournament, false);
+  }, [onTournamentUpdate]);
 
   // Styles
   const containerStyle: CSSProperties = {
@@ -444,6 +451,22 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </Card>
           </>
         )}
+
+        {/* Sponsoren-Verwaltung - MON-KONF-01 */}
+        <div style={{ marginTop: cssVars.spacing.lg }}>
+          <SponsorManagement
+            tournament={tournament}
+            onTournamentUpdate={handleAsyncTournamentUpdate}
+          />
+        </div>
+
+        {/* Felder-Verwaltung - MON-KONF-01 */}
+        <div style={{ marginTop: cssVars.spacing.lg }}>
+          <FieldManagement
+            tournament={tournament}
+            onTournamentUpdate={handleAsyncTournamentUpdate}
+          />
+        </div>
 
         {/* Wizard-Bearbeitung Buttons - IMMER SICHTBAR */}
         {onEditInWizard && (

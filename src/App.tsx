@@ -42,6 +42,11 @@ const SettingsScreen = lazy(() =>
   import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen }))
 );
 
+// MON-KONF-01: Monitor Display für TVs/Beamer
+const MonitorDisplayPage = lazy(() =>
+  import('./features/monitor-display').then(m => ({ default: m.MonitorDisplayPage }))
+);
+
 // Loading fallback component
 const ScreenLoader = () => (
   <div
@@ -76,7 +81,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display';
 
 function AppContent() {
   const { showError } = useToast();
@@ -163,13 +168,27 @@ function AppContent() {
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
-  // Parse URL on mount to detect public tournament view or invite
+  // MON-KONF-01: Monitor Display Route params
+  const [monitorDisplayParams, setMonitorDisplayParams] = useState<{
+    tournamentId: string;
+    monitorId: string;
+  } | null>(null);
+
+  // Parse URL on mount to detect public tournament view, invite, or monitor display
   useEffect(() => {
     const path = window.location.pathname;
     const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
     const inviteMatch = path.match(/^\/invite$/);
+    // MON-KONF-01: Monitor Display route /display/:tournamentId/:monitorId
+    const displayMatch = path.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
 
-    if (publicMatch) {
+    if (displayMatch) {
+      // Monitor Display route (for TVs/Beamer)
+      const tournamentId = displayMatch[1];
+      const monitorId = displayMatch[2];
+      setMonitorDisplayParams({ tournamentId, monitorId });
+      setScreen('monitor-display');
+    } else if (publicMatch) {
       const tournamentId = publicMatch[1];
       setPublicTournamentId(tournamentId);
       setScreen('public');
@@ -478,6 +497,19 @@ function AppContent() {
 
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
+        )}
+
+        {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
+        {screen === 'monitor-display' && monitorDisplayParams && (
+          <MonitorDisplayPage
+            tournamentId={monitorDisplayParams.tournamentId}
+            monitorId={monitorDisplayParams.monitorId}
+            onBack={() => {
+              window.history.replaceState({}, '', '/');
+              setMonitorDisplayParams(null);
+              setScreen('dashboard');
+            }}
+          />
         )}
 
         {/* Legal Screens */}

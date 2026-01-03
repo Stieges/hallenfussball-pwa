@@ -40,6 +40,9 @@ export { useTournaments } from './useTournaments'
 export { useSportConfig } from './useSportConfig'
 export { useUserProfile } from './useUserProfile'
 export { usePermissions } from './usePermissions'
+export { useSponsors } from './useSponsors'
+export { useFields } from './useFields'
+export { useMonitors } from './useMonitors'
 
 // Theming & Corporate Colors
 export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
