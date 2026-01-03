@@ -91,7 +91,7 @@ function MatchSummaryDialog({
   };
 
   const dialogStyle: CSSProperties = {
-    background: cssVars.colors.surface,
+    background: cssVars.colors.surfaceElevated,
     borderRadius: cssVars.borderRadius.lg,
     maxWidth: 520,
     width: '100%',
