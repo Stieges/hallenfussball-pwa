@@ -1,5 +1,6 @@
-import { Card, Button, Input, Icons } from '../../components/ui';
-import { Tournament, Team } from '../../types/tournament';
+import { useState } from 'react';
+import { Card, Button, Input, Icons, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
+import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
@@ -100,12 +101,49 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   onRemoveTeam,
   onUpdateTeam,
 }) => {
+  const [logoUploadTeamId, setLogoUploadTeamId] = useState<string | null>(null);
+  const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
+
   const teams = formData.teams ?? [];
   const canAssignGroups = formData.groupSystem === 'groupsAndFinals';
   const numberOfTeams = formData.numberOfTeams ?? 4;
   const numberOfGroups = formData.numberOfGroups ?? 2;
   const needsMoreTeams = teams.length < numberOfTeams;
   const groupLabels = generateGroupLabels(numberOfGroups);
+
+  // Find team for logo upload dialog
+  const logoUploadTeam = logoUploadTeamId
+    ? teams.find(t => t.id === logoUploadTeamId)
+    : null;
+
+  // Handle logo save
+  const handleLogoSave = (logo: TeamLogo) => {
+    if (logoUploadTeamId) {
+      onUpdateTeam(logoUploadTeamId, { logo });
+      setLogoUploadTeamId(null);
+    }
+  };
+
+  // Handle logo remove
+  const handleLogoRemove = () => {
+    if (logoUploadTeamId) {
+      onUpdateTeam(logoUploadTeamId, { logo: undefined });
+      setLogoUploadTeamId(null);
+    }
+  };
+
+  // Handle color change
+  const handleColorChange = (teamId: string, color: string) => {
+    const team = teams.find(t => t.id === teamId);
+    onUpdateTeam(teamId, {
+      colors: { ...team?.colors, primary: color },
+    });
+  };
+
+  // Toggle expanded state
+  const toggleExpanded = (teamId: string) => {
+    setExpandedTeamId(prev => prev === teamId ? null : teamId);
+  };
 
   // Analyze group distribution for warnings
   const groupWarnings = canAssignGroups && teams.length > 0
@@ -201,17 +239,35 @@ export const Step4_Teams: React.FC<Step4Props> = ({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {teams.map((team, index) => {
+          {teams.map((team) => {
             const isDuplicate = isTeamDuplicate(team.id, team.name);
             const isOriginal = isTeamOriginal(team.id, team.name);
             const hasError = isDuplicate || isOriginal;
+            const isExpanded = expandedTeamId === team.id;
+
             return (
               <div key={team.id} className={styles.teamRow}>
-                {/* Main row: Badge + Name + Delete */}
+                {/* Main row: Avatar + Name + Expand + Delete */}
                 <div className={styles.teamRowMain}>
-                  <div className={styles.teamBadge}>
-                    {index + 1}
-                  </div>
+                  {/* TeamAvatar instead of numbered badge */}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(team.id)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                    aria-label={`Logo und Farben für ${team.name} ${isExpanded ? 'einklappen' : 'bearbeiten'}`}
+                  >
+                    <TeamAvatar
+                      team={team}
+                      size="md"
+                      showColorRing={!!team.colors?.primary}
+                    />
+                  </button>
 
                   <div className={styles.teamNameInput}>
                     <Input
@@ -231,6 +287,31 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     )}
                   </div>
 
+                  {/* Expand button for logo/color editing */}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(team.id)}
+                    style={{
+                      flexShrink: 0,
+                      width: 40,
+                      height: 40,
+                      padding: 0,
+                      background: cssVars.colors.surface,
+                      border: `1px solid ${cssVars.colors.border}`,
+                      borderRadius: cssVars.borderRadius.md,
+                      color: cssVars.colors.textSecondary,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? 'Einklappen' : 'Logo & Farben'}
+                  >
+                    {isExpanded ? '▲' : '▼'}
+                  </button>
+
                   <button
                     onClick={() => onRemoveTeam(team.id)}
                     className={styles.deleteButton}
@@ -239,6 +320,52 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     <Icons.Trash size={18} />
                   </button>
                 </div>
+
+                {/* Expanded section: Logo & Color editing */}
+                {isExpanded && (
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: cssVars.spacing.md,
+                    paddingTop: cssVars.spacing.md,
+                    paddingLeft: '52px', // Align with input (40px avatar + 12px gap)
+                    borderTop: `1px solid ${cssVars.colors.border}`,
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: cssVars.spacing.lg,
+                      alignItems: 'flex-start',
+                    }}>
+                      {/* Logo Section */}
+                      <div style={{ minWidth: 120 }}>
+                        <span style={{
+                          display: 'block',
+                          fontSize: cssVars.fontSizes.sm,
+                          color: cssVars.colors.textSecondary,
+                          marginBottom: cssVars.spacing.sm,
+                        }}>
+                          Logo
+                        </span>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setLogoUploadTeamId(team.id)}
+                        >
+                          {team.logo ? 'Logo ändern' : 'Logo hochladen'}
+                        </Button>
+                      </div>
+
+                      {/* Color Section */}
+                      <ColorPicker
+                        label="Trikotfarbe"
+                        value={team.colors?.primary || '#666666'}
+                        onChange={(color) => handleColorChange(team.id, color)}
+                        showCustomPicker={false}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Secondary row: Group selector (only on mobile, inline on desktop via CSS) */}
                 {canAssignGroups && (
@@ -348,6 +475,17 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             {canAssignGroups && ` • Gruppen können jetzt zugewiesen werden`}
           </div>
         </div>
+      )}
+
+      {/* Logo Upload Dialog */}
+      {logoUploadTeam && (
+        <LogoUploadDialog
+          teamName={logoUploadTeam.name}
+          currentLogo={logoUploadTeam.logo}
+          onSave={handleLogoSave}
+          onCancel={() => setLogoUploadTeamId(null)}
+          onRemove={logoUploadTeam.logo ? handleLogoRemove : undefined}
+        />
       )}
     </Card>
   );

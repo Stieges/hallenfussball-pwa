@@ -272,3 +272,66 @@ export function tournamentHasResults(matches: Match[]): boolean {
 export function countMatchesWithResults(matches: Match[]): number {
   return matches.filter(matchHasResult).length;
 }
+
+/**
+ * Team object with minimal properties for display components
+ */
+export interface TeamForDisplay {
+  id: string;
+  name: string;
+  logo?: Team['logo'];
+  colors?: Team['colors'];
+}
+
+/**
+ * Find a team by ID and return display-ready team object with logo and colors
+ * Falls back to a basic team object if not found
+ */
+export function getTeamForDisplay(
+  teams: Team[] | undefined,
+  teamId: string,
+  fallbackName: string
+): TeamForDisplay {
+  const team = teams?.find(t => t.id === teamId);
+
+  if (team) {
+    return {
+      id: team.id,
+      name: team.name,
+      logo: team.logo,
+      colors: team.colors,
+    };
+  }
+
+  // Fallback: Create basic team object with the provided name
+  return {
+    id: teamId,
+    name: fallbackName,
+  };
+}
+
+/**
+ * Find a team by name and return display-ready team object with logo and colors
+ * Useful when only team name is available (e.g., from ScheduledMatch.homeTeam)
+ */
+export function getTeamByNameForDisplay(
+  teams: Team[] | undefined,
+  teamName: string
+): TeamForDisplay {
+  const team = teams?.find(t => t.name === teamName);
+
+  if (team) {
+    return {
+      id: team.id,
+      name: team.name,
+      logo: team.logo,
+      colors: team.colors,
+    };
+  }
+
+  // Fallback: Create basic team object
+  return {
+    id: `temp-${teamName}`,
+    name: teamName,
+  };
+}

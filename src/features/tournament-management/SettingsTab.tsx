@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useMemo, CSSProperties } from 'react';
-import { Card, Input, Select } from '../../components/ui';
+import { Card, Input, Combobox } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
@@ -354,11 +354,12 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 style={{ marginTop: '16px' }}
               />
 
-              <Select
+              <Combobox
                 label="Altersklasse"
                 value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
                 onChange={(v) => handleUpdate('ageClass', v)}
                 options={getAgeClassOptions(tournament.sport)}
+                placeholder="Suchen oder auswählen..."
                 style={{ marginTop: '16px' }}
               />
             </Card>

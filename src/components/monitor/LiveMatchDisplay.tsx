@@ -14,6 +14,7 @@ import { CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
 import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
 import { MatchTimer } from './MatchTimer';
+import { TeamAvatar } from '../ui/TeamAvatar';
 
 export interface LiveMatchDisplayProps {
   /** The live match to display */
@@ -260,8 +261,11 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         {/* Matchup: Team A - Score - Team B */}
         <div style={matchupContainerStyle}>
           <div style={teamContainerStyle('home')}>
-            <div style={{ ...teamNameStyle, textAlign: 'right' }}>
-              {match.homeTeam.name}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: cssVars.spacing.lg }}>
+              <div style={{ ...teamNameStyle, textAlign: 'right' }}>
+                {match.homeTeam.name}
+              </div>
+              <TeamAvatar team={match.homeTeam} size="lg" showColorRing />
             </div>
           </div>
 
@@ -272,8 +276,11 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           </div>
 
           <div style={teamContainerStyle('away')}>
-            <div style={{ ...teamNameStyle, textAlign: 'left' }}>
-              {match.awayTeam.name}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: cssVars.spacing.lg }}>
+              <TeamAvatar team={match.awayTeam} size="lg" showColorRing />
+              <div style={{ ...teamNameStyle, textAlign: 'left' }}>
+                {match.awayTeam.name}
+              </div>
             </div>
           </div>
         </div>

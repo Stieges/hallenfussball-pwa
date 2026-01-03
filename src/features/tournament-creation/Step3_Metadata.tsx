@@ -1,4 +1,4 @@
-import { Card, Select, Input } from '../../components/ui';
+import { Card, Combobox, Input } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { getAgeClassOptions, DEFAULT_VALUES } from '../../constants/tournamentOptions';
@@ -33,11 +33,12 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         style={{ marginTop: '16px' }}
       />
 
-      <Select
+      <Combobox
         label="Altersklasse"
         value={formData.ageClass || DEFAULT_VALUES.ageClass}
         onChange={(v) => onUpdate('ageClass', v)}
         options={getAgeClassOptions(formData.sport ?? 'football')}
+        placeholder="Suchen oder auswählen..."
         style={{ marginTop: '16px' }}
       />
 

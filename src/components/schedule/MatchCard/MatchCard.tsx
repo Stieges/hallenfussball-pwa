@@ -19,7 +19,9 @@
 import { type CSSProperties, useState, useCallback } from 'react';
 import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
-import { formatTime, getTeamInitials } from './utils';
+import { formatTime } from './utils';
+import { TeamAvatar } from '../../ui/TeamAvatar';
+import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,6 +30,8 @@ import { formatTime, getTeamInitials } from './utils';
 export interface Team {
   id: string;
   name: string;
+  logo?: TeamLogo;
+  colors?: TeamColors;
 }
 
 export interface MatchCardProps {
@@ -187,19 +191,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     gap: cssVars.spacing.sm,
   };
 
-  const avatarStyle: CSSProperties = {
-    width: 40,
-    height: 40,
-    borderRadius: cssVars.borderRadius.sm,
-    backgroundColor: cssVars.colors.primary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.onPrimary,
-    flexShrink: 0,
-  };
 
   const teamNameStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.lg,
@@ -273,16 +264,12 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div style={teamsContainerStyle}>
           {/* Home Team */}
           <div style={teamRowStyle}>
-            <div style={avatarStyle}>
-              {getTeamInitials(homeTeam.name)}
-            </div>
+            <TeamAvatar team={homeTeam} size="md" />
             <span style={teamNameStyle}>{homeTeam.name}</span>
           </div>
           {/* Away Team */}
           <div style={teamRowStyle}>
-            <div style={avatarStyle}>
-              {getTeamInitials(awayTeam.name)}
-            </div>
+            <TeamAvatar team={awayTeam} size="md" />
             <span style={teamNameStyle}>{awayTeam.name}</span>
           </div>
         </div>

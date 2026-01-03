@@ -10,6 +10,7 @@ import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { getTeamForDisplay } from '../../utils/teamHelpers';
 import { MatchCardDesktop, type MatchCardStatus } from './MatchCard';
 
 // ---------------------------------------------------------------------------
@@ -70,8 +71,8 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         field={match.field}
         group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
         showGroupLabel={showGroupLabel}
-        homeTeam={{ id: `${match.id}-home`, name: match.homeTeam }}
-        awayTeam={{ id: `${match.id}-away`, name: match.awayTeam }}
+        homeTeam={getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam)}
+        awayTeam={getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam)}
         homeScore={match.scoreA ?? 0}
         awayScore={match.scoreB ?? 0}
         status={status}

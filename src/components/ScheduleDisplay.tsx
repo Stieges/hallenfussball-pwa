@@ -12,7 +12,7 @@
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
-import { Standing, Match } from '../types/tournament';
+import { Standing, Match, Team } from '../types/tournament';
 import {
   TournamentHeader,
   ParticipantsAndGroups,
@@ -69,6 +69,8 @@ interface ScheduleDisplayProps {
   onNavigateToCockpit?: (matchId: string) => void;
   /** US-VIEWER-FILTERS: Set of visible match IDs (for filtering). If undefined, all matches are visible. */
   visibleMatchIds?: Set<string>;
+  /** Full tournament teams with logo and colors (for display in match cards) */
+  tournamentTeams?: Team[];
   // Note: Permission check is now handled in ScheduleTab
 }
 
@@ -93,6 +95,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
   onMatchSwap,
   onNavigateToCockpit,
   visibleMatchIds,
+  tournamentTeams,
 }) => {
   const standings = currentStandings ?? schedule.initialStandings;
   const hasGroups = schedule.teams.some(t => t.group);
@@ -227,7 +230,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           onStartCorrection={onStartCorrection}
           runningMatchIds={runningMatchIds}
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any -- GeneratedSchedule.tournament has different shape than Tournament; components only use 'groups'
-          tournament={{ groups: schedule.tournament.groups } as any}
+          tournament={{ groups: schedule.tournament.groups, teams: tournamentTeams } as any}
           onMatchSwap={onMatchSwap}
           onNavigateToCockpit={onNavigateToCockpit}
         />

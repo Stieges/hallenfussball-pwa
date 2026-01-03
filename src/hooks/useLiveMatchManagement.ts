@@ -262,18 +262,32 @@ export function useLiveMatchManagement({
     const homeId = matchData.originalTeamA || matchData.homeTeam;
     const awayId = matchData.originalTeamB || matchData.awayTeam;
 
-    // Resolve team names from tournament
-    let homeName = matchData.homeTeam; // Display name (could be translated placeholder)
-    let awayName = matchData.awayTeam;
+    // Resolve full team data (including logo and colors) from tournament
+    let homeTeamData: LiveMatch['homeTeam'] = { id: homeId, name: matchData.homeTeam };
+    let awayTeamData: LiveMatch['awayTeam'] = { id: awayId, name: matchData.awayTeam };
 
     if (!isPlaceholderTeamRef(homeId)) {
       const team = tournamentRef.current.teams.find(t => t.id === homeId);
-      if (team) {homeName = team.name;}
+      if (team) {
+        homeTeamData = {
+          id: team.id,
+          name: team.name,
+          logo: team.logo,
+          colors: team.colors,
+        };
+      }
     }
 
     if (!isPlaceholderTeamRef(awayId)) {
       const team = tournamentRef.current.teams.find(t => t.id === awayId);
-      if (team) {awayName = team.name;}
+      if (team) {
+        awayTeamData = {
+          id: team.id,
+          name: team.name,
+          logo: team.logo,
+          colors: team.colors,
+        };
+      }
     }
 
     const newMatch: LiveMatch = {
@@ -284,8 +298,8 @@ export function useLiveMatchManagement({
       scheduledKickoff: matchData.time,
       durationSeconds: tournamentRef.current.groupPhaseGameDuration * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
-      homeTeam: { id: homeId, name: homeName },
-      awayTeam: { id: awayId, name: awayName },
+      homeTeam: homeTeamData,
+      awayTeam: awayTeamData,
       homeScore: matchData.scoreA ?? 0,
       awayScore: matchData.scoreB ?? 0,
       status: 'NOT_STARTED' as MatchStatus,
@@ -1179,6 +1193,33 @@ export function useLiveMatchManagement({
    * Reopen a finished match
    */
   const handleReopenMatch = useCallback((matchData: ScheduledMatch) => {
+    // Resolve full team data (including logo and colors) from tournament
+    const homeId = matchData.originalTeamA || matchData.homeTeam;
+    const awayId = matchData.originalTeamB || matchData.awayTeam;
+
+    let homeTeamData: LiveMatch['homeTeam'] = { id: homeId, name: matchData.homeTeam };
+    let awayTeamData: LiveMatch['awayTeam'] = { id: awayId, name: matchData.awayTeam };
+
+    const homeTeam = tournamentRef.current.teams.find(t => t.id === homeId);
+    if (homeTeam) {
+      homeTeamData = {
+        id: homeTeam.id,
+        name: homeTeam.name,
+        logo: homeTeam.logo,
+        colors: homeTeam.colors,
+      };
+    }
+
+    const awayTeam = tournamentRef.current.teams.find(t => t.id === awayId);
+    if (awayTeam) {
+      awayTeamData = {
+        id: awayTeam.id,
+        name: awayTeam.name,
+        logo: awayTeam.logo,
+        colors: awayTeam.colors,
+      };
+    }
+
     const reopenedMatch: LiveMatch = {
       id: matchData.id,
       number: matchData.matchNumber,
@@ -1187,8 +1228,8 @@ export function useLiveMatchManagement({
       scheduledKickoff: matchData.time,
       durationSeconds: tournamentRef.current.groupPhaseGameDuration * 60,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
-      homeTeam: { id: matchData.homeTeam, name: matchData.homeTeam },
-      awayTeam: { id: matchData.awayTeam, name: matchData.awayTeam },
+      homeTeam: homeTeamData,
+      awayTeam: awayTeamData,
       homeScore: matchData.scoreA ?? 0,
       awayScore: matchData.scoreB ?? 0,
       status: 'PAUSED' as MatchStatus,

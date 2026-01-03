@@ -99,12 +99,12 @@ export const Input: React.FC<InputProps> = ({
         aria-invalid={hasError || undefined}
         aria-describedby={errorId}
         onFocus={(e) => {
-          if (!hasError) {
-            e.target.style.borderColor = cssVars.colors.primary;
-          }
+          e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.primary;
+          e.target.style.boxShadow = `0 0 0 3px ${hasError ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;
         }}
         onBlur={(e) => {
           e.target.style.borderColor = hasError ? cssVars.colors.error : cssVars.colors.border;
+          e.target.style.boxShadow = 'none';
         }}
       />
       {errorMessage && (

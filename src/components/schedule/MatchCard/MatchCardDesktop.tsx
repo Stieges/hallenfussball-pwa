@@ -16,7 +16,9 @@
 import { type CSSProperties, useState, useCallback } from 'react';
 import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
-import { formatTime, getTeamInitials } from './utils';
+import { formatTime } from './utils';
+import { TeamAvatar } from '../../ui/TeamAvatar';
+import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,6 +27,8 @@ import { formatTime, getTeamInitials } from './utils';
 export interface Team {
   id: string;
   name: string;
+  logo?: TeamLogo;
+  colors?: TeamColors;
 }
 
 export interface MatchCardDesktopProps {
@@ -167,19 +171,6 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     justifyContent: align === 'right' ? 'flex-end' : 'flex-start',
   });
 
-  const avatarStyle: CSSProperties = {
-    width: 32,
-    height: 32,
-    borderRadius: cssVars.borderRadius.sm,
-    backgroundColor: cssVars.colors.primary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.onPrimary,
-    flexShrink: 0,
-  };
 
   const teamNameStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.lg,
@@ -257,9 +248,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         {/* Home Team (right-aligned) */}
         <div style={teamStyle('right')}>
           <span style={teamNameStyle}>{homeTeam.name}</span>
-          <div style={avatarStyle}>
-            {getTeamInitials(homeTeam.name)}
-          </div>
+          <TeamAvatar team={homeTeam} size="sm" />
         </div>
 
         {/* Score Circle */}
@@ -278,9 +267,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
         {/* Away Team (left-aligned) */}
         <div style={teamStyle('left')}>
-          <div style={avatarStyle}>
-            {getTeamInitials(awayTeam.name)}
-          </div>
+          <TeamAvatar team={awayTeam} size="sm" />
           <span style={teamNameStyle}>{awayTeam.name}</span>
         </div>
 

@@ -210,6 +210,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
             schedule={filteredSchedule}
             currentStandings={filteredStandings}
             currentMatches={tournament.matches}
+            tournamentTeams={tournament.teams}
             editable={false}
           />
         </Card>

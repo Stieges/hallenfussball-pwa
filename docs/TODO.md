@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-02 (TODO Status-Check + Typography ESLint Rule)
+> **Letzte Aktualisierung:** 2026-01-03 (Team-Management Analyse)
 
 ---
 
@@ -140,6 +140,20 @@
 | Public View (Zuschauer-Link) | Mittel | - | - |
 | Trainer-Cockpit | Mittel | - | US-TRAINER-COCKPIT |
 | Turnier kopieren/löschen konzeptionieren | Mittel | - | US-TOURNAMENT-COPY |
+
+### Team-Management (Phase 2)
+
+**Analyse:** `.serena/memories/team-management-analysis-2026-01.md`
+**Stand:** 85% implementiert (Phase 1 produktionsreif)
+
+| Aufgabe | Priorität | Status | Notizen |
+|---------|-----------|--------|---------|
+| Unit-Tests für `teamHelpers.ts` | Hoch | ⬜ Offen | deleteTeamSafely, renameTeam, analyzeTeamMatches |
+| E2E-Tests für TeamsTab | Hoch | ⬜ Offen | Create, Rename, Delete, Soft-Delete |
+| Trainer-Cockpit implementieren | Mittel | ⬜ Offen | Konzept: `docs/concepts/TRAINER-COCKPIT-CONCEPT.md` |
+| Public Team-Registration | Mittel | ⬜ Offen | Öffentliches Anmeldeformular für Teams |
+| Audit-Log Integration | Niedrig | ⬜ Offen | Konzept: `docs/concepts/AUDIT-LOG-KONZEPT.md` |
+| Supabase Auth Migration | Phase 2 | ⬜ Offen | E-Mail-Einladungen, Real-time Sync |
 
 ### Bugs
 

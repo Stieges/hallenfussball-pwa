@@ -11,9 +11,9 @@
  * - Teams mit Matches MIT Ergebnissen: Team wird als "entfernt" markiert
  */
 
-import { useState, CSSProperties } from 'react';
-import { Card, Input, Button } from '../../components/ui';
-import { Tournament, Team } from '../../types/tournament';
+import { useState, CSSProperties, useCallback } from 'react';
+import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
+import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import {
   analyzeTeamMatches,
@@ -26,6 +26,7 @@ import {
   TeamMatchAnalysis,
 } from '../../utils/teamHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { createPortal } from 'react-dom';
 
 interface TeamsTabProps {
   tournament: Tournament;
@@ -40,6 +41,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // State für expandierte Team-Cards
+  const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+
+  // State für Logo-Upload Dialog
+  const [logoUploadTeamId, setLogoUploadTeamId] = useState<string | null>(null);
 
   // State für Lösch-Dialog
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<{
@@ -152,6 +159,64 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     onTournamentUpdate(updatedTournament);
   };
 
+  // Toggle expanded state for a team card
+  const toggleExpanded = useCallback((teamId: string) => {
+    setExpandedTeams(prev => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Handle logo save
+  const handleLogoSave = useCallback((teamId: string, logo: TeamLogo) => {
+    const updatedTeams = tournament.teams.map(t =>
+      t.id === teamId ? { ...t, logo } : t
+    );
+
+    onTournamentUpdate({
+      ...tournament,
+      teams: updatedTeams,
+      updatedAt: new Date().toISOString(),
+    });
+    setLogoUploadTeamId(null);
+  }, [tournament, onTournamentUpdate]);
+
+  // Handle logo remove
+  const handleLogoRemove = useCallback((teamId: string) => {
+    const updatedTeams = tournament.teams.map(t =>
+      t.id === teamId ? { ...t, logo: undefined } : t
+    );
+
+    onTournamentUpdate({
+      ...tournament,
+      teams: updatedTeams,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [tournament, onTournamentUpdate]);
+
+  // Handle color change
+  const handleColorChange = useCallback((teamId: string, color: string) => {
+    const updatedTeams = tournament.teams.map(t =>
+      t.id === teamId ? { ...t, colors: { ...t.colors, primary: color } } : t
+    );
+
+    onTournamentUpdate({
+      ...tournament,
+      teams: updatedTeams,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [tournament, onTournamentUpdate]);
+
+  // Get team for logo upload dialog
+  const logoUploadTeam = logoUploadTeamId
+    ? tournament.teams.find(t => t.id === logoUploadTeamId)
+    : null;
+
   // ============================================================================
   // STYLES
   // ============================================================================
@@ -234,6 +299,81 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     color: cssVars.colors.textSecondary,
   };
 
+  // New card-based styles
+  const teamCardStyle: CSSProperties = {
+    background: cssVars.colors.surface,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.lg,
+    marginBottom: cssVars.spacing.md,
+    overflow: 'hidden',
+    transition: 'border-color 0.2s ease',
+  };
+
+  const teamCardHeaderStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: cssVars.spacing.md,
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+  };
+
+  const teamCardLeftStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.md,
+    flex: 1,
+    minWidth: 0,
+  };
+
+  const teamCardMetaStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  };
+
+  const expandButtonStyle: CSSProperties = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: cssVars.spacing.xs,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.lg,
+    transition: 'transform 0.2s ease',
+  };
+
+  const expandedSectionStyle: CSSProperties = {
+    borderTop: `1px solid ${cssVars.colors.border}`,
+    padding: cssVars.spacing.lg,
+    background: cssVars.colors.surfaceVariant,
+  };
+
+  const expandedRowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.lg,
+    flexWrap: 'wrap',
+    marginBottom: cssVars.spacing.md,
+  };
+
+  const expandedLabelStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    color: cssVars.colors.textSecondary,
+    minWidth: '100px',
+  };
+
+  const colorIndicatorStyle = (color: string): CSSProperties => ({
+    width: '16px',
+    height: '16px',
+    borderRadius: '50%',
+    backgroundColor: color,
+    border: '2px solid rgba(255,255,255,0.3)',
+    flexShrink: 0,
+  });
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -289,69 +429,150 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           activeTeams.map(team => {
             const analysis = teamAnalyses[team.id];
             const isEditing = editingTeamId === team.id;
+            const isExpanded = expandedTeams.has(team.id);
+            const primaryColor = team.colors?.primary || '#CCCCCC';
 
             return (
-              <div key={team.id} style={teamRowStyle}>
-                {isEditing ? (
-                  // Edit Mode
-                  <>
-                    <div style={editInputStyle}>
-                      <Input
-                        label=""
-                        value={editingName}
-                        onChange={setEditingName}
-                        placeholder="Teamname"
-                      />
+              <div
+                key={team.id}
+                style={{
+                  ...teamCardStyle,
+                  borderColor: isExpanded ? cssVars.colors.primary : cssVars.colors.border,
+                }}
+              >
+                {/* Card Header */}
+                <div
+                  style={teamCardHeaderStyle}
+                  onClick={() => !isEditing && toggleExpanded(team.id)}
+                >
+                  <div style={teamCardLeftStyle}>
+                    {/* TeamAvatar with click to open logo dialog */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLogoUploadTeamId(team.id);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <TeamAvatar team={team} size="md" showColorRing />
                     </div>
-                    <div style={buttonGroupStyle}>
-                      <Button variant="secondary" onClick={handleCancelEdit}>
-                        Abbrechen
-                      </Button>
-                      <Button
-                        variant="primary"
-                        onClick={handleSaveRename}
-                        disabled={!editingName.trim() || editingName.trim() === team.name}
-                      >
-                        Speichern
-                      </Button>
+
+                    {/* Team Name and Badges */}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+                        <span style={teamNameStyle}>{team.name}</span>
+                        {team.group && (
+                          <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
+                            {getGroupDisplayName(team.group, tournament)}
+                          </span>
+                        )}
+                      </div>
+                      <div style={teamCardMetaStyle}>
+                        <span style={colorIndicatorStyle(primaryColor)} title={`Trikotfarbe: ${primaryColor}`} />
+                        {analysis.matchesWithResults > 0 && (
+                          <span>{analysis.matchesWithResults} Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}</span>
+                        )}
+                        {analysis.matchesWithoutResults > 0 && (
+                          <span>{analysis.matchesWithoutResults} geplant</span>
+                        )}
+                      </div>
                     </div>
-                  </>
-                ) : (
-                  // View Mode
-                  <>
-                    <div style={teamInfoStyle}>
-                      <span style={teamNameStyle}>{team.name}</span>
-                      {team.group && (
-                        <span style={badgeStyle(cssVars.colors.primary, cssVars.colors.infoBadgeBg)}>
-                          {getGroupDisplayName(team.group, tournament)}
-                        </span>
-                      )}
-                      {analysis.matchesWithResults > 0 && (
-                        <span style={badgeStyle(cssVars.colors.success, cssVars.colors.successLight)}>
-                          {analysis.matchesWithResults} Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
-                        </span>
-                      )}
-                      {analysis.matchesWithoutResults > 0 && (
-                        <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
-                          {analysis.matchesWithoutResults} geplant
-                        </span>
-                      )}
-                    </div>
-                    <div style={buttonGroupStyle}>
-                      <button
-                        style={actionButtonStyle('edit')}
-                        onClick={() => handleStartEdit(team)}
-                      >
-                        ✏️ Umbenennen
-                      </button>
-                      <button
-                        style={actionButtonStyle('delete')}
-                        onClick={() => handleDeleteClick(team)}
-                      >
-                        🗑️ Löschen
-                      </button>
-                    </div>
-                  </>
+                  </div>
+
+                  {/* Expand/Collapse Button */}
+                  <button
+                    style={{
+                      ...expandButtonStyle,
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpanded(team.id);
+                    }}
+                    aria-label={isExpanded ? 'Einklappen' : 'Aufklappen'}
+                  >
+                    ▼
+                  </button>
+                </div>
+
+                {/* Expanded Section */}
+                {isExpanded && (
+                  <div style={expandedSectionStyle}>
+                    {isEditing ? (
+                      // Edit Mode
+                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, flexWrap: 'wrap' }}>
+                        <div style={editInputStyle}>
+                          <Input
+                            label="Teamname"
+                            value={editingName}
+                            onChange={setEditingName}
+                            placeholder="Teamname"
+                          />
+                        </div>
+                        <div style={buttonGroupStyle}>
+                          <Button variant="secondary" onClick={handleCancelEdit}>
+                            Abbrechen
+                          </Button>
+                          <Button
+                            variant="primary"
+                            onClick={handleSaveRename}
+                            disabled={!editingName.trim() || editingName.trim() === team.name}
+                          >
+                            Speichern
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode - Expanded Details
+                      <>
+                        {/* Logo Section */}
+                        <div style={expandedRowStyle}>
+                          <span style={expandedLabelStyle}>Logo:</span>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setLogoUploadTeamId(team.id)}
+                          >
+                            {team.logo ? 'Logo ändern' : 'Logo hochladen'}
+                          </Button>
+                          {team.logo && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleLogoRemove(team.id)}
+                            >
+                              Logo entfernen
+                            </Button>
+                          )}
+                        </div>
+
+                        {/* Color Section */}
+                        <div style={expandedRowStyle}>
+                          <span style={expandedLabelStyle}>Trikotfarbe:</span>
+                          <ColorPicker
+                            value={primaryColor}
+                            onChange={(color) => handleColorChange(team.id, color)}
+                          />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div style={{ ...expandedRowStyle, marginTop: cssVars.spacing.lg, marginBottom: 0 }}>
+                          <button
+                            style={actionButtonStyle('edit')}
+                            onClick={() => handleStartEdit(team)}
+                          >
+                            ✏️ Umbenennen
+                          </button>
+                          <button
+                            style={actionButtonStyle('delete')}
+                            onClick={() => handleDeleteClick(team)}
+                          >
+                            🗑️ Löschen
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -375,6 +596,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             return (
               <div key={team.id} style={removedTeamStyle}>
                 <div style={teamInfoStyle}>
+                  <TeamAvatar team={team} size="sm" style={{ opacity: 0.5 }} />
                   <span style={removedTeamNameStyle}>{team.name}</span>
                   {analysis.matchesWithResults > 0 && (
                     <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
@@ -451,6 +673,21 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Logo Upload Dialog */}
+      {logoUploadTeam && createPortal(
+        <LogoUploadDialog
+          teamName={logoUploadTeam.name}
+          currentLogo={logoUploadTeam.logo}
+          onSave={(logo) => handleLogoSave(logoUploadTeam.id, logo)}
+          onCancel={() => setLogoUploadTeamId(null)}
+          onRemove={logoUploadTeam.logo ? () => {
+            handleLogoRemove(logoUploadTeam.id);
+            setLogoUploadTeamId(null);
+          } : undefined}
+        />,
+        document.body
       )}
     </div>
   );

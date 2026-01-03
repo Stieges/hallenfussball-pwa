@@ -6,13 +6,14 @@
 
 import React, { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
-import { Button } from '../../ui';
+import { Button, TeamAvatar } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { MatchStatus } from '../MatchCockpit';
+import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 export interface TeamBlockProps {
   label: string;
-  team: { id: string; name: string };
+  team: { id: string; name: string; logo?: TeamLogo; colors?: TeamColors };
   score: number;
   status: MatchStatus;
   awaitingTiebreakerChoice?: boolean;
@@ -72,7 +73,10 @@ const TeamBlockComponent: React.FC<TeamBlockProps> = ({
   return (
     <div style={blockStyle}>
       <div style={labelStyle}>{label}</div>
-      <div style={teamNameStyle}>{team.name}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+        <TeamAvatar team={team} size="sm" showColorRing />
+        <span style={teamNameStyle}>{team.name}</span>
+      </div>
       {/* MF-004: Score mit aria-label für Screen-Reader */}
       <div
         style={scoreStyle}

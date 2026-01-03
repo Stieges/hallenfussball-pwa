@@ -25,6 +25,7 @@ import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
 import { ScheduledMatch } from '../../lib/scheduleGenerator';
 import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { getTeamForDisplay } from '../../utils/teamHelpers';
 import {
   MatchCard,
   type MatchCardStatus,
@@ -328,8 +329,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return null;
     }
 
-    const homeTeam = { id: `${match.id}-home`, name: match.homeTeam };
-    const awayTeam = { id: `${match.id}-away`, name: match.awayTeam };
+    const homeTeam = getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam);
+    const awayTeam = getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam);
 
     switch (expandType) {
       case 'quick':
@@ -370,7 +371,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -695,8 +696,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               field: match.field,
               group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
               showGroupLabel,
-              homeTeam: { id: `${match.id}-home`, name: match.homeTeam },
-              awayTeam: { id: `${match.id}-away`, name: match.awayTeam },
+              homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
+              awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
               homeScore: match.scoreA ?? 0,
               awayScore: match.scoreB ?? 0,
               status: status,

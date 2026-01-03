@@ -39,12 +39,58 @@ export interface TournamentStatsSnapshot {
 /** Retention period for soft-deleted tournaments in days */
 export const TRASH_RETENTION_DAYS = 30;
 
+// ============================================================================
+// TEAM-MANAGEMENT TYPES (US Team-Logo & Trikotfarben)
+// ============================================================================
+
+/**
+ * Team Logo configuration
+ * Supports URL, Base64, or auto-generated initials
+ */
+export interface TeamLogo {
+  type: 'url' | 'base64' | 'initials';
+  value: string;                  // URL, Base64-String, or initials
+  backgroundColor?: string;       // Background color for initials fallback
+  uploadedAt?: string;            // ISO timestamp
+  uploadedBy?: 'organizer' | 'trainer';
+}
+
+/**
+ * Team jersey/kit colors
+ */
+export interface TeamColors {
+  primary: string;                // Main jersey color (Hex)
+  secondary?: string;             // Secondary color (Hex)
+}
+
+/**
+ * Team trainer/coach information
+ */
+export interface TeamTrainer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  inviteStatus: 'pending' | 'sent' | 'accepted';
+  inviteToken?: string;           // Reference to Invitation
+  inviteSentAt?: string;
+  acceptedAt?: string;
+  createdAt: string;
+}
+
 export interface Team {
   id: string;
   name: string;
   group?: string;
   isRemoved?: boolean;  // TOUR-EDIT-TEAMS: Team wurde entfernt (aber hat noch historische Ergebnisse)
   removedAt?: string;   // ISO timestamp wann das Team entfernt wurde
+
+  // Team-Management: Visual Identity
+  logo?: TeamLogo;
+  colors?: TeamColors;
+
+  // Team-Management: Trainers
+  trainers?: TeamTrainer[];
 }
 
 /**

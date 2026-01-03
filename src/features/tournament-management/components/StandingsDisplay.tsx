@@ -5,6 +5,7 @@ import { CSSProperties } from 'react'
 import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
+import { TeamAvatar } from '../../../components/ui/TeamAvatar'
 
 interface StandingsDisplayProps {
   standings: Standing[]
@@ -116,7 +117,12 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
               >
                 {index + 1}
               </td>
-              <td style={tdStyle}>{standing.team.name}</td>
+              <td style={tdStyle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+                  <TeamAvatar team={standing.team} size="xs" />
+                  {standing.team.name}
+                </div>
+              </td>
               <td style={{ ...tdStyle, textAlign: 'center' }}>{standing.played || 0}</td>
               <td style={{ ...tdStyle, textAlign: 'center' }}>
                 {standing.goalsFor}:{standing.goalsAgainst}

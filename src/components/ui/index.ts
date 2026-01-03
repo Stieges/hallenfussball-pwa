@@ -3,6 +3,7 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { Input } from './Input';
 export { Select } from './Select';
+export { Combobox } from './Combobox';
 export { Icons } from './Icons';
 export { NumberStepper } from './NumberStepper';
 export { CollapsibleSection } from './CollapsibleSection';
@@ -41,3 +42,8 @@ export type { ProgressRingProps, ScoreContentProps } from './ProgressRing';
 // Score Input
 export { ScoreStepper } from './ScoreStepper';
 export type { ScoreStepperProps } from './ScoreStepper';
+
+// Team Management
+export { TeamAvatar } from './TeamAvatar';
+export { ColorPicker } from './ColorPicker';
+export { LogoUploadDialog } from './LogoUploadDialog';

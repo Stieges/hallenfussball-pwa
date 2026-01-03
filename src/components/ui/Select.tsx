@@ -81,12 +81,12 @@ export const Select: React.FC<SelectProps> = ({
         data-testid={testId}
         aria-invalid={error || undefined}
         onFocus={(e) => {
-          if (!error) {
-            e.target.style.borderColor = cssVars.colors.primary;
-          }
+          e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.primary;
+          e.target.style.boxShadow = `0 0 0 3px ${error ? cssVars.colors.errorGlow : cssVars.colors.focusRing}`;
         }}
         onBlur={(e) => {
           e.target.style.borderColor = error ? cssVars.colors.error : cssVars.colors.border;
+          e.target.style.boxShadow = 'none';
         }}
       >
         {options.map((option) => (

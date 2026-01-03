@@ -6,13 +6,14 @@
 
 import { CSSProperties, useState } from 'react';
 import { cssVars } from '../../design-tokens'
-import { Standing, Tournament } from '../../types/tournament';
+import { Standing, Tournament, TeamLogo, TeamColors } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { TeamAvatar } from '../ui/TeamAvatar';
 import styles from './GroupTables.module.css';
 
 interface GroupTablesProps {
   standings: Standing[];
-  teams: Array<{ id: string; name: string; group?: string }>;
+  teams: Array<{ id: string; name: string; group?: string; logo?: TeamLogo; colors?: TeamColors }>;
   tournament?: Tournament;
   /** @deprecated No longer needed - responsive layout handled via CSS */
   isMobile?: boolean;
@@ -172,7 +173,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     {rank}
                   </td>
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
-                    {standing.team.name}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+                      <TeamAvatar team={standing.team} size="xs" />
+                      {standing.team.name}
+                    </div>
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
                     {standing.played}
@@ -265,7 +269,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       {rank}
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
-                      {standing.team.name}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs }}>
+                        <TeamAvatar team={standing.team} size="xs" />
+                        {standing.team.name}
+                      </div>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <span style={{

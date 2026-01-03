@@ -20,6 +20,17 @@ export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
 export interface Team {
   id: string;
   name: string;
+  logo?: {
+    type: 'url' | 'base64' | 'initials';
+    value: string;
+    backgroundColor?: string;
+    uploadedAt?: string;
+    uploadedBy?: 'organizer' | 'trainer';
+  };
+  colors?: {
+    primary: string;
+    secondary?: string;
+  };
 }
 
 export interface MatchEvent {

@@ -41,6 +41,7 @@ export const Button: React.FC<ButtonProps> = ({
   'data-testid': testId,
 }) => {
   const [isPressed, setIsPressed] = useState(false);
+  const [isFocusVisible, setIsFocusVisible] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // Check for reduced motion preference
@@ -69,6 +70,18 @@ export const Button: React.FC<ButtonProps> = ({
     setIsPressed(false);
   };
 
+  // Focus-visible detection (keyboard focus only)
+  const handleFocus = (e: React.FocusEvent) => {
+    // Check if focus was triggered by keyboard (not mouse/touch)
+    if (e.target.matches(':focus-visible')) {
+      setIsFocusVisible(true);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocusVisible(false);
+  };
+
   const baseStyles: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -84,6 +97,8 @@ export const Button: React.FC<ButtonProps> = ({
     opacity: isDisabled ? 0.5 : 1,
     transform: isPressed ? 'scale(0.97)' : 'scale(1)',
     touchAction: 'manipulation', // Disable 300ms tap delay on mobile
+    outline: 'none',
+    boxShadow: isFocusVisible ? `0 0 0 3px ${cssVars.colors.focusRing}` : 'none',
   };
 
   const sizeStyles: Record<string, CSSProperties> = {
@@ -163,6 +178,8 @@ export const Button: React.FC<ButtonProps> = ({
       onTouchStart={handlePressStart}
       onTouchEnd={handlePressEnd}
       onTouchCancel={handlePressEnd}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
     >
       {loading ? (
         <LoadingSpinner />
