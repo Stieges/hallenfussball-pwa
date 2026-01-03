@@ -11,7 +11,8 @@ const AVATAR_SIZES = {
   md: 40,   // Mobile match cards
   lg: 56,   // Live display
   xl: 80,   // Edit dialog, detail view
-  xxl: 120, // Monitor view, TV displays
+  xxl: 120, // Monitor view
+  xxxl: 180, // TV displays, large projections
 } as const;
 
 type AvatarSize = keyof typeof AVATAR_SIZES;

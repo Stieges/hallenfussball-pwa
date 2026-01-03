@@ -265,7 +265,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             {/* Logo above team name for better visibility from distance */}
             <TeamAvatar
               team={match.homeTeam}
-              size={size === 'xl' ? 'xxl' : size === 'lg' ? 'xl' : 'lg'}
+              size={size === 'xl' ? 'xxxl' : size === 'lg' ? 'xxl' : 'xl'}
               showColorRing
             />
             <div style={{ ...teamNameStyle, textAlign: 'center' }}>
@@ -283,7 +283,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
             {/* Logo above team name for better visibility from distance */}
             <TeamAvatar
               team={match.awayTeam}
-              size={size === 'xl' ? 'xxl' : size === 'lg' ? 'xl' : 'lg'}
+              size={size === 'xl' ? 'xxxl' : size === 'lg' ? 'xxl' : 'xl'}
               showColorRing
             />
             <div style={{ ...teamNameStyle, textAlign: 'center' }}>
