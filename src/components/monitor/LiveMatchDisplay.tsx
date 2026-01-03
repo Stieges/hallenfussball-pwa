@@ -175,12 +175,13 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     marginBottom: size === 'xl' ? cssVars.spacing.xxl : cssVars.spacing.xl,
   };
 
-  const teamContainerStyle = (side: 'home' | 'away'): CSSProperties => ({
+  const teamContainerStyle = (_side: 'home' | 'away'): CSSProperties => ({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    alignItems: side === 'home' ? 'flex-end' : 'flex-start',
-    gap: cssVars.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: cssVars.spacing.md,
   });
 
   const teamNameStyle: CSSProperties = {
@@ -261,11 +262,14 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         {/* Matchup: Team A - Score - Team B */}
         <div style={matchupContainerStyle}>
           <div style={teamContainerStyle('home')}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: cssVars.spacing.lg }}>
-              <div style={{ ...teamNameStyle, textAlign: 'right' }}>
-                {match.homeTeam.name}
-              </div>
-              <TeamAvatar team={match.homeTeam} size="lg" showColorRing />
+            {/* Logo above team name for better visibility from distance */}
+            <TeamAvatar
+              team={match.homeTeam}
+              size={size === 'xl' ? 'xxl' : size === 'lg' ? 'xl' : 'lg'}
+              showColorRing
+            />
+            <div style={{ ...teamNameStyle, textAlign: 'center' }}>
+              {match.homeTeam.name}
             </div>
           </div>
 
@@ -276,11 +280,14 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
           </div>
 
           <div style={teamContainerStyle('away')}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: cssVars.spacing.lg }}>
-              <TeamAvatar team={match.awayTeam} size="lg" showColorRing />
-              <div style={{ ...teamNameStyle, textAlign: 'left' }}>
-                {match.awayTeam.name}
-              </div>
+            {/* Logo above team name for better visibility from distance */}
+            <TeamAvatar
+              team={match.awayTeam}
+              size={size === 'xl' ? 'xxl' : size === 'lg' ? 'xl' : 'lg'}
+              showColorRing
+            />
+            <div style={{ ...teamNameStyle, textAlign: 'center' }}>
+              {match.awayTeam.name}
             </div>
           </div>
         </div>

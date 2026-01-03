@@ -18,7 +18,9 @@
  */
 
 import { type CSSProperties, useCallback } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
+import { TeamAvatar } from '../TeamAvatar';
+import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,7 +33,11 @@ export interface ScoreStepperProps {
   onChange: (value: number) => void;
   /** Team name to display */
   teamName: string;
-  /** Avatar background color (team color) */
+  /** Team logo (optional) */
+  teamLogo?: TeamLogo;
+  /** Team colors (optional) */
+  teamColors?: TeamColors;
+  /** Avatar background color (team color) - deprecated, use teamColors instead */
   avatarColor?: string;
   /** Minimum value (default: 0) */
   min?: number;
@@ -41,8 +47,8 @@ export interface ScoreStepperProps {
   disabled?: boolean;
   /** Read-only mode (displays value without controls) */
   readOnly?: boolean;
-  /** Avatar size in pixels (default: 32) */
-  avatarSize?: number;
+  /** Avatar size: 'sm' (32px), 'md' (40px), 'lg' (56px) - default: 'sm' */
+  avatarSize?: 'sm' | 'md' | 'lg';
   /** Show avatar (default: true) */
   showAvatar?: boolean;
 }
@@ -55,12 +61,14 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
   value,
   onChange,
   teamName,
-  avatarColor = cssVars.colors.primary,
+  teamLogo,
+  teamColors,
+  avatarColor,
   min = 0,
   max = 99,
   disabled = false,
   readOnly = false,
-  avatarSize = 32,
+  avatarSize = 'sm',
   showAvatar = true,
 }) => {
   const handleDecrement = useCallback(() => {
@@ -94,18 +102,11 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
     minWidth: 0, // Allow text truncation
   };
 
-  const avatarStyle: CSSProperties = {
-    width: avatarSize,
-    height: avatarSize,
-    borderRadius: '6px',
-    backgroundColor: avatarColor,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: Math.round(avatarSize * 0.4),
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.onPrimary,
-    flexShrink: 0,
+  // Build team object for TeamAvatar, using legacy avatarColor as fallback
+  const teamData = {
+    name: teamName,
+    logo: teamLogo,
+    colors: teamColors ?? (avatarColor ? { primary: avatarColor } : undefined),
   };
 
   const teamNameStyle: CSSProperties = {
@@ -160,27 +161,12 @@ export const ScoreStepper: React.FC<ScoreStepperProps> = ({
   // Render
   // ---------------------------------------------------------------------------
 
-  // Get team initials for avatar
-  const getInitials = (name: string): string => {
-    const words = name.trim().split(/\s+/);
-    if (words.length === 1) {
-      return words[0].substring(0, 2).toUpperCase();
-    }
-    return words
-      .slice(0, 2)
-      .map((w) => w[0])
-      .join('')
-      .toUpperCase();
-  };
-
   return (
     <div style={containerStyle}>
       {/* Team Info */}
       <div style={teamInfoStyle}>
         {showAvatar && (
-          <div style={avatarStyle} aria-hidden="true">
-            {getInitials(teamName)}
-          </div>
+          <TeamAvatar team={teamData} size={avatarSize} />
         )}
         <span style={teamNameStyle}>{teamName}</span>
       </div>

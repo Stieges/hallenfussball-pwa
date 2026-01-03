@@ -22,9 +22,10 @@
  */
 
 import { type CSSProperties, useState } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
 import { ScoreStepper } from '../../ui/ScoreStepper';
 import { Button } from '../../ui/Button';
+import type { TeamLogo, TeamColors } from '../../../types/tournament';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +34,8 @@ import { Button } from '../../ui/Button';
 export interface Team {
   id: string;
   name: string;
+  logo?: TeamLogo;
+  colors?: TeamColors;
 }
 
 export interface QuickScoreExpandProps {
@@ -152,6 +155,9 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           value={homeScore}
           onChange={setHomeScore}
           teamName={homeTeam.name}
+          teamLogo={homeTeam.logo}
+          teamColors={homeTeam.colors}
+          avatarSize="md"
           min={0}
           max={99}
         />
@@ -159,6 +165,9 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           value={awayScore}
           onChange={setAwayScore}
           teamName={awayTeam.name}
+          teamLogo={awayTeam.logo}
+          teamColors={awayTeam.colors}
+          avatarSize="md"
           min={0}
           max={99}
         />
