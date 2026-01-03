@@ -89,8 +89,17 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   });
 
   // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit")
+  // BUG-FIX: When navigating from ScheduleTab with a running match, we need to
+  // end the running match first. The user already confirmed in ScheduleTab.
   useEffect(() => {
     if (initialMatchId) {
+      // Check if there's a running match that needs to be ended
+      const runningMatch = hasRunningMatch();
+      if (runningMatch && runningMatch.id !== initialMatchId) {
+        // End the running match first - user already confirmed in ScheduleTab
+        handleFinish(runningMatch.id);
+      }
+
       // Find the match to get its field number
       const match = schedule.allMatches.find(m => m.id === initialMatchId);
       if (match) {
@@ -101,7 +110,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       // Consume the initial match ID
       onInitialMatchConsumed?.();
     }
-  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed]);
+  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, hasRunningMatch, handleFinish]);
 
   // Helper: Check if a team reference is a placeholder (not a real team ID)
   const isPlaceholder = useCallback((teamRef: string): boolean => {

@@ -173,7 +173,7 @@ function MatchSummaryDialog({
             onClick={onClose}
             aria-label="Schließen"
           >
-            \u2715
+            ✕
           </button>
         </div>
 

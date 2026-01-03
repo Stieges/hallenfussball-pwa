@@ -129,7 +129,7 @@ export function ScoreHeader({
           onClick={onEditScore}
           aria-label="Ergebnis bearbeiten"
         >
-          \u270F\uFE0F Ergebnis bearbeiten
+          ✏️ Ergebnis bearbeiten
         </button>
       )}
     </div>
