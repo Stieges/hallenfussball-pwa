@@ -9,5 +9,6 @@
  * - Search & Filter
  */
 
-export { DashboardNav, type DashboardTab } from './DashboardNav';
+export { DashboardNav } from './DashboardNav';
+export { getTabFromPath, type DashboardTab } from './dashboardUtils';
 export { SearchFilterBar, type FilterChip } from './SearchFilterBar';

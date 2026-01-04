@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
 import { TrashTournamentCard } from '../components/TrashTournamentCard';
@@ -27,7 +28,7 @@ import { ImportDialog } from '../components/dialogs/ImportDialog';
 import { getAppTitle } from '../config/app';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AuthSection } from '../components/layout/AuthSection';
-import { DashboardNav, DashboardTab, SearchFilterBar, FilterChip } from '../components/dashboard';
+import { DashboardNav, SearchFilterBar, FilterChip, getTabFromPath } from '../components/dashboard';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
@@ -64,10 +65,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNavigateToSettings,
 }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<DashboardTab>('turniere');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<FilterChip[]>([]);
   const isMobile = useIsMobile();
+  const location = useLocation();
+
+  // Get active tab from URL path
+  const activeTab = getTabFromPath(location.pathname);
 
   // Empty Trash Confirmation Dialog
   const emptyTrashDialog = useConfirmDialog({
@@ -265,8 +269,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Desktop Navigation Tabs */}
       {!isMobile && (
         <DashboardNav
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
           trashedCount={trashedTournaments.length}
           expiringSoonCount={expiringSoonCount}
         />
@@ -587,8 +589,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
       {/* Mobile Bottom Navigation */}
       {isMobile && (
         <DashboardNav
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
           trashedCount={trashedTournaments.length}
           expiringSoonCount={expiringSoonCount}
         />

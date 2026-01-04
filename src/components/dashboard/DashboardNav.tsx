@@ -11,11 +11,11 @@
  */
 
 import { CSSProperties } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
 import { useIsMobile } from '../../hooks/useIsMobile';
-
-export type DashboardTab = 'turniere' | 'archiv' | 'papierkorb';
+import { DashboardTab, TAB_PATHS, getTabFromPath } from './dashboardUtils';
 
 interface DashboardNavItem {
   id: DashboardTab;
@@ -26,21 +26,39 @@ interface DashboardNavItem {
 }
 
 interface DashboardNavProps {
-  activeTab: DashboardTab;
-  onTabChange: (tab: DashboardTab) => void;
+  /** Active tab (optional when using URL-based navigation) */
+  activeTab?: DashboardTab;
+  /** Tab change callback (optional when using URL-based navigation) */
+  onTabChange?: (tab: DashboardTab) => void;
   /** Number of trashed tournaments (shown as badge on Papierkorb) */
   trashedCount?: number;
   /** Number of tournaments expiring soon (within 7 days) */
   expiringSoonCount?: number;
+  /** Use URL-based navigation (default: true) */
+  useUrlNavigation?: boolean;
 }
 
 export const DashboardNav: React.FC<DashboardNavProps> = ({
-  activeTab,
+  activeTab: activeTabProp,
   onTabChange,
   trashedCount = 0,
   expiringSoonCount = 0,
+  useUrlNavigation = true,
 }) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine active tab from URL or prop
+  const activeTab = useUrlNavigation ? getTabFromPath(location.pathname) : (activeTabProp ?? 'turniere');
+
+  // Handle tab change - navigate to URL or call callback
+  const handleTabChange = (tab: DashboardTab) => {
+    if (useUrlNavigation) {
+      void navigate(TAB_PATHS[tab]);
+    }
+    onTabChange?.(tab);
+  };
 
   const navItems: DashboardNavItem[] = [
     {
@@ -63,10 +81,10 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
   ];
 
   if (isMobile) {
-    return <MobileNav items={navItems} activeTab={activeTab} onTabChange={onTabChange} />;
+    return <MobileNav items={navItems} activeTab={activeTab} onTabChange={handleTabChange} />;
   }
 
-  return <DesktopTabs items={navItems} activeTab={activeTab} onTabChange={onTabChange} />;
+  return <DesktopTabs items={navItems} activeTab={activeTab} onTabChange={handleTabChange} />;
 };
 
 // =============================================================================

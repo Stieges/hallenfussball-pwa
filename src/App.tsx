@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
 import { Tournament, TournamentStatus } from './types/tournament';
 import { generateTournamentId, generateUniqueId } from './utils/idGenerator';
@@ -86,6 +88,11 @@ type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'regist
 function AppContent() {
   const { showError } = useToast();
   const { isGuest } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if current path is a dashboard path
+  const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
   const {
     tournaments,
     loading,
@@ -349,8 +356,6 @@ function AppContent() {
 
   // Helper to navigate to tournament after accepting invite
   const handleInviteAccepted = (tournamentId: string) => {
-    // Clear URL params
-    window.history.replaceState({}, '', '/');
     setInviteToken(null);
     // Navigate to the tournament
     const tournament = tournaments.find(t => t.id === tournamentId);
@@ -358,7 +363,7 @@ function AppContent() {
       setSelectedTournament(tournament);
       setScreen('view');
     } else {
-      setScreen('dashboard');
+      void navigate('/');
     }
   };
 
@@ -371,8 +376,11 @@ function AppContent() {
         fontFamily: cssVars.fontFamilies.body,
       }}
     >
+      {/* Scroll to top on route changes */}
+      <ScrollToTop />
+
       {/* Guest Banner - shows registration prompt for guests */}
-      {isGuest && screen === 'dashboard' && (
+      {isGuest && isDashboardPath && (
         <GuestBanner
           dismissible
           onDismiss={() => { /* stays dismissed */ }}
@@ -384,31 +392,31 @@ function AppContent() {
         {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
-            onSuccess={() => setScreen('dashboard')}
+            onSuccess={() => void navigate('/')}
             onNavigateToRegister={() => setScreen('register')}
-            onBack={() => setScreen('dashboard')}
-            onContinueAsGuest={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
+            onContinueAsGuest={() => void navigate('/')}
           />
         )}
 
         {screen === 'register' && (
           <RegisterScreen
-            onSuccess={() => setScreen('dashboard')}
+            onSuccess={() => void navigate('/')}
             onNavigateToLogin={() => setScreen('login')}
-            onBack={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
           />
         )}
 
         {screen === 'profile' && (
           <UserProfileScreen
-            onBack={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
             onOpenSettings={() => setScreen('settings')}
           />
         )}
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
             onNavigateToImpressum={() => setScreen('impressum')}
             onNavigateToDatenschutz={() => setScreen('datenschutz')}
           />
@@ -420,15 +428,14 @@ function AppContent() {
             onAccepted={handleInviteAccepted}
             onNeedLogin={() => setScreen('login')}
             onCancel={() => {
-              window.history.replaceState({}, '', '/');
               setInviteToken(null);
-              setScreen('dashboard');
+              void navigate('/');
             }}
           />
         )}
 
         {/* Main App Screens */}
-        {screen === 'dashboard' && (
+        {isDashboardPath && (
           <DashboardScreen
             tournaments={tournaments}
             onCreateNew={() => setScreen('create')}
@@ -463,7 +470,7 @@ function AppContent() {
               originalStatusRef.current = null; // Reset ref
               setSelectedTournament(null); // Clear selection when going back
               setQuickEditMode(false); // Reset quick edit mode
-              setScreen('dashboard');
+              void navigate('/');
             }}
             onSave={async (tournament) => {
               await saveTournament(tournament);
@@ -472,7 +479,7 @@ function AppContent() {
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
               await new Promise(resolve => setTimeout(resolve, 200));
-              setScreen('dashboard');
+              void navigate('/');
             }}
             existingTournament={selectedTournament ?? undefined}
             quickEditMode={quickEditMode}
@@ -486,7 +493,7 @@ function AppContent() {
         {screen === 'view' && selectedTournament && (
           <TournamentManagementScreen
             tournamentId={selectedTournament.id}
-            onBack={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
             onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
@@ -505,21 +512,20 @@ function AppContent() {
             tournamentId={monitorDisplayParams.tournamentId}
             monitorId={monitorDisplayParams.monitorId}
             onBack={() => {
-              window.history.replaceState({}, '', '/');
               setMonitorDisplayParams(null);
-              setScreen('dashboard');
+              void navigate('/');
             }}
           />
         )}
 
         {/* Legal Screens */}
         {screen === 'impressum' && (
-          <ImpressumScreen onBack={() => setScreen('dashboard')} />
+          <ImpressumScreen onBack={() => void navigate('/')} />
         )}
 
         {screen === 'datenschutz' && (
           <DatenschutzScreen
-            onBack={() => setScreen('dashboard')}
+            onBack={() => void navigate('/')}
             onOpenCookieSettings={() => {
               // TODO: Integrate with Cookie Banner when implemented
               // Cookie banner will be added in a future commit
@@ -529,7 +535,7 @@ function AppContent() {
       </Suspense>
 
       {/* Footer - shown on main screens (not on public/invite flows) */}
-      {['dashboard', 'create', 'view', 'profile', 'settings', 'login', 'register'].includes(screen) && (
+      {(isDashboardPath || ['create', 'view', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
             if (target === 'impressum') {setScreen('impressum');}
