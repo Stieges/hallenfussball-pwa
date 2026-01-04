@@ -13,10 +13,15 @@
  * - s: status (pending,running,finished - kommagetrennt)
  * - q: query (teamSearch)
  *
+ * NOTE: Updated to work with react-router-dom HashRouter.
+ * Uses location.search from react-router (not window.location.search)
+ * to correctly handle query params in the hash portion of the URL.
+ *
  * @see docs/concepts/URL-FILTER-PERSISTENZ.md
  */
 
 import { useCallback, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ScheduleFilters, DEFAULT_FILTERS } from '../types/scheduleFilters';
 import { MatchStatus } from '../types/tournament';
 
@@ -164,36 +169,41 @@ export function useURLFilterSync(
 ): UseURLFilterSyncReturn {
   const { enabled = true, debounceMs = 300 } = options;
 
+  // React Router hooks - works correctly with HashRouter
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // Debounce timer ref
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Track if we're currently updating from URL to avoid loops
   const isUpdatingFromURL = useRef(false);
 
-  // Get initial filters from current URL
+  // Get initial filters from current URL (using react-router's location.search)
   const getInitialFilters = useCallback((): Partial<ScheduleFilters> => {
-    if (!enabled || typeof window === 'undefined') {
+    if (!enabled) {
       return {};
     }
 
-    const searchParams = new URLSearchParams(window.location.search);
+    // Use location.search from react-router (works with HashRouter)
+    const searchParams = new URLSearchParams(location.search);
     return parseURLFilters(searchParams);
-  }, [enabled]);
+  }, [enabled, location.search]);
 
   // Check if URL has filter params
   const hasURLFilters = useCallback((): boolean => {
-    if (!enabled || typeof window === 'undefined') {
+    if (!enabled) {
       return false;
     }
 
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = new URLSearchParams(location.search);
     return Object.values(URL_PARAM_KEYS).some(key => searchParams.has(key));
-  }, [enabled]);
+  }, [enabled, location.search]);
 
-  // Sync filters to URL (debounced)
+  // Sync filters to URL (debounced, using react-router's navigate)
   const syncToURL = useCallback(
     (filters: ScheduleFilters) => {
-      if (!enabled || typeof window === 'undefined') {
+      if (!enabled) {
         return;
       }
 
@@ -209,10 +219,10 @@ export function useURLFilterSync(
 
       debounceRef.current = setTimeout(() => {
         const newParams = serializeFiltersToURL(filters);
-        const currentParams = new URLSearchParams(window.location.search);
+        const currentParams = new URLSearchParams(location.search);
 
-        // Preserve non-filter params (like tab)
-        const preservedKeys = ['tab', 'view', 'match'];
+        // Preserve non-filter params (like matchId)
+        const preservedKeys = ['matchId'];
         preservedKeys.forEach(key => {
           const value = currentParams.get(key);
           if (value) {
@@ -220,34 +230,32 @@ export function useURLFilterSync(
           }
         });
 
-        // Build new URL
-        const newSearch = newParams.toString();
-        const currentSearch = currentParams.toString();
+        // Build new search string
+        let newSearch: string;
+
+        if (areFiltersDefault(filters)) {
+          // Keep only preserved params if filters are default
+          const preservedParams = new URLSearchParams();
+          preservedKeys.forEach(key => {
+            const value = currentParams.get(key);
+            if (value) {
+              preservedParams.set(key, value);
+            }
+          });
+          newSearch = preservedParams.toString();
+        } else {
+          newSearch = newParams.toString();
+        }
 
         // Only update if changed
-        if (newSearch !== currentSearch) {
-          const url = new URL(window.location.href);
-
-          if (areFiltersDefault(filters)) {
-            // Remove all filter params if defaults
-            Object.values(URL_PARAM_KEYS).forEach(key => {
-              url.searchParams.delete(key);
-            });
-          } else {
-            // Set new params
-            url.search = newParams.toString();
-          }
-
-          // Update URL without navigation (replaceState for filter changes)
-          window.history.replaceState(
-            { ...window.history.state, filters },
-            '',
-            url.toString()
-          );
+        if (newSearch !== currentParams.toString()) {
+          // Use react-router's navigate with replace to update URL
+          const newPath = newSearch ? `${location.pathname}?${newSearch}` : location.pathname;
+          void navigate(newPath, { replace: true });
         }
       }, debounceMs);
     },
-    [enabled, debounceMs]
+    [enabled, debounceMs, location.search, location.pathname, navigate]
   );
 
   // Cleanup debounce on unmount
