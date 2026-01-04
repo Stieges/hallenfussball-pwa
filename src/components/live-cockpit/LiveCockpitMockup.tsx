@@ -94,6 +94,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
+  // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
+  const [sidesSwapped, setSidesSwapped] = useState(false);
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, dismissToast } = useToast();
@@ -248,7 +250,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   );
 
   const handleSwitchSides = useCallback(() => {
-    // TODO: Implement switch sides
+    setSidesSwapped(prev => !prev);
     showInfo('Seiten getauscht');
   }, [showInfo]);
 
@@ -691,79 +693,75 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               </span>
             </div>
 
-            {/* Score Row */}
+            {/* Score Row - Teams können mit "Seiten tauschen" vertauscht werden */}
             <div style={scoreRowStyle}>
-              {/* Team A */}
+              {/* Linkes Team (Home oder Away je nach sidesSwapped) */}
               <TeamBlock
-                teamName={match.homeTeam.name}
-                teamLabel="Heim"
-                score={match.homeScore}
-                fouls={homeFouls}
+                teamName={sidesSwapped ? match.awayTeam.name : match.homeTeam.name}
+                teamLabel={sidesSwapped ? 'Gast' : 'Heim'}
+                score={sidesSwapped ? match.awayScore : match.homeScore}
+                fouls={sidesSwapped ? awayFouls : homeFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
-                onGoal={handleGoalHome}
-                onMinus={handleMinusHome}
+                side={sidesSwapped ? 'away' : 'home'}
+                onGoal={sidesSwapped ? handleGoalAway : handleGoalHome}
+                onMinus={sidesSwapped ? handleMinusAway : handleMinusHome}
                 onPenalty={() => {
-                  setPendingPenaltySide('home');
+                  setPendingPenaltySide(sidesSwapped ? 'away' : 'home');
                   setShowTimePenaltyDialog(true);
                 }}
                 onYellowCard={() => {
-                  // BUG-007: Set card type and team side before opening dialog
                   setPendingCardType('YELLOW');
-                  setPendingCardTeamSide('home');
+                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
                   setShowCardDialog(true);
                 }}
                 onRedCard={() => {
-                  // BUG-007: Set card type and team side before opening dialog
                   setPendingCardType('RED');
-                  setPendingCardTeamSide('home');
+                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
                   setShowCardDialog(true);
                 }}
                 onSubstitution={() => {
-                  // BUG-009: Set team side before opening dialog
-                  setPendingSubstitutionSide('home');
+                  setPendingSubstitutionSide(sidesSwapped ? 'away' : 'home');
                   setShowSubstitutionDialog(true);
                 }}
-                onFoul={handleFoulHome}
-                canDecrement={canDecrementHome}
+                onFoul={sidesSwapped ? handleFoulAway : handleFoulHome}
+                canDecrement={sidesSwapped ? canDecrementAway : canDecrementHome}
               />
 
               {/* Divider */}
               <span style={scoreDividerStyle}>:</span>
 
-              {/* Team B */}
+              {/* Rechtes Team (Away oder Home je nach sidesSwapped) */}
               <TeamBlock
-                teamName={match.awayTeam.name}
-                teamLabel="Gast"
-                score={match.awayScore}
-                fouls={awayFouls}
+                teamName={sidesSwapped ? match.homeTeam.name : match.awayTeam.name}
+                teamLabel={sidesSwapped ? 'Heim' : 'Gast'}
+                score={sidesSwapped ? match.homeScore : match.awayScore}
+                fouls={sidesSwapped ? homeFouls : awayFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
-                onGoal={handleGoalAway}
-                onMinus={handleMinusAway}
+                side={sidesSwapped ? 'home' : 'away'}
+                onGoal={sidesSwapped ? handleGoalHome : handleGoalAway}
+                onMinus={sidesSwapped ? handleMinusHome : handleMinusAway}
                 onPenalty={() => {
-                  setPendingPenaltySide('away');
+                  setPendingPenaltySide(sidesSwapped ? 'home' : 'away');
                   setShowTimePenaltyDialog(true);
                 }}
                 onYellowCard={() => {
-                  // BUG-007: Set card type and team side before opening dialog
                   setPendingCardType('YELLOW');
-                  setPendingCardTeamSide('away');
+                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
                   setShowCardDialog(true);
                 }}
                 onRedCard={() => {
-                  // BUG-007: Set card type and team side before opening dialog
                   setPendingCardType('RED');
-                  setPendingCardTeamSide('away');
+                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
                   setShowCardDialog(true);
                 }}
                 onSubstitution={() => {
-                  // BUG-009: Set team side before opening dialog
-                  setPendingSubstitutionSide('away');
+                  setPendingSubstitutionSide(sidesSwapped ? 'home' : 'away');
                   setShowSubstitutionDialog(true);
                 }}
-                onFoul={handleFoulAway}
-                canDecrement={canDecrementAway}
+                onFoul={sidesSwapped ? handleFoulHome : handleFoulAway}
+                canDecrement={sidesSwapped ? canDecrementHome : canDecrementAway}
               />
             </div>
 
