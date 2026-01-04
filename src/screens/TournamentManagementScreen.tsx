@@ -24,6 +24,8 @@ import { ManagementTab } from '../features/tournament-management/ManagementTab';
 import { MonitorTab } from '../features/tournament-management/MonitorTab';
 import { SettingsTab } from '../features/tournament-management/SettingsTab';
 import { TeamsTab } from '../features/tournament-management/TeamsTab';
+import { MonitorsConfigTab } from '../features/tournament-management/MonitorsConfigTab';
+import { MonitorEditor } from '../features/tournament-management/MonitorEditor';
 
 // Auth
 import { AuthSection } from '../components/layout/AuthSection';
@@ -39,7 +41,7 @@ interface TournamentManagementScreenProps {
   onNavigateToSettings?: () => void;
 }
 
-type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'teams' | 'settings';
+type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'monitors' | 'teams' | 'settings';
 
 export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = ({
   tournamentId,
@@ -63,6 +65,9 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const [isSettingsDirty, setIsSettingsDirty] = useState(false);
   const [pendingTab, setPendingTab] = useState<TabType | null>(null);
   const [showDirtyWarning, setShowDirtyWarning] = useState(false);
+
+  // MON-KONF-01: Monitor-Konfigurator State
+  const [editingMonitorId, setEditingMonitorId] = useState<string | null>(null);
 
   // Tournament-Schedule sync via custom hook
   const {
@@ -118,6 +123,11 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   const handleNavigateToCockpit = (matchId: string) => {
     setInitialMatchId(matchId);
     setActiveTab('management');
+  };
+
+  // MON-KONF-01: Async wrapper for monitor components
+  const handleAsyncTournamentUpdate = async (updatedTournament: Tournament): Promise<void> => {
+    handleTournamentUpdate(updatedTournament);
   };
 
   // Loading / Error state
@@ -272,6 +282,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           <TabButton label="Tabellen" isActive={activeTab === 'tabellen'} onClick={() => handleTabChange('tabellen')} />
           <TabButton label="Live" isActive={activeTab === 'management'} onClick={() => handleTabChange('management')} />
           <TabButton label="Monitor" isActive={activeTab === 'monitor'} onClick={() => handleTabChange('monitor')} />
+          <TabButton label="Monitore" isActive={activeTab === 'monitors'} onClick={() => handleTabChange('monitors')} />
           <TabButton label="Teams" isActive={activeTab === 'teams'} onClick={() => handleTabChange('teams')} />
           <TabButton label="Einstellungen" isActive={activeTab === 'settings'} onClick={() => handleTabChange('settings')} isDirty={isSettingsDirty} />
         </nav>
@@ -325,7 +336,24 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             onEditInWizard={onEditInWizard}
           />
         )}
+        {activeTab === 'monitors' && (
+          <MonitorsConfigTab
+            tournament={tournament}
+            onTournamentUpdate={handleAsyncTournamentUpdate}
+            onEditMonitor={setEditingMonitorId}
+          />
+        )}
       </div>
+
+      {/* MON-KONF-01: Monitor-Editor Dialog */}
+      {editingMonitorId && (
+        <MonitorEditor
+          tournament={tournament}
+          monitorId={editingMonitorId}
+          onTournamentUpdate={handleAsyncTournamentUpdate}
+          onClose={() => setEditingMonitorId(null)}
+        />
+      )}
 
       {/* TOUR-EDIT-META: Dirty-Warning Dialog */}
       {showDirtyWarning && (
@@ -384,6 +412,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           description="Großbildschirm-Ansicht"
           onClick={() => handleMoreMenuSelect('monitor')}
           isActive={activeTab === 'monitor'}
+        />
+        <BottomSheetItem
+          icon={<Icons.Monitor size={20} color="currentColor" />}
+          label="Monitore"
+          description="Display-Konfiguration"
+          onClick={() => handleMoreMenuSelect('monitors')}
+          isActive={activeTab === 'monitors'}
         />
       </BottomSheet>
     </div>
