@@ -365,7 +365,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
         <ScheduleDisplay
           schedule={schedule}
           tournamentTeams={currentTournament.teams}
-          editable={true}
+          editable={false}
           onRefereeChange={handleRefereeAssignment}
           onFieldChange={handleFieldChange}
         />

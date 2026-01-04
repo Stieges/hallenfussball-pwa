@@ -3,7 +3,7 @@ import { Button } from './ui/Button';
 import { Icons } from './ui/Icons';
 import { ShareDialog } from './dialogs/ShareDialog';
 import { PDFExportDialog } from './dialogs/PDFExportDialog';
-import { cssVars, mediaQueries } from '../design-tokens'
+import { cssVars, mediaQueries, layoutHeights } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule } from '../lib/scheduleGenerator';
 
@@ -29,10 +29,10 @@ export const ScheduleActionButtons = ({
     flexWrap: 'wrap',
   };
 
-  // Responsive styles for mobile FAB buttons
+  // Responsive styles for mobile FAB buttons - positioned above bottom nav
   const fabContainerStyle: CSSProperties = {
     position: 'fixed',
-    bottom: cssVars.spacing.lg,
+    bottom: `calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px))`,
     right: cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
@@ -90,7 +90,7 @@ export const ScheduleActionButtons = ({
         ${mediaQueries.tabletDown} {
           .schedule-action-buttons {
             position: fixed !important;
-            bottom: ${cssVars.spacing.lg} !important;
+            bottom: calc(${layoutHeights.bottomNav} + ${cssVars.spacing.lg} + env(safe-area-inset-bottom, 0px)) !important;
             right: ${cssVars.spacing.lg} !important;
             flex-direction: column !important;
             z-index: 100 !important;

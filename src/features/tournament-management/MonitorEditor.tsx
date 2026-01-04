@@ -93,10 +93,24 @@ export function MonitorEditor({
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
 
-  // Get groups from tournament
+  // Get groups from tournament - generate if not explicit
   const groups: TournamentGroup[] = useMemo(() => {
-    return tournament.groups ?? [];
-  }, [tournament.groups]);
+    // If explicit groups are defined, use them
+    if (tournament.groups && tournament.groups.length > 0) {
+      return tournament.groups;
+    }
+    // If numberOfGroups is set, generate synthetic group entries
+    const numGroups = tournament.numberOfGroups ?? 1;
+    if (numGroups <= 1) {
+      // Single group tournament - return one default group
+      return [{ id: 'default', customName: 'Alle Teams' }];
+    }
+    // Generate group entries A, B, C, etc.
+    return Array.from({ length: numGroups }, (_, i) => ({
+      id: String.fromCharCode(65 + i), // A, B, C...
+      customName: `Gruppe ${String.fromCharCode(65 + i)}`,
+    }));
+  }, [tournament.groups, tournament.numberOfGroups]);
 
   // Available slide types (Phase 1 only)
   const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
@@ -699,7 +713,7 @@ function SlideConfigEditor({
       )}
 
       {/* Gruppen-Auswahl für standings, schedule-group */}
-      {(type === 'standings' || type === 'schedule-group') && (
+      {(type === 'standings' || type === 'schedule-group') && groups.length > 1 && (
         <div style={styles.inputGroupStyle}>
           <label style={styles.labelStyle}>Gruppe</label>
           <select
@@ -707,7 +721,7 @@ function SlideConfigEditor({
             value={config.groupId ?? ''}
             onChange={(e) => handleConfigChange('groupId', e.target.value || undefined)}
           >
-            <option value="">Bitte wählen...</option>
+            <option value="">Alle Gruppen</option>
             {groups.map(g => (
               <option key={g.id} value={g.id}>
                 {g.customName || `Gruppe ${g.id}`}
