@@ -93,6 +93,11 @@ function AppContent() {
 
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
+
+  // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
+  const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
+  const isTournamentPath = !!tournamentMatch;
+  const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
   const {
     tournaments,
     loading,
@@ -228,14 +233,13 @@ function AppContent() {
   }
 
   const handleTournamentClick = (tournament: Tournament) => {
-    setSelectedTournament(tournament);
-
     // If tournament is a draft, open in edit mode
     if (tournament.status === 'draft') {
+      setSelectedTournament(tournament);
       setScreen('create');
     } else {
-      // Published tournaments open in view/management mode
-      setScreen('view');
+      // Published tournaments open in view/management mode via URL
+      void navigate(`/tournament/${tournament.id}`);
     }
   };
 
@@ -490,9 +494,9 @@ function AppContent() {
           />
         )}
 
-        {screen === 'view' && selectedTournament && (
+        {isTournamentPath && tournamentIdFromUrl && (
           <TournamentManagementScreen
-            tournamentId={selectedTournament.id}
+            tournamentId={tournamentIdFromUrl}
             onBack={() => void navigate('/')}
             onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
             onNavigateToLogin={() => setScreen('login')}
@@ -535,7 +539,7 @@ function AppContent() {
       </Suspense>
 
       {/* Footer - shown on main screens (not on public/invite flows) */}
-      {(isDashboardPath || ['create', 'view', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
+      {(isDashboardPath || isTournamentPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
             if (target === 'impressum') {setScreen('impressum');}

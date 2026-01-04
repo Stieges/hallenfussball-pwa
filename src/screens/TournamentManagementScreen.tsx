@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { CSSProperties } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
@@ -16,6 +17,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentSync } from '../hooks/useTournamentSync';
 import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
 import type { BottomNavTab } from '../components/ui';
+import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
 
 // Tab Components
 import { ScheduleTab } from '../features/tournament-management/ScheduleTab';
@@ -41,7 +43,8 @@ interface TournamentManagementScreenProps {
   onNavigateToSettings?: () => void;
 }
 
-type TabType = 'schedule' | 'tabellen' | 'management' | 'monitor' | 'monitors' | 'teams' | 'settings';
+// Type alias for backward compatibility
+type TabType = TournamentTab;
 
 export const TournamentManagementScreen: React.FC<TournamentManagementScreenProps> = ({
   tournamentId,
@@ -52,10 +55,20 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onNavigateToProfile,
   onNavigateToSettings,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('schedule');
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Initial match ID for cockpit navigation (passed from ScheduleTab)
-  const [initialMatchId, setInitialMatchId] = useState<string | null>(null);
+  // Get active tab from URL path (e.g., /tournament/:id/schedule)
+  const pathParts = location.pathname.split('/');
+  const tabFromUrl = pathParts.length >= 4 ? pathParts[3] : undefined;
+  const activeTab = getTabFromPath(tabFromUrl);
+
+  // Parse matchId from URL query params (for deep-linking to specific match)
+  const searchParams = new URLSearchParams(location.search);
+  const matchIdFromUrl = searchParams.get('matchId');
+
+  // Initial match ID for cockpit navigation (passed from ScheduleTab or URL)
+  const [initialMatchId, setInitialMatchId] = useState<string | null>(matchIdFromUrl);
 
   // Mobile Navigation
   const isMobile = useIsMobile();
@@ -84,14 +97,15 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       setPendingTab(newTab);
       setShowDirtyWarning(true);
     } else {
-      setActiveTab(newTab);
+      // Navigate to new tab URL
+      void navigate(buildTournamentTabPath(tournamentId, newTab));
     }
   };
 
   // TOUR-EDIT-META: Dirty-Warning Dialog bestätigen
   const handleConfirmTabChange = () => {
     if (pendingTab) {
-      setActiveTab(pendingTab);
+      void navigate(buildTournamentTabPath(tournamentId, pendingTab));
       setPendingTab(null);
       setShowDirtyWarning(false);
       setIsSettingsDirty(false);
@@ -122,7 +136,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   // Handle navigation to cockpit with specific match
   const handleNavigateToCockpit = (matchId: string) => {
     setInitialMatchId(matchId);
-    setActiveTab('management');
+    // Navigate to live/management tab with match ID as query param
+    void navigate(`${buildTournamentTabPath(tournamentId, 'management')}?matchId=${matchId}`);
   };
 
   // MON-KONF-01: Async wrapper for monitor components
