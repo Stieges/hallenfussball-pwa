@@ -125,10 +125,9 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
-    maxWidth: '100px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
   };
 
   const vsStyle: CSSProperties = {

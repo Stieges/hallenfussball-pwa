@@ -202,10 +202,10 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
     textAlign: 'center',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    maxWidth: '100px',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
+    maxWidth: '120px',
   };
 
   const scoreValueStyle: CSSProperties = {

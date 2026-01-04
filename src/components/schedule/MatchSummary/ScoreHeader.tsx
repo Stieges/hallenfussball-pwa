@@ -65,9 +65,9 @@ export function ScoreHeader({
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
     textAlign: 'center',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
     maxWidth: '100%',
   };
 

@@ -1,4 +1,5 @@
 /* Step4_Teams - Responsive Team Row Layout */
+/* MOBILE-UX: Flex-wrap layout for better mobile experience */
 
 /* Team row container */
 .teamRow {
@@ -11,9 +12,11 @@
   border: 1px solid var(--color-border);
 }
 
-/* Top row: number badge + team name input */
+/* Top row: avatar + team name input + action buttons */
+/* Uses flex-wrap for automatic line breaks on mobile */
 .teamRowMain {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-md);
 }
@@ -33,17 +36,19 @@
   font-size: var(--font-size-lg);
 }
 
-/* Team name input wrapper - takes remaining space */
+/* Team name input wrapper - flex-grow with min-width for wrap trigger */
 .teamNameInput {
-  flex: 1;
+  flex: 1 1 200px; /* Grow, shrink, min 200px before wrapping */
   min-width: 0; /* Prevent flex blowout */
 }
 
-/* Delete button */
+/* Delete button - WCAG compliant 48x48px touch target */
 .deleteButton {
   flex-shrink: 0;
   width: 48px;
   height: 48px;
+  min-width: 44px; /* WCAG minimum touch target */
+  min-height: 44px;
   padding: 0;
   background: var(--color-error-medium);
   border: 1px solid var(--color-error-border);
@@ -61,12 +66,27 @@
   background: var(--color-error-border);
 }
 
+.deleteButton:focus {
+  outline: 2px solid var(--color-error);
+  outline-offset: 2px;
+}
+
 /* Bottom row: group selector (only visible when groups are enabled) */
 .teamRowSecondary {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--spacing-md);
   padding-left: 64px; /* Align with input above (48px badge + 16px gap) */
+}
+
+/* On very small screens: secondary row takes full width */
+@media (max-width: 400px) {
+  .teamRowSecondary {
+    padding-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .groupLabel {

@@ -173,7 +173,14 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     {rank}
                   </td>
                   <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: cssVars.spacing.sm,
+                      // MOBILE-UX: No truncation - team names must be fully visible
+                      wordBreak: 'break-word',
+                      overflowWrap: 'break-word',
+                    }}>
                       <TeamAvatar team={standing.team} size="xs" />
                       {standing.team.name}
                     </div>
@@ -269,7 +276,14 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       {rank}
                     </td>
                     <td style={{ ...tdStyle, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.xs }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: cssVars.spacing.xs,
+                        // MOBILE-UX: No truncation - team names must be fully visible
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                      }}>
                         <TeamAvatar team={standing.team} size="xs" />
                         {standing.team.name}
                       </div>

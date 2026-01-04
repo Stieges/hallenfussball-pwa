@@ -653,9 +653,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               <div style={mobileTeamNameStyle}>
                 {homeWins && <span style={mobileWinnerIconStyle}>✓</span>}
                 <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const
+                  // MOBILE-UX: No truncation - team names must be fully visible
+                  wordBreak: 'break-word' as const,
+                  overflowWrap: 'break-word' as const
                 }}>
                   {match.homeTeam}
                 </span>
@@ -693,9 +693,9 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               <div style={mobileTeamNameStyle}>
                 {awayWins && <span style={mobileWinnerIconStyle}>✓</span>}
                 <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap' as const
+                  // MOBILE-UX: No truncation - team names must be fully visible
+                  wordBreak: 'break-word' as const,
+                  overflowWrap: 'break-word' as const
                 }}>
                   {match.awayTeam}
                 </span>

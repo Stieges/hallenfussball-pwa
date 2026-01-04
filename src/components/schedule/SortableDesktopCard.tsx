@@ -243,9 +243,9 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
   };
 
   const vsStyle: CSSProperties = {

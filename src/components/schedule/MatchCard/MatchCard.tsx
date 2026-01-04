@@ -196,9 +196,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     fontSize: cssVars.fontSizes.lg,
     fontWeight: 800,
     color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
   };
 
   const liveBadgeStyle: CSSProperties = {
