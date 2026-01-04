@@ -281,14 +281,14 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-testid="live-info-expand">
       {/* Header with LIVE badge and timer */}
       <div style={headerStyle}>
-        <span style={liveBadgeStyle}>
+        <span style={liveBadgeStyle} data-testid="live-badge">
           <span style={liveDotStyle} />
           LIVE
         </span>
-        <span style={timerStyle}>{elapsedFormatted}</span>
+        <span style={timerStyle} data-testid="live-timer">{elapsedFormatted}</span>
       </div>
 
       {/* Large Score Display */}
@@ -339,6 +339,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
           variant="primary"
           size="md"
           onClick={onNavigateToCockpit}
+          data-testid="goto-cockpit-btn"
         >
           → Zum Cockpit
         </Button>

@@ -148,7 +148,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-testid="quick-score-expand">
       {/* Score Steppers */}
       <div style={steppersContainerStyle}>
         <ScoreStepper
@@ -160,6 +160,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           avatarSize="md"
           min={0}
           max={99}
+          data-testid="home-score-stepper"
         />
         <ScoreStepper
           value={awayScore}
@@ -170,6 +171,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           avatarSize="md"
           min={0}
           max={99}
+          data-testid="away-score-stepper"
         />
       </div>
 
@@ -202,6 +204,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           size="md"
           onClick={onCancel}
           disabled={isSaving}
+          data-testid="quick-score-cancel-btn"
         >
           Abbrechen
         </Button>
@@ -210,6 +213,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           size="md"
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
+          data-testid="quick-score-save-btn"
         >
           {isSaving ? 'Speichern...' : 'Speichern'}
         </Button>

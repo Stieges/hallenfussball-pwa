@@ -286,6 +286,13 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         setSummaryMatchId(matchId);
         setShowMatchSummary(true);
         break;
+      default:
+        // Fallback: If match has scores, treat as finished and show summary
+        if (match.scoreA !== undefined && match.scoreB !== undefined) {
+          setSummaryMatchId(matchId);
+          setShowMatchSummary(true);
+        }
+        break;
     }
   };
 

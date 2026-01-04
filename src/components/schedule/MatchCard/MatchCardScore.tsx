@@ -46,6 +46,8 @@ export interface MatchCardScoreProps {
   onClick?: () => void;
   /** Disable interaction */
   disabled?: boolean;
+  /** Match ID for testing */
+  matchId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   size = 56,
   onClick,
   disabled = false,
+  matchId,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -120,7 +123,9 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   // Event Handlers
   // ---------------------------------------------------------------------------
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
+    // Stop propagation to prevent card click handler from interfering
+    e.stopPropagation();
     if (!disabled && onClick) {
       onClick();
     }
@@ -149,6 +154,8 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick && !disabled ? 0 : undefined}
         aria-label={`Spielstand ${homeScore}:${awayScore}, ${elapsedFormatted || 'Live'}`}
+        data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
+        data-match-status="running"
       >
         <ProgressRing
           progress={progress}
@@ -181,6 +188,8 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick && !disabled ? 0 : undefined}
         aria-label="Spiel starten"
+        data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
+        data-match-status="scheduled"
       >
         <div style={circleStyle}>
           <span style={vsStyle}>VS</span>
@@ -200,6 +209,8 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
       role={onClick ? 'button' : undefined}
       tabIndex={onClick && !disabled ? 0 : undefined}
       aria-label={`Endstand ${homeScore}:${awayScore}`}
+      data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
+      data-match-status="finished"
     >
       <div style={circleStyle}>
         <span style={scoreStyle}>

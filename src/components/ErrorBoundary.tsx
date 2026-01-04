@@ -5,6 +5,8 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  /** Callback when user resets the error boundary (e.g., to navigate away) */
+  onReset?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -33,6 +35,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   handleReset = (): void => {
     this.setState({ hasError: false, error: null });
+    this.props.onReset?.();
   };
 
   render(): ReactNode {

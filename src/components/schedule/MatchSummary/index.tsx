@@ -157,6 +157,7 @@ function MatchSummaryDialog({
       style={overlayStyle}
       onClick={onClose}
       role="presentation"
+      data-testid="match-summary-backdrop"
     >
       <div
         style={dialogStyle}
@@ -164,6 +165,7 @@ function MatchSummaryDialog({
         role="dialog"
         aria-modal="true"
         aria-label="Spielzusammenfassung"
+        data-testid="match-summary-dialog"
       >
         {/* Header */}
         <div style={headerStyle}>

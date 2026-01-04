@@ -1,7 +1,81 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-03 (Team-Management Analyse)
+> **Letzte Aktualisierung:** 2026-01-04 (Mobile-UX-Improvements)
+
+---
+
+## 🔴 KRITISCH: Mobile-UX-Verbesserungen
+
+**Prompt-Datei:** `MOBILE-UX-IMPROVEMENTS-PROMPT.md`
+**Priorität:** 🔴 KRITISCH
+**Status:** ⬜ Offen (Umsetzung verschoben)
+
+> **Problem:** Auf mobilen Geräten werden Teamnamen abgeschnitten ("T..."), was die App unbrauchbar macht.
+
+### Teil 1: Wizard Teams – Flex-Wrap Layout
+
+| Aufgabe | Status | Betroffene Dateien |
+|---------|--------|-------------------|
+| Team-Row refactoren mit `flex-wrap` | ⬜ Offen | `src/features/tournament-creation/` |
+| Input `min-width: 200px` für Umbruch | ⬜ Offen | Team-Input Komponente |
+| Touch-Targets ≥ 44px garantieren | ⬜ Offen | Delete-Button, Dropdown |
+| `white-space: normal` statt truncation | ⬜ Offen | TeamInput, TeamName |
+
+**Ziel-Layout Mobile (<600px):**
+```
+[Avatar] [Team Alpha United_________________________]
+                                     [Gruppe▼] [🗑️]
+```
+
+### Teil 2: Spielplan Grid – Stacked-Team Konzept
+
+| Aufgabe | Status | Betroffene Dateien |
+|---------|--------|-------------------|
+| Truncation entfernen (`ellipsis`, `nowrap`) | ⬜ Offen | `src/components/schedule/` |
+| GameCard mit gestapeltem Layout | ⬜ Offen | GameCard.tsx / MatchCard |
+| Grid 1-Spalte auf Mobile | ⬜ Offen | ScheduleGrid |
+| `word-break: break-word` für Namen | ⬜ Offen | TeamName Komponenten |
+
+**Ziel-Layout Mobile (<600px):**
+```
+┌─────────────────────────────────┐
+│ 18:35                  Spiel 1  │
+├─────────────────────────────────┤
+│ Team Alpha United               │
+│           vs                    │
+│ FC Musterdorf 07                │
+├─────────────────────────────────┤
+│ Feld 1                          │
+└─────────────────────────────────┘
+```
+
+### Teil 3: Design Tokens Ergänzungen
+
+| Aufgabe | Status | Datei |
+|---------|--------|-------|
+| `components.ts` erstellen | ⬜ Offen | `src/design-tokens/components.ts` |
+| `teamRow` Tokens (gap, inputMinWidth, avatarSize) | ⬜ Offen | components.ts |
+| `gameCard` Tokens (minWidth, padding) | ⬜ Offen | components.ts |
+| `touchTarget` Tokens (44px, 48px, 56px) | ⬜ Offen | components.ts |
+
+### Teil 4: Tests
+
+| Test | Priorität | Status |
+|------|-----------|--------|
+| Viewport-Test: iPhone SE (320px) Team-Namen sichtbar | Hoch | ⬜ Offen |
+| Viewport-Test: Touch Target ≥ 44px | Hoch | ⬜ Offen |
+| Viewport-Test: Grid 1-Spalte auf Mobile | Mittel | ⬜ Offen |
+| Visual Regression Snapshots | Niedrig | ⬜ Offen |
+
+### Checkliste vor Umsetzung
+
+```
+□ Context7-Recherche: CSS Flexbox, styled-components responsive
+□ Projektdateien lesen: design-tokens/README.md, spacing.ts
+□ grep -r "ellipsis" src/ → alle Truncation-Stellen finden
+□ grep -r "nowrap" src/ → alle nowrap-Stellen finden
+```
 
 ---
 
@@ -140,6 +214,62 @@
 | Public View (Zuschauer-Link) | Mittel | - | - |
 | Trainer-Cockpit | Mittel | - | US-TRAINER-COCKPIT |
 | Turnier kopieren/löschen konzeptionieren | Mittel | - | US-TOURNAMENT-COPY |
+| **PWA Install-Button in App** | Niedrig | 1h | - |
+
+### PWA Installation (Dokumentation)
+
+> **Status:** PWA ist korrekt konfiguriert mit `vite-plugin-pwa`. Installation funktioniert automatisch.
+
+#### Manuelle Installation durch User
+
+| Plattform | Browser | Methode |
+|-----------|---------|---------|
+| **Android** | Chrome | ⋮ Menü → "App installieren" oder "Zum Startbildschirm" |
+| **Windows** | Chrome | Adressleiste → ⊕ Icon ODER Menü → "Installieren..." |
+| **Windows** | Edge | Adressleiste → App-Icon ODER Menü → Apps → "Als App installieren" |
+| **macOS** | Chrome | Menü → "Hallenfußball Turnier-Manager installieren..." |
+| **iOS** | Safari | Teilen-Button → "Zum Home-Bildschirm" |
+
+#### Optional: In-App Install-Button implementieren
+
+```typescript
+// Hook für PWA Installation
+const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+useEffect(() => {
+  const handler = (e: BeforeInstallPromptEvent) => {
+    e.preventDefault();
+    setInstallPrompt(e);
+  };
+  window.addEventListener('beforeinstallprompt', handler);
+  return () => window.removeEventListener('beforeinstallprompt', handler);
+}, []);
+
+const handleInstallClick = async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  const { outcome } = await installPrompt.userChoice;
+  setInstallPrompt(null);
+};
+```
+
+#### PWA-Manifest (generiert)
+
+```json
+{
+  "name": "Hallenfußball Turnier-Manager",
+  "short_name": "Turnier",
+  "display": "standalone",
+  "theme_color": "#00e676",
+  "background_color": "#1a1a2e"
+}
+```
+
+#### Hinweis für Localhost-Testing
+
+PWA-Installation auf `localhost` funktioniert nur in Chrome/Edge. Für vollständige Tests (Safari, iOS):
+- `ngrok` für temporäre HTTPS-URL
+- Deploy auf Vercel/Netlify
 
 ### Team-Management (Phase 2)
 

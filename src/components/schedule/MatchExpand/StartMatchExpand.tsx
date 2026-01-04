@@ -171,7 +171,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={containerStyle}>
+    <div style={containerStyle} data-testid="start-match-expand">
       {/* Match Info */}
       <div style={matchInfoStyle}>
         <div style={teamContainerStyle}>
@@ -209,6 +209,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
           size="md"
           onClick={onCancel}
           disabled={isLoading}
+          data-testid="start-match-cancel-btn"
         >
           Abbrechen
         </Button>
@@ -217,6 +218,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
           size="md"
           onClick={onConfirm}
           disabled={isLoading}
+          data-testid="start-match-confirm-btn"
         >
           {isLoading ? 'Wird gestartet...' : '→ Zum Cockpit'}
         </Button>
