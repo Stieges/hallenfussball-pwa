@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Icons } from '../components/ui';
 import { ProgressBar } from '../components/ProgressBar';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { TournamentPreview } from '../features/tournament-creation/TournamentPreview';
 import { Step5_Overview as Step5_OverviewDirect } from '../features/tournament-creation/Step5_Overview';
+import { getStepFromSearchParams, buildWizardStepPath, type WizardStep } from '../features/tournament-creation';
 import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
@@ -82,6 +84,8 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   const { showSuccess, showWarning } = useToast();
   const { saveTournament: defaultSaveTournament } = useTournaments();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // ============================================================================
   // WIZARD HOOK - All wizard state and actions from useTournamentWizard
@@ -96,6 +100,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     hasResults,
     lastSavedDataRef,
     // Actions
+    setStep,
     setFormData,
     setScheduleError,
     updateForm,
@@ -116,6 +121,20 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Draft Creation
     createDraftTournament,
   } = useTournamentWizard(existingTournament);
+
+  // Sync step from URL on mount (for deep-linking)
+  // This effect intentionally runs only on mount to read initial URL step
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlStep = getStepFromSearchParams(searchParams);
+
+    // Only sync if this is a fresh navigation (not an existing draft)
+    // and the URL step differs from the current step
+    if (!existingTournament?.lastVisitedStep && urlStep !== step) {
+      setStep(urlStep);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ============================================================================
   // SCREEN-SPECIFIC STATE (not in hook)
@@ -181,7 +200,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation, createDraftTournament, lastSavedDataRef, setFormData]);
 
-  // Helper function to change step with autosave and slide animation
+  // Helper function to change step with autosave, slide animation, and URL update
   const handleStepChange = useCallback((newStep: number) => {
     // Determine slide direction based on navigation
     const direction = newStep > step ? 'right' : 'left';
@@ -194,9 +213,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     // Use wizard hook's handleStepChange with saveAsDraft callback
     wizardHandleStepChange(newStep, saveAsDraft);
 
+    // Update URL with new step (replace to avoid history clutter)
+    const newPath = buildWizardStepPath(newStep as WizardStep, existingTournament?.id);
+    void navigate(newPath, { replace: true });
+
     // Clear slide direction after animation completes
     setTimeout(() => setSlideDirection(null), 300);
-  }, [wizardHandleStepChange, saveAsDraft, step]);
+  }, [wizardHandleStepChange, saveAsDraft, step, navigate, existingTournament?.id]);
 
   // Autosave 1: Periodic autosave every 10 seconds
   useEffect(() => {
@@ -338,11 +361,15 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   // Handle navigation to a specific step via ProgressBar
-  // Wraps hook's handleNavigateToStep with screen-specific callbacks
+  // Wraps hook's handleNavigateToStep with screen-specific callbacks and URL update
   const handleNavigateToStep = useCallback((targetStep: number) => {
     const saveCallback = hasUnsavedChanges() ? saveAsDraft : undefined;
     wizardHandleNavigateToStep(targetStep, saveCallback, showWarning);
-  }, [wizardHandleNavigateToStep, hasUnsavedChanges, saveAsDraft, showWarning]);
+
+    // Update URL with new step (replace to avoid history clutter)
+    const newPath = buildWizardStepPath(targetStep as WizardStep, existingTournament?.id);
+    void navigate(newPath, { replace: true });
+  }, [wizardHandleNavigateToStep, hasUnsavedChanges, saveAsDraft, showWarning, navigate, existingTournament?.id]);
 
   // Dynamic width: wider for preview, narrower for wizard steps
   const isShowingPreview = step === 6 && generatedSchedule;

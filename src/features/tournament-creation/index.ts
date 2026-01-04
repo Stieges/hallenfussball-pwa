@@ -5,3 +5,11 @@ export { Step3_Metadata } from './Step3_Metadata';
 export { Step_GroupsAndFields } from './Step_GroupsAndFields'; // US-GROUPS-AND-FIELDS: Neuer Step
 export { Step4_Teams } from './Step4_Teams';
 export { Step5_Overview } from './Step5_Overview';
+
+// URL Utilities
+export {
+  getStepFromSearchParams,
+  buildWizardStepPath,
+  isWizardPath,
+  type WizardStep,
+} from './utils/wizardStepUtils';

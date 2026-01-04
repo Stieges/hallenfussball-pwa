@@ -96,8 +96,15 @@ function AppContent() {
 
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
-  const isTournamentPath = !!tournamentMatch;
+  const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit');
   const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
+
+  // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
+  const isNewWizardPath = location.pathname === '/tournament/new';
+  const editWizardMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/edit$/);
+  const isEditWizardPath = !!editWizardMatch;
+  const isWizardPath = isNewWizardPath || isEditWizardPath;
+  const editingTournamentId = editWizardMatch?.[1] ?? null;
   const {
     tournaments,
     loading,
@@ -233,10 +240,9 @@ function AppContent() {
   }
 
   const handleTournamentClick = (tournament: Tournament) => {
-    // If tournament is a draft, open in edit mode
+    // If tournament is a draft, open in edit mode via URL
     if (tournament.status === 'draft') {
-      setSelectedTournament(tournament);
-      setScreen('create');
+      void navigate(`/tournament/${tournament.id}/edit`);
     } else {
       // Published tournaments open in view/management mode via URL
       void navigate(`/tournament/${tournament.id}`);
@@ -263,8 +269,8 @@ function AppContent() {
           lastVisitedStep: 2, // Go to Mode/System step
         };
         await saveTournament(tournamentWithStep);
-        setSelectedTournament(tournamentWithStep);
-        setScreen('create');
+        // Navigate to wizard with step 2 via URL
+        void navigate(`/tournament/${tournament.id}/edit?step=2`);
       }
     } catch (error) {
       console.error('[App] Failed to import tournament:', error);
@@ -348,10 +354,11 @@ function AppContent() {
       // Save the tournament with draft status (already set by SettingsTab)
       await saveTournament(tournamentToEdit);
 
-      // Enable quick edit mode and navigate to create screen
+      // Enable quick edit mode and navigate to wizard via URL
       setQuickEditMode(true);
       setSelectedTournament(tournamentToEdit);
-      setScreen('create');
+      const stepParam = targetStep ? `?step=${targetStep}` : '';
+      void navigate(`/tournament/${tournament.id}/edit${stepParam}`);
     } catch (error) {
       console.error('[App] Failed to open tournament in wizard:', error);
       showError('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
@@ -442,7 +449,7 @@ function AppContent() {
         {isDashboardPath && (
           <DashboardScreen
             tournaments={tournaments}
-            onCreateNew={() => setScreen('create')}
+            onCreateNew={() => void navigate('/tournament/new')}
             onTournamentClick={handleTournamentClick}
             onDeleteTournament={(id, title) => void handleDeleteTournament(id, title)}
             onImportTournament={(tournament) => void handleImportTournament(tournament)}
@@ -457,7 +464,7 @@ function AppContent() {
           />
         )}
 
-        {screen === 'create' && (
+        {(isWizardPath || screen === 'create') && (
           <TournamentCreationScreen
             onBack={() => {
               // If in quickEditMode and user cancels, restore original status
@@ -485,7 +492,10 @@ function AppContent() {
               await new Promise(resolve => setTimeout(resolve, 200));
               void navigate('/');
             }}
-            existingTournament={selectedTournament ?? undefined}
+            existingTournament={
+              selectedTournament ??
+              (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined)
+            }
             quickEditMode={quickEditMode}
             onNavigateToLogin={() => setScreen('login')}
             onNavigateToRegister={() => setScreen('register')}
@@ -539,7 +549,7 @@ function AppContent() {
       </Suspense>
 
       {/* Footer - shown on main screens (not on public/invite flows) */}
-      {(isDashboardPath || isTournamentPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
+      {(isDashboardPath || isTournamentPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
             if (target === 'impressum') {setScreen('impressum');}
