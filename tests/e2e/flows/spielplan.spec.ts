@@ -377,22 +377,24 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);
 
-    // WHEN - Click on score circle of a scheduled match
-    const scoreCircle = page.locator('[data-score-circle]').first();
-    if (await scoreCircle.isVisible()) {
-      await scoreCircle.click();
+    // WHEN - Click on score circle of a SCHEDULED match (use specific selector)
+    // Use data-match-status="scheduled" to target only scheduled matches
+    const scheduledCircle = page.locator('[data-match-status="scheduled"]').first();
+
+    if (await scheduledCircle.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await scheduledCircle.click();
 
       // THEN - Start match dialog should appear
       await page.waitForTimeout(300);
 
-      // Look for dialog with "Cockpit" or "starten" text
-      const startDialog = page.locator('[role="dialog"], [data-testid="start-match-expand"]');
-      const dialogText = page.locator('text=/Cockpit|starten/i');
+      // Look for start-match-expand which should appear for scheduled matches
+      const startExpand = page.getByTestId('start-match-expand').first();
 
-      // Either a dialog appears or expand with start option
-      await startDialog.isVisible();
-      await dialogText.first().isVisible().catch(() => false);
-      // Test documents expected behavior
+      // Use proper assertion
+      await expect(startExpand).toBeVisible({ timeout: 5000 });
+    } else {
+      // If no scheduled matches are visible, skip test (all matches may have started)
+      test.skip(true, 'No scheduled matches visible - test conditions not met');
     }
   });
 

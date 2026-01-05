@@ -160,6 +160,7 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
         onClick={handleTimeClick}
         aria-label={`Spielzeit ${formatTime(displayTime)}. Klicken zum Bearbeiten`}
         type="button"
+        data-testid="match-timer-display"
       >
         {formatTime(displayTime)}
       </button>
