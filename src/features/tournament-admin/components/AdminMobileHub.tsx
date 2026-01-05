@@ -7,7 +7,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 4.4
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useMemo } from 'react';
 import { cssVars } from '../../../design-tokens';
 import type { AdminMobileHubProps, AdminCategoryGroup } from '../types/admin.types';
 import {
@@ -211,6 +211,30 @@ const styles = {
     fontSize: cssVars.fontSizes.labelSm,
     color: cssVars.colors.textSecondary,
   } as CSSProperties,
+
+  searchContainer: {
+    padding: `0 ${cssVars.spacing.md} ${cssVars.spacing.md}`,
+    background: cssVars.colors.surface,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+  } as CSSProperties,
+
+  searchInput: {
+    width: '100%',
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.bodyMd,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    background: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
+    outline: 'none',
+  } as CSSProperties,
+
+  noResults: {
+    textAlign: 'center',
+    padding: cssVars.spacing.xl,
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.bodyMd,
+  } as CSSProperties,
 } as const;
 
 // =============================================================================
@@ -222,6 +246,34 @@ export function AdminMobileHub({
   warnings = [],
   onBackToTournament,
 }: AdminMobileHubProps) {
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter categories based on search query
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return { categories: ADMIN_CATEGORIES, dangerItems: DANGER_ZONE_ITEMS };
+    }
+
+    const query = searchQuery.toLowerCase();
+    return {
+      categories: ADMIN_CATEGORIES.filter(
+        (cat) =>
+          cat.label.toLowerCase().includes(query) ||
+          cat.shortLabel?.toLowerCase().includes(query) ||
+          cat.description?.toLowerCase().includes(query)
+      ),
+      dangerItems: DANGER_ZONE_ITEMS.filter(
+        (item) =>
+          item.label.toLowerCase().includes(query) ||
+          item.shortLabel?.toLowerCase().includes(query) ||
+          item.description?.toLowerCase().includes(query)
+      ),
+    };
+  }, [searchQuery]);
+
+  const hasResults = filteredCategories.categories.length > 0 || filteredCategories.dangerItems.length > 0;
+
   const renderCategoryCard = (category: typeof ADMIN_CATEGORIES[0]) => {
     const cardStyle = {
       ...styles.categoryCard,
@@ -269,7 +321,7 @@ export function AdminMobileHub({
 
   const renderGroup = (groupId: AdminCategoryGroup) => {
     const groupConfig = ADMIN_CATEGORY_GROUPS.find((g) => g.id === groupId);
-    const categories = ADMIN_CATEGORIES.filter((cat) => cat.group === groupId);
+    const categories = filteredCategories.categories.filter((cat) => cat.group === groupId);
 
     if (categories.length === 0) {return null;}
 
@@ -293,8 +345,27 @@ export function AdminMobileHub({
         <div style={styles.headerTitle}>Admin Center</div>
       </div>
 
+      {/* Search */}
+      <div style={styles.searchContainer}>
+        <input
+          type="search"
+          placeholder="Suchen..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={styles.searchInput}
+          aria-label="Kategorien durchsuchen"
+        />
+      </div>
+
       {/* Content */}
       <div style={styles.content}>
+        {/* No Results */}
+        {!hasResults && searchQuery && (
+          <div style={styles.noResults}>
+            Keine Ergebnisse für &quot;{searchQuery}&quot;
+          </div>
+        )}
+
         {/* Overview (Dashboard) */}
         {renderGroup('overview')}
 
@@ -304,19 +375,25 @@ export function AdminMobileHub({
         {/* Settings */}
         {renderGroup('settings')}
 
-        <div style={styles.separator} />
+        {/* Only show separator if we have support or danger items */}
+        {(filteredCategories.categories.some(c => c.group === 'support') ||
+          filteredCategories.dangerItems.length > 0) && hasResults && (
+          <div style={styles.separator} />
+        )}
 
         {/* Support */}
         {renderGroup('support')}
 
-        {/* Danger Zone */}
-        <div style={styles.dangerZoneSection}>
-          <div style={styles.dangerZoneLabel}>Kritische Aktionen</div>
-          {DANGER_ZONE_ITEMS.map(renderCategoryCard)}
-        </div>
+        {/* Danger Zone - only show if there are danger items */}
+        {filteredCategories.dangerItems.length > 0 && (
+          <div style={styles.dangerZoneSection}>
+            <div style={styles.dangerZoneLabel}>Kritische Aktionen</div>
+            {filteredCategories.dangerItems.map(renderCategoryCard)}
+          </div>
+        )}
 
-        {/* Warnings Card */}
-        {warnings.length > 0 && (
+        {/* Warnings Card - only show when not searching */}
+        {warnings.length > 0 && !searchQuery && (
           <button
             style={styles.warningsCard}
             onClick={() => {

@@ -14,7 +14,24 @@ import type {
   MatchSoundPreset,
   TimerDirection,
 } from '../../types/tournament';
-import { storeCustomSound, deleteCustomSound } from '../../utils/soundStorage';
+import { storeCustomSound, deleteCustomSound, MAX_SOUND_FILE_SIZE } from '../../utils/soundStorage';
+
+// =============================================================================
+// UI Constants
+// =============================================================================
+
+// Toggle dimensions (shared with SettingItem.tsx for consistency)
+const TOGGLE_WIDTH = 52;
+const TOGGLE_HEIGHT = 28;
+const TOGGLE_THUMB_SIZE = 24;
+const TOGGLE_THUMB_SPACING = 2;
+const TOGGLE_THUMB_ON_POSITION = TOGGLE_WIDTH - TOGGLE_THUMB_SIZE - TOGGLE_THUMB_SPACING;
+
+// Form element dimensions
+const SELECT_MIN_WIDTH = 180;
+const SELECT_HEIGHT = 40;
+const SLIDER_WIDTH = 120;
+const SLIDER_HEIGHT = 6;
 
 // =============================================================================
 // Types
@@ -239,7 +256,7 @@ export function MatchCockpitSettingsPanel({
         )}
 
         {/* Custom Sound Upload */}
-        <SettingRow label="Eigener Sound" description="MP3-Datei hochladen (max 500KB)">
+        <SettingRow label="Eigener Sound" description={`MP3-Datei hochladen (max ${Math.round(MAX_SOUND_FILE_SIZE / 1024)}KB)`}>
           <div style={styles.uploadContainer}>
             <input
               ref={fileInputRef}
@@ -428,8 +445,8 @@ const styles: Record<string, CSSProperties> = {
 
   // Select
   select: {
-    minWidth: '180px',
-    height: '40px',
+    minWidth: `${SELECT_MIN_WIDTH}px`,
+    height: `${SELECT_HEIGHT}px`,
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
@@ -447,8 +464,8 @@ const styles: Record<string, CSSProperties> = {
   // Toggle
   toggle: {
     position: 'relative',
-    width: '52px',
-    height: '28px',
+    width: `${TOGGLE_WIDTH}px`,
+    height: `${TOGGLE_HEIGHT}px`,
     borderRadius: cssVars.borderRadius.full,
     border: 'none',
     cursor: 'pointer',
@@ -467,19 +484,19 @@ const styles: Record<string, CSSProperties> = {
   },
   toggleThumb: {
     position: 'absolute',
-    top: '2px',
-    width: '24px',
-    height: '24px',
+    top: `${TOGGLE_THUMB_SPACING}px`,
+    width: `${TOGGLE_THUMB_SIZE}px`,
+    height: `${TOGGLE_THUMB_SIZE}px`,
     borderRadius: cssVars.borderRadius.full,
     background: cssVars.colors.textPrimary,
     transition: 'left 0.2s ease',
     boxShadow: cssVars.shadows.sm,
   },
   toggleThumbOff: {
-    left: '2px',
+    left: `${TOGGLE_THUMB_SPACING}px`,
   },
   toggleThumbOn: {
-    left: '26px',
+    left: `${TOGGLE_THUMB_ON_POSITION}px`,
   },
 
   // Slider
@@ -489,8 +506,8 @@ const styles: Record<string, CSSProperties> = {
     gap: cssVars.spacing.sm,
   },
   slider: {
-    width: '120px',
-    height: '6px',
+    width: `${SLIDER_WIDTH}px`,
+    height: `${SLIDER_HEIGHT}px`,
     appearance: 'none',
     background: cssVars.colors.surfaceLight,
     borderRadius: cssVars.borderRadius.full,

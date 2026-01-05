@@ -13,9 +13,11 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { STORAGE_KEYS } from '../constants/storage';
+import type { RuntimeMatchEvent } from '../types/tournament';
 
-// Types from MatchCockpit
+// Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+export type MatchEvent = RuntimeMatchEvent;
 
 export interface Team {
   id: string;
@@ -31,44 +33,6 @@ export interface Team {
     primary: string;
     secondary?: string;
   };
-}
-
-export interface MatchEvent {
-  id: string;
-  matchId: string;
-  timestampSeconds: number;
-  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE' | 'YELLOW_CARD' | 'RED_CARD' | 'TIME_PENALTY' | 'SUBSTITUTION' | 'FOUL';
-  payload: {
-    teamId?: string;
-    teamName?: string;
-    direction?: 'INC' | 'DEC';
-    newHomeScore?: number;
-    newAwayScore?: number;
-    toStatus?: MatchStatus;
-    /** Rückennummer des Spielers (Torschütze, Karte, Strafe) */
-    playerNumber?: number;
-    /** @deprecated Use assists array instead */
-    assistPlayerNumber?: number;
-    /** Rückennummern der Vorlagengeber (max 2) */
-    assists?: number[];
-    /** Dauer der Zeitstrafe in Sekunden (default: 120) */
-    penaltyDuration?: number;
-    /** @deprecated Use playersOut array instead */
-    playerOutNumber?: number;
-    /** @deprecated Use playersIn array instead */
-    playerInNumber?: number;
-    /** Rückennummern der ausgewechselten Spieler */
-    playersOut?: number[];
-    /** Rückennummern der eingewechselten Spieler */
-    playersIn?: number[];
-    cardType?: 'YELLOW' | 'RED';
-  };
-  scoreAfter: {
-    home: number;
-    away: number;
-  };
-  /** Event wurde ohne Details erfasst - muss nachgetragen werden */
-  incomplete?: boolean;
 }
 
 export interface LiveMatch {

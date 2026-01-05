@@ -610,16 +610,16 @@ export interface MatchEvent {
   teamId?: string;
   playerNumber?: number;
 
-  // GOAL specific
-  assistPlayerNumber?: number;
+  // GOAL specific - Vorlagengeber (max 2)
+  assists?: number[];
 
   // TIME_PENALTY specific
   penaltyDuration?: number;   // Duration in seconds
   penaltyEndTime?: Date;      // When the penalty ends
 
-  // SUBSTITUTION specific
-  playerOutNumber?: number;
-  playerInNumber?: number;
+  // SUBSTITUTION specific - Arrays für mehrere Wechsel
+  playersOut?: number[];
+  playersIn?: number[];
 
   // Card type (for YELLOW_CARD and RED_CARD events)
   cardType?: 'YELLOW' | 'RED';
@@ -659,23 +659,17 @@ export interface RuntimeMatchEvent {
     toStatus?: 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
     /** Spieler-Rückennummer (Torschütze, Karte, Strafe) */
     playerNumber?: number;
-    /** @deprecated Use assists array instead */
-    assistPlayerNumber?: number;
     /** Rückennummern der Vorlagengeber (max 2) */
     assists?: number[];
     /** Dauer der Zeitstrafe in Sekunden (default: 120) */
     penaltyDuration?: number;
-    /** @deprecated Use playersOut array instead */
-    playerOutNumber?: number;
-    /** @deprecated Use playersIn array instead */
-    playerInNumber?: number;
     /** Rückennummern der ausgewechselten Spieler */
     playersOut?: number[];
     /** Rückennummern der eingewechselten Spieler */
     playersIn?: number[];
     cardType?: 'YELLOW' | 'RED';
   };
-  scoreAfter?: {
+  scoreAfter: {
     home: number;
     away: number;
   };

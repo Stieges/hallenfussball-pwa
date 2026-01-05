@@ -13,6 +13,7 @@ import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
 import { UpcomingMatchesSidebar } from './UpcomingMatchesSidebar';
+import type { RuntimeMatchEvent } from '../../types/tournament';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -36,44 +37,8 @@ export interface Team {
   };
 }
 
-export interface MatchEvent {
-  id: string;
-  matchId: string;
-  timestampSeconds: number;
-  type: 'GOAL' | 'RESULT_EDIT' | 'STATUS_CHANGE' | 'YELLOW_CARD' | 'RED_CARD' | 'TIME_PENALTY' | 'SUBSTITUTION' | 'FOUL';
-  payload: {
-    teamId?: string;
-    teamName?: string; // DEF-004: Add team name for display
-    direction?: 'INC' | 'DEC';
-    newHomeScore?: number;
-    newAwayScore?: number;
-    toStatus?: MatchStatus;
-    /** Spieler-Rückennummer (Torschütze, Karte, Strafe) */
-    playerNumber?: number;
-    /** @deprecated Use assists array instead */
-    assistPlayerNumber?: number;
-    /** Rückennummern der Vorlagengeber (max 2) */
-    assists?: number[];
-    /** Dauer der Zeitstrafe in Sekunden (default: 120) */
-    penaltyDuration?: number;
-    /** @deprecated Use playersOut array instead */
-    playerOutNumber?: number;
-    /** @deprecated Use playersIn array instead */
-    playerInNumber?: number;
-    /** Rückennummern der ausgewechselten Spieler */
-    playersOut?: number[];
-    /** Rückennummern der eingewechselten Spieler */
-    playersIn?: number[];
-    /** Kartentyp für Karten-Events */
-    cardType?: 'YELLOW' | 'RED';
-  };
-  scoreAfter: {
-    home: number;
-    away: number;
-  };
-  /** Event wurde ohne Details erfasst - muss nachgetragen werden */
-  incomplete?: boolean;
-}
+// Re-export RuntimeMatchEvent as MatchEvent for backwards compatibility
+export type MatchEvent = RuntimeMatchEvent;
 
 /** Current phase of play within a match */
 export type MatchPlayPhase = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';

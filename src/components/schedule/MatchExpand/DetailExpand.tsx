@@ -42,7 +42,7 @@ export interface GoalEvent {
   teamName?: string;
   playerNumber?: number;
   timestampSeconds: number;
-  assistPlayerNumbers?: number[];
+  assists?: number[];
 }
 
 export interface DetailExpandProps {

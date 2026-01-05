@@ -188,10 +188,12 @@ export function useMatchSound(
       await silentAudio.play();
       silentAudio.pause();
       setIsActivated(true);
+      setError(null);
     } catch (err) {
       console.warn('[useMatchSound] Audio activation failed:', err);
-      // Still mark as activated - some browsers don't require it
-      setIsActivated(true);
+      // Don't set isActivated - activation genuinely failed
+      // Some browsers may still work without activation, but we report the issue
+      setError('Audio-Aktivierung fehlgeschlagen. Bitte erneut versuchen.');
     }
   }, []);
 
@@ -244,17 +246,20 @@ export function useMatchSound(
   // Test play (same as play but always tries)
   const testPlay = useCallback(async () => {
     if (!audioRef.current) {
+      setError('Kein Audio geladen');
       return;
     }
 
     try {
       audioRef.current.currentTime = 0;
       setIsPlaying(true);
+      setError(null);
       await audioRef.current.play();
       // Event listener is already set up in useEffect above
     } catch (err) {
       console.error('[useMatchSound] Test play failed:', err);
       setIsPlaying(false);
+      setError('Sound konnte nicht abgespielt werden');
     }
   }, []);
 

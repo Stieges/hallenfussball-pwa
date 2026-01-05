@@ -625,7 +625,11 @@ function MonitorCard({
 
       {/* Delete Confirmation */}
       {isDeleting && (
-        <div style={styles.deleteConfirmStyle as CSSProperties}>
+        <div
+          role="alert"
+          aria-live="polite"
+          style={styles.deleteConfirmStyle as CSSProperties}
+        >
           <span style={{ flex: 1, color: cssVars.colors.error }}>
             Monitor &quot;{monitor.name}&quot; wirklich löschen?
           </span>

@@ -489,7 +489,7 @@ export function DashboardCategory({
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/settings`); }}
           >
             <span style={styles.actionIcon}>⏸️</span>
-            <span>Turnier pausieren</span>
+            <span>Pause-Einstellungen</span>
           </button>
           <button
             style={styles.actionButton}

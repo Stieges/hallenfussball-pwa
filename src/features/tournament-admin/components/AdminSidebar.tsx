@@ -7,7 +7,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 4.2
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useRef, useCallback, useMemo, KeyboardEvent } from 'react';
 import { cssVars } from '../../../design-tokens';
 import type { AdminSidebarProps, AdminCategoryGroup } from '../types/admin.types';
 import {
@@ -206,6 +206,70 @@ export function AdminSidebar({
   onBackToTournament,
   onWarningClick,
 }: AdminSidebarProps) {
+  // Build flat list of all navigable category IDs for keyboard navigation
+  const allCategoryIds = useMemo(() => {
+    const ids: string[] = [];
+    (['overview', 'management', 'settings', 'support'] as AdminCategoryGroup[]).forEach((group) => {
+      getCategoriesByGroup(group).forEach((cat) => {
+        if (!cat.isComingSoon) {
+          ids.push(cat.id);
+        }
+      });
+    });
+    // Add danger zone items
+    DANGER_ZONE_ITEMS.forEach((item) => {
+      if (!item.isComingSoon) {
+        ids.push(item.id);
+      }
+    });
+    return ids;
+  }, []);
+
+  // Track focused item index for roving tabindex
+  const [focusedIndex, setFocusedIndex] = useState(() => {
+    const idx = allCategoryIds.indexOf(activeCategory);
+    return idx >= 0 ? idx : 0;
+  });
+
+  // Refs for all category buttons
+  const itemRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+
+  // Keyboard handler for arrow navigation
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>, categoryId: string) => {
+      const currentIndex = allCategoryIds.indexOf(categoryId);
+      if (currentIndex === -1) {return;}
+
+      let nextIndex: number | null = null;
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          nextIndex = Math.min(currentIndex + 1, allCategoryIds.length - 1);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          nextIndex = Math.max(currentIndex - 1, 0);
+          break;
+        case 'Home':
+          e.preventDefault();
+          nextIndex = 0;
+          break;
+        case 'End':
+          e.preventDefault();
+          nextIndex = allCategoryIds.length - 1;
+          break;
+      }
+
+      if (nextIndex !== null && nextIndex !== currentIndex) {
+        setFocusedIndex(nextIndex);
+        const nextId = allCategoryIds[nextIndex];
+        itemRefs.current.get(nextId)?.focus();
+      }
+    },
+    [allCategoryIds]
+  );
+
   const renderCategoryItem = (
     category: typeof ADMIN_CATEGORIES[0],
     isActive: boolean
@@ -217,11 +281,22 @@ export function AdminSidebar({
       ...(category.isWarning ? styles.categoryItemWarning : {}),
     };
 
+    // Roving tabindex: only focused item is tabbable
+    const categoryIndex = allCategoryIds.indexOf(category.id);
+    const isFocusable = categoryIndex === focusedIndex;
+
     return (
       <button
         key={category.id}
+        ref={(el) => itemRefs.current.set(category.id, el)}
         style={itemStyle}
         onClick={() => onNavigate(category.id)}
+        onKeyDown={(e) => handleKeyDown(e, category.id)}
+        onFocus={() => {
+          if (categoryIndex !== -1) {
+            setFocusedIndex(categoryIndex);
+          }
+        }}
         onMouseEnter={(e) => {
           if (!isActive) {
             e.currentTarget.style.background = cssVars.colors.surfaceHover;
@@ -233,6 +308,7 @@ export function AdminSidebar({
           }
         }}
         disabled={category.isComingSoon}
+        tabIndex={category.isComingSoon ? -1 : isFocusable ? 0 : -1}
         aria-current={isActive ? 'page' : undefined}
       >
         <span style={styles.categoryIcon}>{category.icon}</span>
