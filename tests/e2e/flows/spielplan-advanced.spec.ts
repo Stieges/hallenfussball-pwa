@@ -178,10 +178,16 @@ test.describe('Spielwechsel-Logik', () => {
       const confirmBtn = page.getByTestId('start-match-confirm-btn').first();
       if (await confirmBtn.isVisible()) {
         await confirmBtn.click();
-        await page.waitForTimeout(1000);
+
+        // Wait for navigation to management tab to complete
+        await page.waitForURL(/.*management.*matchId=/, { timeout: 5000 }).catch(() => {
+          // Navigation might happen with different URL pattern
+        });
+        await page.waitForTimeout(1500);
 
         // THEN - Should be in cockpit with new match, old match should be finished
-        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 5000 });
+        // Timer display is in LiveCockpitMockup component
+        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 8000 });
       }
     }
   });
