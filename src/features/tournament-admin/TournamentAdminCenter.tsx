@@ -7,7 +7,8 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md
  */
 
-import { useState, useEffect, lazy, Suspense, CSSProperties } from 'react';
+import { useState, useEffect, lazy, Suspense, CSSProperties, useCallback } from 'react';
+import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
@@ -241,6 +242,12 @@ export function TournamentAdminCenter({
   const categoryConfig = getAdminCategory(activeCategory);
   const categoryTitle = categoryConfig?.label ?? 'Admin Center';
 
+  // Error boundary reset handler - navigate to dashboard
+  const handleErrorReset = useCallback(() => {
+    setActiveCategory('dashboard');
+    void navigate(`/tournament/${tournamentId}/admin/dashboard`);
+  }, [navigate, tournamentId]);
+
   // Mobile: Show hub or spoke
   if (isMobile) {
     if (showMobileHub) {
@@ -264,9 +271,11 @@ export function TournamentAdminCenter({
             onBackToTournament={onBackToTournament}
           />
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
-            <Suspense fallback={<CategorySkeleton />}>
-              {renderCategoryContent()}
-            </Suspense>
+            <ErrorBoundary onReset={handleErrorReset}>
+              <Suspense fallback={<CategorySkeleton />}>
+                {renderCategoryContent()}
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
       </div>
@@ -294,9 +303,11 @@ export function TournamentAdminCenter({
           onBackToTournament={onBackToTournament}
         />
         <div style={styles.contentArea}>
-          <Suspense fallback={<CategorySkeleton />}>
-            {renderCategoryContent()}
-          </Suspense>
+          <ErrorBoundary onReset={handleErrorReset}>
+            <Suspense fallback={<CategorySkeleton />}>
+              {renderCategoryContent()}
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
     </div>

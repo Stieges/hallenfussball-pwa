@@ -86,17 +86,30 @@ export interface SlideUpdate {
 // =============================================================================
 
 /**
+ * Generiert eine eindeutige ID mit crypto.randomUUID() oder Fallback
+ */
+function generateUniqueId(): string {
+  // Use crypto.randomUUID if available
+  try {
+    return crypto.randomUUID();
+  } catch {
+    // Fallback for environments without crypto.randomUUID
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  }
+}
+
+/**
  * Generiert eine eindeutige Monitor-ID
  */
 function generateMonitorId(): string {
-  return `mon-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  return `mon-${generateUniqueId()}`;
 }
 
 /**
  * Generiert eine eindeutige Slide-ID
  */
 function generateSlideId(): string {
-  return `slide-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  return `slide-${generateUniqueId().substring(0, 12)}`;
 }
 
 // =============================================================================

@@ -12,7 +12,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-05
  */
 
-import { useState, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useCallback, useMemo, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentField, TournamentGroup } from '../../types/tournament';
 import type {
@@ -88,10 +88,25 @@ export function MonitorEditor({
   const monitor = getMonitorById(monitorId);
 
   // State
-  const [_isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingSlideId, setEditingSlideId] = useState<string | null>(null);
   const [isAddingSlide, setIsAddingSlide] = useState(false);
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Unique ID for aria-labelledby
+  const titleId = `monitor-editor-title-${monitorId}`;
 
   // Get groups from tournament - generate if not explicit
   // For roundRobin tournaments, there's only one group (all teams play each other)
@@ -476,11 +491,17 @@ export function MonitorEditor({
 
   if (!monitor) {
     return (
-      <div style={overlayStyle} onClick={onClose}>
+      <div
+        style={overlayStyle}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Monitor nicht gefunden"
+      >
         <div style={editorStyle} onClick={e => e.stopPropagation()}>
           <div style={headerStyle}>
             <h2 style={titleStyle}>Monitor nicht gefunden</h2>
-            <button style={closeButtonStyle} onClick={onClose}>✕</button>
+            <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">✕</button>
           </div>
           <div style={contentStyle}>
             <p>Der Monitor mit ID &quot;{monitorId}&quot; existiert nicht mehr.</p>
@@ -491,16 +512,22 @@ export function MonitorEditor({
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
+    <div
+      style={overlayStyle}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+    >
       <div style={editorStyle} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={headerStyle}>
-          <h2 style={titleStyle}>{monitor.name}</h2>
-          <button style={closeButtonStyle} onClick={onClose}>✕</button>
+          <h2 id={titleId} style={titleStyle}>{monitor.name}</h2>
+          <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">✕</button>
         </div>
 
         {/* Content */}
-        <div style={contentStyle}>
+        <div style={{ ...contentStyle, opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
           {/* Error */}
           {error && <div style={errorStyle}>{error}</div>}
 

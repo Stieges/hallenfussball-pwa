@@ -15,7 +15,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-10 bis P1-12
  */
 
-import { useState, useEffect, useCallback, useMemo, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, CSSProperties } from 'react';
 import {
   displayColors,
   displayFontSizes,
@@ -95,6 +95,27 @@ function getGroupDisplayName(tournament: Tournament, groupId: string | undefined
   if (!groupId) {return 'Gruppe';}
   const group = tournament.groups?.find(g => g.id === groupId);
   return group?.customName ?? `Gruppe ${groupId}`;
+}
+
+/**
+ * Validates a URL to prevent XSS attacks
+ * Only allows http/https protocols
+ */
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sanitizes a URL - returns safe URL or fallback
+ */
+function getSafeUrl(url: string | undefined, fallback: string): string {
+  if (!url) {return fallback;}
+  return isValidUrl(url) ? url : fallback;
 }
 
 // =============================================================================
@@ -561,12 +582,13 @@ function SponsorSlide({ slide, tournament, performanceSettings, style }: Sponsor
   // Use logoUrl or logoBase64
   const logoSrc = sponsor.logoUrl ?? sponsor.logoBase64;
 
-  // Generate QR code URL
+  // Generate QR code URL with validation to prevent XSS
+  const fallbackUrl = `${window.location.origin}/tournament/${tournament.id}`;
   const qrUrl = slide.config.qrTarget === 'sponsor-website' && sponsor.websiteUrl
-    ? sponsor.websiteUrl
+    ? getSafeUrl(sponsor.websiteUrl, fallbackUrl)
     : slide.config.qrTarget === 'custom' && slide.config.customQrUrl
-      ? slide.config.customQrUrl
-      : `${window.location.origin}/tournament/${tournament.id}`;
+      ? getSafeUrl(slide.config.customQrUrl, fallbackUrl)
+      : fallbackUrl;
 
   return (
     <div style={style}>
@@ -817,6 +839,9 @@ export function MonitorDisplayPage({
   const [lastFetch, setLastFetch] = useState<number>(Date.now());
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
 
+  // Ref to track if a fetch is in progress (prevents race conditions)
+  const isFetchingRef = useRef(false);
+
   // Derived state
   const performanceSettings = useMemo(
     () => monitor ? getPerformanceSettings(monitor.performanceMode) : PERFORMANCE_PROFILES.high,
@@ -845,6 +870,13 @@ export function MonitorDisplayPage({
   // ==========================================================================
 
   const loadData = useCallback(async () => {
+    // Prevent concurrent fetches (race condition fix)
+    if (isFetchingRef.current) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+
     try {
       const tournaments = await getAllTournaments();
       const found = tournaments.find((t: Tournament) => t.id === tournamentId);
@@ -869,6 +901,8 @@ export function MonitorDisplayPage({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Fehler beim Laden');
       setLoading(false);
+    } finally {
+      isFetchingRef.current = false;
     }
   }, [tournamentId, monitorId]);
 

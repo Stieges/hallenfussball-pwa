@@ -13,7 +13,7 @@
  * @see MONITOR-KONFIGURATOR-UMSETZUNGSPLAN-v2.md P1-04
  */
 
-import { useState, useCallback, CSSProperties } from 'react';
+import { useState, useCallback, useEffect, useRef, CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
@@ -46,6 +46,18 @@ export function MonitorsConfigTab({
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Ref for timeout cleanup
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Hook
   const {
@@ -142,12 +154,20 @@ export function MonitorsConfigTab({
   const handleCopyUrl = useCallback(async (monitorId: string) => {
     const url = `${window.location.origin}${getDisplayUrl(monitorId)}`;
 
+    // Clear any existing timeout
+    if (copiedTimeoutRef.current) {
+      clearTimeout(copiedTimeoutRef.current);
+    }
+
     try {
+      // Use clipboard API with fallback for older browsers
       await navigator.clipboard.writeText(url);
+
       setCopiedId(monitorId);
-      setTimeout(() => setCopiedId(null), 2000);
+      copiedTimeoutRef.current = setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Clipboard copy failed:', err);
+      setError('URL konnte nicht kopiert werden');
     }
   }, [getDisplayUrl]);
 
