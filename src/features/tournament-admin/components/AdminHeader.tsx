@@ -1,0 +1,230 @@
+/**
+ * AdminHeader - Admin Center Header Component
+ *
+ * Header with back navigation, title, and optional search.
+ * Used for both desktop (with sidebar) and mobile spoke views.
+ *
+ * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 2.3
+ */
+
+import { useState, CSSProperties } from 'react';
+import { cssVars } from '../../../design-tokens';
+import type { AdminHeaderProps } from '../types/admin.types';
+import { ADMIN_LAYOUT } from '../constants/admin.constants';
+
+// =============================================================================
+// STYLES
+// =============================================================================
+
+const styles = {
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.md,
+    height: ADMIN_LAYOUT.headerHeight,
+    padding: `0 ${cssVars.spacing.lg}`,
+    background: cssVars.colors.surface,
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    position: 'sticky',
+    top: 0,
+    zIndex: 20,
+  } as CSSProperties,
+
+  backButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.bodySm,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    whiteSpace: 'nowrap',
+  } as CSSProperties,
+
+  backButtonMobile: {
+    width: 40,
+    height: 40,
+    padding: 0,
+    justifyContent: 'center',
+    fontSize: '1.25rem',
+  } as CSSProperties,
+
+  title: {
+    flex: 1,
+    fontSize: cssVars.fontSizes.titleMd,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textPrimary,
+    textAlign: 'center',
+  } as CSSProperties,
+
+  titleDesktop: {
+    textAlign: 'left',
+  } as CSSProperties,
+
+  searchContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+  } as CSSProperties,
+
+  searchButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: '1.25rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  } as CSSProperties,
+
+  searchInput: {
+    width: 200,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: cssVars.colors.inputBg,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.bodySm,
+    outline: 'none',
+    transition: 'all 0.15s ease',
+  } as CSSProperties,
+
+  searchInputExpanded: {
+    width: 280,
+    borderColor: cssVars.colors.primary,
+  } as CSSProperties,
+
+  spacer: {
+    width: 40,
+  } as CSSProperties,
+} as const;
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+export function AdminHeader({
+  title,
+  showBackToHub = false,
+  onBackToHub,
+  onBackToTournament,
+  onSearch,
+}: AdminHeaderProps) {
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearchToggle = () => {
+    if (isSearchExpanded && searchQuery) {
+      // Clear search when closing
+      setSearchQuery('');
+      onSearch?.('');
+    }
+    setIsSearchExpanded(!isSearchExpanded);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    onSearch?.(value);
+  };
+
+  const handleBackClick = () => {
+    if (showBackToHub && onBackToHub) {
+      onBackToHub();
+    } else {
+      onBackToTournament();
+    }
+  };
+
+  // Desktop layout: back button on left, title, search on right
+  // Mobile layout: back arrow, centered title, search icon
+
+  return (
+    <header style={styles.header}>
+      {/* Back Button */}
+      <button
+        style={{
+          ...styles.backButton,
+          ...(showBackToHub ? styles.backButtonMobile : {}),
+        }}
+        onClick={handleBackClick}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = cssVars.colors.surfaceHover;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+        }}
+      >
+        <span>←</span>
+        {!showBackToHub && <span>Zurück zum Turnier</span>}
+      </button>
+
+      {/* Title */}
+      <div
+        style={{
+          ...styles.title,
+          ...(!showBackToHub ? styles.titleDesktop : {}),
+        }}
+      >
+        {showBackToHub ? title : 'ADMIN CENTER'}
+      </div>
+
+      {/* Search */}
+      {onSearch && (
+        <div style={styles.searchContainer}>
+          {isSearchExpanded && (
+            <input
+              type="text"
+              placeholder="Suchen..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              style={{
+                ...styles.searchInput,
+                ...(searchQuery ? styles.searchInputExpanded : {}),
+              }}
+              autoFocus
+              onBlur={() => {
+                if (!searchQuery) {
+                  setIsSearchExpanded(false);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setSearchQuery('');
+                  onSearch('');
+                  setIsSearchExpanded(false);
+                }
+              }}
+            />
+          )}
+          <button
+            style={styles.searchButton}
+            onClick={handleSearchToggle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = cssVars.colors.surfaceHover;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+            aria-label={isSearchExpanded ? 'Suche schließen' : 'Suchen'}
+          >
+            {isSearchExpanded ? '✕' : '🔍'}
+          </button>
+        </div>
+      )}
+
+      {/* Spacer for mobile layout balance (when no search) */}
+      {!onSearch && showBackToHub && <div style={styles.spacer} />}
+    </header>
+  );
+}
+
+export default AdminHeader;

@@ -49,6 +49,11 @@ const MonitorDisplayPage = lazy(() =>
   import('./features/monitor-display').then(m => ({ default: m.MonitorDisplayPage }))
 );
 
+// Tournament Admin Center
+const TournamentAdminCenter = lazy(() =>
+  import('./features/tournament-admin').then(m => ({ default: m.TournamentAdminCenter }))
+);
+
 // Loading fallback component
 const ScreenLoader = () => (
   <div
@@ -94,9 +99,14 @@ function AppContent() {
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
 
+  // Check if current path is an admin center path (e.g., /tournament/:id/admin or /tournament/:id/admin/:category)
+  const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
+  const isAdminPath = !!adminMatch;
+  const adminTournamentId = adminMatch?.[1] ?? null;
+
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
-  const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit');
+  const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath;
   const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
 
   // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
@@ -504,6 +514,14 @@ function AppContent() {
           />
         )}
 
+        {/* Tournament Admin Center */}
+        {isAdminPath && adminTournamentId && (
+          <TournamentAdminCenter
+            tournamentId={adminTournamentId}
+            onBackToTournament={() => void navigate(`/tournament/${adminTournamentId}`)}
+          />
+        )}
+
         {isTournamentPath && tournamentIdFromUrl && (
           <TournamentManagementScreen
             tournamentId={tournamentIdFromUrl}
@@ -549,7 +567,7 @@ function AppContent() {
       </Suspense>
 
       {/* Footer - shown on main screens (not on public/invite flows) */}
-      {(isDashboardPath || isTournamentPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
+      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
             if (target === 'impressum') {setScreen('impressum');}

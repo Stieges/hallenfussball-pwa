@@ -433,6 +433,10 @@ export interface Tournament {
   cancelledReason?: string;
   /** ISO timestamp wann Turnier abgebrochen wurde */
   cancelledAt?: string;
+
+  // Admin Center
+  /** Private Notizen für Turnierleitung (nur im Admin Center sichtbar) */
+  adminNotes?: string;
 }
 
 export interface Standing {

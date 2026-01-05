@@ -281,6 +281,31 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           </div>
         </div>
 
+        {/* Admin Center Button */}
+        <button
+          onClick={() => { void navigate(`/tournament/${tournamentId}/admin`); }}
+          style={{
+            padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+            background: cssVars.colors.primarySubtle,
+            border: `1px solid ${cssVars.colors.primaryBorder}`,
+            borderRadius: cssVars.borderRadius.md,
+            color: cssVars.colors.primary,
+            fontSize: cssVars.fontSizes.sm,
+            fontWeight: cssVars.fontWeights.medium,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: cssVars.spacing.xs,
+            marginRight: cssVars.spacing.md,
+            transition: 'all 0.15s ease',
+            flexShrink: 0,
+          }}
+          title="Admin Center öffnen"
+        >
+          <span>⚙️</span>
+          {!isMobile && <span>Admin Center</span>}
+        </button>
+
         {/* Right: Auth Section */}
         <AuthSection
           onNavigateToLogin={onNavigateToLogin}
