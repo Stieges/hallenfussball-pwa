@@ -1,5 +1,5 @@
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
-import { Tournament, GroupSystem, PlacementCriterion } from '../../types/tournament';
+import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { cssVars, displaySizes } from '../../design-tokens'
 import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
@@ -17,6 +17,7 @@ import {
   ValidationWarnings,
   SmartConfig,
 } from './components';
+import { MatchCockpitSettingsPanel } from '../../components/match-cockpit/MatchCockpitSettingsPanel';
 
 interface Step2Props {
   formData: Partial<Tournament>;
@@ -104,6 +105,28 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     if (formData.hideRankingsForPublic) {rules.push('Tabellen');}
     if (rules.length === 0) {return 'Bambini-Modus';}
     return `Bambini (${rules.length} verborgen)`;
+  };
+
+  // Helper to get cockpit summary
+  const getCockpitSummary = (): string => {
+    const settings = { ...DEFAULT_MATCH_COCKPIT_SETTINGS, ...formData.matchCockpitSettings };
+    const features: string[] = [];
+    if (settings.soundEnabled) {features.push('Sound');}
+    if (settings.hapticEnabled) {features.push('Haptik');}
+    if (settings.autoFinishEnabled) {features.push('Auto');}
+    if (features.length === 0) {return 'Standard';}
+    return features.join(' + ');
+  };
+
+  // Get cockpit settings with defaults
+  const cockpitSettings: MatchCockpitSettings = {
+    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...formData.matchCockpitSettings,
+  };
+
+  // Handle cockpit settings change
+  const handleCockpitSettingsChange = (newSettings: MatchCockpitSettings) => {
+    onUpdate('matchCockpitSettings', newSettings);
   };
 
   return (
@@ -388,6 +411,29 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             <BambiniSettings
               formData={formData}
               onUpdate={onUpdate}
+            />
+          </CollapsibleSection>
+
+          {/* ============================================
+              SECTION 7: Match Cockpit Pro (collapsible)
+              ============================================ */}
+          <CollapsibleSection
+            title="Match Cockpit Pro"
+            badge={getCockpitSummary()}
+            defaultOpen={false}
+            variant="primary"
+          >
+            <p style={{
+              color: cssVars.colors.textSecondary,
+              fontSize: cssVars.fontSizes.sm,
+              marginBottom: cssVars.spacing.md,
+            }}>
+              Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und Auto-Funktionen.
+            </p>
+            <MatchCockpitSettingsPanel
+              settings={cockpitSettings}
+              onChange={handleCockpitSettingsChange}
+              tournamentId={formData.id ?? 'new'}
             />
           </CollapsibleSection>
         </>
