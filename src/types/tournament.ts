@@ -437,6 +437,129 @@ export interface Tournament {
   // Admin Center
   /** Private Notizen für Turnierleitung (nur im Admin Center sichtbar) */
   adminNotes?: string;
+
+  // Match Cockpit Pro Settings
+  /** Zentrale Match Cockpit Einstellungen für alle Spiele */
+  matchCockpitSettings?: MatchCockpitSettings;
+}
+
+// ============================================================================
+// MATCH COCKPIT PRO TYPES
+// ============================================================================
+
+/**
+ * Sound preset IDs for match end horn
+ */
+export type MatchSoundPreset = 'horn-1' | 'horn-2' | 'horn-3' | 'custom';
+
+/**
+ * Timer direction for match cockpit display
+ */
+export type TimerDirection = 'countdown' | 'elapsed';
+
+/**
+ * How finals tiebreakers are resolved by default
+ */
+export type FinalDeciderType = 'penalty' | 'goldenGoal';
+
+/**
+ * Match Cockpit Settings - Tournament-wide defaults for live match management
+ *
+ * These settings apply to all matches in a tournament and can be
+ * overridden per-match via MatchCockpitOverrides.
+ *
+ * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md
+ */
+export interface MatchCockpitSettings {
+  // Timer Settings
+  /** Timer direction: countdown (10:00→00:00) or elapsed (00:00→10:00). Default: 'countdown' */
+  timerDirection: TimerDirection;
+  /** Enable netto-time warning animation. Default: true */
+  nettoWarningEnabled: boolean;
+  /** Seconds remaining when netto warning triggers (e.g., 120 = 2:00 remaining). Default: 120 */
+  nettoWarningSeconds: number;
+
+  // Automation Settings
+  /** Auto-finish match when timer reaches 00:00. Ignored for finals with draw. Default: true */
+  autoFinishEnabled: boolean;
+  /** Seconds to wait before auto-advancing to next match (0 = disabled). Default: 10 */
+  autoAdvanceSeconds: number;
+
+  // Final Match Rules
+  /** Default tiebreaker for finals with draw. Default: 'penalty' */
+  finalDecider: FinalDeciderType;
+  /** Number of penalty shooters per team. Default: 5 */
+  penaltyShootersPerTeam: number;
+  /** Round after which sudden death begins. Default: 6 */
+  penaltySuddenDeathAfter: number;
+
+  // Sound Settings
+  /** Enable end-of-match horn sound. Default: true */
+  soundEnabled: boolean;
+  /** Sound preset ID or 'custom' for uploaded sound. Default: 'horn-1' */
+  soundId: MatchSoundPreset | null;
+  /** Sound volume (0-100). Default: 80 */
+  soundVolume: number;
+  /** Whether a custom sound has been uploaded. Default: false */
+  hasCustomSound: boolean;
+
+  // Feedback Settings
+  /** Enable haptic feedback (vibration) on events. Default: true */
+  hapticEnabled: boolean;
+  /** Keep screen awake during active match. Default: true */
+  wakeLockEnabled: boolean;
+}
+
+/**
+ * Default values for MatchCockpitSettings
+ * Used when creating new tournaments or when settings are undefined
+ */
+export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
+  // Timer
+  timerDirection: 'countdown',
+  nettoWarningEnabled: true,
+  nettoWarningSeconds: 120, // 2 minutes
+
+  // Automation
+  autoFinishEnabled: true,
+  autoAdvanceSeconds: 10,
+
+  // Final Rules
+  finalDecider: 'penalty',
+  penaltyShootersPerTeam: 5,
+  penaltySuddenDeathAfter: 6,
+
+  // Sound
+  soundEnabled: true,
+  soundId: 'horn-1',
+  soundVolume: 80,
+  hasCustomSound: false,
+
+  // Feedback
+  hapticEnabled: true,
+  wakeLockEnabled: true,
+};
+
+/**
+ * Per-match overrides for cockpit settings
+ * Only includes settings that can be changed during a match
+ *
+ * These overrides are stored on the LiveMatch (not Match) since they
+ * are runtime settings that don't persist to tournament state.
+ */
+export interface MatchCockpitOverrides {
+  /** Override netto warning for this match */
+  nettoWarningEnabled?: boolean;
+  /** Override auto-finish for this match */
+  autoFinishEnabled?: boolean;
+  /** Override sound enabled for this match */
+  soundEnabled?: boolean;
+  /** Override sound preset for this match */
+  soundId?: MatchSoundPreset | null;
+  /** Override volume for this match */
+  soundVolume?: number;
+  /** Enable golden goal for this final (overrides tournament default) */
+  goldenGoalEnabled?: boolean;
 }
 
 export interface Standing {

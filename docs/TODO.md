@@ -214,7 +214,28 @@
 | Public View (Zuschauer-Link) | Mittel | - | - |
 | Trainer-Cockpit | Mittel | - | US-TRAINER-COCKPIT |
 | Turnier kopieren/löschen konzeptionieren | Mittel | - | US-TOURNAMENT-COPY |
+| **Elfmeterschießen-Flow UI** | Mittel | - | - |
 | **PWA Install-Button in App** | Niedrig | 1h | - |
+
+### Elfmeterschießen-Flow (separates Feature)
+
+> **Status:** 📋 Konzept erforderlich
+> **Abhängigkeit:** Match Cockpit Pro (Settings vorhanden)
+
+Das Match Cockpit Pro Feature enthält nur die **Settings** für Elfmeterschießen:
+- `penaltyShootersPerTeam` (Default: 5)
+- `penaltySuddenDeathAfter` (Default: 6)
+
+Was **FEHLT** und als separates Feature umgesetzt werden muss:
+
+| Aufgabe | Beschreibung |
+|---------|--------------|
+| Elfmeter-Erfassung UI | Schütze auswählen, Treffer/Fehlschuss Button |
+| Elfmeter-Scoreboard | Visuelle Darstellung der Schüsse (●/○) |
+| Sudden Death Logik | Automatische Erkennung wann entschieden |
+| Runden-Tracking | "Runde 3 von 5" Anzeige |
+| Ergebnis-Commit | Finales Ergebnis nach Elfmeterschießen ins Match schreiben |
+| Monitor-Sync | Elfmeter-Status an TV-Ansicht senden |
 
 ### PWA Installation (Dokumentation)
 

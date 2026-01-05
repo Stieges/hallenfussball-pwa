@@ -91,6 +91,8 @@ export interface LiveMatch {
   timerPausedAt?: string;
   timerElapsedSeconds?: number;
   group?: string;
+  // Match Cockpit Pro: Per-match setting overrides
+  cockpitOverrides?: import('../types/tournament').MatchCockpitOverrides;
 }
 
 export interface GoalEventInfo {

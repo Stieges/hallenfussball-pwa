@@ -112,6 +112,9 @@ export interface LiveMatch {
   penaltyScoreB?: number;               // Penalty score (away)
   tiebreakerMode?: 'shootout' | 'overtime-then-shootout' | 'goldenGoal'; // From tournament config
   awaitingTiebreakerChoice?: boolean;   // True when match ended in draw, waiting for tiebreaker
+
+  // Match Cockpit Pro: Per-match setting overrides
+  cockpitOverrides?: import('../../types/tournament').MatchCockpitOverrides;
 }
 
 export interface MatchSummary {
