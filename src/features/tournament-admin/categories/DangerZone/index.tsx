@@ -6,12 +6,13 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.11
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useState, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
+import { Dialog } from '../../../../components/dialogs/Dialog';
 import type { Tournament } from '../../../../types/tournament';
-import type { DangerAction } from '../../types/admin.types';
+import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
 // =============================================================================
 // PROPS
@@ -129,6 +130,86 @@ const styles = {
     background: cssVars.colors.warning,
     color: cssVars.colors.onWarning,
   } as CSSProperties,
+
+  // Dialog styles
+  dialogDescription: {
+    fontSize: cssVars.fontSizes.bodyMd,
+    color: cssVars.colors.textSecondary,
+    marginBottom: cssVars.spacing.md,
+    lineHeight: 1.5,
+  } as CSSProperties,
+
+  dialogConsequences: {
+    background: cssVars.colors.dangerSubtle,
+    border: `1px solid ${cssVars.colors.errorBorder}`,
+    borderRadius: cssVars.borderRadius.md,
+    padding: cssVars.spacing.md,
+    marginBottom: cssVars.spacing.lg,
+  } as CSSProperties,
+
+  dialogConsequencesList: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  } as CSSProperties,
+
+  dialogConsequenceItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: cssVars.spacing.xs,
+    fontSize: cssVars.fontSizes.bodySm,
+    color: cssVars.colors.error,
+    marginBottom: cssVars.spacing.xs,
+  } as CSSProperties,
+
+  confirmLabel: {
+    fontSize: cssVars.fontSizes.bodySm,
+    color: cssVars.colors.textSecondary,
+    marginBottom: cssVars.spacing.xs,
+  } as CSSProperties,
+
+  confirmInput: {
+    width: '100%',
+    padding: cssVars.spacing.sm,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    background: cssVars.colors.surface,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.bodyMd,
+    marginBottom: cssVars.spacing.lg,
+    boxSizing: 'border-box',
+  } as CSSProperties,
+
+  dialogActions: {
+    display: 'flex',
+    gap: cssVars.spacing.sm,
+    justifyContent: 'flex-end',
+  } as CSSProperties,
+
+  cancelButton: {
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+    border: `1px solid ${cssVars.colors.border}`,
+    borderRadius: cssVars.borderRadius.md,
+    background: 'transparent',
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.bodyMd,
+    fontWeight: cssVars.fontWeights.medium,
+    cursor: 'pointer',
+  } as CSSProperties,
+
+  confirmButton: {
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+    border: 'none',
+    borderRadius: cssVars.borderRadius.md,
+    fontSize: cssVars.fontSizes.bodyMd,
+    fontWeight: cssVars.fontWeights.medium,
+    cursor: 'pointer',
+  } as CSSProperties,
+
+  confirmButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  } as CSSProperties,
 } as const;
 
 // =============================================================================
@@ -136,12 +217,86 @@ const styles = {
 // =============================================================================
 
 export function DangerZoneCategory({
-  tournament: _tournament,
+  tournament,
+  onTournamentUpdate,
 }: DangerZoneCategoryProps) {
-  const handleAction = (_action: DangerAction) => {
-    // TODO: Implement confirmation dialog
-    // Action will be handled when confirmation dialog is implemented
-  };
+  const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
+  const [confirmationInput, setConfirmationInput] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const handleOpenDialog = useCallback((action: DangerAction) => {
+    const config = DANGER_ACTIONS[action];
+    setPendingAction(config);
+    setConfirmationInput('');
+  }, []);
+
+  const handleCloseDialog = useCallback(() => {
+    if (!isExecuting) {
+      setPendingAction(null);
+      setConfirmationInput('');
+    }
+  }, [isExecuting]);
+
+  const handleConfirm = useCallback(async () => {
+    if (!pendingAction || confirmationInput !== pendingAction.confirmText) {
+      return;
+    }
+
+    setIsExecuting(true);
+
+    try {
+      const now = new Date().toISOString();
+
+      switch (pendingAction.action) {
+        case 'regenerate_schedule':
+          // TODO: Implement schedule regeneration logic
+          // eslint-disable-next-line no-console
+          console.log('[DangerZone] TODO: Regenerate schedule for:', tournament.id);
+          break;
+
+        case 'reset_schedule':
+          // TODO: Implement schedule reset logic
+          // eslint-disable-next-line no-console
+          console.log('[DangerZone] TODO: Reset schedule for:', tournament.id);
+          break;
+
+        case 'end_tournament':
+          onTournamentUpdate({
+            ...tournament,
+            dashboardStatus: 'finished',
+            updatedAt: now,
+          });
+          break;
+
+        case 'archive_tournament':
+          // Archive by setting dashboardStatus to finished
+          // TODO: Add dedicated archivedAt field when backend supports it
+          onTournamentUpdate({
+            ...tournament,
+            dashboardStatus: 'finished',
+            updatedAt: now,
+          });
+          break;
+
+        case 'delete_tournament':
+          onTournamentUpdate({
+            ...tournament,
+            deletedAt: now,
+            updatedAt: now,
+          });
+          break;
+      }
+
+      setPendingAction(null);
+      setConfirmationInput('');
+    } catch (error) {
+      console.error('Error executing action:', error);
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate]);
+
+  const isConfirmEnabled = pendingAction && confirmationInput === pendingAction.confirmText;
 
   const renderActionCard = (action: DangerAction) => {
     const config = DANGER_ACTIONS[action];
@@ -189,7 +344,7 @@ export function DangerZoneCategory({
             ...styles.button,
             ...(isDanger ? styles.buttonDanger : styles.buttonWarning),
           }}
-          onClick={() => handleAction(action)}
+          onClick={() => handleOpenDialog(action)}
         >
           {config.buttonLabel}
         </button>
@@ -226,6 +381,68 @@ export function DangerZoneCategory({
 
       {/* Delete Tournament (Danger) */}
       {renderActionCard('delete_tournament')}
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        isOpen={pendingAction !== null}
+        onClose={handleCloseDialog}
+        title={pendingAction?.title ?? 'Bestätigung'}
+        maxWidth="480px"
+        closeOnBackdropClick={!isExecuting}
+      >
+        {pendingAction && (
+          <>
+            <p style={styles.dialogDescription}>{pendingAction.description}</p>
+
+            <div style={styles.dialogConsequences}>
+              <ul style={styles.dialogConsequencesList}>
+                {pendingAction.consequences.map((consequence, i) => (
+                  <li key={i} style={styles.dialogConsequenceItem}>
+                    <span>•</span>
+                    <span>{consequence}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <label style={styles.confirmLabel}>
+              Tippe <strong>{pendingAction.confirmText}</strong> um fortzufahren:
+            </label>
+            <input
+              type="text"
+              style={styles.confirmInput}
+              value={confirmationInput}
+              onChange={(e) => setConfirmationInput(e.target.value)}
+              placeholder={pendingAction.confirmText}
+              disabled={isExecuting}
+              autoFocus
+            />
+
+            <div style={styles.dialogActions}>
+              <button
+                style={styles.cancelButton}
+                onClick={handleCloseDialog}
+                disabled={isExecuting}
+              >
+                Abbrechen
+              </button>
+              <button
+                style={{
+                  ...styles.confirmButton,
+                  ...(pendingAction.severity === 'danger'
+                    ? styles.buttonDanger
+                    : styles.buttonWarning),
+                  ...(!isConfirmEnabled ? styles.confirmButtonDisabled : {}),
+                }}
+                onClick={() => void handleConfirm()}
+                disabled={!isConfirmEnabled || isExecuting}
+              >
+                {isExecuting ? 'Wird ausgeführt...' : pendingAction.buttonLabel}
+              </button>
+            </div>
+          </>
+        )}
+      </Dialog>
     </CategoryPage>
   );
 }
