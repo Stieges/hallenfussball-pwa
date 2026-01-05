@@ -333,6 +333,30 @@ export function MonitorEditor({
     flex: 1,
     overflow: 'auto',
     padding: cssVars.spacing.lg,
+    position: 'relative',
+  };
+
+  const loadingOverlayStyle: CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.3)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    borderRadius: cssVars.borderRadius.md,
+  };
+
+  const spinnerStyle: CSSProperties = {
+    width: 40,
+    height: 40,
+    border: `3px solid ${cssVars.colors.border}`,
+    borderTopColor: cssVars.colors.primary,
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
   };
 
   const sectionStyle: CSSProperties = {
@@ -527,7 +551,14 @@ export function MonitorEditor({
         </div>
 
         {/* Content */}
-        <div style={{ ...contentStyle, opacity: isLoading ? 0.6 : 1, pointerEvents: isLoading ? 'none' : 'auto' }}>
+        <div style={contentStyle}>
+          {/* Loading Overlay */}
+          {isLoading && (
+            <div style={loadingOverlayStyle} aria-label="Wird geladen...">
+              <div style={spinnerStyle} />
+            </div>
+          )}
+
           {/* Error */}
           {error && <div style={errorStyle}>{error}</div>}
 

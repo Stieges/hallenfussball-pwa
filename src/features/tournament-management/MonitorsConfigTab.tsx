@@ -85,8 +85,21 @@ export function MonitorsConfigTab({
   };
 
   const handleCreate = async () => {
-    if (!newMonitorName.trim()) {
+    const trimmedName = newMonitorName.trim();
+
+    if (!trimmedName) {
       setError('Name ist erforderlich');
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      setError('Name darf maximal 50 Zeichen haben');
+      return;
+    }
+
+    // Check for duplicate names
+    if (monitors.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
+      setError('Ein Monitor mit diesem Namen existiert bereits');
       return;
     }
 
@@ -94,7 +107,7 @@ export function MonitorsConfigTab({
     setError(null);
 
     try {
-      const newMonitor = await createMonitor(newMonitorName.trim());
+      const newMonitor = await createMonitor(trimmedName);
       setIsCreating(false);
       setNewMonitorName('');
 

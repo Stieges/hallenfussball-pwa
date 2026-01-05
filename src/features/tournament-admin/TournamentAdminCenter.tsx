@@ -138,7 +138,7 @@ export function TournamentAdminCenter({
 }: TournamentAdminCenterProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isMobile, isTablet: _isTablet } = useBreakpoint();
+  const { isMobile } = useBreakpoint();
 
   // Parse category from URL
   const pathParts = location.pathname.split('/');
