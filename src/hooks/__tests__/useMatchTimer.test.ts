@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useMatchTimer } from '../useMatchTimer';
+import { useMatchTimer, useMatchTimerExtended, formatTimerDisplay } from '../useMatchTimer';
 
 describe('useMatchTimer', () => {
   beforeEach(() => {
@@ -325,16 +325,171 @@ describe('useMatchTimer', () => {
   });
 });
 
-describe('formatMatchTime helper (if exists)', () => {
-  // Test placeholder for formatMatchTime utility
-  // The actual implementation may be in a different file
-
-  it.skip('formats overtime correctly after 90 minutes', () => {
-    // Example: 90:30 should display as "90+1" or similar
-    // This is a placeholder for when the formatting utility is available
+describe('useMatchTimerExtended', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
   });
 
-  it.skip('pads minutes and seconds with zeros', () => {
-    // Example: 5:3 should display as "05:03"
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe('Countdown mode (default)', () => {
+    it('returns remaining seconds in countdown mode', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // Timer started now, 600 seconds duration (10 minutes)
+      const startTime = now.toISOString();
+
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(startTime, 0, 'RUNNING', 600, 'countdown')
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // displaySeconds should be 600 (remaining), elapsedSeconds should be 0
+      expect(result.current.displaySeconds).toBe(600);
+      expect(result.current.elapsedSeconds).toBe(0);
+      expect(result.current.isAtZero).toBe(false);
+      expect(result.current.isOvertime).toBe(false);
+      expect(result.current.timerState).toBe('normal');
+    });
+
+    it('shows remaining time counting down', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // Timer started 5 seconds ago
+      const startTime = new Date('2025-01-04T09:59:55Z').toISOString();
+
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(startTime, 0, 'RUNNING', 600, 'countdown')
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // 600 - 5 = 595 remaining
+      expect(result.current.displaySeconds).toBe(595);
+      expect(result.current.elapsedSeconds).toBe(5);
+    });
+  });
+
+  describe('Elapsed mode', () => {
+    it('returns elapsed seconds in elapsed mode', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // Timer started 5 seconds ago
+      const startTime = new Date('2025-01-04T09:59:55Z').toISOString();
+
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(startTime, 0, 'RUNNING', 600, 'elapsed')
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // Both displaySeconds and elapsedSeconds should be 5
+      expect(result.current.displaySeconds).toBe(5);
+      expect(result.current.elapsedSeconds).toBe(5);
+    });
+  });
+
+  describe('Timer states', () => {
+    it('returns "normal" state when timer is running normally', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      const startTime = now.toISOString();
+
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(startTime, 0, 'RUNNING', 600, 'countdown', 120)
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // 600 remaining > 120 netto warning threshold
+      expect(result.current.timerState).toBe('normal');
+      expect(result.current.secondsUntilNettoWarning).toBe(480); // 600 - 120 = 480
+    });
+
+    it('returns "netto-warning" state when entering warning zone', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // 480 seconds already elapsed (120 remaining)
+      const startTime = now.toISOString();
+
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(startTime, 480, 'RUNNING', 600, 'countdown', 120)
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // 120 remaining = exactly at netto warning threshold
+      expect(result.current.timerState).toBe('netto-warning');
+      expect(result.current.displaySeconds).toBe(120);
+      expect(result.current.secondsUntilNettoWarning).toBeNull();
+    });
+
+    it('returns "zero" state when timer reaches 00:00', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // 600 seconds elapsed = exactly at duration
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(null, 600, 'PAUSED', 600, 'countdown')
+      );
+
+      expect(result.current.timerState).toBe('zero');
+      expect(result.current.displaySeconds).toBe(0);
+      expect(result.current.isAtZero).toBe(true);
+      expect(result.current.isOvertime).toBe(false);
+    });
+
+    it('returns "overtime" state when timer exceeds duration', () => {
+      const now = new Date('2025-01-04T10:00:00Z');
+      vi.setSystemTime(now);
+
+      // 610 seconds elapsed = 10 seconds overtime
+      const { result } = renderHook(() =>
+        useMatchTimerExtended(null, 610, 'PAUSED', 600, 'countdown')
+      );
+
+      expect(result.current.timerState).toBe('overtime');
+      expect(result.current.displaySeconds).toBe(0); // Still 0 in countdown mode
+      expect(result.current.isAtZero).toBe(false);
+      expect(result.current.isOvertime).toBe(true);
+    });
+  });
+});
+
+describe('formatTimerDisplay', () => {
+  it('formats seconds to MM:SS', () => {
+    expect(formatTimerDisplay(0)).toBe('00:00');
+    expect(formatTimerDisplay(59)).toBe('00:59');
+    expect(formatTimerDisplay(60)).toBe('01:00');
+    expect(formatTimerDisplay(90)).toBe('01:30');
+    expect(formatTimerDisplay(600)).toBe('10:00');
+  });
+
+  it('pads single digits with zeros', () => {
+    expect(formatTimerDisplay(5)).toBe('00:05');
+    expect(formatTimerDisplay(65)).toBe('01:05');
+  });
+
+  it('handles large values', () => {
+    expect(formatTimerDisplay(3600)).toBe('60:00');
+    expect(formatTimerDisplay(5999)).toBe('99:59');
   });
 });
