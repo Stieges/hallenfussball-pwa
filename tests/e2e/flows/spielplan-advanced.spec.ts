@@ -179,15 +179,39 @@ test.describe('Spielwechsel-Logik', () => {
       if (await confirmBtn.isVisible()) {
         await confirmBtn.click();
 
-        // Wait for navigation to management tab to complete
-        await page.waitForURL(/.*management.*matchId=/, { timeout: 5000 }).catch(() => {
-          // Navigation might happen with different URL pattern
+        // On desktop/tablet, a confirmation dialog appears asking to end the running match
+        // This dialog is shown by ScheduleTab when there's already a running match
+        const runningMatchDialog = page.locator('[role="dialog"]').filter({
+          hasText: /Laufendes Spiel|Spiel beenden/i
         });
-        await page.waitForTimeout(1500);
 
-        // THEN - Should be in cockpit with new match, old match should be finished
+        // Check if the dialog appeared (desktop/tablet) and confirm it
+        if (await runningMatchDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+          const endMatchBtn = page.locator('button').filter({
+            hasText: /Spiel beenden|wechseln/i
+          });
+          if (await endMatchBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await endMatchBtn.click();
+          }
+        }
+
+        // Wait for navigation to live/management tab to complete
+        // Note: The URL uses /live (not /management) as the path segment
+        await page.waitForURL(/.*\/live/, { timeout: 10000 });
+
+        // Wait for the ManagementTab to fully render
+        // The LiveCockpitMockup needs time to initialize with the match data
+        // Use a more robust wait strategy: wait for the timer display (always visible in cockpit)
+        const timerDisplay = page.getByTestId('match-timer-display');
+
+        // Wait for the timer display to be visible (cockpit is ready)
+        // Use .first() to handle potential multiple matches in split-view on desktop
+        await expect(timerDisplay.first()).toBeVisible({ timeout: 10000 });
+
+        // THEN - Should be in cockpit with new match
         // Timer display is in LiveCockpitMockup component
-        await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 8000 });
+        // Test passes if we're in the cockpit (timer is visible)
+        expect(await timerDisplay.first().isVisible()).toBeTruthy();
       }
     }
   });
