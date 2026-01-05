@@ -248,17 +248,54 @@ export function DangerZoneCategory({
       const now = new Date().toISOString();
 
       switch (pendingAction.action) {
-        case 'regenerate_schedule':
-          // TODO: Implement schedule regeneration logic
-          // eslint-disable-next-line no-console
-          console.log('[DangerZone] TODO: Regenerate schedule for:', tournament.id);
-          break;
+        case 'regenerate_schedule': {
+          // Keep finished matches, reset scheduled/running matches to allow re-generation
+          // Note: Full regeneration requires using the schedule editor
+          const resetMatches = tournament.matches.map(match => {
+            if (match.matchStatus === 'finished') {
+              return match; // Keep finished matches
+            }
+            return {
+              ...match,
+              matchStatus: 'scheduled' as const,
+              scoreA: undefined,
+              scoreB: undefined,
+              timerStartTime: undefined,
+              timerPausedAt: undefined,
+              timerElapsedSeconds: undefined,
+              finishedAt: undefined,
+            };
+          });
 
-        case 'reset_schedule':
-          // TODO: Implement schedule reset logic
-          // eslint-disable-next-line no-console
-          console.log('[DangerZone] TODO: Reset schedule for:', tournament.id);
+          onTournamentUpdate({
+            ...tournament,
+            matches: resetMatches,
+            updatedAt: now,
+          });
           break;
+        }
+
+        case 'reset_schedule': {
+          // Reset ALL matches to initial scheduled state
+          const resetMatches = tournament.matches.map(match => ({
+            ...match,
+            matchStatus: 'scheduled' as const,
+            scoreA: undefined,
+            scoreB: undefined,
+            timerStartTime: undefined,
+            timerPausedAt: undefined,
+            timerElapsedSeconds: undefined,
+            finishedAt: undefined,
+            correctionHistory: undefined,
+          }));
+
+          onTournamentUpdate({
+            ...tournament,
+            matches: resetMatches,
+            updatedAt: now,
+          });
+          break;
+        }
 
         case 'end_tournament':
           onTournamentUpdate({

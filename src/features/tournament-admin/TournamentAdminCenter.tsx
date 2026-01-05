@@ -174,11 +174,11 @@ export function TournamentAdminCenter({
   }, [categoryFromUrl, isMobile]);
 
   // Navigation handler
-  const handleNavigate = (categoryId: AdminCategoryId) => {
+  const handleNavigate = useCallback((categoryId: AdminCategoryId) => {
     setActiveCategory(categoryId);
     setShowMobileHub(false);
     void navigate(`/tournament/${tournamentId}/admin/${categoryId}`);
-  };
+  }, [navigate, tournamentId]);
 
   // Back to hub (mobile only)
   const handleBackToHub = () => {
@@ -248,6 +248,14 @@ export function TournamentAdminCenter({
     void navigate(`/tournament/${tournamentId}/admin/dashboard`);
   }, [navigate, tournamentId]);
 
+  // Warning click handler - navigate to action path if available
+  const handleWarningClick = useCallback((warning: AdminWarning) => {
+    if (warning.actionPath) {
+      // actionPath is a category ID like 'settings' or 'visibility'
+      handleNavigate(warning.actionPath as AdminCategoryId);
+    }
+  }, [handleNavigate]);
+
   // Mobile: Show hub or spoke
   if (isMobile) {
     if (showMobileHub) {
@@ -294,6 +302,7 @@ export function TournamentAdminCenter({
         onNavigate={handleNavigate}
         warnings={warnings}
         onBackToTournament={onBackToTournament}
+        onWarningClick={handleWarningClick}
       />
 
       {/* Main Content */}

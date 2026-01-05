@@ -170,6 +170,7 @@ export function MatchCockpitSettingsPanel({
           <Toggle
             checked={settings.nettoWarningEnabled}
             onChange={(v) => updateSetting('nettoWarningEnabled', v)}
+            label="Netto-Zeit Warnung aktivieren"
           />
         </SettingRow>
 
@@ -223,6 +224,10 @@ export function MatchCockpitSettingsPanel({
                 value={settings.soundVolume}
                 onChange={(e) => updateSetting('soundVolume', Number(e.target.value))}
                 style={styles.slider}
+                aria-label="Lautstärke"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={settings.soundVolume}
               />
               {onTestSound && (
                 <button type="button" onClick={onTestSound} style={styles.testButton}>
@@ -269,6 +274,7 @@ export function MatchCockpitSettingsPanel({
           <Toggle
             checked={settings.hapticEnabled}
             onChange={(v) => updateSetting('hapticEnabled', v)}
+            label="Vibration aktivieren"
           />
         </SettingRow>
 
@@ -276,6 +282,7 @@ export function MatchCockpitSettingsPanel({
           <Toggle
             checked={settings.wakeLockEnabled}
             onChange={(v) => updateSetting('wakeLockEnabled', v)}
+            label="Bildschirm aktiv halten"
           />
         </SettingRow>
       </section>
@@ -288,6 +295,7 @@ export function MatchCockpitSettingsPanel({
           <Toggle
             checked={settings.autoFinishEnabled}
             onChange={(v) => updateSetting('autoFinishEnabled', v)}
+            label="Spiel automatisch beenden"
           />
         </SettingRow>
 
@@ -337,14 +345,17 @@ interface ToggleProps {
   checked: boolean;
   onChange: (value: boolean) => void;
   disabled?: boolean;
+  /** Accessible label for screen readers */
+  label?: string;
 }
 
-function Toggle({ checked, onChange, disabled }: ToggleProps): JSX.Element {
+function Toggle({ checked, onChange, disabled, label }: ToggleProps): JSX.Element {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-label={label}
       onClick={() => !disabled && onChange(!checked)}
       style={{
         ...styles.toggle,

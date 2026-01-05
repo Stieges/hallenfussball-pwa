@@ -204,6 +204,7 @@ export function AdminSidebar({
   onNavigate,
   warnings = [],
   onBackToTournament,
+  onWarningClick,
 }: AdminSidebarProps) {
   const renderCategoryItem = (
     category: typeof ADMIN_CATEGORIES[0],
@@ -313,10 +314,22 @@ export function AdminSidebar({
             <span>{warnings.length} Warnungen</span>
           </div>
           {warnings.slice(0, 2).map((warning) => (
-            <div key={warning.id} style={styles.warningItem}>
+            <button
+              key={warning.id}
+              style={{
+                ...styles.warningItem,
+                background: 'transparent',
+                border: 'none',
+                cursor: onWarningClick ? 'pointer' : 'default',
+                width: '100%',
+                textAlign: 'left',
+              }}
+              onClick={() => onWarningClick?.(warning)}
+              aria-label={`Warnung: ${warning.title}. Klicken um zur Behebung zu navigieren.`}
+            >
               <span>►</span>
               <span>{warning.title}</span>
-            </div>
+            </button>
           ))}
           {warnings.length > 2 && (
             <span style={styles.warningsLink}>Alle anzeigen →</span>

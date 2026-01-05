@@ -32,6 +32,8 @@ export interface UseMatchSoundReturn {
   testPlay: () => Promise<void>;
   /** Whether the sound is currently playing */
   isPlaying: boolean;
+  /** Whether sound is currently loading */
+  isLoading: boolean;
   /** Whether sound is ready to play (loaded) */
   isReady: boolean;
   /** Whether audio has been activated by user interaction */
@@ -57,6 +59,7 @@ export function useMatchSound(
   tournamentId: string
 ): UseMatchSoundReturn {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isActivated, setIsActivated] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,12 +71,14 @@ export function useMatchSound(
   useEffect(() => {
     if (!enabled || !soundId) {
       setIsReady(false);
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
 
     async function loadSound() {
+      setIsLoading(true);
       setIsReady(false);
       setError(null);
 
@@ -138,11 +143,13 @@ export function useMatchSound(
 
         if (isMounted) {
           setIsReady(true);
+          setIsLoading(false);
         }
       } catch (err) {
         console.error('[useMatchSound] Failed to load sound:', err);
         if (isMounted) {
           setError('Sound konnte nicht geladen werden');
+          setIsLoading(false);
         }
       }
     }
@@ -256,6 +263,7 @@ export function useMatchSound(
     stop,
     testPlay,
     isPlaying,
+    isLoading,
     isReady,
     isActivated,
     activate,

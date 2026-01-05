@@ -228,6 +228,8 @@ export interface AdminSidebarProps {
   onNavigate: (category: AdminCategoryId) => void;
   warnings?: AdminWarning[];
   onBackToTournament: () => void;
+  /** Handle warning click for navigation */
+  onWarningClick?: (warning: AdminWarning) => void;
 }
 
 /**

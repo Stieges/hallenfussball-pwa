@@ -573,21 +573,38 @@ function MonitorCard({
 
       {/* Actions */}
       <div style={styles.actionsStyle as CSSProperties}>
-        <button style={actionButtonStyle('primary')} onClick={onEdit}>
+        <button
+          style={actionButtonStyle('primary')}
+          onClick={onEdit}
+          aria-label={`Monitor "${monitor.name}" bearbeiten`}
+        >
           ✏️ Bearbeiten
         </button>
-        <button style={actionButtonStyle()} onClick={onOpenDisplay}>
+        <button
+          style={actionButtonStyle()}
+          onClick={onOpenDisplay}
+          aria-label={`Monitor "${monitor.name}" in neuem Tab öffnen`}
+        >
           🖥️ Öffnen
         </button>
-        <button style={actionButtonStyle()} onClick={onCopyUrl}>
+        <button
+          style={actionButtonStyle()}
+          onClick={onCopyUrl}
+          aria-label={isCopied ? 'URL kopiert' : `URL für Monitor "${monitor.name}" kopieren`}
+        >
           {isCopied ? '✓ Kopiert!' : '🔗 URL kopieren'}
         </button>
-        <button style={actionButtonStyle()} onClick={onDuplicate}>
+        <button
+          style={actionButtonStyle()}
+          onClick={onDuplicate}
+          aria-label={`Monitor "${monitor.name}" duplizieren`}
+        >
           📋 Duplizieren
         </button>
         <button
           style={actionButtonStyle(isDeleting ? 'danger' : 'secondary')}
           onClick={onDelete}
+          aria-label={isDeleting ? `Löschen von "${monitor.name}" bestätigen` : `Monitor "${monitor.name}" löschen`}
         >
           🗑️ {isDeleting ? 'Bestätigen' : 'Löschen'}
         </button>
@@ -599,10 +616,18 @@ function MonitorCard({
           <span style={{ flex: 1, color: cssVars.colors.error }}>
             Monitor &quot;{monitor.name}&quot; wirklich löschen?
           </span>
-          <button style={actionButtonStyle('danger')} onClick={onDelete}>
+          <button
+            style={actionButtonStyle('danger')}
+            onClick={onDelete}
+            aria-label={`Monitor "${monitor.name}" endgültig löschen`}
+          >
             Ja, löschen
           </button>
-          <button style={actionButtonStyle()} onClick={onCancelDelete}>
+          <button
+            style={actionButtonStyle()}
+            onClick={onCancelDelete}
+            aria-label="Löschen abbrechen"
+          >
             Abbrechen
           </button>
         </div>
