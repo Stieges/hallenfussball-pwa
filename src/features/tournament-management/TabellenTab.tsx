@@ -342,7 +342,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   const renderRankingView = () => {
     return (
       <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
-        <h2 style={titleStyle}>Finale Platzierung</h2>
+        <h2 style={titleStyle}>Gesamtplatzierung</h2>
 
         {/* Platzierungslogik Anzeige */}
         <div style={{
@@ -690,7 +690,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
               style={getSegmentButtonStyle(viewMode === 'ranking')}
               onClick={() => setViewMode('ranking')}
             >
-              Platzierung
+              Gesamtplatzierung
             </button>
           </div>
         </div>

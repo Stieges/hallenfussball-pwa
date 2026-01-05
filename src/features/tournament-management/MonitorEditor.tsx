@@ -94,23 +94,31 @@ export function MonitorEditor({
   const [isAddingSlide, setIsAddingSlide] = useState(false);
 
   // Get groups from tournament - generate if not explicit
+  // For roundRobin tournaments, there's only one group (all teams play each other)
   const groups: TournamentGroup[] = useMemo(() => {
+    // Round-robin mode = single group tournament (everyone plays everyone)
+    if (tournament.groupSystem === 'roundRobin') {
+      return [{ id: 'default', customName: 'Alle Teams' }];
+    }
+
     // If explicit groups are defined, use them
     if (tournament.groups && tournament.groups.length > 0) {
       return tournament.groups;
     }
+
     // If numberOfGroups is set, generate synthetic group entries
     const numGroups = tournament.numberOfGroups ?? 1;
     if (numGroups <= 1) {
       // Single group tournament - return one default group
       return [{ id: 'default', customName: 'Alle Teams' }];
     }
+
     // Generate group entries A, B, C, etc.
     return Array.from({ length: numGroups }, (_, i) => ({
       id: String.fromCharCode(65 + i), // A, B, C...
       customName: `Gruppe ${String.fromCharCode(65 + i)}`,
     }));
-  }, [tournament.groups, tournament.numberOfGroups]);
+  }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem]);
 
   // Available slide types (Phase 1 only)
   const availableSlideTypes: SlideTypeOption[] = useMemo(() => {

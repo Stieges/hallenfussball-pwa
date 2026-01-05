@@ -257,13 +257,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   } : {};
 
   // Build finished matches set for display
-  const finishedMatchIds = appSettings.lockFinishedResults
-    ? new Set(
-        tournament.matches
-          .filter(m => isMatchFinished(m.id, tournament.matches, tournament.id))
-          .map(m => m.id)
-      )
-    : new Set<string>();
+  // Always populate this set to show proper match status (summary view on circle click)
+  // The lockFinishedResults setting only controls whether editing is prevented
+  const finishedMatchIds = new Set(
+    tournament.matches
+      .filter(m => isMatchFinished(m.id, tournament.matches, tournament.id))
+      .map(m => m.id)
+  );
 
   // Count conflicts by severity
   const criticalConflicts = detectedConflicts.filter(c =>

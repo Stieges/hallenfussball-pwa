@@ -281,7 +281,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
 
       <Card>
         <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
-          <h2 style={titleStyle}>Finale Platzierung</h2>
+          <h2 style={titleStyle}>Gesamtplatzierung</h2>
 
           {/* Platzierungslogik Anzeige */}
           <div style={{

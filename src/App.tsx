@@ -552,12 +552,18 @@ function AppContent() {
 
         {/* Legal Screens */}
         {screen === 'impressum' && (
-          <ImpressumScreen onBack={() => void navigate('/')} />
+          <ImpressumScreen onBack={() => {
+            setScreen('dashboard');
+            void navigate('/');
+          }} />
         )}
 
         {screen === 'datenschutz' && (
           <DatenschutzScreen
-            onBack={() => void navigate('/')}
+            onBack={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
             onOpenCookieSettings={() => {
               // TODO: Integrate with Cookie Banner when implemented
               // Cookie banner will be added in a future commit

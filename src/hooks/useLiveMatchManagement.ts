@@ -138,13 +138,52 @@ export function useLiveMatchManagement({
     tournamentId: tournament.id,
   });
 
-  // Initialize from localStorage
+  // Initialize from localStorage with staleness check
+  // BUG-FIX: Detect and auto-pause matches that were left RUNNING for too long
+  // (e.g., browser closed during a match, now showing 76 minutes instead of 10)
   const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(() => {
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored) as Record<string, LiveMatch>;
-        return new Map(Object.entries(parsed));
+        const now = Date.now();
+        const MAX_STALE_DURATION_MS = 30 * 60 * 1000; // 30 minutes - if timer started more than 30 min ago, likely stale
+
+        // Check each match for staleness
+        const entries = Object.entries(parsed).map(([id, match]) => {
+          // Only check RUNNING matches with a timerStartTime
+          if (match.status === 'RUNNING' && match.timerStartTime) {
+            const timerStart = new Date(match.timerStartTime).getTime();
+            const timeSinceStart = now - timerStart;
+            const maxExpectedDuration = (match.durationSeconds + 300) * 1000; // match duration + 5 min buffer
+
+            // If the timer has been running for longer than expected, it's stale
+            if (timeSinceStart > maxExpectedDuration || timeSinceStart > MAX_STALE_DURATION_MS) {
+              console.warn(
+                `[useLiveMatchManagement] Stale match detected: ${id}. ` +
+                `Timer started ${Math.round(timeSinceStart / 1000 / 60)} minutes ago. ` +
+                `Auto-pausing and clamping elapsed time.`
+              );
+
+              // Calculate reasonable elapsed time (clamped to match duration)
+              const maxElapsed = match.durationSeconds;
+              const calculatedElapsed = (match.timerElapsedSeconds ?? 0) + Math.floor(timeSinceStart / 1000);
+              const clampedElapsed = Math.min(calculatedElapsed, maxElapsed);
+
+              return [id, {
+                ...match,
+                status: 'PAUSED' as MatchStatus,
+                elapsedSeconds: clampedElapsed,
+                timerElapsedSeconds: clampedElapsed,
+                timerPausedAt: new Date().toISOString(),
+                // Keep timerStartTime for reference but clear it to prevent further calculation
+              }] as [string, LiveMatch];
+            }
+          }
+          return [id, match] as [string, LiveMatch];
+        });
+
+        return new Map(entries);
       }
     } catch {
       // Ignore parse errors
