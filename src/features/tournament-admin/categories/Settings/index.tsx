@@ -6,11 +6,14 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.6
  */
 
-import { CSSProperties } from 'react';
+import { CSSProperties, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
-import type { Tournament } from '../../../../types/tournament';
+import { MatchCockpitSettingsPanel } from '../../../../components/match-cockpit/MatchCockpitSettingsPanel';
+import { useMatchSound } from '../../../../hooks/useMatchSound';
+import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 
 // =============================================================================
 // PROPS
@@ -20,6 +23,14 @@ interface SettingsCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void;
+}
+
+// Helper to get cockpit settings with defaults
+function getCockpitSettings(tournament: Tournament): MatchCockpitSettings {
+  return {
+    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...tournament.matchCockpitSettings,
+  };
 }
 
 // =============================================================================
@@ -126,6 +137,7 @@ const styles = {
 // =============================================================================
 
 export function SettingsCategory({
+  tournamentId,
   tournament,
   onTournamentUpdate,
 }: SettingsCategoryProps) {
@@ -133,12 +145,52 @@ export function SettingsCategory({
     onTournamentUpdate(updatedTournament);
   };
 
+  // Match Cockpit Pro settings
+  const cockpitSettings = getCockpitSettings(tournament);
+
+  // Sound hook for testing
+  const sound = useMatchSound(
+    cockpitSettings.soundId,
+    cockpitSettings.soundVolume,
+    cockpitSettings.soundEnabled,
+    tournamentId
+  );
+
+  // Handle cockpit settings change
+  const handleCockpitSettingsChange = useCallback(
+    (newSettings: MatchCockpitSettings) => {
+      onTournamentUpdate({
+        ...tournament,
+        matchCockpitSettings: newSettings,
+      });
+    },
+    [tournament, onTournamentUpdate]
+  );
+
+  // Handle test sound
+  const handleTestSound = useCallback(() => {
+    void sound.testPlay();
+  }, [sound]);
+
   return (
     <CategoryPage
       icon="⚙️"
       title="Turnier-Einstellungen"
       description="Nicht-destruktive Turnier-Operationen und Feld-Management"
     >
+      {/* Match Cockpit Pro Settings */}
+      <CollapsibleSection icon="🎮" title="Match Cockpit Pro" defaultOpen>
+        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
+          Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und mehr.
+        </p>
+        <MatchCockpitSettingsPanel
+          settings={cockpitSettings}
+          onChange={handleCockpitSettingsChange}
+          tournamentId={tournamentId}
+          onTestSound={handleTestSound}
+        />
+      </CollapsibleSection>
+
       {/* Pause Tournament */}
       <CollapsibleSection icon="⏸️" title="Turnier pausieren" defaultOpen>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
