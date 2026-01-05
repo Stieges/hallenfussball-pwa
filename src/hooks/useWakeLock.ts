@@ -35,9 +35,18 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
   const [error, setError] = useState<string | null>(null);
 
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
+  const releaseHandlerRef = useRef<(() => void) | null>(null);
 
   // Check if Wake Lock API is supported
   const isSupported = 'wakeLock' in navigator;
+
+  // Clean up event listener helper
+  const cleanupEventListener = useCallback(() => {
+    if (wakeLockRef.current && releaseHandlerRef.current) {
+      wakeLockRef.current.removeEventListener('release', releaseHandlerRef.current);
+      releaseHandlerRef.current = null;
+    }
+  }, []);
 
   // Request wake lock
   const request = useCallback(async () => {
@@ -47,25 +56,30 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
     }
 
     try {
+      // Clean up any existing listener before requesting new lock
+      cleanupEventListener();
+
       wakeLockRef.current = await navigator.wakeLock.request('screen');
       setIsLocked(true);
       setError(null);
 
       // Listen for release event (e.g., when tab becomes hidden)
-      wakeLockRef.current.addEventListener('release', () => {
+      releaseHandlerRef.current = () => {
         setIsLocked(false);
-      });
+      };
+      wakeLockRef.current.addEventListener('release', releaseHandlerRef.current);
     } catch (err) {
       console.error('[useWakeLock] Failed to acquire wake lock:', err);
       setError('Wake Lock konnte nicht aktiviert werden');
       setIsLocked(false);
     }
-  }, [isSupported]);
+  }, [isSupported, cleanupEventListener]);
 
   // Release wake lock
   const release = useCallback(async () => {
     if (wakeLockRef.current) {
       try {
+        cleanupEventListener();
         await wakeLockRef.current.release();
         wakeLockRef.current = null;
         setIsLocked(false);
@@ -73,7 +87,7 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
         console.error('[useWakeLock] Failed to release wake lock:', err);
       }
     }
-  }, []);
+  }, [cleanupEventListener]);
 
   // Auto-acquire/release based on enabled prop
   useEffect(() => {
@@ -106,6 +120,11 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Clean up event listener first
+      if (wakeLockRef.current && releaseHandlerRef.current) {
+        wakeLockRef.current.removeEventListener('release', releaseHandlerRef.current);
+      }
+      // Then release the wake lock
       if (wakeLockRef.current) {
         void wakeLockRef.current.release();
       }

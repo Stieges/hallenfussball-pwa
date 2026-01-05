@@ -234,7 +234,7 @@ export function MatchCockpitSettingsPanel({
         )}
 
         {/* Custom Sound Upload */}
-        <SettingRow label="Eigener Sound" description="MP3-Datei hochladen (max 2MB)">
+        <SettingRow label="Eigener Sound" description="MP3-Datei hochladen (max 500KB)">
           <div style={styles.uploadContainer}>
             <input
               ref={fileInputRef}

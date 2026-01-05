@@ -173,17 +173,21 @@ export function useMatchCockpitPro({
     settings.wakeLockEnabled && (status === 'RUNNING' || status === 'PAUSED')
   );
 
+  // Extract stable references from hooks to avoid dependency issues
+  const { trigger: triggerHapticFn } = haptic;
+  const { play: playSound, isReady: isSoundReady } = sound;
+
   // Handle timer reaching zero
   useEffect(() => {
     if (timerResult.isAtZero && !hasFireTimerZero.current && status === 'RUNNING') {
       hasFireTimerZero.current = true;
 
       // Trigger haptic
-      haptic.trigger('timerZero');
+      triggerHapticFn('timerZero');
 
       // Play sound
-      if (effectiveSettings.soundEnabled && sound.isReady) {
-        void sound.play();
+      if (effectiveSettings.soundEnabled && isSoundReady) {
+        void playSound();
       }
 
       // Fire callback
@@ -198,10 +202,11 @@ export function useMatchCockpitPro({
   }, [
     timerResult.isAtZero,
     status,
-    haptic,
+    triggerHapticFn,
     effectiveSettings.soundEnabled,
     effectiveSettings.autoFinishEnabled,
-    sound,
+    isSoundReady,
+    playSound,
     onTimerZero,
     onAutoFinish,
     hasTriggeredAutoFinish,
@@ -218,9 +223,9 @@ export function useMatchCockpitPro({
   // Netto warning haptic trigger
   useEffect(() => {
     if (nettoWarning.phase === 'attention') {
-      haptic.trigger('warning');
+      triggerHapticFn('warning');
     }
-  }, [nettoWarning.phase, haptic]);
+  }, [nettoWarning.phase, triggerHapticFn]);
 
   // Format timer display
   const timerDisplay = formatTimerDisplay(timerResult.displaySeconds);
@@ -228,9 +233,9 @@ export function useMatchCockpitPro({
   // Trigger haptic helper
   const triggerHaptic = useCallback(
     (pattern: 'tap' | 'goal' | 'warning' | 'matchEnd' | 'timerZero' | 'undo' | 'success' | 'error') => {
-      haptic.trigger(pattern);
+      triggerHapticFn(pattern);
     },
-    [haptic]
+    [triggerHapticFn]
   );
 
   return {

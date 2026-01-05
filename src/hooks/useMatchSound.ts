@@ -188,6 +188,24 @@ export function useMatchSound(
     }
   }, []);
 
+  // Set up ended event handler once
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    const handleEnded = () => {
+      setIsPlaying(false);
+    };
+
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [isReady]); // Re-attach when audio element changes
+
   // Play the sound
   const play = useCallback(async () => {
     if (!enabled || !isReady || !audioRef.current) {
@@ -200,11 +218,6 @@ export function useMatchSound(
       setIsPlaying(true);
 
       await audioRef.current.play();
-
-      // Wait for sound to finish
-      audioRef.current.onended = () => {
-        setIsPlaying(false);
-      };
     } catch (err) {
       console.error('[useMatchSound] Failed to play sound:', err);
       setIsPlaying(false);
@@ -231,9 +244,7 @@ export function useMatchSound(
       audioRef.current.currentTime = 0;
       setIsPlaying(true);
       await audioRef.current.play();
-      audioRef.current.onended = () => {
-        setIsPlaying(false);
-      };
+      // Event listener is already set up in useEffect above
     } catch (err) {
       console.error('[useMatchSound] Test play failed:', err);
       setIsPlaying(false);
