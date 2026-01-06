@@ -464,6 +464,7 @@ export function SponsorManagement({
                       />
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemoveLogo(); }}
+                        aria-label="Logo entfernen"
                         style={{
                           position: 'absolute',
                           top: '4px',
@@ -601,6 +602,7 @@ export function SponsorManagement({
                       <button
                         style={actionButtonStyle}
                         onClick={() => handleStartEdit(sponsor)}
+                        aria-label={`${sponsor.name} bearbeiten`}
                         title="Bearbeiten"
                       >
                         ✏️
@@ -611,6 +613,7 @@ export function SponsorManagement({
                           borderColor: isDeleting ? cssVars.colors.error : cssVars.colors.border,
                         }}
                         onClick={() => void handleDelete(sponsor.id)}
+                        aria-label={`${sponsor.name} löschen`}
                         title={isDeleting ? 'Klicken zum Bestätigen' : 'Löschen'}
                       >
                         🗑️

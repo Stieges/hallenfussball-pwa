@@ -205,6 +205,158 @@ export const displayEffects = {
 } as const;
 
 // =============================================================================
+// MONITOR THEME COLOR SCHEMES
+// =============================================================================
+
+/**
+ * Theme-spezifische Farben für Monitor-Display
+ * WCAG AA Kontraste validiert
+ */
+export const monitorThemes = {
+  dark: {
+    // Backgrounds
+    background: '#0f172a',
+    backgroundGradient: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+    surface: '#1e293b',
+    surfaceHover: '#334155',
+
+    // Text (WCAG AAA auf dark: 15:1)
+    text: '#ffffff',
+    textSecondary: '#94a3b8',
+    textMuted: '#64748b',
+
+    // Score (WCAG AA auf dark: 8.5:1)
+    score: '#00E676',
+    scoreGlow: 'rgba(0, 230, 118, 0.4)',
+    scoreShadow: '0 0 60px rgba(0, 230, 118, 0.3)',
+
+    // Timer
+    timerNormal: '#e2e8f0',
+    timerOvertime: '#ff5252',
+    timerWarning: '#ffb300',
+    timerPaused: '#fbbf24',
+
+    // Status Badges
+    liveBadgeBg: 'rgba(0, 230, 118, 0.2)',
+    liveBadgeText: '#00E676',
+    liveDot: '#00E676',
+    pauseBadgeBg: 'rgba(251, 191, 36, 0.2)',
+    pauseBadgeText: '#fbbf24',
+    overtimeBadgeBg: 'rgba(255, 82, 82, 0.2)',
+
+    // Progress Bar
+    progressBar: '#00E676',
+    progressBarWarning: '#ff5252',
+    progressTrack: 'rgba(255, 255, 255, 0.15)',
+    progressGlow: 'rgba(0, 230, 118, 0.25)',
+    progressGlowWarning: 'rgba(255, 145, 0, 0.25)',
+    progressShadow: '0 0 15px rgba(0, 230, 118, 0.3)',
+    progressShadowWarning: '0 0 15px rgba(255, 145, 0, 0.3)',
+    progressInsetShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+
+    // Timer specific
+    timerSeparator: 'rgba(255, 255, 255, 0.6)',
+    timerSecondary: 'rgba(255, 255, 255, 0.5)',
+
+    // Borders & Effects
+    border: 'rgba(255, 255, 255, 0.1)',
+    borderActive: 'rgba(0, 230, 118, 0.4)',
+    glow: '0 0 40px rgba(0, 230, 118, 0.2)',
+    glowActive: '0 0 60px rgba(0, 230, 118, 0.4)',
+
+    // Text Shadows
+    textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+    textShadowLight: '0 2px 8px rgba(0, 0, 0, 0.4)',
+    textShadowScore: '0 2px 10px rgba(0, 0, 0, 0.3)',
+
+    // Overlays
+    overlay: 'rgba(0, 0, 0, 0.7)',
+    overlayLight: 'rgba(0, 0, 0, 0.4)',
+    overlayGradient: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 100%)',
+    controlsGradient: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%)',
+
+    // Interactive States
+    buttonHover: 'rgba(0, 230, 118, 0.3)',
+    buttonDefault: 'rgba(0, 230, 118, 0.15)',
+    fieldSelected: 'rgba(0, 230, 118, 0.2)',
+    fieldDefault: 'rgba(255, 255, 255, 0.05)',
+    fieldHover: 'rgba(0, 230, 118, 0.1)',
+  },
+  light: {
+    // Backgrounds
+    background: '#f1f5f9',
+    backgroundGradient: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
+    surface: '#ffffff',
+    surfaceHover: '#f8fafc',
+
+    // Text (WCAG AAA auf light: 12:1)
+    text: '#1e293b',
+    textSecondary: '#64748b',
+    textMuted: '#94a3b8',
+
+    // Score (WCAG AA auf light: 5.2:1) - dunkleres Grün
+    score: '#047857',
+    scoreGlow: 'rgba(4, 120, 87, 0.3)',
+    scoreShadow: '0 0 40px rgba(4, 120, 87, 0.2)',
+
+    // Timer
+    timerNormal: '#334155',
+    timerOvertime: '#dc2626',
+    timerWarning: '#d97706',
+    timerPaused: '#d97706',
+
+    // Status Badges
+    liveBadgeBg: 'rgba(4, 120, 87, 0.15)',
+    liveBadgeText: '#047857',
+    liveDot: '#047857',
+    pauseBadgeBg: 'rgba(217, 119, 6, 0.15)',
+    pauseBadgeText: '#d97706',
+    overtimeBadgeBg: 'rgba(220, 38, 38, 0.15)',
+
+    // Progress Bar
+    progressBar: '#10b981',
+    progressBarWarning: '#dc2626',
+    progressTrack: 'rgba(0, 0, 0, 0.1)',
+    progressGlow: 'rgba(16, 185, 129, 0.2)',
+    progressGlowWarning: 'rgba(217, 119, 6, 0.2)',
+    progressShadow: '0 0 12px rgba(16, 185, 129, 0.25)',
+    progressShadowWarning: '0 0 12px rgba(217, 119, 6, 0.25)',
+    progressInsetShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.15)',
+
+    // Timer specific
+    timerSeparator: 'rgba(0, 0, 0, 0.5)',
+    timerSecondary: 'rgba(0, 0, 0, 0.4)',
+
+    // Borders & Effects
+    border: 'rgba(0, 0, 0, 0.1)',
+    borderActive: 'rgba(4, 120, 87, 0.4)',
+    glow: '0 0 30px rgba(4, 120, 87, 0.15)',
+    glowActive: '0 0 50px rgba(4, 120, 87, 0.25)',
+
+    // Text Shadows
+    textShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+    textShadowLight: '0 1px 3px rgba(0, 0, 0, 0.1)',
+    textShadowScore: '0 1px 5px rgba(0, 0, 0, 0.1)',
+
+    // Overlays
+    overlay: 'rgba(0, 0, 0, 0.6)',
+    overlayLight: 'rgba(0, 0, 0, 0.3)',
+    overlayGradient: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.5) 100%)',
+    controlsGradient: 'linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 100%)',
+
+    // Interactive States
+    buttonHover: 'rgba(4, 120, 87, 0.25)',
+    buttonDefault: 'rgba(4, 120, 87, 0.1)',
+    fieldSelected: 'rgba(4, 120, 87, 0.15)',
+    fieldDefault: 'rgba(0, 0, 0, 0.03)',
+    fieldHover: 'rgba(4, 120, 87, 0.08)',
+  },
+} as const;
+
+export type MonitorThemeKey = keyof typeof monitorThemes;
+export type MonitorThemeColors = typeof monitorThemes[MonitorThemeKey];
+
+// =============================================================================
 // COLOR SCHEMES (für Custom-Text Slides)
 // =============================================================================
 
@@ -251,6 +403,7 @@ export const displayTokens = {
   layout: displayLayout,
   effects: displayEffects,
   colorSchemes: displayColorSchemes,
+  themes: monitorThemes,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

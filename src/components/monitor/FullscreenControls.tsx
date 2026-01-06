@@ -8,10 +8,14 @@
  * - Reappears on mouse movement
  * - Mobile: Back button (Android), Swipe-down gesture (iOS)
  * - Fade in/out animation
+ * - Theme support (dark/light/auto)
  */
 
 import { CSSProperties, useEffect, useRef, useCallback, useState } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars } from '../../design-tokens';
+import type { MonitorTheme } from '../../types/monitor';
+import { useMonitorTheme } from '../../hooks';
+
 export interface FullscreenControlsProps {
   /** Whether currently in fullscreen mode */
   isFullscreen: boolean;
@@ -21,6 +25,8 @@ export interface FullscreenControlsProps {
   autoHideTimeout?: number;
   /** Children to render alongside controls (e.g., FieldSelector) */
   children?: React.ReactNode;
+  /** Theme (dark/light/auto) */
+  theme?: MonitorTheme;
 }
 
 export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
@@ -28,7 +34,11 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
   onToggleFullscreen,
   autoHideTimeout = 3000,
   children,
+  theme = 'dark',
 }) => {
+  // Resolve auto theme based on system preference
+  const { themeColors } = useMonitorTheme(theme);
+
   const [isVisible, setIsVisible] = useState(true);
   const hideTimeoutRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -145,7 +155,7 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
     transition: 'opacity 0.3s ease, transform 0.3s ease',
     pointerEvents: isVisible ? 'auto' : 'none',
     background: isFullscreen
-      ? 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)'
+      ? themeColors.controlsGradient
       : 'transparent',
   };
 
@@ -160,10 +170,10 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
     alignItems: 'center',
     gap: cssVars.spacing.sm,
     padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-    background: 'rgba(0, 230, 118, 0.15)',
-    border: `2px solid ${cssVars.colors.primary}`,
+    background: themeColors.buttonDefault,
+    border: `2px solid ${themeColors.liveBadgeText}`,
     borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.primary,
+    color: themeColors.liveBadgeText,
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.bold,
     cursor: 'pointer',
@@ -174,8 +184,8 @@ export const FullscreenControls: React.FC<FullscreenControlsProps> = ({
   const handleButtonHover = (e: React.MouseEvent<HTMLButtonElement>, entering: boolean) => {
     const target = e.currentTarget;
     target.style.background = entering
-      ? 'rgba(0, 230, 118, 0.3)'
-      : 'rgba(0, 230, 118, 0.15)';
+      ? themeColors.buttonHover
+      : themeColors.buttonDefault;
     target.style.transform = entering ? 'scale(1.02)' : 'scale(1)';
   };
 

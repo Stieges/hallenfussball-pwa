@@ -47,6 +47,7 @@ export { useMonitors } from './useMonitors'
 // Theming & Corporate Colors
 export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
 export { useTheme, ThemeProvider, type Theme, type ThemeContextValue } from './useTheme'
+export { useMonitorTheme, type UseMonitorThemeReturn } from './useMonitorTheme'
 
 // Sound & Haptics
 export { useMatchSound, type UseMatchSoundReturn } from './useMatchSound'

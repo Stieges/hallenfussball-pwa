@@ -114,11 +114,14 @@ export {
   displayLayout,
   displayEffects,
   displayColorSchemes,
+  monitorThemes,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,
   type DisplaySpacingKey,
   type DisplayColorSchemeKey,
+  type MonitorThemeKey,
+  type MonitorThemeColors,
 } from './display';
 
 export {

@@ -7,11 +7,14 @@
  * - Warning state when < 2 min remaining (red pulse)
  * - Pause indicator (yellow pulse)
  * - Overtime indication (red text)
+ * - Theme support (dark/light/auto)
  */
 
 import { CSSProperties, useState, useEffect } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars } from '../../design-tokens';
+import type { MonitorTheme } from '../../types/monitor';
 import { MatchStatus } from '../../hooks/useLiveMatches';
+import { useMonitorTheme } from '../../hooks';
 
 export interface MatchTimerProps {
   /** Current elapsed seconds */
@@ -30,6 +33,8 @@ export interface MatchTimerProps {
   timerStartTime?: string;
   /** Timer elapsed seconds before current run */
   timerElapsedSeconds?: number;
+  /** Theme (dark/light/auto) */
+  theme?: MonitorTheme;
 }
 
 /**
@@ -74,7 +79,11 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   warningThresholdSeconds = 120,
   timerStartTime,
   timerElapsedSeconds,
+  theme = 'dark',
 }) => {
+  // Resolve auto theme based on system preference
+  const { themeColors } = useMonitorTheme(theme);
+
   // Real-time elapsed seconds (updates every second when running)
   const [displayElapsed, setDisplayElapsed] = useState(() =>
     calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds)
@@ -132,13 +141,13 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.heading,
     color: isOvertime
-      ? cssVars.colors.error
+      ? themeColors.timerOvertime
       : isPaused
-        ? cssVars.colors.warning
-        : cssVars.colors.textPrimary,
+        ? themeColors.timerPaused
+        : themeColors.timerNormal,
     textShadow: isOvertime || isPaused
-      ? `0 0 20px ${isOvertime ? cssVars.colors.error : cssVars.colors.warning}`
-      : '0 2px 8px rgba(0, 0, 0, 0.4)',
+      ? `0 0 20px ${isOvertime ? themeColors.timerOvertime : themeColors.timerPaused}`
+      : themeColors.textShadowLight,
     animation: isPaused ? 'timerPause 1.5s ease-in-out infinite' : undefined,
     letterSpacing: '0.02em',
   };
@@ -146,38 +155,36 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   const separatorStyle: CSSProperties = {
     fontSize: currentSize.time,
     fontWeight: cssVars.fontWeights.bold,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: themeColors.timerSeparator,
   };
 
   const totalTimeStyle: CSSProperties = {
     fontSize: currentSize.time,
     fontWeight: cssVars.fontWeights.medium,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: themeColors.timerSecondary,
   };
 
   const progressContainerStyle: CSSProperties = {
     width: '100%',
     height: currentSize.progress,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: themeColors.progressTrack,
     borderRadius: currentSize.progress,
     overflow: 'hidden',
     position: 'relative',
-    boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+    boxShadow: themeColors.progressInsetShadow,
   };
 
   const progressBarStyle: CSSProperties = {
     height: '100%',
     width: `${progressPercent}%`,
-    background: isOvertime
-      ? `linear-gradient(90deg, ${cssVars.colors.error} 0%, ${cssVars.colors.gradientErrorLight} 100%)`
-      : isNearEnd
-        ? `linear-gradient(90deg, ${cssVars.colors.error} 0%, ${cssVars.colors.gradientErrorLight} 100%)`
-        : `linear-gradient(90deg, ${cssVars.colors.primary} 0%, ${cssVars.colors.gradientPrimaryLight} 100%)`,
+    background: isOvertime || isNearEnd
+      ? `linear-gradient(90deg, ${themeColors.progressBarWarning} 0%, ${themeColors.timerWarning} 100%)`
+      : `linear-gradient(90deg, ${themeColors.progressBar} 0%, ${themeColors.liveBadgeText} 100%)`,
     borderRadius: currentSize.progress,
     transition: 'width 1s linear',
     boxShadow: isNearEnd || isOvertime
-      ? `0 0 12px ${cssVars.colors.error}`
-      : `0 0 10px ${cssVars.colors.primary}`,
+      ? themeColors.progressShadowWarning
+      : themeColors.progressShadow,
     animation: isNearEnd ? 'progressPulse 1s ease-in-out infinite' : undefined,
   };
 
@@ -189,14 +196,14 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     backgroundColor: isPaused
-      ? 'rgba(255,145,0,0.25)'
-      : 'rgba(0,230,118,0.25)',
+      ? themeColors.pauseBadgeBg
+      : themeColors.liveBadgeBg,
     color: isPaused
-      ? cssVars.colors.warning
-      : cssVars.colors.primary,
+      ? themeColors.pauseBadgeText
+      : themeColors.liveBadgeText,
     boxShadow: isPaused
-      ? `0 0 15px rgba(255,145,0,0.3)`
-      : `0 0 15px rgba(0,230,118,0.3)`,
+      ? themeColors.progressShadowWarning
+      : themeColors.progressShadow,
     animation: isPaused ? 'statusPulse 1.5s ease-in-out infinite' : undefined,
   };
 
@@ -220,7 +227,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
         )}
 
         {isOvertime && !isPaused && (
-          <div style={{ ...statusBadgeStyle, backgroundColor: 'rgba(255,82,82,0.2)', color: cssVars.colors.error }}>
+          <div style={{ ...statusBadgeStyle, backgroundColor: themeColors.overtimeBadgeBg, color: themeColors.timerOvertime }}>
             Nachspielzeit
           </div>
         )}

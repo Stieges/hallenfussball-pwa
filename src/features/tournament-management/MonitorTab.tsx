@@ -23,6 +23,7 @@ import {
   FullscreenControls,
   useFullscreen,
   GoalAnimation,
+  CardAnimation,
   NextMatchPreview,
 } from '../../components/monitor'
 import { NextMatchCard, NextMatchInfo } from './components/NextMatchCard'
@@ -48,6 +49,8 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
     pausedMatches,
     lastGoalEvent,
     clearLastGoalEvent,
+    lastCardEvent,
+    clearLastCardEvent,
     calculateElapsedSeconds,
   } = useLiveMatches(tournament.id)
 
@@ -219,6 +222,12 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
       <GoalAnimation
         goalEvent={lastGoalEvent}
         onAnimationComplete={clearLastGoalEvent}
+      />
+
+      {/* CARD ANIMATION OVERLAY */}
+      <CardAnimation
+        cardEvent={lastCardEvent}
+        onAnimationComplete={clearLastCardEvent}
       />
 
       {/* NEXT MATCH PREVIEW BANNER */}

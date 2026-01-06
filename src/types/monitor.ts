@@ -236,6 +236,11 @@ export interface MonitorSlide {
 // =============================================================================
 
 /**
+ * Theme für Monitor-Display
+ */
+export type MonitorTheme = 'light' | 'dark' | 'auto';
+
+/**
  * Monitor-Konfiguration - eine Display-Einrichtung
  */
 export interface TournamentMonitor {
@@ -246,6 +251,9 @@ export interface TournamentMonitor {
   defaultSlideDuration: number;           // Sekunden (Default: 15)
   transition: TransitionType;
   transitionDuration: number;             // Millisekunden (Default: 500)
+
+  // Darstellung
+  theme: MonitorTheme;                    // 'light' | 'dark' | 'auto'
 
   // Template-System (Phase 2)
   templateId?: string;                    // Referenz zu MonitorTemplate
@@ -269,6 +277,7 @@ export const DEFAULT_MONITOR: Omit<TournamentMonitor, 'id' | 'name' | 'createdAt
   defaultSlideDuration: 15,
   transition: 'fade',
   transitionDuration: 500,
+  theme: 'dark',
   performanceMode: 'auto',
   slides: [],
 };

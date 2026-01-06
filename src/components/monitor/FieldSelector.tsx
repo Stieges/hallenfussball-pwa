@@ -6,10 +6,14 @@
  * - Active field highlighted in green
  * - Shows live indicator on fields with running matches
  * - Only shows if more than one field
+ * - Theme support (dark/light/auto)
  */
 
 import { CSSProperties } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars } from '../../design-tokens';
+import type { MonitorTheme } from '../../types/monitor';
+import { useMonitorTheme } from '../../hooks';
+
 export interface FieldSelectorProps {
   /** Total number of fields */
   numberOfFields: number;
@@ -21,6 +25,8 @@ export interface FieldSelectorProps {
   fieldsWithRunningMatches?: Set<number>;
   /** Hide the selector (e.g., in fullscreen mode when controls hidden) */
   hidden?: boolean;
+  /** Theme (dark/light/auto) */
+  theme?: MonitorTheme;
 }
 
 export const FieldSelector: React.FC<FieldSelectorProps> = ({
@@ -29,7 +35,10 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
   onSelectField,
   fieldsWithRunningMatches = new Set(),
   hidden = false,
+  theme = 'dark',
 }) => {
+  // Resolve auto theme based on system preference
+  const { themeColors } = useMonitorTheme(theme);
   // Don't render if only one field
   if (numberOfFields <= 1) {
     return null;
@@ -50,12 +59,12 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
 
     return {
       padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
-      border: `2px solid ${isActive ? cssVars.colors.primary : cssVars.colors.border}`,
+      border: `2px solid ${isActive ? themeColors.liveBadgeText : themeColors.border}`,
       borderRadius: cssVars.borderRadius.md,
       backgroundColor: isActive
-        ? 'rgba(0,230,118,0.2)'
-        : 'rgba(255,255,255,0.05)',
-      color: isActive ? cssVars.colors.primary : cssVars.colors.textPrimary,
+        ? themeColors.fieldSelected
+        : themeColors.fieldDefault,
+      color: isActive ? themeColors.liveBadgeText : themeColors.text,
       fontSize: cssVars.fontSizes.md,
       fontWeight: isActive ? cssVars.fontWeights.bold : cssVars.fontWeights.medium,
       cursor: 'pointer',
@@ -71,7 +80,7 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
     width: '8px',
     height: '8px',
     borderRadius: '50%',
-    backgroundColor: cssVars.colors.statusLive,
+    backgroundColor: themeColors.liveDot,
     animation: 'liveDot 1s ease-in-out infinite',
   };
 
@@ -85,14 +94,14 @@ export const FieldSelector: React.FC<FieldSelectorProps> = ({
             onClick={() => onSelectField(field)}
             onMouseEnter={(e) => {
               if (field !== selectedField) {
-                e.currentTarget.style.borderColor = cssVars.colors.primary;
-                e.currentTarget.style.backgroundColor = 'rgba(0,230,118,0.1)';
+                e.currentTarget.style.borderColor = themeColors.liveBadgeText;
+                e.currentTarget.style.backgroundColor = themeColors.fieldHover;
               }
             }}
             onMouseLeave={(e) => {
               if (field !== selectedField) {
-                e.currentTarget.style.borderColor = cssVars.colors.border;
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)';
+                e.currentTarget.style.borderColor = themeColors.border;
+                e.currentTarget.style.backgroundColor = themeColors.fieldDefault;
               }
             }}
             aria-pressed={field === selectedField}

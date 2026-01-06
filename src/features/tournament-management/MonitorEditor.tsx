@@ -21,6 +21,8 @@ import type {
   SlideConfig,
   TransitionType,
   PerformanceMode,
+  MonitorTheme,
+  WhenIdleType,
 } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors, useFields } from '../../hooks';
@@ -57,6 +59,19 @@ const PERFORMANCE_OPTIONS: { value: PerformanceMode; label: string; description:
   { value: 'auto', label: 'Automatisch', description: 'Erkennt Smart-TVs automatisch' },
   { value: 'high', label: 'Hoch', description: 'Alle Animationen aktiv' },
   { value: 'low', label: 'Energiesparen', description: 'Für ältere Smart-TVs' },
+];
+
+const THEME_OPTIONS: { value: MonitorTheme; label: string; description: string }[] = [
+  { value: 'dark', label: 'Dunkel', description: 'Dunkler Hintergrund (Standard)' },
+  { value: 'light', label: 'Hell', description: 'Heller Hintergrund für helle Räume' },
+  { value: 'auto', label: 'Automatisch', description: 'Folgt Systemeinstellungen' },
+];
+
+const WHEN_IDLE_OPTIONS: { value: WhenIdleType; label: string; description: string }[] = [
+  { value: 'next-match', label: 'Nächstes Spiel', description: 'Zeigt das nächste Spiel mit Countdown' },
+  { value: 'last-result', label: 'Letztes Ergebnis', description: 'Zeigt das letzte Spielergebnis' },
+  { value: 'sponsor', label: 'Sponsor', description: 'Zeigt einen Sponsor-Screen' },
+  { value: 'skip', label: 'Überspringen', description: 'Springt zum nächsten Slide' },
 ];
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
@@ -170,6 +185,7 @@ export function MonitorEditor({
     transition?: TransitionType;
     transitionDuration?: number;
     performanceMode?: PerformanceMode;
+    theme?: MonitorTheme;
   }) => {
     if (!monitor) {return;}
 
@@ -631,6 +647,20 @@ export function MonitorEditor({
                   ))}
                 </select>
               </div>
+
+              {/* Theme */}
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>Farbschema</label>
+                <select
+                  style={selectStyle}
+                  value={monitor.theme}
+                  onChange={(e) => void handleUpdateSettings({ theme: e.target.value as MonitorTheme })}
+                >
+                  {THEME_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -789,6 +819,45 @@ function SlideConfigEditor({
             ))}
           </select>
         </div>
+      )}
+
+      {/* When Idle - nur für Live-Slides */}
+      {type === 'live' && (
+        <>
+          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+            <label style={styles.labelStyle}>Wenn kein Spiel läuft</label>
+            <select
+              style={styles.selectStyle}
+              value={config.whenIdle?.type ?? 'next-match'}
+              onChange={(e) => handleConfigChange('whenIdle', {
+                type: e.target.value as WhenIdleType,
+                timeoutSeconds: config.whenIdle?.timeoutSeconds ?? 60,
+              })}
+            >
+              {WHEN_IDLE_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <span style={{
+              fontSize: cssVars.fontSizes.xs,
+              color: cssVars.colors.textMuted,
+              marginTop: cssVars.spacing.xs,
+            }}>
+              {WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.description}
+            </span>
+          </div>
+
+          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={config.pauseRotationDuringMatch !== false}
+                onChange={(e) => handleConfigChange('pauseRotationDuringMatch', e.target.checked)}
+              />
+              <span style={styles.labelStyle}>Rotation bei laufendem Spiel pausieren</span>
+            </label>
+          </div>
+        </>
       )}
 
       {/* Gruppen-Auswahl für standings, schedule-group */}

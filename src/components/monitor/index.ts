@@ -25,6 +25,10 @@ export type { FullscreenControlsProps } from './FullscreenControls';
 export { GoalAnimation, GoalFlash } from './GoalAnimation';
 export type { GoalAnimationProps, GoalFlashProps } from './GoalAnimation';
 
+// Card animation
+export { CardAnimation, CardFlash } from './CardAnimation';
+export type { CardAnimationProps, CardFlashProps, CardEventInfo } from './CardAnimation';
+
 // Next match preview
 export { NextMatchPreview, useRemainingSeconds } from './NextMatchPreview';
 export type { NextMatchPreviewProps, NextMatch } from './NextMatchPreview';

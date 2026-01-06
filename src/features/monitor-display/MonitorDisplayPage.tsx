@@ -22,6 +22,8 @@ import {
   displaySpacing,
   displayEffects,
   displayColorSchemes,
+  monitorThemes,
+  cssVars,
 } from '../../design-tokens';
 import type { Tournament, Match, Team } from '../../types/tournament';
 import type {
@@ -29,10 +31,31 @@ import type {
   MonitorSlide,
   TransitionType,
   PerformanceSettings,
+  MonitorTheme,
 } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus, CacheStatus } from '../../types/monitor';
 import { getAllTournaments } from '../../services/api';
 import { calculateStandings } from '../../utils/calculations';
+import { TeamAvatar } from '../../components/ui/TeamAvatar';
+import { useLiveMatches } from '../../hooks/useLiveMatches';
+import { GoalAnimation, CardAnimation } from '../../components/monitor';
+
+// =============================================================================
+// THEME RESOLUTION
+// =============================================================================
+
+/**
+ * Resolve auto theme based on system preference
+ */
+function resolveTheme(theme: MonitorTheme): 'light' | 'dark' {
+  if (theme === 'auto') {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark';
+  }
+  return theme;
+}
 
 // =============================================================================
 // TYPES
@@ -126,9 +149,13 @@ interface SlideRendererProps {
   slide: MonitorSlide;
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
+  theme: MonitorTheme;
 }
 
-function SlideRenderer({ slide, tournament, performanceSettings }: SlideRendererProps) {
+function SlideRenderer({ slide, tournament, performanceSettings, theme }: SlideRendererProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
   const slideStyle: CSSProperties = {
     width: '100%',
     height: '100%',
@@ -138,23 +165,23 @@ function SlideRenderer({ slide, tournament, performanceSettings }: SlideRenderer
     justifyContent: 'center',
     padding: displaySpacing.overscan,
     boxSizing: 'border-box',
-    background: displayColors.background,
-    color: displayColors.textPrimary,
+    background: themeColors.backgroundGradient,
+    color: themeColors.text,
     fontFamily: 'Inter, system-ui, sans-serif',
   };
 
   switch (slide.type) {
     case 'live':
-      return <LiveSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} style={slideStyle} />;
+      return <LiveSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'standings':
-      return <StandingsSlide slide={slide} tournament={tournament} style={slideStyle} />;
+      return <StandingsSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'schedule-field':
-      return <ScheduleFieldSlide slide={slide} tournament={tournament} style={slideStyle} />;
+      return <ScheduleFieldSlide slide={slide} tournament={tournament} theme={theme} style={slideStyle} />;
 
     case 'sponsor':
-      return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} style={slideStyle} />;
+      return <SponsorSlide slide={slide} tournament={tournament} performanceSettings={performanceSettings} theme={theme} style={slideStyle} />;
 
     case 'custom-text':
       return <CustomTextSlide slide={slide} style={slideStyle} />;
@@ -178,10 +205,14 @@ interface LiveSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
+  theme: MonitorTheme;
   style: CSSProperties;
 }
 
-function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideProps) {
+function LiveSlide({ slide, tournament, performanceSettings, theme, style }: LiveSlideProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
@@ -197,7 +228,14 @@ function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideP
     ? matches.find(m => m.field === fieldNumber && (!m.matchStatus || m.matchStatus === 'scheduled'))
     : null;
 
+  // Get team objects for avatars
+  const getTeamObject = (teamIdOrName: string) =>
+    teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
+
   if (liveMatch) {
+    const homeTeam = getTeamObject(liveMatch.teamA);
+    const awayTeam = getTeamObject(liveMatch.teamB);
+
     return (
       <div style={style}>
         {/* Live Badge */}
@@ -211,13 +249,13 @@ function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideP
             width: '16px',
             height: '16px',
             borderRadius: '50%',
-            background: displayColors.liveIndicator,
-            animation: performanceSettings.enableAnimations ? 'pulse 2s ease-in-out infinite' : 'none',
-            boxShadow: performanceSettings.enableGlow ? displayEffects.liveGlow : 'none',
+            background: themeColors.liveDot,
+            animation: performanceSettings.enableAnimations ? 'liveDotPulse 1s ease-in-out infinite' : 'none',
+            boxShadow: performanceSettings.enableGlow ? `0 0 10px ${themeColors.liveDot}` : 'none',
           }} />
           <span style={{
             fontSize: displayFontSizes.bodyLG,
-            color: displayColors.live,
+            color: themeColors.liveBadgeText,
             fontWeight: 600,
             textTransform: 'uppercase',
             letterSpacing: '2px',
@@ -226,64 +264,95 @@ function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideP
           </span>
         </div>
 
-        {/* Score Display */}
+        {/* Score Display - Matched with LiveMatchDisplay layout */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: displaySpacing.sectionLG,
+          width: '100%',
           marginBottom: displaySpacing.sectionMD,
         }}>
           {/* Home Team */}
-          <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.md }}>
+            {homeTeam && (
+              <TeamAvatar
+                team={homeTeam}
+                size="xxxl"
+                showColorRing
+              />
+            )}
             <div style={{
-              fontSize: displayFontSizes.bodyXL,
-              color: displayColors.textPrimary,
-              marginBottom: displaySpacing.contentMD,
+              fontSize: 'clamp(48px, 5vw, 72px)',
+              color: themeColors.text,
+              fontWeight: cssVars.fontWeights.bold,
+              textShadow: themeColors.textShadow,
             }}>
               {getTeamName(teams, liveMatch.teamA)}
             </div>
+          </div>
+
+          {/* Score */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: cssVars.spacing.xl,
+            flexShrink: 0,
+          }}>
             <div style={{
-              fontSize: displayFontSizes.scoreXL,
+              fontSize: 'clamp(120px, 14vw, 200px)',
               fontWeight: 700,
-              color: displayColors.textPrimary,
-              textShadow: performanceSettings.enableGlow ? displayEffects.scoreGlow : 'none',
+              color: themeColors.score,
+              textShadow: themeColors.scoreShadow,
+              minWidth: '140px',
+              textAlign: 'center',
             }}>
               {liveMatch.scoreA ?? 0}
             </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{
-            fontSize: displayFontSizes.scoreLG,
-            color: displayColors.textMuted,
-          }}>
-            :
+            <div style={{
+              fontSize: 'clamp(80px, 9vw, 120px)',
+              fontWeight: 700,
+              color: themeColors.text,
+              opacity: 0.8,
+            }}>
+              :
+            </div>
+            <div style={{
+              fontSize: 'clamp(120px, 14vw, 200px)',
+              fontWeight: 700,
+              color: themeColors.score,
+              textShadow: themeColors.scoreShadow,
+              minWidth: '140px',
+              textAlign: 'center',
+            }}>
+              {liveMatch.scoreB ?? 0}
+            </div>
           </div>
 
           {/* Away Team */}
-          <div style={{ textAlign: 'center', flex: 1 }}>
+          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.md }}>
+            {awayTeam && (
+              <TeamAvatar
+                team={awayTeam}
+                size="xxxl"
+                showColorRing
+              />
+            )}
             <div style={{
-              fontSize: displayFontSizes.bodyXL,
-              color: displayColors.textPrimary,
-              marginBottom: displaySpacing.contentMD,
+              fontSize: 'clamp(48px, 5vw, 72px)',
+              color: themeColors.text,
+              fontWeight: cssVars.fontWeights.bold,
+              textShadow: themeColors.textShadow,
             }}>
               {getTeamName(teams, liveMatch.teamB)}
-            </div>
-            <div style={{
-              fontSize: displayFontSizes.scoreXL,
-              fontWeight: 700,
-              color: displayColors.textPrimary,
-              textShadow: performanceSettings.enableGlow ? displayEffects.scoreGlow : 'none',
-            }}>
-              {liveMatch.scoreB ?? 0}
             </div>
           </div>
         </div>
 
         {/* Match Info */}
         <div style={{
-          fontSize: displayFontSizes.bodyMD,
-          color: displayColors.textSecondary,
+          fontSize: displayFontSizes.bodyXL,
+          color: themeColors.textSecondary,
         }}>
           {liveMatch.group ? `Gruppe ${liveMatch.group}` : liveMatch.label ?? 'Spiel'}
         </div>
@@ -291,37 +360,86 @@ function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideP
     );
   }
 
-  // No live match - show next match or idle state
+  // No live match - show next match or idle state based on whenIdle config
+  const whenIdleType = slide.config.whenIdle?.type ?? 'next-match';
+
   return (
     <div style={style}>
       <div style={{
         fontSize: displayFontSizes.headingMD,
-        color: displayColors.textSecondary,
+        color: themeColors.textSecondary,
         marginBottom: displaySpacing.sectionMD,
       }}>
-        {fieldName}
+        ⚽ {fieldName}
       </div>
 
-      {nextMatch ? (
-        <>
-          <div style={{
-            fontSize: displayFontSizes.bodyLG,
-            color: displayColors.textMuted,
-            marginBottom: displaySpacing.contentLG,
-          }}>
-            Nächstes Spiel
-          </div>
-          <div style={{
-            fontSize: displayFontSizes.headingLG,
-            color: displayColors.textPrimary,
-          }}>
-            {getTeamName(teams, nextMatch.teamA)} vs {getTeamName(teams, nextMatch.teamB)}
-          </div>
-        </>
+      {whenIdleType === 'skip' ? (
+        <div style={{
+          fontSize: displayFontSizes.bodyLG,
+          color: themeColors.textMuted,
+        }}>
+          Warte auf nächstes Spiel...
+        </div>
+      ) : nextMatch ? (
+        (() => {
+          const nextTeamA = getTeamObject(nextMatch.teamA);
+          const nextTeamB = getTeamObject(nextMatch.teamB);
+          return (
+            <>
+              <div style={{
+                fontSize: displayFontSizes.bodyLG,
+                color: themeColors.textMuted,
+                marginBottom: displaySpacing.contentLG,
+              }}>
+                Nächstes Spiel
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: displaySpacing.sectionMD,
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  {nextTeamA && (
+                    <TeamAvatar team={nextTeamA} size="xxl" showColorRing />
+                  )}
+                  <div style={{
+                    fontSize: displayFontSizes.headingMD,
+                    color: themeColors.text,
+                    marginTop: cssVars.spacing.md,
+                  }}>
+                    {getTeamName(teams, nextMatch.teamA)}
+                  </div>
+                </div>
+
+                <div style={{
+                  fontSize: displayFontSizes.headingLG,
+                  color: themeColors.textMuted,
+                  padding: `0 ${displaySpacing.contentLG}`,
+                }}>
+                  vs
+                </div>
+
+                <div style={{ textAlign: 'center' }}>
+                  {nextTeamB && (
+                    <TeamAvatar team={nextTeamB} size="xxl" showColorRing />
+                  )}
+                  <div style={{
+                    fontSize: displayFontSizes.headingMD,
+                    color: themeColors.text,
+                    marginTop: cssVars.spacing.md,
+                  }}>
+                    {getTeamName(teams, nextMatch.teamB)}
+                  </div>
+                </div>
+              </div>
+            </>
+          );
+        })()
       ) : (
         <div style={{
           fontSize: displayFontSizes.bodyLG,
-          color: displayColors.textMuted,
+          color: themeColors.textMuted,
         }}>
           Kein Spiel geplant
         </div>
@@ -337,10 +455,14 @@ function LiveSlide({ slide, tournament, performanceSettings, style }: LiveSlideP
 interface StandingsSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
+  theme: MonitorTheme;
   style: CSSProperties;
 }
 
-function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
+function StandingsSlide({ slide, tournament, theme, style }: StandingsSlideProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
   const groupId = slide.config.groupId;
   const groupName = getGroupDisplayName(tournament, groupId);
   const { teams, matches } = tournament;
@@ -355,19 +477,20 @@ function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
         fontSize: displayFontSizes.headingLG,
         fontWeight: 600,
         marginBottom: displaySpacing.sectionMD,
-        color: displayColors.textPrimary,
+        color: themeColors.text,
       }}>
-        {groupName}
+        📊 {groupName}
       </div>
 
       {/* Table */}
       <div style={{
         width: '100%',
         maxWidth: '800px',
-        background: displayColors.surface,
+        background: themeColors.surface,
         borderRadius: '16px',
         padding: displaySpacing.contentLG,
         boxShadow: displayEffects.cardShadow,
+        border: `1px solid ${themeColors.border}`,
       }}>
         {/* Table Header */}
         <div style={{
@@ -375,9 +498,9 @@ function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
           gridTemplateColumns: '48px 1fr 48px 48px 48px 64px 64px',
           gap: displaySpacing.inlineMD,
           padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-          borderBottom: `1px solid ${displayColors.surfaceAlt}`,
+          borderBottom: `1px solid ${themeColors.border}`,
           fontSize: displayFontSizes.bodySM,
-          color: displayColors.textMuted,
+          color: themeColors.textMuted,
           fontWeight: 500,
         }}>
           <div>#</div>
@@ -398,9 +521,9 @@ function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
               gridTemplateColumns: '48px 1fr 48px 48px 48px 64px 64px',
               gap: displaySpacing.inlineMD,
               padding: `${displaySpacing.contentMD} ${displaySpacing.contentMD}`,
-              borderBottom: idx < standings.length - 1 ? `1px solid ${displayColors.surfaceAlt}` : 'none',
+              borderBottom: idx < standings.length - 1 ? `1px solid ${themeColors.border}` : 'none',
               fontSize: displayFontSizes.bodyLG,
-              color: displayColors.textPrimary,
+              color: themeColors.text,
             }}
           >
             <div style={{ fontWeight: 600 }}>{idx + 1}</div>
@@ -411,23 +534,23 @@ function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
             }}>
               {row.team.name}
             </div>
-            <div style={{ textAlign: 'center', color: displayColors.success }}>{row.won}</div>
-            <div style={{ textAlign: 'center', color: displayColors.textSecondary }}>{row.drawn}</div>
-            <div style={{ textAlign: 'center', color: displayColors.error }}>{row.lost}</div>
+            <div style={{ textAlign: 'center', color: themeColors.progressBar }}>{row.won}</div>
+            <div style={{ textAlign: 'center', color: themeColors.textSecondary }}>{row.drawn}</div>
+            <div style={{ textAlign: 'center', color: themeColors.progressBarWarning }}>{row.lost}</div>
             <div style={{
               textAlign: 'center',
               color: row.goalDifference > 0
-                ? displayColors.success
+                ? themeColors.progressBar
                 : row.goalDifference < 0
-                  ? displayColors.error
-                  : displayColors.textSecondary,
+                  ? themeColors.progressBarWarning
+                  : themeColors.textSecondary,
             }}>
               {row.goalDifference > 0 ? '+' : ''}{row.goalDifference}
             </div>
             <div style={{
               textAlign: 'center',
               fontWeight: 700,
-              color: displayColors.primary,
+              color: themeColors.score,
             }}>
               {row.points}
             </div>
@@ -445,10 +568,14 @@ function StandingsSlide({ slide, tournament, style }: StandingsSlideProps) {
 interface ScheduleFieldSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
+  theme: MonitorTheme;
   style: CSSProperties;
 }
 
-function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProps) {
+function ScheduleFieldSlide({ slide, tournament, theme, style }: ScheduleFieldSlideProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
   const fieldNumber = fieldIdToNumber(slide.config.fieldId);
   const field = tournament.fields?.find(f => f.id === slide.config.fieldId);
   const fieldName = field?.customName ?? field?.defaultName ?? `Feld ${fieldNumber}`;
@@ -461,9 +588,9 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
 
   const getStatusColor = (match: Match) => {
     switch (match.matchStatus) {
-      case 'running': return displayColors.live;
-      case 'finished': return displayColors.success;
-      default: return displayColors.textMuted;
+      case 'running': return themeColors.liveDot;
+      case 'finished': return themeColors.progressBar;
+      default: return themeColors.textMuted;
     }
   };
 
@@ -474,9 +601,9 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
         fontSize: displayFontSizes.headingLG,
         fontWeight: 600,
         marginBottom: displaySpacing.sectionMD,
-        color: displayColors.textPrimary,
+        color: themeColors.text,
       }}>
-        Spielplan {fieldName}
+        📋 Spielplan {fieldName}
       </div>
 
       {/* Match List */}
@@ -495,9 +622,9 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
               alignItems: 'center',
               gap: displaySpacing.contentLG,
               padding: displaySpacing.contentLG,
-              background: match.matchStatus === 'running' ? displayColors.surfaceAlt : displayColors.surface,
+              background: match.matchStatus === 'running' ? themeColors.surfaceHover : themeColors.surface,
               borderRadius: '12px',
-              border: match.matchStatus === 'running' ? `2px solid ${displayColors.live}` : 'none',
+              border: match.matchStatus === 'running' ? `2px solid ${themeColors.liveDot}` : `1px solid ${themeColors.border}`,
             }}
           >
             {/* Status Indicator */}
@@ -513,7 +640,7 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
             <div style={{
               flex: 1,
               fontSize: displayFontSizes.bodyLG,
-              color: displayColors.textPrimary,
+              color: themeColors.text,
               textAlign: 'right',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -528,7 +655,7 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
               textAlign: 'center',
               fontSize: displayFontSizes.bodyXL,
               fontWeight: 700,
-              color: match.matchStatus === 'finished' ? displayColors.textPrimary : displayColors.textMuted,
+              color: match.matchStatus === 'finished' ? themeColors.score : themeColors.textMuted,
             }}>
               {match.scoreA !== undefined && match.scoreB !== undefined
                 ? `${match.scoreA}:${match.scoreB}`
@@ -539,7 +666,7 @@ function ScheduleFieldSlide({ slide, tournament, style }: ScheduleFieldSlideProp
             <div style={{
               flex: 1,
               fontSize: displayFontSizes.bodyLG,
-              color: displayColors.textPrimary,
+              color: themeColors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -561,10 +688,14 @@ interface SponsorSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
+  theme: MonitorTheme;
   style: CSSProperties;
 }
 
-function SponsorSlide({ slide, tournament, performanceSettings, style }: SponsorSlideProps) {
+function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: SponsorSlideProps) {
+  const resolvedTheme = resolveTheme(theme);
+  const themeColors = monitorThemes[resolvedTheme];
+
   const sponsorId = slide.config.sponsorId;
   const sponsors = tournament.sponsors ?? [];
   const sponsor = sponsors.find(s => s.id === sponsorId);
@@ -572,7 +703,7 @@ function SponsorSlide({ slide, tournament, performanceSettings, style }: Sponsor
   if (!sponsor) {
     return (
       <div style={style}>
-        <div style={{ fontSize: displayFontSizes.headingMD, color: displayColors.textMuted }}>
+        <div style={{ fontSize: displayFontSizes.headingMD, color: themeColors.textMuted }}>
           Sponsor nicht gefunden
         </div>
       </div>
@@ -609,7 +740,7 @@ function SponsorSlide({ slide, tournament, performanceSettings, style }: Sponsor
         <div style={{
           fontSize: displayFontSizes.headingXL,
           fontWeight: 700,
-          color: displayColors.textPrimary,
+          color: themeColors.text,
           marginBottom: displaySpacing.sectionLG,
         }}>
           {sponsor.name}
@@ -620,7 +751,7 @@ function SponsorSlide({ slide, tournament, performanceSettings, style }: Sponsor
       {sponsor.tier && (
         <div style={{
           fontSize: displayFontSizes.bodyMD,
-          color: displayColors.textSecondary,
+          color: themeColors.textSecondary,
           marginBottom: displaySpacing.sectionMD,
           textTransform: 'capitalize',
         }}>
@@ -653,7 +784,7 @@ function SponsorSlide({ slide, tournament, performanceSettings, style }: Sponsor
           </div>
           <div style={{
             fontSize: displayFontSizes.bodySM,
-            color: displayColors.textMuted,
+            color: themeColors.textMuted,
             marginTop: displaySpacing.contentSM,
           }}>
             Scan für mehr Info
@@ -838,6 +969,14 @@ export function MonitorDisplayPage({
   const [isPaused, setIsPaused] = useState(false);
   const [lastFetch, setLastFetch] = useState<number>(Date.now());
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
+
+  // Live match events for animations
+  const {
+    lastGoalEvent,
+    clearLastGoalEvent,
+    lastCardEvent,
+    clearLastCardEvent,
+  } = useLiveMatches(tournamentId);
 
   // Ref to track if a fetch is in progress (prevents race conditions)
   const isFetchingRef = useRef(false);
@@ -1080,6 +1219,7 @@ export function MonitorDisplayPage({
               slide={currentSlide}
               tournament={tournament}
               performanceSettings={performanceSettings}
+              theme={monitor.theme}
             />
           </TransitionWrapper>
         )}
@@ -1135,11 +1275,41 @@ export function MonitorDisplayPage({
       {/* Cache Indicator (Admin only) */}
       <CacheIndicator cacheStatus={cacheStatus} visible={showCacheIndicator} />
 
+      {/* Goal Animation Overlay */}
+      <GoalAnimation
+        goalEvent={lastGoalEvent}
+        onAnimationComplete={clearLastGoalEvent}
+      />
+
+      {/* Card Animation Overlay */}
+      <CardAnimation
+        cardEvent={lastCardEvent}
+        onAnimationComplete={clearLastCardEvent}
+      />
+
       {/* CSS for animations */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.6; transform: scale(0.95); }
+        }
+
+        @keyframes liveDotPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 0.8;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+          }
         }
       `}</style>
     </div>

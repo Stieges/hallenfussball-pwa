@@ -71,6 +71,16 @@ export interface GoalEventInfo {
   };
 }
 
+export interface CardEventInfo {
+  matchId: string;
+  teamId: string;
+  teamName: string;
+  side: 'home' | 'away';
+  cardType: 'YELLOW' | 'RED';
+  playerNumber?: number;
+  timestamp: number;
+}
+
 export interface UseLiveMatchesReturn {
   /** All live matches from localStorage */
   liveMatches: Map<string, LiveMatch>;
@@ -86,6 +96,10 @@ export interface UseLiveMatchesReturn {
   lastGoalEvent: GoalEventInfo | null;
   /** Clear the last goal event (after animation completes) */
   clearLastGoalEvent: () => void;
+  /** Last detected card event (for animations) */
+  lastCardEvent: CardEventInfo | null;
+  /** Clear the last card event (after animation completes) */
+  clearLastCardEvent: () => void;
   /** Calculate current elapsed seconds for a match (with real-time timer) */
   calculateElapsedSeconds: (match: LiveMatch) => number;
 }
@@ -118,10 +132,13 @@ function calculateMatchElapsedSeconds(match: LiveMatch): number {
 export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
   const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
   const [lastGoalEvent, setLastGoalEvent] = useState<GoalEventInfo | null>(null);
+  const [lastCardEvent, setLastCardEvent] = useState<CardEventInfo | null>(null);
 
   // Track seen goal event IDs to avoid duplicate animations
   const seenGoalIds = useRef<Set<string>>(new Set());
-  // Flag to skip goal detection on initial load (don't animate old goals)
+  // Track seen card event IDs to avoid duplicate animations
+  const seenCardIds = useRef<Set<string>>(new Set());
+  // Flag to skip event detection on initial load (don't animate old events)
   const isInitialLoad = useRef(true);
 
   const storageKey = STORAGE_KEYS.liveMatches(tournamentId);
@@ -144,14 +161,16 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
   }, [storageKey]);
 
   /**
-   * Pre-populate seenGoalIds with all existing goal events
-   * Called on initial load to prevent animating old goals
+   * Pre-populate seen event IDs with all existing events
+   * Called on initial load to prevent animating old events
    */
-  const markAllGoalsAsSeen = useCallback((matches: Map<string, LiveMatch>) => {
+  const markAllEventsAsSeen = useCallback((matches: Map<string, LiveMatch>) => {
     for (const [, match] of matches) {
       for (const event of match.events) {
         if (event.type === 'GOAL') {
           seenGoalIds.current.add(event.id);
+        } else if (event.type === 'YELLOW_CARD' || event.type === 'RED_CARD') {
+          seenCardIds.current.add(event.id);
         }
       }
     }
@@ -205,20 +224,71 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
   }, []);
 
   /**
+   * Detect new card events by checking event IDs we haven't seen before
+   * IMPORTANT: Only detects cards from RUNNING matches
+   */
+  const detectCardEvent = useCallback((
+    newMatches: Map<string, LiveMatch>
+  ): CardEventInfo | null => {
+    for (const [, match] of newMatches) {
+      // Only detect cards from RUNNING matches
+      if (match.status !== 'RUNNING') {
+        // Still mark events as seen to avoid triggering when match resumes
+        for (const event of match.events) {
+          if (event.type === 'YELLOW_CARD' || event.type === 'RED_CARD') {
+            seenCardIds.current.add(event.id);
+          }
+        }
+        continue;
+      }
+
+      const events = match.events;
+
+      // Find card events we haven't seen yet
+      for (const event of events) {
+        if (
+          (event.type === 'YELLOW_CARD' || event.type === 'RED_CARD') &&
+          !seenCardIds.current.has(event.id)
+        ) {
+          // Mark as seen
+          seenCardIds.current.add(event.id);
+
+          const isHome = event.payload.teamId === match.homeTeam.id;
+
+          return {
+            matchId: match.id,
+            teamId: event.payload.teamId ?? '',
+            teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
+            side: isHome ? 'home' : 'away',
+            cardType: event.type === 'RED_CARD' ? 'RED' : 'YELLOW',
+            playerNumber: event.payload.playerNumber,
+            timestamp: Date.now(),
+          };
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  /**
    * Update state from localStorage
    */
   const updateFromStorage = useCallback(() => {
     const newMatches = parseLiveMatches();
 
-    // On initial load, mark all existing goals as seen (don't animate old goals)
+    // On initial load, mark all existing events as seen (don't animate old events)
     if (isInitialLoad.current) {
       isInitialLoad.current = false;
-      markAllGoalsAsSeen(newMatches);
+      markAllEventsAsSeen(newMatches);
     } else {
-      // Only detect new goals after initial load
+      // Only detect new events after initial load
       const goalEvent = detectGoalEvent(newMatches);
       if (goalEvent) {
         setLastGoalEvent(goalEvent);
+      }
+      const cardEvent = detectCardEvent(newMatches);
+      if (cardEvent) {
+        setLastCardEvent(cardEvent);
       }
     }
 
@@ -229,7 +299,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       if (prevJson === newJson) {return prev;}
       return newMatches;
     });
-  }, [parseLiveMatches, detectGoalEvent, markAllGoalsAsSeen]);
+  }, [parseLiveMatches, detectGoalEvent, detectCardEvent, markAllEventsAsSeen]);
 
   // Initial load and polling
   useEffect(() => {
@@ -278,6 +348,10 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
     setLastGoalEvent(null);
   }, []);
 
+  const clearLastCardEvent = useCallback(() => {
+    setLastCardEvent(null);
+  }, []);
+
   const calculateElapsedSeconds = useCallback(
     (match: LiveMatch) => calculateMatchElapsedSeconds(match),
     []
@@ -291,6 +365,8 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
     getMatchById,
     lastGoalEvent,
     clearLastGoalEvent,
+    lastCardEvent,
+    clearLastCardEvent,
     calculateElapsedSeconds,
   };
 }

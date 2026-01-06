@@ -183,9 +183,9 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.textPrimary,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
+    // MOBILE-UX: No truncation - team names must be fully visible
+    wordBreak: 'break-word',
+    overflowWrap: 'break-word',
     flex: 1,
     textAlign: 'center',
   };

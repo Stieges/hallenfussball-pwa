@@ -7,10 +7,13 @@
  * - Displays for 7 seconds, then fades out
  * - Does NOT show when: paused, no next match, or already finished
  * - Slide-up animation from bottom
+ * - Theme support (dark/light/auto)
  */
 
 import { CSSProperties, useEffect, useState, useCallback, useRef } from 'react';
-import { cssVars } from '../../design-tokens'
+import { cssVars } from '../../design-tokens';
+import type { MonitorTheme } from '../../types/monitor';
+import { useMonitorTheme } from '../../hooks';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 
 export interface NextMatch {
@@ -34,6 +37,8 @@ export interface NextMatchPreviewProps {
   showThresholdSeconds?: number;
   /** Duration to show the preview (default: 7000ms) */
   displayDuration?: number;
+  /** Theme (dark/light/auto) */
+  theme?: MonitorTheme;
 }
 
 export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
@@ -42,7 +47,10 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   remainingSeconds,
   showThresholdSeconds = 180,
   displayDuration = 7000,
+  theme = 'dark',
 }) => {
+  // Resolve auto theme based on system preference
+  const { themeColors } = useMonitorTheme(theme);
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimatingOut, setIsAnimatingOut] = useState(false);
   const hasShownRef = useRef(false);
@@ -125,8 +133,8 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
     left: 0,
     right: 0,
     padding: cssVars.spacing.lg,
-    background: 'linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 100%)',
-    borderTop: `3px solid ${cssVars.colors.accent}`,
+    background: themeColors.overlayGradient,
+    borderTop: `3px solid ${themeColors.liveBadgeText}`,
     animation: isAnimatingOut
       ? 'slideDown 0.3s ease-out forwards'
       : 'slideUp 0.4s ease-out',
@@ -145,7 +153,7 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   const labelStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.accent,
+    color: themeColors.liveBadgeText,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     display: 'flex',
@@ -166,19 +174,19 @@ export const NextMatchPreview: React.FC<NextMatchPreviewProps> = ({
   const teamNameStyle: CSSProperties = {
     fontSize: '28px',
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
+    color: themeColors.text,
     fontFamily: cssVars.fontFamilies.heading,
   };
 
   const vsStyle: CSSProperties = {
     fontSize: '20px',
     fontWeight: cssVars.fontWeights.medium,
-    color: cssVars.colors.textSecondary,
+    color: themeColors.textSecondary,
   };
 
   const metaStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.lg,
-    color: cssVars.colors.textSecondary,
+    color: themeColors.textSecondary,
   };
 
   const estimatedMinutes = Math.ceil(remainingSeconds / 60);
