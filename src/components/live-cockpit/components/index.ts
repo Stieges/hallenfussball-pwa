@@ -41,3 +41,6 @@ export { EventLogBottomSheet } from './EventLogBottomSheet';
 
 // Toast Notifications
 export { Toast, ToastContainer, type ToastData, type ToastType } from './Toast';
+
+// Overflow Menu
+export { OverflowMenu, type OverflowMenuProps } from './OverflowMenu';

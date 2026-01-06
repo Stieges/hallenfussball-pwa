@@ -32,6 +32,8 @@ import {
   EventEditDialog,
   // BUG-002: Event Log Bottom Sheet for Mobile
   EventLogBottomSheet,
+  // Overflow Menu for quick actions + settings link
+  OverflowMenu,
 } from './components';
 
 // Hooks
@@ -116,6 +118,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
   // BUG-002: Event Log Bottom Sheet for Mobile
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
+  // Overflow Menu (⋮ button in header)
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
   // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
@@ -570,6 +574,22 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
   };
 
+  // Menu Button (⋮)
+  const menuButtonStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.textSecondary,
+    fontSize: '1.25rem',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  };
+
   // Next Banner
   const nextBannerStyle: CSSProperties = {
     background: `linear-gradient(90deg, ${cssVars.colors.dangerGradientStart} 0%, ${cssVars.colors.dangerGradientEnd} 100%)`,
@@ -681,7 +701,24 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
             />
           )}
 
-          <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+            <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
+            <button
+              type="button"
+              style={menuButtonStyle}
+              onClick={() => setShowOverflowMenu(true)}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = cssVars.colors.surfaceHover;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+              }}
+              aria-label="Weitere Aktionen"
+              data-testid="overflow-menu-button"
+            >
+              ⋮
+            </button>
+          </div>
         </div>
 
         {/* Foul Bar - Mobile only */}
@@ -935,6 +972,29 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
           setShowEventLogBottomSheet(false);
           setEditingEvent(event);
           setShowEventEditDialog(true);
+        }}
+      />
+
+      {/* Overflow Menu (⋮ button) */}
+      <OverflowMenu
+        isOpen={showOverflowMenu}
+        onClose={() => setShowOverflowMenu(false)}
+        tournamentId={tournamentId}
+        onCardClick={() => {
+          setShowOverflowMenu(false);
+          setShowCardDialog(true);
+        }}
+        onTimePenaltyClick={() => {
+          setShowOverflowMenu(false);
+          setShowTimePenaltyDialog(true);
+        }}
+        onSubstitutionClick={() => {
+          setShowOverflowMenu(false);
+          setShowSubstitutionDialog(true);
+        }}
+        onAdjustTimeClick={() => {
+          setShowOverflowMenu(false);
+          setShowTimeAdjustDialog(true);
         }}
       />
 

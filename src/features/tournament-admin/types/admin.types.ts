@@ -247,6 +247,7 @@ export interface AdminMobileHubProps {
 export interface AdminHeaderProps {
   title: string;
   showBackToHub?: boolean; // Mobile only
+  hideBackButton?: boolean; // Desktop: sidebar has the back button
   onBackToHub?: () => void;
   onBackToTournament: () => void;
   onSearch?: (query: string) => void;

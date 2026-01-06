@@ -115,6 +115,7 @@ const styles = {
 export function AdminHeader({
   title,
   showBackToHub = false,
+  hideBackButton = false,
   onBackToHub,
   onBackToTournament,
   onSearch,
@@ -144,34 +145,36 @@ export function AdminHeader({
     }
   };
 
-  // Desktop layout: back button on left, title, search on right
+  // Desktop layout: no back button (sidebar has it), title left-aligned, search on right
   // Mobile layout: back arrow, centered title, search icon
 
   return (
     <header style={styles.header}>
-      {/* Back Button */}
-      <button
-        style={{
-          ...styles.backButton,
-          ...(showBackToHub ? styles.backButtonMobile : {}),
-        }}
-        onClick={handleBackClick}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = cssVars.colors.surfaceHover;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
-      >
-        <span>←</span>
-        {!showBackToHub && <span>Zurück zum Turnier</span>}
-      </button>
+      {/* Back Button - hidden on desktop (sidebar has the back button) */}
+      {!hideBackButton && (
+        <button
+          style={{
+            ...styles.backButton,
+            ...(showBackToHub ? styles.backButtonMobile : {}),
+          }}
+          onClick={handleBackClick}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = cssVars.colors.surfaceHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          <span>←</span>
+          {!showBackToHub && <span>Zurück zum Turnier</span>}
+        </button>
+      )}
 
       {/* Title */}
       <div
         style={{
           ...styles.title,
-          ...(!showBackToHub ? styles.titleDesktop : {}),
+          ...(hideBackButton || !showBackToHub ? styles.titleDesktop : {}),
         }}
       >
         {showBackToHub ? title : 'ADMIN CENTER'}

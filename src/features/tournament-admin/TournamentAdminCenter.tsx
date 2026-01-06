@@ -309,6 +309,7 @@ export function TournamentAdminCenter({
       <div style={styles.mainContent}>
         <AdminHeader
           title={categoryTitle}
+          hideBackButton // Desktop: sidebar already has back button
           onBackToTournament={onBackToTournament}
         />
         <div style={styles.contentArea}>
