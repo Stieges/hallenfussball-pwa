@@ -1,7 +1,27 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-04 (Mobile-UX-Improvements)
+> **Letzte Aktualisierung:** 2026-01-05 (QA-Durchlauf abgeschlossen)
+
+---
+
+## 🟢 QA-DURCHLAUF ABGESCHLOSSEN (2026-01-05)
+
+**Status:** PASSED - Release-ready
+
+**Ergebnisse:** [docs/qa/](qa/)
+- [QA-ZUSAMMENFASSUNG.md](qa/QA-ZUSAMMENFASSUNG.md) - Executive Summary
+- [QA-UMSETZUNGSPLAN.md](qa/QA-UMSETZUNGSPLAN.md) - Priorisierter Fixplan
+
+**Wichtigste Erkenntnisse:**
+- 336/337 Unit Tests passed
+- 613/684 E2E Tests passed
+- 0 ESLint/TypeScript Fehler
+- 0 `any` Types in .tsx
+
+**Vor Release zu beheben (P1):**
+1. Mobile Team-Namen Truncation
+2. aria-labels für IconButtons
 
 ---
 

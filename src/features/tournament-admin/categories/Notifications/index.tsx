@@ -2,6 +2,10 @@
  * NotificationsCategory - Push & Sound Settings
  *
  * Configure push notifications and sound alerts.
+ * Currently marked as "Coming Soon" as it requires:
+ * - Push notification infrastructure
+ * - Trainer Cockpit
+ * - Backend notification service
  *
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.8
  */
@@ -9,7 +13,6 @@
 import { CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
-import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
 // PROPS
@@ -17,8 +20,6 @@ import type { Tournament } from '../../../../types/tournament';
 
 interface NotificationsCategoryProps {
   tournamentId: string;
-  tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament) => void;
 }
 
 // =============================================================================
@@ -52,59 +53,31 @@ const styles = {
     borderRadius: cssVars.borderRadius.full,
     fontSize: cssVars.fontSizes.labelSm,
     fontWeight: cssVars.fontWeights.medium,
+    marginTop: cssVars.spacing.sm,
+  } as CSSProperties,
+
+  featureList: {
+    textAlign: 'left',
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.surfaceHover,
+    borderRadius: cssVars.borderRadius.md,
     marginTop: cssVars.spacing.md,
   } as CSSProperties,
 
-  formGroup: {
+  featureItem: {
     display: 'flex',
-    flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: cssVars.spacing.sm,
-    marginBottom: cssVars.spacing.md,
-  } as CSSProperties,
-
-  label: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textSecondary,
-  } as CSSProperties,
-
-  checkboxGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  checkbox: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.bodyMd,
-    color: cssVars.colors.textPrimary,
-  } as CSSProperties,
-
-  selectRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  select: {
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.inputBg,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.bodyMd,
-  } as CSSProperties,
-
-  button: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: cssVars.colors.surface,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textPrimary,
     fontSize: cssVars.fontSizes.bodySm,
-    cursor: 'pointer',
+    color: cssVars.colors.textSecondary,
+    marginBottom: cssVars.spacing.xs,
+  } as CSSProperties,
+
+  note: {
+    fontSize: cssVars.fontSizes.labelSm,
+    color: cssVars.colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: cssVars.spacing.md,
   } as CSSProperties,
 } as const;
 
@@ -112,86 +85,69 @@ const styles = {
 // COMPONENT
 // =============================================================================
 
-export function NotificationsCategory({
-  tournament: _tournament,
-}: NotificationsCategoryProps) {
+export function NotificationsCategory(_props: NotificationsCategoryProps) {
   return (
     <CategoryPage
       icon="🔔"
       title="Benachrichtigungen"
       description="Push- und Sound-Einstellungen"
     >
-      {/* Trainer Notifications */}
-      <CollapsibleSection icon="📲" title="Push an Trainer" defaultOpen>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Vorlaufzeit für Spielbenachrichtigung</label>
-          <div style={styles.selectRow}>
-            <select style={styles.select} defaultValue="5">
-              <option value="0">Aus</option>
-              <option value="2">2 Minuten vorher</option>
-              <option value="5">5 Minuten vorher</option>
-              <option value="10">10 Minuten vorher</option>
-              <option value="15">15 Minuten vorher</option>
-            </select>
-          </div>
-        </div>
-
+      {/* Main Coming Soon notice */}
+      <CollapsibleSection icon="📲" title="Benachrichtigungs-System" defaultOpen>
         <div style={styles.comingSoon}>
+          <div style={styles.comingSoonIcon}>🔔</div>
+          <div style={styles.comingSoonTitle}>Benachrichtigungen kommen bald</div>
+          <p>
+            Ein umfassendes Benachrichtigungssystem für Turnierleitungen und Trainer ist in
+            Entwicklung.
+          </p>
+
+          <div style={styles.featureList}>
+            <div style={styles.featureItem}>
+              <span>📲</span>
+              <span>Push-Benachrichtigungen an Trainer vor Spielbeginn</span>
+            </div>
+            <div style={styles.featureItem}>
+              <span>🔔</span>
+              <span>Echtzeit-Alerts bei Spielende, Karten und Korrekturen</span>
+            </div>
+            <div style={styles.featureItem}>
+              <span>🔊</span>
+              <span>Anpassbare Sound-Signale für verschiedene Ereignisse</span>
+            </div>
+            <div style={styles.featureItem}>
+              <span>📱</span>
+              <span>Browser-Push und In-App-Benachrichtigungen</span>
+            </div>
+          </div>
+
+          <span style={styles.badge}>In Entwicklung</span>
+          <p style={styles.note}>
+            Sound-Einstellungen für das Match Cockpit Pro findest du unter Einstellungen → Match
+            Cockpit Pro.
+          </p>
+        </div>
+      </CollapsibleSection>
+
+      {/* Trainer Notifications - Placeholder */}
+      <CollapsibleSection icon="👥" title="Trainer-Benachrichtigungen">
+        <div style={styles.comingSoon}>
+          <p>
+            Trainer können benachrichtigt werden, wenn ihr Team als nächstes spielt. Benötigt das
+            Trainer-Cockpit.
+          </p>
           <span style={styles.badge}>Benötigt Trainer-Cockpit</span>
         </div>
       </CollapsibleSection>
 
-      {/* Tournament Director Notifications */}
-      <CollapsibleSection icon="🔔" title="TL-Benachrichtigungen">
-        <div style={styles.checkboxGroup}>
-          <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
-            <span>Bei Spielende benachrichtigen</span>
-          </label>
-          <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
-            <span>Bei Roter Karte benachrichtigen</span>
-          </label>
-          <label style={styles.checkbox}>
-            <input type="checkbox" />
-            <span>Bei Ergebnis-Korrektur benachrichtigen</span>
-          </label>
-        </div>
-      </CollapsibleSection>
-
-      {/* Sound Settings */}
-      <CollapsibleSection icon="🔊" title="Sound-Einstellungen">
-        <div style={styles.formGroup}>
-          <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
-            <span>Sounds aktiviert</span>
-          </label>
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Signalton</label>
-          <div style={styles.selectRow}>
-            <select style={styles.select} defaultValue="default">
-              <option value="default">Standard</option>
-              <option value="whistle">Pfeife</option>
-              <option value="bell">Glocke</option>
-              <option value="chime">Gong</option>
-            </select>
-            <button style={styles.button}>🔊 Test</button>
-          </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* Push Notifications - Coming Soon */}
-      <CollapsibleSection icon="📱" title="Push-Notifications">
+      {/* Tournament Director Notifications - Placeholder */}
+      <CollapsibleSection icon="🏆" title="TL-Benachrichtigungen">
         <div style={styles.comingSoon}>
-          <div style={styles.comingSoonIcon}>📱</div>
-          <div style={styles.comingSoonTitle}>Push-Notifications kommen bald</div>
           <p>
-            Browser-Push-Notifications für Turnierleitung und Trainer werden in
-            einer zukünftigen Version verfügbar sein.
+            Turnierleitungs-spezifische Alerts bei Spielende, Roten Karten und
+            Ergebnis-Korrekturen.
           </p>
-          <span style={styles.badge}>In Entwicklung</span>
+          <span style={styles.badge}>Benötigt Push-System</span>
         </div>
       </CollapsibleSection>
     </CategoryPage>

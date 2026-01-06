@@ -2,16 +2,21 @@
  * SettingsCategory - Tournament Settings
  *
  * Non-destructive tournament operations and field management.
+ * Implements:
+ * - Match Cockpit Pro settings (sound, haptic, timer)
+ * - Tournament duplication
+ * - Field management
  *
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.6
  */
 
-import { CSSProperties, useCallback } from 'react';
+import { CSSProperties, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
 import { MatchCockpitSettingsPanel } from '../../../../components/match-cockpit/MatchCockpitSettingsPanel';
-import { useMatchSound } from '../../../../hooks/useMatchSound';
+import { useMatchSound, useTournaments } from '../../../../hooks';
 import type { Tournament, MatchCockpitSettings } from '../../../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../../../types/tournament';
 
@@ -83,22 +88,9 @@ const styles = {
     cursor: 'pointer',
   } as CSSProperties,
 
-  radioGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.sm,
-  } as CSSProperties,
-
-  radio: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: cssVars.spacing.sm,
-    cursor: 'pointer',
-  } as CSSProperties,
-
-  radioLabel: {
-    fontSize: cssVars.fontSizes.bodyMd,
-    color: cssVars.colors.textPrimary,
+  buttonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
   } as CSSProperties,
 
   checkboxGroup: {
@@ -117,18 +109,47 @@ const styles = {
     color: cssVars.colors.textPrimary,
   } as CSSProperties,
 
-  preview: {
-    background: cssVars.colors.surfaceHover,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
+  comingSoon: {
+    textAlign: 'center',
+    padding: cssVars.spacing.lg,
+    color: cssVars.colors.textMuted,
+  } as CSSProperties,
+
+  badge: {
+    display: 'inline-block',
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    background: cssVars.colors.primarySubtle,
+    color: cssVars.colors.primary,
+    borderRadius: cssVars.borderRadius.full,
+    fontSize: cssVars.fontSizes.labelSm,
+    fontWeight: cssVars.fontWeights.medium,
+    marginTop: cssVars.spacing.sm,
+  } as CSSProperties,
+
+  success: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: cssVars.spacing.sm,
     padding: cssVars.spacing.md,
+    background: cssVars.colors.successLight,
+    border: `1px solid ${cssVars.colors.success}`,
+    borderRadius: cssVars.borderRadius.md,
+    fontSize: cssVars.fontSizes.bodySm,
+    color: cssVars.colors.success,
     marginTop: cssVars.spacing.md,
   } as CSSProperties,
 
-  previewTitle: {
-    fontSize: cssVars.fontSizes.labelSm,
-    color: cssVars.colors.textMuted,
-    marginBottom: cssVars.spacing.sm,
+  error: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.errorSubtle,
+    border: `1px solid ${cssVars.colors.error}`,
+    borderRadius: cssVars.borderRadius.md,
+    fontSize: cssVars.fontSizes.bodySm,
+    color: cssVars.colors.error,
+    marginTop: cssVars.spacing.md,
   } as CSSProperties,
 } as const;
 
@@ -141,6 +162,22 @@ export function SettingsCategory({
   tournament,
   onTournamentUpdate,
 }: SettingsCategoryProps) {
+  const navigate = useNavigate();
+  const { saveTournament } = useTournaments();
+
+  // State for duplicate function
+  const [duplicateName, setDuplicateName] = useState(`${tournament.title} (Kopie)`);
+  const [duplicateOptions, setDuplicateOptions] = useState({
+    settings: true,
+    groups: true,
+    fields: true,
+    teams: false,
+    sponsors: true,
+  });
+  const [isDuplicating, setIsDuplicating] = useState(false);
+  const [duplicateSuccess, setDuplicateSuccess] = useState<string | null>(null);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
+
   const handleTournamentUpdate = async (updatedTournament: Tournament) => {
     onTournamentUpdate(updatedTournament);
   };
@@ -172,6 +209,82 @@ export function SettingsCategory({
     void sound.testPlay();
   }, [sound]);
 
+  // Handle duplicate tournament
+  const handleDuplicate = useCallback(async () => {
+    try {
+      setIsDuplicating(true);
+      setDuplicateError(null);
+
+      // Create new tournament with selected options
+      const now = new Date().toISOString();
+      const newId = `tournament-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+
+      const duplicatedTournament: Tournament = {
+        // Spread all properties from original
+        ...tournament,
+
+        // Override with new values
+        id: newId,
+        title: duplicateName.trim() || `${tournament.title} (Kopie)`,
+        createdAt: now,
+        updatedAt: now,
+        status: 'draft',
+
+        // Settings (conditionally copied)
+        matchCockpitSettings: duplicateOptions.settings
+          ? tournament.matchCockpitSettings
+          : undefined,
+
+        // Groups (conditionally copied)
+        numberOfGroups: duplicateOptions.groups ? tournament.numberOfGroups : 1,
+        groups: duplicateOptions.groups ? tournament.groups : undefined,
+
+        // Fields (conditionally copied)
+        numberOfFields: duplicateOptions.fields ? tournament.numberOfFields : 1,
+        fields: duplicateOptions.fields ? tournament.fields : undefined,
+
+        // Teams (empty or copied without results)
+        teams: duplicateOptions.teams
+          ? tournament.teams.map((team) => ({
+              ...team,
+              id: `team-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            }))
+          : [],
+        numberOfTeams: duplicateOptions.teams ? tournament.numberOfTeams : 0,
+
+        // Matches - always empty for duplicate
+        matches: [],
+
+        // Sponsors (conditionally copied)
+        sponsors: duplicateOptions.sponsors ? tournament.sponsors : undefined,
+      };
+
+      // Save the new tournament
+      await saveTournament(duplicatedTournament);
+
+      setDuplicateSuccess(`"${duplicatedTournament.title}" wurde erstellt!`);
+      setTimeout(() => {
+        // Navigate to the new tournament
+        void navigate(`/tournament/${newId}`);
+      }, 1500);
+    } catch (error) {
+      console.error('Duplicate failed:', error);
+      setDuplicateError(
+        error instanceof Error ? error.message : 'Fehler beim Duplizieren des Turniers'
+      );
+    } finally {
+      setIsDuplicating(false);
+    }
+  }, [tournament, duplicateName, duplicateOptions, saveTournament, navigate]);
+
+  // Toggle duplicate option
+  const toggleOption = (key: keyof typeof duplicateOptions) => {
+    setDuplicateOptions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   return (
     <CategoryPage
       icon="⚙️"
@@ -191,100 +304,69 @@ export function SettingsCategory({
         />
       </CollapsibleSection>
 
-      {/* Pause Tournament */}
-      <CollapsibleSection icon="⏸️" title="Turnier pausieren" defaultOpen>
-        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Pausiert alle laufenden Aktivitäten und fügt einen Pause-Block in den Spielplan ein.
-        </p>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Pause-Dauer</label>
-          <div style={styles.inputRow}>
-            <input
-              type="number"
-              defaultValue={15}
-              min={1}
-              max={120}
-              style={styles.input}
-            />
-            <span style={styles.inputUnit}>Minuten</span>
-          </div>
+      {/* Pause Tournament - Coming Soon */}
+      <CollapsibleSection icon="⏸️" title="Turnier pausieren">
+        <div style={styles.comingSoon}>
+          <p>
+            Pausiert alle laufenden Aktivitäten und fügt einen Pause-Block in den Spielplan ein.
+          </p>
+          <span style={styles.badge}>Coming Soon</span>
         </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Grund (optional)</label>
-          <input
-            type="text"
-            placeholder="z.B. Siegerehrung Vorrunde"
-            style={{ ...styles.input, width: '100%', textAlign: 'left' }}
-          />
-        </div>
-
-        <button style={styles.button}>Pause einfügen</button>
       </CollapsibleSection>
 
-      {/* Auto-Time-Continuation */}
+      {/* Auto-Time-Continuation - Coming Soon */}
       <CollapsibleSection icon="🔄" title="Auto-Time-Continuation">
-        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Passt Spielplan-Zeiten automatisch an Verzögerungen an.
-        </p>
-
-        <div style={styles.radioGroup}>
-          <label style={styles.radio}>
-            <input type="radio" name="autoTime" defaultChecked />
-            <div>
-              <div style={styles.radioLabel}>Aus</div>
-              <div style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
-                Zeiten bleiben wie geplant
-              </div>
-            </div>
-          </label>
-          <label style={styles.radio}>
-            <input type="radio" name="autoTime" />
-            <div>
-              <div style={styles.radioLabel}>Automatisch</div>
-              <div style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
-                System erkennt Verzögerungen
-              </div>
-            </div>
-          </label>
-          <label style={styles.radio}>
-            <input type="radio" name="autoTime" />
-            <div>
-              <div style={styles.radioLabel}>Manuell</div>
-              <div style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted }}>
-                Offset selbst eingeben
-              </div>
-            </div>
-          </label>
+        <div style={styles.comingSoon}>
+          <p>Passt Spielplan-Zeiten automatisch an Verzögerungen an.</p>
+          <span style={styles.badge}>Coming Soon</span>
         </div>
       </CollapsibleSection>
 
-      {/* Duplicate Tournament */}
-      <CollapsibleSection icon="📋" title="Turnier duplizieren">
+      {/* Duplicate Tournament - Functional */}
+      <CollapsibleSection icon="📋" title="Turnier duplizieren" defaultOpen>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
           Erstellt eine Kopie als Vorlage für nächstes Jahr.
         </p>
 
         <div style={styles.checkboxGroup}>
           <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
+            <input
+              type="checkbox"
+              checked={duplicateOptions.settings}
+              onChange={() => toggleOption('settings')}
+            />
             <span>Turnier-Einstellungen</span>
           </label>
           <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
+            <input
+              type="checkbox"
+              checked={duplicateOptions.groups}
+              onChange={() => toggleOption('groups')}
+            />
             <span>Gruppen-Struktur</span>
           </label>
           <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
+            <input
+              type="checkbox"
+              checked={duplicateOptions.fields}
+              onChange={() => toggleOption('fields')}
+            />
             <span>Feld-Namen</span>
           </label>
           <label style={styles.checkbox}>
-            <input type="checkbox" />
+            <input
+              type="checkbox"
+              checked={duplicateOptions.teams}
+              onChange={() => toggleOption('teams')}
+            />
             <span>Teams (ohne Ergebnisse)</span>
           </label>
           <label style={styles.checkbox}>
-            <input type="checkbox" defaultChecked />
+            <input
+              type="checkbox"
+              checked={duplicateOptions.sponsors}
+              onChange={() => toggleOption('sponsors')}
+            />
             <span>Sponsoren</span>
           </label>
         </div>
@@ -293,20 +375,41 @@ export function SettingsCategory({
           <label style={styles.label}>Name der Kopie</label>
           <input
             type="text"
-            defaultValue={`${tournament.title} (Kopie)`}
+            value={duplicateName}
+            onChange={(e) => setDuplicateName(e.target.value)}
             style={{ ...styles.input, width: '100%', textAlign: 'left' }}
           />
         </div>
 
-        <button style={styles.button}>Turnier duplizieren</button>
+        <button
+          style={{
+            ...styles.button,
+            ...(isDuplicating ? styles.buttonDisabled : {}),
+          }}
+          onClick={() => void handleDuplicate()}
+          disabled={isDuplicating}
+        >
+          {isDuplicating ? 'Wird dupliziert...' : 'Turnier duplizieren'}
+        </button>
+
+        {duplicateSuccess && (
+          <div style={styles.success}>
+            <span>✅</span>
+            <span>{duplicateSuccess}</span>
+          </div>
+        )}
+
+        {duplicateError && (
+          <div style={styles.error}>
+            <span>❌</span>
+            <span>{duplicateError}</span>
+          </div>
+        )}
       </CollapsibleSection>
 
       {/* Field Management */}
       <CollapsibleSection icon="🏟️" title="Feld-Management" defaultOpen>
-        <FieldManagement
-          tournament={tournament}
-          onTournamentUpdate={handleTournamentUpdate}
-        />
+        <FieldManagement tournament={tournament} onTournamentUpdate={handleTournamentUpdate} />
       </CollapsibleSection>
 
       {/* Game Times (Locked if matches started) */}

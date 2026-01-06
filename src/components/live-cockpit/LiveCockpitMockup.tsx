@@ -12,9 +12,10 @@
 
 import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
-import { useBreakpoint, useMatchTimer } from '../../hooks';
+import { useBreakpoint, useMatchTimer, useMatchSound } from '../../hooks';
 import type { LiveCockpitProps } from './types';
-import type { ActivePenalty, EditableMatchEvent } from '../../types/tournament';
+import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 
 // Sub-components
 import {
@@ -40,9 +41,19 @@ import { useToast } from './hooks';
 // Main Component
 // ---------------------------------------------------------------------------
 
+// Helper to get cockpit settings with defaults
+function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCockpitSettings {
+  return {
+    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...settings,
+  };
+}
+
 export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   fieldName,
   tournamentName: _tournamentName,
+  tournamentId,
+  cockpitSettings: cockpitSettingsProp,
   currentMatch,
   lastFinishedMatch: _lastFinishedMatch,
   upcomingMatches,
@@ -69,6 +80,19 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   onSubstitution,
   onFoul,
 }) => {
+  // Get cockpit settings with defaults
+  const cockpitSettings = useMemo(
+    () => getCockpitSettings(cockpitSettingsProp),
+    [cockpitSettingsProp]
+  );
+
+  // Sound hook for match end horn
+  const sound = useMatchSound(
+    cockpitSettings.soundId,
+    cockpitSettings.soundVolume,
+    cockpitSettings.soundEnabled,
+    tournamentId
+  );
   // Responsive breakpoint detection
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
 
@@ -215,11 +239,23 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   const handleFinish = useCallback(() => {
     if (!currentMatch) {return;}
+
+    // Play match end sound if enabled
+    if (cockpitSettings.soundEnabled) {
+      void sound.play();
+    }
+
+    // Trigger haptic feedback if enabled (navigator.vibrate is not available on all browsers)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: vibrate API not available in all browsers
+    if (cockpitSettings.hapticEnabled && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]); // Double pulse pattern
+    }
+
     onFinish(currentMatch.id);
     // BUG-008: Clear all active penalties when match ends
     setActivePenalties([]);
     showInfo('Spiel beendet');
-  }, [currentMatch, onFinish, showInfo]);
+  }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound]);
 
   const handleUndo = useCallback(() => {
     if (!currentMatch) {return;}

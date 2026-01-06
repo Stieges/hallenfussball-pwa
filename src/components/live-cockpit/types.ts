@@ -49,6 +49,10 @@ export interface LiveCockpitProps {
   fieldName: string;
   /** Tournament name for display */
   tournamentName: string;
+  /** Tournament ID for custom sound lookup */
+  tournamentId: string;
+  /** Match Cockpit Pro settings from tournament */
+  cockpitSettings?: import('../../types/tournament').MatchCockpitSettings;
 
   /** The current match being played */
   currentMatch: import('../match-cockpit/MatchCockpit').LiveMatch | null;

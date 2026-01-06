@@ -48,6 +48,9 @@ export { useMonitors } from './useMonitors'
 export { useCorporateColors, useCurrentThemeColors } from './useCorporateColors'
 export { useTheme, ThemeProvider, type Theme, type ThemeContextValue } from './useTheme'
 
+// Sound & Haptics
+export { useMatchSound, type UseMatchSoundReturn } from './useMatchSound'
+
 // Accessibility
 export { useHighContrast } from './useHighContrast'
 export { useFontScale, FONT_SCALES, FONT_SCALE_LABELS } from './useFontScale'

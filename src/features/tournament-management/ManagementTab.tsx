@@ -342,6 +342,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <LiveCockpitMockup
           fieldName={`Feld ${selectedFieldNumber}`}
           tournamentName={tournament.title}
+          tournamentId={tournament.id}
+          cockpitSettings={tournament.matchCockpitSettings}
           currentMatch={currentMatch}
           lastFinishedMatch={lastFinishedMatch}
           upcomingMatches={upcomingMatches}
