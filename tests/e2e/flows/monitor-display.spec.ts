@@ -17,14 +17,31 @@
 import { test, expect, Page } from '@playwright/test';
 
 // Helper to create a tournament with monitor config via localStorage
+// Must navigate to app first to establish correct origin for localStorage access
 async function setupTournamentWithMonitor(page: Page, monitorConfig: {
   slides?: Array<{ id: string; type: string; config: Record<string, unknown>; duration: number | null; order: number }>;
   theme?: string;
 }) {
   const tournament = {
     id: 'test-tournament',
+    title: 'E2E Test Turnier',
     name: 'E2E Test Turnier',
+    status: 'published',
     sport: 'hallenfussball',
+    sportId: 'football-indoor',
+    tournamentType: 'classic',
+    mode: 'classic',
+    numberOfFields: 1,
+    numberOfTeams: 2,
+    groupPhaseGameDuration: 10,
+    placementLogic: ['points', 'goalDiff', 'goalsFor'],
+    finals: { enabled: false },
+    isKidsTournament: false,
+    hideScoresForPublic: false,
+    hideRankingsForPublic: false,
+    resultMode: 'standard',
+    pointSystem: { win: 3, draw: 1, loss: 0 },
+    groups: [{ id: 'g1', name: 'Gruppe A', teamIds: ['t1', 't2'] }],
     teams: [
       { id: 't1', name: 'FC Bayern', color: '#DC2626' },
       { id: 't2', name: 'Borussia Dortmund', color: '#FACC15' },
@@ -33,12 +50,19 @@ async function setupTournamentWithMonitor(page: Page, monitorConfig: {
       {
         id: 'm1',
         number: 1,
+        teamA: 't1',
+        teamB: 't2',
         homeTeamId: 't1',
         awayTeamId: 't2',
         homeScore: 2,
         awayScore: 1,
+        scoreA: 2,
+        scoreB: 1,
         status: 'RUNNING',
+        matchStatus: 'playing',
         field: 1,
+        fieldNumber: 1,
+        groupId: 'g1',
         scheduledTime: new Date().toISOString(),
         durationSeconds: 600,
         elapsedSeconds: 300,
@@ -73,8 +97,13 @@ async function setupTournamentWithMonitor(page: Page, monitorConfig: {
     updatedAt: new Date().toISOString(),
   };
 
+  // Navigate to the app root first to establish the correct origin
+  // This ensures localStorage access works in CI environments
+  await page.goto('/');
+  await page.waitForLoadState('domcontentloaded');
+
   await page.evaluate((t) => {
-    localStorage.setItem('hallenfussball-tournaments', JSON.stringify([t]));
+    localStorage.setItem('tournaments', JSON.stringify([t]));
   }, tournament);
 
   return tournament;
@@ -103,9 +132,10 @@ test.describe('Monitor Display', () => {
     test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page }) => {
       await setupTournamentWithMonitor(page, { slides: [] });
       await page.goto('/display/test-tournament/monitor-1');
+      await page.waitForLoadState('networkidle');
 
-      // Should show "no slides configured" message
-      await expect(page.locator('text=/keine.*slides|nicht konfiguriert/i')).toBeVisible({ timeout: 10000 });
+      // Should show "no slides configured" message (exact text: "Keine Slides konfiguriert.")
+      await expect(page.getByText('Keine Slides konfiguriert')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -121,17 +151,23 @@ test.describe('Monitor Display', () => {
       await page.goto('/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
+      // Wait for slide to render
+      await page.waitForTimeout(1000);
+
+      // Click on page to ensure focus for keyboard events
+      await page.locator('body').click();
+
       // Press space to pause
       await page.keyboard.press('Space');
 
-      // Should show pause indicator
-      await expect(page.locator('text=/pausiert|paused/i')).toBeVisible({ timeout: 5000 });
+      // Should show pause indicator (exact text: "⏸ Pausiert (Leertaste zum Fortsetzen)")
+      await expect(page.getByText('Pausiert')).toBeVisible({ timeout: 5000 });
 
       // Press space again to resume
       await page.keyboard.press('Space');
 
       // Pause indicator should disappear
-      await expect(page.locator('text=/pausiert|paused/i')).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByText('Pausiert')).not.toBeVisible({ timeout: 5000 });
     });
 
     test('Arrow keys navigieren zwischen Slides', async ({ page }) => {
