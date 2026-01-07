@@ -178,7 +178,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // IMPORTANT: Always use defaultSaveTournament for autosave, not saveTournament!
   // saveTournament might be mapped to onSave which triggers navigation back to dashboard
   const saveAsDraft = useCallback(async () => {
-    if (!hasUnsavedChanges()) {return;}
+    if (!hasUnsavedChanges()) { return; }
 
     try {
       await saveDraft();
@@ -205,7 +205,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       setGeneratedSchedule(null);
     }
     // Use wizard hook's handleStepChange with saveAsDraft callback
-    wizardHandleStepChange(newStep, saveAsDraft);
+    wizardHandleStepChange(newStep, () => void saveAsDraft());
 
     // Update URL with new step (replace to avoid history clutter)
     const newPath = buildWizardStepPath(newStep as WizardStep, existingTournament?.id);
@@ -219,7 +219,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   useEffect(() => {
     const interval = setInterval(() => {
       if (hasUnsavedChanges()) {
-        saveAsDraft();
+        void saveAsDraft();
       }
     }, 10000); // 10 seconds
 
@@ -230,7 +230,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasUnsavedChanges()) {
-        saveAsDraft();
+        void saveAsDraft();
 
         // Show browser warning (optional)
         event.preventDefault();
@@ -288,8 +288,12 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   const handleSaveDraft = async () => {
-    await saveDraft();
-    showSuccess('Turnier als Entwurf gespeichert!');
+    try {
+      await saveDraft();
+      showSuccess('Turnier als Entwurf gespeichert!');
+    } catch (error) {
+      console.error('[TournamentCreation] Failed to manual save draft:', error);
+    }
   };
 
   const handleBackToDashboard = () => {
@@ -317,9 +321,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   // Dialog handlers: Save draft and go back
   const handleSaveAndGoBack = async () => {
-    await saveDraft();
-    setShowSaveDialog(false);
-    onBack();
+    try {
+      await saveDraft();
+      setShowSaveDialog(false);
+      onBack();
+    } catch (error) {
+      console.error('[TournamentCreation] Failed to save and go back:', error);
+    }
   };
 
   const handleBackToEdit = () => {
@@ -408,7 +416,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           </div>
           <Button
             variant="primary"
-            onClick={handlePublish}
+            onClick={() => void handlePublish()}
             style={{ background: cssVars.colors.success }}
           >
             Speichern & Zurück
@@ -609,7 +617,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
                   tournament={createDraftTournament()}
                   schedule={generatedSchedule}
                   onEdit={handleBackToEdit}
-                  onPublish={handlePublish}
+                  onPublish={() => void handlePublish()}
                   onTournamentChange={(updatedTournament) => {
                     // Update formData with the modified playoff config and referee config
                     setFormData((prev) => ({
@@ -655,7 +663,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
                   variant="secondary"
-                  onClick={handleSaveDraft}
+                  onClick={() => void handleSaveDraft()}
                   icon={<Icons.Check />}
                   size={isMobile ? 'sm' : 'md'}
                 >
@@ -711,7 +719,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       <ConfirmDialog
         isOpen={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
-        onConfirm={handleSaveAndGoBack}
+        onConfirm={() => void handleSaveAndGoBack()}
         title="Änderungen speichern?"
         message="Du hast Änderungen vorgenommen, die noch nicht gespeichert wurden. Was möchtest du tun?"
         confirmText="Speichern"

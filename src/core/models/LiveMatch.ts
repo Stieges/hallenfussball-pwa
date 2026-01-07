@@ -46,6 +46,8 @@ export interface MatchEvent {
         cardType?: 'YELLOW' | 'RED';
         toStatus?: MatchStatus;
         durationSeconds?: number;
+        playersIn?: number[];
+        playersOut?: number[];
     };
     scoreAfter: {
         home: number;

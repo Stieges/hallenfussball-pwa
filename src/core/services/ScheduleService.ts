@@ -23,7 +23,7 @@ export class ScheduleService {
         }
 
         // A. Truth exists in DB
-        if (tournament.matches && tournament.matches.length > 0) {
+        if (tournament.matches.length > 0) {
             // NOTE: We do NOT re-generate here. That was the bug.
             return tournament.matches;
         }
@@ -38,7 +38,7 @@ export class ScheduleService {
      */
     async regenerateSchedule(tournamentId: string): Promise<Match[]> {
         const tournament = await this.repository.get(tournamentId);
-        if (!tournament) {throw new Error('Tournament not found');}
+        if (!tournament) { throw new Error('Tournament not found'); }
 
         // 1. Generate pure schedule from rules
         const generated = generateFullSchedule(tournament);

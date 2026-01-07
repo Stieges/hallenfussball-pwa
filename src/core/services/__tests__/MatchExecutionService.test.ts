@@ -1,4 +1,5 @@
 
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MatchExecutionService } from '../MatchExecutionService';
 import { ILiveMatchRepository } from '../../repositories/ILiveMatchRepository';
@@ -15,19 +16,22 @@ const mockLiveMatchRepo = {
     saveAll: vi.fn(),
     delete: vi.fn(),
     clear: vi.fn()
-} as unknown as ILiveMatchRepository;
+};
 
 const mockTournamentRepo = {
     get: vi.fn(),
     save: vi.fn(),
-} as unknown as ITournamentRepository;
+};
 
 describe('MatchExecutionService', () => {
     let service: MatchExecutionService;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        service = new MatchExecutionService(mockLiveMatchRepo, mockTournamentRepo);
+        service = new MatchExecutionService(
+            mockLiveMatchRepo as unknown as ILiveMatchRepository,
+            mockTournamentRepo as unknown as ITournamentRepository
+        );
     });
 
     const mockScheduledMatch: ScheduledMatch = {

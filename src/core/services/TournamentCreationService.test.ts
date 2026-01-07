@@ -1,3 +1,4 @@
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TournamentCreationService } from './TournamentCreationService';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
@@ -14,7 +15,8 @@ vi.mock('../generators', () => ({
 
 describe('TournamentCreationService', () => {
     let service: TournamentCreationService;
-    let mockRepo: ITournamentRepository;
+    // mockRepo defined as implicit object with Mock types
+    let mockRepo: any; // Using any or specific Mock type, or just let to be reassigned
 
     beforeEach(() => {
         mockRepo = {
@@ -24,7 +26,7 @@ describe('TournamentCreationService', () => {
             updateMatches: vi.fn(),
             delete: vi.fn(),
         };
-        service = new TournamentCreationService(mockRepo);
+        service = new TournamentCreationService(mockRepo as ITournamentRepository);
         vi.clearAllMocks();
     });
 

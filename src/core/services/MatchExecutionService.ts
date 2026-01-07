@@ -46,7 +46,7 @@ export class MatchExecutionService {
 
     async startMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -63,7 +63,7 @@ export class MatchExecutionService {
 
     async pauseMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
 
@@ -82,7 +82,7 @@ export class MatchExecutionService {
 
     async resumeMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -99,7 +99,7 @@ export class MatchExecutionService {
 
     async finishMatch(tournamentId: string, matchId: string): Promise<FinishResult> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         // Check if finals match needs tiebreaker
         if (this.needsTiebreaker(match)) {
@@ -133,7 +133,7 @@ export class MatchExecutionService {
         options?: GoalOptions
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
         const isOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
@@ -189,7 +189,7 @@ export class MatchExecutionService {
         options?: CardOptions
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
 
@@ -224,7 +224,7 @@ export class MatchExecutionService {
         options?: TimePenaltyOptions
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
 
@@ -257,7 +257,7 @@ export class MatchExecutionService {
         options?: { playersIn?: number[]; playersOut?: number[] }
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
 
@@ -280,8 +280,8 @@ export class MatchExecutionService {
         // For now, let's assume payload is flexible or I cast it. 
         // Or better: update LiveMatch.ts to include playersIn/Out in payload.
         // Let's rely on flexible payload for a moment or cast.
-        (event.payload as any).playersIn = options?.playersIn;
-        (event.payload as any).playersOut = options?.playersOut;
+        event.payload.playersIn = options?.playersIn;
+        event.payload.playersOut = options?.playersOut;
 
         const updated: LiveMatch = {
             ...match,
@@ -299,7 +299,7 @@ export class MatchExecutionService {
         options?: { playerNumber?: number }
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const elapsed = this.calculateElapsedSeconds(match);
 
@@ -335,7 +335,7 @@ export class MatchExecutionService {
         awayScore: number
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -362,7 +362,7 @@ export class MatchExecutionService {
         newElapsedSeconds: number
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         let updated: LiveMatch = {
             ...match,
@@ -391,7 +391,7 @@ export class MatchExecutionService {
 
     async startOvertime(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -413,7 +413,7 @@ export class MatchExecutionService {
 
     async startGoldenGoal(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -435,7 +435,7 @@ export class MatchExecutionService {
 
     async startPenaltyShootout(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -457,7 +457,7 @@ export class MatchExecutionService {
         awayScore: number
     ): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         const updated: LiveMatch = {
             ...match,
@@ -471,7 +471,7 @@ export class MatchExecutionService {
 
     async cancelTiebreaker(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
 
         // Finish as draw (only valid in group stage)
         await this.persistFinalResult(tournamentId, match, 'regular');
@@ -506,8 +506,8 @@ export class MatchExecutionService {
 
     async undoLastEvent(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) {throw new Error(`Match ${matchId} not found`);}
-        if (match.events.length === 0) {return match;}
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+        if (match.events.length === 0) { return match; }
 
         const lastEvent = match.events[match.events.length - 1];
         let updated = { ...match, events: match.events.slice(0, -1) };
@@ -573,11 +573,11 @@ export class MatchExecutionService {
     ): Promise<LiveMatch> {
         // Check if already exists
         const existing = await this.liveMatchRepo.get(tournamentId, scheduledMatch.id);
-        if (existing) {return existing;}
+        if (existing) { return existing; }
 
         // Get tournament for config
         const tournament = await this.tournamentRepo.get(tournamentId);
-        if (!tournament) {throw new Error(`Tournament ${tournamentId} not found`);}
+        if (!tournament) { throw new Error(`Tournament ${tournamentId} not found`); }
 
         const tiebreakerMode = tournament.finalsConfig?.tiebreaker;
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
@@ -626,9 +626,9 @@ export class MatchExecutionService {
     // ==========================================================================
 
     private needsTiebreaker(match: LiveMatch): boolean {
-        if (match.tournamentPhase === 'groupStage') {return false;}
-        if (!match.tiebreakerMode) {return false;}
-        if (match.playPhase === 'penalty') {return false;}
+        if (match.tournamentPhase === 'groupStage') { return false; }
+        if (!match.tiebreakerMode) { return false; }
+        if (match.playPhase === 'penalty') { return false; }
 
         if (match.playPhase === 'regular' || match.playPhase === undefined) {
             return match.homeScore === match.awayScore;
