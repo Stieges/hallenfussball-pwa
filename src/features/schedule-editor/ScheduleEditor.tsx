@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
 import { Tournament, Match } from '../../types/tournament';
 
 // ============================================================================
@@ -159,7 +159,7 @@ const statItemStyle: React.CSSProperties = {
 // ============================================================================
 
 function formatTime(date: Date | string | undefined): string {
-  if (!date) {return '--:--';}
+  if (!date) { return '--:--'; }
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -255,7 +255,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Undo: Restore previous state
   const handleUndo = useCallback(() => {
-    if (undoStackRef.current.length === 0) {return;}
+    if (undoStackRef.current.length === 0) { return; }
 
     // Save current state to redo stack
     redoStackRef.current.push({
@@ -265,7 +265,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
     // Pop and apply previous state
     const previousState = undoStackRef.current.pop();
-    if (!previousState) {return;} // Should never happen due to length check
+    if (!previousState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: previousState.matches,
@@ -276,7 +276,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Redo: Restore next state
   const handleRedo = useCallback(() => {
-    if (redoStackRef.current.length === 0) {return;}
+    if (redoStackRef.current.length === 0) { return; }
 
     // Save current state to undo stack
     undoStackRef.current.push({
@@ -286,7 +286,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
     // Pop and apply next state
     const nextState = redoStackRef.current.pop();
-    if (!nextState) {return;} // Should never happen due to length check
+    if (!nextState) { return; } // Should never happen due to length check
     onTournamentUpdate({
       ...tournament,
       matches: nextState.matches,
@@ -304,9 +304,9 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
   // Filter matches by phase
   const filteredMatches = useMemo(() => {
-    if (phase === 'all') {return tournament.matches;}
+    if (phase === 'all') { return tournament.matches; }
     return tournament.matches.filter(m => {
-      if (phase === 'group') {return !m.isFinal;}
+      if (phase === 'group') { return !m.isFinal; }
       // phase === 'finals' is the only remaining option
       return Boolean(m.isFinal);
     });
@@ -352,7 +352,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
 
       // Find the source match to get its original position
       const sourceMatch = tournament.matches.find(m => m.id === matchId);
-      if (!sourceMatch) {return;}
+      if (!sourceMatch) { return; }
 
       const sourceTime = sourceMatch.scheduledTime;
       const sourceField = sourceMatch.field;
@@ -506,7 +506,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   // Toggle mode (only used when NOT in external control mode)
   const handleToggleMode = useCallback(() => {
     // Don't toggle if parent controls the mode
-    if (externalEditMode !== undefined) {return;}
+    if (externalEditMode !== undefined) { return; }
 
     if (state.mode === 'edit') {
       // Clear local history when exiting edit mode
@@ -638,7 +638,30 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
           </div>
         )}
 
-        {/* NOTE: No DragOverlay - items transform in-place with visual feedback */}
+        {/* Drag Overlay for smooth dragging without layout shifts */}
+        <DragOverlay>
+          {(() => {
+            const activeMatch = activeId ? tournament.matches.find(m => m.id === activeId) : null;
+            return activeMatch ? (
+              <div style={{
+                // BUG-FIX: Do not use height: '100%' here as it expands to viewport height in portal
+                // height: '100%', 
+                opacity: 0.9,
+                transform: 'scale(1.02)'
+              }}>
+                <DraggableMatch
+                  match={activeMatch}
+                  teams={tournament.teams}
+                  isEditing={true}
+                  isSelected={true}
+                  compact={compact}
+                  // Disable listeners on overlay (it's just visual)
+                  draggable={false}
+                />
+              </div>
+            ) : null;
+          })()}
+        </DragOverlay>
 
         {/* Conflict Dialog */}
         <ConflictDialog

@@ -120,6 +120,24 @@ npm run preview
 
 ```
 src/
+├── core/                      # Pure Business Logic (KEIN React)
+│   ├── models/                # Datentypen, Zod-Schemas
+│   │   ├── types.ts           # Tournament, Match, Team
+│   │   ├── LiveMatch.ts       # Live-Spielstand-Typen
+│   │   └── schemas/           # Zod-Validierung
+│   ├── repositories/          # Data Access Layer
+│   │   ├── ITournamentRepository.ts
+│   │   ├── ILiveMatchRepository.ts
+│   │   ├── LocalStorageRepository.ts
+│   │   └── LocalStorageLiveMatchRepository.ts
+│   ├── services/              # Business Logic
+│   │   ├── MatchExecutionService.ts   # Live-Spiel-Logik
+│   │   ├── TournamentCreationService.ts
+│   │   ├── TournamentService.ts
+│   │   └── ScheduleService.ts
+│   └── generators/            # Schedule-Generierung
+│       └── index.ts           # Re-exports aus lib/utils
+│
 ├── components/
 │   ├── ui/                    # Basis-Komponenten (Button, Card, Input...)
 │   ├── schedule/              # Spielplan-Komponenten
@@ -131,53 +149,46 @@ src/
 │   ├── tournament-management/ # Tabs (Spielplan, Tabelle, Ranking)
 │   └── schedule-editor/       # Spielplan-Editor (Drag & Drop)
 │
+├── hooks/                     # React Hooks (Thin Controllers)
+│   ├── useMatchExecution.ts   # Wrapper für MatchExecutionService
+│   ├── useTournamentManager.ts
+│   ├── useTournamentWizard.ts
+│   ├── useLiveMatchManagement.ts # Legacy (→ useMatchExecution)
+│   └── ...                    # 21 Hooks insgesamt
+│
 ├── design-tokens/             # Single Source of Truth für Styling
 │   ├── colors.ts              # Farbpalette (WCAG-validiert)
 │   ├── spacing.ts             # 8pt Grid
-│   ├── typography.ts          # Schriftgrößen & Gewichte
-│   ├── shadows.ts             # Schatten
-│   ├── radii.ts               # Border Radius
-│   ├── motion.ts              # Animationen
-│   └── index.ts               # Zentrale Exports
+│   └── ...
 │
-├── hooks/                     # Custom React Hooks
-│   ├── useTournaments.ts      # CRUD Operations
-│   ├── useTournamentWizard.ts # Wizard State Management
-│   ├── useLiveMatches.ts      # Live-Match State
-│   ├── useMatchTimer.ts       # Timer-Logik
-│   ├── useAutoSave.ts         # Automatisches Speichern
-│   ├── useIsMobile.ts         # Responsive Detection
-│   └── ...                    # 21 Hooks insgesamt
-│
-├── utils/
+├── utils/                     # Utility-Funktionen
 │   ├── fairScheduler.ts       # Kern-Scheduling-Algorithmus
 │   ├── playoffScheduler.ts    # Playoff-Match-Generierung
-│   ├── tournamentImporter.ts  # JSON/CSV Import
-│   └── storage.ts             # localStorage Wrapper
+│   └── ...
 │
-├── lib/
+├── lib/                       # Legacy Generatoren
 │   ├── scheduleGenerator.ts   # Zeit-basierte Integration
-│   └── pdfExporter.ts         # PDF-Export
+│   └── ...
 │
 ├── types/
 │   └── tournament.ts          # TypeScript Definitionen
 │
 ├── contexts/                  # React Context Providers
 ├── config/                    # App-Konfiguration
-├── services/                  # Service Layer
 ├── constants/                 # Konstanten & Schemas
 ├── screens/                   # Screen-Komponenten
-├── styles/                    # Legacy Styles (migriert zu design-tokens)
 └── test/                      # Test Utilities
 ```
+
 
 ### Wichtige Dateien
 
 | Priorität | Datei | Beschreibung |
 |-----------|-------|--------------|
+| ⭐⭐⭐ | `src/core/services/MatchExecutionService.ts` | Live-Spiel Business Logic |
+| ⭐⭐⭐ | `src/core/services/TournamentCreationService.ts` | Wizard-Validierung, Publish |
 | ⭐⭐⭐ | `src/utils/fairScheduler.ts` | Kern-Scheduling-Algorithmus |
-| ⭐⭐⭐ | `src/utils/playoffScheduler.ts` | Playoff-Logik |
-| ⭐⭐⭐ | `src/lib/scheduleGenerator.ts` | Zeit-basierte Integration |
+| ⭐⭐ | `src/core/repositories/` | Data Access Layer |
 | ⭐⭐ | `src/types/tournament.ts` | Datenstruktur-Definitionen |
 | ⭐⭐ | `src/design-tokens/` | Design System |
 

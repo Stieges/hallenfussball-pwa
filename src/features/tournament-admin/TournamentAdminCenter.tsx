@@ -12,7 +12,7 @@ import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
-import { useTournamentSync } from '../../hooks/useTournamentSync';
+import { useTournamentManager } from '../../hooks/useTournamentManager';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
 
@@ -150,7 +150,7 @@ export function TournamentAdminCenter({
   const [showMobileHub, setShowMobileHub] = useState(true);
 
   // Tournament data
-  const { tournament, handleTournamentUpdate, loadingError } = useTournamentSync(tournamentId);
+  const { tournament, handleTournamentUpdate, loadingError } = useTournamentManager(tournamentId);
 
   // Warnings (placeholder - will be computed from tournament state)
   const [warnings] = useState<AdminWarning[]>([]);

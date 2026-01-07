@@ -14,7 +14,7 @@ import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { useTournamentSync } from '../hooks/useTournamentSync';
+import { useTournamentManager } from '../hooks/useTournamentManager';
 import { BottomNavigation, BottomSheet, BottomSheetItem, Icons } from '../components/ui';
 import type { BottomNavTab } from '../components/ui';
 import { getTabFromPath, buildTournamentTabPath, TournamentTab } from '../features/tournament-management/utils/tournamentTabUtils';
@@ -89,7 +89,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     currentStandings,
     loadingError,
     handleTournamentUpdate,
-  } = useTournamentSync(tournamentId);
+  } = useTournamentManager(tournamentId);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
@@ -142,7 +142,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // MON-KONF-01: Async wrapper for monitor components
   const handleAsyncTournamentUpdate = async (updatedTournament: Tournament): Promise<void> => {
-    handleTournamentUpdate(updatedTournament);
+    void handleTournamentUpdate(updatedTournament);
   };
 
   // Loading / Error state
@@ -335,8 +335,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             tournament={tournament}
             schedule={schedule}
             currentStandings={currentStandings}
-            onTournamentUpdate={handleTournamentUpdate}
-            onNavigateToCockpit={handleNavigateToCockpit}
+            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
           />
         )}
         {activeTab === 'tabellen' && (
@@ -350,7 +350,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
           <ManagementTab
             tournament={tournament}
             schedule={schedule}
-            onTournamentUpdate={handleTournamentUpdate}
+            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             initialMatchId={initialMatchId}
             onInitialMatchConsumed={() => setInitialMatchId(null)}
           />
@@ -365,13 +365,13 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
         {activeTab === 'teams' && (
           <TeamsTab
             tournament={tournament}
-            onTournamentUpdate={handleTournamentUpdate}
+            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
           />
         )}
         {activeTab === 'settings' && (
           <SettingsTab
             tournament={tournament}
-            onTournamentUpdate={handleTournamentUpdate}
+            onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
             onDirtyChange={setIsSettingsDirty}
             onEditInWizard={onEditInWizard}
           />

@@ -8,10 +8,10 @@
  * - Fair field distribution
  */
 
-import { Team, Match } from '../types/tournament';
-import { FairnessCalculator } from './FairnessCalculator';
-import { generateGroupStageMatchId } from './idGenerator';
-import { parseDFBMatches, getDFBPattern } from '../constants/dfbMatchPatterns';
+import { Team, Match } from '../../types/tournament';
+import { FairnessCalculator } from '../../utils/FairnessCalculator';
+import { generateGroupStageMatchId } from '../../utils/idGenerator';
+import { parseDFBMatches, getDFBPattern } from '../../constants/dfbMatchPatterns';
 
 /**
  * Represents a time slot in the schedule
@@ -94,7 +94,7 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
   const pairings: TeamPairing[] = [];
   const n = teams.length;
 
-  if (n < 2) {return pairings;}
+  if (n < 2) { return pairings; }
 
   // For odd number of teams, add a "bye" team
   const teamsWithBye: (Team | null)[] = n % 2 === 0 ? [...teams] : [...teams, null];
@@ -183,7 +183,7 @@ function canTeamPlayInSlot(
   teamStates: Map<string, TeamScheduleState>
 ): boolean {
   const state = teamStates.get(teamId);
-  if (!state) {return false;}
+  if (!state) { return false; }
 
   // Check minimum rest period
   if (state.lastSlot !== -Infinity && slot - state.lastSlot < minRestSlots + 1) {
@@ -220,7 +220,7 @@ function calculateFairnessScore(
 
   // Penalize if minimum rest is violated
   if (!canTeamPlayInSlot(teamAId, slot, minRestSlots, teamStates) ||
-      !canTeamPlayInSlot(teamBId, slot, minRestSlots, teamStates)) {
+    !canTeamPlayInSlot(teamBId, slot, minRestSlots, teamStates)) {
     return Infinity; // Invalid assignment
   }
 
@@ -417,7 +417,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
     // Try to schedule matches in available fields
     for (let field = 1; field <= numberOfFields; field++) {
-      if (currentSlot.matches.has(field)) {continue;} // Field occupied
+      if (currentSlot.matches.has(field)) { continue; } // Field occupied
 
       // Find best pairing for this slot and field
       // Strategy: Prioritize matches with teams that have had longest rest
@@ -430,7 +430,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
 
         // NOTE: pairing.teamB is guaranteed non-null here because BYE-pairings
         // are filtered out in generateRoundRobinPairings() at line 105
-        if (!pairing.teamB) {continue;} // Type guard for safety
+        if (!pairing.teamB) { continue; } // Type guard for safety
 
         const score = calculateFairnessScore(
           pairing.teamA.id,
@@ -445,7 +445,7 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         if (score < Infinity) {
           const teamAState = teamStates.get(pairing.teamA.id);
           const teamBState = teamStates.get(pairing.teamB.id);
-          if (!teamAState || !teamBState) {continue;} // Skip if states not found
+          if (!teamAState || !teamBState) { continue; } // Skip if states not found
           const restA = currentSlotIndex - teamAState.lastSlot;
           const restB = currentSlotIndex - teamBState.lastSlot;
           const minRest = Math.min(restA, restB);
@@ -475,11 +475,11 @@ export function generateGroupPhaseSchedule(options: GroupPhaseScheduleOptions): 
         const { groupId, pairing } = remainingPairings[bestPairingIndex];
 
         // Type guard: pairing.teamB is non-null (BYE-pairings filtered earlier)
-        if (!pairing.teamB) {continue;}
+        if (!pairing.teamB) { continue; }
 
         const stateA = teamStates.get(pairing.teamA.id);
         const stateB = teamStates.get(pairing.teamB.id);
-        if (!stateA || !stateB) {continue;} // Skip if states not found
+        if (!stateA || !stateB) { continue; } // Skip if states not found
 
         // Debug logging (disabled for performance with large tournaments)
         // const restA = currentSlotIndex - stateA.lastSlot;
@@ -576,15 +576,15 @@ function balanceHomeAway(matches: Match[], teamStates: Map<string, TeamScheduleS
   for (const match of matches) {
     const balanceA = homeAwayBalance.get(match.teamA);
     const balanceB = homeAwayBalance.get(match.teamB);
-    if (balanceA) {balanceA.home++;}
-    if (balanceB) {balanceB.away++;}
+    if (balanceA) { balanceA.home++; }
+    if (balanceB) { balanceB.away++; }
   }
 
   // Find matches where swapping would improve balance
   for (const match of matches) {
     const balanceA = homeAwayBalance.get(match.teamA);
     const balanceB = homeAwayBalance.get(match.teamB);
-    if (!balanceA || !balanceB) {continue;}
+    if (!balanceA || !balanceB) { continue; }
 
     // Calculate current imbalances
     const imbalanceA = Math.abs(balanceA.home - balanceA.away);

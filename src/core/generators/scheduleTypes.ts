@@ -2,7 +2,7 @@
  * Schedule Types - Type definitions for schedule generation
  */
 
-import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField } from '../types/tournament'
+import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField } from '../../types/tournament'
 
 // ============================================================================
 // SCHEDULED MATCH

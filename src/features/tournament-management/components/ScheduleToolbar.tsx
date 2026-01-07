@@ -15,7 +15,7 @@ import { Button } from '../../../components/ui';
 import { ScheduleActionButtons } from '../../../components/ScheduleActionButtons';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament';
-import { GeneratedSchedule } from '../../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../../core/generators';
 
 export type ScheduleViewMode = 'table' | 'grid';
 

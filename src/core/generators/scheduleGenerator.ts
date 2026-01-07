@@ -8,26 +8,27 @@
  * - Druckfreundliches Format (A4)
  */
 
-import { Tournament, Match, Team } from '../types/tournament'
-import { generateGroupPhaseSchedule } from '../utils/fairScheduler'
+import { Team, Match, Tournament } from '../../types/tournament';
+import { generateGroupPhaseSchedule } from './fairScheduler'
 import {
   generatePlayoffSchedule,
   generatePlayoffDefinitions,
   generatePlayoffDefinitionsLegacy,
-} from '../utils/playoffScheduler'
-import { getUniqueGroups } from '../utils/groupHelpers'
+} from './playoffScheduler'
+import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
 import { GroupSizeInfo } from './playoffGenerator'
 
 // Re-export types for backwards compatibility
 export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './scheduleTypes'
-export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from './scheduleRenderer'
+export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
 import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleTypes'
 import {
   parseStartTime,
   addMinutes,
+  formatTime,
   scheduleMatches,
   createInitialStandings,
 } from './scheduleHelpers'
@@ -54,44 +55,103 @@ export function generateFullSchedule(
     teamMap.set(team.id, team.name)
   })
 
-  // Generiere Matches
-  const { groupStageMatches, finalMatches } = generateMatches(tournament, startTime)
+  let allMatches: ScheduledMatch[] = []
+  let groupStageMatches: Match[] = []
+  let finalMatches: Match[] = []
 
-  // Scheduliere Gruppenphase
-  const scheduledGroupStage = scheduleMatches({
-    matches: groupStageMatches,
-    startTime,
-    numberOfFields: tournament.numberOfFields,
-    gameDuration: tournament.groupPhaseGameDuration,
-    breakDuration: tournament.groupPhaseBreakDuration ?? 0,
-    gamePeriods: tournament.gamePeriods ?? 1,
-    halftimeBreak: tournament.halftimeBreak ?? 0,
-    phase: 'groupStage',
-    teamMap,
-    locale,
-    startMatchNumber: 1,
-    groups: tournament.groups,
-  })
+  // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
+  // to avoid inheritance conflicts with different property types
+  interface ExtendedMatchInput {
+    id: string;
+    teamA: string;
+    teamB: string;
+    phase?: string;
+    isFinal?: boolean;
+    scheduledTime?: Date | string;
+  }
 
-  // Scheduliere Finalrunde
-  const scheduledFinals = scheduleFinalMatches(
-    finalMatches,
-    scheduledGroupStage,
-    startTime,
-    tournament,
-    teamMap,
-    locale
-  )
+  // Check if tournament has custom matches that should be preserved
+  const hasMatches = tournament.matches.length > 0
 
-  // Kombiniere und weise Schiedsrichter zu
-  let allMatches = [...scheduledGroupStage, ...scheduledFinals]
 
-  if (tournament.refereeConfig && tournament.refereeConfig.mode !== 'none') {
-    allMatches = assignReferees(allMatches, tournament.teams, tournament.refereeConfig)
+  if (hasMatches) {
+    // USE ESTABLISHED MATCHES (Truth from Repository)
+    allMatches = tournament.matches.map((m, index) => {
+      const extMatch = m as unknown as ExtendedMatchInput
+      const matchStart = m.scheduledTime ? new Date(m.scheduledTime) : startTime
+      // Estimate end time based on duration
+      const duration = tournament.groupPhaseGameDuration
+      const matchEnd = new Date(matchStart.getTime() + duration * 60000)
+
+      const phase = m.phase || extMatch.phase || 'groupStage'
+
+      return {
+        ...m,
+        id: m.id,
+        matchNumber: m.matchNumber || index + 1,
+        startTime: matchStart,
+        endTime: matchEnd,
+        // Properties required by ScheduledMatch interface
+        time: formatTime(matchStart),
+        originalTeamA: m.teamA,
+        originalTeamB: m.teamB,
+        duration,
+
+        homeTeam: teamMap.get(m.teamA) || m.teamA,
+        awayTeam: teamMap.get(m.teamB) || m.teamB,
+        phase: phase as ScheduledMatch['phase'],
+        isFinal: !!m.isFinal || !!extMatch.isFinal,
+        // Ensure scores are preserved
+        scoreA: m.scoreA,
+        scoreB: m.scoreB
+      } as ScheduledMatch
+    })
+
+    // Categorize into group/final for stats
+    groupStageMatches = tournament.matches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase))
+    finalMatches = tournament.matches.filter(m => m.isFinal || (m.phase && m.phase !== 'groupStage'))
+
+  } else {
+    // GENERATE MATCHES (Standard Behavior)
+    const generated = generateMatches(tournament, startTime)
+    groupStageMatches = generated.groupStageMatches
+    finalMatches = generated.finalMatches
+
+    // Scheduliere Gruppenphase
+    const scheduledGroupStage = scheduleMatches({
+      matches: groupStageMatches,
+      startTime,
+      numberOfFields: tournament.numberOfFields,
+      gameDuration: tournament.groupPhaseGameDuration,
+      breakDuration: tournament.groupPhaseBreakDuration ?? 0,
+      gamePeriods: tournament.gamePeriods ?? 1,
+      halftimeBreak: tournament.halftimeBreak ?? 0,
+      phase: 'groupStage',
+      teamMap,
+      locale,
+      startMatchNumber: 1,
+      groups: tournament.groups,
+    })
+
+    // Scheduliere Finalrunde
+    const scheduledFinals = scheduleFinalMatches(
+      finalMatches,
+      scheduledGroupStage,
+      startTime,
+      tournament,
+      teamMap,
+      locale
+    )
+
+    allMatches = [...scheduledGroupStage, ...scheduledFinals]
+
+    if (tournament.refereeConfig && tournament.refereeConfig.mode !== 'none') {
+      allMatches = assignReferees(allMatches, tournament.teams, tournament.refereeConfig)
+    }
   }
 
   // Erstelle Phasen
-  const phases = createPhases(allMatches, scheduledGroupStage.length)
+  const phases = createPhases(allMatches, groupStageMatches.length)
 
   // End-Zeit des Turniers
   const endTime = allMatches.length > 0 ? allMatches[allMatches.length - 1].endTime : startTime

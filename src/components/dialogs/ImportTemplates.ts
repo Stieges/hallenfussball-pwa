@@ -31,6 +31,7 @@ export const JSON_TEMPLATE = {
 
   // === SPORTART & TYP (Step 1) ===
   sport: "football",              // "football" | "other"
+  sportId: "football-indoor",     // "football-indoor" | "football-field" | "handball"
   tournamentType: "classic",      // "classic" | "bambini"
 
   // === MODUS & SYSTEM (Step 2) ===

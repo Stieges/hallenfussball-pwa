@@ -22,7 +22,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { cssVars, spacingSemantics, mediaQueries } from '../../design-tokens'
-import { ScheduledMatch } from '../../lib/scheduleGenerator';
+import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig, Tournament, RuntimeMatchEvent } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { getTeamForDisplay } from '../../utils/teamHelpers';

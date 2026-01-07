@@ -7,7 +7,7 @@
  * - Teams provide referees (team referees after their own match)
  */
 
-import { Match, RefereeConfig, Team } from '../types/tournament';
+import { Match, RefereeConfig, Team } from '../../types/tournament';
 
 // Generic match interface that works with both Match and ScheduledMatch
 interface MatchLike {

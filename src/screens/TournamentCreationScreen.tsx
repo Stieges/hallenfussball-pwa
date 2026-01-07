@@ -11,7 +11,7 @@ import { Tournament } from '../types/tournament';
 import { useTournaments } from '../hooks/useTournaments';
 import { useTournamentWizard } from '../hooks/useTournamentWizard';
 import { useIsMobile } from '../hooks/useIsMobile';
-import { generateFullSchedule } from '../lib/scheduleGenerator';
+import { generateFullSchedule } from '../core/generators';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { useToast } from '../components/ui/Toast';
 import { AuthSection } from '../components/layout/AuthSection';
@@ -120,6 +120,9 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     handleResetTournament,
     // Draft Creation
     createDraftTournament,
+    // Persistence
+    saveDraft,
+    publishTournament,
   } = useTournamentWizard(existingTournament);
 
   // Sync step from URL on mount (for deep-linking)
@@ -154,7 +157,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       formData.location ||
       (formData.teams && formData.teams.length > 0);
 
-    if (!hasData) {return false;}
+    if (!hasData) { return false; }
 
     // Check if data is different from last save
     const currentData = JSON.stringify(formData);
@@ -174,20 +177,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   // Helper function to save as draft
   // IMPORTANT: Always use defaultSaveTournament for autosave, not saveTournament!
   // saveTournament might be mapped to onSave which triggers navigation back to dashboard
-  const saveAsDraft = useCallback(() => {
-    if (!hasUnsavedChanges()) {return;}
-
-    const tournament = createDraftTournament();
+  const saveAsDraft = useCallback(async () => {
+    if (!hasUnsavedChanges()) { return; }
 
     try {
-      void defaultSaveTournament(tournament);
-
-      // Update formData with the generated ID to prevent creating multiple drafts
-      if (!formData.id && tournament.id) {
-        setFormData((prev) => ({ ...prev, id: tournament.id }));
-      }
-
-      lastSavedDataRef.current = JSON.stringify(formData);
+      await saveDraft();
 
       // Show save confirmation notification
       showSaveConfirmation();
@@ -198,7 +192,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
         console.error('[TournamentCreation] Failed to save draft:', error);
       }
     }
-  }, [hasUnsavedChanges, formData, defaultSaveTournament, showSaveConfirmation, createDraftTournament, lastSavedDataRef, setFormData]);
+  }, [hasUnsavedChanges, saveDraft, showSaveConfirmation]);
 
   // Helper function to change step with autosave, slide animation, and URL update
   const handleStepChange = useCallback((newStep: number) => {
@@ -211,7 +205,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       setGeneratedSchedule(null);
     }
     // Use wizard hook's handleStepChange with saveAsDraft callback
-    wizardHandleStepChange(newStep, saveAsDraft);
+    wizardHandleStepChange(newStep, () => void saveAsDraft());
 
     // Update URL with new step (replace to avoid history clutter)
     const newPath = buildWizardStepPath(newStep as WizardStep, existingTournament?.id);
@@ -225,7 +219,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   useEffect(() => {
     const interval = setInterval(() => {
       if (hasUnsavedChanges()) {
-        saveAsDraft();
+        void saveAsDraft();
       }
     }, 10000); // 10 seconds
 
@@ -236,7 +230,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (hasUnsavedChanges()) {
-        saveAsDraft();
+        void saveAsDraft();
 
         // Show browser warning (optional)
         event.preventDefault();
@@ -273,35 +267,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     try {
-      const tournament = createDraftTournament();
-      tournament.status = 'published';
+      const published = await publishTournament();
 
-      // Generate matches before publishing
-      const schedule = generateFullSchedule(tournament);
+      // Call external save callback if provided (e.g. for potential redirects or parent updates)
+      // Though publishTournament already saves to repo.
+      void saveTournament(published);
 
-      // Convert ScheduledMatch[] to Match[]
-      // WICHTIG: Verwende originalTeamA/B (technische IDs/Platzhalter) statt homeTeam/awayTeam (Display-Text)
-      // damit der playoffResolver die Platzhalter wie "group-a-1st" erkennen kann
-      tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
-        id: scheduledMatch.id,
-        round: Math.floor(index / tournament.numberOfFields) + 1, // Calculate round from index and fields
-        field: scheduledMatch.field,
-        slot: scheduledMatch.slot,
-        teamA: scheduledMatch.originalTeamA, // Original ID/Placeholder für playoffResolver
-        teamB: scheduledMatch.originalTeamB, // Original ID/Placeholder für playoffResolver
-        scoreA: scheduledMatch.scoreA,
-        scoreB: scheduledMatch.scoreB,
-        group: scheduledMatch.group,
-        isFinal: scheduledMatch.phase !== 'groupStage',
-        finalType: scheduledMatch.finalType,
-        label: scheduledMatch.label,
-        scheduledTime: scheduledMatch.startTime,
-        referee: scheduledMatch.referee,
-      }));
-
-      void saveTournament(tournament);
       onBack();
     } catch (error) {
       // Capture error and display to user
@@ -314,11 +287,13 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     }
   };
 
-  const handleSaveDraft = () => {
-    const tournament = createDraftTournament();
-    void defaultSaveTournament(tournament);
-    lastSavedDataRef.current = JSON.stringify(formData);
-    showSuccess('Turnier als Entwurf gespeichert!');
+  const handleSaveDraft = async () => {
+    try {
+      await saveDraft();
+      showSuccess('Turnier als Entwurf gespeichert!');
+    } catch (error) {
+      console.error('[TournamentCreation] Failed to manual save draft:', error);
+    }
   };
 
   const handleBackToDashboard = () => {
@@ -345,11 +320,14 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
   };
 
   // Dialog handlers: Save draft and go back
-  const handleSaveAndGoBack = () => {
-    const tournament = createDraftTournament();
-    void saveTournament(tournament);
-    setShowSaveDialog(false);
-    onBack();
+  const handleSaveAndGoBack = async () => {
+    try {
+      await saveDraft();
+      setShowSaveDialog(false);
+      onBack();
+    } catch (error) {
+      console.error('[TournamentCreation] Failed to save and go back:', error);
+    }
   };
 
   const handleBackToEdit = () => {
@@ -438,7 +416,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           </div>
           <Button
             variant="primary"
-            onClick={handlePublish}
+            onClick={() => void handlePublish()}
             style={{ background: cssVars.colors.success }}
           >
             Speichern & Zurück
@@ -475,183 +453,183 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       {/* Steps with lazy loading and error boundary */}
       <ErrorBoundary>
         <Suspense fallback={<StepLoadingFallback />}>
-        <div
-          className="step-content"
-          data-slide={slideDirection}
-          style={{ willChange: slideDirection ? 'transform, opacity' : 'auto' }}
-        >
-        {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
+          <div
+            className="step-content"
+            data-slide={slideDirection}
+            style={{ willChange: slideDirection ? 'transform, opacity' : 'auto' }}
+          >
+            {step === 1 && <Step3_Metadata formData={formData} onUpdate={updateForm} />}
 
-        {step === 2 && (
-          <Step1_SportAndType
-            formData={formData}
-            onUpdate={updateForm}
-            onTournamentTypeChange={handleTournamentTypeChange}
-          />
-        )}
+            {step === 2 && (
+              <Step1_SportAndType
+                formData={formData}
+                onUpdate={updateForm}
+                onTournamentTypeChange={handleTournamentTypeChange}
+              />
+            )}
 
-        {step === 3 && (
-          <Step2_ModeAndSystem
-            formData={formData}
-            onUpdate={updateForm}
-            onMovePlacementLogic={movePlacementLogic}
-            onTogglePlacementLogic={togglePlacementLogic}
-            onReorderPlacementLogic={reorderPlacementLogic}
-            hasResults={hasResults}
-            onResetTournament={handleResetTournament}
-          />
-        )}
+            {step === 3 && (
+              <Step2_ModeAndSystem
+                formData={formData}
+                onUpdate={updateForm}
+                onMovePlacementLogic={movePlacementLogic}
+                onTogglePlacementLogic={togglePlacementLogic}
+                onReorderPlacementLogic={reorderPlacementLogic}
+                hasResults={hasResults}
+                onResetTournament={handleResetTournament}
+              />
+            )}
 
-        {/* US-GROUPS-AND-FIELDS: Neuer Step 4 */}
-        {step === 4 && (
-          <Step_GroupsAndFields
-            formData={formData}
-            onUpdate={updateForm}
-          />
-        )}
+            {/* US-GROUPS-AND-FIELDS: Neuer Step 4 */}
+            {step === 4 && (
+              <Step_GroupsAndFields
+                formData={formData}
+                onUpdate={updateForm}
+              />
+            )}
 
-        {step === 5 && (
-          <Step4_Teams
-            formData={formData}
-            onUpdate={updateForm}
-            onAddTeam={addTeam}
-            onRemoveTeam={removeTeam}
-            onUpdateTeam={updateTeam}
-          />
-        )}
+            {step === 5 && (
+              <Step4_Teams
+                formData={formData}
+                onUpdate={updateForm}
+                onAddTeam={addTeam}
+                onRemoveTeam={removeTeam}
+                onUpdateTeam={updateTeam}
+              />
+            )}
 
-      {step === 6 && !generatedSchedule && (
-        <>
-          {scheduleError && (
-            <div
-              style={{
-                marginBottom: '24px',
-                padding: '16px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: cssVars.borderRadius.md,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
-                  ⚠️
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3
+            {step === 6 && !generatedSchedule && (
+              <>
+                {scheduleError && (
+                  <div
                     style={{
-                      margin: '0 0 8px 0',
-                      fontSize: cssVars.fontSizes.lg,
-                      fontWeight: cssVars.fontWeights.semibold,
-                      color: cssVars.colors.error,
+                      marginBottom: '24px',
+                      padding: '16px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '2px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: cssVars.borderRadius.md,
                     }}
                   >
-                    Spielplan konnte nicht erstellt werden
-                  </h3>
-                  <p
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
+                        ⚠️
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h3
+                          style={{
+                            margin: '0 0 8px 0',
+                            fontSize: cssVars.fontSizes.lg,
+                            fontWeight: cssVars.fontWeights.semibold,
+                            color: cssVars.colors.error,
+                          }}
+                        >
+                          Spielplan konnte nicht erstellt werden
+                        </h3>
+                        <p
+                          style={{
+                            margin: '0 0 12px 0',
+                            fontSize: cssVars.fontSizes.md,
+                            color: cssVars.colors.textPrimary,
+                            lineHeight: '1.5',
+                          }}
+                        >
+                          {scheduleError}
+                        </p>
+                        <button
+                          onClick={() => setScheduleError(null)}
+                          style={{
+                            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            borderRadius: cssVars.borderRadius.sm,
+                            color: cssVars.colors.textPrimary,
+                            fontSize: cssVars.fontSizes.sm,
+                            fontWeight: cssVars.fontWeights.medium,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Zurück zur Bearbeitung
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <Step5_OverviewDirect formData={formData} onSave={handlePreview} />
+              </>
+            )}
+            {step === 6 && generatedSchedule && (
+              <>
+                {scheduleError && (
+                  <div
                     style={{
-                      margin: '0 0 12px 0',
-                      fontSize: cssVars.fontSizes.md,
-                      color: cssVars.colors.textPrimary,
-                      lineHeight: '1.5',
+                      marginBottom: '24px',
+                      padding: '16px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      border: '2px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: cssVars.borderRadius.md,
                     }}
                   >
-                    {scheduleError}
-                  </p>
-                  <button
-                    onClick={() => setScheduleError(null)}
-                    style={{
-                      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: cssVars.borderRadius.sm,
-                      color: cssVars.colors.textPrimary,
-                      fontSize: cssVars.fontSizes.sm,
-                      fontWeight: cssVars.fontWeights.medium,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Zurück zur Bearbeitung
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          <Step5_OverviewDirect formData={formData} onSave={handlePreview} />
-        </>
-      )}
-      {step === 6 && generatedSchedule && (
-        <>
-          {scheduleError && (
-            <div
-              style={{
-                marginBottom: '24px',
-                padding: '16px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '2px solid rgba(239, 68, 68, 0.3)',
-                borderRadius: cssVars.borderRadius.md,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
-                  ⚠️
-                </div>
-                <div style={{ flex: 1 }}>
-                  <h3
-                    style={{
-                      margin: '0 0 8px 0',
-                      fontSize: cssVars.fontSizes.lg,
-                      fontWeight: cssVars.fontWeights.semibold,
-                      color: cssVars.colors.error,
-                    }}
-                  >
-                    Turnier konnte nicht veröffentlicht werden
-                  </h3>
-                  <p
-                    style={{
-                      margin: '0 0 12px 0',
-                      fontSize: cssVars.fontSizes.md,
-                      color: cssVars.colors.textPrimary,
-                      lineHeight: '1.5',
-                    }}
-                  >
-                    {scheduleError}
-                  </p>
-                  <button
-                    onClick={() => setScheduleError(null)}
-                    style={{
-                      padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: cssVars.borderRadius.sm,
-                      color: cssVars.colors.textPrimary,
-                      fontSize: cssVars.fontSizes.sm,
-                      fontWeight: cssVars.fontWeights.medium,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Schließen
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-          <TournamentPreview
-            tournament={createDraftTournament()}
-            schedule={generatedSchedule}
-            onEdit={handleBackToEdit}
-            onPublish={handlePublish}
-            onTournamentChange={(updatedTournament) => {
-              // Update formData with the modified playoff config and referee config
-              setFormData((prev) => ({
-                ...prev,
-                playoffConfig: updatedTournament.playoffConfig,
-                refereeConfig: updatedTournament.refereeConfig,
-              }));
-            }}
-          />
-        </>
-      )}
-        </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                      <div style={{ color: cssVars.colors.error, fontSize: fontSizesMd3.headlineMedium, flexShrink: 0 }}>
+                        ⚠️
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h3
+                          style={{
+                            margin: '0 0 8px 0',
+                            fontSize: cssVars.fontSizes.lg,
+                            fontWeight: cssVars.fontWeights.semibold,
+                            color: cssVars.colors.error,
+                          }}
+                        >
+                          Turnier konnte nicht veröffentlicht werden
+                        </h3>
+                        <p
+                          style={{
+                            margin: '0 0 12px 0',
+                            fontSize: cssVars.fontSizes.md,
+                            color: cssVars.colors.textPrimary,
+                            lineHeight: '1.5',
+                          }}
+                        >
+                          {scheduleError}
+                        </p>
+                        <button
+                          onClick={() => setScheduleError(null)}
+                          style={{
+                            padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            borderRadius: cssVars.borderRadius.sm,
+                            color: cssVars.colors.textPrimary,
+                            fontSize: cssVars.fontSizes.sm,
+                            fontWeight: cssVars.fontWeights.medium,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Schließen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <TournamentPreview
+                  tournament={createDraftTournament()}
+                  schedule={generatedSchedule}
+                  onEdit={handleBackToEdit}
+                  onPublish={() => void handlePublish()}
+                  onTournamentChange={(updatedTournament) => {
+                    // Update formData with the modified playoff config and referee config
+                    setFormData((prev) => ({
+                      ...prev,
+                      playoffConfig: updatedTournament.playoffConfig,
+                      refereeConfig: updatedTournament.refereeConfig,
+                    }));
+                  }}
+                />
+              </>
+            )}
+          </div>
         </Suspense>
       </ErrorBoundary>
 
@@ -685,7 +663,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
                   variant="secondary"
-                  onClick={handleSaveDraft}
+                  onClick={() => void handleSaveDraft()}
                   icon={<Icons.Check />}
                   size={isMobile ? 'sm' : 'md'}
                 >
@@ -741,7 +719,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
       <ConfirmDialog
         isOpen={showSaveDialog}
         onClose={() => setShowSaveDialog(false)}
-        onConfirm={handleSaveAndGoBack}
+        onConfirm={() => void handleSaveAndGoBack()}
         title="Änderungen speichern?"
         message="Du hast Änderungen vorgenommen, die noch nicht gespeichert wurden. Was möchtest du tun?"
         confirmText="Speichern"

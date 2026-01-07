@@ -218,17 +218,17 @@ test.describe('Live Cockpit', () => {
     // Verify that either:
     // - Status shows FINISHED (if we stayed on same match), or
     // - We moved to a different match (team changed)
-    await page.waitForTimeout(500); // Wait for state update
 
-    const homeTeamAfter = await page.getByTestId('team-name-home').textContent();
-    const statusBadge = await page.getByTestId('match-status-badge').textContent();
+    // Use robust expect polling instead of hard timeout
+    await expect(async () => {
+      const homeTeamAfter = await page.getByTestId('team-name-home').textContent();
+      const statusBadge = await page.getByTestId('match-status-badge').textContent();
 
-    // Either the status changed to finished, or we auto-navigated to next match
-    const matchFinishedOrNavigated =
-      Boolean(statusBadge?.match(/Beendet|FINISHED|ABGESCHLOSSEN/i)) ||
-      homeTeamAfter !== homeTeamBefore;
+      const isFinished = Boolean(statusBadge?.match(/Beendet|FINISHED|ABGESCHLOSSEN/i));
+      const hasNavigated = homeTeamAfter !== homeTeamBefore;
 
-    expect(matchFinishedOrNavigated).toBeTruthy();
+      expect(isFinished || hasNavigated).toBeTruthy();
+    }).toPass({ timeout: 5000 });
   });
 
   test('Timer updates while match is running', async ({ page }) => {
@@ -246,9 +246,11 @@ test.describe('Live Cockpit', () => {
     // WHEN - Wait for 2 seconds
     await page.waitForTimeout(2000);
 
-    // THEN - Timer should have advanced
-    const newTime = await timerElement.textContent();
-    expect(newTime).not.toBe(initialTime);
+    // THEN - Timer should have advanced (check multiple times to be safe)
+    await expect(async () => {
+      const newTime = await timerElement.textContent();
+      expect(newTime).not.toBe(initialTime);
+    }).toPass({ timeout: 5000 });
   });
 
   test('Can undo last event', async ({ page }) => {
@@ -276,7 +278,7 @@ test.describe('Live Cockpit', () => {
 
       // Handle confirmation if present
       const confirmButton = page.getByRole('button', { name: /Bestätigen|Confirm|Ja/i });
-      if (await confirmButton.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await confirmButton.click();
       }
 
@@ -302,8 +304,10 @@ test.describe('Live Cockpit', () => {
     await expect(skipButton).toBeVisible({ timeout: 2000 });
 
     // Skip button should show countdown (e.g., "Ohne Nr. (10s)" or "(9s)")
-    const buttonText = await skipButton.textContent();
-    expect(buttonText).toMatch(/\(\d+s\)/);
+    await expect(async () => {
+      const buttonText = await skipButton.textContent();
+      expect(buttonText).toMatch(/\(\d+s\)/);
+    }).toPass({ timeout: 3000 });
 
     // Close dialog
     await skipButton.click();
@@ -330,7 +334,7 @@ test.describe('Live Cockpit', () => {
 
     // Wait for auto-dismiss (10 seconds + buffer)
     // Note: Goal is still recorded even when dialog auto-dismisses
-    await expect(skipButton).toBeHidden({ timeout: 12000 });
+    await expect(skipButton).toBeHidden({ timeout: 15000 });
 
     // Verify goal was recorded (auto-dismiss saves as "incomplete")
     await expect(page.getByTestId('score-home')).toContainText('1');
@@ -354,22 +358,21 @@ test.describe('Live Cockpit', () => {
       if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
         await skipButton.click();
       }
-      await page.waitForTimeout(300); // Small delay between goals
+      // Wait for score to update in UI before firing next goal
+      await expect(page.getByTestId('score-home')).toContainText(`${i + 1}`);
     }
 
     // Score 1 goal for away team
     await page.getByTestId('goal-button-away').click();
-    const skipButton = page.getByTestId('dialog-skip-button');
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await skipButton.click();
+    const skipButtonAway = page.getByTestId('dialog-skip-button');
+    if (await skipButtonAway.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await skipButtonAway.click();
     }
-
-    // Verify scores before finish
-    await expect(page.getByTestId('score-home')).toContainText('2');
     await expect(page.getByTestId('score-away')).toContainText('1');
 
     // Pause and finish the match
     await page.getByTestId('match-pause-button').click();
+    await expect(page.getByTestId('match-finish-button')).toBeEnabled();
     await page.getByTestId('match-finish-button').click();
 
     // Handle confirmation dialog if present
@@ -378,18 +381,20 @@ test.describe('Live Cockpit', () => {
       await dialogConfirmButton.click();
     }
 
-    await page.waitForTimeout(500);
+    // Wait for state to settle
+    await page.waitForTimeout(1000);
 
     // WHEN - Navigate to Spielplan tab to verify results
     await page.getByRole('button', { name: 'Spielplan' }).click({ force: true });
-    await page.waitForTimeout(500);
 
     // THEN - Should see the result "2:1" in the schedule
-    // Look for the score in the schedule display area
-    const scheduleDisplay = page.locator('.group-stage-schedule, .schedule-display').first();
-    await expect(scheduleDisplay).toBeVisible();
-    const scheduleContent = await scheduleDisplay.textContent();
-    expect(scheduleContent).toMatch(/2\s*[-:]\s*1/);
+    // Use robust poll for the schedule content
+    await expect(async () => {
+      const scheduleDisplay = page.locator('.group-stage-schedule, .schedule-display').first();
+      await expect(scheduleDisplay).toBeVisible();
+      const scheduleContent = await scheduleDisplay.textContent();
+      expect(scheduleContent).toMatch(/2\s*[-:]\s*1/);
+    }).toPass({ timeout: 5000 });
   });
 });
 

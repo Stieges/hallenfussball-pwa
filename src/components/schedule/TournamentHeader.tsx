@@ -4,7 +4,7 @@
 
 import { CSSProperties } from 'react';
 import { cssVars, fontSizesMd3 } from '../../design-tokens'
-import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../core/generators';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
 
 interface TournamentHeaderProps {

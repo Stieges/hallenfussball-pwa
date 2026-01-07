@@ -5,7 +5,7 @@ import { ShareDialog } from './dialogs/ShareDialog';
 import { PDFExportDialog } from './dialogs/PDFExportDialog';
 import { cssVars, mediaQueries, layoutHeights } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
-import { GeneratedSchedule } from '../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../core/generators';
 
 export interface ScheduleActionButtonsProps {
   tournament: Tournament;

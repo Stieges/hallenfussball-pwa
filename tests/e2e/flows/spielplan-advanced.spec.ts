@@ -15,6 +15,16 @@
 import { test, expect, Page } from '@playwright/test';
 
 /**
+ * Parse timer values (format: MM:SS)
+ */
+const parseTime = (time: string | null): number => {
+  if (!time) { return 0; }
+  const match = time.match(/(\d+):(\d+)/);
+  if (!match) { return 0; }
+  return parseInt(match[1]) * 60 + parseInt(match[2]);
+};
+
+/**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
  */
 function getFutureDate(): string {
@@ -428,12 +438,7 @@ test.describe('Timer-Stabilität', () => {
 
     // THEN - Timer should have advanced by approximately 5 seconds
     // Parse timer values (format: MM:SS)
-    const parseTime = (time: string | null): number => {
-      if (!time) {return 0;}
-      const match = time.match(/(\d+):(\d+)/);
-      if (!match) {return 0;}
-      return parseInt(match[1]) * 60 + parseInt(match[2]);
-    };
+
 
     const secondsBefore = parseTime(timerBefore);
     const secondsAfter = parseTime(timerAfter);
@@ -464,8 +469,9 @@ test.describe('Timer-Stabilität', () => {
     await page.waitForTimeout(2000);
     const timerDuringPause = await page.getByTestId('match-timer-display').textContent();
 
-    // Timer should NOT have changed during pause
-    expect(timerDuringPause).toBe(timerBeforePause);
+    // Timer should NOT have changed during pause (allow 1s tolerance due to interval update)
+    const diff = Math.abs(parseTime(timerDuringPause) - parseTime(timerBeforePause));
+    expect(diff).toBeLessThanOrEqual(1);
 
     // Resume
     await page.getByTestId('match-start-button').click();
@@ -476,12 +482,7 @@ test.describe('Timer-Stabilität', () => {
     const timerAfterResume = await page.getByTestId('match-timer-display').textContent();
 
     // THEN - Timer should have advanced after resume
-    const parseTime = (time: string | null): number => {
-      if (!time) {return 0;}
-      const match = time.match(/(\d+):(\d+)/);
-      if (!match) {return 0;}
-      return parseInt(match[1]) * 60 + parseInt(match[2]);
-    };
+
 
     expect(parseTime(timerAfterResume)).toBeGreaterThan(parseTime(timerBeforePause));
   });

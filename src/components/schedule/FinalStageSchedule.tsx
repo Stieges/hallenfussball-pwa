@@ -24,7 +24,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, shadowSemantics, mediaQueries } from '../../design-tokens'
-import { ScheduledMatch } from '../../lib/scheduleGenerator';
+import { ScheduledMatch } from '../../core/generators';
 import { RefereeConfig } from '../../types/tournament';
 import { MatchScoreCell } from './MatchScoreCell';
 import { LiveBadge } from './LiveBadge';

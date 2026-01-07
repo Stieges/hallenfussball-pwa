@@ -32,7 +32,7 @@ import {
 } from './hooks';
 import { isMatchFinished, getTeamName } from './utils';
 import { ScheduleToolbar, ScheduleViewMode, ScheduleConflictContent } from './components';
-import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { ScheduleEditor } from '../schedule-editor';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';

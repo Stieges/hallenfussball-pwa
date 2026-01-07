@@ -11,7 +11,7 @@
 import { useState, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../design-tokens'
 import { Tournament, Standing } from '../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../lib/scheduleGenerator';
+import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings } from '../utils/calculations';
 import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';

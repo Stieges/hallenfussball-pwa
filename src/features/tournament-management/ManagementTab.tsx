@@ -17,11 +17,11 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tournament } from '../../types/tournament';
-import { GeneratedSchedule, ScheduledMatch } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpitMockup } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useLiveMatchManagement } from '../../hooks/useLiveMatchManagement';
+import { useMatchExecution } from '../../hooks/useMatchExecution';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -69,7 +69,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleStartPenaltyShootout,
     handleRecordPenaltyResult,
     handleCancelTiebreaker,
-  } = useLiveMatchManagement({ tournament, onTournamentUpdate });
+  } = useMatchExecution({ tournament, onTournamentUpdate });
 
   // Confirm dialogs
   const startWithResultDialog = useConfirmDialog({
@@ -97,7 +97,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       const runningMatch = hasRunningMatch();
       if (runningMatch && runningMatch.id !== initialMatchId) {
         // End the running match first - user already confirmed in ScheduleTab
-        handleFinish(runningMatch.id);
+        void handleFinish(runningMatch.id);
       }
 
       // Find the match to get its field number
@@ -144,12 +144,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
     if (!isPlaceholder(homeId)) {
       const resolved = getTeamName(homeId);
-      if (resolved) {homeName = resolved;}
+      if (resolved) { homeName = resolved; }
     }
 
     if (!isPlaceholder(awayId)) {
       const resolved = getTeamName(awayId);
-      if (resolved) {awayName = resolved;}
+      if (resolved) { awayName = resolved; }
     }
 
     return {
@@ -187,10 +187,17 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
 
-  // Current match as LiveMatch
+  // Ensure match is initialized in service
+  useEffect(() => {
+    if (currentMatchData) {
+      void getLiveMatchData(currentMatchData);
+    }
+  }, [currentMatchData, getLiveMatchData]);
+
+  // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
-    currentMatchData ? getLiveMatchData(currentMatchData) : null,
-    [currentMatchData, getLiveMatchData]
+    currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
+    [currentMatchData, liveMatches]
   );
 
   // Find last finished match
@@ -222,7 +229,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Handler: Start match with confirmation for existing results
   const handleStart = useCallback(async (matchId: string) => {
     const match = liveMatches.get(matchId);
-    if (!match) {return;}
+    if (!match) { return; }
 
     const hasExistingResult = match.homeScore > 0 || match.awayScore > 0;
 
@@ -232,7 +239,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         details: `Spiel #${match.number}: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
       });
 
-      if (!confirmed) {return;}
+      if (!confirmed) { return; }
     }
 
     void hookHandleStart(matchId);
@@ -248,9 +255,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         confirmText: 'Spiel beenden & wechseln',
       });
 
-      if (!confirmed) {return;}
+      if (!confirmed) { return; }
 
-      handleFinish(runningMatch.id);
+      void handleFinish(runningMatch.id);
     }
 
     setSelectedMatchId(newMatchId);
@@ -286,15 +293,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
-    if (!lastFinishedMatchData) {return;}
+    if (!lastFinishedMatchData) { return; }
     setSelectedMatchId(lastFinishedMatchData.id);
-    handleReopenMatch(lastFinishedMatchData);
+    void handleReopenMatch(lastFinishedMatchData);
   }, [lastFinishedMatchData, handleReopenMatch]);
 
   // Wrapped handleFinish to reset selection
-  const handleFinishAndReset = useCallback((matchId: string) => {
-    handleFinish(matchId);
-    setTimeout(() => setSelectedMatchId(null), 0);
+  const handleFinishAndReset = useCallback(async (matchId: string) => {
+    await handleFinish(matchId);
+    setTimeout(() => { setSelectedMatchId(null); }, 0);
   }, [handleFinish]);
 
   return (
@@ -325,7 +332,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         <select
           className={styles.matchSelect}
           value={selectedMatchId ?? ''}
-          onChange={(e) => void handleMatchSelectionChange(e.target.value || null)}
+          onChange={(e) => { void handleMatchSelectionChange(e.target.value || null); }}
         >
           <option value="">Automatisch (nächstes Spiel)</option>
           {fieldMatches.map(match => (
@@ -348,28 +355,28 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           lastFinishedMatch={lastFinishedMatch}
           upcomingMatches={upcomingMatches}
           highlightNextMatchMinutesBefore={5}
-          onStart={(matchId) => void handleStart(matchId)}
-          onPause={handlePause}
-          onResume={handleResume}
-          onFinish={handleFinishAndReset}
-          onGoal={handleGoal}
-          onUndoLastEvent={handleUndoLastEvent}
-          onManualEditResult={handleManualEditResult}
-          onAdjustTime={handleAdjustTime}
+          onStart={(matchId) => { void handleStart(matchId); }}
+          onPause={(matchId) => { void handlePause(matchId); }}
+          onResume={(matchId) => { void handleResume(matchId); }}
+          onFinish={(matchId) => { void handleFinishAndReset(matchId); }}
+          onGoal={(matchId, teamId, delta, options) => { void handleGoal(matchId, teamId, delta, options); }}
+          onUndoLastEvent={(matchId) => { void handleUndoLastEvent(matchId); }}
+          onManualEditResult={(matchId, home, away) => { void handleManualEditResult(matchId, home, away); }}
+          onAdjustTime={(matchId, time) => { void handleAdjustTime(matchId, time); }}
           onLoadNextMatch={handleLoadNextMatch}
           onReopenLastMatch={handleReopenLastMatch}
           // Event tracking callbacks
-          onTimePenalty={handleTimePenalty}
-          onCard={handleCard}
-          onSubstitution={handleSubstitution}
-          onFoul={handleFoul}
+          onTimePenalty={(matchId, teamId, options) => { void handleTimePenalty(matchId, teamId, options); }}
+          onCard={(matchId, teamId, type, options) => { void handleCard(matchId, teamId, type, options); }}
+          onSubstitution={(matchId, teamId, options) => { void handleSubstitution(matchId, teamId, options); }}
+          onFoul={(matchId, teamId) => { void handleFoul(matchId, teamId); }}
           // Tiebreaker callbacks
-          onStartOvertime={handleStartOvertime}
-          onStartGoldenGoal={handleStartGoldenGoal}
-          onStartPenaltyShootout={handleStartPenaltyShootout}
-          onRecordPenaltyResult={handleRecordPenaltyResult}
-          onForceFinish={handleForceFinish}
-          onCancelTiebreaker={handleCancelTiebreaker}
+          onStartOvertime={(matchId) => { void handleStartOvertime(matchId); }}
+          onStartGoldenGoal={(matchId) => { void handleStartGoldenGoal(matchId); }}
+          onStartPenaltyShootout={(matchId) => { void handleStartPenaltyShootout(matchId); }}
+          onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
+          onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
+          onCancelTiebreaker={(matchId) => { void handleCancelTiebreaker(matchId); }}
         />
       ) : (
         <div className={styles.noMatches}>

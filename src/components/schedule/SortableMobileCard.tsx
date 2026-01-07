@@ -9,7 +9,7 @@ import { type CSSProperties } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
-import { ScheduledMatch } from '../../lib/scheduleGenerator';
+import { ScheduledMatch } from '../../core/generators';
 import { Tournament } from '../../types/tournament';
 import { getGroupShortCode } from '../../utils/displayNames';
 import { getTeamForDisplay } from '../../utils/teamHelpers';

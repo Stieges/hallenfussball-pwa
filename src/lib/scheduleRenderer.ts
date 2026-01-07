@@ -2,8 +2,8 @@
  * Schedule Renderer - Export and print formatting functions
  */
 
-import { GeneratedSchedule } from './scheduleTypes'
-import { formatTime } from './scheduleHelpers'
+import { GeneratedSchedule } from '../core/generators'
+import { formatTime } from '../core/generators'
 
 // ============================================================================
 // PRINT FORMATTING

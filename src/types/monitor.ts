@@ -186,6 +186,9 @@ export interface SlideConfig {
   // Für: next-matches
   matchCount?: number;  // Default: 3, Max: 10
 
+  // Für: top-scorers
+  numberOfPlayers?: number;  // Default: 10, Max: 20
+
   // Für: sponsor
   // WICHTIG: Nur Referenz, keine Inline-Daten!
   sponsorId?: string;
