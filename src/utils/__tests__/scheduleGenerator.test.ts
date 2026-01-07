@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateFullSchedule } from '../../lib/scheduleGenerator';
+import { generateFullSchedule } from '../../core/generators';
 import { Tournament, Team } from '../../types/tournament';
 
 // Helper to create a minimal tournament config

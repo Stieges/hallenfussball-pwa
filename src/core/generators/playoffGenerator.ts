@@ -12,7 +12,7 @@
  * Inspiriert von Blitzcup und MeinTurnierplan
  */
 
-import { FinalsPreset, FinalsConfig } from '../types/tournament';
+import { FinalsPreset, FinalsConfig } from '../../types/tournament';
 
 export interface PlayoffMatch {
   id: string;

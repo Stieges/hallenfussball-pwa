@@ -1,4 +1,4 @@
-import { TeamScheduleState } from './fairScheduler';
+import { TeamScheduleState } from '../core/generators';
 
 /**
  * Stateful helper that maintains incremental fairness metrics.

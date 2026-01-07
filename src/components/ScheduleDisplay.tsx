@@ -11,7 +11,7 @@
 
 import { CSSProperties, useMemo } from 'react';
 import { cssVars } from '../design-tokens'
-import { GeneratedSchedule } from '../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../core/generators';
 import { Standing, Match, Team } from '../types/tournament';
 import {
   TournamentHeader,

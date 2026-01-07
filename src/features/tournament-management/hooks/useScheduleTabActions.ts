@@ -10,7 +10,7 @@ import { useCallback } from 'react';
 import { Tournament } from '../../../types/tournament';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
-import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../utils/playoffResolver';
+import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;

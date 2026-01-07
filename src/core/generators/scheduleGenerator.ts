@@ -8,20 +8,20 @@
  * - Druckfreundliches Format (A4)
  */
 
-import { Tournament, Match, Team } from '../types/tournament'
-import { generateGroupPhaseSchedule } from '../utils/fairScheduler'
+import { Team, Match, Tournament } from '../../types/tournament';
+import { generateGroupPhaseSchedule } from './fairScheduler'
 import {
   generatePlayoffSchedule,
   generatePlayoffDefinitions,
   generatePlayoffDefinitionsLegacy,
-} from '../utils/playoffScheduler'
-import { getUniqueGroups } from '../utils/groupHelpers'
+} from './playoffScheduler'
+import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
 import { GroupSizeInfo } from './playoffGenerator'
 
 // Re-export types for backwards compatibility
 export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './scheduleTypes'
-export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from './scheduleRenderer'
+export { formatScheduleForPrint, exportScheduleAsCSV, calculateScheduleStats } from '../../lib/scheduleRenderer'
 
 // Import internal helpers
 import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleTypes'

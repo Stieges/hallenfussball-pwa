@@ -19,7 +19,7 @@ import { GroupTables } from '../../components/schedule';
 import { HighlightedCell } from './components';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { Tournament, Standing } from '../../types/tournament';
-import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../core/generators';
 import {
   calculateStandings,
   getMergedFinalRanking,

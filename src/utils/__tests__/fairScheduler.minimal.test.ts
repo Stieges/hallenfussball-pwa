@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateGroupPhaseSchedule } from '../fairScheduler';
+import { generateGroupPhaseSchedule } from '../../core/generators';
 import { Team } from '../../types/tournament';
 
 describe('Fair Scheduler - Critical Tests', () => {

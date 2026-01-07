@@ -9,7 +9,7 @@
 
 import { CSSProperties, useState } from 'react';
 import { Tournament, FinalsConfig } from '../../types/tournament';
-import { GeneratedSchedule, generateFullSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule, generateFullSchedule } from '../../core/generators';
 import { ScheduleDisplay } from '../../components/ScheduleDisplay';
 import { RefereeAssignmentEditor } from '../../components/RefereeAssignmentEditor';
 import { Button, Card } from '../../components/ui';

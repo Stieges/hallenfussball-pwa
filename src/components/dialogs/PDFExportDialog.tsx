@@ -3,7 +3,7 @@ import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
 import { cssVars } from '../../design-tokens'
 import { exportScheduleToPDF } from '../../lib/pdfExporter';
-import { GeneratedSchedule } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule } from '../../core/generators';
 import { Standing, Tournament } from '../../types/tournament';
 import { getLocationName } from '../../utils/locationHelpers';
 

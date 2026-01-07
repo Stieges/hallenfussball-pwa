@@ -11,7 +11,7 @@ import { CSSProperties, useState, useCallback, useMemo, useRef } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
-import { generateFullSchedule } from '../../../../lib/scheduleGenerator';
+import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandings } from '../../../../utils/calculations';
 import type { Tournament } from '../../../../types/tournament';
 

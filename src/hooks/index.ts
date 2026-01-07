@@ -28,7 +28,7 @@ export { useIsMobile } from './useIsMobile'
 export { useBreakpoint, type Breakpoint, type BreakpointConfig, type UseBreakpointReturn } from './useBreakpoint'
 
 // Live Data & Sync
-export { useLiveMatchManagement } from './useLiveMatchManagement'
+
 export { useLiveMatches } from './useLiveMatches'
 export { useLiveProgress, formatTime, type UseLiveProgressReturn, type ProgressMatch } from './useLiveProgress'
 export { useMultiTabSync } from './useMultiTabSync'

@@ -5,7 +5,7 @@ import {
   resolvePlayoffPairings,
   autoResolvePlayoffsIfReady,
   resolveBracketAfterPlayoffMatch,
-} from '../playoffResolver';
+} from '../../core/generators';
 import { Tournament, Team, Match } from '../../types/tournament';
 
 describe('Playoff Resolver - DEF-003 Fix', () => {

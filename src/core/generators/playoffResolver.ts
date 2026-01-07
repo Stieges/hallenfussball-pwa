@@ -5,8 +5,8 @@
  * Triggers when all group matches are completed and updates playoff brackets.
  */
 
-import { Tournament } from '../types/tournament';
-import { calculateStandings } from './calculations';
+import { Tournament } from '../../types/tournament';
+import { calculateStandings } from '../../utils/calculations';
 
 /**
  * Result of playoff resolution attempt
@@ -115,7 +115,7 @@ function getExpectedTeamsForMatch(
 ): { teamA: string; teamB: string } | null {
   // Get group keys (sorted alphabetically: A, B, ...)
   const groups = Object.keys(standings).sort();
-  if (groups.length < 2) {return null;}
+  if (groups.length < 2) { return null; }
 
   const groupA = groups[0]; // 'A'
   const groupB = groups[1]; // 'B'
@@ -126,7 +126,7 @@ function getExpectedTeamsForMatch(
     // Matching: { id: 'semi1', home: 'group-a-2nd', away: 'group-b-1st' }
     const teamA = standings[groupA][1]?.teamId; // 2nd place from Group A (index 1)
     const teamB = standings[groupB][0]?.teamId; // 1st place from Group B (index 0)
-    if (teamA && teamB) {return { teamA, teamB };}
+    if (teamA && teamB) { return { teamA, teamB }; }
   }
 
   if (match.id === 'semi2' || match.id.includes('semi2')) {
@@ -134,7 +134,7 @@ function getExpectedTeamsForMatch(
     // Matching: { id: 'semi2', home: 'group-a-1st', away: 'group-b-2nd' }
     const teamA = standings[groupA][0]?.teamId; // 1st place from Group A (index 0)
     const teamB = standings[groupB][1]?.teamId; // 2nd place from Group B (index 1)
-    if (teamA && teamB) {return { teamA, teamB };}
+    if (teamA && teamB) { return { teamA, teamB }; }
   }
 
   // Place matches for direct group positions
@@ -142,14 +142,14 @@ function getExpectedTeamsForMatch(
     // 3rd place teams
     const teamA = standings[groupA][2]?.teamId; // 3rd place from Group A
     const teamB = standings[groupB][2]?.teamId; // 3rd place from Group B
-    if (teamA && teamB) {return { teamA, teamB };}
+    if (teamA && teamB) { return { teamA, teamB }; }
   }
 
   if (match.id === 'place78-direct' || match.id.includes('place78')) {
     // 4th place teams
     const teamA = standings[groupA][3]?.teamId; // 4th place from Group A
     const teamB = standings[groupB][3]?.teamId; // 4th place from Group B
-    if (teamA && teamB) {return { teamA, teamB };}
+    if (teamA && teamB) { return { teamA, teamB }; }
   }
 
   // Final and third-place matches depend on semifinal results,

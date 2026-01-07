@@ -12,7 +12,7 @@
 
 import jsPDF from 'jspdf';
 import autoTable, { RowInput, CellInput, Styles } from 'jspdf-autotable';
-import { GeneratedSchedule, ScheduledMatch } from './scheduleGenerator';
+import { GeneratedSchedule, ScheduledMatch } from '../core/generators';
 import { Standing, RefereeConfig } from '../types/tournament';
 import { getLocationName, getLocationAddressLine } from '../utils/locationHelpers';
 import { getGroupDisplayName, getGroupShortCode } from '../utils/displayNames';

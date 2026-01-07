@@ -17,11 +17,11 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tournament } from '../../types/tournament';
-import { GeneratedSchedule, ScheduledMatch } from '../../lib/scheduleGenerator';
+import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpitMockup } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useLiveMatchManagement } from '../../hooks/useLiveMatchManagement';
+import { useMatchExecution } from '../../hooks/useMatchExecution';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -69,7 +69,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleStartPenaltyShootout,
     handleRecordPenaltyResult,
     handleCancelTiebreaker,
-  } = useLiveMatchManagement({ tournament, onTournamentUpdate });
+  } = useMatchExecution({ tournament, onTournamentUpdate });
 
   // Confirm dialogs
   const startWithResultDialog = useConfirmDialog({
@@ -144,12 +144,12 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
     if (!isPlaceholder(homeId)) {
       const resolved = getTeamName(homeId);
-      if (resolved) {homeName = resolved;}
+      if (resolved) { homeName = resolved; }
     }
 
     if (!isPlaceholder(awayId)) {
       const resolved = getTeamName(awayId);
-      if (resolved) {awayName = resolved;}
+      if (resolved) { awayName = resolved; }
     }
 
     return {
@@ -187,10 +187,17 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
 
-  // Current match as LiveMatch
+  // Ensure match is initialized in service
+  useEffect(() => {
+    if (currentMatchData) {
+      void getLiveMatchData(currentMatchData);
+    }
+  }, [currentMatchData, getLiveMatchData]);
+
+  // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
-    currentMatchData ? getLiveMatchData(currentMatchData) : null,
-    [currentMatchData, getLiveMatchData]
+    currentMatchData ? liveMatches.get(currentMatchData.id) ?? null : null,
+    [currentMatchData, liveMatches]
   );
 
   // Find last finished match
@@ -222,7 +229,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Handler: Start match with confirmation for existing results
   const handleStart = useCallback(async (matchId: string) => {
     const match = liveMatches.get(matchId);
-    if (!match) {return;}
+    if (!match) { return; }
 
     const hasExistingResult = match.homeScore > 0 || match.awayScore > 0;
 
@@ -232,7 +239,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         details: `Spiel #${match.number}: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
       });
 
-      if (!confirmed) {return;}
+      if (!confirmed) { return; }
     }
 
     void hookHandleStart(matchId);
@@ -248,7 +255,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         confirmText: 'Spiel beenden & wechseln',
       });
 
-      if (!confirmed) {return;}
+      if (!confirmed) { return; }
 
       handleFinish(runningMatch.id);
     }
@@ -286,7 +293,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
-    if (!lastFinishedMatchData) {return;}
+    if (!lastFinishedMatchData) { return; }
     setSelectedMatchId(lastFinishedMatchData.id);
     handleReopenMatch(lastFinishedMatchData);
   }, [lastFinishedMatchData, handleReopenMatch]);

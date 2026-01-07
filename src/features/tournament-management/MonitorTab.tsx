@@ -14,7 +14,7 @@
 import { CSSProperties, useState, useMemo } from 'react'
 import { cssVars } from '../../design-tokens'
 import { Tournament, Standing } from '../../types/tournament'
-import { GeneratedSchedule } from '../../lib/scheduleGenerator'
+import { GeneratedSchedule } from '../../core/generators'
 import { useLiveMatches } from '../../hooks/useLiveMatches'
 import {
   LiveMatchDisplay,

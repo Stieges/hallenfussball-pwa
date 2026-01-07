@@ -9,7 +9,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
-import { ScheduledMatch } from '../lib/scheduleGenerator';
+import { ScheduledMatch } from '../core/generators';
 import { RefereeConfig } from '../types/tournament';
 import { cssVars } from '../design-tokens'
 import { Select, Button } from './ui';

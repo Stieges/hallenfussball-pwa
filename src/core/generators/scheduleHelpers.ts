@@ -2,8 +2,8 @@
  * Schedule Helpers - Utility functions for schedule generation
  */
 
-import { Match, Team, Standing, TournamentGroup } from '../types/tournament'
-import { getGroupDisplayName } from '../utils/displayNames'
+import { Match, Team, Standing, TournamentGroup } from '../../types/tournament'
+import { getGroupDisplayName } from '../../utils/displayNames'
 import { ScheduledMatch, SchedulePhaseType } from './scheduleTypes'
 
 // ============================================================================
@@ -93,9 +93,9 @@ export function determineFinalPhase(match: Match): SchedulePhaseType {
 
   // Heuristik: Basierend auf Match-ID oder Round
   const matchId = match.id.toLowerCase()
-  if (matchId.includes('r16') || matchId.startsWith('r16-')) {return 'roundOf16'}
-  if (matchId.includes('qf')) {return 'quarterfinal'}
-  if (matchId.includes('sf') || matchId.includes('semi')) {return 'semifinal'}
+  if (matchId.includes('r16') || matchId.startsWith('r16-')) { return 'roundOf16' }
+  if (matchId.includes('qf')) { return 'quarterfinal' }
+  if (matchId.includes('sf') || matchId.includes('semi')) { return 'semifinal' }
 
   return 'final'
 }
@@ -127,9 +127,9 @@ export function resolveTeamName(
  * Gibt das englische Ordinal-Suffix zurück (1st, 2nd, 3rd, 4th)
  */
 function getOrdinalSuffix(n: number): string {
-  if (n === 1) {return 'st'}
-  if (n === 2) {return 'nd'}
-  if (n === 3) {return 'rd'}
+  if (n === 1) { return 'st' }
+  if (n === 2) { return 'nd' }
+  if (n === 3) { return 'rd' }
   return 'th'
 }
 
@@ -306,7 +306,7 @@ export function scheduleMatches(options: ScheduleMatchesOptions): ScheduledMatch
   const sortedMatches = [...matches].sort((a, b) => {
     const slotA = a.slot ?? a.round - 1
     const slotB = b.slot ?? b.round - 1
-    if (slotA !== slotB) {return slotA - slotB}
+    if (slotA !== slotB) { return slotA - slotB }
     return a.field - b.field
   })
 
