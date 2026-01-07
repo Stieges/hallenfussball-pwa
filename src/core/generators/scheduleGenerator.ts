@@ -56,20 +56,38 @@ export function generateFullSchedule(
 
   let allMatches: ScheduledMatch[] = []
   let groupStageMatches: Match[] = []
-  // WARN: unused variable
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let finalMatches: Match[] = []
 
-  // Check if tournament is external (imported) or has custom matches that should be preserved
-  const isExternal = tournament.isExternal || (tournament as any).externalSource
+  // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
+  // to avoid inheritance conflicts with different property types
+  interface ExtendedMatchInput {
+    id: string;
+    teamA: string;
+    teamB: string;
+    phase?: string;
+    isFinal?: boolean;
+    scheduledTime?: Date | string;
+  }
 
-  if (isExternal && tournament.matches && tournament.matches.length > 0) {
+  interface ExtendedTournamentInput {
+    externalSource?: string;
+    matches: ExtendedMatchInput[];
+  }
+
+  // Check if tournament is external (imported) or has custom matches that should be preserved
+  const extTournament = tournament as unknown as ExtendedTournamentInput
+  const isExternal = tournament.isExternal || !!extTournament.externalSource
+
+  if (isExternal && tournament.matches.length > 0) {
     // USE EXISTING MATCHES
     allMatches = tournament.matches.map((m, index) => {
+      const extMatch = m as unknown as ExtendedMatchInput
       const matchStart = m.scheduledTime ? new Date(m.scheduledTime) : startTime
       // Estimate end time based on duration
       const duration = tournament.groupPhaseGameDuration
       const matchEnd = new Date(matchStart.getTime() + duration * 60000)
+
+      const phase = extMatch.phase || 'groupStage'
 
       return {
         ...m,
@@ -85,14 +103,14 @@ export function generateFullSchedule(
 
         homeTeam: teamMap.get(m.teamA) || m.teamA,
         awayTeam: teamMap.get(m.teamB) || m.teamB,
-        phase: (m as any).phase || 'groupStage', // Default to groupStage if missing
-        isFinal: (m as any).isFinal || false
+        phase,
+        isFinal: !!extMatch.isFinal
       } as ScheduledMatch
     })
 
     // Try to categorize into group/final for stats
-    groupStageMatches = tournament.matches.filter(m => !(m as any).isFinal)
-    finalMatches = tournament.matches.filter(m => (m as any).isFinal)
+    groupStageMatches = tournament.matches.filter(m => !(m as unknown as ExtendedMatchInput).isFinal)
+    finalMatches = tournament.matches.filter(m => (m as unknown as ExtendedMatchInput).isFinal)
 
   } else {
     // GENERATE MATCHES (Standard Behavior)
