@@ -2,6 +2,7 @@
 
 > **Version:** 1.0
 > **Erstellt:** 2026-01-03
+> **Aktualisiert:** 2026-01-07
 > **Projekt:** Hallenfussball PWA
 
 ---
@@ -12,12 +13,12 @@ Dieser Plan beschreibt die schrittweise Implementierung des Monitor-Konfigurator
 
 ### Kernumfang
 
-| Phase | Fokus | Tasks | Geschaetzte Dauer |
-|-------|-------|-------|-------------------|
-| **Phase 0** | Foundation | Datenmodell, Types, Migration | 2-3 Tage |
-| **Phase 1** | MVP Core | Konfigurator UI, 5 Slide-Typen, Display | 8-10 Tage |
-| **Phase 2** | Extended | Restliche Slides, When Idle, Preview | 5-7 Tage |
-| **Phase 3** | Professional | Remote Control, Sync, Overlays | Nach Supabase |
+| Phase | Fokus | Tasks | Geschaetzte Dauer | Status |
+|-------|-------|-------|-------------------|--------|
+| **Phase 0** | Foundation | Datenmodell, Types, Migration | 2-3 Tage | ✅ Fertig |
+| **Phase 1** | MVP Core | Konfigurator UI, 5 Slide-Typen, Display | 8-10 Tage | 🚧 In Arbeit |
+| **Phase 2** | Extended | Restliche Slides, When Idle, Preview | 5-7 Tage | 📅 Geplant |
+| **Phase 3** | Professional | Remote Control, Sync, Overlays | Nach Supabase | 📅 Geplant |
 
 **Gesamt Phase 0-2: ca. 15-20 Arbeitstage**
 
@@ -109,71 +110,16 @@ Types → Migration → Fields UI → Monitor CRUD → Slide Management → Disp
 **Geschaetzter Aufwand:** 4 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] `TournamentField` Interface mit id, name, shortName, order
-- [ ] `Sponsor` Interface mit id, name, logoUrl, websiteUrl, tier
-- [ ] `TournamentMonitor` Interface mit id, name, slides[], settings
-- [ ] `MonitorSlide` Interface mit id, type, config, duration, order
-- [ ] `SlideConfig` Union Type fuer alle 9 Slide-Typen
-- [ ] `SlideType` Literal Union
-- [ ] `TransitionType` ('fade' | 'slide' | 'none')
-- [ ] `WhenIdleConfig` und `WhenIdleType`
-- [ ] `QrTargetType` ('tournament' | 'sponsor-website' | 'custom')
-- [ ] Default-Wert Konstanten exportiert
-
-**Code-Beispiel:**
-
-```typescript
-// src/types/monitor.ts
-
-export interface TournamentField {
-  id: string;
-  name: string;
-  shortName?: string;
-  order: number;
-}
-
-export interface Sponsor {
-  id: string;
-  name: string;
-  logoUrl?: string;
-  websiteUrl?: string;
-  tier?: 'gold' | 'silver' | 'bronze';
-}
-
-export interface TournamentMonitor {
-  id: string;
-  name: string;
-  defaultSlideDuration: number;
-  transition: TransitionType;
-  transitionDuration: number;
-  slides: MonitorSlide[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type TransitionType = 'fade' | 'slide' | 'none';
-
-export type SlideType =
-  | 'live'
-  | 'standings'
-  | 'all-standings'
-  | 'schedule-group'
-  | 'schedule-field'
-  | 'next-matches'
-  | 'top-scorers'
-  | 'sponsor'
-  | 'custom-text';
-
-export interface MonitorSlide {
-  id: string;
-  type: SlideType;
-  config: SlideConfig;
-  duration: number | null;
-  order: number;
-}
-
-// ... weitere Types
-```
+- [x] `TournamentField` Interface mit id, name, shortName, order
+- [x] `Sponsor` Interface mit id, name, logoUrl, websiteUrl, tier
+- [x] `TournamentMonitor` Interface mit id, name, slides[], settings
+- [x] `MonitorSlide` Interface mit id, type, config, duration, order
+- [x] `SlideConfig` Union Type fuer alle 9 Slide-Typen
+- [x] `SlideType` Literal Union
+- [x] `TransitionType` ('fade' | 'slide' | 'none')
+- [x] `WhenIdleConfig` und `WhenIdleType`
+- [x] `QrTargetType` ('tournament' | 'sponsor-website' | 'custom')
+- [x] Default-Wert Konstanten exportiert
 
 ---
 
@@ -191,11 +137,11 @@ export interface MonitorSlide {
 **Geschaetzter Aufwand:** 1 Stunde
 
 **Akzeptanzkriterien:**
-- [ ] `Tournament` Interface hat optionale `monitors: TournamentMonitor[]`
-- [ ] `Tournament` Interface hat optionale `fields: TournamentField[]`
-- [ ] `Tournament` Interface hat optionale `sponsors: Sponsor[]`
-- [ ] Bestehende `numberOfFields` in Settings bleibt fuer Rueckwaertskompatibilitaet
-- [ ] TypeScript Build laeuft ohne Fehler
+- [x] `Tournament` Interface hat optionale `monitors: TournamentMonitor[]`
+- [x] `Tournament` Interface hat optionale `fields: TournamentField[]`
+- [x] `Tournament` Interface hat optionale `sponsors: Sponsor[]`
+- [x] Bestehende `numberOfFields` in Settings bleibt fuer Rueckwaertskompatibilitaet
+- [x] TypeScript Build laeuft ohne Fehler
 
 ---
 
@@ -214,45 +160,12 @@ export interface MonitorSlide {
 **Geschaetzter Aufwand:** 3 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] `migrateTournamentFields()` Funktion erstellt
-- [ ] Migration wird beim Laden eines Turniers automatisch ausgefuehrt
-- [ ] Bestehende `numberOfFields` Setting wird in `fields[]` konvertiert
-- [ ] Default-Namen: "Hauptfeld", "Feld 2", "Feld 3", etc.
-- [ ] Migration ist idempotent (mehrfaches Ausfuehren aendert nichts)
+- [x] `migrateTournamentFields()` Funktion erstellt
+- [x] Migration wird beim Laden eines Turniers automatisch ausgefuehrt
+- [x] Bestehende `numberOfFields` Setting wird in `fields[]` konvertiert
+- [x] Default-Namen: "Hauptfeld", "Feld 2", "Feld 3", etc.
+- [x] Migration ist idempotent (mehrfaches Ausfuehren aendert nichts)
 - [ ] Unit Tests fuer Migration
-
-**Code-Beispiel:**
-
-```typescript
-// src/utils/tournamentMigration.ts
-
-import { Tournament, TournamentField } from '@/types/tournament';
-import { generateId } from '@/utils/idGenerator';
-
-export function migrateTournamentFields(tournament: Tournament): Tournament {
-  // Bereits migriert?
-  if (tournament.fields && tournament.fields.length > 0) {
-    return tournament;
-  }
-
-  const numberOfFields = tournament.settings?.numberOfFields || 2;
-
-  const fields: TournamentField[] = Array.from(
-    { length: numberOfFields },
-    (_, i) => ({
-      id: generateId(),
-      name: i === 0 ? 'Hauptfeld' : `Feld ${i + 1}`,
-      shortName: `F${i + 1}`,
-      order: i
-    })
-  );
-
-  return {
-    ...tournament,
-    fields
-  };
-}
-```
 
 ---
 
@@ -271,13 +184,13 @@ export function migrateTournamentFields(tournament: Tournament): Tournament {
 **Geschaetzter Aufwand:** 2 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] `displayTokens` Objekt mit TV-optimierten Werten
-- [ ] Grosse Schriftgroessen (Score: 120px, Timer: 64px, etc.)
-- [ ] Hoher Kontrast fuer helle Sporthallen
-- [ ] Smooth Transition-Werte
-- [ ] TV-optimiertes Spacing (Overscan beruecksichtigt)
-- [ ] Steuerungsleisten-Werte (height, background, buttonSize)
-- [ ] Export in design-tokens/index.ts
+- [x] `displayTokens` Objekt mit TV-optimierten Werten
+- [x] Grosse Schriftgroessen (Score: 120px, Timer: 64px, etc.)
+- [x] Hoher Kontrast fuer helle Sporthallen
+- [x] Smooth Transition-Werte
+- [x] TV-optimiertes Spacing (Overscan beruecksichtigt)
+- [x] Steuerungsleisten-Werte (height, background, buttonSize)
+- [x] Export in design-tokens/index.ts
 
 ---
 
@@ -296,11 +209,11 @@ export function migrateTournamentFields(tournament: Tournament): Tournament {
 **Geschaetzter Aufwand:** 2 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Neuer ScreenType: 'monitor-display'
-- [ ] URL-Parsing fuer `/t/:tournamentId/monitor/:monitorId`
-- [ ] URL-Parsing fuer `/t/:tournamentId/monitors` (Konfigurator)
-- [ ] Lazy-Loading vorbereitet fuer MonitorDisplayScreen
-- [ ] Platzhalter-Komponenten ohne Funktionalitaet
+- [x] Neuer ScreenType: 'monitor-display'
+- [x] URL-Parsing fuer `/t/:tournamentId/monitor/:monitorId`
+- [x] URL-Parsing fuer `/t/:tournamentId/monitors` (Konfigurator)
+- [x] Lazy-Loading vorbereitet fuer MonitorDisplayScreen
+- [x] Platzhalter-Komponenten ohne Funktionalitaet
 
 ---
 
@@ -321,11 +234,11 @@ export function migrateTournamentFields(tournament: Tournament): Tournament {
 **Geschaetzter Aufwand:** 4 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Liste aller Felder mit Name, KurzName, Spielanzahl
-- [ ] Feld hinzufuegen Button
-- [ ] Feld bearbeiten (Name aendern)
-- [ ] Feld loeschen (mit Warnung wenn Spiele zugewiesen)
-- [ ] Drag & Drop zum Sortieren
+- [x] Liste aller Felder mit Name, KurzName, Spielanzahl
+- [x] Feld hinzufuegen Button
+- [x] Feld bearbeiten (Name aendern)
+- [x] Feld loeschen (mit Warnung wenn Spiele zugewiesen)
+- [x] Drag & Drop zum Sortieren
 - [ ] Validierung: Mindestens 1 Feld
 - [ ] Hinweis-Box: "Spielplan muss neu generiert werden"
 
@@ -346,44 +259,13 @@ export function migrateTournamentFields(tournament: Tournament): Tournament {
 **Geschaetzter Aufwand:** 4 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] `useMonitors(tournamentId)` Hook
-- [ ] CRUD: create, read, update, delete Monitor
-- [ ] Slide-Operationen: add, remove, reorder Slides
-- [ ] Optimistisches Update mit Rollback bei Fehler
-- [ ] localStorage Persistenz
+- [x] `useMonitors(tournamentId)` Hook
+- [x] CRUD: create, read, update, delete Monitor
+- [x] Slide-Operationen: add, remove, reorder Slides
+- [x] Optimistisches Update mit Rollback bei Fehler
+- [x] localStorage Persistenz
 - [ ] Cross-Tab Sync via `useMultiTabSync`
-- [ ] TypeScript typisiert
-
-**Code-Beispiel:**
-
-```typescript
-// src/hooks/useMonitors.ts
-
-interface UseMonitorsReturn {
-  monitors: TournamentMonitor[];
-  isLoading: boolean;
-
-  // Monitor CRUD
-  createMonitor: (name: string) => TournamentMonitor;
-  updateMonitor: (id: string, updates: Partial<TournamentMonitor>) => void;
-  deleteMonitor: (id: string) => void;
-  duplicateMonitor: (id: string) => TournamentMonitor;
-
-  // Slide Operations
-  addSlide: (monitorId: string, slide: Omit<MonitorSlide, 'id' | 'order'>) => void;
-  updateSlide: (monitorId: string, slideId: string, updates: Partial<MonitorSlide>) => void;
-  removeSlide: (monitorId: string, slideId: string) => void;
-  reorderSlides: (monitorId: string, fromIndex: number, toIndex: number) => void;
-
-  // Helpers
-  getMonitorUrl: (monitorId: string) => string;
-  createDefaultMonitor: () => TournamentMonitor;
-}
-
-export function useMonitors(tournamentId: string): UseMonitorsReturn {
-  // Implementation
-}
-```
+- [x] TypeScript typisiert
 
 ---
 
@@ -404,12 +286,12 @@ export function useMonitors(tournamentId: string): UseMonitorsReturn {
 **Geschaetzter Aufwand:** 5 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Responsive Grid-Ansicht aller Monitore
-- [ ] MonitorCard zeigt: Name, Slide-Anzahl, Intervall, Mini-Vorschau
-- [ ] Quick-Actions: Bearbeiten, Link, QR-Code, Vorschau, Loeschen
-- [ ] "Neuen Monitor anlegen" Button
+- [x] Responsive Grid-Ansicht aller Monitore
+- [x] MonitorCard zeigt: Name, Slide-Anzahl, Intervall, Mini-Vorschau
+- [x] Quick-Actions: Bearbeiten, Link, QR-Code, Vorschau, Loeschen
+- [x] "Neuen Monitor anlegen" Button
 - [ ] "Standard-Monitor erstellen" Schnellstart
-- [ ] Leerzustand wenn keine Monitore
+- [x] Leerzustand wenn keine Monitore
 - [ ] Hilfe-Button mit Erklaerung
 
 ---
@@ -430,11 +312,11 @@ export function useMonitors(tournamentId: string): UseMonitorsReturn {
 **Geschaetzter Aufwand:** 6 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Name, Standard-Dauer, Uebergangs-Einstellungen
-- [ ] Slide-Liste mit Drag & Drop zum Sortieren
-- [ ] SlideCard zeigt: Typ-Icon, Titel, Dauer, Aktionen
-- [ ] "Slide hinzufuegen" Button
-- [ ] Speichern/Abbrechen Buttons
+- [x] Name, Standard-Dauer, Uebergangs-Einstellungen
+- [x] Slide-Liste mit Drag & Drop zum Sortieren
+- [x] SlideCard zeigt: Typ-Icon, Titel, Dauer, Aktionen
+- [x] "Slide hinzufuegen" Button
+- [x] Speichern/Abbrechen Buttons
 - [ ] Unsaved-Changes Warnung
 
 ---
@@ -453,11 +335,11 @@ export function useMonitors(tournamentId: string): UseMonitorsReturn {
 **Geschaetzter Aufwand:** 2 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Kategorisierte Auswahl (Live & Spielplan, Tabellen & Statistik, Sponsor & Sonstiges)
-- [ ] Icon + Titel + Beschreibung pro Typ
-- [ ] Klick oeffnet typ-spezifischen Konfigurator
-- [ ] Responsive Grid-Layout
-- [ ] Schliessen-Button
+- [x] Kategorisierte Auswahl (Live & Spielplan, Tabellen & Statistik, Sponsor & Sonstiges)
+- [x] Icon + Titel + Beschreibung pro Typ
+- [x] Klick oeffnet typ-spezifischen Konfigurator
+- [x] Responsive Grid-Layout
+- [x] Schliessen-Button
 
 ---
 
@@ -698,9 +580,9 @@ export function useSlideshow(
 **Geschaetzter Aufwand:** 2 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Neuer Tab "Monitore" im Turnier-Dashboard
-- [ ] Tab zeigt MonitorConfiguratorPage eingebettet
-- [ ] Tab-Icon (TV/Monitor Symbol)
+- [x] Neuer Tab "Monitore" im Turnier-Dashboard
+- [x] Tab zeigt MonitorConfiguratorPage eingebettet
+- [x] Tab-Icon (TV/Monitor Symbol)
 - [ ] Badge mit Monitor-Anzahl (optional)
 
 ---
@@ -799,503 +681,48 @@ export function useSlideshow(
 
 ### P2-04: Live-Preview im Konfigurator
 
-**Beschreibung:** Echtzeit-Miniatur des Monitors im Editor
+**Beschreibung:** Kleine Vorschau im Monitor-Editor
 
-**Abhaengigkeiten:** P1-10
-
-**Betroffene Dateien:**
-- `src/features/monitor-configurator/components/MonitorPreview.tsx` (neu)
-- `src/features/monitor-configurator/hooks/useMonitorPreview.ts` (neu)
-
-**Komplexitaet:** Mittel
-
-**Geschaetzter Aufwand:** 5 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Skalierte Echtzeit-Vorschau
-- [ ] Zeigt aktuellen Slide mit Timer
-- [ ] Play/Pause Controls
-- [ ] Slide-Indikator
-- [ ] Click-to-Jump zu Slide
-
----
-
-### P2-05: Drag & Drop fuer Slides
-
-**Beschreibung:** Erweiterte Slide-Sortierung mit Drag & Drop
-
-**Abhaengigkeiten:** P1-04
+**Abhaengigkeiten:** P1-04, P1-10
 
 **Betroffene Dateien:**
-- `src/features/monitor-configurator/components/SlideList.tsx` (erweitern)
-- `src/features/monitor-configurator/hooks/useSlideDragDrop.ts` (neu)
+- `src/features/monitor-configurator/components/SlidePreview.tsx` (neu)
 
 **Komplexitaet:** Mittel
 
 **Geschaetzter Aufwand:** 4 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Native HTML5 Drag & Drop
-- [ ] Visual Feedback waehrend Drag
-- [ ] Drop-Zone Highlighting
-- [ ] Keyboard Accessibility (Alt+Up/Down)
-- [ ] Mobile Touch-Drag Support
+- [ ] Zeigt den aktuell gewaehlten Slide als Miniatur
+- [ ] Live-Updates bei Aenderung der Einstellungen
+- [ ] Toggle zwischen Desktop-Scaling und Mobile-Scaling
 
 ---
 
-### P2-06: Sponsor-Verwaltung
+### P2-05: Asset-Caching
 
-**Beschreibung:** Eigener Bereich zur Verwaltung von Sponsoren
+**Beschreibung:** Service Worker Strategie fuer Bilder und Assets
 
-**Abhaengigkeiten:** P0-01
+**Abhaengigkeiten:** Keine
 
 **Betroffene Dateien:**
-- `src/features/tournament-management/components/SettingsTab/SponsorManagement.tsx` (neu)
-- `src/hooks/useSponsors.ts` (neu)
+- `vite.config.ts` (vite-plugin-pwa config)
 
-**Komplexitaet:** Mittel
+**Komplexitaet:** Niedrig
 
-**Geschaetzter Aufwand:** 5 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Liste aller Sponsoren
-- [ ] CRUD Operationen
-- [ ] Logo-Upload (Base64 fuer Phase 1)
-- [ ] Tier-Zuweisung (Gold/Silver/Bronze)
-- [ ] Drag & Drop Sortierung
-
----
-
-### P2-07: Asset-Caching (Service Worker)
-
-**Beschreibung:** Offline-Caching fuer stabile Anzeige bei schlechtem WLAN
-
-**Abhaengigkeiten:** P1-10
-
-**Betroffene Dateien:**
-- `src/service-worker.ts` (erweitern)
-- `src/features/monitor-display/MonitorDisplayPage.tsx` (erweitern)
-
-**Komplexitaet:** Hoch
-
-**Geschaetzter Aufwand:** 6 Stunden
+**Geschaetzter Aufwand:** 2 Stunden
 
 **Akzeptanzkriterien:**
-- [ ] Sponsor-Logos werden gecacht
-- [ ] Team-Logos werden gecacht
-- [ ] Turnier-Daten werden gecacht
-- [ ] Background Sync fuer Updates
-- [ ] Cache-Invalidierung bei Aenderungen
-- [ ] Offline-Indikator in Display
+- [ ] Sponsor-Logos werden gecached
+- [ ] Offline-Faehigkeit fuer Monitor-Display
+- [ ] Strategie: StaleWhileRevalidate
 
 ---
 
-## Phase 3: Professional (Nach Supabase)
-
-### P3-01: Verbindungs-Status
-
-**Beschreibung:** Anzeige wie viele Geraete einen Monitor anzeigen
-
-**Abhaengigkeiten:** Supabase Realtime
-
-**Betroffene Dateien:**
-- `src/features/monitor-configurator/components/MonitorCard.tsx` (erweitern)
-- `src/hooks/useMonitorPresence.ts` (neu)
-
-**Komplexitaet:** Mittel
-
-**Geschaetzter Aufwand:** 4 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] "X Geraete online" Badge
-- [ ] Realtime Updates via Supabase Presence
-- [ ] Geraete-Liste bei Hover
-
----
-
-### P3-02: Remote Control
-
-**Beschreibung:** Fernsteuerung aller Monitore vom Dashboard aus
-
-**Abhaengigkeiten:** Supabase Realtime
-
-**Betroffene Dateien:**
-- `src/features/monitor-configurator/components/RemoteControlPanel.tsx` (neu)
-- `src/hooks/useMonitorRemote.ts` (neu)
-
-**Komplexitaet:** Hoch
-
-**Geschaetzter Aufwand:** 8 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Alle Monitore auf bestimmten Slide schalten
-- [ ] Alle Monitore pausieren/fortsetzen
-- [ ] Notfall-Nachricht an alle senden
-- [ ] Realtime Sync via Supabase Broadcast
-
----
-
-### P3-03: Synchronisierte Diashows
-
-**Beschreibung:** Mehrere Monitore zeigen gleichen Slide zur gleichen Zeit
-
-**Abhaengigkeiten:** P3-02
-
-**Betroffene Dateien:**
-- `src/features/monitor-display/hooks/useSlideshowSync.ts` (neu)
-
-**Komplexitaet:** Hoch
-
-**Geschaetzter Aufwand:** 6 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Master-Clock fuer alle Monitore
-- [ ] Sync-Gruppe konfigurierbar
-- [ ] Drift-Korrektur
-- [ ] Graceful Fallback bei Disconnect
-
----
-
-### P3-04: Overlays
-
-**Beschreibung:** Tor-Animationen und Ticker-Einblendungen
-
-**Abhaengigkeiten:** P3-02
-
-**Betroffene Dateien:**
-- `src/features/monitor-display/components/overlays/GoalOverlay.tsx` (neu)
-- `src/features/monitor-display/components/overlays/TickerOverlay.tsx` (neu)
-
-**Komplexitaet:** Mittel
-
-**Geschaetzter Aufwand:** 6 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Tor-Animation bei GOAL Event
-- [ ] News-Ticker am unteren Rand
-- [ ] Konfigurierbar an/aus
-
----
-
-### P3-05: Impressions-Tracking
-
-**Beschreibung:** Tracking wie oft Sponsor-Slides angezeigt wurden
-
-**Abhaengigkeiten:** Supabase
-
-**Betroffene Dateien:**
-- `src/features/monitor-display/hooks/useImpressionTracking.ts` (neu)
-- `src/features/tournament-management/components/SettingsTab/SponsorAnalytics.tsx` (neu)
-
-**Komplexitaet:** Mittel
-
-**Geschaetzter Aufwand:** 5 Stunden
-
-**Akzeptanzkriterien:**
-- [ ] Zaehle Impressions pro Sponsor-Slide
-- [ ] Speichere in Supabase
-- [ ] Dashboard mit Statistiken
-- [ ] Export als CSV
-
----
-
-## Abhaengigkeits-Graph
-
-```mermaid
-graph TD
-    subgraph "Phase 0: Foundation"
-        P0-01[P0-01: Types] --> P0-02[P0-02: Tournament erweitern]
-        P0-02 --> P0-03[P0-03: Migration]
-        P0-04[P0-04: Display Tokens]
-        P0-05[P0-05: Routing]
-    end
-
-    subgraph "Phase 1: MVP Core"
-        P0-03 --> P1-01[P1-01: Felder-Verwaltung]
-        P0-01 --> P1-02[P1-02: useMonitors Hook]
-        P0-02 --> P1-02
-        P1-02 --> P1-03[P1-03: Monitor-Uebersicht]
-        P1-03 --> P1-04[P1-04: Monitor Editor]
-        P1-04 --> P1-05[P1-05: Slide Type Selector]
-        P1-05 --> P1-06[P1-06: Slide Konfiguratoren]
-        P1-07[P1-07: QR-Code]
-        P1-07 --> P1-08[P1-08: Link-Sharing]
-        P0-05 --> P1-09[P1-09: Display Grundgeruest]
-        P1-02 --> P1-09
-        P1-09 --> P1-10[P1-10: Slide Renderer]
-        P1-09 --> P1-11[P1-11: Fullscreen/Wake Lock]
-        P1-03 --> P1-12[P1-12: Monitor Tab]
-    end
-
-    subgraph "Phase 2: Extended"
-        P1-10 --> P2-01[P2-01: Restliche Slides]
-        P1-10 --> P2-02[P2-02: When Idle]
-        P1-09 --> P2-03[P2-03: Steuerungsleiste]
-        P1-10 --> P2-04[P2-04: Live-Preview]
-        P1-04 --> P2-05[P2-05: Drag & Drop]
-        P0-01 --> P2-06[P2-06: Sponsor-Verwaltung]
-        P1-10 --> P2-07[P2-07: Asset-Caching]
-    end
-
-    subgraph "Phase 3: Professional"
-        SUPABASE[Supabase Migration]
-        SUPABASE --> P3-01[P3-01: Verbindungs-Status]
-        SUPABASE --> P3-02[P3-02: Remote Control]
-        P3-02 --> P3-03[P3-03: Synchronisierte Diashows]
-        P3-02 --> P3-04[P3-04: Overlays]
-        SUPABASE --> P3-05[P3-05: Impressions-Tracking]
-    end
-
-    classDef foundation fill:#e1f5fe
-    classDef mvp fill:#c8e6c9
-    classDef extended fill:#fff3e0
-    classDef professional fill:#f3e5f5
-
-    class P0-01,P0-02,P0-03,P0-04,P0-05 foundation
-    class P1-01,P1-02,P1-03,P1-04,P1-05,P1-06,P1-07,P1-08,P1-09,P1-10,P1-11,P1-12 mvp
-    class P2-01,P2-02,P2-03,P2-04,P2-05,P2-06,P2-07 extended
-    class P3-01,P3-02,P3-03,P3-04,P3-05 professional
-```
-
-### Kritischer Pfad
-
-```
-P0-01 → P0-02 → P0-03 → P1-02 → P1-03 → P1-04 → P1-05 → P1-06
-                          ↓
-                        P1-09 → P1-10 → [Phase 2]
-```
-
-### Parallelisierbare Aufgaben
-
-**Phase 0 (parallel):**
-- P0-04 (Display Tokens) kann parallel zu P0-01/P0-02/P0-03
-- P0-05 (Routing) kann parallel zu allem
-
-**Phase 1 (parallel nach P1-02):**
-- P1-07/P1-08 (QR-Code, Link-Sharing) parallel zu P1-03-P1-06
-- P1-11 (Fullscreen) parallel zu P1-10
-
-**Phase 2 (weitgehend parallel):**
-- P2-01-P2-07 sind groesstenteils unabhaengig
-
----
-
-## Risiko-Matrix
-
-| ID | Risiko | Wahrscheinlichkeit | Auswirkung | Mitigation |
-|----|--------|-------------------|------------|------------|
-| R1 | Wake Lock API nicht in allen Browsern verfuegbar | Mittel | Niedrig | Graceful Fallback, Hinweis an User |
-| R2 | Performance bei vielen Slides/Animationen | Niedrig | Mittel | Virtual DOM Optimierung, requestAnimationFrame |
-| R3 | localStorage Limit bei vielen Monitoren | Niedrig | Mittel | Kompression, Warnung bei 90% Auslastung |
-| R4 | Service Worker Caching Bugs | Mittel | Mittel | Manueller Cache-Clear Button, Versionierung |
-| R5 | QR-Code Library Groesse | Niedrig | Niedrig | Dynamic Import, Tree Shaking |
-| R6 | Drag & Drop auf Touch-Geraeten | Mittel | Niedrig | Touch-spezifische Library (dnd-kit) |
-| R7 | Smart TV Browser Kompatibilitaet | Hoch | Mittel | Feature Detection, Polyfills, Dokumentation |
-| R8 | Base64 Logo-Speicherung zu gross | Mittel | Mittel | Groessen-Limit, Kompression, Migration zu Supabase Storage |
-
-### Empfohlene Mitigationen
-
-**R7 (Smart TV Browser):**
-- Testen auf: Samsung Tizen, LG WebOS, Android TV Chrome
-- Polyfills fuer fehlende APIs
-- Dokumentation der unterstuetzten Geraete
-- Fallback-Modus ohne Animationen
-
-**R8 (Base64 Logos):**
-- Maximale Bildgroesse: 500KB vor Kompression
-- Client-seitige Resize auf max 500x500px
-- Progressive JPEG/WebP wo verfuegbar
-- Warnung bei Ueberschreitung
-
----
-
-## Empfohlene Implementierungsreihenfolge
-
-### Sprint 1 (3-4 Tage): Foundation + Grundgeruest
-
-```
-Tag 1:
-  - P0-01: Types definieren (4h)
-  - P0-02: Tournament erweitern (1h)
-  - P0-04: Display Tokens (2h)
-
-Tag 2:
-  - P0-03: Migration-Logik (3h)
-  - P0-05: Routing vorbereiten (2h)
-  - P1-02: useMonitors Hook (4h) [Start]
-
-Tag 3:
-  - P1-02: useMonitors Hook (fertig)
-  - P1-07: QR-Code Generierung (3h)
-```
-
-### Sprint 2 (4-5 Tage): Konfigurator UI
-
-```
-Tag 4:
-  - P1-03: Monitor-Uebersicht (5h)
-
-Tag 5:
-  - P1-04: Monitor Editor Dialog (6h)
-
-Tag 6:
-  - P1-05: Slide Type Selector (2h)
-  - P1-06: Slide Konfiguratoren - Live, Standings (3h)
-
-Tag 7:
-  - P1-06: Slide Konfiguratoren - Schedule, Sponsor, Custom (5h)
-  - P1-08: Link-Sharing (2h)
-
-Tag 8:
-  - P1-01: Felder-Verwaltung (4h)
-  - P1-12: Monitor Tab Integration (2h)
-```
-
-### Sprint 3 (4-5 Tage): Display-Ansicht
-
-```
-Tag 9:
-  - P1-09: Display Grundgeruest + useSlideshow (6h)
-
-Tag 10:
-  - P1-10: SlideRenderer + LiveSlide + StandingsSlide (6h)
-
-Tag 11:
-  - P1-10: ScheduleFieldSlide + SponsorSlide + CustomTextSlide (4h)
-  - P1-11: Fullscreen + Wake Lock (3h)
-
-Tag 12-13:
-  - Integration Testing
-  - Bug Fixes
-  - Edge Cases
-```
-
-### Sprint 4 (5-7 Tage): Phase 2 Extended
-
-```
-Tag 14-15:
-  - P2-01: Restliche Slide-Typen (8h)
-  - P2-02: When Idle Logik (5h)
-
-Tag 16-17:
-  - P2-03: Versteckte Steuerungsleiste (4h)
-  - P2-04: Live-Preview (5h)
-
-Tag 18-19:
-  - P2-05: Drag & Drop (4h)
-  - P2-06: Sponsor-Verwaltung (5h)
-
-Tag 20:
-  - P2-07: Asset-Caching (6h)
-```
-
----
-
-## Anhang: File Structure
-
-```
-src/
-├── features/
-│   ├── monitor-configurator/
-│   │   ├── MonitorConfiguratorPage.tsx
-│   │   ├── components/
-│   │   │   ├── MonitorList.tsx
-│   │   │   ├── MonitorCard.tsx
-│   │   │   ├── MonitorEditor.tsx
-│   │   │   ├── SlideList.tsx
-│   │   │   ├── SlideCard.tsx
-│   │   │   ├── SlideTypeSelector.tsx
-│   │   │   ├── SlideConfigurators/
-│   │   │   │   ├── LiveSlideConfig.tsx
-│   │   │   │   ├── StandingsSlideConfig.tsx
-│   │   │   │   ├── AllStandingsSlideConfig.tsx
-│   │   │   │   ├── ScheduleGroupSlideConfig.tsx
-│   │   │   │   ├── ScheduleFieldSlideConfig.tsx
-│   │   │   │   ├── NextMatchesSlideConfig.tsx
-│   │   │   │   ├── TopScorersSlideConfig.tsx
-│   │   │   │   ├── SponsorSlideConfig.tsx
-│   │   │   │   ├── CustomTextSlideConfig.tsx
-│   │   │   │   └── index.ts
-│   │   │   ├── MonitorPreview.tsx
-│   │   │   ├── ShareMonitorDialog.tsx
-│   │   │   ├── QRCodeDialog.tsx
-│   │   │   └── index.ts
-│   │   ├── hooks/
-│   │   │   ├── useMonitorPreview.ts
-│   │   │   ├── useSlideDragDrop.ts
-│   │   │   └── index.ts
-│   │   └── index.ts
-│   │
-│   ├── monitor-display/
-│   │   ├── MonitorDisplayPage.tsx
-│   │   ├── components/
-│   │   │   ├── SlideRenderer.tsx
-│   │   │   ├── slides/
-│   │   │   │   ├── LiveSlide.tsx
-│   │   │   │   ├── StandingsSlide.tsx
-│   │   │   │   ├── AllStandingsSlide.tsx
-│   │   │   │   ├── ScheduleGroupSlide.tsx
-│   │   │   │   ├── ScheduleFieldSlide.tsx
-│   │   │   │   ├── NextMatchesSlide.tsx
-│   │   │   │   ├── TopScorersSlide.tsx
-│   │   │   │   ├── SponsorSlide.tsx
-│   │   │   │   ├── CustomTextSlide.tsx
-│   │   │   │   └── index.ts
-│   │   │   ├── DisplayControls.tsx
-│   │   │   ├── TransitionWrapper.tsx
-│   │   │   ├── IdleContent.tsx
-│   │   │   └── overlays/
-│   │   │       ├── GoalOverlay.tsx
-│   │   │       └── TickerOverlay.tsx
-│   │   ├── hooks/
-│   │   │   ├── useSlideshow.ts
-│   │   │   ├── useWakeLock.ts
-│   │   │   ├── useFullscreen.ts
-│   │   │   ├── useIdleDetection.ts
-│   │   │   ├── useImpressionTracking.ts
-│   │   │   └── index.ts
-│   │   └── index.ts
-│   │
-│   └── tournament-management/
-│       └── components/
-│           └── SettingsTab/
-│               ├── FieldManagement.tsx
-│               └── SponsorManagement.tsx
-│
-├── hooks/
-│   ├── useMonitors.ts
-│   ├── useSponsors.ts
-│   └── index.ts
-│
-├── types/
-│   ├── tournament.ts (erweitert)
-│   └── monitor.ts (neu)
-│
-├── utils/
-│   ├── tournamentMigration.ts
-│   └── qrCodeGenerator.ts
-│
-└── design-tokens/
-    └── display.ts
-```
-
----
-
-## Checkliste pro Task
-
-Fuer jeden Task vor Abschluss pruefen:
-
-```
-□ TypeScript Build laeuft ohne Fehler
-□ ESLint ohne Warnings
-□ Design Tokens verwendet (keine hardcoded Werte)
-□ Mobile-Responsive (wo anwendbar)
-□ Accessibility (Keyboard, Screen Reader)
-□ Edge Cases behandelt (leere Listen, Fehler)
-□ Barrel Exports aktualisiert
-□ Kurzer Test im Browser
-```
-
----
-
-**Ende des Umsetzungsplans**
+## Phase 3: Professional (Ausblick)
+
+Nach der Migration zu Supabase:
+- Remote Control via Websockets
+- Synchronisierte Slideshows
+- Live-Ticker Overlay
+- Sponsor-Analytics
