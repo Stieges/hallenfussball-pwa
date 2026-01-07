@@ -29,39 +29,62 @@ function syncScheduleIds(
   generatedSchedule: GeneratedSchedule,
   tournamentMatches: Tournament['matches']
 ): GeneratedSchedule {
-  // BUG-FIX: Use strict index-based mapping.
-  // Assumption: generateFullSchedule() produces matches in the exact same creation order
-  // as the initial tournament.matches.
-  // handleMoveMatch uses .map(), preserving this order.
-  // This ensures that even if a match is moved to a different slot (changing properties),
-  // it remains linked to the same generated match entry by index.
+  // BUG-FIX: Match by Team Pairings (Robust Persistence)
+  // We cannot use index (arrays might be sorted differently).
+  // We cannot use slot/time (matches are moved by user).
+  // We must use the immutable Team Pairing (Team A vs Team B).
+  // For duplicate pairings (e.g. return legs), we 'consume' matches to ensure 1:1 mapping.
+
+  const availableMatches = [...tournamentMatches];
+
+  // Helper to find and consume a match by Teams
+  // ScheduledMatch uses 'originalTeamA'/'originalTeamB' for IDs
+  const findAndConsumeMatch = (genMatch: { originalTeamA: string; originalTeamB: string; group?: string }) => {
+    // 1. Try exact team match
+    const index = availableMatches.findIndex(
+      m => m.teamA === genMatch.originalTeamA && m.teamB === genMatch.originalTeamB
+    );
+
+    if (index !== -1) {
+      const [found] = availableMatches.splice(index, 1);
+      return found;
+    }
+    return undefined;
+  };
+
+  // 1. Sync allMatches first
+  const syncedAllMatches = generatedSchedule.allMatches.map(sm => {
+    const tournamentMatch = findAndConsumeMatch(sm);
+    if (tournamentMatch) {
+      return { ...sm, id: tournamentMatch.id };
+    }
+    return sm;
+  });
+
+  // 2. Sync phases using the now-synced allMatches
+  const syncedPhases = generatedSchedule.phases.map(phase => ({
+    ...phase,
+    matches: phase.matches.map(sm => {
+      // Find the corresponding match in syncedAllMatches using unique properties
+      // We use slot, field, and team IDs to match
+      const found = syncedAllMatches.find(s =>
+        s.slot === sm.slot &&
+        s.field === sm.field &&
+        s.originalTeamA === sm.originalTeamA &&
+        s.originalTeamB === sm.originalTeamB
+      );
+
+      if (found) {
+        return { ...sm, id: found.id };
+      }
+      return sm;
+    })
+  }));
 
   return {
     ...generatedSchedule,
-    allMatches: generatedSchedule.allMatches.map((sm, index) => {
-      // Avoid 'always truthy' warning by checking bounds
-      if (index < tournamentMatches.length) {
-        const tournamentMatch = tournamentMatches[index];
-        return { ...sm, id: tournamentMatch.id };
-      }
-      return sm;
-    }),
-    phases: generatedSchedule.phases.map(phase => ({
-      ...phase,
-      matches: phase.matches.map((sm) => {
-        // Find the match in allMatches to get its index / original ID
-        // This is safe because generatedSchedule.phases are derived from generatedSchedule.allMatches
-        const matchIndex = generatedSchedule.allMatches.findIndex(
-          m => m.slot === sm.slot && m.field === sm.field && m.group === sm.group
-        );
-
-        if (matchIndex !== -1 && matchIndex < tournamentMatches.length) {
-          const tournamentMatch = tournamentMatches[matchIndex];
-          return { ...sm, id: tournamentMatch.id };
-        }
-        return sm;
-      })
-    }))
+    allMatches: syncedAllMatches,
+    phases: syncedPhases
   };
 }
 
