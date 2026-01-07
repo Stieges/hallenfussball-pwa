@@ -1,6 +1,6 @@
-
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
+import * as path from 'path';
 
 // Minimal Interface for checking
 interface ImportedMatch {
@@ -24,7 +24,7 @@ interface ImportedTournament {
 describe('Hallenkreismeisterschaft Scenario Import', () => {
     it('should correctly import the specific schedule with Match 8 at 10:54', () => {
         // Load the reference JSON
-        const jsonPath = '/Users/daniel.stiegler/.gemini/antigravity/brain/cbf03481-9a39-4e11-b37e-ef418a61df06/reference_tournament.json';
+        const jsonPath = path.join(__dirname, 'fixtures', 'reference_tournament.json');
         const fileContent = fs.readFileSync(jsonPath, 'utf-8');
         const importedTournament = JSON.parse(fileContent) as ImportedTournament;
 
@@ -50,7 +50,7 @@ describe('Hallenkreismeisterschaft Scenario Import', () => {
     });
 
     it('should verify the 12-minute rhythm leading up to 10:54', () => {
-        const jsonPath = '/Users/daniel.stiegler/.gemini/antigravity/brain/cbf03481-9a39-4e11-b37e-ef418a61df06/reference_tournament.json';
+        const jsonPath = path.join(__dirname, 'fixtures', 'reference_tournament.json');
         const fileContent = fs.readFileSync(jsonPath, 'utf-8');
         const importedTournament = JSON.parse(fileContent) as ImportedTournament;
 

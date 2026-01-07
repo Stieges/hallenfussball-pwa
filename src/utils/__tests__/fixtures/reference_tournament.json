@@ -1,0 +1,277 @@
+{
+    "id": "reference-U11-HMK",
+    "title": "Hallenkreismeisterschaft U11 Inn/Salzach",
+    "status": "published",
+    "isExternal": true,
+    "externalSource": "JSON Import",
+    "sport": "football",
+    "sportId": "football-indoor",
+    "tournamentType": "classic",
+    "mode": "classic",
+    "numberOfFields": 1,
+    "numberOfTeams": 7,
+    "groupSystem": "roundRobin",
+    "numberOfGroups": 1,
+    "groupPhaseGameDuration": 10,
+    "groupPhaseBreakDuration": 2,
+    "startDate": "2026-01-10",
+    "startTime": "09:30",
+    "location": {
+        "name": "Sporthalle"
+    },
+    "placementLogic": [
+        {
+            "id": "points",
+            "label": "Punkte",
+            "enabled": true
+        },
+        {
+            "id": "goalDifference",
+            "label": "Tordifferenz",
+            "enabled": true
+        },
+        {
+            "id": "goalsFor",
+            "label": "Erzielte Tore",
+            "enabled": true
+        }
+    ],
+    "pointSystem": {
+        "win": 3,
+        "draw": 1,
+        "loss": 0
+    },
+    "finals": {
+        "final": false,
+        "thirdPlace": false,
+        "fifthSixth": false,
+        "seventhEighth": false
+    },
+    "isKidsTournament": false,
+    "hideScoresForPublic": false,
+    "hideRankingsForPublic": false,
+    "resultMode": "goals",
+    "teams": [
+        {
+            "id": "t1",
+            "name": "SV Wacker Burghausen"
+        },
+        {
+            "id": "t2",
+            "name": "SV Bad Feilnbach"
+        },
+        {
+            "id": "t3",
+            "name": "TSV 1880 Wasserburg am Inn"
+        },
+        {
+            "id": "t4",
+            "name": "TSV 1860 Rosenheim"
+        },
+        {
+            "id": "t5",
+            "name": "Sportbund Chiemgau Traunstein"
+        },
+        {
+            "id": "t6",
+            "name": "TSV Heiligkreuz"
+        },
+        {
+            "id": "t7",
+            "name": "(SG) Aschau/Weidenbach"
+        }
+    ],
+    "matches": [
+        {
+            "id": "m1",
+            "round": 1,
+            "field": 1,
+            "teamA": "t1",
+            "teamB": "t2",
+            "scheduledTime": "2026-01-10T08:30:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m2",
+            "round": 1,
+            "field": 1,
+            "teamA": "t3",
+            "teamB": "t4",
+            "scheduledTime": "2026-01-10T08:42:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m3",
+            "round": 1,
+            "field": 1,
+            "teamA": "t5",
+            "teamB": "t6",
+            "scheduledTime": "2026-01-10T08:54:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m4",
+            "round": 2,
+            "field": 1,
+            "teamA": "t7",
+            "teamB": "t1",
+            "scheduledTime": "2026-01-10T09:06:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m5",
+            "round": 2,
+            "field": 1,
+            "teamA": "t2",
+            "teamB": "t3",
+            "scheduledTime": "2026-01-10T09:18:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m6",
+            "round": 2,
+            "field": 1,
+            "teamA": "t4",
+            "teamB": "t5",
+            "scheduledTime": "2026-01-10T09:30:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m7",
+            "round": 3,
+            "field": 1,
+            "teamA": "t6",
+            "teamB": "t7",
+            "scheduledTime": "2026-01-10T09:42:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m8",
+            "round": 3,
+            "field": 1,
+            "teamA": "t1",
+            "teamB": "t3",
+            "scheduledTime": "2026-01-10T09:54:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m9",
+            "round": 4,
+            "field": 1,
+            "teamA": "t5",
+            "teamB": "t2",
+            "scheduledTime": "2026-01-10T10:06:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m10",
+            "round": 4,
+            "field": 1,
+            "teamA": "t7",
+            "teamB": "t4",
+            "scheduledTime": "2026-01-10T10:18:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m11",
+            "round": 4,
+            "field": 1,
+            "teamA": "t6",
+            "teamB": "t1",
+            "scheduledTime": "2026-01-10T10:30:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m12",
+            "round": 5,
+            "field": 1,
+            "teamA": "t3",
+            "teamB": "t5",
+            "scheduledTime": "2026-01-10T10:42:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m13",
+            "round": 5,
+            "field": 1,
+            "teamA": "t2",
+            "teamB": "t7",
+            "scheduledTime": "2026-01-10T10:54:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m14",
+            "round": 5,
+            "field": 1,
+            "teamA": "t4",
+            "teamB": "t6",
+            "scheduledTime": "2026-01-10T11:06:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m15",
+            "round": 6,
+            "field": 1,
+            "teamA": "t1",
+            "teamB": "t5",
+            "scheduledTime": "2026-01-10T11:18:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m16",
+            "round": 6,
+            "field": 1,
+            "teamA": "t7",
+            "teamB": "t3",
+            "scheduledTime": "2026-01-10T11:30:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m17",
+            "round": 6,
+            "field": 1,
+            "teamA": "t6",
+            "teamB": "t2",
+            "scheduledTime": "2026-01-10T11:42:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m18",
+            "round": 7,
+            "field": 1,
+            "teamA": "t4",
+            "teamB": "t1",
+            "scheduledTime": "2026-01-10T11:54:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m19",
+            "round": 7,
+            "field": 1,
+            "teamA": "t5",
+            "teamB": "t7",
+            "scheduledTime": "2026-01-10T12:06:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m20",
+            "round": 7,
+            "field": 1,
+            "teamA": "t3",
+            "teamB": "t6",
+            "scheduledTime": "2026-01-10T12:18:00.000Z",
+            "matchStatus": "scheduled"
+        },
+        {
+            "id": "m21",
+            "round": 7,
+            "field": 1,
+            "teamA": "t2",
+            "teamB": "t4",
+            "scheduledTime": "2026-01-10T12:30:00.000Z",
+            "matchStatus": "scheduled"
+        }
+    ],
+    "createdAt": "2026-01-07T12:00:00.000Z",
+    "updatedAt": "2026-01-07T12:00:00.000Z"
+}
