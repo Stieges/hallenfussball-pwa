@@ -216,6 +216,56 @@ export function useLiveMatchManagement({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [liveMatches, storageKey]);
 
+  // BUG-FIX: Sync team names from tournament.teams to liveMatches
+  // This ensures that when a team name is renamed in settings, the live cockpit updates immediately
+  useEffect(() => {
+    setLiveMatches(prev => {
+      let hasChanges = false;
+      const updated = new Map(prev);
+
+      for (const [matchId, match] of updated.entries()) {
+        // Resolve current team names from tournament
+        const homeId = match.homeTeam.id;
+        const awayId = match.awayTeam.id;
+
+        // Skip placeholders
+        if (isPlaceholderTeamRef(homeId) && isPlaceholderTeamRef(awayId)) {
+          continue;
+        }
+
+        const currentHomeTeam = tournament.teams.find(t => t.id === homeId);
+        const currentAwayTeam = tournament.teams.find(t => t.id === awayId);
+
+        let matchChanged = false;
+        let newHomeTeam = match.homeTeam;
+        let newAwayTeam = match.awayTeam;
+
+        // Check home team
+        if (currentHomeTeam && currentHomeTeam.name !== match.homeTeam.name) {
+          newHomeTeam = { ...match.homeTeam, name: currentHomeTeam.name };
+          matchChanged = true;
+        }
+
+        // Check away team
+        if (currentAwayTeam && currentAwayTeam.name !== match.awayTeam.name) {
+          newAwayTeam = { ...match.awayTeam, name: currentAwayTeam.name };
+          matchChanged = true;
+        }
+
+        if (matchChanged) {
+          hasChanges = true;
+          updated.set(matchId, {
+            ...match,
+            homeTeam: newHomeTeam,
+            awayTeam: newAwayTeam
+          });
+        }
+      }
+
+      return hasChanges ? updated : prev;
+    });
+  }, [tournament.teams]);
+
   // Timer for running matches (DEF-005: Timestamp-based calculation)
   // BUG-MOD-002 FIX: Added visibility change handler to save resources when tab is hidden
   useEffect(() => {
@@ -329,26 +379,51 @@ export function useLiveMatchManagement({
       }
     }
 
+    // Find the original tournament match to get status and detailed scores
+    const tournamentMatch = tournamentRef.current.matches.find(m => m.id === matchData.id);
+
+    // Determine status and scores from tournament match if available
+    const initialStatus = (tournamentMatch?.matchStatus === 'running' ? 'RUNNING' :
+      tournamentMatch?.matchStatus === 'finished' ? 'FINISHED' :
+        'NOT_STARTED') as MatchStatus;
+
+    const durationSeconds = tournamentRef.current.groupPhaseGameDuration * 60;
+
+    // If finished, assume full duration elapsed. If explicitly set in tournamentMatch (future feature), use that.
+    const initialElapsed = initialStatus === 'FINISHED' ? durationSeconds : 0;
+
     const newMatch: LiveMatch = {
       id: matchData.id,
       number: matchData.matchNumber,
       phaseLabel: matchData.label || (matchData.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       fieldId: `field-${matchData.field}`,
       scheduledKickoff: matchData.time,
-      durationSeconds: tournamentRef.current.groupPhaseGameDuration * 60,
+      durationSeconds: durationSeconds,
       refereeName: matchData.referee ? `SR ${matchData.referee}` : undefined,
       homeTeam: homeTeamData,
       awayTeam: awayTeamData,
-      homeScore: matchData.scoreA ?? 0,
-      awayScore: matchData.scoreB ?? 0,
-      status: 'NOT_STARTED' as MatchStatus,
-      elapsedSeconds: 0,
-      events: [],
-      // Tiebreaker fields
+
+      // Use scores from tournament match to be safe (though matchData should have them too via sync)
+      homeScore: tournamentMatch?.scoreA ?? matchData.scoreA ?? 0,
+      awayScore: tournamentMatch?.scoreB ?? matchData.scoreB ?? 0,
+
+      status: initialStatus,
+      elapsedSeconds: initialElapsed,
+      events: [], // Events are not currently hydrated from tournament match history (complexity trade-off)
+
+      // Tiebreaker fields from tournament match
       tournamentPhase: matchData.phase,
-      playPhase: 'regular',
+      playPhase: tournamentMatch?.decidedBy === 'penalty' ? 'penalty' :
+        tournamentMatch?.decidedBy === 'overtime' ? 'overtime' :
+          tournamentMatch?.decidedBy === 'goldenGoal' ? 'goldenGoal' : 'regular',
       tiebreakerMode: tiebreakerMode,
       overtimeDurationSeconds: tiebreakerDuration * 60,
+
+      // Hydrate tiebreaker scores
+      overtimeScoreA: tournamentMatch?.overtimeScoreA,
+      overtimeScoreB: tournamentMatch?.overtimeScoreB,
+      penaltyScoreA: tournamentMatch?.penaltyScoreA,
+      penaltyScoreB: tournamentMatch?.penaltyScoreB,
     };
 
     // Save immediately
@@ -487,9 +562,9 @@ export function useLiveMatchManagement({
    * Check if match ended in a draw and needs tiebreaker
    */
   const needsTiebreaker = (match: LiveMatch): boolean => {
-    if (!isFinalsMatch(match)) {return false;}
-    if (!match.tiebreakerMode) {return false;} // No tiebreaker configured
-    if (match.playPhase === 'penalty') {return false;} // Already in penalty shootout
+    if (!isFinalsMatch(match)) { return false; }
+    if (!match.tiebreakerMode) { return false; } // No tiebreaker configured
+    if (match.playPhase === 'penalty') { return false; } // Already in penalty shootout
 
     // Check if current phase ended in draw
     if (match.playPhase === 'regular' || match.playPhase === undefined) {
@@ -606,9 +681,9 @@ export function useLiveMatchManagement({
 
     // Determine how match was decided
     let decidedBy: 'regular' | 'overtime' | 'goldenGoal' | 'penalty' = 'regular';
-    if (match.playPhase === 'overtime') {decidedBy = 'overtime';}
-    if (match.playPhase === 'goldenGoal') {decidedBy = 'goldenGoal';}
-    if (match.playPhase === 'penalty') {decidedBy = 'penalty';}
+    if (match.playPhase === 'overtime') { decidedBy = 'overtime'; }
+    if (match.playPhase === 'goldenGoal') { decidedBy = 'goldenGoal'; }
+    if (match.playPhase === 'penalty') { decidedBy = 'penalty'; }
 
     finishMatchInternal(matchId, decidedBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- needsTiebreaker is a pure function, doesn't need to be in deps
@@ -737,7 +812,7 @@ export function useLiveMatchManagement({
   const handleCancelTiebreaker = useCallback((matchId: string) => {
     setLiveMatches(prev => {
       const match = prev.get(matchId);
-      if (!match) {return prev;}
+      if (!match) { return prev; }
 
       const updated = new Map(prev);
       updated.set(matchId, {
@@ -777,7 +852,7 @@ export function useLiveMatchManagement({
     // Also update liveMatches if it exists
     setLiveMatches(prev => {
       const match = prev.get(matchId);
-      if (!match) {return prev;}
+      if (!match) { return prev; }
 
       const updated = new Map(prev);
       updated.set(matchId, {
@@ -817,7 +892,7 @@ export function useLiveMatchManagement({
     // Also update liveMatches if it exists
     setLiveMatches(prev => {
       const match = prev.get(matchId);
-      if (!match) {return prev;}
+      if (!match) { return prev; }
 
       const updated = new Map(prev);
       updated.set(matchId, {

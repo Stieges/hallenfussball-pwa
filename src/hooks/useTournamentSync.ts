@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule, ScheduledMatch } from '../lib/scheduleGenerator';
 import { calculateStandings } from '../utils/calculations';
+import { safeLocalStorageSet } from '../utils/storageCleanup';
 
 interface UseTournamentSyncResult {
   tournament: Tournament | null;
@@ -71,7 +72,7 @@ function syncMatchFields(
   sm: ScheduledMatch,
   tournamentMatch: Tournament['matches'][0] | undefined
 ): ScheduledMatch {
-  if (!tournamentMatch) {return sm;}
+  if (!tournamentMatch) { return sm; }
 
   // Parse scheduledTime to Date if it changed
   let startTime = sm.startTime;
@@ -159,7 +160,7 @@ export function useTournamentSync(tournamentId: string): UseTournamentSyncResult
           const index = tournaments.findIndex((t) => t.id === tournamentId);
           if (index !== -1) {
             tournaments[index] = updatedTournament;
-            localStorage.setItem('tournaments', JSON.stringify(tournaments));
+            safeLocalStorageSet('tournaments', JSON.stringify(tournaments));
             window.dispatchEvent(new CustomEvent('tournament-updated'));
           }
         }
@@ -167,6 +168,23 @@ export function useTournamentSync(tournamentId: string): UseTournamentSyncResult
         // Generate and sync schedule
         const generatedSchedule = generateFullSchedule(updatedTournament);
         const syncedSchedule = syncScheduleIds(generatedSchedule, updatedTournament.matches);
+
+        // BUG-FIX: Apply persisted match data (times, scores, etc.) to the generated schedule
+        // Without this, reloading the page resets the schedule to default generated times
+        const finalSchedule: GeneratedSchedule = {
+          ...syncedSchedule,
+          allMatches: syncedSchedule.allMatches.map(sm => {
+            const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
+            return syncMatchFields(sm, tournamentMatch);
+          }),
+          phases: syncedSchedule.phases.map(phase => ({
+            ...phase,
+            matches: phase.matches.map(sm => {
+              const tournamentMatch = updatedTournament.matches.find(m => m.id === sm.id);
+              return syncMatchFields(sm, tournamentMatch);
+            })
+          }))
+        };
 
         // Calculate standings
         const standings = calculateStandings(
@@ -176,7 +194,7 @@ export function useTournamentSync(tournamentId: string): UseTournamentSyncResult
         );
 
         setTournament(updatedTournament);
-        setSchedule(syncedSchedule);
+        setSchedule(finalSchedule);
         setCurrentStandings(standings);
         setLoadingError(null);
       } catch (error) {
@@ -195,13 +213,20 @@ export function useTournamentSync(tournamentId: string): UseTournamentSyncResult
     // Persist to localStorage
     const stored = localStorage.getItem('tournaments');
     if (stored) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const tournaments: Tournament[] = JSON.parse(stored);
-      const index = tournaments.findIndex((t) => t.id === updatedTournament.id);
-      if (index !== -1) {
-        tournaments[index] = updatedTournament;
-        localStorage.setItem('tournaments', JSON.stringify(tournaments));
-        window.dispatchEvent(new CustomEvent('tournament-updated'));
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const tournaments: Tournament[] = JSON.parse(stored);
+        const index = tournaments.findIndex((t) => t.id === updatedTournament.id);
+
+        if (index !== -1) {
+          tournaments[index] = updatedTournament;
+          // Use safe set to handle quota limits
+          safeLocalStorageSet('tournaments', JSON.stringify(tournaments));
+          window.dispatchEvent(new CustomEvent('tournament-updated'));
+        }
+      } catch (e) {
+        console.error('Failed to persist tournament update:', e);
+        // Even if persistence fails, we should update local state so the UI reflects changes
       }
     }
 

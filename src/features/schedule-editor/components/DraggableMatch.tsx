@@ -48,7 +48,7 @@ function getTeamName(teamId: string, teams: Team[]): string {
 }
 
 function formatTime(date: Date | string | undefined): string {
-  if (!date) {return '--:--';}
+  if (!date) { return '--:--'; }
   const d = date instanceof Date ? date : new Date(date);
   return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -105,12 +105,14 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     position: 'relative',
     width: '100%', // Fill container width
     height: '100%', // Fill container height
-    transform: CSS.Transform.toString(transform),
+    // BUG-FIX: If dragging, don't move the original element (it acts as placeholder)
+    // The visual movement is handled by DragOverlay
+    transform: isDragging ? 'none' : CSS.Transform.toString(transform),
     transition: isDragging ? 'none' : 'transform 200ms ease',
     zIndex: isDragging ? 1000 : 1, // High z-index when dragging
     touchAction: canDrag ? 'none' : 'auto',
     // When dragging: semi-transparent to see drop targets underneath
-    opacity: isDragging ? 0.7 : (isSkipped ? 0.5 : 1),
+    opacity: isDragging ? 0.3 : (isSkipped ? 0.5 : 1),
   };
 
   const cardStyle: React.CSSProperties = {
@@ -131,15 +133,14 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
             : cssVars.colors.surface,
     border: isDragging
       ? `3px dashed ${cssVars.colors.primary}` // Dashed border when dragging
-      : `2px solid ${
-          isSelected
-            ? cssVars.colors.primary
-            : hasErrors
-              ? cssVars.colors.error
-              : hasWarnings
-                ? cssVars.colors.warning
-                : cssVars.colors.border
-        }`,
+      : `2px solid ${isSelected
+        ? cssVars.colors.primary
+        : hasErrors
+          ? cssVars.colors.error
+          : hasWarnings
+            ? cssVars.colors.warning
+            : cssVars.colors.border
+      }`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: isDragging
       ? 'none' // No shadow when dragging - simpler look
