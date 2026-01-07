@@ -28,6 +28,7 @@ import { SchedulePhase, GeneratedSchedule, ScheduledMatch } from './scheduleType
 import {
   parseStartTime,
   addMinutes,
+  formatTime,
   scheduleMatches,
   createInitialStandings,
 } from './scheduleHelpers'
@@ -69,17 +70,12 @@ export function generateFullSchedule(
     scheduledTime?: Date | string;
   }
 
-  interface ExtendedTournamentInput {
-    externalSource?: string;
-    matches: ExtendedMatchInput[];
-  }
+  // Check if tournament has custom matches that should be preserved
+  const hasMatches = tournament.matches.length > 0
 
-  // Check if tournament is external (imported) or has custom matches that should be preserved
-  const extTournament = tournament as unknown as ExtendedTournamentInput
-  const isExternal = tournament.isExternal || !!extTournament.externalSource
 
-  if (isExternal && tournament.matches.length > 0) {
-    // USE EXISTING MATCHES
+  if (hasMatches) {
+    // USE ESTABLISHED MATCHES (Truth from Repository)
     allMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput
       const matchStart = m.scheduledTime ? new Date(m.scheduledTime) : startTime
@@ -87,30 +83,33 @@ export function generateFullSchedule(
       const duration = tournament.groupPhaseGameDuration
       const matchEnd = new Date(matchStart.getTime() + duration * 60000)
 
-      const phase = extMatch.phase || 'groupStage'
+      const phase = m.phase || extMatch.phase || 'groupStage'
 
       return {
         ...m,
         id: m.id,
-        matchNumber: index + 1,
+        matchNumber: m.matchNumber || index + 1,
         startTime: matchStart,
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
-        time: matchStart.toLocaleTimeString(locale === 'de' ? 'de-DE' : 'en-US', { hour: '2-digit', minute: '2-digit' }),
-        originalTeamA: m.teamA, // Store ID just in case
-        originalTeamB: m.teamB, // Store ID just in case
+        time: formatTime(matchStart),
+        originalTeamA: m.teamA,
+        originalTeamB: m.teamB,
         duration,
 
         homeTeam: teamMap.get(m.teamA) || m.teamA,
         awayTeam: teamMap.get(m.teamB) || m.teamB,
-        phase,
-        isFinal: !!extMatch.isFinal
+        phase: phase as ScheduledMatch['phase'],
+        isFinal: !!m.isFinal || !!extMatch.isFinal,
+        // Ensure scores are preserved
+        scoreA: m.scoreA,
+        scoreB: m.scoreB
       } as ScheduledMatch
     })
 
-    // Try to categorize into group/final for stats
-    groupStageMatches = tournament.matches.filter(m => !(m as unknown as ExtendedMatchInput).isFinal)
-    finalMatches = tournament.matches.filter(m => (m as unknown as ExtendedMatchInput).isFinal)
+    // Categorize into group/final for stats
+    groupStageMatches = tournament.matches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase))
+    finalMatches = tournament.matches.filter(m => m.isFinal || (m.phase && m.phase !== 'groupStage'))
 
   } else {
     // GENERATE MATCHES (Standard Behavior)

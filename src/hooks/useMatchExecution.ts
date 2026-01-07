@@ -117,25 +117,35 @@ export function useMatchExecution({
             const matches = await repo.getAll(tournament.id);
             setLiveMatches(matches);
         };
-        load();
+        void load();
     }, [tournament.id]);
 
     // Timer for display updates (not persistence)
     useEffect(() => {
         const interval = setInterval(() => {
             setLiveMatches(prev => {
-                let hasRunning = false;
                 const updated = new Map(prev);
+                let hasRunning = false;
+
+                for (const match of updated.values()) {
+                    if (match.status === 'RUNNING' && match.timerStartTime) {
+                        hasRunning = true;
+                        break;
+                    }
+                }
+
+                if (!hasRunning) {
+                    return prev;
+                }
 
                 updated.forEach((match, id) => {
                     if (match.status === 'RUNNING' && match.timerStartTime) {
-                        hasRunning = true;
                         const elapsed = service.calculateElapsedSeconds(match);
                         updated.set(id, { ...match, elapsedSeconds: elapsed });
                     }
                 });
 
-                return hasRunning ? updated : prev;
+                return updated;
             });
         }, TIMER_UPDATE_INTERVAL_MS);
 
@@ -148,7 +158,7 @@ export function useMatchExecution({
 
     const getLiveMatchData = useCallback(async (matchData: ScheduledMatch): Promise<LiveMatch> => {
         const existing = liveMatches.get(matchData.id);
-        if (existing) {return existing;}
+        if (existing) { return existing; }
 
         const newMatch = await service.initializeMatch(tournament.id, matchData);
         setLiveMatches(prev => new Map(prev).set(matchData.id, newMatch));
@@ -157,7 +167,7 @@ export function useMatchExecution({
 
     const handleStart = useCallback(async (matchId: string): Promise<boolean> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return false;}
+        if (!match) { return false; }
 
         // Check for existing results (need confirmation in UI)
         if ((match.homeScore > 0 || match.awayScore > 0) && match.status === 'NOT_STARTED') {
@@ -211,7 +221,7 @@ export function useMatchExecution({
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         // Cancel tiebreaker and finish
         await service.cancelTiebreaker(tournament.id, matchId);
@@ -235,10 +245,10 @@ export function useMatchExecution({
         matchId: string,
         teamId: string,
         delta: 1 | -1,
-        options?: { playerNumber?: number; assists?: number[] }
+        options?: { playerNumber?: number; assists?: number[]; incomplete?: boolean }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
         const updated = await service.recordGoal(tournament.id, matchId, team, delta, options);
@@ -248,7 +258,7 @@ export function useMatchExecution({
         if (updated.status === 'FINISHED') {
             const repo = new LocalStorageRepository();
             const t = await repo.get(tournament.id);
-            if (t) {onTournamentUpdate(t, false);}
+            if (t) { onTournamentUpdate(t, false); }
             announceMatchFinished(matchId);
         }
     }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished]);
@@ -260,7 +270,7 @@ export function useMatchExecution({
         options?: { playerNumber?: number }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
         const updated = await service.recordCard(tournament.id, matchId, team, cardType, options);
@@ -273,7 +283,7 @@ export function useMatchExecution({
         options?: { playerNumber?: number; durationSeconds?: number }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
         const updated = await service.recordTimePenalty(tournament.id, matchId, team, options);
@@ -286,7 +296,7 @@ export function useMatchExecution({
         options?: { playersIn?: number[]; playersOut?: number[] }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
         const updated = await service.recordSubstitution(tournament.id, matchId, team, options);
@@ -299,7 +309,7 @@ export function useMatchExecution({
         options?: { playerNumber?: number }
     ): Promise<void> => {
         const match = liveMatches.get(matchId);
-        if (!match) {return;}
+        if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
         const updated = await service.recordFoul(tournament.id, matchId, team, options);
@@ -331,7 +341,7 @@ export function useMatchExecution({
 
         const repo = new LocalStorageRepository();
         const t = await repo.get(tournament.id);
-        if (t) {onTournamentUpdate(t, false);}
+        if (t) { onTournamentUpdate(t, false); }
         announceMatchFinished(matchId);
     }, [service, tournament.id, onTournamentUpdate, announceMatchFinished]);
 
@@ -352,12 +362,6 @@ export function useMatchExecution({
     ): Promise<void> => {
         const updated = await service.updateResultManually(tournament.id, matchId, homeScore, awayScore);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
-        // We probably also want to update the tournament repo if the match was finished? 
-        // For now the service updates local repo, but useMatchExecution might want to trigger sync if important.
-        // Let's assume manual edit implies live check.
-        // If it was finished, we should probably update tournament match too? 
-        // The service impl for updateResultManually didn't do that yet. 
-        // But for live score adjustment it is fine.
     }, [service, tournament.id]);
 
     const handleAdjustTime = useCallback(async (matchId: string, newElapsedSeconds: number): Promise<void> => {
@@ -370,7 +374,7 @@ export function useMatchExecution({
 
         const repo = new LocalStorageRepository();
         const t = await repo.get(tournament.id);
-        if (t) {onTournamentUpdate(t, false);}
+        if (t) { onTournamentUpdate(t, false); }
     }, [service, tournament.id, onTournamentUpdate]);
 
     const handleUnskipMatch = useCallback(async (matchId: string): Promise<void> => {
@@ -378,7 +382,7 @@ export function useMatchExecution({
 
         const repo = new LocalStorageRepository();
         const t = await repo.get(tournament.id);
-        if (t) {onTournamentUpdate(t, false);}
+        if (t) { onTournamentUpdate(t, false); }
     }, [service, tournament.id, onTournamentUpdate]);
 
     const handleUndoLastEvent = useCallback(async (matchId: string): Promise<void> => {

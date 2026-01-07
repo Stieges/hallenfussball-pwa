@@ -8,7 +8,7 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     async get(id: string): Promise<Tournament | null> {
         const list = this.loadList();
-        return list.find(t => t.id === id) || null;
+        return list.find(t => t.id === id) ?? null;
     }
 
     async save(tournament: Tournament): Promise<void> {
@@ -67,19 +67,21 @@ export class LocalStorageRepository implements ITournamentRepository {
     private loadList(): Tournament[] {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
-            if (!stored) {return [];}
-            const raw = JSON.parse(stored);
-            if (!Array.isArray(raw)) {return [];}
+            if (!stored) { return []; }
+            const raw = JSON.parse(stored) as unknown;
+            if (!Array.isArray(raw)) { return []; }
+            const rawArray = raw as unknown[];
 
-            return raw.map((item: any) => {
+            return rawArray.map((item) => {
+                const itemData = item as Record<string, unknown>;
                 // Validate each item
-                const result = TournamentSchema.safeParse(item);
+                const result = TournamentSchema.safeParse(itemData);
                 if (result.success) {
                     return result.data as unknown as Tournament;
                 }
                 // If validation fails, log but return raw item to avoid data loss during migration
-                console.warn(`Tournament ${item.id} validation failed:`, result.error);
-                return item as Tournament;
+                console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
+                return itemData as unknown as Tournament;
             });
         } catch (e) {
             console.error('Failed to load tournaments', e);

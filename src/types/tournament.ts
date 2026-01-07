@@ -260,6 +260,8 @@ export interface Match {
   finalType?: 'final' | 'thirdPlace' | 'fifthSixth' | 'seventhEighth';
   label?: string; // Label for playoff matches (e.g., '1. Halbfinale', '2. Halbfinale')
   scheduledTime?: Date; // Actual scheduled time
+  matchNumber?: number; // Spiel-Nummer (1-basiert)
+  phase?: string; // Phase: 'groupStage', 'semifinal', etc.
   referee?: number; // Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.)
 
   // TL-RESULT-LOCK-01: Match Status & Correction Mode
