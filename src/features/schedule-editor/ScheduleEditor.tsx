@@ -644,7 +644,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             const activeMatch = activeId ? tournament.matches.find(m => m.id === activeId) : null;
             return activeMatch ? (
               <div style={{
-                height: '100%',
+                // BUG-FIX: Do not use height: '100%' here as it expands to viewport height in portal
+                // height: '100%', 
                 opacity: 0.9,
                 transform: 'scale(1.02)'
               }}>

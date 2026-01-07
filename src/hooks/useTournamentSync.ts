@@ -29,12 +29,19 @@ function syncScheduleIds(
   generatedSchedule: GeneratedSchedule,
   tournamentMatches: Tournament['matches']
 ): GeneratedSchedule {
+  // BUG-FIX: Use strict index-based mapping.
+  // Assumption: generateFullSchedule() produces matches in the exact same creation order
+  // as the initial tournament.matches.
+  // handleMoveMatch uses .map(), preserving this order.
+  // This ensures that even if a match is moved to a different slot (changing properties),
+  // it remains linked to the same generated match entry by index.
+
   return {
     ...generatedSchedule,
     allMatches: generatedSchedule.allMatches.map((sm, index) => {
-      const tournamentMatch = tournamentMatches[index];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
-      if (tournamentMatch) {
+      // Avoid 'always truthy' warning by checking bounds
+      if (index < tournamentMatches.length) {
+        const tournamentMatch = tournamentMatches[index];
         return { ...sm, id: tournamentMatch.id };
       }
       return sm;
@@ -42,21 +49,14 @@ function syncScheduleIds(
     phases: generatedSchedule.phases.map(phase => ({
       ...phase,
       matches: phase.matches.map((sm) => {
-        // Match by slot + field + group/label instead of team names
-        // Team names can differ in format (technical placeholder vs display text)
-        const tournamentMatch = tournamentMatches.find(m => {
-          // For group stage: match by slot + field + group
-          if (sm.group && m.group) {
-            return m.slot === sm.slot && m.field === sm.field && m.group === sm.group;
-          }
-          // For playoffs: match by label (most reliable for finals)
-          if (sm.label && m.label) {
-            return m.label === sm.label;
-          }
-          // Fallback: match by slot + field (should be unique)
-          return m.slot === sm.slot && m.field === sm.field;
-        });
-        if (tournamentMatch) {
+        // Find the match in allMatches to get its index / original ID
+        // This is safe because generatedSchedule.phases are derived from generatedSchedule.allMatches
+        const matchIndex = generatedSchedule.allMatches.findIndex(
+          m => m.slot === sm.slot && m.field === sm.field && m.group === sm.group
+        );
+
+        if (matchIndex !== -1 && matchIndex < tournamentMatches.length) {
+          const tournamentMatch = tournamentMatches[matchIndex];
           return { ...sm, id: tournamentMatch.id };
         }
         return sm;
