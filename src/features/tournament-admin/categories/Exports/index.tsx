@@ -494,7 +494,7 @@ export function ExportsCategory({
                 return;
               }
 
-              // Collect Data
+              // Collect Data - Improved JSON structure with metadata
               interface ExportEventItem {
                 matchId: string;
                 round: number;
@@ -504,11 +504,25 @@ export function ExportsCategory({
                 type: string;
                 team: { id?: string; name: string };
                 playerNumber?: number;
-                details: string;
-                rawEvent: unknown;
+                // Structured details instead of string
+                scoreAfter?: { home: number; away: number };
+                assists?: number[];
+                penaltyDuration?: number;
+                playersIn?: number[];
+                playersOut?: number[];
               }
               const exportData: ExportEventItem[] = [];
               const csvRows: string[] = [];
+
+              // Summary counters for JSON export
+              const summary = {
+                totalEvents: 0,
+                goals: 0,
+                yellowCards: 0,
+                redCards: 0,
+                timePenalties: 0,
+                substitutions: 0,
+              };
 
               matchesToExport.forEach(match => {
                 const homeTeamName = getTeamName(match.teamA);
@@ -524,7 +538,15 @@ export function ExportsCategory({
                   let player = event.payload.playerNumber ? `#${event.payload.playerNumber}` : '';
                   const teamName = getTeamName(event.payload.teamId);
 
-                  // Formatting details
+                  // Update summary counters
+                  summary.totalEvents++;
+                  if (event.type === 'GOAL') {summary.goals++;}
+                  else if (event.type === 'YELLOW_CARD') {summary.yellowCards++;}
+                  else if (event.type === 'RED_CARD') {summary.redCards++;}
+                  else if (event.type === 'TIME_PENALTY') {summary.timePenalties++;}
+                  else if (event.type === 'SUBSTITUTION') {summary.substitutions++;}
+
+                  // Formatting details for CSV
                   if (event.type === 'GOAL') {
                     eventTypeLabel = 'Tor';
                     details = `Stand: ${event.scoreAfter.home}:${event.scoreAfter.away}`;
@@ -546,9 +568,9 @@ export function ExportsCategory({
                     player = '';
                   }
 
-                  // JSON Structure
+                  // JSON Structure - clean, structured data (no rawEvent)
                   if (exportFormat === 'json') {
-                    exportData.push({
+                    const eventItem: ExportEventItem = {
                       matchId: match.id,
                       round: match.round,
                       homeTeam: { id: match.teamA, name: homeTeamName },
@@ -557,9 +579,22 @@ export function ExportsCategory({
                       type: event.type,
                       team: { id: event.payload.teamId, name: teamName },
                       playerNumber: event.payload.playerNumber,
-                      details: details,
-                      rawEvent: event
-                    });
+                    };
+
+                    // Add type-specific structured data
+                    if (event.type === 'GOAL') {
+                      eventItem.scoreAfter = { home: event.scoreAfter.home, away: event.scoreAfter.away };
+                      if (event.payload.assists && event.payload.assists.length > 0) {
+                        eventItem.assists = event.payload.assists;
+                      }
+                    } else if (event.type === 'TIME_PENALTY') {
+                      eventItem.penaltyDuration = event.payload.penaltyDuration || 120;
+                    } else if (event.type === 'SUBSTITUTION') {
+                      eventItem.playersIn = event.payload.playersIn;
+                      eventItem.playersOut = event.payload.playersOut;
+                    }
+
+                    exportData.push(eventItem);
                   } else {
                     // CSV Row
                     csvRows.push([
@@ -577,17 +612,31 @@ export function ExportsCategory({
                 });
               });
 
-              // Check if we actually have events
-              if (exportFormat === 'json' && exportData.length === 0) {
-                // Allow empty export but maybe warn? Or just export empty array.
-              }
-
               // Generate File
               const timestamp = new Date().toISOString().split('T')[0];
               const safeTitle = tournament.title.replace(/[^a-zA-Z0-9]/g, '_');
 
               if (exportFormat === 'json') {
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                // Create wrapper with metadata, filters, and summary
+                const exportWrapper = {
+                  version: '1.0',
+                  exportedAt: new Date().toISOString(),
+                  tournament: {
+                    id: tournament.id,
+                    name: tournament.title,
+                  },
+                  filters: {
+                    teams: selectedTeamIds.map(id => ({
+                      id,
+                      name: getTeamName(id),
+                    })),
+                    eventTypes: selectedEventTypes,
+                  },
+                  summary,
+                  events: exportData,
+                };
+
+                const blob = new Blob([JSON.stringify(exportWrapper, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
