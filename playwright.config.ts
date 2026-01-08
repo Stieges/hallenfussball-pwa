@@ -32,12 +32,18 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
 
+  // Timeouts - prevent hanging tests
+  timeout: 60_000, // 60s per test (default: 30s)
+  globalTimeout: process.env.CI ? 10 * 60 * 1000 : undefined, // 10min total in CI
+
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    actionTimeout: 15_000, // 15s per action (click, fill, etc.)
+    navigationTimeout: 30_000, // 30s for page navigation
   },
 
   projects: [
