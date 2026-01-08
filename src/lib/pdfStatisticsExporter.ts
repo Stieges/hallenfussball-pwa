@@ -69,7 +69,7 @@ export async function exportStatisticsToPDF(tournament: Tournament): Promise<voi
             headStyles: { fillColor: PDF_STYLE.colors.headBg, textColor: PDF_STYLE.colors.textMain, fontStyle: 'bold' },
             margin: { left: PDF_STYLE.spacing.pageMargin.left, right: PDF_STYLE.spacing.pageMargin.right },
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jspdf-autotable adds lastAutoTable property dynamically
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- jspdf-autotable adds lastAutoTable property dynamically
         yPos = (doc as any).lastAutoTable.finalY + PDF_STYLE.spacing.sectionGap;
     } else {
         doc.setFontSize(11);

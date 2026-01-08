@@ -247,7 +247,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         <div style={fieldStyle}>
           {field !== undefined ? `Feld ${field}` : ''}
           {matchNumber && matchNumber > 0 && referee && (
-            <div style={{ fontSize: '10px', color: cssVars.colors.textMuted }}>SR: {referee}</div>
+            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR: {referee}</div>
           )}
         </div>
 

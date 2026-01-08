@@ -122,7 +122,7 @@ export function mapMatchFromSupabase(
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
-    matchStatus: (row.match_status as MatchStatus) || 'scheduled',
+    matchStatus: (row.match_status as MatchStatus | null) ?? 'scheduled',
     finishedAt: row.actual_end ?? undefined,
     timerStartTime: row.timer_start_time ?? undefined,
     timerPausedAt: row.timer_paused_at ?? undefined,
@@ -362,10 +362,10 @@ export function mapTournamentFromSupabase(
   const matches = matchRows.map((m) => mapMatchFromSupabase(m, teamIdToName));
 
   // Parse config JSON
-  const config = (row.config as TournamentConfig) || {};
+  const config = (row.config as TournamentConfig | null) ?? {};
 
   // Parse point system (cast via unknown due to Json type)
-  const pointSystem = (row.point_system as unknown as PointSystem) || {
+  const pointSystem = (row.point_system as unknown as PointSystem | null) ?? {
     win: 3,
     draw: 1,
     loss: 0,
@@ -410,14 +410,14 @@ export function mapTournamentFromSupabase(
     breakDuration: config.breakDuration,
     roundLogic: config.roundLogic as Tournament['roundLogic'],
     numberOfRounds: config.numberOfRounds,
-    placementLogic: (config.placementLogic ||
+    placementLogic: (config.placementLogic ??
       []) as Tournament['placementLogic'],
     finalsConfig: finalsConfig ?? undefined,
     refereeConfig: refereeConfig ?? undefined,
     fieldAssignments: config.fieldAssignments,
     groups: config.groups as Tournament['groups'],
     fields: config.fields as Tournament['fields'],
-    finals: config.finals || {
+    finals: config.finals ?? {
       final: false,
       thirdPlace: false,
       fifthSixth: false,
@@ -538,8 +538,8 @@ export function mapTournamentToSupabase(
     final_round_duration: tournament.finalRoundGameDuration || null,
     final_round_break: tournament.finalRoundBreakDuration || null,
     point_system: tournament.pointSystem as unknown as Json,
-    finals_config: (tournament.finalsConfig || null) as unknown as Json,
-    referee_config: (tournament.refereeConfig || null) as unknown as Json,
+    finals_config: (tournament.finalsConfig ?? null) as unknown as Json,
+    referee_config: (tournament.refereeConfig ?? null) as unknown as Json,
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt || null,
     completed_at: tournament.completedAt || null,

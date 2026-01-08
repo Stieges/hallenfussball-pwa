@@ -53,7 +53,7 @@ export const AuthCallback: React.FC = () => {
 
         if (session) {
           // Successfully authenticated, redirect to home
-          navigate('/', { replace: true });
+          void navigate('/', { replace: true });
         } else {
           // No session, might be a confirmation email link
           // Check for email confirmation
@@ -63,12 +63,12 @@ export const AuthCallback: React.FC = () => {
 
           if (exchangeError) {
             // Not a code exchange flow, just redirect to login
-            navigate('/login', { replace: true });
+            void navigate('/login', { replace: true });
             return;
           }
 
           // Successfully exchanged code, redirect to home
-          navigate('/', { replace: true });
+          void navigate('/', { replace: true });
         }
       } catch (err) {
         console.error('Auth callback error:', err);
@@ -76,7 +76,7 @@ export const AuthCallback: React.FC = () => {
       }
     };
 
-    handleAuthCallback();
+    void handleAuthCallback();
   }, [navigate]);
 
   if (error) {
@@ -87,7 +87,7 @@ export const AuthCallback: React.FC = () => {
           <h2 style={styles.title}>Authentifizierung fehlgeschlagen</h2>
           <p style={styles.text}>{error}</p>
           <button
-            onClick={() => navigate('/login', { replace: true })}
+            onClick={() => void navigate('/login', { replace: true })}
             style={styles.button}
           >
             Zum Login

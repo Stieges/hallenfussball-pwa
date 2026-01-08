@@ -245,7 +245,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             : 'Wir senden dir einen Magic Link per E-Mail.'}
         </p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={(e) => void handleSubmit(e)} style={styles.form}>
           <div style={styles.inputGroup}>
             <label htmlFor="email" style={styles.label}>
               E-Mail
@@ -287,7 +287,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               />
               <button
                 type="button"
-                onClick={handleForgotPassword}
+                onClick={() => void handleForgotPassword()}
                 disabled={isLoading}
                 style={styles.forgotPasswordLink}
               >
@@ -330,7 +330,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <Button
           variant="secondary"
           fullWidth
-          onClick={handleGoogleLogin}
+          onClick={() => void handleGoogleLogin()}
           disabled={isLoading}
           style={styles.googleButton}
         >

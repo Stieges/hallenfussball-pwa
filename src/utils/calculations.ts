@@ -466,8 +466,8 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
     if (match.events) {
       match.events.forEach(event => {
         if (event.type === 'GOAL') {
-          const teamId = event.payload?.teamId;
-          const playerNum = event.payload?.playerNumber;
+          const teamId = event.payload.teamId;
+          const playerNum = event.payload.playerNumber;
 
           if (teamId) {
             const key = getKey(teamId, playerNum);
@@ -483,26 +483,26 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
               scorerMap.set(key, scorer);
             }
             scorer.goals++;
-          }
 
-          // Assists
-          if (event.payload?.assists) {
-            event.payload.assists.forEach(assistNum => {
-              // Assume assist is from same team
-              const key = getKey(teamId!, assistNum);
-              let scorer = scorerMap.get(key);
-              if (!scorer) {
-                const teamName = getTeamName(teamId!);
-                scorer = {
-                  teamName,
-                  playerName: `#${assistNum}`,
-                  goals: 0,
-                  assists: 0
-                };
-                scorerMap.set(key, scorer);
-              }
-              scorer.assists++;
-            });
+            // Assists (inside teamId check to ensure teamId is defined)
+            if (event.payload.assists) {
+              event.payload.assists.forEach(assistNum => {
+                // Assume assist is from same team
+                const key = getKey(teamId, assistNum);
+                let scorer = scorerMap.get(key);
+                if (!scorer) {
+                  const teamName = getTeamName(teamId);
+                  scorer = {
+                    teamName,
+                    playerName: `#${assistNum}`,
+                    goals: 0,
+                    assists: 0
+                  };
+                  scorerMap.set(key, scorer);
+                }
+                scorer.assists++;
+              });
+            }
           }
         }
       });
@@ -537,10 +537,10 @@ export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
   tournament.matches.forEach(match => {
     if (match.events) {
       match.events.forEach(event => {
-        const teamId = event.payload?.teamId;
-        if (!teamId) return;
+        const teamId = event.payload.teamId;
+        if (!teamId) { return; }
         const entry = map.get(teamId);
-        if (!entry) return;
+        if (!entry) { return; }
 
         if (event.type === 'YELLOW_CARD') {
           entry.yellowCards++;

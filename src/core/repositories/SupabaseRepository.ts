@@ -67,8 +67,8 @@ export class SupabaseRepository implements ITournamentRepository {
     // Convert to frontend types
     return mapTournamentFromSupabase(
       tournamentRow,
-      teamRows ?? [],
-      matchRows ?? []
+      teamRows,
+      matchRows
     );
   }
 
@@ -293,7 +293,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // For listing, we don't need full team/match data
     // Return minimal tournament objects
-    return (tournamentRows ?? []).map((row) =>
+    return tournamentRows.map((row) =>
       mapTournamentFromSupabase(row, [], [])
     );
   }

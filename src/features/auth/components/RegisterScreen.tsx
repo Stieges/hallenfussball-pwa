@@ -242,7 +242,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             : 'Erstelle ein Konto, um Turniere zu verwalten.'}
         </p>
 
-        <form onSubmit={handleSubmit} style={styles.form}>
+        <form onSubmit={(e) => void handleSubmit(e)} style={styles.form}>
           <div style={styles.inputGroup}>
             <label htmlFor="name" style={styles.label}>
               Name
@@ -348,7 +348,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         <Button
           variant="secondary"
           fullWidth
-          onClick={handleGoogleLogin}
+          onClick={() => void handleGoogleLogin()}
           disabled={isLoading}
           style={styles.googleButton}
         >

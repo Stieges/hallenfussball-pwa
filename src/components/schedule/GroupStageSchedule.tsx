@@ -790,7 +790,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   onCircleClick={() => handleCircleClick(match.id)}
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
-                  referee={match.referee ? (typeof match.referee === 'number' ? `SR ${match.referee}` : `SR ${match.referee}`) : undefined}
+                  referee={match.referee ? `SR ${match.referee}` : undefined}
                 />
               </div>
             );

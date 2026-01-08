@@ -117,12 +117,12 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   }
 
   const handleLogout = () => {
-    logout();
+    void logout();
     onBack?.();
   };
 
   const handleChangePassword = async () => {
-    if (!user?.email) {
+    if (!user.email) {
       showError('Keine E-Mail-Adresse hinterlegt.');
       return;
     }
@@ -228,7 +228,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
               checked={false}
               onChange={() => alert('2FA Einrichtung startet...')}
             />
-            <button style={styles.actionButton} onClick={handleChangePassword}>
+            <button style={styles.actionButton} onClick={() => void handleChangePassword()}>
               🔑 Passwort ändern
             </button>
             <div style={styles.divider} />

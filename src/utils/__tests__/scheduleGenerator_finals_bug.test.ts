@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- Test file with debug output */
 /**
  * Test to reproduce the "Finals not showing in Management Tab" bug
  *

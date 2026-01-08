@@ -36,14 +36,17 @@ function mapSupabaseUser(
   supabaseUser: SupabaseUser | null,
   profileData?: { name: string; avatar_url: string | null; role: string } | null
 ): User | null {
-  if (!supabaseUser) return null;
+  if (!supabaseUser) { return null; }
+
+  // Extract user_metadata with proper typing
+  const metadata = supabaseUser.user_metadata as { full_name?: string; avatar_url?: string } | undefined;
 
   return {
     id: supabaseUser.id,
     email: supabaseUser.email ?? '',
-    name: profileData?.name ?? supabaseUser.user_metadata?.full_name ?? supabaseUser.email?.split('@')[0] ?? 'User',
-    avatarUrl: profileData?.avatar_url ?? supabaseUser.user_metadata?.avatar_url,
-    globalRole: (profileData?.role as 'user' | 'admin') ?? 'user',
+    name: profileData?.name ?? metadata?.full_name ?? supabaseUser.email?.split('@')[0] ?? 'User',
+    avatarUrl: profileData?.avatar_url ?? metadata?.avatar_url,
+    globalRole: profileData?.role as 'user' | 'admin' | undefined ?? 'user',
     createdAt: supabaseUser.created_at,
     updatedAt: supabaseUser.updated_at ?? supabaseUser.created_at,
     lastLoginAt: supabaseUser.last_sign_in_at,
@@ -54,14 +57,14 @@ function mapSupabaseUser(
  * Maps Supabase Session to our Session type
  */
 function mapSupabaseSession(supabaseSession: SupabaseSession | null): Session | null {
-  if (!supabaseSession) return null;
+  if (!supabaseSession) { return null; }
 
   return {
     id: supabaseSession.access_token.substring(0, 36), // Use first part as ID
     userId: supabaseSession.user.id,
     token: supabaseSession.access_token,
     createdAt: new Date().toISOString(),
-    expiresAt: new Date(supabaseSession.expires_at! * 1000).toISOString(),
+    expiresAt: new Date((supabaseSession.expires_at ?? Date.now() / 1000) * 1000).toISOString(),
     lastActivityAt: new Date().toISOString(),
   };
 }
@@ -107,11 +110,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Map to expected format
-      return data ? {
+      return {
         name: data.display_name ?? '',
         avatar_url: data.avatar_url,
         role: 'user' as const, // Default role since it's not stored in profiles
-      } : null;
+      };
     } catch (err) {
       console.error('Profile fetch failed:', err);
       return null;
@@ -182,11 +185,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
 
-    initAuth();
+    void initAuth();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+        // eslint-disable-next-line no-console -- Useful for auth debugging
         console.log('Auth state change:', event);
 
         if (mounted) {
@@ -308,13 +312,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
       }
 
-      if (!data.user) {
-        return {
-          success: false,
-          error: 'Login fehlgeschlagen.',
-        };
-      }
-
       // Clear guest data
       localStorage.removeItem('auth:guestUser');
 
@@ -324,7 +321,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return {
         success: true,
         user: mappedUser ?? undefined,
-        session: data.session ? mapSupabaseSession(data.session) ?? undefined : undefined,
+        session: mapSupabaseSession(data.session) ?? undefined,
       };
     } catch (err) {
       console.error('Login error:', err);

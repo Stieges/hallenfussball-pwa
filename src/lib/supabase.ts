@@ -8,8 +8,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
@@ -40,7 +40,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
  */
 export async function getCurrentUser() {
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error) throw error;
+  if (error) { throw error; }
   return user;
 }
 
@@ -49,7 +49,7 @@ export async function getCurrentUser() {
  */
 export async function getCurrentSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error) throw error;
+  if (error) { throw error; }
   return session;
 }
 
@@ -65,7 +65,7 @@ export function getPublicUrl(bucket: string, path: string): string {
  * Helper: Team-Logo URL
  */
 export function getTeamLogoUrl(logoPath: string | null | undefined): string | null {
-  if (!logoPath) return null;
+  if (!logoPath) { return null; }
   return getPublicUrl('team-logos', logoPath);
 }
 
@@ -73,6 +73,6 @@ export function getTeamLogoUrl(logoPath: string | null | undefined): string | nu
  * Helper: Sponsor-Logo URL
  */
 export function getSponsorLogoUrl(logoPath: string | null | undefined): string | null {
-  if (!logoPath) return null;
+  if (!logoPath) { return null; }
   return getPublicUrl('sponsor-logos', logoPath);
 }

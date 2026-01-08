@@ -110,8 +110,8 @@ export function generateFullSchedule(
     })
 
     // Categorize into group/final for stats
-    groupStageMatches = mappedMatches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase)).map(m => m as unknown as Match)
-    finalMatches = mappedMatches.filter(m => m.isFinal || (m.phase && m.phase !== 'groupStage')).map(m => m as unknown as Match)
+    groupStageMatches = mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage').map(m => m as unknown as Match)
+    finalMatches = mappedMatches.filter(m => m.isFinal || m.phase !== 'groupStage').map(m => m as unknown as Match)
 
     // HYBRID MODE: If we have group matches but NO final matches (or they look incomplete), check if we SHOULD have finals
     // This happens if matches were persisted before finals were configured or generated
@@ -133,7 +133,7 @@ export function generateFullSchedule(
       // Note: We need to convert mappedMatches back to scheduledGroupStage format for timing calc
       const scheduledFinalsByGen = scheduleFinalMatches(
         generatedFinals,
-        mappedMatches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase)),
+        mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage'),
         startTime,
         tournament,
         teamMap,
