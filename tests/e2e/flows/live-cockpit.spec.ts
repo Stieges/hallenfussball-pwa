@@ -82,6 +82,8 @@ test.describe('Live Cockpit', () => {
     // Navigate to app
     await page.goto('/');
     await page.waitForLoadState('networkidle');
+    // Wait for React to render the seeded tournament
+    await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
   });
 
   test.afterEach(async ({ page }) => {
@@ -97,8 +99,7 @@ test.describe('Live Cockpit', () => {
   });
 
   test('Can navigate to Live Cockpit tab', async ({ page }) => {
-    // GIVEN - App is loaded with test tournament
-    await expect(page.getByText('E2E Test Turnier')).toBeVisible();
+    // GIVEN - App is loaded with test tournament (verified in beforeEach)
 
     // WHEN - Click on the tournament
     await page.getByText('E2E Test Turnier').click();
