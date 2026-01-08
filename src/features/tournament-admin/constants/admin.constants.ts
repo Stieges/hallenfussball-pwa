@@ -88,6 +88,15 @@ export const ADMIN_CATEGORIES: AdminCategory[] = [
     path: 'settings',
   },
   {
+    id: 'match-cockpit',
+    label: 'Match Cockpit',
+    shortLabel: 'Cockpit',
+    description: 'Timer, Sound, Feedback',
+    icon: '🎮',
+    group: 'settings',
+    path: 'match-cockpit',
+  },
+  {
     id: 'visibility',
     label: 'Sichtbarkeit',
     shortLabel: 'Sichtbarkeit',

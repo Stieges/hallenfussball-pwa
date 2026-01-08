@@ -411,12 +411,19 @@ function AppContent() {
 
       <Suspense fallback={<ScreenLoader />}>
         {/* Auth Screens */}
+        {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
             onSuccess={() => void navigate('/')}
             onNavigateToRegister={() => setScreen('register')}
-            onBack={() => void navigate('/')}
-            onContinueAsGuest={() => void navigate('/')}
+            onBack={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
+            onContinueAsGuest={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
           />
         )}
 
@@ -424,7 +431,10 @@ function AppContent() {
           <RegisterScreen
             onSuccess={() => void navigate('/')}
             onNavigateToLogin={() => setScreen('login')}
-            onBack={() => void navigate('/')}
+            onBack={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
           />
         )}
 
@@ -500,7 +510,12 @@ function AppContent() {
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
               await new Promise(resolve => setTimeout(resolve, 200));
-              void navigate('/');
+              // If published/created, go to tournament dashboard. If draft, go to main dashboard.
+              if (tournament.status !== 'draft') {
+                void navigate(`/tournament/${tournament.id}`);
+              } else {
+                void navigate('/');
+              }
             }}
             existingTournament={
               selectedTournament ??
@@ -576,8 +591,8 @@ function AppContent() {
       {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
-            if (target === 'impressum') {setScreen('impressum');}
-            if (target === 'datenschutz') {setScreen('datenschutz');}
+            if (target === 'impressum') { setScreen('impressum'); }
+            if (target === 'datenschutz') { setScreen('datenschutz'); }
           }}
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented

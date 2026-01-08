@@ -11,6 +11,7 @@ import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { LiveMatch, MatchStatus, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
+import { RuntimeMatchEvent } from '../../types/tournament';
 
 // ============================================================================
 // TYPES
@@ -563,6 +564,49 @@ export class MatchExecutionService {
         return timeSinceStart > maxExpectedDuration || timeSinceStart > MAX_STALE_MS;
     }
 
+    async updateEvent(
+        tournamentId: string,
+        matchId: string,
+        eventId: string,
+        updates: { playerNumber?: number; incomplete?: boolean }
+    ): Promise<LiveMatch> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+
+        // Find event
+        const eventIndex = match.events.findIndex(e => e.id === eventId);
+        if (eventIndex === -1) { throw new Error(`Event ${eventId} not found`); }
+
+        const events = [...match.events];
+        const event = { ...events[eventIndex] };
+
+        // Update basic properties if present
+        if (updates.incomplete !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            (event as any).incomplete = updates.incomplete;
+        }
+        if (updates.playerNumber !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            (event as any).playerNumber = updates.playerNumber;
+            // Also update payload for legacy compatibility
+            // Also update payload for legacy compatibility. Payload is typed as object in MatchEvent/EditableMatchEvent
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (event.payload && typeof (event.payload as unknown) === 'object') {
+                event.payload = { ...event.payload, playerNumber: updates.playerNumber };
+            }
+        }
+
+        events[eventIndex] = event;
+
+        const updated: LiveMatch = {
+            ...match,
+            events,
+        };
+
+        await this.liveMatchRepo.save(tournamentId, updated);
+        return updated;
+    }
+
     // ==========================================================================
     // MATCH INITIALIZATION
     // ==========================================================================
@@ -689,6 +733,7 @@ export class MatchExecutionService {
             penaltyScoreA: match.penaltyScoreA,
             penaltyScoreB: match.penaltyScoreB,
             decidedBy,
+            events: match.events as unknown as RuntimeMatchEvent[], // Persist full event history
         });
     }
 }

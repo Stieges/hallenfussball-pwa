@@ -213,22 +213,34 @@ export function MatchCockpitSettingsPanel({
         <h3 style={styles.sectionTitle}>Sound</h3>
 
         <SettingRow label="Spielende-Sound" description="Akustisches Signal bei Spielende">
-          <select
-            value={currentSoundValue}
-            onChange={(e) => handleSoundChange(e.target.value)}
-            style={styles.select}
-          >
-            {SOUND_PRESET_OPTIONS.map((opt) => (
-              <option
-                key={opt.value}
-                value={opt.value}
-                disabled={opt.value === 'custom' && !settings.hasCustomSound}
+          <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
+            <select
+              value={currentSoundValue}
+              onChange={(e) => handleSoundChange(e.target.value)}
+              style={styles.select}
+            >
+              {SOUND_PRESET_OPTIONS.map((opt) => (
+                <option
+                  key={opt.value}
+                  value={opt.value}
+                  disabled={opt.value === 'custom' && !settings.hasCustomSound}
+                >
+                  {opt.label}
+                  {opt.value === 'custom' && !settings.hasCustomSound && ' (nicht hochgeladen)'}
+                </option>
+              ))}
+            </select>
+            {onTestSound && (
+              <button
+                type="button"
+                onClick={onTestSound}
+                style={styles.testButton}
+                title="Sound testen"
               >
-                {opt.label}
-                {opt.value === 'custom' && !settings.hasCustomSound && ' (nicht hochgeladen)'}
-              </option>
-            ))}
-          </select>
+                ▶
+              </button>
+            )}
+          </div>
         </SettingRow>
 
         {settings.soundEnabled && (

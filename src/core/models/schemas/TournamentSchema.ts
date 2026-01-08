@@ -51,6 +51,7 @@ export const MatchSchema = z.object({
     decidedBy: z.string().optional(),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
+    events: z.array(z.any()).optional(), // Persist match events (scorers, cards, etc.)
 });
 
 // Handling Date: JSON has strings. Our application assumes Date objects for some fields?

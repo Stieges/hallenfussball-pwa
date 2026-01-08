@@ -76,6 +76,7 @@ export interface UseMatchExecutionReturn {
     // Other
     handleUndoLastEvent: (matchId: string) => Promise<void>;
     handleReopenMatch: (matchData: ScheduledMatch) => Promise<void>;
+    handleUpdateEvent: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => Promise<void>;
     hasRunningMatch: () => LiveMatch | undefined;
 }
 
@@ -408,6 +409,15 @@ export function useMatchExecution({
         }
     }, [tournament.id]);
 
+    const handleUpdateEvent = useCallback(async (
+        matchId: string,
+        eventId: string,
+        updates: { playerNumber?: number; incomplete?: boolean }
+    ): Promise<void> => {
+        const updated = await service.updateEvent(tournament.id, matchId, eventId, updates);
+        setLiveMatches(prev => new Map(prev).set(matchId, updated));
+    }, [service, tournament.id]);
+
     const hasRunningMatch = useCallback((): LiveMatch | undefined => {
         return Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
     }, [liveMatches]);
@@ -436,6 +446,7 @@ export function useMatchExecution({
         handleUnskipMatch,
         handleUndoLastEvent,
         handleReopenMatch,
+        handleUpdateEvent,
         hasRunningMatch,
     };
 }

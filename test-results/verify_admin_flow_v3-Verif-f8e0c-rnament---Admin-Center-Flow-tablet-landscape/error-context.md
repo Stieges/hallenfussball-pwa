@@ -1,0 +1,41 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Turnierverwaltung" [level=1] [ref=e6]
+      - generic [ref=e7]:
+        - generic [ref=e8]:
+          - generic [ref=e9]: Angemeldet als Admin User
+          - generic [ref=e10]: Admin User
+          - button "Profil von Admin User öffnen" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: AU
+        - generic [ref=e13]:
+          - button "Importieren" [ref=e14] [cursor=pointer]:
+            - img [ref=e16]
+            - text: Importieren
+          - button "+ Neues Turnier" [ref=e18] [cursor=pointer]
+    - navigation [ref=e19]:
+      - button "Turniere" [ref=e20] [cursor=pointer]:
+        - img [ref=e21]
+        - generic [ref=e23]: Turniere
+      - button "Archiv" [ref=e24] [cursor=pointer]:
+        - img [ref=e25]
+        - generic [ref=e28]: Archiv
+      - button "Papierkorb" [ref=e29] [cursor=pointer]:
+        - img [ref=e30]
+        - generic [ref=e32]: Papierkorb
+    - generic [ref=e33]:
+      - img [ref=e35]
+      - heading "Noch keine Turniere" [level=2] [ref=e37]
+      - paragraph [ref=e38]: Erstelle dein erstes Turnier mit dem Button oben
+  - contentinfo [ref=e39]:
+    - generic [ref=e40]: © 2026 Spielplan
+    - navigation "Rechtliche Links" [ref=e41]:
+      - button "Impressum öffnen" [ref=e42] [cursor=pointer]: Impressum
+      - generic [ref=e43]: •
+      - button "Datenschutzerklärung öffnen" [ref=e44] [cursor=pointer]: Datenschutz
+      - generic [ref=e45]: •
+      - button "Cookie-Einstellungen öffnen" [ref=e46] [cursor=pointer]: Cookie-Einstellungen
+```

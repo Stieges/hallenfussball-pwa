@@ -284,6 +284,9 @@ export interface Match {
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
   skippedAt?: string;            // ISO timestamp when match was skipped
+
+  // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
+  events?: RuntimeMatchEvent[]; // Full event history persisted with the match
 }
 
 /**

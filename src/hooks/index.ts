@@ -10,7 +10,7 @@ export { useLocalStorage } from './useLocalStorage'
 export { useFormPersistence } from './useFormPersistence'
 
 // Timer & Animation
-export { useMatchTimer } from './useMatchTimer'
+export { useMatchTimer, useMatchTimerExtended } from './useMatchTimer'
 export { useDialogTimer } from './useDialogTimer'
 export { useShake } from './useShake'
 export { useListAnimation, useFadeIn } from './useListAnimation'

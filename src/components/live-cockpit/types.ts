@@ -81,7 +81,9 @@ export interface LiveCockpitProps {
   onManualEditResult(matchId: string, newHomeScore: number, newAwayScore: number): void;
   onAdjustTime(matchId: string, newElapsedSeconds: number): void;
 
-  // Optional Event Handlers for detailed tracking
+  /** Callback when an event is updated */
+  onUpdateEvent?: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => void;
+  // Event tracking handlers (new)
   onTimePenalty?(matchId: string, teamId: string, options?: {
     playerNumber?: number;
     durationSeconds?: number;
@@ -104,7 +106,11 @@ export interface LiveCockpitProps {
   onStartPenaltyShootout?(matchId: string): void;
   onRecordPenaltyResult?(matchId: string, homeScore: number, awayScore: number): void;
   onForceFinish?(matchId: string): void;
+  onForceFinish?(matchId: string): void;
   onCancelTiebreaker?(matchId: string): void;
+
+  /** Update cockpit settings directly from the view */
+  onUpdateSettings?(settings: import('../../types/tournament').MatchCockpitSettings): void;
 }
 
 // ---------------------------------------------------------------------------

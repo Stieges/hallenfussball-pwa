@@ -29,6 +29,7 @@ export {
   TimePenaltyDialog,
   SubstitutionDialog,
   EventEditDialog,
+  SettingsDialog,
 } from './Dialogs';
 export { ScoreEditDialog } from './ScoreEditDialog';
 

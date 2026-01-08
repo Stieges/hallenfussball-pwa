@@ -2,7 +2,7 @@
  * Schedule Types - Type definitions for schedule generation
  */
 
-import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField } from '../../types/tournament'
+import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -47,6 +47,9 @@ export interface ScheduledMatch {
   scoreA?: number
   /** Score Auswärts-Team (optional, wird bei Ergebniseingabe gesetzt) */
   scoreB?: number
+
+  // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
+  events?: RuntimeMatchEvent[]
 }
 
 export type SchedulePhaseType = 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final'

@@ -49,6 +49,9 @@ const SponsorsCategory = lazy(() =>
 const SettingsCategory = lazy(() =>
   import('./categories/Settings').then((m) => ({ default: m.SettingsCategory }))
 );
+const MatchCockpitCategory = lazy(() =>
+  import('./categories/MatchCockpit').then((m) => ({ default: m.MatchCockpitCategory }))
+);
 const VisibilityCategory = lazy(() =>
   import('./categories/Visibility').then((m) => ({ default: m.VisibilityCategory }))
 );
@@ -223,6 +226,8 @@ export function TournamentAdminCenter({
         return <SponsorsCategory {...categoryProps} />;
       case 'settings':
         return <SettingsCategory {...categoryProps} />;
+      case 'match-cockpit':
+        return <MatchCockpitCategory {...categoryProps} />;
       case 'visibility':
         return <VisibilityCategory {...categoryProps} />;
       case 'notifications':

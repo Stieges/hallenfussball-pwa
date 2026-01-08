@@ -273,9 +273,11 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
       // Call external save callback if provided (e.g. for potential redirects or parent updates)
       // Though publishTournament already saves to repo.
-      void saveTournament(published);
+      await saveTournament(published);
 
-      onBack();
+      if (!onSave) {
+        onBack();
+      }
     } catch (error) {
       // Capture error and display to user
       const errorMessage = error instanceof Error
