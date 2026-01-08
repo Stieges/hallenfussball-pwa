@@ -41,11 +41,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
   const [errors, setErrors] = useState<{
     name?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
+    registrationCode?: string;
     general?: string;
   }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +93,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     // Confirm password validation
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
+    }
+
+    // Registration code validation
+    const expectedCode = import.meta.env.VITE_REGISTRATION_CODE as string | undefined;
+    if (expectedCode && registrationCode !== expectedCode) {
+      newErrors.registrationCode = 'Ungültiger Einladungscode';
     }
 
     setErrors(newErrors);
@@ -323,6 +331,30 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             )}
           </div>
 
+          <div style={styles.inputGroup}>
+            <label htmlFor="registrationCode" style={styles.label}>
+              Einladungscode
+            </label>
+            <input
+              id="registrationCode"
+              type="text"
+              value={registrationCode}
+              onChange={(e) => setRegistrationCode(e.target.value)}
+              placeholder="Code vom Veranstalter"
+              style={{
+                ...styles.input,
+                ...(errors.registrationCode ? styles.inputError : {}),
+              }}
+              autoComplete="off"
+            />
+            {errors.registrationCode && (
+              <span style={styles.errorText}>{errors.registrationCode}</span>
+            )}
+            <span style={styles.hint}>
+              Den Code bekommst du vom Turnierveranstalter.
+            </span>
+          </div>
+
           {errors.general && (
             <div style={styles.generalError}>{errors.general}</div>
           )}
@@ -489,6 +521,11 @@ const styles: Record<string, CSSProperties> = {
   errorText: {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.error,
+  },
+  hint: {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginTop: cssVars.spacing.xs,
   },
   generalError: {
     padding: cssVars.spacing.md,
