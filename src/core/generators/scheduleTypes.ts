@@ -41,6 +41,8 @@ export interface ScheduledMatch {
   duration: number
   /** Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.) */
   referee?: number
+  /** Is this a final match? */
+  isFinal?: boolean
   /** Slot index für Schiedsrichter-Verteilung */
   slot?: number
   /** Score Heim-Team (optional, wird bei Ergebniseingabe gesetzt) */

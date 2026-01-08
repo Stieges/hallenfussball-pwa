@@ -13,6 +13,7 @@
  */
 
 import { Tournament } from '../types/tournament';
+import { STORAGE_KEYS } from '../constants/storage';
 
 /**
  * API Configuration
@@ -118,11 +119,9 @@ export async function deleteTournament(id: string): Promise<void> {
 // LOCAL STORAGE IMPLEMENTATION
 // ============================================================================
 
-const STORAGE_KEY = 'tournaments';
-
 function localStorageGetTournaments(): Tournament[] {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
     if (!stored) {return [];}
 
     const tournaments = JSON.parse(stored) as Tournament[];
@@ -163,14 +162,14 @@ function localStorageSaveTournament(tournament: Tournament): Tournament {
     tournaments.push(updatedTournament);
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tournaments));
+  localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(tournaments));
   return updatedTournament;
 }
 
 function localStorageDeleteTournament(id: string): void {
   const tournaments = localStorageGetTournaments();
   const filtered = tournaments.filter(t => t.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(filtered));
 }
 
 // ============================================================================

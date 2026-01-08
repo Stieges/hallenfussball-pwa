@@ -9,7 +9,7 @@
 
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
-import { LiveMatch, MatchStatus, MatchEvent, FinishResult } from '../models/LiveMatch';
+import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { RuntimeMatchEvent } from '../../types/tournament';
 
@@ -45,7 +45,54 @@ export class MatchExecutionService {
     // STATUS MANAGEMENT
     // ==========================================================================
 
-    async startMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
+    /**
+    * Syncs metadata (referee, team names) from tournament schedule to live match
+    */
+    public async syncMatchMetadata(
+        tournamentId: string,
+        matchId: string,
+        metadata: {
+            refereeName?: string;
+            homeTeam?: LiveTeamInfo;
+            awayTeam?: LiveTeamInfo;
+        }
+    ): Promise<LiveMatch | null> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { return null; }
+
+        let changed = false;
+
+        if (metadata.refereeName !== undefined && match.refereeName !== metadata.refereeName) {
+            match.refereeName = metadata.refereeName;
+            changed = true;
+        }
+
+        if (metadata.homeTeam) {
+            // Deep compare or just assign? Assigning is safer for name updates.
+            // But preserve colors if not provided in update?
+            // The scheduled match usually has full team data.
+            if (JSON.stringify(match.homeTeam) !== JSON.stringify(metadata.homeTeam)) {
+                match.homeTeam = metadata.homeTeam;
+                changed = true;
+            }
+        }
+
+        if (metadata.awayTeam) {
+            if (JSON.stringify(match.awayTeam) !== JSON.stringify(metadata.awayTeam)) {
+                match.awayTeam = metadata.awayTeam;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await this.liveMatchRepo.save(tournamentId, match);
+            return match;
+        }
+
+        return match;
+    }
+
+    public async startMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
         if (!match) { throw new Error(`Match ${matchId} not found`); }
 

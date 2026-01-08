@@ -76,14 +76,16 @@ export function generateFullSchedule(
 
   if (hasMatches) {
     // USE ESTABLISHED MATCHES (Truth from Repository)
-    allMatches = tournament.matches.map((m, index) => {
+    // First, map all existing matches to ScheduledMatch format
+    const mappedMatches = tournament.matches.map((m, index) => {
       const extMatch = m as unknown as ExtendedMatchInput
       const matchStart = m.scheduledTime ? new Date(m.scheduledTime) : startTime
       // Estimate end time based on duration
       const duration = tournament.groupPhaseGameDuration
       const matchEnd = new Date(matchStart.getTime() + duration * 60000)
 
-      const phase = m.phase || extMatch.phase || 'groupStage'
+      // BUG-FIX: Derive phase from isFinal for backward compatibility with old data
+      const phase = m.phase || extMatch.phase || (m.isFinal ? 'final' : 'groupStage')
 
       return {
         ...m,
@@ -108,8 +110,45 @@ export function generateFullSchedule(
     })
 
     // Categorize into group/final for stats
-    groupStageMatches = tournament.matches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase))
-    finalMatches = tournament.matches.filter(m => m.isFinal || (m.phase && m.phase !== 'groupStage'))
+    groupStageMatches = mappedMatches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase)).map(m => m as unknown as Match)
+    finalMatches = mappedMatches.filter(m => m.isFinal || (m.phase && m.phase !== 'groupStage')).map(m => m as unknown as Match)
+
+    // HYBRID MODE: If we have group matches but NO final matches (or they look incomplete), check if we SHOULD have finals
+    // This happens if matches were persisted before finals were configured or generated
+    const shouldGeneratePlayoffs =
+      tournament.groupSystem === 'groupsAndFinals' &&
+      ((tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
+        Object.values(tournament.finals).some(Boolean))
+
+    // Check if we already have finals in the persisted data
+    const hasExistingFinals = finalMatches.length > 0;
+
+    // Also sanity check: If we have NO finals but we SHOULD, we must regenerate.
+    // AND: Safety check - don't regenerate if we actually have finals but they are somehow miscategorized (unlikely with our robust filtering above)
+    if (shouldGeneratePlayoffs && !hasExistingFinals && groupStageMatches.length > 0) {
+      // Generate Finals dynamically even though we are in "Persisted Mode"
+      const generatedFinals = generateFinalMatches(tournament, groupStageMatches, startTime)
+
+      // Schedule the finals (time slots)
+      // Note: We need to convert mappedMatches back to scheduledGroupStage format for timing calc
+      const scheduledFinalsByGen = scheduleFinalMatches(
+        generatedFinals,
+        mappedMatches.filter(m => !m.isFinal && (m.phase === 'groupStage' || !m.phase)),
+        startTime,
+        tournament,
+        teamMap,
+        locale
+      )
+
+      // Merge: Existing Group Matches + Generated Final Matches
+      allMatches = [...mappedMatches, ...scheduledFinalsByGen]
+
+      // Update finalMatches ref for consistency
+      finalMatches = generatedFinals
+    } else {
+      // Standard Case: Use what we loaded
+      allMatches = mappedMatches
+    }
 
   } else {
     // GENERATE MATCHES (Standard Behavior)

@@ -13,9 +13,9 @@ import { Tournament } from '../types/tournament';
 import { ScheduledMatch } from '../core/generators';
 import { MatchExecutionService } from '../core/services/MatchExecutionService';
 import { LocalStorageLiveMatchRepository } from '../core/repositories/LocalStorageLiveMatchRepository';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 import { LiveMatch, MatchStatus } from '../core/models/LiveMatch';
 import { useMultiTabSync } from './useMultiTabSync';
+import { useRepository } from './useRepository';
 
 // ============================================================================
 // TYPES
@@ -77,6 +77,7 @@ export interface UseMatchExecutionReturn {
     handleUndoLastEvent: (matchId: string) => Promise<void>;
     handleReopenMatch: (matchData: ScheduledMatch) => Promise<void>;
     handleUpdateEvent: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => Promise<void>;
+    handleSyncMetadata: (matchId: string) => Promise<void>;
     hasRunningMatch: () => LiveMatch | undefined;
 }
 
@@ -92,12 +93,14 @@ export function useMatchExecution({
     onTournamentUpdate,
 }: UseMatchExecutionProps): UseMatchExecutionReturn {
 
-    // Repositories and Service (memoized)
+    // Get auth-aware tournament repository (Supabase for authenticated, localStorage for guests)
+    const tournamentRepo = useRepository();
+
+    // Repositories and Service (memoized, recreate if repository changes)
     const service = useMemo(() => {
         const liveMatchRepo = new LocalStorageLiveMatchRepository();
-        const tournamentRepo = new LocalStorageRepository();
         return new MatchExecutionService(liveMatchRepo, tournamentRepo);
-    }, []);
+    }, [tournamentRepo]);
 
     // State
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
@@ -116,10 +119,26 @@ export function useMatchExecution({
         const load = async () => {
             const repo = new LocalStorageLiveMatchRepository();
             const matches = await repo.getAll(tournament.id);
-            setLiveMatches(matches);
+
+            // Sync metadata (referees) on load/update
+            const updates = Array.from(matches.values()).map(async (liveMatch) => {
+                const scheduled = tournament.matches.find(m => m.id === liveMatch.id);
+                if (scheduled) {
+                    const refereeName = scheduled.referee ? (typeof scheduled.referee === 'number' ? `SR ${scheduled.referee}` : scheduled.referee) : undefined;
+
+                    if (refereeName !== liveMatch.refereeName) {
+                        const updated = await service.syncMatchMetadata(tournament.id, liveMatch.id, { refereeName });
+                        if (updated) { return updated; }
+                    }
+                }
+                return liveMatch;
+            });
+
+            const synced = await Promise.all(updates);
+            setLiveMatches(new Map(synced.map(m => [m.id, m])));
         };
         void load();
-    }, [tournament.id]);
+    }, [tournament.id, tournament.matches, service]); // Re-run when tournament matches change (e.g. referee assignment)
 
     // Timer for display updates (not persistence)
     useEffect(() => {
@@ -204,7 +223,7 @@ export function useMatchExecution({
         }
 
         // Reload tournament to get updated match results
-        const repo = new LocalStorageRepository();
+        const repo = tournamentRepo;
         const updated = await repo.get(tournament.id);
         if (updated) {
             onTournamentUpdate(updated, false);
@@ -218,7 +237,7 @@ export function useMatchExecution({
         }
 
         announceMatchFinished(matchId);
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -227,7 +246,7 @@ export function useMatchExecution({
         // Cancel tiebreaker and finish
         await service.cancelTiebreaker(tournament.id, matchId);
 
-        const repo = new LocalStorageRepository();
+        const repo = tournamentRepo;
         const updated = await repo.get(tournament.id);
         if (updated) {
             onTournamentUpdate(updated, false);
@@ -240,7 +259,7 @@ export function useMatchExecution({
         }
 
         announceMatchFinished(matchId);
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleGoal = useCallback(async (
         matchId: string,
@@ -257,12 +276,12 @@ export function useMatchExecution({
 
         // If match finished (golden goal), update tournament
         if (updated.status === 'FINISHED') {
-            const repo = new LocalStorageRepository();
+            const repo = tournamentRepo;
             const t = await repo.get(tournament.id);
             if (t) { onTournamentUpdate(t, false); }
             announceMatchFinished(matchId);
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleCard = useCallback(async (
         matchId: string,
@@ -340,11 +359,11 @@ export function useMatchExecution({
         const updated = await service.recordPenaltyResult(tournament.id, matchId, homeScore, awayScore);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
 
-        const repo = new LocalStorageRepository();
+        const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
         if (t) { onTournamentUpdate(t, false); }
         announceMatchFinished(matchId);
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleCancelTiebreaker = useCallback(async (matchId: string): Promise<void> => {
         await service.cancelTiebreaker(tournament.id, matchId);
@@ -373,18 +392,18 @@ export function useMatchExecution({
     const handleSkipMatch = useCallback(async (matchId: string, reason: string): Promise<void> => {
         await service.skipMatch(tournament.id, matchId, reason);
 
-        const repo = new LocalStorageRepository();
+        const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
         if (t) { onTournamentUpdate(t, false); }
-    }, [service, tournament.id, onTournamentUpdate]);
+    }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
 
     const handleUnskipMatch = useCallback(async (matchId: string): Promise<void> => {
         await service.unskipMatch(tournament.id, matchId);
 
-        const repo = new LocalStorageRepository();
+        const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
         if (t) { onTournamentUpdate(t, false); }
-    }, [service, tournament.id, onTournamentUpdate]);
+    }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
 
     const handleUndoLastEvent = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.undoLastEvent(tournament.id, matchId);
@@ -418,6 +437,18 @@ export function useMatchExecution({
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
     }, [service, tournament.id]);
 
+    const handleSyncMetadata = useCallback(async (matchId: string): Promise<void> => {
+        const match = tournament.matches.find(m => m.id === matchId);
+        if (!match) return;
+
+        const refereeName = match.referee ? (typeof match.referee === 'number' ? `SR ${match.referee}` : match.referee) : undefined;
+        const updated = await service.syncMatchMetadata(tournament.id, matchId, { refereeName });
+
+        if (updated) {
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+        }
+    }, [service, tournament.id, tournament.matches]);
+
     const hasRunningMatch = useCallback((): LiveMatch | undefined => {
         return Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
     }, [liveMatches]);
@@ -447,6 +478,7 @@ export function useMatchExecution({
         handleUndoLastEvent,
         handleReopenMatch,
         handleUpdateEvent,
+        handleSyncMetadata,
         hasRunningMatch,
     };
 }

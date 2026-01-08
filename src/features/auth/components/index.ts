@@ -5,6 +5,7 @@
 // Phase 2: Auth Screens
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
+export { AuthCallback } from './AuthCallback';
 export { GuestBanner } from './GuestBanner';
 export { AuthGuard } from './AuthGuard';
 

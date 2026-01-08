@@ -302,7 +302,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   const handleExpandSave = useCallback((matchId: string, homeScore: number, awayScore: number) => {
     // Check if match is already finished
     const match = matches.find(m => m.id === matchId);
-    if (!match) {return;}
+    if (!match) { return; }
 
     const isFinished = finishedMatches?.has(matchId) || (match.scoreA !== undefined && match.scoreB !== undefined);
 
@@ -486,7 +486,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const options = [];
     for (let i = 1; i <= numberOfReferees; i++) {
-      options.push({ value: i, label: i.toString() });
+      const name = refereeConfig.refereeNames?.[i];
+      const label = name ? `${i} (${name})` : i.toString();
+      options.push({ value: i, label });
     }
     return options;
   };
@@ -788,6 +790,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   onCircleClick={() => handleCircleClick(match.id)}
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
+                  referee={match.referee ? (typeof match.referee === 'number' ? `SR ${match.referee}` : `SR ${match.referee}`) : undefined}
                 />
               </div>
             );

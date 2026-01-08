@@ -166,9 +166,10 @@ export class TournamentCreationService {
             scoreB: scheduledMatch.scoreB,
             group: scheduledMatch.group,
             isFinal: scheduledMatch.phase !== 'groupStage',
+            phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
             finalType: scheduledMatch.finalType,
             label: scheduledMatch.label,
-            scheduledTime: scheduledMatch.startTime, // Keeping Date object? Match.scheduledTime is Date? Check Match type.
+            scheduledTime: scheduledMatch.startTime,
             referee: scheduledMatch.referee,
         }));
 

@@ -14,6 +14,7 @@ import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog'
 import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandings } from '../../../../utils/calculations';
 import type { Tournament } from '../../../../types/tournament';
+import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
 
 // =============================================================================
 // PROPS
@@ -320,28 +321,253 @@ export function ExportsCategory({
       title="Exporte"
       description="Daten exportieren und Backups verwalten"
     >
-      {/* Game Events Export - Coming Soon */}
+      {/* Game Events Export */}
       <CollapsibleSection icon="📋" title="Spielereignisse exportieren">
-        <div style={styles.comingSoon}>
-          <p>Export von detaillierten Spielereignissen (Tore, Karten, Wechsel).</p>
-          <span style={styles.badge}>Coming Soon</span>
-        </div>
+        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
+          Exportiert alle Ereignisse (Tore, Karten, Strafen) aller Spiele als CSV-Datei.
+        </p>
+        <button
+          style={{
+            ...styles.button,
+            ...(isExporting ? styles.buttonDisabled : {})
+          }}
+          onClick={() => {
+            try {
+              setIsExporting(true);
+              const headers = ['Match ID', 'Runde', 'Heimmannschaft', 'Gastmannschaft', 'Spielminute', 'Ereignis', 'Team', 'Spieler', 'Details'];
+              const rows: string[] = [];
+
+              // Helper to get team name
+              const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
+
+              tournament.matches.forEach(match => {
+                const homeTeamName = getTeamName(match.teamA);
+                const guestTeamName = getTeamName(match.teamB);
+
+                // Sort events by timestamp
+                const sortedEvents = [...(match.events || [])].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+
+                sortedEvents.forEach(event => {
+                  let details = '';
+                  let eventType = event.type as string; // Cast to string for generic usage
+                  let player = event.payload?.playerNumber ? `#${event.payload.playerNumber}` : '';
+                  const teamName = getTeamName(event.payload?.teamId);
+
+                  // Formatting details based on type
+                  if (event.type === 'GOAL') {
+                    eventType = 'Tor';
+                    details = `Stand: ${event.scoreAfter?.home}:${event.scoreAfter?.away}`;
+                    if (event.payload?.assists && event.payload.assists.length > 0) {
+                      details += ` (Vorlage: ${event.payload.assists.map(a => '#' + a).join(', ')})`;
+                    }
+                  } else if (event.type === 'YELLOW_CARD') {
+                    eventType = 'Gelbe Karte';
+                  } else if (event.type === 'RED_CARD') {
+                    eventType = 'Rote Karte';
+                  } else if (event.type === 'TIME_PENALTY') {
+                    eventType = 'Zeitstrafe';
+                    details = `${event.payload?.penaltyDuration || 120}s`;
+                  } else if (event.type === 'SUBSTITUTION') {
+                    eventType = 'Wechsel';
+                    const inPlayers = event.payload?.playersIn?.map(p => `#${p}`).join(', ') || '';
+                    const outPlayers = event.payload?.playersOut?.map(p => `#${p}`).join(', ') || '';
+                    details = `Raus: ${outPlayers} -> Rein: ${inPlayers}`;
+                    player = ''; // Multiple players usually
+                  } else if (event.type === 'STATUS_CHANGE') {
+                    return; // Skip status changes for now, focus on game events
+                  }
+
+                  rows.push([
+                    match.id,
+                    match.round,
+                    homeTeamName,
+                    guestTeamName,
+                    Math.floor(event.timestampSeconds / 60) + 1 + "'",
+                    eventType,
+                    teamName,
+                    player,
+                    details
+                  ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
+                });
+              });
+
+              const csvContent = [headers.join(';'), ...rows].join('\n');
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${tournament.title.replace(/[^a-zA-Z0-9]/g, '_')}_events_${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setIsExporting(false);
+              setExportSuccess('Spielereignisse erfolgreich exportiert!');
+              setTimeout(() => setExportSuccess(null), 3000);
+
+            } catch (e) {
+              console.error(e);
+              setExportError('Fehler beim Exportieren der Ereignisse.');
+              setIsExporting(false);
+            }
+          }}
+          disabled={isExporting}
+        >
+          {isExporting ? 'Wird exportiert...' : '📥 Als CSV herunterladen'}
+        </button>
       </CollapsibleSection>
 
-      {/* Audit Log Export - Coming Soon */}
+      {/* Audit Log Export */}
       <CollapsibleSection icon="📋" title="Turnier-Audit-Log exportieren">
-        <div style={styles.comingSoon}>
-          <p>Exportiert alle Änderungen aus dem Activity Log.</p>
-          <span style={styles.badge}>Benötigt Activity Log</span>
-        </div>
+        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
+          Exportiert das gesamte Änderungsprotokoll (Ergebnisse, Korrekturen, Statusänderungen) als CSV-Datei.
+        </p>
+        <button
+          style={{
+            ...styles.button,
+            ...(isExporting ? styles.buttonDisabled : {})
+          }}
+          onClick={() => {
+            try {
+              setIsExporting(true);
+
+              // Define interface for local aggregation
+              interface AuditEntry {
+                timestamp: string;
+                type: string;
+                matchLabel: string;
+                description: string;
+                details: string;
+                oldValue: string;
+                newValue: string;
+              }
+
+              const entries: AuditEntry[] = [];
+              const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
+              const getMatchLabel = (m: any) => `${getTeamName(m.teamA)} vs ${getTeamName(m.teamB)}`;
+
+              // 1. Tournament Creation
+              if (tournament.createdAt) {
+                entries.push({
+                  timestamp: tournament.createdAt,
+                  type: 'tournament_created',
+                  matchLabel: '-',
+                  description: 'Turnier erstellt',
+                  details: tournament.title,
+                  oldValue: '-',
+                  newValue: '-'
+                });
+              }
+
+              // 2. Match Events (Finished, Corrections, Result Entered)
+              tournament.matches.forEach(match => {
+                const label = getMatchLabel(match);
+
+                if (match.finishedAt) {
+                  entries.push({
+                    timestamp: match.finishedAt,
+                    type: 'match_finished',
+                    matchLabel: label,
+                    description: 'Spiel beendet',
+                    details: '',
+                    oldValue: '-',
+                    newValue: `${match.scoreA}:${match.scoreB}`
+                  });
+                }
+
+                if (match.correctionHistory && match.correctionHistory.length > 0) {
+                  match.correctionHistory.forEach((c: any) => {
+                    entries.push({
+                      timestamp: c.timestamp,
+                      type: 'result_changed',
+                      matchLabel: label,
+                      description: 'Ergebnis korrigiert',
+                      details: c.reason || c.note || '',
+                      oldValue: `${c.previousScoreA}:${c.previousScoreB}`,
+                      newValue: `${c.newScoreA}:${c.newScoreB}`
+                    });
+                  });
+                } else if (match.matchStatus === 'finished' && match.scoreA !== undefined) {
+                  // Initial result (inferred)
+                  entries.push({
+                    timestamp: match.finishedAt || new Date().toISOString(),
+                    type: 'result_entered',
+                    matchLabel: label,
+                    description: 'Ergebnis eingetragen',
+                    details: '',
+                    oldValue: '-',
+                    newValue: `${match.scoreA}:${match.scoreB}`
+                  });
+                }
+              });
+
+              // Sort by timestamp
+              entries.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+              // Generate CSV
+              const headers = ['Zeitstempel', 'Typ', 'Match', 'Beschreibung', 'Details', 'Alt', 'Neu'];
+              const csvRows: string[] = entries.map(e => [
+                e.timestamp,
+                e.type,
+                e.matchLabel,
+                e.description,
+                e.details,
+                e.oldValue,
+                e.newValue
+              ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
+
+              const csvContent = [headers.join(';'), ...csvRows].join('\n');
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `${tournament.title.replace(/[^a-zA-Z0-9]/g, '_')}_audit_log_${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+
+              setIsExporting(false);
+              setExportSuccess('Audit Log erfolgreich exportiert!');
+              setTimeout(() => setExportSuccess(null), 3000);
+
+            } catch (e) {
+              console.error(e);
+              setExportError('Fehler beim Exportieren des Audit Logs.');
+              setIsExporting(false);
+            }
+          }}
+          disabled={isExporting}
+        >
+          {isExporting ? 'Wird exportiert...' : '📥 Als CSV herunterladen'}
+        </button>
       </CollapsibleSection>
 
-      {/* Statistics Export - Coming Soon */}
+      {/* Statistics Export */}
       <CollapsibleSection icon="📊" title="Statistiken exportieren">
-        <div style={styles.comingSoon}>
-          <p>Export von Torschützenliste, Fair-Play-Wertung und mehr.</p>
-          <span style={styles.badge}>Coming Soon</span>
-        </div>
+        <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
+          Exportiert Statistiken wie Torschützenliste und Fair-Play-Tabelle als PDF.
+        </p>
+        <button
+          style={{
+            ...styles.button,
+            ...(isExporting ? styles.buttonDisabled : {})
+          }}
+          onClick={async () => {
+            try {
+              setIsExporting(true);
+              await exportStatisticsToPDF(tournament);
+              setIsExporting(false);
+              setExportSuccess('Statistik-Report erfolgreich erstellt!');
+              setTimeout(() => setExportSuccess(null), 3000);
+            } catch (e) {
+              console.error(e);
+              setExportError('Fehler beim Erstellen des Reports.');
+              setIsExporting(false);
+            }
+          }}
+          disabled={isExporting}
+        >
+          {isExporting ? 'Wird erstellt...' : '📊 Als PDF exportieren'}
+        </button>
       </CollapsibleSection>
 
       {/* Tournament Summary - Uses existing PDF Export */}

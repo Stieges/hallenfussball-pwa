@@ -1,19 +1,21 @@
 /**
- * LoginScreen - E-Mail-Eingabe für Login
+ * LoginScreen - Login mit Email/Password oder Magic Link
  *
- * Phase 1: Lokale Simulation (kein echter Magic Link)
+ * Phase 2: Supabase Auth Integration
  *
  * Features:
- * - Semi-transparenter Backdrop für Kontext
- * - Zurück-Button und X-Button
- * - ESC-Taste zum Schließen
+ * - Email/Password Login
+ * - Magic Link Option
+ * - Google OAuth
  * - Als Gast fortfahren Option
+ * - Semi-transparenter Backdrop für Kontext
+ * - ESC-Taste zum Schließen
  *
- * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 4.1
+ * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
 import React, { useState, useEffect, CSSProperties } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 
@@ -28,18 +30,24 @@ interface LoginScreenProps {
   onBack?: () => void;
 }
 
+type LoginMode = 'password' | 'magic-link';
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onSuccess,
   onNavigateToRegister,
   onContinueAsGuest,
   onBack,
 }) => {
-  const { login, continueAsGuest } = useAuth();
+  const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword } = useAuth();
 
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginMode, setLoginMode] = useState<LoginMode>('password');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [resetPasswordSent, setResetPasswordSent] = useState(false);
 
   // ESC key to close
   useEffect(() => {
@@ -52,27 +60,58 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     return () => document.removeEventListener('keydown', handleEsc);
   }, [onBack]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
 
-    // Simulate async operation with setTimeout
-    setTimeout(() => {
-      const result = login(email);
+    try {
+      if (loginMode === 'magic-link') {
+        // Send magic link
+        const result = await sendMagicLink(email);
 
-      setIsLoading(false);
-
-      if (result.success) {
-        // Show success and callback
-        setShowSuccess(true);
-        setTimeout(() => {
-          onSuccess?.();
-        }, 500);
+        if (result.success) {
+          setMagicLinkSent(true);
+        } else {
+          setError(result.error ?? 'Magic Link konnte nicht gesendet werden');
+        }
       } else {
-        setError(result.error ?? 'Login fehlgeschlagen');
+        // Password login
+        const result = await login(email, password);
+
+        if (result.success) {
+          setShowSuccess(true);
+          setTimeout(() => {
+            onSuccess?.();
+          }, 500);
+        } else {
+          setError(result.error ?? 'Login fehlgeschlagen');
+        }
       }
-    }, 300);
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await loginWithGoogle();
+      if (!result.success) {
+        setError(result.error ?? 'Google Login fehlgeschlagen');
+        setIsLoading(false);
+      }
+      // On success, the page will redirect
+    } catch (err) {
+      console.error('Google login error:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten');
+      setIsLoading(false);
+    }
   };
 
   const handleGuestContinue = () => {
@@ -80,12 +119,84 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     onContinueAsGuest?.();
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Bitte gib zuerst deine E-Mail-Adresse ein.');
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await resetPassword(email);
+
+      if (result.success) {
+        setResetPasswordSent(true);
+      } else {
+        setError(result.error ?? 'Passwort-Reset konnte nicht gesendet werden');
+      }
+    } catch (err) {
+      console.error('Reset password error:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only close if clicking directly on backdrop, not on card
     if (e.target === e.currentTarget && onBack) {
       onBack();
     }
   };
+
+  // Reset Password Sent State
+  if (resetPasswordSent) {
+    return (
+      <div style={styles.backdrop} onClick={handleBackdropClick}>
+        <div style={styles.card}>
+          <div style={styles.successIcon}>✉</div>
+          <h2 style={styles.successTitle}>E-Mail gesendet!</h2>
+          <p style={styles.successText}>
+            Wir haben einen Link zum Zurücksetzen deines Passworts an <strong>{email}</strong> gesendet.
+            Klicke auf den Link in der E-Mail, um ein neues Passwort zu setzen.
+          </p>
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={() => setResetPasswordSent(false)}
+            style={{ marginTop: cssVars.spacing.lg }}
+          >
+            Zurück zum Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Magic Link Sent State
+  if (magicLinkSent) {
+    return (
+      <div style={styles.backdrop} onClick={handleBackdropClick}>
+        <div style={styles.card}>
+          <div style={styles.successIcon}>✉</div>
+          <h2 style={styles.successTitle}>Magic Link gesendet!</h2>
+          <p style={styles.successText}>
+            Wir haben einen Login-Link an <strong>{email}</strong> gesendet.
+            Klicke auf den Link in der E-Mail, um dich anzumelden.
+          </p>
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={() => setMagicLinkSent(false)}
+            style={{ marginTop: cssVars.spacing.lg }}
+          >
+            Andere E-Mail verwenden
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Success state
   if (showSuccess) {
@@ -129,7 +240,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <h1 id="login-title" style={styles.title}>Anmelden</h1>
         <p style={styles.subtitle}>
-          Gib deine E-Mail-Adresse ein, um dich anzumelden.
+          {loginMode === 'password'
+            ? 'Melde dich mit E-Mail und Passwort an.'
+            : 'Wir senden dir einen Magic Link per E-Mail.'}
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -151,8 +264,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               autoFocus
               required
             />
-            {error && <span style={styles.errorText}>{error}</span>}
           </div>
+
+          {loginMode === 'password' && (
+            <div style={styles.inputGroup}>
+              <label htmlFor="password" style={styles.label}>
+                Passwort
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{
+                  ...styles.input,
+                  ...(error ? styles.inputError : {}),
+                }}
+                autoComplete="current-password"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={isLoading}
+                style={styles.forgotPasswordLink}
+              >
+                Passwort vergessen?
+              </button>
+            </div>
+          )}
+
+          {error && <span style={styles.errorText}>{error}</span>}
 
           <Button
             type="submit"
@@ -161,9 +305,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             loading={isLoading}
             style={styles.button}
           >
-            Magic Link senden
+            {loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
           </Button>
         </form>
+
+        {/* Login mode toggle */}
+        <button
+          type="button"
+          onClick={() => setLoginMode(loginMode === 'password' ? 'magic-link' : 'password')}
+          style={styles.modeToggle}
+        >
+          {loginMode === 'password'
+            ? 'Stattdessen Magic Link verwenden'
+            : 'Mit Passwort anmelden'}
+        </button>
 
         <div style={styles.divider}>
           <span style={styles.dividerLine} />
@@ -171,10 +326,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <span style={styles.dividerLine} />
         </div>
 
+        {/* Google Login */}
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          style={styles.googleButton}
+        >
+          <span style={styles.googleIcon}>G</span>
+          Mit Google anmelden
+        </Button>
+
+        {/* Guest option */}
         <Button
           variant="ghost"
           fullWidth
           onClick={handleGuestContinue}
+          disabled={isLoading}
           style={styles.ghostButton}
         >
           Als Gast fortfahren
@@ -207,7 +376,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'center',
     alignItems: 'center',
     padding: cssVars.spacing.lg,
-    background: 'rgba(10, 22, 40, 0.85)', // Semi-transparent to show context
+    background: 'rgba(10, 22, 40, 0.85)',
     backdropFilter: 'blur(4px)',
     WebkitBackdropFilter: 'blur(4px)',
     zIndex: 1000,
@@ -229,7 +398,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: cssVars.spacing.md,
-    minHeight: '44px', // Touch target minimum
+    minHeight: '44px',
     gap: cssVars.spacing.sm,
     flexWrap: 'nowrap' as const,
   },
@@ -247,7 +416,7 @@ const styles: Record<string, CSSProperties> = {
     transition: 'color 0.2s, background 0.2s',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
-    minHeight: '44px', // Touch target
+    minHeight: '44px',
   },
   closeButton: {
     display: 'flex',
@@ -298,7 +467,7 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     height: '48px',
     padding: `0 ${cssVars.spacing.md}`,
-    fontSize: cssVars.fontSizes.lg, // 16px to prevent iOS zoom
+    fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,
@@ -310,12 +479,36 @@ const styles: Record<string, CSSProperties> = {
   inputError: {
     borderColor: cssVars.colors.error,
   },
+  forgotPasswordLink: {
+    alignSelf: 'flex-end',
+    marginTop: cssVars.spacing.xs,
+    padding: 0,
+    background: 'transparent',
+    border: 'none',
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.sm,
+    cursor: 'pointer',
+    textDecoration: 'underline',
+  },
   errorText: {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.error,
   },
   button: {
     minHeight: '56px',
+  },
+  modeToggle: {
+    display: 'block',
+    width: '100%',
+    marginTop: cssVars.spacing.sm,
+    padding: cssVars.spacing.sm,
+    background: 'transparent',
+    border: 'none',
+    color: cssVars.colors.textMuted,
+    fontSize: cssVars.fontSizes.sm,
+    cursor: 'pointer',
+    textAlign: 'center',
+    textDecoration: 'underline',
   },
   divider: {
     display: 'flex',
@@ -332,8 +525,21 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
   },
+  googleButton: {
+    minHeight: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: cssVars.spacing.sm,
+  },
+  googleIcon: {
+    fontWeight: cssVars.fontWeights.bold,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.primary,
+  },
   ghostButton: {
     minHeight: '48px',
+    marginTop: cssVars.spacing.sm,
   },
   footer: {
     marginTop: cssVars.spacing.lg,
@@ -377,6 +583,7 @@ const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.textSecondary,
     margin: 0,
     textAlign: 'center',
+    lineHeight: '1.5',
   },
 };
 

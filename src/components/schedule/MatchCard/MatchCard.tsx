@@ -45,6 +45,8 @@ export interface MatchCardProps {
   field?: number;
   /** Group label */
   group?: string;
+  /** Referee name */
+  referee?: string;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Home team */
@@ -83,6 +85,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   scheduledTime,
   field,
   group,
+  referee,
   showGroupLabel = true,
   homeTeam,
   awayTeam,
@@ -249,6 +252,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div style={metaStyle}>
           {field !== undefined && <span>Feld {field}</span>}
           {showGroupLabel && group && group !== 'all' && <span>• Gr. {group}</span>}
+          {referee && <span>• SR: {referee}</span>}
           {isLive && (
             <span style={liveBadgeStyle}>
               <span style={liveDotStyle} />

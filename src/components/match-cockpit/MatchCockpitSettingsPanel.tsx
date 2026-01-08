@@ -258,6 +258,20 @@ export function MatchCockpitSettingsPanel({
                 aria-valuemax={100}
                 aria-valuenow={settings.soundVolume}
               />
+              <button
+                type="button"
+                onClick={() => {
+                  if (settings.soundVolume > 0) {
+                    updateSetting('soundVolume', 0);
+                  } else {
+                    updateSetting('soundVolume', 50); // Restore to default/medium volume
+                  }
+                }}
+                style={styles.testButton}
+                title={settings.soundVolume > 0 ? "Stumm schalten" : "Ton einschalten"}
+              >
+                {settings.soundVolume > 0 ? '🔊' : '🔇'}
+              </button>
               {onTestSound && (
                 <button type="button" onClick={onTestSound} style={styles.testButton}>
                   Test

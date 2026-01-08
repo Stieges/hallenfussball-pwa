@@ -18,6 +18,7 @@ import {
   RegisterScreen,
   UserProfileScreen,
   InviteAcceptScreen,
+  AuthCallback,
 } from './features/auth/components';
 import { Footer } from './components/layout';
 
@@ -88,7 +89,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
 
 function AppContent() {
   const { showError } = useToast();
@@ -213,24 +214,31 @@ function AppContent() {
 
     if (displayMatch) {
       // Monitor Display route (for TVs/Beamer)
-      const tournamentId = displayMatch[1];
-      const monitorId = displayMatch[2];
-      setMonitorDisplayParams({ tournamentId, monitorId });
+      setMonitorDisplayParams({ tournamentId: displayMatch[1], monitorId: displayMatch[2] });
       setScreen('monitor-display');
     } else if (publicMatch) {
-      const tournamentId = publicMatch[1];
-      setPublicTournamentId(tournamentId);
+      setPublicTournamentId(publicMatch[1]);
       setScreen('public');
     } else if (inviteMatch) {
-      // Parse invite token from URL params
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       if (token) {
         setInviteToken(token);
         setScreen('invite');
       }
+    } else if (path === '/auth/callback') {
+      // Handle OAuth/Magic Link callback
+      setScreen('auth-callback');
+    } else if (path === '/settings') {
+      setScreen('settings');
+    } else if (path === '/profile') {
+      setScreen('profile');
+    } else if (path === '/register') {
+      setScreen('register');
+    } else if (path === '/login') {
+      setScreen('login');
     }
-  }, []);
+  }, [location.pathname]); // Depend on location.pathname to react to URL changes
 
   if (loading) {
     return (
@@ -438,6 +446,8 @@ function AppContent() {
           />
         )}
 
+        {screen === 'auth-callback' && <AuthCallback />}
+
         {screen === 'profile' && (
           <UserProfileScreen
             onBack={() => void navigate('/')}
@@ -447,7 +457,13 @@ function AppContent() {
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => void navigate('/')}
+            onBack={() => {
+              setScreen('profile');
+              // Optionally update URL if needed, but 'profile' screen logic handles its own state
+              // But wait, profile screen is also just a 'screen' state. 
+              // Let's also navigate to /profile if that's the desired URL behavior
+              void navigate('/profile');
+            }}
             onNavigateToImpressum={() => setScreen('impressum')}
             onNavigateToDatenschutz={() => setScreen('datenschutz')}
           />

@@ -165,13 +165,36 @@ export function MatchOverridePanel({
               onReset={() => resetOverride('soundVolume')}
             >
               <div style={styles.volumeControl}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentVol = overrides.soundVolume ?? defaults.soundVolume;
+                    if (currentVol === 0) {
+                      // Unmute: Restore to default or 50 if default is 0
+                      updateOverride('soundVolume', defaults.soundVolume || 50);
+                    } else {
+                      // Mute: Set to 0
+                      updateOverride('soundVolume', 0);
+                    }
+                  }}
+                  style={{
+                    ...styles.muteButton,
+                    opacity: (overrides.soundVolume ?? defaults.soundVolume) === 0 ? 0.5 : 1
+                  }}
+                  title={(overrides.soundVolume ?? defaults.soundVolume) === 0 ? "Unmute" : "Mute"}
+                >
+                  {(overrides.soundVolume ?? defaults.soundVolume) === 0 ? '🔇' : '🔊'}
+                </button>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   value={overrides.soundVolume ?? defaults.soundVolume}
                   onChange={(e) => updateOverride('soundVolume', Number(e.target.value))}
-                  style={styles.volumeSlider}
+                  style={{
+                    ...styles.volumeSlider,
+                    opacity: (overrides.soundVolume ?? defaults.soundVolume) === 0 ? 0.5 : 1
+                  }}
                 />
                 <span style={styles.volumeValue}>
                   {overrides.soundVolume ?? defaults.soundVolume}%
@@ -424,6 +447,16 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textSecondary,
     textAlign: 'right',
+  },
+  muteButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    fontSize: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 };
 

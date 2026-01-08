@@ -271,11 +271,8 @@ export function TournamentProvider({
       if (onSave) {
         await onSave(state.tournament)
       } else {
-        // Default: Save to localStorage
-        localStorage.setItem(
-          `tournament_${state.tournament.id}`,
-          JSON.stringify(state.tournament)
-        )
+        // No onSave callback provided - this is a configuration error
+        throw new Error('TournamentProvider: onSave callback is required for persistence')
       }
       dispatch({ type: 'MARK_SAVED' })
     } catch (error) {

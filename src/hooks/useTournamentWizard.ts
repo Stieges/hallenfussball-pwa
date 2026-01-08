@@ -11,11 +11,7 @@ import { Tournament, TournamentType, PlacementCriterion } from '../types/tournam
 import { countMatchesWithResults } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
-
-// Singleton instance of the service (could be moved to context/DI container)
-const repository = new LocalStorageRepository();
-const creationService = new TournamentCreationService(repository);
+import { useRepository } from './useRepository';
 
 export interface WizardState {
   step: number;
@@ -102,6 +98,15 @@ export interface UseTournamentWizardReturn {
 export function useTournamentWizard(
   existingTournament?: Tournament
 ): UseTournamentWizardReturn {
+  // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
+  const repository = useRepository();
+
+  // Create service with the repository (recreates if repository changes)
+  const creationService = useMemo(
+    () => new TournamentCreationService(repository),
+    [repository]
+  );
+
   // Initial step from existing tournament (draft restoration)
   const initialStep = existingTournament?.lastVisitedStep ?? 1;
 

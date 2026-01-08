@@ -6,6 +6,7 @@ import { CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { TeamAvatar } from '../ui/TeamAvatar';
 
 interface ParticipantsAndGroupsProps {
   teams: Array<{ id: string; name: string; group?: string }>;
@@ -49,8 +50,10 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   const groupsGridStyle: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: cssVars.spacing.md,
+    // Allow groups to sit side-by-side again to save vertical space
+    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gap: cssVars.spacing.lg,
+    alignItems: 'start',
   };
 
   const groupBoxStyle: CSSProperties = {
@@ -65,19 +68,44 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.primary,
     marginBottom: '12px',
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    paddingBottom: '8px',
   };
 
   const teamListStyle: CSSProperties = {
     listStyle: 'none',
     padding: 0,
     margin: 0,
+    display: 'grid',
+    // Internal grid: Allow 2 columns even in narrower group boxes (min 140px is safe for avatar + name)
+    gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+    gap: '8px 16px',
   };
 
   const teamItemStyle: CSSProperties = {
-    padding: '6px 0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    padding: '6px 8px',
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    minHeight: '40px',
+  };
+
+  const numberStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+    width: '24px',
+    textAlign: 'center',
+    flexShrink: 0,
+    fontWeight: 500,
+  };
+
+  const nameStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textPrimary,
-    borderBottom: `1px solid ${cssVars.colors.border}`,
+    fontWeight: cssVars.fontWeights.bold,
+    // Allow text to wrap so long names are not cut off
+    lineHeight: 1.3,
   };
 
   // Special case: Only 1 group - hide group title
@@ -88,12 +116,20 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
       <h2 style={titleStyle}>Teilnehmer</h2>
       <div style={groupsGridStyle}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
-          <div key={group} style={groupBoxStyle}>
+          <div key={group || 'default'} style={groupBoxStyle}>
             {showGroupTitles && <h3 style={groupTitleStyle}>{getGroupDisplayName(group, tournament)}</h3>}
             <ul style={teamListStyle}>
               {groupTeams.map((standing) => (
                 <li key={standing.team.id} style={teamItemStyle}>
-                  {teamNumberMap.get(standing.team.id)}. {standing.team.name}
+                  <div style={numberStyle}>
+                    {teamNumberMap.get(standing.team.id)}.
+                  </div>
+                  <TeamAvatar
+                    team={standing.team}
+                    size="sm" // Small avatar (32px)
+                    showColorRing={false}
+                  />
+                  <span style={nameStyle}>{standing.team.name}</span>
                 </li>
               ))}
             </ul>
@@ -112,6 +148,14 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
           .participants-and-groups {
             break-inside: avoid;
           }
+          /* Reset grid for print to ensure list format if needed, or keep grid if it fits */
+          .participants-and-groups ul {
+             display: block !important;
+          }
+          .participants-and-groups li {
+             break-inside: avoid;
+             border-bottom: 1px solid #ccc;
+          }
         }
       `}</style>
     </div>
@@ -123,6 +167,15 @@ function getGroupStandings(
   teams: Array<{ id: string; name: string; group?: string }>
 ): Array<{ group: string; groupStandings: Standing[] }> {
   const groups = new Set(teams.map(t => t.group).filter(Boolean)) as Set<string>;
+
+  // If no groups defined but we have teams, handle as single group (or handle empty strings)
+  if (groups.size === 0 && teams.length > 0) {
+    // Fallback for no groups
+    return [{
+      group: '',
+      groupStandings: allStandings.sort((a, b) => a.team.name.localeCompare(b.team.name))
+    }];
+  }
 
   return Array.from(groups)
     .sort()

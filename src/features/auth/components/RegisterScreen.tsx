@@ -1,22 +1,24 @@
 /**
- * RegisterScreen - Registrierung mit Name + E-Mail
+ * RegisterScreen - Registrierung mit Name, E-Mail und Passwort
  *
- * Phase 1: Lokale Simulation
+ * Phase 2: Supabase Auth Integration
  *
  * Features:
- * - Semi-transparenter Backdrop für Kontext
- * - Zurück-Button und X-Button
+ * - Name, E-Mail und Passwort Registrierung
+ * - Passwort-Bestätigung
+ * - Google OAuth Option
+ * - Gast-zu-User Migration
+ * - Semi-transparenter Backdrop
  * - ESC-Taste zum Schließen
  *
- * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 4.2
+ * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
 import React, { useState, useEffect, CSSProperties } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
-import { isValidName } from '../services/authService';
 
 interface RegisterScreenProps {
   /** Called when registration is successful */
@@ -32,15 +34,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onNavigateToLogin,
   onBack,
 }) => {
-  const { register } = useAuth();
+  const { register, loginWithGoogle, isGuest } = useAuth();
   const { showMigrationSuccess } = useToast();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    general?: string;
+  }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
 
   // ESC key to close
   useEffect(() => {
@@ -54,24 +64,40 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   }, [onBack]);
 
   const validateForm = (): boolean => {
-    const newErrors: { name?: string; email?: string } = {};
+    const newErrors: typeof errors = {};
 
-    const nameValidation = isValidName(name);
-    if (!nameValidation.valid) {
-      newErrors.name = nameValidation.error;
+    // Name validation
+    const trimmedName = name.trim();
+    if (trimmedName.length < 2) {
+      newErrors.name = 'Name muss mindestens 2 Zeichen haben.';
+    } else if (trimmedName.length > 100) {
+      newErrors.name = 'Name darf maximal 100 Zeichen haben.';
     }
 
+    // Email validation
     if (!email.trim()) {
       newErrors.email = 'E-Mail ist erforderlich';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       newErrors.email = 'Bitte gib eine gültige E-Mail-Adresse ein';
     }
 
+    // Password validation
+    if (!password) {
+      newErrors.password = 'Passwort ist erforderlich';
+    } else if (password.length < 6) {
+      newErrors.password = 'Passwort muss mindestens 6 Zeichen haben';
+    }
+
+    // Confirm password validation
+    if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
@@ -79,12 +105,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     }
 
     setIsLoading(true);
+    setErrors({});
 
-    // Simulate async operation with setTimeout
-    setTimeout(() => {
-      const result = register(name, email, rememberMe);
-
-      setIsLoading(false);
+    try {
+      const result = await register(name, email, password);
 
       if (result.success) {
         // Show migration toast if guest was converted
@@ -92,23 +116,74 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           showMigrationSuccess();
         }
 
-        setShowSuccess(true);
-        // Give user time to see success screen and migration toast (if shown)
-        setTimeout(() => {
-          onSuccess?.();
-        }, 2000);
+        // Check if email confirmation is required
+        // Supabase may require email verification
+        if (!result.session) {
+          setShowEmailConfirmation(true);
+        } else {
+          setShowSuccess(true);
+          setTimeout(() => {
+            onSuccess?.();
+          }, 2000);
+        }
       } else {
-        setErrors({ email: result.error });
+        setErrors({ general: result.error });
       }
-    }, 300);
+    } catch (err) {
+      console.error('Register error:', err);
+      setErrors({ general: 'Ein unerwarteter Fehler ist aufgetreten.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setErrors({});
+    setIsLoading(true);
+
+    try {
+      const result = await loginWithGoogle();
+      if (!result.success) {
+        setErrors({ general: result.error ?? 'Google Login fehlgeschlagen' });
+        setIsLoading(false);
+      }
+      // On success, the page will redirect
+    } catch (err) {
+      console.error('Google login error:', err);
+      setErrors({ general: 'Ein unerwarteter Fehler ist aufgetreten' });
+      setIsLoading(false);
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only close if clicking directly on backdrop, not on card
     if (e.target === e.currentTarget && onBack) {
       onBack();
     }
   };
+
+  // Email confirmation state
+  if (showEmailConfirmation) {
+    return (
+      <div style={styles.backdrop} onClick={handleBackdropClick}>
+        <div style={styles.card}>
+          <div style={styles.successIcon}>✉</div>
+          <h2 style={styles.successTitle}>Bestätige deine E-Mail</h2>
+          <p style={styles.successText}>
+            Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
+            Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.
+          </p>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={onNavigateToLogin}
+            style={{ marginTop: cssVars.spacing.lg }}
+          >
+            Zum Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Success state
   if (showSuccess) {
@@ -118,6 +193,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Willkommen!</h2>
           <p style={styles.successText}>Dein Konto wurde erstellt.</p>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={() => onSuccess?.()}
+            style={{ marginTop: cssVars.spacing.lg }}
+          >
+            Weiter
+          </Button>
         </div>
       </div>
     );
@@ -150,9 +233,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           )}
         </div>
 
-        <h1 id="register-title" style={styles.title}>Registrieren</h1>
+        <h1 id="register-title" style={styles.title}>
+          {isGuest ? 'Konto erstellen' : 'Registrieren'}
+        </h1>
         <p style={styles.subtitle}>
-          Erstelle ein Konto, um Turniere zu verwalten und zu synchronisieren.
+          {isGuest
+            ? 'Erstelle ein Konto, um deine Turniere zu synchronisieren.'
+            : 'Erstelle ein Konto, um Turniere zu verwalten.'}
         </p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -195,15 +282,50 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             {errors.email && <span style={styles.errorText}>{errors.email}</span>}
           </div>
 
-          <label style={styles.checkboxLabel}>
+          <div style={styles.inputGroup}>
+            <label htmlFor="password" style={styles.label}>
+              Passwort
+            </label>
             <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              style={styles.checkbox}
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mindestens 6 Zeichen"
+              style={{
+                ...styles.input,
+                ...(errors.password ? styles.inputError : {}),
+              }}
+              autoComplete="new-password"
+              minLength={6}
             />
-            <span>Angemeldet bleiben (30 Tage)</span>
-          </label>
+            {errors.password && <span style={styles.errorText}>{errors.password}</span>}
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label htmlFor="confirmPassword" style={styles.label}>
+              Passwort bestätigen
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Passwort wiederholen"
+              style={{
+                ...styles.input,
+                ...(errors.confirmPassword ? styles.inputError : {}),
+              }}
+              autoComplete="new-password"
+            />
+            {errors.confirmPassword && (
+              <span style={styles.errorText}>{errors.confirmPassword}</span>
+            )}
+          </div>
+
+          {errors.general && (
+            <div style={styles.generalError}>{errors.general}</div>
+          )}
 
           <Button
             type="submit"
@@ -215,6 +337,24 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             Konto erstellen
           </Button>
         </form>
+
+        <div style={styles.divider}>
+          <span style={styles.dividerLine} />
+          <span style={styles.dividerText}>oder</span>
+          <span style={styles.dividerLine} />
+        </div>
+
+        {/* Google Signup */}
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          style={styles.googleButton}
+        >
+          <span style={styles.googleIcon}>G</span>
+          Mit Google registrieren
+        </Button>
 
         <p style={styles.footer}>
           Bereits registriert?{' '}
@@ -248,7 +388,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'center',
     alignItems: 'center',
     padding: cssVars.spacing.lg,
-    background: 'rgba(10, 22, 40, 0.85)', // Semi-transparent to show context
+    background: 'rgba(10, 22, 40, 0.85)',
     backdropFilter: 'blur(4px)',
     WebkitBackdropFilter: 'blur(4px)',
     zIndex: 1000,
@@ -334,7 +474,7 @@ const styles: Record<string, CSSProperties> = {
     width: '100%',
     height: '48px',
     padding: `0 ${cssVars.spacing.md}`,
-    fontSize: cssVars.fontSizes.lg, // 16px to prevent iOS zoom
+    fontSize: cssVars.fontSizes.lg,
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,
@@ -350,22 +490,45 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.error,
   },
-  checkboxLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
+  generalError: {
+    padding: cssVars.spacing.md,
+    background: 'rgba(239, 68, 68, 0.1)',
+    border: `1px solid ${cssVars.colors.error}`,
+    borderRadius: cssVars.borderRadius.md,
+    color: cssVars.colors.error,
     fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    cursor: 'pointer',
-  },
-  checkbox: {
-    width: '20px',
-    height: '20px',
-    accentColor: cssVars.colors.primary,
+    textAlign: 'center',
   },
   button: {
     minHeight: '56px',
     marginTop: cssVars.spacing.sm,
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.md,
+    margin: `${cssVars.spacing.lg} 0`,
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    background: cssVars.colors.border,
+  },
+  dividerText: {
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+  },
+  googleButton: {
+    minHeight: '48px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: cssVars.spacing.sm,
+  },
+  googleIcon: {
+    fontWeight: cssVars.fontWeights.bold,
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.primary,
   },
   footer: {
     marginTop: cssVars.spacing.lg,
@@ -416,6 +579,7 @@ const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.textSecondary,
     margin: 0,
     textAlign: 'center',
+    lineHeight: '1.5',
   },
 };
 

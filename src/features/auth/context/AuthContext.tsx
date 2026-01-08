@@ -1,24 +1,26 @@
 /**
  * AuthContext - React Context für Auth-State
  *
- * Bietet globalen Auth-State für die gesamte App.
+ * Phase 2: Supabase Auth Integration
+ *
+ * Features:
+ * - Email/Password Login
+ * - Magic Link (passwordless)
+ * - Google OAuth
+ * - Guest Mode (local only)
+ * - Profile Management via profiles table
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
+ * @see docs/concepts/SUPABASE-SCHEMA-KONZEPT.md
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import type { User } from '../types/auth.types';
-import {
-  register as authRegister,
-  login as authLogin,
-  logout as authLogout,
-  getCurrentUser,
-  createGuestUser,
-  convertGuestToUser,
-} from '../services/authService';
-import { getSession, refreshSessionActivity } from '../services/sessionService';
+import { supabase } from '../../../lib/supabase';
+import type { User as SupabaseUser, Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
+import type { User, Session, LoginResult, RegisterResult } from '../types/auth.types';
 import type { AuthContextValue } from './authContextValue';
 import { AuthContext } from './authContextInstance';
+import { generateUUID } from '../utils/tokenGenerator';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -28,112 +30,494 @@ interface AuthProviderProps {
 }
 
 /**
- * AuthProvider - Wrapper für Auth-State
+ * Maps Supabase User to our User type
+ */
+function mapSupabaseUser(
+  supabaseUser: SupabaseUser | null,
+  profileData?: { name: string; avatar_url: string | null; role: string } | null
+): User | null {
+  if (!supabaseUser) return null;
+
+  return {
+    id: supabaseUser.id,
+    email: supabaseUser.email ?? '',
+    name: profileData?.name ?? supabaseUser.user_metadata?.full_name ?? supabaseUser.email?.split('@')[0] ?? 'User',
+    avatarUrl: profileData?.avatar_url ?? supabaseUser.user_metadata?.avatar_url,
+    globalRole: (profileData?.role as 'user' | 'admin') ?? 'user',
+    createdAt: supabaseUser.created_at,
+    updatedAt: supabaseUser.updated_at ?? supabaseUser.created_at,
+    lastLoginAt: supabaseUser.last_sign_in_at,
+  };
+}
+
+/**
+ * Maps Supabase Session to our Session type
+ */
+function mapSupabaseSession(supabaseSession: SupabaseSession | null): Session | null {
+  if (!supabaseSession) return null;
+
+  return {
+    id: supabaseSession.access_token.substring(0, 36), // Use first part as ID
+    userId: supabaseSession.user.id,
+    token: supabaseSession.access_token,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(supabaseSession.expires_at! * 1000).toISOString(),
+    lastActivityAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Creates a local guest user (not stored in Supabase)
+ */
+function createLocalGuestUser(): User {
+  const now = new Date().toISOString();
+  return {
+    id: generateUUID(),
+    email: '',
+    name: 'Gast',
+    globalRole: 'guest',
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+/**
+ * AuthProvider - Wrapper für Auth-State mit Supabase
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
-  // Initialer Auth-Check
+  /**
+   * Fetches profile data from profiles table
+   */
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.warn('Profile fetch error (may not exist yet):', error.message);
+        return null;
+      }
+
+      // Map to expected format
+      return data ? {
+        name: data.display_name ?? '',
+        avatar_url: data.avatar_url,
+        role: 'user' as const, // Default role since it's not stored in profiles
+      } : null;
+    } catch (err) {
+      console.error('Profile fetch failed:', err);
+      return null;
+    }
+  }, []);
+
+  /**
+   * Updates auth state from Supabase session
+   */
+  const updateAuthState = useCallback(async (supabaseSession: SupabaseSession | null) => {
+    if (!supabaseSession?.user) {
+      // Check if we have a guest user stored
+      const storedGuest = localStorage.getItem('auth:guestUser');
+      if (storedGuest) {
+        try {
+          const guestUser = JSON.parse(storedGuest) as User;
+          if (guestUser.globalRole === 'guest') {
+            setUser(guestUser);
+            setIsGuest(true);
+            setSession(null);
+            setIsLoading(false);
+            return;
+          }
+        } catch {
+          localStorage.removeItem('auth:guestUser');
+        }
+      }
+
+      setUser(null);
+      setSession(null);
+      setIsGuest(false);
+      setIsLoading(false);
+      return;
+    }
+
+    // Fetch profile data
+    const profileData = await fetchProfile(supabaseSession.user.id);
+
+    // Map to our types
+    const mappedUser = mapSupabaseUser(supabaseSession.user, profileData);
+    const mappedSession = mapSupabaseSession(supabaseSession);
+
+    setUser(mappedUser);
+    setSession(mappedSession);
+    setIsGuest(false);
+    setIsLoading(false);
+  }, [fetchProfile]);
+
+  // Initial auth check and subscription
   useEffect(() => {
-    const initAuth = () => {
+    let mounted = true;
+
+    const initAuth = async () => {
       try {
-        const currentUser = getCurrentUser();
-        setUser(currentUser);
+        // Get current session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+        if (mounted) {
+          await updateAuthState(currentSession);
+        }
       } catch (error) {
         console.error('Auth init error:', error);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setUser(null);
+          setSession(null);
+          setIsLoading(false);
+        }
       }
     };
 
     initAuth();
-  }, []);
 
-  // Session-Aktivität bei User-Interaktion aktualisieren
-  useEffect(() => {
-    if (!user || user.globalRole === 'guest') {
-      return;
-    }
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+        console.log('Auth state change:', event);
 
-    const handleActivity = () => {
-      refreshSessionActivity();
-    };
+        if (mounted) {
+          // Clear guest state on real login
+          if (event === 'SIGNED_IN' && newSession) {
+            localStorage.removeItem('auth:guestUser');
+            setIsGuest(false);
+          }
 
-    // Aktivität bei Klicks und Tastatureingaben tracken
-    window.addEventListener('click', handleActivity, { passive: true });
-    window.addEventListener('keydown', handleActivity, { passive: true });
+          await updateAuthState(newSession);
+        }
+      }
+    );
 
     return () => {
-      window.removeEventListener('click', handleActivity);
-      window.removeEventListener('keydown', handleActivity);
+      mounted = false;
+      subscription.unsubscribe();
     };
-  }, [user]);
+  }, [updateAuthState]);
 
-  // Abgeleitete States
+  // Derived state
   const isAuthenticated = useMemo(() => {
     return user !== null && user.globalRole !== 'guest';
   }, [user]);
 
-  const isGuest = useMemo(() => {
-    return user?.globalRole === 'guest';
-  }, [user]);
+  // ============================================
+  // AUTH ACTIONS
+  // ============================================
 
-  const session = useMemo(() => {
-    return getSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  /**
+   * Register with email and password
+   */
+  const register = useCallback(async (
+    name: string,
+    email: string,
+    password: string
+  ): Promise<RegisterResult> => {
+    try {
+      // Check if current user is a guest (for migration)
+      const wasGuest = isGuest && user?.globalRole === 'guest';
+      // Note: guestId could be used later for migrating local data to the new user account
+      // const guestId = wasGuest ? user.id : undefined;
 
-  // Actions
-  const register = useCallback(
-    (name: string, email: string, rememberMe: boolean = false) => {
-      // If current user is a guest, migrate instead of fresh register
-      const currentUser = getCurrentUser();
-      const isCurrentGuest = currentUser?.globalRole === 'guest';
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: name.trim(),
+          },
+        },
+      });
 
-      const result = isCurrentGuest
-        ? convertGuestToUser(currentUser.id, name, email, rememberMe)
-        : authRegister(name, email, rememberMe);
-
-      if (result.success && result.user) {
-        setUser(result.user);
+      if (error) {
+        return {
+          success: false,
+          error: error.message === 'User already registered'
+            ? 'Diese E-Mail ist bereits registriert.'
+            : error.message,
+        };
       }
 
-      return result;
-    },
-    []
-  );
-
-  const login = useCallback(
-    (email: string, rememberMe: boolean = false) => {
-      const result = authLogin(email, rememberMe);
-
-      if (result.success && result.user) {
-        setUser(result.user);
+      if (!data.user) {
+        return {
+          success: false,
+          error: 'Registrierung fehlgeschlagen.',
+        };
       }
 
-      return result;
-    },
-    []
-  );
+      // Update profile with display_name
+      await supabase
+        .from('profiles')
+        .update({ display_name: name.trim() })
+        .eq('id', data.user.id);
 
-  const logout = useCallback(() => {
-    authLogout();
-    setUser(null);
+      // Clear guest data
+      if (wasGuest) {
+        localStorage.removeItem('auth:guestUser');
+      }
+
+      // Get profile data
+      const profileData = await fetchProfile(data.user.id);
+      const mappedUser = mapSupabaseUser(data.user, profileData);
+
+      return {
+        success: true,
+        user: mappedUser ?? undefined,
+        session: data.session ? mapSupabaseSession(data.session) ?? undefined : undefined,
+        wasMigrated: wasGuest,
+      };
+    } catch (err) {
+      console.error('Register error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
+  }, [isGuest, user, fetchProfile]);
+
+  /**
+   * Login with email and password
+   */
+  const login = useCallback(async (
+    email: string,
+    password: string
+  ): Promise<LoginResult> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message === 'Invalid login credentials'
+            ? 'E-Mail oder Passwort ist falsch.'
+            : error.message,
+        };
+      }
+
+      if (!data.user) {
+        return {
+          success: false,
+          error: 'Login fehlgeschlagen.',
+        };
+      }
+
+      // Clear guest data
+      localStorage.removeItem('auth:guestUser');
+
+      const profileData = await fetchProfile(data.user.id);
+      const mappedUser = mapSupabaseUser(data.user, profileData);
+
+      return {
+        success: true,
+        user: mappedUser ?? undefined,
+        session: data.session ? mapSupabaseSession(data.session) ?? undefined : undefined,
+      };
+    } catch (err) {
+      console.error('Login error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
+  }, [fetchProfile]);
+
+  /**
+   * Send magic link email
+   */
+  const sendMagicLink = useCallback(async (
+    email: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('Magic link error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
   }, []);
 
+  /**
+   * Login with Google OAuth
+   */
+  const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      // OAuth redirects, so success means redirect initiated
+      return { success: true };
+    } catch (err) {
+      console.error('Google login error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
+  }, []);
+
+  /**
+   * Logout
+   */
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('auth:guestUser');
+      setUser(null);
+      setSession(null);
+      setIsGuest(false);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  }, []);
+
+  /**
+   * Continue as guest (local only, no Supabase)
+   */
   const continueAsGuest = useCallback((): User => {
-    const guestUser = createGuestUser();
+    const guestUser = createLocalGuestUser();
+    localStorage.setItem('auth:guestUser', JSON.stringify(guestUser));
     setUser(guestUser);
+    setSession(null);
+    setIsGuest(true);
     return guestUser;
   }, []);
 
-  const refreshAuth = useCallback(() => {
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
+  /**
+   * Refresh auth state
+   */
+  const refreshAuth = useCallback(async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      await updateAuthState(currentSession);
+    } catch (err) {
+      console.error('Refresh auth error:', err);
+      setIsLoading(false);
+    }
+  }, [updateAuthState]);
+
+  /**
+   * Send password reset email
+   */
+  const resetPassword = useCallback(async (
+    email: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }
+      );
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message,
+        };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('Reset password error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
   }, []);
 
+  /**
+   * Update user profile
+   */
+  const updateProfile = useCallback(async (
+    updates: { name?: string; avatarUrl?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!user || isGuest) {
+      return { success: false, error: 'Nicht angemeldet.' };
+    }
+
+    try {
+      const profileUpdates: Record<string, unknown> = {};
+
+      if (updates.name !== undefined) {
+        const trimmedName = updates.name.trim();
+        if (trimmedName.length < 2 || trimmedName.length > 100) {
+          return { success: false, error: 'Name muss 2-100 Zeichen haben.' };
+        }
+        profileUpdates.display_name = trimmedName;
+      }
+
+      if (updates.avatarUrl !== undefined) {
+        profileUpdates.avatar_url = updates.avatarUrl;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileUpdates as { display_name?: string; avatar_url?: string })
+        .eq('id', user.id);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Update local state
+      setUser(prev => prev ? {
+        ...prev,
+        name: updates.name?.trim() ?? prev.name,
+        avatarUrl: updates.avatarUrl ?? prev.avatarUrl,
+        updatedAt: new Date().toISOString(),
+      } : null);
+
+      return { success: true };
+    } catch (err) {
+      console.error('Update profile error:', err);
+      return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
+    }
+  }, [user, isGuest]);
+
+  // Context value
   const value: AuthContextValue = {
     user,
     session,
@@ -142,9 +526,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isLoading,
     register,
     login,
+    sendMagicLink,
+    loginWithGoogle,
     logout,
     continueAsGuest,
     refreshAuth,
+    updateProfile,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
