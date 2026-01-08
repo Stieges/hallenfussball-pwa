@@ -40,10 +40,6 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new Error(`Failed to fetch tournament: ${tournamentError.message}`);
     }
 
-    if (!tournamentRow) {
-      return null;
-    }
-
     // Fetch teams
     const { data: teamRows, error: teamsError } = await supabase
       .from('teams')
@@ -71,8 +67,8 @@ export class SupabaseRepository implements ITournamentRepository {
     // Convert to frontend types
     return mapTournamentFromSupabase(
       tournamentRow,
-      teamRows || [],
-      matchRows || []
+      teamRows ?? [],
+      matchRows ?? []
     );
   }
 
@@ -119,7 +115,7 @@ export class SupabaseRepository implements ITournamentRepository {
       .select('id')
       .eq('tournament_id', tournament.id);
 
-    const existingTeamIds = new Set(existingTeams?.map((t) => t.id) || []);
+    const existingTeamIds = new Set(existingTeams?.map((t) => t.id) ?? []);
     const newTeamIds = new Set(teamRows.map((t) => t.id));
 
     // Delete teams that are no longer in the tournament
@@ -156,7 +152,7 @@ export class SupabaseRepository implements ITournamentRepository {
       .select('id')
       .eq('tournament_id', tournament.id);
 
-    const existingMatchIds = new Set(existingMatches?.map((m) => m.id) || []);
+    const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
     const newMatchIds = new Set(matchRows.map((m) => m.id));
 
     // Delete matches that are no longer in the tournament
@@ -203,7 +199,9 @@ export class SupabaseRepository implements ITournamentRepository {
     tournamentId: string,
     updates: MatchUpdate[]
   ): Promise<void> {
-    if (updates.length === 0) return;
+    if (updates.length === 0) {
+      return;
+    }
 
     // Get team name to ID mapping for this tournament
     const { data: teams } = await supabase
@@ -295,7 +293,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // For listing, we don't need full team/match data
     // Return minimal tournament objects
-    return (tournamentRows || []).map((row) =>
+    return (tournamentRows ?? []).map((row) =>
       mapTournamentFromSupabase(row, [], [])
     );
   }

@@ -179,7 +179,7 @@ export function useTournamentWizard(
   // Validate step using Service
   const validateStep = useCallback((stepNumber: number): string[] => {
     return creationService.validateStep(stepNumber, formData);
-  }, [formData]);
+  }, [creationService, formData]);
 
   // Can go to next step
   const canGoNext = useCallback((): boolean => {
@@ -187,7 +187,7 @@ export function useTournamentWizard(
     // Service validation returns array of strings. Empty = valid.
     const errors = creationService.validateStep(step, formData);
     return errors.length === 0;
-  }, [step, formData]);
+  }, [creationService, step, formData]);
 
   // Can navigate to step
   const canNavigateToStep = useCallback((targetStep: number): boolean => {
@@ -358,7 +358,7 @@ export function useTournamentWizard(
       ...formData,
       lastVisitedStep: step,
     }, existingTournament?.id);
-  }, [formData, existingTournament, step]);
+  }, [creationService, formData, existingTournament, step]);
 
   // Save draft
   const saveDraft = useCallback(async (): Promise<Tournament> => {
@@ -369,7 +369,7 @@ export function useTournamentWizard(
     setFormData(saved);
     lastSavedDataRef.current = JSON.stringify(saved);
     return saved;
-  }, [formData, step]);
+  }, [creationService, formData, step]);
 
   // Publish tournament
   const publishTournament = useCallback(async (): Promise<Tournament> => {
@@ -380,7 +380,7 @@ export function useTournamentWizard(
     setFormData(published);
     lastSavedDataRef.current = JSON.stringify(published);
     return published;
-  }, [formData, step]);
+  }, [creationService, formData, step]);
 
   return {
     // State

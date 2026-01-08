@@ -166,6 +166,13 @@ export function ExportsCategory({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Export Settings
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json'>('csv');
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([
+    'GOAL', 'YELLOW_CARD', 'RED_CARD', 'TIME_PENALTY', 'SUBSTITUTION'
+  ]);
+
   // Generate schedule and standings for PDF export
   const schedule = useMemo(() => {
     return generateFullSchedule(tournament);
@@ -324,8 +331,77 @@ export function ExportsCategory({
       {/* Game Events Export */}
       <CollapsibleSection icon="📋" title="Spielereignisse exportieren">
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Exportiert alle Ereignisse (Tore, Karten, Strafen) aller Spiele als CSV-Datei.
+          Exportiert Ereignisse (Tore, Karten, Strafen) als CSV oder JSON-Datei.
         </p>
+
+        <div style={styles.optionGroup}>
+          <label style={styles.label}>Format</label>
+          <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
+            <label style={styles.checkbox}>
+              <input
+                type="radio"
+                name="exportFormat"
+                checked={exportFormat === 'csv'}
+                onChange={() => setExportFormat('csv')}
+              />
+              CSV (Excel)
+            </label>
+            <label style={styles.checkbox}>
+              <input
+                type="radio"
+                name="exportFormat"
+                checked={exportFormat === 'json'}
+                onChange={() => setExportFormat('json')}
+              />
+              JSON (Daten)
+            </label>
+          </div>
+        </div>
+
+        <div style={styles.optionGroup}>
+          <label style={styles.label}>Team Filter</label>
+          <select
+            style={styles.select}
+            value={selectedTeamId || ''}
+            onChange={(e) => setSelectedTeamId(e.target.value || null)}
+          >
+            <option value="">Alle Teams</option>
+            {tournament.teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={styles.optionGroup}>
+          <label style={styles.label}>Ereignisse</label>
+          <div style={styles.checkboxGroup}>
+            {[
+              { id: 'GOAL', label: 'Tore' },
+              { id: 'YELLOW_CARD', label: 'Gelbe Karten' },
+              { id: 'RED_CARD', label: 'Rote Karten' },
+              { id: 'TIME_PENALTY', label: 'Zeitstrafen' },
+              { id: 'SUBSTITUTION', label: 'Wechsel' },
+            ].map((type) => (
+              <label key={type.id} style={styles.checkbox}>
+                <input
+                  type="checkbox"
+                  checked={selectedEventTypes.includes(type.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedEventTypes([...selectedEventTypes, type.id]);
+                    } else {
+                      setSelectedEventTypes(selectedEventTypes.filter((t) => t !== type.id));
+                    }
+                  }}
+                />
+                {type.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
         <button
           style={{
             ...styles.button,
@@ -334,72 +410,110 @@ export function ExportsCategory({
           onClick={() => {
             try {
               setIsExporting(true);
-              const headers = ['Match ID', 'Runde', 'Heimmannschaft', 'Gastmannschaft', 'Spielminute', 'Ereignis', 'Team', 'Spieler', 'Details'];
-              const rows: string[] = [];
 
               // Helper to get team name
               const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
 
-              tournament.matches.forEach(match => {
+              // Filter Matches Logic
+              const matchesToExport = tournament.matches.filter(m => {
+                if (!selectedTeamId) return true;
+                return m.teamA === selectedTeamId || m.teamB === selectedTeamId;
+              });
+
+              // Collect Data
+              const exportData: any[] = [];
+              const csvRows: string[] = [];
+
+              matchesToExport.forEach(match => {
                 const homeTeamName = getTeamName(match.teamA);
                 const guestTeamName = getTeamName(match.teamB);
 
-                // Sort events by timestamp
-                const sortedEvents = [...(match.events || [])].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
+                // Filter Events Logic
+                const relevantEvents = (match.events || []).filter(e => selectedEventTypes.includes(e.type));
+                const sortedEvents = [...relevantEvents].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
 
                 sortedEvents.forEach(event => {
                   let details = '';
-                  let eventType = event.type as string; // Cast to string for generic usage
+                  let eventTypeLabel = event.type as string;
                   let player = event.payload?.playerNumber ? `#${event.payload.playerNumber}` : '';
                   const teamName = getTeamName(event.payload?.teamId);
 
-                  // Formatting details based on type
+                  // Formatting details
                   if (event.type === 'GOAL') {
-                    eventType = 'Tor';
+                    eventTypeLabel = 'Tor';
                     details = `Stand: ${event.scoreAfter?.home}:${event.scoreAfter?.away}`;
                     if (event.payload?.assists && event.payload.assists.length > 0) {
                       details += ` (Vorlage: ${event.payload.assists.map(a => '#' + a).join(', ')})`;
                     }
                   } else if (event.type === 'YELLOW_CARD') {
-                    eventType = 'Gelbe Karte';
+                    eventTypeLabel = 'Gelbe Karte';
                   } else if (event.type === 'RED_CARD') {
-                    eventType = 'Rote Karte';
+                    eventTypeLabel = 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
-                    eventType = 'Zeitstrafe';
+                    eventTypeLabel = 'Zeitstrafe';
                     details = `${event.payload?.penaltyDuration || 120}s`;
                   } else if (event.type === 'SUBSTITUTION') {
-                    eventType = 'Wechsel';
+                    eventTypeLabel = 'Wechsel';
                     const inPlayers = event.payload?.playersIn?.map(p => `#${p}`).join(', ') || '';
                     const outPlayers = event.payload?.playersOut?.map(p => `#${p}`).join(', ') || '';
                     details = `Raus: ${outPlayers} -> Rein: ${inPlayers}`;
-                    player = ''; // Multiple players usually
-                  } else if (event.type === 'STATUS_CHANGE') {
-                    return; // Skip status changes for now, focus on game events
+                    player = '';
                   }
 
-                  rows.push([
-                    match.id,
-                    match.round,
-                    homeTeamName,
-                    guestTeamName,
-                    Math.floor(event.timestampSeconds / 60) + 1 + "'",
-                    eventType,
-                    teamName,
-                    player,
-                    details
-                  ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
+                  // JSON Structure
+                  if (exportFormat === 'json') {
+                    exportData.push({
+                      matchId: match.id,
+                      round: match.round,
+                      homeTeam: { id: match.teamA, name: homeTeamName },
+                      guestTeam: { id: match.teamB, name: guestTeamName },
+                      minute: Math.floor(event.timestampSeconds / 60) + 1,
+                      type: event.type,
+                      team: { id: event.payload?.teamId, name: teamName },
+                      playerNumber: event.payload?.playerNumber,
+                      details: details,
+                      rawEvent: event
+                    });
+                  } else {
+                    // CSV Row
+                    csvRows.push([
+                      match.id,
+                      match.round,
+                      homeTeamName,
+                      guestTeamName,
+                      Math.floor(event.timestampSeconds / 60) + 1 + "'",
+                      eventTypeLabel,
+                      teamName,
+                      player,
+                      details
+                    ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(';'));
+                  }
                 });
               });
 
-              const csvContent = [headers.join(';'), ...rows].join('\n');
-              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = `${tournament.title.replace(/[^a-zA-Z0-9]/g, '_')}_events_${new Date().toISOString().split('T')[0]}.csv`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
+              // Generate File
+              if (exportFormat === 'json') {
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${tournament.title.replace(/[^a-zA-Z0-9]/g, '_')}_events_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              } else {
+                const headers = ['Match ID', 'Runde', 'Heimmannschaft', 'Gastmannschaft', 'Spielminute', 'Ereignis', 'Team', 'Spieler', 'Details'];
+                const csvContent = [headers.join(';'), ...csvRows].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${tournament.title.replace(/[^a-zA-Z0-9]/g, '_')}_events_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+
               setIsExporting(false);
               setExportSuccess('Spielereignisse erfolgreich exportiert!');
               setTimeout(() => setExportSuccess(null), 3000);
@@ -412,7 +526,7 @@ export function ExportsCategory({
           }}
           disabled={isExporting}
         >
-          {isExporting ? 'Wird exportiert...' : '📥 Als CSV herunterladen'}
+          {isExporting ? 'Wird exportiert...' : `📥 Als ${exportFormat.toUpperCase()} herunterladen`}
         </button>
       </CollapsibleSection>
 

@@ -439,7 +439,9 @@ export function useMatchExecution({
 
     const handleSyncMetadata = useCallback(async (matchId: string): Promise<void> => {
         const match = tournament.matches.find(m => m.id === matchId);
-        if (!match) return;
+        if (!match) {
+            return;
+        }
 
         const refereeName = match.referee ? (typeof match.referee === 'number' ? `SR ${match.referee}` : match.referee) : undefined;
         const updated = await service.syncMatchMetadata(tournament.id, matchId, { refereeName });

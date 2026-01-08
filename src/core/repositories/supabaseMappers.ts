@@ -122,7 +122,7 @@ export function mapMatchFromSupabase(
     matchNumber: row.match_number ?? undefined,
     phase: row.phase ?? undefined,
     referee: row.referee_number ?? undefined,
-    matchStatus: (row.match_status as MatchStatus) ?? 'scheduled',
+    matchStatus: (row.match_status as MatchStatus) || 'scheduled',
     finishedAt: row.actual_end ?? undefined,
     timerStartTime: row.timer_start_time ?? undefined,
     timerPausedAt: row.timer_paused_at ?? undefined,
@@ -196,28 +196,48 @@ export function mapMatchUpdateToSupabase(
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
-  if (match.scoreA !== undefined) update.score_a = match.scoreA;
-  if (match.scoreB !== undefined) update.score_b = match.scoreB;
-  if (match.matchStatus !== undefined) update.match_status = match.matchStatus;
-  if (match.finishedAt !== undefined) update.actual_end = match.finishedAt;
-  if (match.timerStartTime !== undefined)
+  if (match.scoreA !== undefined) {
+    update.score_a = match.scoreA;
+  }
+  if (match.scoreB !== undefined) {
+    update.score_b = match.scoreB;
+  }
+  if (match.matchStatus !== undefined) {
+    update.match_status = match.matchStatus;
+  }
+  if (match.finishedAt !== undefined) {
+    update.actual_end = match.finishedAt;
+  }
+  if (match.timerStartTime !== undefined) {
     update.timer_start_time = match.timerStartTime;
-  if (match.timerPausedAt !== undefined)
+  }
+  if (match.timerPausedAt !== undefined) {
     update.timer_paused_at = match.timerPausedAt;
-  if (match.timerElapsedSeconds !== undefined)
+  }
+  if (match.timerElapsedSeconds !== undefined) {
     update.timer_elapsed_seconds = match.timerElapsedSeconds;
-  if (match.overtimeScoreA !== undefined)
+  }
+  if (match.overtimeScoreA !== undefined) {
     update.overtime_score_a = match.overtimeScoreA;
-  if (match.overtimeScoreB !== undefined)
+  }
+  if (match.overtimeScoreB !== undefined) {
     update.overtime_score_b = match.overtimeScoreB;
-  if (match.penaltyScoreA !== undefined)
+  }
+  if (match.penaltyScoreA !== undefined) {
     update.penalty_score_a = match.penaltyScoreA;
-  if (match.penaltyScoreB !== undefined)
+  }
+  if (match.penaltyScoreB !== undefined) {
     update.penalty_score_b = match.penaltyScoreB;
-  if (match.decidedBy !== undefined) update.decided_by = match.decidedBy;
-  if (match.skippedReason !== undefined)
+  }
+  if (match.decidedBy !== undefined) {
+    update.decided_by = match.decidedBy;
+  }
+  if (match.skippedReason !== undefined) {
     update.skipped_reason = match.skippedReason;
-  if (match.skippedAt !== undefined) update.skipped_at = match.skippedAt;
+  }
+  if (match.skippedAt !== undefined) {
+    update.skipped_at = match.skippedAt;
+  }
 
   // Handle team changes if teamNameToId is provided
   if (teamNameToId && match.teamA !== undefined) {
