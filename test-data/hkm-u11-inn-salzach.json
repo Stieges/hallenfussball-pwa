@@ -1,0 +1,72 @@
+{
+  "title": "Hallenkreismeisterschaft U11 Inn/Salzach powered by Ballfreunde",
+  "organizer": "BFV Kreis Inn/Salzach",
+  "ageClass": "U11",
+  "date": "2026-01-10",
+  "startTime": "09:30",
+  "location": {
+    "name": "Traunstein",
+    "city": "Traunstein",
+    "country": "Deutschland"
+  },
+
+  "sport": "football",
+  "tournamentType": "classic",
+  "mode": "classic",
+
+  "numberOfFields": 1,
+  "numberOfTeams": 7,
+  "groupSystem": "roundRobin",
+  "numberOfGroups": 1,
+
+  "groupPhaseGameDuration": 10,
+  "groupPhaseBreakDuration": 2,
+  "gamePeriods": 1,
+
+  "placementLogic": [
+    { "id": "points", "label": "Punkte", "enabled": true },
+    { "id": "goalDifference", "label": "Tordifferenz", "enabled": true },
+    { "id": "goalsFor", "label": "Erzielte Tore", "enabled": true },
+    { "id": "directComparison", "label": "Direkter Vergleich", "enabled": true }
+  ],
+
+  "pointSystem": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+  },
+
+  "teams": [
+    { "id": "t1", "name": "SV Wacker Burghausen", "group": "A" },
+    { "id": "t2", "name": "SV Bad Feilnbach", "group": "A" },
+    { "id": "t3", "name": "Sportbund Chiemgau Traunstein", "group": "A" },
+    { "id": "t4", "name": "TSV Heiligkreuz", "group": "A" },
+    { "id": "t5", "name": "(SG) Aschau/Weidenbach", "group": "A" },
+    { "id": "t6", "name": "TSV 1880 Wasserburg am Inn", "group": "A" },
+    { "id": "t7", "name": "TSV 1860 Rosenheim", "group": "A" }
+  ],
+
+  "matches": [
+    { "id": "m1",  "round": 1,  "field": 1, "teamA": "t1", "teamB": "t2", "group": "A" },
+    { "id": "m2",  "round": 2,  "field": 1, "teamA": "t6", "teamB": "t7", "group": "A" },
+    { "id": "m3",  "round": 3,  "field": 1, "teamA": "t3", "teamB": "t4", "group": "A" },
+    { "id": "m4",  "round": 4,  "field": 1, "teamA": "t5", "teamB": "t1", "group": "A" },
+    { "id": "m5",  "round": 5,  "field": 1, "teamA": "t2", "teamB": "t6", "group": "A" },
+    { "id": "m6",  "round": 6,  "field": 1, "teamA": "t7", "teamB": "t3", "group": "A" },
+    { "id": "m7",  "round": 7,  "field": 1, "teamA": "t4", "teamB": "t5", "group": "A" },
+    { "id": "m8",  "round": 8,  "field": 1, "teamA": "t1", "teamB": "t6", "group": "A" },
+    { "id": "m9",  "round": 9,  "field": 1, "teamA": "t3", "teamB": "t2", "group": "A" },
+    { "id": "m10", "round": 10, "field": 1, "teamA": "t5", "teamB": "t7", "group": "A" },
+    { "id": "m11", "round": 11, "field": 1, "teamA": "t4", "teamB": "t1", "group": "A" },
+    { "id": "m12", "round": 12, "field": 1, "teamA": "t6", "teamB": "t3", "group": "A" },
+    { "id": "m13", "round": 13, "field": 1, "teamA": "t2", "teamB": "t5", "group": "A" },
+    { "id": "m14", "round": 14, "field": 1, "teamA": "t7", "teamB": "t4", "group": "A" },
+    { "id": "m15", "round": 15, "field": 1, "teamA": "t1", "teamB": "t3", "group": "A" },
+    { "id": "m16", "round": 16, "field": 1, "teamA": "t5", "teamB": "t6", "group": "A" },
+    { "id": "m17", "round": 17, "field": 1, "teamA": "t4", "teamB": "t2", "group": "A" },
+    { "id": "m18", "round": 18, "field": 1, "teamA": "t7", "teamB": "t1", "group": "A" },
+    { "id": "m19", "round": 19, "field": 1, "teamA": "t3", "teamB": "t5", "group": "A" },
+    { "id": "m20", "round": 20, "field": 1, "teamA": "t6", "teamB": "t4", "group": "A" },
+    { "id": "m21", "round": 21, "field": 1, "teamA": "t2", "teamB": "t7", "group": "A" }
+  ]
+}

@@ -23,6 +23,7 @@ export interface GameControlsProps {
   onSwitchSides: () => void;
   onHalfTime: () => void;
   onFinish: () => void;
+  onSettings?: () => void;
   /** BUG-002: Event log button for mobile retroactive editing */
   onEventLog?: () => void;
   canUndo?: boolean;
@@ -42,6 +43,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onSwitchSides,
   onHalfTime,
   onFinish,
+  onSettings,
   onEventLog,
   canUndo = false,
   breakpoint = 'desktop',
@@ -107,9 +109,9 @@ export const GameControls: React.FC<GameControlsProps> = ({
 
   // Main button label
   const getMainButtonLabel = (): string => {
-    if (isNotStarted) {return '▶ Start';}
-    if (isRunning) {return '⏸ Pause';}
-    if (isPaused) {return '▶ Start';}
+    if (isNotStarted) { return '▶ Start'; }
+    if (isRunning) { return '⏸ Pause'; }
+    if (isPaused) { return '▶ Start'; }
     return '▶ Start';
   };
 
@@ -198,6 +200,18 @@ export const GameControls: React.FC<GameControlsProps> = ({
       >
         🏁 {!isMobile && 'Beenden'}
       </button>
+
+      {/* Settings */}
+      {onSettings && (
+        <button
+          style={btnStyle}
+          onClick={onSettings}
+          type="button"
+          aria-label="Einstellungen"
+        >
+          ⚙️ {!isMobile && 'Optionen'}
+        </button>
+      )}
 
       {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar) */}
       {isMobile && onEventLog && (

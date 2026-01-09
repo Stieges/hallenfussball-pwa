@@ -23,6 +23,7 @@ export type AdminCategoryId =
   | 'settings'
   | 'visibility'
   | 'notifications'
+  | 'match-cockpit'
   | 'metadata'
   | 'help'
   | 'danger-zone';

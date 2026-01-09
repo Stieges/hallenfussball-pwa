@@ -69,6 +69,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         matchNumber={match.matchNumber}
         scheduledTime={match.time}
         field={match.field}
+        referee={match.referee ? `SR ${match.referee}` : undefined}
         group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
         showGroupLabel={showGroupLabel}
         homeTeam={getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam)}

@@ -1,7 +1,39 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-05 (QA-Durchlauf abgeschlossen)
+> **Letzte Aktualisierung:** 2026-01-08
+
+---
+
+## 🔵 IN ARBEIT: Supabase-Migration
+
+**Status:** 🔵 In Arbeit
+**MCP Server:** Konfiguriert in `.mcp.json`
+**Project-Ref:** `amtlqicosscsjnnthvzm`
+
+| Schritt | Status | Notizen |
+|---------|--------|---------|
+| Storage-Key konsolidieren | ✅ Erledigt | Alle nutzen `STORAGE_KEYS.TOURNAMENTS` |
+| Supabase MCP konfigurieren | ✅ Erledigt | `.mcp.json` |
+| Tabellen erstellen | ✅ Erledigt | tournaments, teams, matches, match_events, live_matches (existierten bereits) |
+| `SupabaseRepository` implementieren | ✅ Erledigt | `src/core/repositories/SupabaseRepository.ts` + `supabaseMappers.ts` |
+| Repository in App integrieren | ✅ Erledigt | `useRepository` Hook + alle Hooks aktualisiert |
+| Migration testen | ⬜ Offen | E2E-Test mit authentifiziertem User |
+
+**Architektur-Änderungen (2026-01-08):**
+- `src/utils/storage.ts` gelöscht (toter Code, nutzte anderen Key)
+- `src/services/api.ts` → nutzt jetzt `STORAGE_KEYS.TOURNAMENTS`
+- `src/core/repositories/LocalStorageRepository.ts` → nutzt `STORAGE_KEYS.TOURNAMENTS`
+- `src/contexts/TournamentContext.tsx` → localStorage-Fallback entfernt
+- `src/core/repositories/SupabaseRepository.ts` → NEU: Supabase-Implementierung
+- `src/core/repositories/supabaseMappers.ts` → NEU: Type-Konvertierung Frontend↔Supabase
+- `src/hooks/useRepository.ts` → NEU: Auth-aware Repository-Selektion
+- `src/hooks/useMatchExecution.ts` → nutzt jetzt `useRepository`
+- `src/hooks/useTournamentWizard.ts` → nutzt jetzt `useRepository`
+- `src/hooks/useTournamentManager.ts` → nutzt jetzt `useRepository`
+- `src/hooks/useScheduleManager.ts` → nutzt jetzt `useRepository`
+
+**Nächste Session:** E2E-Test mit authentifiziertem User durchführen.
 
 ---
 

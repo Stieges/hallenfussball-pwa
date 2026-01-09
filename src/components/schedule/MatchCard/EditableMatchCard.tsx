@@ -24,7 +24,7 @@ import type { ScheduleConflict } from '../../../features/schedule-editor/types';
 // Types
 // ---------------------------------------------------------------------------
 
-export interface EditableMatchCardProps extends Omit<MatchCardProps, 'disabled'> {
+export interface EditableMatchCardProps extends Omit<MatchCardProps, 'disabled' | 'referee'> {
   // ---------------------------------------------------------------------------
   // Drag & Drop
   // ---------------------------------------------------------------------------

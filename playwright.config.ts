@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = process.env.PORT || '3000';
+// In CI with preview mode, Vite uses port 4173; otherwise dev server uses 3000
+const usePreview = !!process.env.CI_E2E_USE_PREVIEW;
+const PORT = process.env.PORT || (usePreview ? '4173' : '3000');
 const baseURL = `http://localhost:${PORT}`;
 
 // Network Throttling Presets for performance testing
@@ -30,7 +32,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Use 4 parallel workers in CI for faster execution (was 1)
+  workers: process.env.CI ? 4 : undefined,
+
+  // Global timeout: 60s in CI (cold-start variance), 30s locally
+  timeout: process.env.CI ? 60000 : 30000,
 
   reporter: [['html', { open: 'never' }], ['list']],
 
@@ -38,6 +44,14 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Action and navigation timeouts
+    actionTimeout: process.env.CI ? 15000 : 10000,
+    navigationTimeout: process.env.CI ? 30000 : 15000,
+  },
+
+  expect: {
+    // Expect timeout: 10s in CI, 5s locally
+    timeout: process.env.CI ? 10000 : 5000,
   },
 
   projects: [
@@ -145,7 +159,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    // In CI with CI_E2E_USE_PREVIEW, use production build (faster, no Vite cold-start)
+    // Locally, use dev server for hot reload
+    command: process.env.CI_E2E_USE_PREVIEW ? 'npm run preview' : 'npm run dev',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

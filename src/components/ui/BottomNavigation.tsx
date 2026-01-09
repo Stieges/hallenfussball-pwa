@@ -62,10 +62,11 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
     height: '100%',
     padding: `${cssVars.spacing.xs} 0`,
     cursor: 'pointer',
-    background: 'transparent',
+    background: isActive ? `linear-gradient(to bottom, ${cssVars.colors.surfaceHover}, transparent)` : 'transparent', // Subtle background indication
     border: 'none',
+    borderTop: isActive ? `2px solid ${cssVars.colors.primary}` : '2px solid transparent', // Top border indicator
     color: isActive ? cssVars.colors.primary : cssVars.colors.textSecondary,
-    transition: 'color 0.2s ease',
+    transition: 'all 0.2s ease',
     gap: '2px',
     // Touch target minimum 44px
     minWidth: '44px',

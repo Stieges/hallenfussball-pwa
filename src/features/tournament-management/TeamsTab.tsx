@@ -81,7 +81,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   };
 
   const handleSaveRename = () => {
-    if (!editingTeamId) {return;}
+    if (!editingTeamId) { return; }
 
     const analysis = teamAnalyses[editingTeamId];
     const warning = getTeamRenameWarning(analysis.teamName, analysis.matchesWithResults);
@@ -91,7 +91,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       const confirmed = window.confirm(
         `⚠️ Warnung\n\n${warning}\n\nMöchtest du den Namen trotzdem ändern?`
       );
-      if (!confirmed) {return;}
+      if (!confirmed) { return; }
     }
 
     try {
@@ -116,7 +116,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   };
 
   const handleConfirmDelete = () => {
-    if (!deleteConfirmTeam) {return;}
+    if (!deleteConfirmTeam) { return; }
 
     try {
       const result = deleteTeamSafely(tournament, deleteConfirmTeam.team.id);
@@ -142,7 +142,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       'Das Team wird wieder in der Tabelle und im Spielplan angezeigt.'
     );
 
-    if (!confirmed) {return;}
+    if (!confirmed) { return; }
 
     const updatedTeams = tournament.teams.map(t =>
       t.id === teamId
@@ -251,9 +251,10 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: cssVars.fontWeights.semibold,
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
+    marginBottom: '4px',
   };
 
   const badgeStyle = (color: string, bgColor: string): CSSProperties => ({
@@ -313,15 +314,16 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: cssVars.spacing.md,
+    padding: cssVars.spacing.lg, // Increased padding
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
+    minHeight: '80px', // Enforce height for logo space
   };
 
   const teamCardLeftStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: cssVars.spacing.md,
+    gap: cssVars.spacing.lg, // Increased gap
     flex: 1,
     minWidth: 0,
   };
@@ -454,7 +456,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       }}
                       style={{ cursor: 'pointer' }}
                     >
-                      <TeamAvatar team={team} size="md" showColorRing />
+                      <TeamAvatar team={team} size="lg" showColorRing />
                     </div>
 
                     {/* Team Name and Badges */}
@@ -496,200 +498,208 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                 </div>
 
                 {/* Expanded Section */}
-                {isExpanded && (
-                  <div style={expandedSectionStyle}>
-                    {isEditing ? (
-                      // Edit Mode
-                      <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, flexWrap: 'wrap' }}>
-                        <div style={editInputStyle}>
-                          <Input
-                            label="Teamname"
-                            value={editingName}
-                            onChange={setEditingName}
-                            placeholder="Teamname"
-                          />
-                        </div>
-                        <div style={buttonGroupStyle}>
-                          <Button variant="secondary" onClick={handleCancelEdit}>
-                            Abbrechen
-                          </Button>
-                          <Button
-                            variant="primary"
-                            onClick={handleSaveRename}
-                            disabled={!editingName.trim() || editingName.trim() === team.name}
-                          >
-                            Speichern
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      // View Mode - Expanded Details
-                      <>
-                        {/* Logo Section */}
-                        <div style={expandedRowStyle}>
-                          <span style={expandedLabelStyle}>Logo:</span>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setLogoUploadTeamId(team.id)}
-                          >
-                            {team.logo ? 'Logo ändern' : 'Logo hochladen'}
-                          </Button>
-                          {team.logo && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleLogoRemove(team.id)}
-                            >
-                              Logo entfernen
+                {
+                  isExpanded && (
+                    <div style={expandedSectionStyle}>
+                      {isEditing ? (
+                        // Edit Mode
+                        <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, flexWrap: 'wrap' }}>
+                          <div style={editInputStyle}>
+                            <Input
+                              label="Teamname"
+                              value={editingName}
+                              onChange={setEditingName}
+                              placeholder="Teamname"
+                            />
+                          </div>
+                          <div style={buttonGroupStyle}>
+                            <Button variant="secondary" onClick={handleCancelEdit}>
+                              Abbrechen
                             </Button>
-                          )}
+                            <Button
+                              variant="primary"
+                              onClick={handleSaveRename}
+                              disabled={!editingName.trim() || editingName.trim() === team.name}
+                            >
+                              Speichern
+                            </Button>
+                          </div>
                         </div>
+                      ) : (
+                        // View Mode - Expanded Details
+                        <>
+                          {/* Logo Section */}
+                          <div style={expandedRowStyle}>
+                            <span style={expandedLabelStyle}>Logo:</span>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setLogoUploadTeamId(team.id)}
+                            >
+                              {team.logo ? 'Logo ändern' : 'Logo hochladen'}
+                            </Button>
+                            {team.logo && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleLogoRemove(team.id)}
+                              >
+                                Logo entfernen
+                              </Button>
+                            )}
+                          </div>
 
-                        {/* Color Section */}
-                        <div style={expandedRowStyle}>
-                          <span style={expandedLabelStyle}>Trikotfarbe:</span>
-                          <ColorPicker
-                            value={primaryColor}
-                            onChange={(color) => handleColorChange(team.id, color)}
-                          />
-                        </div>
+                          {/* Color Section */}
+                          <div style={expandedRowStyle}>
+                            <span style={expandedLabelStyle}>Trikotfarbe:</span>
+                            <ColorPicker
+                              value={primaryColor}
+                              onChange={(color) => handleColorChange(team.id, color)}
+                            />
+                          </div>
 
-                        {/* Action Buttons */}
-                        <div style={{ ...expandedRowStyle, marginTop: cssVars.spacing.lg, marginBottom: 0 }}>
-                          <button
-                            style={actionButtonStyle('edit')}
-                            onClick={() => handleStartEdit(team)}
-                          >
-                            ✏️ Umbenennen
-                          </button>
-                          <button
-                            style={actionButtonStyle('delete')}
-                            onClick={() => handleDeleteClick(team)}
-                          >
-                            🗑️ Löschen
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                          {/* Action Buttons */}
+                          <div style={{ ...expandedRowStyle, marginTop: cssVars.spacing.lg, marginBottom: 0 }}>
+                            <button
+                              style={actionButtonStyle('edit')}
+                              onClick={() => handleStartEdit(team)}
+                            >
+                              ✏️ Umbenennen
+                            </button>
+                            <button
+                              style={actionButtonStyle('delete')}
+                              onClick={() => handleDeleteClick(team)}
+                            >
+                              🗑️ Löschen
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )
+                }
+              </div >
             );
           })
         )}
-      </Card>
+      </Card >
 
       {/* Removed Teams */}
-      {removedTeams.length > 0 && (
-        <Card style={{ marginTop: cssVars.spacing.lg }}>
-          <h3 style={{ color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
-            Entfernte Teams ({removedTeams.length})
-          </h3>
-          <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, marginBottom: '16px' }}>
-            Diese Teams wurden entfernt, aber ihre historischen Ergebnisse sind noch im Spielplan sichtbar.
-          </p>
+      {
+        removedTeams.length > 0 && (
+          <Card style={{ marginTop: cssVars.spacing.lg }}>
+            <h3 style={{ color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
+              Entfernte Teams ({removedTeams.length})
+            </h3>
+            <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, marginBottom: '16px' }}>
+              Diese Teams wurden entfernt, aber ihre historischen Ergebnisse sind noch im Spielplan sichtbar.
+            </p>
 
-          {removedTeams.map(team => {
-            const analysis = teamAnalyses[team.id];
+            {removedTeams.map(team => {
+              const analysis = teamAnalyses[team.id];
 
-            return (
-              <div key={team.id} style={removedTeamStyle}>
-                <div style={teamInfoStyle}>
-                  <TeamAvatar team={team} size="sm" style={{ opacity: 0.5 }} />
-                  <span style={removedTeamNameStyle}>{team.name}</span>
-                  {analysis.matchesWithResults > 0 && (
-                    <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
-                      {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
-                    </span>
-                  )}
-                  {team.removedAt && (
-                    <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-                      Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
-                    </span>
-                  )}
+              return (
+                <div key={team.id} style={removedTeamStyle}>
+                  <div style={teamInfoStyle}>
+                    <TeamAvatar team={team} size="sm" style={{ opacity: 0.5 }} />
+                    <span style={removedTeamNameStyle}>{team.name}</span>
+                    {analysis.matchesWithResults > 0 && (
+                      <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
+                        {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
+                      </span>
+                    )}
+                    {team.removedAt && (
+                      <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
+                        Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: cssVars.fontSizes.sm,
+                      borderRadius: cssVars.borderRadius.sm,
+                      border: `1px solid ${cssVars.colors.border}`,
+                      cursor: 'pointer',
+                      background: 'transparent',
+                      color: cssVars.colors.textSecondary,
+                    }}
+                    onClick={() => handleRestoreTeam(team.id)}
+                  >
+                    ↩️ Wiederherstellen
+                  </button>
                 </div>
-                <button
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: cssVars.fontSizes.sm,
-                    borderRadius: cssVars.borderRadius.sm,
-                    border: `1px solid ${cssVars.colors.border}`,
-                    cursor: 'pointer',
-                    background: 'transparent',
-                    color: cssVars.colors.textSecondary,
-                  }}
-                  onClick={() => handleRestoreTeam(team.id)}
-                >
-                  ↩️ Wiederherstellen
-                </button>
-              </div>
-            );
-          })}
-        </Card>
-      )}
+              );
+            })}
+          </Card>
+        )
+      }
 
       {/* Delete Confirmation Dialog */}
-      {deleteConfirmTeam && (
-        <div style={overlayStyle}>
-          <div style={dialogStyle}>
-            <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
-              Team löschen?
-            </h3>
+      {
+        deleteConfirmTeam && (
+          <div style={overlayStyle}>
+            <div style={dialogStyle}>
+              <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
+                Team löschen?
+              </h3>
 
-            <div style={{ marginBottom: '16px' }}>
-              <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
-                {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
-                  `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
-              </p>
+              <div style={{ marginBottom: '16px' }}>
+                <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
+                  {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
+                    `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
+                </p>
 
-              {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
-                <div style={{
-                  padding: cssVars.spacing.md,
-                  background: cssVars.colors.warningBannerBgStrong,
-                  borderRadius: cssVars.borderRadius.sm,
-                  marginTop: '12px',
-                }}>
-                  <p style={{ margin: 0, color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm }}>
-                    ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
-                  </p>
-                </div>
-              )}
-            </div>
+                {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
+                  <div style={{
+                    padding: cssVars.spacing.md,
+                    background: cssVars.colors.warningBannerBgStrong,
+                    borderRadius: cssVars.borderRadius.sm,
+                    marginTop: '12px',
+                  }}>
+                    <p style={{ margin: 0, color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm }}>
+                      ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
+                    </p>
+                  </div>
+                )}
+              </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
-                Abbrechen
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmDelete}
-                style={{ background: cssVars.colors.error }}
-              >
-                {deleteConfirmTeam.analysis.matchesWithResults > 0
-                  ? 'Als entfernt markieren'
-                  : 'Löschen'}
-              </Button>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
+                  Abbrechen
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleConfirmDelete}
+                  style={{ background: cssVars.colors.error }}
+                >
+                  {deleteConfirmTeam.analysis.matchesWithResults > 0
+                    ? 'Als entfernt markieren'
+                    : 'Löschen'}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Logo Upload Dialog */}
-      {logoUploadTeam && createPortal(
-        <LogoUploadDialog
-          teamName={logoUploadTeam.name}
-          currentLogo={logoUploadTeam.logo}
-          onSave={(logo) => handleLogoSave(logoUploadTeam.id, logo)}
-          onCancel={() => setLogoUploadTeamId(null)}
-          onRemove={logoUploadTeam.logo ? () => {
-            handleLogoRemove(logoUploadTeam.id);
-            setLogoUploadTeamId(null);
-          } : undefined}
-        />,
-        document.body
-      )}
-    </div>
+      {
+        logoUploadTeam && createPortal(
+          <LogoUploadDialog
+            teamName={logoUploadTeam.name}
+            currentLogo={logoUploadTeam.logo}
+            onSave={(logo) => handleLogoSave(logoUploadTeam.id, logo)}
+            onCancel={() => setLogoUploadTeamId(null)}
+            onRemove={logoUploadTeam.logo ? () => {
+              handleLogoRemove(logoUploadTeam.id);
+              setLogoUploadTeamId(null);
+            } : undefined}
+          />,
+          document.body
+        )
+      }
+    </div >
   );
 };
 

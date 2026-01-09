@@ -11,11 +11,7 @@ import { Tournament, TournamentType, PlacementCriterion } from '../types/tournam
 import { countMatchesWithResults } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
-
-// Singleton instance of the service (could be moved to context/DI container)
-const repository = new LocalStorageRepository();
-const creationService = new TournamentCreationService(repository);
+import { useRepository } from './useRepository';
 
 export interface WizardState {
   step: number;
@@ -102,6 +98,15 @@ export interface UseTournamentWizardReturn {
 export function useTournamentWizard(
   existingTournament?: Tournament
 ): UseTournamentWizardReturn {
+  // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
+  const repository = useRepository();
+
+  // Create service with the repository (recreates if repository changes)
+  const creationService = useMemo(
+    () => new TournamentCreationService(repository),
+    [repository]
+  );
+
   // Initial step from existing tournament (draft restoration)
   const initialStep = existingTournament?.lastVisitedStep ?? 1;
 
@@ -174,7 +179,7 @@ export function useTournamentWizard(
   // Validate step using Service
   const validateStep = useCallback((stepNumber: number): string[] => {
     return creationService.validateStep(stepNumber, formData);
-  }, [formData]);
+  }, [creationService, formData]);
 
   // Can go to next step
   const canGoNext = useCallback((): boolean => {
@@ -182,7 +187,7 @@ export function useTournamentWizard(
     // Service validation returns array of strings. Empty = valid.
     const errors = creationService.validateStep(step, formData);
     return errors.length === 0;
-  }, [step, formData]);
+  }, [creationService, step, formData]);
 
   // Can navigate to step
   const canNavigateToStep = useCallback((targetStep: number): boolean => {
@@ -353,7 +358,7 @@ export function useTournamentWizard(
       ...formData,
       lastVisitedStep: step,
     }, existingTournament?.id);
-  }, [formData, existingTournament, step]);
+  }, [creationService, formData, existingTournament, step]);
 
   // Save draft
   const saveDraft = useCallback(async (): Promise<Tournament> => {
@@ -364,7 +369,7 @@ export function useTournamentWizard(
     setFormData(saved);
     lastSavedDataRef.current = JSON.stringify(saved);
     return saved;
-  }, [formData, step]);
+  }, [creationService, formData, step]);
 
   // Publish tournament
   const publishTournament = useCallback(async (): Promise<Tournament> => {
@@ -375,7 +380,7 @@ export function useTournamentWizard(
     setFormData(published);
     lastSavedDataRef.current = JSON.stringify(published);
     return published;
-  }, [formData, step]);
+  }, [creationService, formData, step]);
 
   return {
     // State

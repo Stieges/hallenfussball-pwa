@@ -258,7 +258,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               role="menuitem"
               onClick={() => {
                 setDropdownOpen(false);
-                logout();
+                void logout();
               }}
               style={{ ...styles.dropdownItem, ...styles.dropdownItemDanger }}
               data-testid="auth-logout-button"

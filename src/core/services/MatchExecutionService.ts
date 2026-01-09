@@ -9,8 +9,9 @@
 
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
-import { LiveMatch, MatchStatus, MatchEvent, FinishResult } from '../models/LiveMatch';
+import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
+import { RuntimeMatchEvent } from '../../types/tournament';
 
 // ============================================================================
 // TYPES
@@ -44,7 +45,54 @@ export class MatchExecutionService {
     // STATUS MANAGEMENT
     // ==========================================================================
 
-    async startMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
+    /**
+    * Syncs metadata (referee, team names) from tournament schedule to live match
+    */
+    public async syncMatchMetadata(
+        tournamentId: string,
+        matchId: string,
+        metadata: {
+            refereeName?: string;
+            homeTeam?: LiveTeamInfo;
+            awayTeam?: LiveTeamInfo;
+        }
+    ): Promise<LiveMatch | null> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { return null; }
+
+        let changed = false;
+
+        if (metadata.refereeName !== undefined && match.refereeName !== metadata.refereeName) {
+            match.refereeName = metadata.refereeName;
+            changed = true;
+        }
+
+        if (metadata.homeTeam) {
+            // Deep compare or just assign? Assigning is safer for name updates.
+            // But preserve colors if not provided in update?
+            // The scheduled match usually has full team data.
+            if (JSON.stringify(match.homeTeam) !== JSON.stringify(metadata.homeTeam)) {
+                match.homeTeam = metadata.homeTeam;
+                changed = true;
+            }
+        }
+
+        if (metadata.awayTeam) {
+            if (JSON.stringify(match.awayTeam) !== JSON.stringify(metadata.awayTeam)) {
+                match.awayTeam = metadata.awayTeam;
+                changed = true;
+            }
+        }
+
+        if (changed) {
+            await this.liveMatchRepo.save(tournamentId, match);
+            return match;
+        }
+
+        return match;
+    }
+
+    public async startMatch(tournamentId: string, matchId: string): Promise<LiveMatch> {
         const match = await this.liveMatchRepo.get(tournamentId, matchId);
         if (!match) { throw new Error(`Match ${matchId} not found`); }
 
@@ -563,6 +611,49 @@ export class MatchExecutionService {
         return timeSinceStart > maxExpectedDuration || timeSinceStart > MAX_STALE_MS;
     }
 
+    async updateEvent(
+        tournamentId: string,
+        matchId: string,
+        eventId: string,
+        updates: { playerNumber?: number; incomplete?: boolean }
+    ): Promise<LiveMatch> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+
+        // Find event
+        const eventIndex = match.events.findIndex(e => e.id === eventId);
+        if (eventIndex === -1) { throw new Error(`Event ${eventId} not found`); }
+
+        const events = [...match.events];
+        const event = { ...events[eventIndex] };
+
+        // Update basic properties if present
+        if (updates.incomplete !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            (event as any).incomplete = updates.incomplete;
+        }
+        if (updates.playerNumber !== undefined) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+            (event as any).playerNumber = updates.playerNumber;
+            // Also update payload for legacy compatibility
+            // Also update payload for legacy compatibility. Payload is typed as object in MatchEvent/EditableMatchEvent
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (event.payload && typeof (event.payload as unknown) === 'object') {
+                event.payload = { ...event.payload, playerNumber: updates.playerNumber };
+            }
+        }
+
+        events[eventIndex] = event;
+
+        const updated: LiveMatch = {
+            ...match,
+            events,
+        };
+
+        await this.liveMatchRepo.save(tournamentId, updated);
+        return updated;
+    }
+
     // ==========================================================================
     // MATCH INITIALIZATION
     // ==========================================================================
@@ -689,6 +780,7 @@ export class MatchExecutionService {
             penaltyScoreA: match.penaltyScoreA,
             penaltyScoreB: match.penaltyScoreB,
             decidedBy,
+            events: match.events as unknown as RuntimeMatchEvent[], // Persist full event history
         });
     }
 }

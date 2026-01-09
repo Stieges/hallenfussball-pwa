@@ -13,3 +13,4 @@ export { QuickScoreExpand, type QuickScoreExpandProps } from './QuickScoreExpand
 export { DetailExpand, type DetailExpandProps, type GoalEvent } from './DetailExpand';
 export { LiveInfoExpand, type LiveInfoExpandProps } from './LiveInfoExpand';
 export { StartMatchExpand, type StartMatchExpandProps } from './StartMatchExpand';
+export { SummaryExpand, type SummaryExpandProps } from './SummaryExpand';

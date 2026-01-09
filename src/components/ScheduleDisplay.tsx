@@ -122,7 +122,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // Merge currentMatches scores into schedule matches (memoized to prevent re-computation)
   const groupPhaseMatches = useMemo(() => {
-    if (!groupPhase || !currentMatches) {return groupPhase?.matches ?? [];}
+    if (!groupPhase || !currentMatches) { return groupPhase?.matches ?? []; }
 
     return groupPhase.matches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
@@ -139,7 +139,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // FIX: Merge playoff matches with resolved team names from tournament.matches
   const finalPhaseMatches = useMemo(() => {
-    if (!currentMatches) {return finalMatches;}
+    if (!currentMatches) { return finalMatches; }
 
     return finalMatches.map(sm => {
       const currentMatch = currentMatches.find(m => m.id === sm.id);
@@ -175,12 +175,12 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {
-    if (!visibleMatchIds) {return groupPhaseMatches;}
+    if (!visibleMatchIds) { return groupPhaseMatches; }
     return groupPhaseMatches.filter(m => visibleMatchIds.has(m.id));
   }, [groupPhaseMatches, visibleMatchIds]);
 
   const filteredFinalPhaseMatches = useMemo(() => {
-    if (!visibleMatchIds) {return finalPhaseMatches;}
+    if (!visibleMatchIds) { return finalPhaseMatches; }
     return finalPhaseMatches.filter(m => visibleMatchIds.has(m.id));
   }, [finalPhaseMatches, visibleMatchIds]);
 
@@ -195,12 +195,14 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
   return (
     <div style={containerStyle} className="schedule-display">
-      {/* Tournament Header */}
-      <TournamentHeader
-        schedule={schedule}
-        logoUrl={logoUrl}
-        qrCodeUrl={showQRCode ? qrCodeUrl : undefined}
-      />
+      {/* Tournament Header - Hidden on Desktop as info is in Top Nav */}
+      <div className="md:hidden">
+        <TournamentHeader
+          schedule={schedule}
+          logoUrl={logoUrl}
+          qrCodeUrl={showQRCode ? qrCodeUrl : undefined}
+        />
+      </div>
 
       {/* Participants (only for group tournaments) */}
       {hasGroups && (

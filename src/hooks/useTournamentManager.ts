@@ -1,23 +1,25 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { TournamentService } from '../core/services/TournamentService';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 import { Tournament } from '../core/models/types';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
+import { useRepository } from './useRepository';
 
 /**
  * useTournamentManager Hook
- * 
+ *
  * High-level hook for full Tournament lifecycle.
  * Replaces `useTournamentSync` for components needing the full Tournament object.
  */
 export function useTournamentManager(tournamentId: string) {
-    // Service Instantiation
+    // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
+    const repository = useRepository();
+
+    // Service Instantiation (recreates if repository changes)
     const service = useMemo(() => {
-        const repo = new LocalStorageRepository();
-        return new TournamentService(repo);
-    }, []);
+        return new TournamentService(repository);
+    }, [repository]);
 
     // State
     const [tournament, setTournament] = useState<Tournament | null>(null);

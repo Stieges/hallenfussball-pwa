@@ -153,7 +153,7 @@ const compareDirectMatches = (
     (m) =>
       (m.scoreA !== undefined && m.scoreB !== undefined) &&
       ((matchesTeam(m.teamA, a) && matchesTeam(m.teamB, b)) ||
-       (matchesTeam(m.teamA, b) && matchesTeam(m.teamB, a)))
+        (matchesTeam(m.teamA, b) && matchesTeam(m.teamB, a)))
   );
 
   if (directMatches.length === 0) {
@@ -172,7 +172,7 @@ const compareDirectMatches = (
 
   directMatches.forEach((match) => {
     // Scores are guaranteed defined by the filter above
-    if (match.scoreA === undefined || match.scoreB === undefined) {return;}
+    if (match.scoreA === undefined || match.scoreB === undefined) { return; }
     const scoreA = match.scoreA;
     const scoreB = match.scoreB;
     const isAHome = matchesTeam(match.teamA, a);
@@ -271,7 +271,7 @@ const getMatchWinner = (match: Match): { winner: string; loser: string } | null 
   }
   // Check if decided by overtime/golden goal
   else if ((match.decidedBy === 'overtime' || match.decidedBy === 'goldenGoal') &&
-           match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
+    match.overtimeScoreA !== undefined && match.overtimeScoreB !== undefined) {
     const totalA = match.scoreA + match.overtimeScoreA;
     const totalB = match.scoreB + match.overtimeScoreB;
     if (totalA > totalB) {
@@ -443,4 +443,118 @@ export const getMergedFinalRanking = (
   }
 
   return { ranking, finalsResult };
+};
+
+// ============================================================================
+// STATISTICS CALCULATION
+// ============================================================================
+
+export interface Scorer {
+  teamName: string;
+  playerName: string;
+  goals: number;
+  assists: number;
+}
+
+export const calculateScorers = (tournament: Tournament): Scorer[] => {
+  const scorerMap = new Map<string, Scorer>();
+
+  const getKey = (teamId: string, playerNum?: number) => `${teamId}-${playerNum || 'unknown'}`;
+  const getTeamName = (id: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
+
+  tournament.matches.forEach(match => {
+    if (match.events) {
+      match.events.forEach(event => {
+        if (event.type === 'GOAL') {
+          const teamId = event.payload.teamId;
+          const playerNum = event.payload.playerNumber;
+
+          if (teamId) {
+            const key = getKey(teamId, playerNum);
+            let scorer = scorerMap.get(key);
+            if (!scorer) {
+              const teamName = getTeamName(teamId);
+              scorer = {
+                teamName,
+                playerName: playerNum ? `#${playerNum}` : 'Unbekannt',
+                goals: 0,
+                assists: 0
+              };
+              scorerMap.set(key, scorer);
+            }
+            scorer.goals++;
+
+            // Assists (inside teamId check to ensure teamId is defined)
+            if (event.payload.assists) {
+              event.payload.assists.forEach(assistNum => {
+                // Assume assist is from same team
+                const key = getKey(teamId, assistNum);
+                let scorer = scorerMap.get(key);
+                if (!scorer) {
+                  const teamName = getTeamName(teamId);
+                  scorer = {
+                    teamName,
+                    playerName: `#${assistNum}`,
+                    goals: 0,
+                    assists: 0
+                  };
+                  scorerMap.set(key, scorer);
+                }
+                scorer.assists++;
+              });
+            }
+          }
+        }
+      });
+    }
+  });
+
+  return Array.from(scorerMap.values()).sort((a, b) => b.goals - a.goals || b.assists - a.assists);
+};
+
+export interface FairPlayEntry {
+  teamName: string;
+  points: number;
+  yellowCards: number;
+  redCards: number;
+  timePenalties: number;
+}
+
+export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
+  const map = new Map<string, FairPlayEntry>();
+
+  // Initialize all teams
+  tournament.teams.forEach(t => {
+    map.set(t.id, {
+      teamName: t.name,
+      points: 0,
+      yellowCards: 0,
+      redCards: 0,
+      timePenalties: 0
+    });
+  });
+
+  tournament.matches.forEach(match => {
+    if (match.events) {
+      match.events.forEach(event => {
+        const teamId = event.payload.teamId;
+        if (!teamId) { return; }
+        const entry = map.get(teamId);
+        if (!entry) { return; }
+
+        if (event.type === 'YELLOW_CARD') {
+          entry.yellowCards++;
+          entry.points += 1;
+        } else if (event.type === 'TIME_PENALTY') {
+          entry.timePenalties++;
+          entry.points += 3; // 3 points for time penalty
+        } else if (event.type === 'RED_CARD') {
+          entry.redCards++;
+          entry.points += 5; // 5 points for red card
+        }
+      });
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) => a.points - b.points); // Lower points is better
 };

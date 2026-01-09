@@ -1,18 +1,20 @@
 /**
  * UserProfileScreen - "Meine Turniere" Ansicht
  *
- * Zeigt User-Profil und alle Turniere mit Mitgliedschaft.
+ * Zeigt User-Profil und alle Turniere mit Mitgliedschaft in modernem Card-Layout.
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 4.3
  */
 
 import React, { CSSProperties, useState } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
+import { useTheme } from '../../../hooks/useTheme';
 import { TournamentCard } from './TournamentCard';
 import { GuestBanner } from './GuestBanner';
+import { useToast } from '../../../components/ui/Toast';
 import type { TournamentSortOption } from '../hooks/useUserTournaments';
 
 interface UserProfileScreenProps {
@@ -59,18 +61,44 @@ const Avatar: React.FC<{ name: string; avatarUrl?: string }> = ({
   );
 };
 
-/**
- * UserProfileScreen - Zeigt User-Profil und Turniere
- *
- * @example
- * ```tsx
- * <UserProfileScreen
- *   onBack={() => setScreen('dashboard')}
- *   onOpenTournament={(id) => setScreen('tournament', { id })}
- *   onCreateTournament={() => setScreen('create')}
- * />
- * ```
- */
+// =============================================================================
+// SUB-COMPONENTS (Cards)
+// =============================================================================
+
+const Card: React.FC<{ children: React.ReactNode; style?: CSSProperties; title?: string }> = ({ children, style, title }) => (
+  <div style={{ ...styles.card, ...style }}>
+    {title && <h3 style={styles.cardTitle}>{title}</h3>}
+    {children}
+  </div>
+);
+
+const StatItem: React.FC<{ label: string; value: number | string; color?: string }> = ({ label, value, color }) => (
+  <div style={styles.statItem}>
+    <div style={{ ...styles.statValue, color: color || cssVars.colors.textPrimary }}>{value}</div>
+    <div style={styles.statLabel}>{label}</div>
+  </div>
+);
+
+const ToggleRow: React.FC<{ label: string; checked: boolean; onChange: () => void; icon?: string }> = ({ label, checked, onChange, icon }) => (
+  <div style={styles.toggleRow} onClick={onChange}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+      {icon && <span style={{ fontSize: cssVars.fontSizes.lg }}>{icon}</span>}
+      <span style={styles.toggleLabel}>{label}</span>
+    </div>
+    <div style={{
+      ...styles.toggleSwitch,
+      background: checked ? cssVars.colors.primary : cssVars.colors.surfaceSolid,
+      justifyContent: checked ? 'flex-end' : 'flex-start'
+    }}>
+      <div style={styles.toggleKnob} />
+    </div>
+  </div>
+);
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onBack,
   onOpenSettings,
@@ -78,7 +106,9 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onCreateTournament,
   onRegister,
 }) => {
-  const { user, isGuest, logout } = useAuth();
+  const { user, isGuest, logout, resetPassword } = useAuth();
+  const { showInfo, showSuccess, showError } = useToast();
+  const { theme, toggleTheme } = useTheme(); // Use Theme Hook
   const [sortBy, setSortBy] = useState<TournamentSortOption>('status');
   const { tournaments, isLoading, counts } = useUserTournaments(sortBy);
 
@@ -87,14 +117,35 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   }
 
   const handleLogout = () => {
-    logout();
+    void logout();
     onBack?.();
   };
 
+  const handleChangePassword = async () => {
+    if (!user.email) {
+      showError('Keine E-Mail-Adresse hinterlegt.');
+      return;
+    }
+
+    try {
+      const result = await resetPassword(user.email);
+      if (result.success) {
+        showSuccess(`E-Mail zum Zurücksetzen wurde an ${user.email} gesendet.`);
+      } else {
+        showError(result.error ?? 'E-Mail konnte nicht gesendet werden.');
+      }
+    } catch (err) {
+      console.error('Change password error:', err);
+      showError('Ein Fehler ist aufgetreten.');
+    }
+  };
+
+  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
   return (
     <div style={styles.container}>
-      {/* Header */}
-      <div style={styles.header}>
+      {/* Top Header Navigation */}
+      <div style={styles.navigationHeader}>
         <button
           type="button"
           onClick={onBack}
@@ -103,130 +154,145 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         >
           ← Zurück
         </button>
-        {onOpenSettings && (
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            style={styles.settingsButton}
-            aria-label="Einstellungen"
-          >
-            ⚙️
-          </button>
-        )}
+        <h1 style={styles.pageTitle}>Mein Profil</h1>
+        <div style={{ width: 40 }} /> {/* Spacer for balance */}
       </div>
 
-      {/* Gast-Banner */}
-      {isGuest && (
-        <div style={styles.bannerSection}>
-          <GuestBanner onRegisterClick={onRegister} dismissible={false} />
-        </div>
-      )}
+      <div style={styles.contentGrid}>
+        {/* LEFT COLUMN: Identity & Stats */}
+        <div style={styles.leftColumn}>
+          {/* Identity Card */}
+          <Card style={styles.identityCard}>
+            <div style={styles.identityHeader}>
+              <Avatar name={user.name} avatarUrl={user.avatarUrl} />
+              <div style={styles.profileInfo}>
+                <h2 style={styles.userName}>{user.name}</h2>
+                <p style={styles.userEmail}>{user.email}</p>
+                {isGuest ? (
+                  <span style={styles.badgeGuest}>Gast-Zugang</span>
+                ) : (
+                  <span style={styles.badgeVerify}>Turnierleitung</span>
+                )}
+              </div>
+            </div>
+          </Card>
 
-      {/* Profil-Header */}
-      <div style={styles.profileHeader}>
-        <Avatar name={user.name} avatarUrl={user.avatarUrl} />
-        <div style={styles.profileInfo}>
-          <h1 style={styles.userName}>{user.name}</h1>
-          <p style={styles.userEmail}>{user.email}</p>
-        </div>
-      </div>
+          {/* Stats Card */}
+          <Card title="Meine Statistik">
+            <div style={styles.statsGrid}>
+              <StatItem label="Turniere" value={counts.total} />
+              <StatItem label="Live" value={counts.live} color={cssVars.colors.statusLive} />
+              <StatItem label="Erstellt" value={tournaments.filter(m => m.membership.role === 'owner').length} />
+            </div>
+          </Card>
 
-      <div style={styles.divider} />
+          {/* Preferences Card */}
+          <Card title="Einstellungen">
+            <ToggleRow
+              label="Dark Mode"
+              icon="🌙"
+              checked={isDark}
+              onChange={toggleTheme}
+            />
+            <ToggleRow
+              label="Benachrichtigungen"
+              icon="🔔"
+              checked={true /* Mocked */}
+              onChange={() => showInfo('Benachrichtigungen werden in Kürze verfügbar sein.')}
+            />
+            <div style={styles.listRow}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+                <span style={{ fontSize: cssVars.fontSizes.lg }}>🌐</span>
+                <span style={styles.listLabel}>Sprache</span>
+              </div>
+              <select
+                style={styles.selectInput}
+                value="de"
+                onChange={() => alert('Sprache ist aktuell auf Deutsch festgelegt.')}
+              >
+                <option value="de">Deutsch</option>
+                <option value="en">English (BETA)</option>
+              </select>
+            </div>
+            <div style={styles.divider} />
+            <button style={styles.actionButton} onClick={onOpenSettings}>
+              ⚙️ Weitere Einstellungen
+            </button>
+          </Card>
 
-      {/* Meine Turniere */}
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>📋 Meine Turniere</h2>
-          {counts.total > 0 && (
-            <div style={styles.statusCounts}>
-              {counts.live > 0 && (
-                <span style={styles.liveCount}>🔴 {counts.live} Live</span>
-              )}
-              <span style={styles.totalCount}>{counts.total} gesamt</span>
+          {/* Security Card */}
+          <Card title="Sicherheit">
+            <ToggleRow
+              label="Zwei-Faktor-Authentifizierung (2FA)"
+              icon="🛡️"
+              checked={false}
+              onChange={() => alert('2FA Einrichtung startet...')}
+            />
+            <button style={styles.actionButton} onClick={() => void handleChangePassword()}>
+              🔑 Passwort ändern
+            </button>
+            <div style={styles.divider} />
+            <button style={{ ...styles.actionButton, color: cssVars.colors.error }} onClick={handleLogout}>
+              🚪 Abmelden
+            </button>
+          </Card>
+
+          {isGuest && (
+            <div style={styles.bannerContainer}>
+              <GuestBanner onRegisterClick={onRegister} dismissible={false} />
             </div>
           )}
         </div>
 
-        {/* Sort Options */}
-        {counts.total > 1 && (
-          <div style={styles.sortRow}>
-            <label style={styles.sortLabel}>Sortieren:</label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as TournamentSortOption)}
-              style={styles.sortSelect}
-            >
-              <option value="status">Nach Status</option>
-              <option value="recent">Zuletzt bearbeitet</option>
-              <option value="name">Alphabetisch</option>
-              <option value="date">Nach Datum</option>
-            </select>
+        {/* RIGHT COLUMN: Tournaments */}
+        <div style={styles.rightColumn}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Meine Turniere</h2>
+            {counts.total > 1 && (
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as TournamentSortOption)}
+                style={styles.sortSelect}
+              >
+                <option value="status">Status</option>
+                <option value="recent">Zuletzt</option>
+                <option value="name">A-Z</option>
+                <option value="date">Datum</option>
+              </select>
+            )}
           </div>
-        )}
 
-        {/* Tournament List */}
-        {isLoading ? (
-          <div style={styles.loadingState}>
-            <span style={styles.loadingText}>Lade Turniere...</span>
-          </div>
-        ) : tournaments.length === 0 ? (
-          <div style={styles.emptyState}>
-            <p style={styles.emptyText}>Du hast noch keine Turniere.</p>
-            <p style={styles.emptySubtext}>
-              Erstelle dein erstes Turnier oder nimm eine Einladung an.
-            </p>
-          </div>
-        ) : (
-          <div style={styles.tournamentList}>
-            {tournaments.map((item) => (
-              <TournamentCard
-                key={item.tournament.id}
-                tournament={item.tournament}
-                membership={item.membership}
-                teamNames={item.teamNames}
-                onClick={() => onOpenTournament?.(item.tournament.id)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Neues Turnier Button */}
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={onCreateTournament}
-          style={styles.createButton}
-        >
-          ＋ Neues Turnier erstellen
-        </Button>
-      </section>
-
-      <div style={styles.divider} />
-
-      {/* Menu Items */}
-      <section style={styles.menuSection}>
-        <button type="button" style={styles.menuItem} disabled>
-          <span style={styles.menuIcon}>🔔</span>
-          <span style={styles.menuText}>Benachrichtigungen</span>
-          <span style={styles.menuArrow}>→</span>
-          <span style={styles.comingSoon}>Bald</span>
-        </button>
-
-        <button type="button" style={styles.menuItem} onClick={onOpenSettings}>
-          <span style={styles.menuIcon}>⚙️</span>
-          <span style={styles.menuText}>Einstellungen</span>
-          <span style={styles.menuArrow}>→</span>
-        </button>
-
-        <button
-          type="button"
-          style={{ ...styles.menuItem, ...styles.logoutItem }}
-          onClick={handleLogout}
-        >
-          <span style={styles.menuIcon}>🚪</span>
-          <span style={styles.menuText}>Abmelden</span>
-        </button>
-      </section>
+          {/* List */}
+          {isLoading ? (
+            <div style={styles.loadingState}>Lade Turniere...</div>
+          ) : tournaments.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p style={styles.emptyText}>Noch keine Turniere vorhanden.</p>
+              <Button variant="primary" onClick={onCreateTournament}>
+                Jetzt erstes Turnier erstellen
+              </Button>
+            </div>
+          ) : (
+            <div style={styles.tournamentList}>
+              {tournaments.map((item) => (
+                <TournamentCard
+                  key={item.tournament.id}
+                  tournament={item.tournament}
+                  membership={item.membership}
+                  teamNames={item.teamNames}
+                  onClick={() => onOpenTournament?.(item.tournament.id)}
+                />
+              ))}
+            </div>
+          )}
+          {/* Create Button (sticky or bottom) */}
+          {tournaments.length > 0 && (
+            <Button variant="secondary" fullWidth onClick={onCreateTournament} style={{ marginTop: cssVars.spacing.md }}>
+              ＋ Neues Turnier
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -234,83 +300,210 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 const styles: Record<string, CSSProperties> = {
   container: {
     minHeight: 'var(--min-h-screen)',
-    padding: cssVars.spacing.lg,
     background: cssVars.colors.background,
+    paddingBottom: '80px', // Space for bottom nav on mobile
   },
-  header: {
+  navigationHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: cssVars.spacing.lg,
+    justifyContent: 'space-between',
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    background: cssVars.colors.surface, // Solid header
+    borderBottom: `1px solid ${cssVars.colors.border}`,
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+  },
+  pageTitle: {
+    fontSize: cssVars.fontSizes.lg,
+    fontWeight: cssVars.fontWeights.semibold,
+    margin: 0,
   },
   backButton: {
-    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-    background: 'transparent',
+    background: 'none',
     border: 'none',
-    color: cssVars.colors.textSecondary,
     fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.primary,
     cursor: 'pointer',
-    font: 'inherit',
-  },
-  settingsButton: {
     padding: cssVars.spacing.sm,
-    background: 'transparent',
-    border: 'none',
-    fontSize: cssVars.fontSizes.xl,
-    cursor: 'pointer',
   },
-  bannerSection: {
-    marginBottom: cssVars.spacing.lg,
+  contentGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', // Responsive grid
+    gap: cssVars.spacing.lg,
+    padding: cssVars.spacing.lg,
+    maxWidth: '1200px',
+    margin: '0 auto',
   },
-  profileHeader: {
+  leftColumn: {
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: 'column',
+    gap: cssVars.spacing.lg,
+  },
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: '300px',
+  },
+
+  // CARDS
+  card: {
+    background: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: cssVars.spacing.lg,
+    border: `1px solid ${cssVars.colors.border}`,
+    boxShadow: cssVars.shadows.sm,
+    display: 'flex',
+    flexDirection: 'column',
     gap: cssVars.spacing.md,
-    marginBottom: cssVars.spacing.lg,
   },
-  avatar: {
-    width: '64px',
-    height: '64px',
-    borderRadius: cssVars.borderRadius.full,
-    background: cssVars.colors.primary,
+  cardTitle: {
+    margin: 0,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontSize: cssVars.fontSizes.xs,
+  },
+  identityCard: {
+    borderTop: `4px solid ${cssVars.colors.primary}`,
+  },
+  identityHeader: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarImage: {
-    width: '64px',
-    height: '64px',
-    borderRadius: cssVars.borderRadius.full,
-    objectFit: 'cover' as const,
-  },
-  avatarInitials: {
-    fontSize: cssVars.fontSizes.xl,
-    fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.onPrimary,
+    gap: cssVars.spacing.lg,
   },
   profileInfo: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
   },
   userName: {
     margin: 0,
     fontSize: cssVars.fontSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
-    color: cssVars.colors.textPrimary,
   },
   userEmail: {
     margin: 0,
-    marginTop: '2px',
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
+  },
+  badgeGuest: {
+    display: 'inline-block',
+    marginTop: cssVars.spacing.xs,
+    padding: '2px 8px',
+    borderRadius: cssVars.borderRadius.full,
+    background: cssVars.colors.warningSubtle,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.xs,
+    alignSelf: 'flex-start',
+  },
+  badgeVerify: {
+    display: 'inline-block',
+    marginTop: cssVars.spacing.xs,
+    padding: '2px 8px',
+    borderRadius: cssVars.borderRadius.full,
+    background: cssVars.colors.primarySubtle,
+    color: cssVars.colors.primary,
+    fontSize: cssVars.fontSizes.xs,
+    alignSelf: 'flex-start',
+  },
+
+  // STATS
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: cssVars.spacing.md,
+  },
+  statItem: {
+    textAlign: 'center',
+    padding: cssVars.spacing.sm,
+    background: cssVars.colors.background,
+    borderRadius: cssVars.borderRadius.md,
+  },
+  statValue: {
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    marginBottom: '4px',
+  },
+  statLabel: {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  },
+
+  // PREFERENCES LIST
+  listRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: `${cssVars.spacing.sm} 0`,
+    cursor: 'pointer',
+  },
+  listLabel: {
+    fontSize: cssVars.fontSizes.md,
+  },
+  listValue: {
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.sm,
   },
   divider: {
     height: '1px',
     background: cssVars.colors.border,
-    margin: `${cssVars.spacing.lg} 0`,
+    margin: `${cssVars.spacing.xs} 0`,
   },
-  section: {
-    marginBottom: cssVars.spacing.lg,
+  actionButton: {
+    width: '100%',
+    textAlign: 'left',
+    padding: `${cssVars.spacing.sm} 0`,
+    background: 'none',
+    border: 'none',
+    fontSize: cssVars.fontSizes.md,
+    color: cssVars.colors.textPrimary,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
   },
+  selectInput: {
+    padding: '4px 8px',
+    borderRadius: cssVars.borderRadius.md,
+    border: `1px solid ${cssVars.colors.border}`,
+    background: cssVars.colors.background,
+    color: cssVars.colors.textPrimary,
+    fontSize: cssVars.fontSizes.sm,
+    cursor: 'pointer',
+  },
+
+  // TOGGLES
+  toggleRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: `${cssVars.spacing.sm} 0`,
+    cursor: 'pointer',
+  },
+  toggleLabel: {
+    fontSize: cssVars.fontSizes.md,
+  },
+  toggleSwitch: {
+    width: '44px',
+    height: '24px',
+    borderRadius: '12px',
+    padding: '2px',
+    display: 'flex',
+    alignItems: 'center',
+    transition: 'background 0.2s ease',
+  },
+  toggleKnob: {
+    width: '20px',
+    height: '20px',
+    borderRadius: '50%',
+    background: '#fff',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+  },
+
+  // TOURNAMENTS LIST AREA
   sectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -321,122 +514,60 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     fontSize: cssVars.fontSizes.lg,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.textPrimary,
-  },
-  statusCounts: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-  },
-  liveCount: {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.statusLive,
-    fontWeight: cssVars.fontWeights.medium,
-  },
-  totalCount: {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textTertiary,
-  },
-  sortRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    marginBottom: cssVars.spacing.md,
-  },
-  sortLabel: {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
   },
   sortSelect: {
-    height: '32px',
-    padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textPrimary,
-    background: cssVars.colors.surfaceSolid,
-    border: `1px solid ${cssVars.colors.border}`,
+    padding: cssVars.spacing.xs,
     borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    // Fix: Prevent all options from rendering at once
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    lineHeight: '32px',
-  } as CSSProperties,
-  loadingState: {
-    padding: cssVars.spacing.xl,
-    textAlign: 'center',
-  },
-  loadingText: {
-    fontSize: cssVars.fontSizes.md,
-    color: cssVars.colors.textSecondary,
-  },
-  emptyState: {
-    padding: cssVars.spacing.xl,
-    textAlign: 'center',
+    border: `1px solid ${cssVars.colors.border}`,
     background: cssVars.colors.surface,
-    borderRadius: cssVars.borderRadius.lg,
-    border: `1px dashed ${cssVars.colors.border}`,
-  },
-  emptyText: {
-    margin: 0,
-    fontSize: cssVars.fontSizes.md,
     color: cssVars.colors.textPrimary,
-    marginBottom: cssVars.spacing.xs,
-  },
-  emptySubtext: {
-    margin: 0,
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
   },
   tournamentList: {
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.md,
-    marginBottom: cssVars.spacing.lg,
   },
-  createButton: {
-    minHeight: '56px',
+  emptyState: {
+    textAlign: 'center',
+    padding: cssVars.spacing.xl,
+    background: cssVars.colors.surface,
+    borderRadius: cssVars.borderRadius.lg,
+    border: `1px dashed ${cssVars.colors.border}`,
+    color: cssVars.colors.textSecondary,
   },
-  menuSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.xs,
+  emptyText: {
+    marginBottom: cssVars.spacing.md,
   },
-  menuItem: {
+  loadingState: {
+    textAlign: 'center',
+    padding: cssVars.spacing.xl,
+    color: cssVars.colors.textSecondary,
+  },
+
+  // AVATAR (reused specific styles)
+  avatar: {
+    width: '64px',
+    height: '64px',
+    borderRadius: cssVars.borderRadius.full,
+    background: cssVars.colors.primary,
     display: 'flex',
     alignItems: 'center',
-    gap: cssVars.spacing.md,
-    padding: cssVars.spacing.md,
-    background: 'transparent',
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    font: 'inherit',
-    textAlign: 'left',
-    color: cssVars.colors.textPrimary,
-    transition: 'background 0.2s ease',
-    width: '100%',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  menuIcon: {
-    fontSize: cssVars.fontSizes.lg,
+  avatarImage: {
+    width: '64px',
+    height: '64px',
+    borderRadius: cssVars.borderRadius.full,
+    objectFit: 'cover' as const,
+    flexShrink: 0,
   },
-  menuText: {
-    flex: 1,
-    fontSize: cssVars.fontSizes.md,
+  avatarInitials: {
+    fontSize: cssVars.fontSizes.xl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.onPrimary,
   },
-  menuArrow: {
-    color: cssVars.colors.textTertiary,
-    fontSize: cssVars.fontSizes.md,
-  },
-  comingSoon: {
-    fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textTertiary,
-    background: cssVars.colors.surface,
-    padding: `2px ${cssVars.spacing.xs}`,
-    borderRadius: cssVars.borderRadius.sm,
-  },
-  logoutItem: {
-    color: cssVars.colors.error,
+  bannerContainer: {
     marginTop: cssVars.spacing.md,
   },
 };

@@ -42,7 +42,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const [reason, setReason] = useState<CorrectionReason>('input_error');
   const [note, setNote] = useState<string>('');
 
-  if (!isOpen) {return null;}
+  if (!isOpen) { return null; }
 
   const handleConfirm = () => {
     const scoreA = parseInt(newScoreA) || 0;
@@ -72,7 +72,8 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   };
 
   const dialogStyle: CSSProperties = {
-    backgroundColor: cssVars.colors.surface,
+    backgroundColor: cssVars.colors.surfaceElevated,
+    color: cssVars.colors.textPrimary,
     borderRadius: cssVars.borderRadius.lg,
     padding: cssVars.spacing.xl,
     maxWidth: '450px',

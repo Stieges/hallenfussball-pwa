@@ -2,7 +2,7 @@
  * Schedule Types - Type definitions for schedule generation
  */
 
-import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField } from '../../types/tournament'
+import { RefereeConfig, LocationDetails, ContactInfo, Standing, TournamentGroup, TournamentField, RuntimeMatchEvent } from '../../types/tournament'
 
 // ============================================================================
 // SCHEDULED MATCH
@@ -41,12 +41,17 @@ export interface ScheduledMatch {
   duration: number
   /** Schiedsrichter-Nummer (SR1 = 1, SR2 = 2, etc.) */
   referee?: number
+  /** Is this a final match? */
+  isFinal?: boolean
   /** Slot index für Schiedsrichter-Verteilung */
   slot?: number
   /** Score Heim-Team (optional, wird bei Ergebniseingabe gesetzt) */
   scoreA?: number
   /** Score Auswärts-Team (optional, wird bei Ergebniseingabe gesetzt) */
   scoreB?: number
+
+  // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
+  events?: RuntimeMatchEvent[]
 }
 
 export type SchedulePhaseType = 'groupStage' | 'roundOf16' | 'quarterfinal' | 'semifinal' | 'final'

@@ -1,8 +1,7 @@
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
-
-const STORAGE_KEY = 'tournaments';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 export class LocalStorageRepository implements ITournamentRepository {
 
@@ -66,7 +65,7 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     private loadList(): Tournament[] {
         try {
-            const stored = localStorage.getItem(STORAGE_KEY);
+            const stored = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
             if (!stored) { return []; }
             const raw = JSON.parse(stored) as unknown;
             if (!Array.isArray(raw)) { return []; }
@@ -90,6 +89,6 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     private saveList(list: Tournament[]): void {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(list));
     }
 }

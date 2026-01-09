@@ -35,7 +35,10 @@ export interface OverflowMenuProps {
   onEditResultClick?: () => void;
   onAdjustTimeClick?: () => void;
 
-  /** Navigate to Admin Center Settings */
+  /** Open Settings Dialog directly */
+  onSettingsClick?: () => void;
+
+  /** Navigate to Admin Center Settings (fallback) */
   onNavigateToSettings?: () => void;
 }
 
@@ -108,19 +111,18 @@ function Divider() {
 export function OverflowMenu({
   isOpen,
   onClose,
-  tournamentId,
   onCardClick,
   onTimePenaltyClick,
   onSubstitutionClick,
   onEditResultClick,
   onAdjustTimeClick,
-  onNavigateToSettings,
+
 }: OverflowMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on click outside
   useEffect(() => {
-    if (!isOpen) {return;}
+    if (!isOpen) { return; }
 
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -143,7 +145,7 @@ export function OverflowMenu({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) {return null;}
+  if (!isOpen) { return null; }
 
   // Handler that closes menu after action
   const handleAction = (action?: () => void) => {
@@ -153,15 +155,7 @@ export function OverflowMenu({
     onClose();
   };
 
-  const handleNavigateToSettings = () => {
-    if (onNavigateToSettings) {
-      onNavigateToSettings();
-    } else {
-      // Default: Navigate to Admin Center Settings
-      window.location.href = `/tournament/${tournamentId}/admin/settings`;
-    }
-    onClose();
-  };
+
 
   // Styles
   const overlayStyle: CSSProperties = {
@@ -253,31 +247,8 @@ export function OverflowMenu({
           />
         )}
 
-        <Divider />
 
-        {/* Settings Link */}
-        <div style={sectionLabelStyle}>Einstellungen</div>
-
-        <MenuItem
-          icon="⚙️"
-          label="Cockpit-Einstellungen"
-          onClick={handleNavigateToSettings}
-          variant="link"
-        />
-
-        <p
-          style={{
-            margin: 0,
-            padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-            fontSize: cssVars.fontSizes.xs,
-            color: cssVars.colors.textMuted,
-          }}
-        >
-          Timer, Sound, Haptik & mehr im Admin Center
-        </p>
       </div>
     </>
   );
 }
-
-export default OverflowMenu;

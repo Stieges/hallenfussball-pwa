@@ -31,7 +31,7 @@ import {
   type MatchCardStatus,
   type RefereeOption,
 } from './MatchCard';
-import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand } from './MatchExpand';
+import { QuickScoreExpand, LiveInfoExpand, StartMatchExpand, SummaryExpand } from './MatchExpand';
 import { MatchSummary } from './MatchSummary';
 import { useMatchConflictsFromTournament } from '../../features/schedule-editor/hooks/useMatchConflicts';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
@@ -119,7 +119,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   }, [editingSchedule]);
 
   // Spielplan 2.0: Expand state for mobile cards
-  type ExpandType = 'quick' | 'live' | 'start' | null;
+  type ExpandType = 'quick' | 'live' | 'start' | 'summary' | null;
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
   const [expandType, setExpandType] = useState<ExpandType>(null);
 
@@ -144,7 +144,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Close expand when clicking outside (Mobile UX improvement)
   useEffect(() => {
-    if (!expandedMatchId) {return;}
+    if (!expandedMatchId) { return; }
 
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -194,7 +194,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) {return;}
+    if (!over || active.id === over.id) { return; }
 
     const sourceMatchId = active.id as string;
     const targetMatchId = over.id as string;
@@ -203,7 +203,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     setDisplayOrder(prevOrder => {
       const oldIndex = prevOrder.indexOf(sourceMatchId);
       const newIndex = prevOrder.indexOf(targetMatchId);
-      if (oldIndex === -1 || newIndex === -1) {return prevOrder;}
+      if (oldIndex === -1 || newIndex === -1) { return prevOrder; }
       return arrayMove(prevOrder, oldIndex, newIndex);
     });
 
@@ -239,7 +239,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
    */
   const handleCardClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
-    if (!match) {return;}
+    if (!match) { return; }
 
     const status = getMatchStatus(match);
 
@@ -266,7 +266,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
    */
   const handleCircleClick = (matchId: string) => {
     const match = matches.find(m => m.id === matchId);
-    if (!match) {return;}
+    if (!match) { return; }
 
     const status = getMatchStatus(match);
 
@@ -282,15 +282,15 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         setExpandType('live');
         break;
       case 'finished':
-        // Finished: Show match summary with events
-        setSummaryMatchId(matchId);
-        setShowMatchSummary(true);
+        // Finished: Show match summary with events (inline)
+        setExpandedMatchId(matchId);
+        setExpandType('summary');
         break;
       default:
         // Fallback: If match has scores, treat as finished and show summary
         if (match.scoreA !== undefined && match.scoreB !== undefined) {
-          setSummaryMatchId(matchId);
-          setShowMatchSummary(true);
+          setExpandedMatchId(matchId);
+          setExpandType('summary');
         }
         break;
     }
@@ -300,12 +300,38 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
    * Handle score save from expand
    */
   const handleExpandSave = useCallback((matchId: string, homeScore: number, awayScore: number) => {
+    // Check if match is already finished
+    const match = matches.find(m => m.id === matchId);
+    if (!match) { return; }
+
+    const isFinished = finishedMatches?.has(matchId) || (match.scoreA !== undefined && match.scoreB !== undefined);
+
+    if (isFinished) {
+      // If finished, redirect to correction flow logic
+      // We can't just apply the score because it's locked.
+      // We should close the quick expand and open correction flow.
+      setExpandedMatchId(null);
+      setExpandType(null);
+
+      // Open correction dialog logic
+      if (_onStartCorrection) {
+        _onStartCorrection(matchId);
+      } else {
+        const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
+        const correctionHandler = matchWithHandler.onStartCorrection;
+        if (typeof correctionHandler === 'function') {
+          correctionHandler(matchId);
+        }
+      }
+      return;
+    }
+
     if (onScoreChange) {
       onScoreChange(matchId, homeScore, awayScore);
     }
     setExpandedMatchId(null);
     setExpandType(null);
-  }, [onScoreChange]);
+  }, [matches, finishedMatches, onScoreChange, _onStartCorrection]);
 
   /**
    * Handle expand cancel/close
@@ -375,10 +401,53 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCancel={handleExpandClose}
           />
         );
+      case 'summary': {
+        // Get events for summary
+        const liveMatch = liveMatches.get(match.id);
+        const liveEvents = liveMatch?.events;
+        const sourceEvents = match.events ?? liveEvents;
+        const events: RuntimeMatchEvent[] = sourceEvents
+          ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
+            ...e,
+            matchId: e.matchId || match.id,
+            scoreAfter: e.scoreAfter,
+          }))
+          : [];
+
+        return (
+          <SummaryExpand
+            homeTeamName={String(homeTeam)}
+            awayTeamName={String(awayTeam)}
+            homeScore={match.scoreA ?? 0}
+            awayScore={match.scoreB ?? 0}
+            homeTeamId={match.originalTeamA}
+            awayTeamId={match.originalTeamB}
+            events={events} // Pass events
+            onEditScore={() => {
+              setExpandedMatchId(null);
+              setExpandType(null);
+              // Fallback correction or emit event?
+              // The old logic was using Quick expand or Correction Dialog.
+              // User wants to see result, then events, then maybe correct?
+              // Let's call onStartCorrection if available.
+              if (_onStartCorrection) {
+                _onStartCorrection(match.id);
+              } else {
+                const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
+                const correctionHandler = matchWithHandler.onStartCorrection;
+                if (typeof correctionHandler === 'function') {
+                  correctionHandler(match.id);
+                }
+              }
+            }}
+            onClose={handleExpandClose}
+          />
+        );
+      }
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams, liveMatches, _onStartCorrection]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -409,7 +478,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Generate referee options for dropdown (nur Nummern)
   const getRefereeOptions = () => {
-    if (!refereeConfig) {return [];}
+    if (!refereeConfig) { return []; }
 
     const numberOfReferees = refereeConfig.mode === 'organizer'
       ? (refereeConfig.numberOfReferees || 2)
@@ -417,7 +486,9 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
     const options = [];
     for (let i = 1; i <= numberOfReferees; i++) {
-      options.push({ value: i, label: i.toString() });
+      const name = refereeConfig.refereeNames?.[i];
+      const label = name ? `${i} (${name})` : i.toString();
+      options.push({ value: i, label });
     }
     return options;
   };
@@ -719,6 +790,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   onCircleClick={() => handleCircleClick(match.id)}
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
+                  referee={match.referee ? `SR ${match.referee}` : undefined}
                 />
               </div>
             );
@@ -729,17 +801,20 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       {/* Match Summary for finished matches */}
       {showMatchSummary && summaryMatchId && (() => {
         const match = matches.find(m => m.id === summaryMatchId);
-        if (!match) {return null;}
+        if (!match) { return null; }
 
         // Get live match data for events
         const liveMatch = liveMatches.get(summaryMatchId);
         const liveEvents = liveMatch?.events;
-        const events: RuntimeMatchEvent[] = liveEvents
-          ? liveEvents.map(e => ({
-              ...e,
-              matchId: e.matchId,
-              scoreAfter: e.scoreAfter,
-            }))
+
+        // Prefer persisted events from match object
+        const sourceEvents = match.events ?? liveEvents;
+        const events: RuntimeMatchEvent[] = sourceEvents
+          ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
+            ...e,
+            matchId: e.matchId || summaryMatchId,
+            scoreAfter: e.scoreAfter,
+          }))
           : [];
 
         return (
@@ -757,11 +832,22 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             awayTeamName={match.awayTeam}
             events={events}
             onEditScore={() => {
-              // Close summary and open quick edit for score correction
+              // Close summary and start correction flow
               setShowMatchSummary(false);
               setSummaryMatchId(null);
-              setExpandedMatchId(summaryMatchId);
-              setExpandType('quick');
+
+              if (_onStartCorrection) {
+                _onStartCorrection(summaryMatchId);
+              } else {
+                const matchWithHandler = match as unknown as { onStartCorrection?: (id: string) => void };
+                const correctionHandler = matchWithHandler.onStartCorrection;
+                if (typeof correctionHandler === 'function') {
+                  correctionHandler(summaryMatchId);
+                } else {
+                  setExpandedMatchId(summaryMatchId);
+                  setExpandType('quick');
+                }
+              }
             }}
           />
         );

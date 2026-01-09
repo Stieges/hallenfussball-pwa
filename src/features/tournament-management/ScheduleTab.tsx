@@ -135,9 +135,20 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   });
 
   // Get filtered matches for display
+  // FIX: Use schedule.allMatches as source ensuring we filter what is displayed (Preview/Generated),
+  // rather than potentially stale tournament.matches (Persistence).
+  // Map ScheduledMatch to Match interface (originalTeamA -> teamA)
+  const sourceMatchesForFiltering = useMemo(() => {
+    return schedule.allMatches.map(sm => ({
+      ...sm,
+      teamA: sm.originalTeamA,
+      teamB: sm.originalTeamB,
+    })) as unknown as Match[];
+  }, [schedule.allMatches]);
+
   const filteredMatches = useMemo(
-    () => getFilteredMatches(tournament.matches, tournament.teams),
-    [getFilteredMatches, tournament.matches, tournament.teams]
+    () => getFilteredMatches(sourceMatchesForFiltering, tournament.teams),
+    [getFilteredMatches, sourceMatchesForFiltering, tournament.teams]
   );
 
   // Build set of visible match IDs for ScheduleDisplay
@@ -208,9 +219,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   // Get info about the currently running match for dialog
   const runningMatchInfo = useMemo(() => {
     const runningMatchId = Array.from(runningMatchIds)[0];
-    if (!runningMatchId) {return null;}
+    if (!runningMatchId) { return null; }
     const match = tournament.matches.find(m => m.id === runningMatchId);
-    if (!match) {return null;}
+    if (!match) { return null; }
     return {
       id: runningMatchId,
       teamA: getTeamNameById(match.teamA),

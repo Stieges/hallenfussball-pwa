@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
-import { useBreakpoint, useMatchTimer, useMatchSound } from '../../hooks';
+import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
@@ -33,7 +33,8 @@ import {
   // BUG-002: Event Log Bottom Sheet for Mobile
   EventLogBottomSheet,
   // Overflow Menu for quick actions + settings link
-  OverflowMenu,
+
+  SettingsDialog,
 } from './components';
 
 // Hooks
@@ -81,6 +82,8 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   onCard,
   onSubstitution,
   onFoul,
+  onUpdateEvent,
+  onUpdateSettings,
 }) => {
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
@@ -119,11 +122,13 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-002: Event Log Bottom Sheet for Mobile
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   // Overflow Menu (⋮ button in header)
-  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+
   const [homeFouls, setHomeFouls] = useState(0);
   const [awayFouls, setAwayFouls] = useState(0);
   // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
   const [sidesSwapped, setSidesSwapped] = useState(false);
+  // Settings Dialog
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, dismissToast } = useToast();
@@ -133,14 +138,22 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     return upcomingMatches.length > 0 ? upcomingMatches[0] : null;
   }, [upcomingMatches]);
 
-  // BUG-004 FIX: Real-time timer display using useMatchTimer
-  // This calculates elapsed time locally from timerStartTime for smooth 1-second updates
-  // instead of waiting for the 5-second persistence interval
-  const displayElapsedSeconds = useMatchTimer(
+  // BUG-004 FIX: Real-time timer display using useMatchTimerExtended
+  // Supports Countdown, Netto-Warning and Timer State
+  const {
+    displaySeconds,
+    isOvertime,
+    timerState
+  } = useMatchTimerExtended(
     currentMatch?.timerStartTime ?? null,
     currentMatch?.timerElapsedSeconds ?? 0,
-    currentMatch?.status ?? 'NOT_STARTED'
+    currentMatch?.status ?? 'NOT_STARTED',
+    currentMatch?.durationSeconds ?? 900, // Default 15 min if missing
+    cockpitSettings.timerDirection,
+    cockpitSettings.nettoWarningSeconds
   );
+
+
 
   // BUG-008 FIX: Update penalty countdowns every second when match is RUNNING
   // Also removes expired penalties and pauses countdown when match is paused
@@ -175,13 +188,13 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   // Open GoalScorerDialog instead of direct goal
   const handleGoalHome = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     setPendingGoalSide('home');
     setShowGoalDialog(true);
   }, [currentMatch]);
 
   const handleGoalAway = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     setPendingGoalSide('away');
     setShowGoalDialog(true);
   }, [currentMatch]);
@@ -189,7 +202,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // Callback when GoalScorerDialog confirms
   const handleGoalConfirm = useCallback(
     (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => {
-      if (!currentMatch || !pendingGoalSide) {return;}
+      if (!currentMatch || !pendingGoalSide) { return; }
 
       const teamId = pendingGoalSide === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
       const teamName = pendingGoalSide === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
@@ -224,25 +237,25 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   );
 
   const handleMinusHome = useCallback(() => {
-    if (!currentMatch || currentMatch.homeScore <= 0) {return;}
+    if (!currentMatch || currentMatch.homeScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
     showInfo(`Tor für ${currentMatch.homeTeam.name} entfernt`);
   }, [currentMatch, onGoal, showInfo]);
 
   const handleMinusAway = useCallback(() => {
-    if (!currentMatch || currentMatch.awayScore <= 0) {return;}
+    if (!currentMatch || currentMatch.awayScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
     showInfo(`Tor für ${currentMatch.awayTeam.name} entfernt`);
   }, [currentMatch, onGoal, showInfo]);
 
   const handleStart = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     onStart(currentMatch.id);
     showSuccess('Spiel gestartet!');
   }, [currentMatch, onStart, showSuccess]);
 
   const handleFinish = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
 
     // Play match end sound if enabled
     if (cockpitSettings.soundEnabled) {
@@ -261,14 +274,31 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     showInfo('Spiel beendet');
   }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound]);
 
+  // Auto-Finish Logic (Moved safely after handleFinish declaration)
+  useEffect(() => {
+    if (
+      cockpitSettings.autoFinishEnabled &&
+      currentMatch?.status === 'RUNNING' &&
+      isOvertime
+    ) {
+      // console.log('⏰ Auto-Finish triggered');
+      handleFinish();
+    }
+  }, [
+    cockpitSettings.autoFinishEnabled,
+    currentMatch?.status,
+    isOvertime,
+    handleFinish
+  ]);
+
   const handleUndo = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     onUndoLastEvent(currentMatch.id);
     showInfo('Letzte Aktion rückgängig gemacht');
   }, [currentMatch, onUndoLastEvent, showInfo]);
 
   const handlePauseResume = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     if (currentMatch.status === 'RUNNING') {
       onPause(currentMatch.id);
       showInfo('Spiel pausiert');
@@ -279,14 +309,28 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   }, [currentMatch, onPause, onResume, showInfo, showSuccess]);
 
   const handleTimeAdjust = useCallback(
-    (newTimeSeconds: number) => {
-      if (!currentMatch) {return;}
-      onAdjustTime(currentMatch.id, newTimeSeconds);
-      const mins = Math.floor(newTimeSeconds / 60);
-      const secs = newTimeSeconds % 60;
+    (newDisplaySeconds: number) => {
+      if (!currentMatch) { return; }
+
+      let newElapsedSeconds = newDisplaySeconds;
+
+      // If in countdown mode, convert display time (remaining) back to elapsed
+      if (cockpitSettings.timerDirection === 'countdown') {
+        // User sets "remaining time", so elapsed = duration - remaining
+        const duration = currentMatch.durationSeconds; // durationSeconds is required in LiveMatch, defaults handled upstream
+        newElapsedSeconds = duration - newDisplaySeconds;
+        // Ensure strictly positive bounds (optional, but good practice)
+        // newElapsedSeconds = Math.max(0, newElapsedSeconds); 
+        // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
+      }
+
+      onAdjustTime(currentMatch.id, newElapsedSeconds);
+
+      const mins = Math.floor(newDisplaySeconds / 60);
+      const secs = newDisplaySeconds % 60;
       showInfo(`Zeit auf ${mins}:${secs.toString().padStart(2, '0')} gesetzt`);
     },
-    [currentMatch, onAdjustTime, showInfo]
+    [currentMatch, onAdjustTime, showInfo, cockpitSettings.timerDirection]
   );
 
   const handleSwitchSides = useCallback(() => {
@@ -302,7 +346,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   }, [showInfo]);
 
   const handleFoulHome = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     const newFouls = homeFouls + 1;
     setHomeFouls(newFouls);
 
@@ -316,7 +360,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   }, [currentMatch, homeFouls, onFoul, showInfo]);
 
   const handleFoulAway = useCallback(() => {
-    if (!currentMatch) {return;}
+    if (!currentMatch) { return; }
     const newFouls = awayFouls + 1;
     setAwayFouls(newFouls);
 
@@ -332,7 +376,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
     (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
 
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
@@ -354,7 +398,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
   const handleTimePenaltyConfirm = useCallback(
     (durationSeconds: number, teamId: string, playerNumber?: number) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
@@ -390,7 +434,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-009: Updated to handle multi-player substitutions
   const handleSubstitutionConfirm = useCallback(
     (teamId: string, playersOut: number[], playersIn: number[]) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
@@ -414,7 +458,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-010: Handler for editing events from the sidebar
   const handleEventEdit = useCallback(
     (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown>; incomplete?: boolean }) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       // Find the full event from match.events to get all properties
       const fullEvent = currentMatch.events.find(e => e.id === event.id);
       if (fullEvent) {
@@ -435,9 +479,9 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   // BUG-010: Handler for updating event details
   const handleEventUpdate = useCallback(
     (eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const event = currentMatch.events.find(e => e.id === eventId);
-      if (!event) {return;}
+      if (!event) { return; }
 
       // Show success toast with event type
       const eventTypeLabels: Record<string, string> = {
@@ -450,20 +494,24 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
       };
       const label = eventTypeLabels[event.type] ?? event.type;
       const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
-      showSuccess(`✅ ${label}${playerInfo} aktualisiert`);
 
-      // Note: Full persistence would require parent callback - for now just showing toast
-      // TODO: Add onUpdateEvent prop to LiveCockpitProps when backend is ready
+      // Call parent handler to persist update
+      if (onUpdateEvent) {
+        onUpdateEvent(currentMatch.id, eventId, updates);
+        showSuccess(`✅ ${label}${playerInfo} aktualisiert`);
+      } else {
+        showInfo(`(Preview) ${label}${playerInfo} aktualisiert`);
+      }
     },
-    [currentMatch, showSuccess]
+    [currentMatch, showSuccess, showInfo, onUpdateEvent]
   );
 
   // BUG-010: Handler for deleting events (with score adjustment for GOALs)
   const handleEventDelete = useCallback(
     (eventId: string) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const event = currentMatch.events.find(e => e.id === eventId);
-      if (!event) {return;}
+      if (!event) { return; }
 
       const eventTypeLabels: Record<string, string> = {
         GOAL: 'Tor',
@@ -574,21 +622,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
   };
 
-  // Menu Button (⋮)
-  const menuButtonStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 36,
-    height: 36,
-    background: 'transparent',
-    border: 'none',
-    borderRadius: cssVars.borderRadius.md,
-    color: cssVars.colors.textSecondary,
-    fontSize: '1.25rem',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  };
+
 
   // Next Banner
   const nextBannerStyle: CSSProperties = {
@@ -636,6 +670,12 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     fontWeight: cssVars.fontWeights.bold,
     fontVariantNumeric: 'tabular-nums',
     cursor: !isFinished ? 'pointer' : 'default',
+    color: timerState === 'netto-warning'
+      ? cssVars.colors.warning
+      : timerState === 'overtime' || timerState === 'zero'
+        ? cssVars.colors.error
+        : cssVars.colors.textPrimary,
+    transition: 'color 0.3s ease',
   };
 
   const timerTotalStyle: CSSProperties = {
@@ -703,21 +743,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
-            <button
-              type="button"
-              style={menuButtonStyle}
-              onClick={() => setShowOverflowMenu(true)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = cssVars.colors.surfaceHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
-              aria-label="Weitere Aktionen"
-              data-testid="overflow-menu-button"
-            >
-              ⋮
-            </button>
+
           </div>
         </div>
 
@@ -759,7 +785,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
                 tabIndex={0}
                 data-testid="match-timer-display"
               >
-                {formatTime(displayElapsedSeconds)}
+                {formatTime(displaySeconds)}
               </span>
               <span style={timerTotalStyle}>
                 / {formatTime(match.durationSeconds)}
@@ -848,6 +874,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
               onSwitchSides={handleSwitchSides}
               onHalfTime={handleHalfTime}
               onFinish={handleFinish}
+              onSettings={() => setShowSettingsDialog(true)}
               // BUG-002: Event Log for Mobile
               onEventLog={() => setShowEventLogBottomSheet(true)}
               canUndo={canUndo}
@@ -876,7 +903,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         isOpen={showTimeAdjustDialog}
         onClose={() => setShowTimeAdjustDialog(false)}
         onConfirm={handleTimeAdjust}
-        currentTimeSeconds={displayElapsedSeconds}
+        currentTimeSeconds={displaySeconds}
         matchDurationMinutes={Math.floor(match.durationSeconds / 60)}
       />
 
@@ -975,27 +1002,19 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
         }}
       />
 
-      {/* Overflow Menu (⋮ button) */}
-      <OverflowMenu
-        isOpen={showOverflowMenu}
-        onClose={() => setShowOverflowMenu(false)}
+
+
+      <SettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
+        settings={cockpitSettings}
+        onChange={(newSettings) => {
+          if (onUpdateSettings) {
+            onUpdateSettings(newSettings);
+          }
+        }}
         tournamentId={tournamentId}
-        onCardClick={() => {
-          setShowOverflowMenu(false);
-          setShowCardDialog(true);
-        }}
-        onTimePenaltyClick={() => {
-          setShowOverflowMenu(false);
-          setShowTimePenaltyDialog(true);
-        }}
-        onSubstitutionClick={() => {
-          setShowOverflowMenu(false);
-          setShowSubstitutionDialog(true);
-        }}
-        onAdjustTimeClick={() => {
-          setShowOverflowMenu(false);
-          setShowTimeAdjustDialog(true);
-        }}
+        onTestSound={() => void sound.play()}
       />
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

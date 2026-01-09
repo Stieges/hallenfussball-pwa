@@ -1,21 +1,22 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { ScheduleService } from '../core/services/ScheduleService';
-import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 import { Match, MatchUpdate } from '../core/models/types';
+import { useRepository } from './useRepository';
 
 /**
  * useScheduleManager Hook
- * 
+ *
  * The "Controller" that bridges React Components to the Domain Logic.
  * Replaces the complex/buggy logic of `useTournamentSync`.
  */
 export function useScheduleManager(tournamentId: string) {
-    // Service Instantiation (Memoized effectively due to class nature)
-    // In a real app manually doing this new() might be moved to a Context or DI Container
+    // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
+    const repository = useRepository();
+
+    // Service Instantiation (recreates if repository changes)
     const service = useMemo(() => {
-        const repo = new LocalStorageRepository();
-        return new ScheduleService(repo);
-    }, []);
+        return new ScheduleService(repository);
+    }, [repository]);
 
     // View State (Read Model)
     const [matches, setMatches] = useState<Match[]>([]);

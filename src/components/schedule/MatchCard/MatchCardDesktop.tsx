@@ -42,6 +42,8 @@ export interface MatchCardDesktopProps {
   field?: number;
   /** Group label */
   group?: string;
+  /** Referee name */
+  referee?: string;
   /** Whether to show group label (hide for single-group tournaments) */
   showGroupLabel?: boolean;
   /** Home team */
@@ -80,6 +82,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   scheduledTime,
   field,
   group,
+  referee,
   showGroupLabel = true,
   homeTeam,
   awayTeam,
@@ -243,6 +246,9 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         {/* Field */}
         <div style={fieldStyle}>
           {field !== undefined ? `Feld ${field}` : ''}
+          {matchNumber && matchNumber > 0 && referee && (
+            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR: {referee}</div>
+          )}
         </div>
 
         {/* Home Team (right-aligned) */}

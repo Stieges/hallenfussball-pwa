@@ -18,6 +18,7 @@ import {
   RegisterScreen,
   UserProfileScreen,
   InviteAcceptScreen,
+  AuthCallback,
 } from './features/auth/components';
 import { Footer } from './components/layout';
 
@@ -88,7 +89,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
 
 function AppContent() {
   const { showError } = useToast();
@@ -213,24 +214,31 @@ function AppContent() {
 
     if (displayMatch) {
       // Monitor Display route (for TVs/Beamer)
-      const tournamentId = displayMatch[1];
-      const monitorId = displayMatch[2];
-      setMonitorDisplayParams({ tournamentId, monitorId });
+      setMonitorDisplayParams({ tournamentId: displayMatch[1], monitorId: displayMatch[2] });
       setScreen('monitor-display');
     } else if (publicMatch) {
-      const tournamentId = publicMatch[1];
-      setPublicTournamentId(tournamentId);
+      setPublicTournamentId(publicMatch[1]);
       setScreen('public');
     } else if (inviteMatch) {
-      // Parse invite token from URL params
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       if (token) {
         setInviteToken(token);
         setScreen('invite');
       }
+    } else if (path === '/auth/callback') {
+      // Handle OAuth/Magic Link callback
+      setScreen('auth-callback');
+    } else if (path === '/settings') {
+      setScreen('settings');
+    } else if (path === '/profile') {
+      setScreen('profile');
+    } else if (path === '/register') {
+      setScreen('register');
+    } else if (path === '/login') {
+      setScreen('login');
     }
-  }, []);
+  }, [location.pathname]); // Depend on location.pathname to react to URL changes
 
   if (loading) {
     return (
@@ -411,12 +419,19 @@ function AppContent() {
 
       <Suspense fallback={<ScreenLoader />}>
         {/* Auth Screens */}
+        {/* Auth Screens */}
         {screen === 'login' && (
           <LoginScreen
             onSuccess={() => void navigate('/')}
             onNavigateToRegister={() => setScreen('register')}
-            onBack={() => void navigate('/')}
-            onContinueAsGuest={() => void navigate('/')}
+            onBack={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
+            onContinueAsGuest={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
           />
         )}
 
@@ -424,9 +439,14 @@ function AppContent() {
           <RegisterScreen
             onSuccess={() => void navigate('/')}
             onNavigateToLogin={() => setScreen('login')}
-            onBack={() => void navigate('/')}
+            onBack={() => {
+              setScreen('dashboard');
+              void navigate('/');
+            }}
           />
         )}
+
+        {screen === 'auth-callback' && <AuthCallback />}
 
         {screen === 'profile' && (
           <UserProfileScreen
@@ -437,7 +457,13 @@ function AppContent() {
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => void navigate('/')}
+            onBack={() => {
+              setScreen('profile');
+              // Optionally update URL if needed, but 'profile' screen logic handles its own state
+              // But wait, profile screen is also just a 'screen' state. 
+              // Let's also navigate to /profile if that's the desired URL behavior
+              void navigate('/profile');
+            }}
             onNavigateToImpressum={() => setScreen('impressum')}
             onNavigateToDatenschutz={() => setScreen('datenschutz')}
           />
@@ -500,7 +526,12 @@ function AppContent() {
               setQuickEditMode(false); // Reset quick edit mode
               // Small delay to ensure state updates propagate
               await new Promise(resolve => setTimeout(resolve, 200));
-              void navigate('/');
+              // If published/created, go to tournament dashboard. If draft, go to main dashboard.
+              if (tournament.status !== 'draft') {
+                void navigate(`/tournament/${tournament.id}`);
+              } else {
+                void navigate('/');
+              }
             }}
             existingTournament={
               selectedTournament ??
@@ -576,8 +607,8 @@ function AppContent() {
       {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
         <Footer
           onNavigate={(target) => {
-            if (target === 'impressum') {setScreen('impressum');}
-            if (target === 'datenschutz') {setScreen('datenschutz');}
+            if (target === 'impressum') { setScreen('impressum'); }
+            if (target === 'datenschutz') { setScreen('datenschutz'); }
           }}
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented

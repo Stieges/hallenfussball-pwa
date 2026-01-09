@@ -27,16 +27,30 @@ export function filterMatches(
 ): Match[] {
   return matches.filter((match) => {
     // Phase filter
-    if (filters.phase === 'groupStage' && match.isFinal) {
+    // Robustness: Check phase OR isFinal
+    const isFinalPhase = (match.phase && match.phase !== 'groupStage') || match.isFinal;
+
+    if (filters.phase === 'groupStage' && isFinalPhase) {
       return false;
     }
-    if (filters.phase === 'finals' && !match.isFinal) {
+    if (filters.phase === 'finals' && !isFinalPhase) {
       return false;
     }
 
     // Group filter
-    if (filters.group && match.group !== filters.group) {
-      return false;
+    if (filters.group && filters.group !== 'all') {
+      // If match is final (not groupStage) and has no group, it should NOT be filtered out by group filter
+      // UNLESS the user is specifically looking for group matches (which they would do via Phase filter)
+      // Robustness: Check phase OR isFinal (legacy/raw data compatibility)
+      const isFinalPhase = (match.phase && match.phase !== 'groupStage') || match.isFinal;
+
+      if (!isFinalPhase && match.group !== filters.group) {
+        return false;
+      }
+      // If it IS a final, and it somehow HAS a group (rare), filter it.
+      if (isFinalPhase && match.group && match.group !== filters.group) {
+        return false;
+      }
     }
 
     // Field filter

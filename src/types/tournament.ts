@@ -284,6 +284,9 @@ export interface Match {
   // US-SCHEDULE-EDITOR: Skipped match support
   skippedReason?: string;        // Grund für Überspringen (z.B. "Team zurückgezogen")
   skippedAt?: string;            // ISO timestamp when match was skipped
+
+  // DB-PERSISTENCE: Events for detailed match summary (scorers, cards)
+  events?: RuntimeMatchEvent[]; // Full event history persisted with the match
 }
 
 /**
@@ -496,7 +499,7 @@ export interface MatchCockpitSettings {
   penaltySuddenDeathAfter: number;
 
   // Sound Settings
-  /** Enable end-of-match horn sound. Default: true */
+  /** Enable end-of-match horn sound. Default: false */
   soundEnabled: boolean;
   /** Sound preset ID or 'custom' for uploaded sound. Default: 'horn-1' */
   soundId: MatchSoundPreset | null;
@@ -532,7 +535,7 @@ export const DEFAULT_MATCH_COCKPIT_SETTINGS: MatchCockpitSettings = {
   penaltySuddenDeathAfter: 6,
 
   // Sound
-  soundEnabled: true,
+  soundEnabled: false,
   soundId: 'horn-1',
   soundVolume: 80,
   hasCustomSound: false,

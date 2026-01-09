@@ -69,6 +69,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleStartPenaltyShootout,
     handleRecordPenaltyResult,
     handleCancelTiebreaker,
+    handleUpdateEvent,
   } = useMatchExecution({ tournament, onTournamentUpdate });
 
   // Confirm dialogs
@@ -298,11 +299,20 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     void handleReopenMatch(lastFinishedMatchData);
   }, [lastFinishedMatchData, handleReopenMatch]);
 
-  // Wrapped handleFinish to reset selection
   const handleFinishAndReset = useCallback(async (matchId: string) => {
     await handleFinish(matchId);
     setTimeout(() => { setSelectedMatchId(null); }, 0);
   }, [handleFinish]);
+
+  const handleUpdateSettings = useCallback(async (settings: import('../../types/tournament').MatchCockpitSettings) => {
+    // Merge with existing tournament settings
+    const updatedTournament = {
+      ...tournament,
+      matchCockpitSettings: settings,
+    };
+    // Persist
+    onTournamentUpdate(updatedTournament);
+  }, [tournament, onTournamentUpdate]);
 
   return (
     <div className={styles.container}>
@@ -377,6 +387,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
           onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
           onCancelTiebreaker={(matchId) => { void handleCancelTiebreaker(matchId); }}
+          onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
+          onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
         />
       ) : (
         <div className={styles.noMatches}>
