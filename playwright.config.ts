@@ -42,7 +42,7 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    actionTimeout: 30_000, // 30s per action (click, fill, etc.)
+    actionTimeout: 60_000, // 60s per action - needed for CI Vite cold-start
     navigationTimeout: 60_000, // 60s for page navigation (CI cold-start needs time)
   },
 
