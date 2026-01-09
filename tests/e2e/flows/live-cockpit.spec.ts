@@ -73,17 +73,19 @@ test.describe('Live Cockpit', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Navigate first, then seed localStorage, then reload
-    // This is more reliable in CI than addInitScript
+    // Navigate first to establish origin for localStorage access
     await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
 
     const tournament = createTestTournament();
     await page.evaluate((t) => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Reload to pick up the seeded data
-    await page.reload();
+    // Navigate again (not reload) to let app initialize with seeded data
+    // This is more reliable than reload() in CI environments
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for seeded tournament to appear
     await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
@@ -410,16 +412,18 @@ test.describe('Live Cockpit - Mobile', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Navigate first, then seed localStorage, then reload
-    // This is more reliable in CI than addInitScript
+    // Navigate first to establish origin for localStorage access
     await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
 
     const tournament = createTestTournament();
     await page.evaluate((t) => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    await page.reload();
+    // Navigate again (not reload) to let app initialize with seeded data
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('Touch targets are appropriately sized on mobile', async ({ page }) => {
