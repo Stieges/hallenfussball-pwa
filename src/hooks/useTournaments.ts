@@ -74,7 +74,7 @@ export const useTournaments = () => {
   }, [loadTournaments]);
 
   // Save tournament
-  const saveTournament = async (tournament: Tournament) => {
+  const saveTournament = useCallback(async (tournament: Tournament) => {
     try {
       await repository.save(tournament);
       // Reload tournaments / Update state optimistically better?
@@ -84,10 +84,10 @@ export const useTournaments = () => {
       console.error('Failed to save tournament:', error);
       throw error;
     }
-  };
+  }, [repository, loadTournaments]);
 
   // Delete tournament (Legacy/Permanent)
-  const deleteTournament = async (id: string) => {
+  const deleteTournament = useCallback(async (id: string) => {
     try {
       await repository.delete(id);
       await loadTournaments();
@@ -95,7 +95,7 @@ export const useTournaments = () => {
       console.error('Failed to delete tournament:', error);
       throw error;
     }
-  };
+  }, [repository, loadTournaments]);
 
   // Get tournament by ID
   const getTournament = (id: string): Tournament | undefined => {
@@ -215,8 +215,8 @@ export const useTournaments = () => {
    * Create stats snapshot for archiving
    */
   const createStatsSnapshot = (tournament: Tournament): TournamentStatsSnapshot => {
-    const matches = tournament.matches ?? [];
-    const teams = tournament.teams ?? [];
+    const matches = tournament.matches;
+    const teams = tournament.teams;
 
     const totalMatches = matches.length;
     const completedMatches = matches.filter(

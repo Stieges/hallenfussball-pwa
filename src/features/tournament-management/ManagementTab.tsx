@@ -205,7 +205,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   const lastFinishedMatchData = useMemo(() => {
     const finishedMatches = fieldMatches.filter((m) =>
       m.scoreA !== undefined && m.scoreB !== undefined
-    );
+    ) as (ScheduledMatch & { scoreA: number; scoreB: number })[];
     return finishedMatches[finishedMatches.length - 1];
   }, [fieldMatches]);
 
@@ -213,8 +213,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
     lastFinishedMatchData ? {
       match: toMatchSummary(lastFinishedMatchData),
-      homeScore: lastFinishedMatchData.scoreA ?? 0,
-      awayScore: lastFinishedMatchData.scoreB ?? 0,
+      homeScore: lastFinishedMatchData.scoreA,
+      awayScore: lastFinishedMatchData.scoreB,
     } : null,
     [lastFinishedMatchData, toMatchSummary]
   );
