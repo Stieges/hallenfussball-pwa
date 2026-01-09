@@ -21,10 +21,6 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 const supabaseRepo = new SupabaseRepository();
                 const offlineRepo = new OfflineRepository(localRepo, supabaseRepo);
 
-                // Trigger background sync when repo is instantiated (user logs in or app loads)
-                console.log('RepositoryProvider: Syncing up...');
-                void offlineRepo.syncUp();
-
                 return offlineRepo;
             } catch (e) {
                 console.error('RepositoryProvider: Failed to init SupabaseRepo', e);
@@ -43,6 +39,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useRepositoryContext = () => {
     const context = useContext(RepositoryContext);
     if (!context) {
