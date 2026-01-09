@@ -42,4 +42,10 @@ export interface ITournamentRepository {
      * - Supabase: Returns tournaments owned by the user.
      */
     listForCurrentUser(): Promise<Tournament[]>;
+
+    /**
+     * Syncs local data to cloud.
+     * Only relevant for OfflineRepository - others can no-op.
+     */
+    syncUp?(): Promise<void>;
 }

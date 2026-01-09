@@ -9,6 +9,7 @@ import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
+import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
@@ -654,15 +655,23 @@ function AppContent() {
 // Providers
 import { RepositoryProvider } from './core/contexts/RepositoryContext';
 
-// ... (imports)
-
-// ...
+/**
+ * SyncManager - Background component that syncs local data to cloud
+ * Triggers sync when:
+ * - User reconnects after being offline
+ * - App starts while online
+ */
+function SyncManager(): null {
+  useSyncOnReconnect();
+  return null;
+}
 
 function App() {
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
         <RepositoryProvider>
+          <SyncManager />
           <ToastProvider>
             <StorageWarningBanner />
             <OfflineBanner />
