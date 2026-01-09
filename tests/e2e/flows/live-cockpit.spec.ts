@@ -8,7 +8,22 @@
  * - Finishing a match
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
+
+/**
+ * Helper to wait for React to mount.
+ * In CI, Vite cold-start can take 30+ seconds before JS is compiled.
+ * This waits for the #root element to have children (React has rendered).
+ */
+async function waitForReactReady(page: Page, timeout = 60000) {
+  await page.waitForFunction(
+    () => {
+      const root = document.getElementById('root');
+      return root && root.children.length > 0;
+    },
+    { timeout }
+  );
+}
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -79,11 +94,10 @@ test.describe('Live Cockpit', () => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Navigate to app and wait for React to fully hydrate
+    // Navigate to app and wait for React to mount
+    // In CI, Vite cold-start can take 30+ seconds before JS is compiled
     await page.goto('/');
-
-    // First wait for React to render any button (proves React has loaded)
-    await page.locator('button').first().waitFor({ state: 'attached', timeout: 30000 });
+    await waitForReactReady(page);
 
     // Then wait for the seeded tournament to appear
     await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
