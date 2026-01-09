@@ -73,15 +73,19 @@ test.describe('Live Cockpit', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Seed localStorage BEFORE navigating
+    // Navigate first, then seed localStorage, then reload
+    // This is more reliable in CI than addInitScript
+    await page.goto('/');
+
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
+    await page.evaluate((t) => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Navigate to app - don't wait for networkidle (slow in CI)
-    await page.goto('/');
-    // Wait for seeded tournament to appear (proves app is hydrated and localStorage was read)
+    // Reload to pick up the seeded data
+    await page.reload();
+
+    // Wait for seeded tournament to appear
     await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
   });
 
@@ -406,17 +410,21 @@ test.describe('Live Cockpit - Mobile', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Seed localStorage BEFORE navigating
+    // Navigate first, then seed localStorage, then reload
+    // This is more reliable in CI than addInitScript
+    await page.goto('/');
+
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
+    await page.evaluate((t) => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
+
+    await page.reload();
   });
 
   test('Touch targets are appropriately sized on mobile', async ({ page }) => {
-    // Navigate to app
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    // Wait for seeded tournament to appear
+    await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
 
     await page.getByText('E2E Test Turnier').click();
 
