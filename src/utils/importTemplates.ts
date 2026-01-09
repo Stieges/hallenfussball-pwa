@@ -115,21 +115,23 @@ export const JSON_TEMPLATE = {
   ],
 
   // === SPIELE (optional - werden sonst generiert) ===
+  // slot = Zeit-Slot (0-basiert), round = Runden-Nummer (1-basiert)
+  // Bei mehreren Feldern können mehrere Spiele im selben slot parallel laufen
   matches: [
-    // Gruppe A - Runde 1
-    { id: "m1", round: 1, field: 1, teamA: "t1", teamB: "t2", group: "A" },
-    { id: "m2", round: 1, field: 2, teamA: "t3", teamB: "t4", group: "A" },
-    // Gruppe B - Runde 1
-    { id: "m3", round: 2, field: 1, teamA: "t5", teamB: "t6", group: "B" },
-    { id: "m4", round: 2, field: 2, teamA: "t7", teamB: "t8", group: "B" },
+    // Gruppe A - Runde 1 (Slot 0)
+    { id: "m1", round: 1, slot: 0, field: 1, teamA: "t1", teamB: "t2", group: "A" },
+    { id: "m2", round: 1, slot: 0, field: 2, teamA: "t3", teamB: "t4", group: "A" },
+    // Gruppe B - Runde 1 (Slot 1)
+    { id: "m3", round: 2, slot: 1, field: 1, teamA: "t5", teamB: "t6", group: "B" },
+    { id: "m4", round: 2, slot: 1, field: 2, teamA: "t7", teamB: "t8", group: "B" },
     // Weitere Gruppenspiele...
-    { id: "m5", round: 3, field: 1, teamA: "t1", teamB: "t3", group: "A" },
-    { id: "m6", round: 3, field: 2, teamA: "t2", teamB: "t4", group: "A" },
-    { id: "m7", round: 4, field: 1, teamA: "t5", teamB: "t7", group: "B" },
-    { id: "m8", round: 4, field: 2, teamA: "t6", teamB: "t8", group: "B" },
+    { id: "m5", round: 3, slot: 2, field: 1, teamA: "t1", teamB: "t3", group: "A" },
+    { id: "m6", round: 3, slot: 2, field: 2, teamA: "t2", teamB: "t4", group: "A" },
+    { id: "m7", round: 4, slot: 3, field: 1, teamA: "t5", teamB: "t7", group: "B" },
+    { id: "m8", round: 4, slot: 3, field: 2, teamA: "t6", teamB: "t8", group: "B" },
     // Mit Ergebnissen (optional)
-    { id: "m9", round: 5, field: 1, teamA: "t1", teamB: "t4", group: "A", scoreA: 3, scoreB: 1 },
-    { id: "m10", round: 5, field: 2, teamA: "t2", teamB: "t3", group: "A", scoreA: 2, scoreB: 2 }
+    { id: "m9", round: 5, slot: 4, field: 1, teamA: "t1", teamB: "t4", group: "A", scoreA: 3, scoreB: 1 },
+    { id: "m10", round: 5, slot: 4, field: 2, teamA: "t2", teamB: "t3", group: "A", scoreA: 2, scoreB: 2 }
   ]
 };
 
