@@ -39,7 +39,7 @@ export interface UseUserTournamentsReturn {
   /** Fehler */
   error: string | null;
   /** Aktualisiert die Turnier-Liste */
-  refresh: () => void;
+  refresh: () => Promise<void>;
   /** Anzahl Turniere nach Status */
   counts: {
     total: number;
