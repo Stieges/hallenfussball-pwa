@@ -257,6 +257,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </label>
             <input
               id="name"
+              name="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -277,6 +278,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </label>
             <input
               id="email"
+              name="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -296,6 +298,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </label>
             <input
               id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -316,6 +319,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </label>
             <input
               id="confirmPassword"
+              name="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -337,6 +341,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             </label>
             <input
               id="registrationCode"
+              name="registrationCode"
               type="text"
               value={registrationCode}
               onChange={(e) => setRegistrationCode(e.target.value)}
