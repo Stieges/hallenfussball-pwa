@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { supabase } from '../../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import type { User as SupabaseUser, Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
 import type { User, Session, LoginResult, RegisterResult } from '../types/auth.types';
 import type { AuthContextValue } from './authContextValue';
@@ -97,6 +97,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Fetches profile data from profiles table
    */
   const fetchProfile = useCallback(async (userId: string) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return null;
+    }
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -166,8 +170,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Initial auth check and subscription
   useEffect(() => {
     let mounted = true;
+    let subscription: { unsubscribe: () => void } | null = null;
 
     const initAuth = async () => {
+      // If Supabase isn't configured, just check for guest user and finish
+      if (!isSupabaseConfigured || !supabase) {
+        if (mounted) {
+          await updateAuthState(null);
+        }
+        return;
+      }
+
       try {
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -187,27 +200,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     void initAuth();
 
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-        // eslint-disable-next-line no-console -- Useful for auth debugging
-        console.log('Auth state change:', event);
+    // Subscribe to auth changes (only if Supabase is configured)
+    if (isSupabaseConfigured && supabase) {
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+          // eslint-disable-next-line no-console -- Useful for auth debugging
+          console.log('Auth state change:', event);
 
-        if (mounted) {
-          // Clear guest state on real login
-          if (event === 'SIGNED_IN' && newSession) {
-            localStorage.removeItem('auth:guestUser');
-            setIsGuest(false);
+          if (mounted) {
+            // Clear guest state on real login
+            if (event === 'SIGNED_IN' && newSession) {
+              localStorage.removeItem('auth:guestUser');
+              setIsGuest(false);
+            }
+
+            await updateAuthState(newSession);
           }
-
-          await updateAuthState(newSession);
         }
-      }
-    );
+      );
+      subscription = data.subscription;
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [updateAuthState]);
 
@@ -228,6 +246,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     email: string,
     password: string
   ): Promise<RegisterResult> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      };
+    }
+
     try {
       // Check if current user is a guest (for migration)
       const wasGuest = isGuest && user?.globalRole === 'guest';
@@ -297,6 +322,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     email: string,
     password: string
   ): Promise<LoginResult> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -338,6 +370,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const sendMagicLink = useCallback(async (
     email: string
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      };
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
@@ -367,6 +406,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Login with Google OAuth
    */
   const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      };
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -397,6 +443,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Logout
    */
   const logout = useCallback(async (): Promise<void> => {
+    // Clear local state even if Supabase is not configured
+    if (!isSupabaseConfigured || !supabase) {
+      localStorage.removeItem('auth:guestUser');
+      setUser(null);
+      setSession(null);
+      setIsGuest(false);
+      return;
+    }
+
     try {
       await supabase.auth.signOut();
       localStorage.removeItem('auth:guestUser');
@@ -424,6 +479,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Refresh auth state
    */
   const refreshAuth = useCallback(async (): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      // Just re-check guest state
+      await updateAuthState(null);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -440,6 +501,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const resetPassword = useCallback(async (
     email: string
   ): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar.',
+      };
+    }
+
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
@@ -473,6 +541,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   ): Promise<{ success: boolean; error?: string }> => {
     if (!user || isGuest) {
       return { success: false, error: 'Nicht angemeldet.' };
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar.' };
     }
 
     try {

@@ -8,7 +8,7 @@
  * @see supabaseMappers.ts for type conversion logic
  */
 
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import {
@@ -19,13 +19,35 @@ import {
   mapMatchToSupabase,
 } from './supabaseMappers';
 
+/**
+ * Gets the Supabase client or throws an error if not configured.
+ * This is used by SupabaseRepository to ensure Supabase is available.
+ */
+function getSupabase() {
+  if (!supabase) {
+    throw new Error(
+      'SupabaseRepository requires Supabase to be configured. ' +
+      'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+    );
+  }
+  return supabase;
+}
+
 export class SupabaseRepository implements ITournamentRepository {
+  constructor() {
+    if (!isSupabaseConfigured) {
+      throw new Error(
+        'Cannot create SupabaseRepository: Supabase is not configured. ' +
+        'Use LocalStorageRepository instead or configure Supabase environment variables.'
+      );
+    }
+  }
   /**
    * Loads a tournament by ID with all related data (teams, matches)
    */
   async get(id: string): Promise<Tournament | null> {
     // Fetch tournament
-    const { data: tournamentRow, error: tournamentError } = await supabase
+    const { data: tournamentRow, error: tournamentError } = await getSupabase()
       .from('tournaments')
       .select('*')
       .eq('id', id)
@@ -41,7 +63,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Fetch teams
-    const { data: teamRows, error: teamsError } = await supabase
+    const { data: teamRows, error: teamsError } = await getSupabase()
       .from('teams')
       .select('*')
       .eq('tournament_id', id)
@@ -53,7 +75,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Fetch matches
-    const { data: matchRows, error: matchesError } = await supabase
+    const { data: matchRows, error: matchesError } = await getSupabase()
       .from('matches')
       .select('*')
       .eq('tournament_id', id)
@@ -83,7 +105,7 @@ export class SupabaseRepository implements ITournamentRepository {
     // Get current user for owner_id
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await getSupabase().auth.getUser();
     if (!user) {
       throw new Error('Not authenticated');
     }
@@ -99,7 +121,7 @@ export class SupabaseRepository implements ITournamentRepository {
     // but we can use RPC for atomic operations if needed
 
     // 1. Upsert tournament
-    const { error: tournamentError } = await supabase
+    const { error: tournamentError } = await getSupabase()
       .from('tournaments')
       .upsert(tournamentRow, { onConflict: 'id' });
 
@@ -110,7 +132,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // 2. Handle teams - delete removed, upsert existing
     // First, get existing team IDs
-    const { data: existingTeams } = await supabase
+    const { data: existingTeams } = await getSupabase()
       .from('teams')
       .select('id')
       .eq('tournament_id', tournament.id);
@@ -123,7 +145,7 @@ export class SupabaseRepository implements ITournamentRepository {
       (id) => !newTeamIds.has(id)
     );
     if (teamsToDelete.length > 0) {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await getSupabase()
         .from('teams')
         .delete()
         .in('id', teamsToDelete);
@@ -136,7 +158,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // Upsert teams
     if (teamRows.length > 0) {
-      const { error: teamsError } = await supabase
+      const { error: teamsError } = await getSupabase()
         .from('teams')
         .upsert(teamRows, { onConflict: 'id' });
 
@@ -147,7 +169,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // 3. Handle matches - delete removed, upsert existing
-    const { data: existingMatches } = await supabase
+    const { data: existingMatches } = await getSupabase()
       .from('matches')
       .select('id')
       .eq('tournament_id', tournament.id);
@@ -160,7 +182,7 @@ export class SupabaseRepository implements ITournamentRepository {
       (id) => !newMatchIds.has(id)
     );
     if (matchesToDelete.length > 0) {
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await getSupabase()
         .from('matches')
         .delete()
         .in('id', matchesToDelete);
@@ -173,7 +195,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     // Upsert matches
     if (matchRows.length > 0) {
-      const { error: matchesError } = await supabase
+      const { error: matchesError } = await getSupabase()
         .from('matches')
         .upsert(matchRows, { onConflict: 'id' });
 
@@ -204,7 +226,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Get team name to ID mapping for this tournament
-    const { data: teams } = await supabase
+    const { data: teams } = await getSupabase()
       .from('teams')
       .select('id, name')
       .eq('tournament_id', tournamentId);
@@ -219,7 +241,7 @@ export class SupabaseRepository implements ITournamentRepository {
     for (const update of updates) {
       const supabaseUpdate = mapMatchUpdateToSupabase(update, teamNameToId);
 
-      const { error } = await supabase
+      const { error } = await getSupabase()
         .from('matches')
         .update(supabaseUpdate)
         .eq('id', update.id)
@@ -232,7 +254,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Update tournament's updated_at timestamp
-    await supabase
+    await getSupabase()
       .from('tournaments')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', tournamentId);
@@ -250,13 +272,13 @@ export class SupabaseRepository implements ITournamentRepository {
    */
   async delete(id: string): Promise<void> {
     // Delete matches first (in case cascade isn't set up)
-    await supabase.from('matches').delete().eq('tournament_id', id);
+    await getSupabase().from('matches').delete().eq('tournament_id', id);
 
     // Delete teams
-    await supabase.from('teams').delete().eq('tournament_id', id);
+    await getSupabase().from('teams').delete().eq('tournament_id', id);
 
     // Delete tournament
-    const { error } = await supabase.from('tournaments').delete().eq('id', id);
+    const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
 
     if (error) {
       console.error('Failed to delete tournament:', error);
@@ -274,12 +296,12 @@ export class SupabaseRepository implements ITournamentRepository {
   async listForCurrentUser(): Promise<Tournament[]> {
     const {
       data: { user },
-    } = await supabase.auth.getUser();
+    } = await getSupabase().auth.getUser();
     if (!user) {
       return [];
     }
 
-    const { data: tournamentRows, error } = await supabase
+    const { data: tournamentRows, error } = await getSupabase()
       .from('tournaments')
       .select('*')
       .eq('owner_id', user.id)
@@ -302,7 +324,7 @@ export class SupabaseRepository implements ITournamentRepository {
    * Soft deletes a tournament (moves to trash)
    */
   async softDelete(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('tournaments')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
@@ -317,7 +339,7 @@ export class SupabaseRepository implements ITournamentRepository {
    * Restores a soft-deleted tournament
    */
   async restore(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('tournaments')
       .update({ deleted_at: null })
       .eq('id', id);
@@ -340,7 +362,7 @@ export class SupabaseRepository implements ITournamentRepository {
       tournamentId
     );
 
-    const { error } = await supabase.from('teams').insert(teamRow);
+    const { error } = await getSupabase().from('teams').insert(teamRow);
 
     if (error) {
       console.error('Failed to add team:', error);
@@ -363,7 +385,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
   ): Promise<void> {
     // Get team name to ID mapping
-    const { data: teams } = await supabase
+    const { data: teams } = await getSupabase()
       .from('teams')
       .select('id, name')
       .eq('tournament_id', tournamentId);
@@ -382,7 +404,7 @@ export class SupabaseRepository implements ITournamentRepository {
       teamNameToId
     );
 
-    const { error } = await supabase.from('matches').insert(matchRow);
+    const { error } = await getSupabase().from('matches').insert(matchRow);
 
     if (error) {
       console.error('Failed to add match:', error);

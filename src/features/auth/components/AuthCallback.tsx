@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { cssVars } from '../../../design-tokens';
 
 export const AuthCallback: React.FC = () => {
@@ -18,6 +18,12 @@ export const AuthCallback: React.FC = () => {
 
   useEffect(() => {
     const handleAuthCallback = async () => {
+      // Auth callback only works with Supabase configured
+      if (!isSupabaseConfigured || !supabase) {
+        void navigate('/', { replace: true });
+        return;
+      }
+
       try {
         // Get the hash fragment from the URL (Supabase puts tokens there)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
