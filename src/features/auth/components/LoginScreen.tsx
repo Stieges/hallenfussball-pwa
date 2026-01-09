@@ -200,12 +200,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   // Success state
   if (showSuccess) {
+    const handleSuccessClose = () => {
+      onSuccess?.();
+    };
+
     return (
-      <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div style={styles.card}>
+      <div style={styles.backdrop} onClick={handleSuccessClose}>
+        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={handleSuccessClose}
+            style={styles.successCloseButton}
+            aria-label="Schließen"
+          >
+            ✕
+          </button>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Angemeldet!</h2>
           <p style={styles.successText}>Du wirst weitergeleitet...</p>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleSuccessClose}
+            style={{ marginTop: cssVars.spacing.lg }}
+          >
+            Weiter
+          </Button>
         </div>
       </div>
     );
@@ -586,6 +606,23 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     textAlign: 'center',
     lineHeight: '1.5',
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: cssVars.spacing.md,
+    right: cssVars.spacing.md,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    background: 'transparent',
+    border: 'none',
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    cursor: 'pointer',
+    transition: 'color 0.2s, background 0.2s',
   },
 };
 
