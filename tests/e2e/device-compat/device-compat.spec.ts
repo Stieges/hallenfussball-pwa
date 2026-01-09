@@ -13,12 +13,13 @@ test.describe('Device Compatibility', () => {
 
     test('Kein 100vh ohne Fallback', async ({ page }) => {
       await page.goto('/');
-      // Wait for React to render - #root must have content
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('#root')).not.toBeEmpty();
 
-      // Note: This test verifies the app loads correctly.
-      // Actual 100vh → 100dvh migration is verified via code review.
+      // Wait for React to fully render by waiting for an actual button element
+      // This is more reliable than networkidle since it waits for React hydration
+      await page.locator('button').first().waitFor({ state: 'attached', timeout: 30000 });
+
+      // Now verify body is visible (not hidden due to CSS issues)
+      // Note: Actual 100vh → 100dvh migration is verified via code review.
       // CSS cannot be directly inspected for vh units from computed styles.
       await expect(page.locator('body')).toBeVisible();
     });

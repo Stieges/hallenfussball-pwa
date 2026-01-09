@@ -79,10 +79,13 @@ test.describe('Live Cockpit', () => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Navigate to app
+    // Navigate to app and wait for React to fully hydrate
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    // Wait for React to render the seeded tournament
+
+    // First wait for React to render any button (proves React has loaded)
+    await page.locator('button').first().waitFor({ state: 'attached', timeout: 30000 });
+
+    // Then wait for the seeded tournament to appear
     await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
   });
 
