@@ -42,8 +42,8 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    actionTimeout: 15_000, // 15s per action (click, fill, etc.)
-    navigationTimeout: 30_000, // 30s for page navigation
+    actionTimeout: 30_000, // 30s per action (click, fill, etc.)
+    navigationTimeout: 60_000, // 60s for page navigation (CI cold-start needs time)
   },
 
   projects: [

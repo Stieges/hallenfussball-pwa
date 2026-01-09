@@ -48,3 +48,6 @@ validate-bye-fix.js
 
 # Interne Dokumentation (nicht öffentlich)
 docs/
+
+# Playwright test results
+test-results/
