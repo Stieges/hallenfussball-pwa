@@ -56,6 +56,7 @@ export class TournamentCreationService {
             hideRankingsForPublic: false,
             resultMode: 'goals',
             pointSystem: defaultConfig.defaults.pointSystem,
+            isPublic: true, // Default: Mit Link teilbar
             title: '',
             ageClass: 'U11',
             date: new Date().toISOString().split('T')[0],
