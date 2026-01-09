@@ -67,6 +67,10 @@ export class LocalStorageRepository implements ITournamentRepository {
         this.saveList(filtered);
     }
 
+    async listForCurrentUser(): Promise<Tournament[]> {
+        return this.loadList();
+    }
+
     // --- Private Helpers ---
 
     private loadList(): Tournament[] {

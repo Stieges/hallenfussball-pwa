@@ -651,15 +651,24 @@ function AppContent() {
   );
 }
 
+// Providers
+import { RepositoryProvider } from './core/contexts/RepositoryContext';
+
+// ... (imports)
+
+// ...
+
 function App() {
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
-        <ToastProvider>
-          <StorageWarningBanner />
-          <OfflineBanner />
-          <AppContent />
-        </ToastProvider>
+        <RepositoryProvider>
+          <ToastProvider>
+            <StorageWarningBanner />
+            <OfflineBanner />
+            <AppContent />
+          </ToastProvider>
+        </RepositoryProvider>
       </AuthProvider>
     </ThemeProvider>
   );

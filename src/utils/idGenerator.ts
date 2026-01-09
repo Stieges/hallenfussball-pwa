@@ -16,10 +16,17 @@ let counter = 0;
  * @returns Eindeutige ID im Format prefix-timestamp-random-counter
  */
 export function generateUniqueId(prefix: string = 'match'): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8); // 6 Zeichen
-  const count = counter++;
+  // Use crypto.randomUUID for collision-free IDs (essential for sync)
+  // Fallback for older browsers included
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  if (crypto?.randomUUID) {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
 
+  // Fallback: timestamp + random
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  const count = counter++;
   return `${prefix}-${timestamp}-${random}-${count}`;
 }
 

@@ -10,7 +10,7 @@
  * - Zeit-Editor für manuelle Anpassungen
  *
  * Refactored:
- * - Uses useLiveMatchManagement hook for state management
+ * - Uses useMatchExecution hook for state management
  * - Uses ConfirmDialog instead of window.confirm
  * - Uses CSS Modules for responsive styles
  */

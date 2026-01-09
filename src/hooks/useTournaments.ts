@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tournament, TournamentStatsSnapshot, TRASH_RETENTION_DAYS } from '../types/tournament';
-import * as api from '../services/api';
+import { useRepository } from '../hooks/useRepository';
 import { migrateLocationsToStructured } from '../utils/locationHelpers';
 import {
   getActiveTournaments,
@@ -11,16 +11,18 @@ import {
 
 /**
  * Custom hook for managing tournaments
- * Verwendet API Service Layer - automatisch localStorage oder Backend
+ * Verwendet Repository Pattern - automatisch Offline/Online Sync
  */
 export const useTournaments = () => {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const repository = useRepository();
 
   // Load tournaments function - extracted for reuse
-  const loadTournaments = async () => {
+  const loadTournaments = useCallback(async () => {
     try {
-      const loaded = await api.getAllTournaments();
+      // Use listForCurrentUser from repository (handles Offline/Online/Auth)
+      const loaded = await repository.listForCurrentUser();
 
       // Migration: Convert old string locations to LocationDetails
       const migrated = migrateLocationsToStructured(loaded);
@@ -32,7 +34,7 @@ export const useTournaments = () => {
 
       // If migrations occurred, save them back
       if (hasChanges) {
-        await Promise.all(migrated.map(t => api.saveTournament(t)));
+        await Promise.all(migrated.map(t => repository.save(t)));
       }
 
       setTournaments(migrated);
@@ -41,14 +43,14 @@ export const useTournaments = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [repository]);
 
-  // Load tournaments on mount
+  // Load tournaments on mount and when repository changes
   useEffect(() => {
     void loadTournaments();
-  }, []);
+  }, [loadTournaments]);
 
-  // Listen for localStorage changes (from TournamentManagementScreen or other tabs)
+  // Listen for localStorage changes (Legacy support for guest mode sharing tabs)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'tournaments') {
@@ -58,6 +60,7 @@ export const useTournaments = () => {
 
     // Also listen for custom events (same-tab updates)
     const handleTournamentUpdate = () => {
+      // Need to re-fetch to get fresh state if repository relies on external state
       void loadTournaments();
     };
 
@@ -68,28 +71,26 @@ export const useTournaments = () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tournament-updated', handleTournamentUpdate);
     };
-  }, []);
+  }, [loadTournaments]);
 
   // Save tournament
   const saveTournament = async (tournament: Tournament) => {
     try {
-      await api.saveTournament(tournament);
-      // Reload tournaments from API
-      const updated = await api.getAllTournaments();
-      setTournaments(updated);
+      await repository.save(tournament);
+      // Reload tournaments / Update state optimistically better?
+      // For now, reload to be safe and consistent with previous behavior
+      await loadTournaments();
     } catch (error) {
       console.error('Failed to save tournament:', error);
       throw error;
     }
   };
 
-  // Delete tournament
+  // Delete tournament (Legacy/Permanent)
   const deleteTournament = async (id: string) => {
     try {
-      await api.deleteTournament(id);
-      // Reload tournaments from API
-      const updated = await api.getAllTournaments();
-      setTournaments(updated);
+      await repository.delete(id);
+      await loadTournaments();
     } catch (error) {
       console.error('Failed to delete tournament:', error);
       throw error;
@@ -127,7 +128,7 @@ export const useTournaments = () => {
    */
   const softDeleteTournament = useCallback(async (id: string) => {
     const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {return;}
+    if (!tournament) { return; }
 
     const updated: Tournament = {
       ...tournament,
@@ -135,10 +136,8 @@ export const useTournaments = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    await api.saveTournament(updated);
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, [tournaments]);
+    await saveTournament(updated);
+  }, [saveTournament, tournaments]);
 
   /**
    * Restore tournament from trash
@@ -149,7 +148,7 @@ export const useTournaments = () => {
     options?: { restoreAs?: 'finished' | 'draft' }
   ) => {
     const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {return;}
+    if (!tournament) { return; }
 
     const updated: Tournament = {
       ...tournament,
@@ -167,19 +166,15 @@ export const useTournaments = () => {
       updated.completedAt = new Date().toISOString();
     }
 
-    await api.saveTournament(updated);
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, [tournaments]);
+    await saveTournament(updated);
+  }, [saveTournament, tournaments]);
 
   /**
    * Permanent Delete: Remove tournament completely (cannot be undone)
    */
   const permanentDeleteTournament = useCallback(async (id: string) => {
-    await api.deleteTournament(id);
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, []);
+    await deleteTournament(id);
+  }, [deleteTournament]);
 
   /**
    * Cleanup expired trash: Permanently delete tournaments past retention period
@@ -188,17 +183,16 @@ export const useTournaments = () => {
   const cleanupExpiredTrash = useCallback(async (): Promise<number> => {
     const expired = getExpiredTrashedTournaments(tournaments);
 
-    if (expired.length === 0) {return 0;}
+    if (expired.length === 0) { return 0; }
 
     for (const tournament of expired) {
-      await api.deleteTournament(tournament.id);
+      await repository.delete(tournament.id);
     }
 
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
+    await loadTournaments();
 
     return expired.length;
-  }, [tournaments]);
+  }, [tournaments, repository, loadTournaments]);
 
   /**
    * Empty trash: Permanently delete all trashed tournaments
@@ -207,12 +201,11 @@ export const useTournaments = () => {
     const trashed = getTrashedTournaments(tournaments);
 
     for (const tournament of trashed) {
-      await api.deleteTournament(tournament.id);
+      await repository.delete(tournament.id);
     }
 
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, [tournaments]);
+    await loadTournaments();
+  }, [tournaments, repository, loadTournaments]);
 
   // ============================================================================
   // TOURNAMENT COMPLETION FUNCTIONS
@@ -222,9 +215,7 @@ export const useTournaments = () => {
    * Create stats snapshot for archiving
    */
   const createStatsSnapshot = (tournament: Tournament): TournamentStatsSnapshot => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
     const matches = tournament.matches ?? [];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
     const teams = tournament.teams ?? [];
 
     const totalMatches = matches.length;
@@ -232,13 +223,9 @@ export const useTournaments = () => {
       m => typeof m.scoreA === 'number' && typeof m.scoreB === 'number'
     ).length;
 
-    // Calculate total goals
     const totalGoals = matches.reduce((sum, m) => {
       return sum + (m.scoreA ?? 0) + (m.scoreB ?? 0);
     }, 0);
-
-    // TODO: Calculate winner from standings
-    // For now, just return basic stats
 
     return {
       teamCount: teams.length,
@@ -254,7 +241,7 @@ export const useTournaments = () => {
    */
   const finishTournament = useCallback(async (id: string) => {
     const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {return;}
+    if (!tournament) { return; }
 
     const updated: Tournament = {
       ...tournament,
@@ -264,17 +251,15 @@ export const useTournaments = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    await api.saveTournament(updated);
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, [tournaments]);
+    await saveTournament(updated);
+  }, [saveTournament, tournaments]);
 
   /**
    * Cancel tournament: Mark as cancelled with reason
    */
   const cancelTournament = useCallback(async (id: string, reason?: string) => {
     const tournament = tournaments.find(t => t.id === id);
-    if (!tournament) {return;}
+    if (!tournament) { return; }
 
     const updated: Tournament = {
       ...tournament,
@@ -285,17 +270,15 @@ export const useTournaments = () => {
       updatedAt: new Date().toISOString(),
     };
 
-    await api.saveTournament(updated);
-    const refreshed = await api.getAllTournaments();
-    setTournaments(refreshed);
-  }, [tournaments]);
+    await saveTournament(updated);
+  }, [saveTournament, tournaments]);
 
   return {
     // Original exports
     tournaments,
     loading,
     saveTournament,
-    deleteTournament, // Legacy: permanent delete
+    deleteTournament,
     getTournament,
 
     // Soft Delete / Papierkorb

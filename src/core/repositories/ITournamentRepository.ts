@@ -35,4 +35,11 @@ export interface ITournamentRepository {
      * Delete a tournament.
      */
     delete(id: string): Promise<void>;
+
+    /**
+     * Lists all tournaments relevant for the current user.
+     * - LocalStorage: Returns all tournaments.
+     * - Supabase: Returns tournaments owned by the user.
+     */
+    listForCurrentUser(): Promise<Tournament[]>;
 }

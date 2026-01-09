@@ -12,6 +12,7 @@ import type { TournamentMembership } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
 import { useAuth } from './useAuth';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
+import { useRepository } from '../../../hooks/useRepository';
 
 /**
  * Turnier mit Membership-Info
@@ -164,22 +165,6 @@ const sortTournaments = (
  *
  * @param sortBy - Sortier-Option
  * @returns Turniere mit Membership-Info
- *
- * @example
- * ```tsx
- * const { tournaments, isLoading, counts } = useUserTournaments('recent');
- *
- * if (isLoading) return <Spinner />;
- *
- * return (
- *   <div>
- *     <p>{counts.live} Live-Turniere</p>
- *     {tournaments.map(t => (
- *       <TournamentCard key={t.tournament.id} {...t} />
- *     ))}
- *   </div>
- * );
- * ```
  */
 export const useUserTournaments = (
   sortBy: TournamentSortOption = 'recent'
@@ -188,11 +173,12 @@ export const useUserTournaments = (
   const [tournaments, setTournaments] = useState<UserTournament[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const repository = useRepository();
 
   /**
    * Lädt Turniere für den aktuellen User
    */
-  const loadTournaments = useCallback(() => {
+  const loadTournaments = useCallback(async () => {
     if (!user) {
       setTournaments([]);
       setIsLoading(false);
@@ -203,7 +189,8 @@ export const useUserTournaments = (
       setIsLoading(true);
       setError(null);
 
-      // Load memberships from localStorage
+      // Load memberships from localStorage (Legacy / Hybrid support)
+      // TODO: Move memberships to Repository too
       const membershipsRaw = localStorage.getItem(AUTH_STORAGE_KEYS.MEMBERSHIPS);
       const allMemberships: TournamentMembership[] = membershipsRaw
         ? (JSON.parse(membershipsRaw) as TournamentMembership[])
@@ -212,66 +199,54 @@ export const useUserTournaments = (
       // Filter for current user
       const userMemberships = allMemberships.filter((m) => m.userId === user.id);
 
-      // Load all tournaments
-      const tournamentsRaw = localStorage.getItem('tournaments');
-      const allTournaments: Tournament[] = tournamentsRaw
-        ? (JSON.parse(tournamentsRaw) as Tournament[])
-        : [];
+      // Load tournaments via Repository
+      // This automatically handles Local vs Cloud vs Offline
+      const allTournaments = await repository.listForCurrentUser();
 
       // Combine memberships with tournaments
       const userTournaments: UserTournament[] = [];
 
-      for (const membership of userMemberships) {
-        const tournament = allTournaments.find((t) => t.id === membership.tournamentId);
-        if (tournament) {
-          // Get team names for trainers
-          const teamNames = membership.teamIds
-            .map((teamId) => {
-              const team = tournament.teams.find((t) => t.id === teamId);
-              return team?.name ?? '';
-            })
-            .filter(Boolean);
+      // Iterate relevant tournaments from repository
+      for (const t of allTournaments) {
+        // Check for existing membership
+        const existingMembership = userMemberships.find(m => m.tournamentId === t.id);
 
+        if (existingMembership) {
+          // Use existing membership logic
+          const teamNames = existingMembership.teamIds.map(tid => t.teams.find(tm => tm.id === tid)?.name ?? '').filter(Boolean);
+          userTournaments.push({ tournament: toCardData(t), membership: existingMembership, teamNames });
+        } else {
+          // Implicit Owner Membership (if not found in legacy memberships)
           userTournaments.push({
-            tournament: toCardData(tournament),
-            membership,
-            teamNames,
+            tournament: toCardData(t),
+            membership: {
+              id: `owner-${t.id}`,
+              userId: user.id,
+              tournamentId: t.id,
+              role: 'owner',
+              teamIds: [],
+              createdAt: t.createdAt,
+              updatedAt: t.updatedAt
+            },
+            teamNames: []
           });
         }
       }
 
-      // For guests: show all tournaments they created (no membership system yet)
-      if (user.globalRole === 'guest') {
-        // As guest, show all tournaments without membership check
-        const guestTournaments: UserTournament[] = allTournaments.map((t) => ({
-          tournament: toCardData(t),
-          membership: {
-            id: `guest-${t.id}`,
-            userId: user.id,
-            tournamentId: t.id,
-            role: 'owner' as const,
-            teamIds: [],
-            createdAt: t.createdAt,
-            updatedAt: t.updatedAt,
-          },
-          teamNames: [],
-        }));
-        setTournaments(guestTournaments);
-      } else {
-        setTournaments(userTournaments);
-      }
+      setTournaments(userTournaments);
+
     } catch (err) {
       console.error('Failed to load user tournaments:', err);
       setError('Turniere konnten nicht geladen werden');
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, repository]);
 
   // Load on mount and when user changes
   useEffect(() => {
     if (!authLoading) {
-      loadTournaments();
+      void loadTournaments();
     }
   }, [authLoading, loadTournaments]);
 
@@ -279,12 +254,12 @@ export const useUserTournaments = (
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'tournaments' || e.key === AUTH_STORAGE_KEYS.MEMBERSHIPS) {
-        loadTournaments();
+        void loadTournaments();
       }
     };
 
     const handleTournamentUpdate = () => {
-      loadTournaments();
+      void loadTournaments();
     };
 
     window.addEventListener('storage', handleStorageChange);
