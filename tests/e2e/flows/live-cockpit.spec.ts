@@ -67,9 +67,7 @@ function createTestTournament() {
   };
 }
 
-// TEMPORARILY SKIPPED: These tests timeout in CI but pass locally
-// TODO: Investigate CI-specific timing issues with localStorage seeding and navigation
-test.describe.skip('Live Cockpit', () => {
+test.describe('Live Cockpit', () => {
   // Skip iPhones - Safe Area viewport emulation causes click interception issues
   // The app works on real iOS devices, this is a Playwright limitation
   test.beforeEach(async ({ page }, testInfo) => {
@@ -81,9 +79,10 @@ test.describe.skip('Live Cockpit', () => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Navigate to app
+    // Navigate to app - don't wait for networkidle (slow in CI)
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    // Wait for seeded tournament to appear (proves app is hydrated and localStorage was read)
+    await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
   });
 
   test.afterEach(async ({ page }) => {

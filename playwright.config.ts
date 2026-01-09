@@ -32,7 +32,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Use 4 parallel workers in CI for faster execution (was 1)
+  workers: process.env.CI ? 4 : undefined,
+
+  // Global timeout: 60s in CI (cold-start variance), 30s locally
+  timeout: process.env.CI ? 60000 : 30000,
 
   reporter: [['html', { open: 'never' }], ['list']],
 
@@ -40,6 +44,14 @@ export default defineConfig({
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Action and navigation timeouts
+    actionTimeout: process.env.CI ? 15000 : 10000,
+    navigationTimeout: process.env.CI ? 30000 : 15000,
+  },
+
+  expect: {
+    // Expect timeout: 10s in CI, 5s locally
+    timeout: process.env.CI ? 10000 : 5000,
   },
 
   projects: [
