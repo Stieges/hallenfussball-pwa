@@ -266,6 +266,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             full_name: name.trim(),
           },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
