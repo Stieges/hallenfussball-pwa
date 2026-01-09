@@ -74,6 +74,8 @@ export const ScheduleActionButtons = ({
         onClose={() => setShowShareDialog(false)}
         tournamentId={tournament.id}
         tournamentTitle={tournament.title}
+        shareCode={tournament.shareCode}
+        isPublic={tournament.isPublic}
       />
 
       {/* PDF Export Dialog */}

@@ -147,13 +147,26 @@ export function getShareMessage(result: ShareResult): string {
 }
 
 /**
- * Generate public tournament URL
+ * Generate public tournament URL (legacy - uses tournamentId)
  *
  * @param tournamentId - Tournament ID
  * @param baseUrl - Base URL (defaults to current origin)
  * @returns Full public tournament URL
+ * @deprecated Use generateLiveUrl with shareCode for public view
  */
 export function generatePublicUrl(tournamentId: string, baseUrl?: string): string {
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   return `${origin}/public/${tournamentId}`;
+}
+
+/**
+ * Generate live view URL with share code
+ *
+ * @param shareCode - 6-character share code (e.g., "ABC123")
+ * @param baseUrl - Base URL (defaults to current origin)
+ * @returns Full live view URL (e.g., "https://example.com/live/ABC123")
+ */
+export function generateLiveUrl(shareCode: string, baseUrl?: string): string {
+  const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${origin}/live/${shareCode}`;
 }

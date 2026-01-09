@@ -446,6 +446,14 @@ export interface Tournament {
   // Match Cockpit Pro Settings
   /** Zentrale Match Cockpit Einstellungen für alle Spiele */
   matchCockpitSettings?: MatchCockpitSettings;
+
+  // Public View / Sharing (Phase 1)
+  /** Ob das Turnier öffentlich über Share-Link zugänglich ist */
+  isPublic?: boolean;
+  /** 6-stelliger Share-Code für öffentlichen Zugang (z.B. "ABC123") */
+  shareCode?: string;
+  /** ISO timestamp wann der Share-Code erstellt wurde */
+  shareCodeCreatedAt?: string;
 }
 
 // ============================================================================

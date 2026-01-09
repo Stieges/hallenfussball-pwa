@@ -8,7 +8,7 @@ import {
   shareUrl,
   copyToClipboard,
   isShareSupported,
-  generatePublicUrl,
+  generateLiveUrl,
   getShareMessage,
 } from '../../utils/shareUtils';
 
@@ -17,6 +17,10 @@ export interface ShareDialogProps {
   onClose: () => void;
   tournamentId: string;
   tournamentTitle: string;
+  /** Share code for public view (e.g., "ABC123") */
+  shareCode?: string | null;
+  /** Whether the tournament is public */
+  isPublic?: boolean;
 }
 
 export const ShareDialog = ({
@@ -24,12 +28,18 @@ export const ShareDialog = ({
   onClose,
   tournamentId,
   tournamentTitle,
+  shareCode,
+  isPublic = false,
 }: ShareDialogProps) => {
   const [qrCode, setQrCode] = useState<string>('');
   const [feedback, setFeedback] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const publicUrl = generatePublicUrl(tournamentId);
+  // Use share code if available, otherwise fall back to tournamentId-based URL
+  const hasShareCode = isPublic && shareCode;
+  const publicUrl = hasShareCode
+    ? generateLiveUrl(shareCode)
+    : `${window.location.origin}/tournament/${tournamentId}`;
 
   // Generate QR code when dialog opens
   useEffect(() => {
@@ -156,9 +166,57 @@ export const ShareDialog = ({
     animation: 'fadeIn 0.2s ease-out',
   };
 
+  const shareCodeDisplayStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: cssVars.spacing.xs,
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.surfaceElevated,
+    borderRadius: cssVars.borderRadius.md,
+    marginBottom: cssVars.spacing.md,
+  };
+
+  const shareCodeValueStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.headlineLg,
+    fontWeight: cssVars.fontWeights.bold,
+    // eslint-disable-next-line local-rules/no-hardcoded-font-styles -- Monospace is intentional for share code display
+    fontFamily: 'monospace',
+    letterSpacing: '0.2em',
+    color: cssVars.colors.primary,
+  };
+
+  const notPublicHintStyle: CSSProperties = {
+    padding: cssVars.spacing.md,
+    background: cssVars.colors.warningLight,
+    borderRadius: cssVars.borderRadius.md,
+    border: `1px solid ${cssVars.colors.warningBorder}`,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.sm,
+    textAlign: 'center',
+    marginBottom: cssVars.spacing.md,
+  };
+
   return (
     <Dialog isOpen={isOpen} onClose={onClose} title="Spielplan teilen" maxWidth="500px">
       <div style={containerStyle}>
+        {/* Share Code Display (if public) */}
+        {hasShareCode && (
+          <div style={shareCodeDisplayStyle}>
+            <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
+              Share-Code:
+            </span>
+            <span style={shareCodeValueStyle}>{shareCode}</span>
+          </div>
+        )}
+
+        {/* Not Public Hint */}
+        {!hasShareCode && (
+          <div style={notPublicHintStyle}>
+            ⚠️ Turnier ist nicht öffentlich. Aktiviere &quot;Öffentlich freigeben&quot; in den Sichtbarkeits-Einstellungen für einen kurzen Share-Link.
+          </div>
+        )}
+
         {/* QR Code Section */}
         <div style={qrSectionStyle}>
           {isGenerating ? (
@@ -168,12 +226,18 @@ export const ShareDialog = ({
           ) : (
             <div style={qrPlaceholderStyle}>QR-Code nicht verfügbar</div>
           )}
-          <p style={qrCaptionStyle}>QR-Code scannen für Live-Ansicht</p>
+          <p style={qrCaptionStyle}>
+            {hasShareCode
+              ? 'QR-Code scannen für öffentliche Live-Ansicht'
+              : 'QR-Code scannen (nur mit Anmeldung)'}
+          </p>
         </div>
 
         {/* URL Display Section */}
         <div style={urlSectionStyle}>
-          <label style={labelStyle}>Öffentlicher Link:</label>
+          <label style={labelStyle}>
+            {hasShareCode ? 'Öffentlicher Link:' : 'Interner Link:'}
+          </label>
           <input
             type="text"
             value={publicUrl}

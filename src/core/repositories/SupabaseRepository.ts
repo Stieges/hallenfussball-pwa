@@ -411,4 +411,174 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new Error(`Failed to add match: ${error.message}`);
     }
   }
+
+  // =============================================================================
+  // PUBLIC VIEW METHODS
+  // =============================================================================
+
+  /**
+   * Fetches a public tournament by share code (for anonymous access)
+   * Returns null if not found or not public
+   */
+  async getByShareCode(shareCode: string): Promise<Tournament | null> {
+    // Normalize to uppercase
+    const normalizedCode = shareCode.toUpperCase().trim();
+
+    // Validate format
+    if (!/^[A-Z0-9]{6}$/.test(normalizedCode)) {
+      return null;
+    }
+
+    // Fetch tournament by share_code (RLS policy allows this for public tournaments)
+    const { data: tournamentRow, error: tournamentError } = await getSupabase()
+      .from('tournaments')
+      .select('*')
+      .eq('share_code', normalizedCode)
+      .eq('is_public', true)
+      .single();
+
+    if (tournamentError) {
+      if (tournamentError.code === 'PGRST116') {
+        // Not found
+        return null;
+      }
+      console.error('Failed to fetch public tournament:', tournamentError);
+      return null;
+    }
+
+    // Fetch teams
+    const { data: teamRows, error: teamsError } = await getSupabase()
+      .from('teams')
+      .select('*')
+      .eq('tournament_id', tournamentRow.id)
+      .order('sort_order', { ascending: true });
+
+    if (teamsError) {
+      console.error('Failed to fetch teams:', teamsError);
+      return null;
+    }
+
+    // Fetch matches
+    const { data: matchRows, error: matchesError } = await getSupabase()
+      .from('matches')
+      .select('*')
+      .eq('tournament_id', tournamentRow.id)
+      .order('match_number', { ascending: true });
+
+    if (matchesError) {
+      console.error('Failed to fetch matches:', matchesError);
+      return null;
+    }
+
+    // Convert to frontend types (database may return null for empty arrays)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DB can return null
+    return mapTournamentFromSupabase(tournamentRow, teamRows ?? [], matchRows ?? []);
+  }
+
+  /**
+   * Makes a tournament public and generates a share code
+   * Calls the database function for atomic operation
+   */
+  async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    // Note: RPC function types are not generated yet, using explicit typing
+    type ShareCodeResult = { share_code: string; share_code_created_at: string }[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- RPC types not generated
+    const client = getSupabase() as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- RPC method access
+    const { data, error } = await client.rpc('make_tournament_public', { tournament_id: tournamentId }) as { data: ShareCodeResult | null; error: Error | null };
+
+    if (error) {
+      console.error('Failed to make tournament public:', error);
+      throw new Error(`Failed to make tournament public: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return {
+      shareCode: data[0].share_code,
+      createdAt: data[0].share_code_created_at,
+    };
+  }
+
+  /**
+   * Makes a tournament private and removes the share code
+   */
+  async makeTournamentPrivate(tournamentId: string): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- RPC types not generated
+    const client = getSupabase() as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- RPC method access
+    const { error } = await client.rpc('make_tournament_private', { tournament_id: tournamentId }) as { error: Error | null };
+
+    if (error) {
+      console.error('Failed to make tournament private:', error);
+      throw new Error(`Failed to make tournament private: ${error.message}`);
+    }
+  }
+
+  /**
+   * Regenerates the share code for a public tournament
+   */
+  async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    // Note: RPC function types are not generated yet, using explicit typing
+    type ShareCodeResult = { share_code: string; share_code_created_at: string }[];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment -- RPC types not generated
+    const client = getSupabase() as any;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call -- RPC method access
+    const { data, error } = await client.rpc('regenerate_share_code', { tournament_id: tournamentId }) as { data: ShareCodeResult | null; error: Error | null };
+
+    if (error) {
+      console.error('Failed to regenerate share code:', error);
+      throw new Error(`Failed to regenerate share code: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return {
+      shareCode: data[0].share_code,
+      createdAt: data[0].share_code_created_at,
+    };
+  }
+
+  /**
+   * Gets the current visibility status of a tournament
+   */
+  async getTournamentVisibility(tournamentId: string): Promise<{
+    isPublic: boolean;
+    shareCode: string | null;
+    shareCodeCreatedAt: string | null;
+  } | null> {
+    // Note: These columns exist but types may not be generated yet
+    type VisibilityRow = {
+      is_public: boolean | null;
+      share_code: string | null;
+      share_code_created_at: string | null;
+    };
+
+    const { data, error } = await getSupabase()
+      .from('tournaments')
+      .select('is_public, share_code, share_code_created_at')
+      .eq('id', tournamentId)
+      .single() as { data: VisibilityRow | null; error: Error | null };
+
+    if (error) {
+      console.error('Failed to get tournament visibility:', error);
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    return {
+      isPublic: data.is_public ?? false,
+      shareCode: data.share_code,
+      shareCodeCreatedAt: data.share_code_created_at,
+    };
+  }
 }
