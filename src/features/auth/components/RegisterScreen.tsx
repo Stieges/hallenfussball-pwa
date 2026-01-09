@@ -174,9 +174,21 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   // Email confirmation state
   if (showEmailConfirmation) {
+    const handleEmailConfirmClose = () => {
+      onNavigateToLogin?.();
+    };
+
     return (
-      <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div style={styles.card}>
+      <div style={styles.backdrop} onClick={handleEmailConfirmClose}>
+        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={handleEmailConfirmClose}
+            style={styles.successCloseButton}
+            aria-label="Schließen"
+          >
+            ✕
+          </button>
           <div style={styles.successIcon}>✉</div>
           <h2 style={styles.successTitle}>Bestätige deine E-Mail</h2>
           <p style={styles.successText}>
@@ -186,7 +198,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           <Button
             variant="primary"
             fullWidth
-            onClick={onNavigateToLogin}
+            onClick={handleEmailConfirmClose}
             style={{ marginTop: cssVars.spacing.lg }}
           >
             Zum Login
@@ -198,16 +210,28 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   // Success state
   if (showSuccess) {
+    const handleSuccessClose = () => {
+      onSuccess?.();
+    };
+
     return (
-      <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div style={styles.card}>
+      <div style={styles.backdrop} onClick={handleSuccessClose}>
+        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={handleSuccessClose}
+            style={styles.successCloseButton}
+            aria-label="Schließen"
+          >
+            ✕
+          </button>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Willkommen!</h2>
           <p style={styles.successText}>Dein Konto wurde erstellt.</p>
           <Button
             variant="primary"
             fullWidth
-            onClick={() => onSuccess?.()}
+            onClick={handleSuccessClose}
             style={{ marginTop: cssVars.spacing.lg }}
           >
             Weiter
@@ -304,7 +328,15 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               name="password"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                const newPassword = e.target.value;
+                setPassword(newPassword);
+                // Auto-sync to confirmation if it was filled by password manager
+                // (detected by large change in value length, e.g. paste/autofill)
+                if (newPassword.length > 6 && confirmPassword === '') {
+                  setConfirmPassword(newPassword);
+                }
+              }}
               placeholder="Mindestens 6 Zeichen"
               style={{
                 ...styles.input,
@@ -625,6 +657,23 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     textAlign: 'center',
     lineHeight: '1.5',
+  },
+  successCloseButton: {
+    position: 'absolute',
+    top: cssVars.spacing.md,
+    right: cssVars.spacing.md,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    background: 'transparent',
+    border: 'none',
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.textSecondary,
+    fontSize: cssVars.fontSizes.lg,
+    cursor: 'pointer',
+    transition: 'color 0.2s, background 0.2s',
   },
 };
 
