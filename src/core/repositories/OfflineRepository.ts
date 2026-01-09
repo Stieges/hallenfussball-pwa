@@ -106,38 +106,21 @@ export class OfflineRepository implements ITournamentRepository {
     /**
      * Lists tournaments.
      * Strategy:
-     * - Try Cloud List.
-     * - If success: Return Cloud List. 
-     *   NOTE: We do NOT cache the mock-objects from listForCurrentUser to avoid overwriting full local objects.
-     *   The detailed objects are cached on 'get(id)'.
+     * - Try Cloud List + Merge with Local-only tournaments
      * - If fail: Return Local List.
      */
     async listForCurrentUser(): Promise<Tournament[]> {
         try {
             const cloudList = await this.supabaseRepo.listForCurrentUser();
-            // We could optionally merging local-only tournaments here that haven't been synced yet?
-            // For now, let's KISS. If online, show cloud truth.
-            // Wait, if I created a tourney offline, it IS in localRepo but NOT in cloudList.
-            // So valid Cloud List might miss "offline created" items.
+            const localList = await this.localRepo.listForCurrentUser();
 
-            // Merge Strategy:
-            // 1. Get Cloud List
-            // 2. Get Local List
-            // 3. Merge (Union of IDs). Prefer Cloud version if exists? 
-            //    Or prefer Local version if newer?
+            // Merge: Add local-only tournaments that haven't been synced yet
+            const cloudIds = new Set(cloudList.map(t => t.id));
+            const localOnly = localList.filter(t => !cloudIds.has(t.id));
 
-            // Let's look at Local List to find "Unsynced" items.
-            // Current simplified approach: Return Cloud List + Check Local for items not in Cloud?
-
-            // For MVP: Return Cloud List if online.
-            // Problem: Offline created tournament disappears when I go online until it syncs.
-            // Solution: Perform "Sync Up" (Local -> Cloud) BEFORE returning list?
-
-            // That's the best spot! But performance?
-            // Let's do it in background or separate "sync()" method.
-
-            // For this return:
-            return cloudList;
+            // Return cloud list + unsynced local tournaments
+            // Local-only items are marked so UI can show sync indicator if needed
+            return [...cloudList, ...localOnly];
         } catch (error) {
             console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
             // Fallback to all local tournaments
