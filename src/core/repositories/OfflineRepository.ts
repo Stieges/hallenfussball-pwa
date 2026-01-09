@@ -141,20 +141,7 @@ export class OfflineRepository implements ITournamentRepository {
         } catch (error) {
             console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
             // Fallback to all local tournaments
-            // Since we are offline, we can't filter by owner_id reliably (unless we stored it locally)
-            // But LocalRepo returns everything. This is fine for single-user devicew mostly.
-            // TODO: In multi-user device scenario, this leaks data. But LocalStorage is insecure anyway.
-            return (await this.localRepo.get('stub')) ? [] : this.localRepo['loadList'] ? (this.localRepo as any).loadList() : []; // access private method workaround or use public if available?
-            // LocalRepo.get implementation loads list internally.
-            // We need a list() method on ITournamentRepository or at least on LocalStorageRepo
-            // But ITournamentRepository doesn't have list().
-            // SupabaseRepository has 'listForCurrentUser'.
-            // LocalStorageRepository needs 'list()'.
-
-            // Let's assume we can cast or extend LocalStorageRepo with list().
-            // For now, let's instantiate a new LocalStorageRepo and call a public method if we add one.
-            // Or just allow fail for now.
-            return [];
+            return await this.localRepo.listForCurrentUser();
         }
     }
 
@@ -163,10 +150,8 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async syncUp(): Promise<void> {
         try {
-            // Need access to local list.
-            // Since LocalStorageRepo doesn't expose list() yet publicly in interface, we might need to add it.
-            // Let's assume we add `list()` to LocalStorageRepo.
-            const localList = (this.localRepo as any).loadList?.() as Tournament[] || [];
+            // Use public API to get local list
+            const localList = await this.localRepo.listForCurrentUser();
 
             for (const localT of localList) {
                 try {
@@ -175,7 +160,6 @@ export class OfflineRepository implements ITournamentRepository {
 
                     if (!cloudT) {
                         // Not in cloud -> Upload
-                        console.log(`Syncing up: Uploading new tournament ${localT.id}`);
                         await this.supabaseRepo.save(localT);
                     } else {
                         // Exists in cloud.
@@ -185,7 +169,6 @@ export class OfflineRepository implements ITournamentRepository {
 
                         if (localDate > cloudDate) {
                             // Local is newer -> Upload
-                            console.log(`Syncing up: Updating tournament ${localT.id} (Local is newer)`);
                             await this.supabaseRepo.save(localT);
                         }
                     }
