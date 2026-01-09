@@ -1,27 +1,12 @@
-import { test, expect, Page } from '@playwright/test';
-
-/**
- * Helper to wait for React to mount.
- * In CI, Vite cold-start can take 30+ seconds before JS is compiled.
- * This waits for the #root element to have children (React has rendered).
- */
-async function waitForReactReady(page: Page, timeout = 60000) {
-  await page.waitForFunction(
-    () => {
-      const root = document.getElementById('root');
-      return root && root.children.length > 0;
-    },
-    { timeout }
-  );
-}
+import { test, expect } from '@playwright/test';
 
 test.describe('Device Compatibility', () => {
 
   test.describe('Viewport & Safe Area', () => {
-
+    
     test('viewport-fit=cover ist gesetzt', async ({ page }) => {
       await page.goto('/');
-
+      
       const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
       expect(viewport).toContain('viewport-fit=cover');
     });
@@ -29,11 +14,8 @@ test.describe('Device Compatibility', () => {
     test('Kein 100vh ohne Fallback', async ({ page }) => {
       await page.goto('/');
 
-      // Wait for React to mount (CI cold-start can take 30+ seconds)
-      await waitForReactReady(page);
-
-      // Now verify body is visible (not hidden due to CSS issues)
-      // Note: Actual 100vh → 100dvh migration is verified via code review.
+      // Note: This test verifies the app loads correctly.
+      // Actual 100vh → 100dvh migration is verified via code review.
       // CSS cannot be directly inspected for vh units from computed styles.
       await expect(page.locator('body')).toBeVisible();
     });

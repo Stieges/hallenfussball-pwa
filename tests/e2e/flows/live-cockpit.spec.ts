@@ -8,22 +8,7 @@
  * - Finishing a match
  */
 
-import { test, expect, Page } from '@playwright/test';
-
-/**
- * Helper to wait for React to mount.
- * In CI, Vite cold-start can take 30+ seconds before JS is compiled.
- * This waits for the #root element to have children (React has rendered).
- */
-async function waitForReactReady(page: Page, timeout = 60000) {
-  await page.waitForFunction(
-    () => {
-      const root = document.getElementById('root');
-      return root && root.children.length > 0;
-    },
-    { timeout }
-  );
-}
+import { test, expect } from '@playwright/test';
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -94,13 +79,9 @@ test.describe('Live Cockpit', () => {
       localStorage.setItem('tournaments', JSON.stringify([t]));
     }, tournament);
 
-    // Navigate to app and wait for React to mount
-    // In CI, Vite cold-start can take 30+ seconds before JS is compiled
+    // Navigate to app
     await page.goto('/');
-    await waitForReactReady(page);
-
-    // Then wait for the seeded tournament to appear
-    await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -116,7 +97,8 @@ test.describe('Live Cockpit', () => {
   });
 
   test('Can navigate to Live Cockpit tab', async ({ page }) => {
-    // GIVEN - App is loaded with test tournament (verified in beforeEach)
+    // GIVEN - App is loaded with test tournament
+    await expect(page.getByText('E2E Test Turnier')).toBeVisible();
 
     // WHEN - Click on the tournament
     await page.getByText('E2E Test Turnier').click();

@@ -32,20 +32,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
 
-  // Timeouts - prevent hanging tests
-  // CI Vite cold-start takes 60-90s to compile JS bundle
-  // Tests need: Vite compile time + actual test execution time
-  timeout: process.env.CI ? 120_000 : 60_000, // 120s in CI (Vite cold-start), 60s locally
-  globalTimeout: process.env.CI ? 15 * 60 * 1000 : undefined, // 15min total in CI (89 tests × retries)
-
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
     baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    actionTimeout: 60_000, // 60s per action - needed for CI Vite cold-start
-    navigationTimeout: 60_000, // 60s for page navigation (CI cold-start needs time)
   },
 
   projects: [
