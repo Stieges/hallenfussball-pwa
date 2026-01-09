@@ -114,7 +114,6 @@ test.describe('Monitor Display', () => {
   test.describe('MON-D01/D02: Error States', () => {
     test('zeigt Fehler bei ungültiger Tournament-ID', async ({ page }) => {
       await page.goto('/display/invalid-tournament/monitor-1');
-      await page.waitForLoadState('networkidle');
 
       // Should show error
       await expect(page.locator('text=/nicht gefunden|error/i')).toBeVisible({ timeout: 10000 });
@@ -123,7 +122,6 @@ test.describe('Monitor Display', () => {
     test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page }) => {
       await setupTournamentWithMonitor(page, {});
       await page.goto('/display/test-tournament/invalid-monitor');
-      await page.waitForLoadState('networkidle');
 
       // Should show error about monitor not found
       await expect(page.locator('text=/nicht gefunden|error/i')).toBeVisible({ timeout: 10000 });
