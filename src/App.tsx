@@ -38,6 +38,9 @@ const PublicTournamentViewScreen = lazy(() =>
 const LiveViewScreen = lazy(() =>
   import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen }))
 );
+const PublicLiveViewScreen = lazy(() =>
+  import('./screens/PublicLiveViewScreen').then(m => ({ default: m.PublicLiveViewScreen }))
+);
 const ImpressumScreen = lazy(() =>
   import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen }))
 );
@@ -112,6 +115,11 @@ function AppContent() {
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
   const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath;
   const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
+
+  // Check if current path is a public live view path (/live/:shareCode)
+  const publicLiveMatch = location.pathname.match(/^\/live\/([A-Za-z0-9]+)$/);
+  const isPublicLivePath = !!publicLiveMatch;
+  const shareCodeFromUrl = publicLiveMatch?.[1] ?? null;
 
   // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
   const isNewWizardPath = location.pathname === '/tournament/new';
@@ -572,6 +580,11 @@ function AppContent() {
             onNavigateToProfile={() => setScreen('profile')}
             onNavigateToSettings={() => setScreen('settings')}
           />
+        )}
+
+        {/* Public Live View via Share Code (/live/:code) */}
+        {isPublicLivePath && shareCodeFromUrl && (
+          <PublicLiveViewScreen shareCode={shareCodeFromUrl} />
         )}
 
         {screen === 'public' && publicTournamentId && (

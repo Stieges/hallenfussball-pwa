@@ -77,6 +77,31 @@ export default defineConfig({
               },
             },
           },
+          {
+            // Cache Supabase API responses for public views
+            // NetworkFirst: Try network, fall back to cache for offline support
+            urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'supabase-api-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60, // 1 hour cache for API responses
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              networkTimeoutSeconds: 10, // Fall back to cache after 10s timeout
+            },
+          },
+          {
+            // Cache Supabase Auth API (for session validation)
+            urlPattern: /^https:\/\/.*\.supabase\.co\/auth\/v1\/.*/i,
+            handler: 'NetworkOnly', // Auth should always be fresh
+            options: {
+              cacheName: 'supabase-auth-cache',
+            },
+          },
         ],
         // Skip waiting and claim clients immediately
         skipWaiting: true,

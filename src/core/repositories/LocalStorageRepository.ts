@@ -10,6 +10,12 @@ export class LocalStorageRepository implements ITournamentRepository {
         return list.find(t => t.id === id) ?? null;
     }
 
+    async getByShareCode(_code: string): Promise<Tournament | null> {
+        // Local storage does not support share codes, as they are a cloud feature.
+        // potentially we could scan for them, but for now we return null.
+        return null;
+    }
+
     async save(tournament: Tournament): Promise<void> {
         const list = this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
