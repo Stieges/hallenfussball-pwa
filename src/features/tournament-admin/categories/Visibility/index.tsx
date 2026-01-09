@@ -2,14 +2,18 @@
  * VisibilityCategory - Visibility & QR-Code
  *
  * Control what's publicly visible and sharing options.
+ * Integrates with Supabase for share code generation.
  *
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.7
+ * @see docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md
  */
 
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, useCallback, CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament } from '../../../../types/tournament';
+import { SupabaseRepository } from '../../../../core/repositories/SupabaseRepository';
+import { isSupabaseConfigured } from '../../../../lib/supabase';
 
 // =============================================================================
 // PROPS
@@ -195,11 +199,127 @@ export function VisibilityCategory({
 }: VisibilityCategoryProps) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isPublic, setIsPublic] = useState(tournament.isPublic ?? false);
+  const [shareCode, setShareCode] = useState<string | null>(tournament.shareCode ?? null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const publicUrl = `${window.location.origin}/public/${tournamentId}`;
+  // Sync state from tournament prop
+  useEffect(() => {
+    setIsPublic(tournament.isPublic ?? false);
+    setShareCode(tournament.shareCode ?? null);
+  }, [tournament.isPublic, tournament.shareCode]);
+
+  // Generate public URL based on share code
+  const publicUrl = shareCode ? `${window.location.origin}/live/${shareCode}` : null;
+
+  // Make tournament public (generate share code)
+  const handleMakePublic = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setError('Cloud-Funktionen sind nicht verfügbar.');
+      return;
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    try {
+      const repository = new SupabaseRepository();
+      const result = await repository.makeTournamentPublic(tournamentId);
+
+      if (result) {
+        setShareCode(result.shareCode);
+        setIsPublic(true);
+        onTournamentUpdate({
+          ...tournament,
+          isPublic: true,
+          shareCode: result.shareCode,
+          shareCodeCreatedAt: result.createdAt,
+          updatedAt: new Date().toISOString(),
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to make tournament public:', err);
+      setError('Fehler beim Veröffentlichen des Turniers.');
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [tournamentId, tournament, onTournamentUpdate]);
+
+  // Make tournament private (remove share code)
+  const handleMakePrivate = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setError('Cloud-Funktionen sind nicht verfügbar.');
+      return;
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    try {
+      const repository = new SupabaseRepository();
+      await repository.makeTournamentPrivate(tournamentId);
+
+      setShareCode(null);
+      setIsPublic(false);
+      onTournamentUpdate({
+        ...tournament,
+        isPublic: false,
+        shareCode: undefined,
+        shareCodeCreatedAt: undefined,
+        updatedAt: new Date().toISOString(),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to make tournament private:', err);
+      setError('Fehler beim Privatisieren des Turniers.');
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [tournamentId, tournament, onTournamentUpdate]);
+
+  // Regenerate share code
+  const handleRegenerateCode = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setError('Cloud-Funktionen sind nicht verfügbar.');
+      return;
+    }
+
+    setIsUpdating(true);
+    setError(null);
+
+    try {
+      const repository = new SupabaseRepository();
+      const result = await repository.regenerateShareCode(tournamentId);
+
+      if (result) {
+        setShareCode(result.shareCode);
+        onTournamentUpdate({
+          ...tournament,
+          shareCode: result.shareCode,
+          shareCodeCreatedAt: result.createdAt,
+          updatedAt: new Date().toISOString(),
+        });
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to regenerate share code:', err);
+      setError('Fehler beim Generieren des neuen Codes.');
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [tournamentId, tournament, onTournamentUpdate]);
 
   // Handle copy to clipboard
   const handleCopy = async () => {
+    if (!publicUrl) {
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
@@ -259,57 +379,122 @@ export function VisibilityCategory({
         )
       }
     >
-      {/* QR Code & Sharing - moved up for importance */}
+      {/* QR Code & Sharing - only shown when public */}
       <CollapsibleSection icon="📱" title="QR-Code & Sharing" defaultOpen>
         <div style={styles.qrContainer}>
-          <div style={styles.linkRow}>
-            <input
-              type="text"
-              value={publicUrl}
-              readOnly
-              style={styles.linkInput}
-              onClick={(e) => (e.target as HTMLInputElement).select()}
-            />
-            <button
-              style={{
-                ...styles.copyButton,
-                ...(copied ? styles.copyButtonSuccess : {}),
-              }}
-              onClick={() => { void handleCopy(); }}
-            >
-              {copied ? '✓ Kopiert!' : '📋 Kopieren'}
-            </button>
-          </div>
-
-          <div style={styles.qrPreview}>
-            <div style={styles.qrPlaceholder}>
-              <span>QR</span>
+          {/* Error Message */}
+          {error && (
+            <div style={{
+              padding: cssVars.spacing.md,
+              background: cssVars.colors.errorLight,
+              border: `1px solid ${cssVars.colors.errorBorder}`,
+              borderRadius: cssVars.borderRadius.md,
+              color: cssVars.colors.error,
+              marginBottom: cssVars.spacing.md,
+            }}>
+              {error}
             </div>
-            <div style={styles.qrActions}>
-              <button
-                style={styles.actionButton}
-                onClick={() => window.open(publicUrl, '_blank')}
-              >
-                <span>🔗</span>
-                <span>Public View öffnen</span>
-              </button>
-              <button style={styles.actionButton}>
-                <span>🖨️</span>
-                <span>QR-Code drucken</span>
-              </button>
-              <button style={styles.actionButton}>
-                <span>📥</span>
-                <span>QR-Code herunterladen</span>
-              </button>
-            </div>
-          </div>
+          )}
 
-          <div style={styles.tip}>
-            <span>💡</span>
-            <span>
-              Tipp: Hänge den QR-Code in der Halle aus, damit Eltern live mitverfolgen können.
-            </span>
-          </div>
+          {/* Show sharing options only when public */}
+          {isPublic && publicUrl ? (
+            <>
+              <div style={styles.linkRow}>
+                <input
+                  type="text"
+                  value={publicUrl}
+                  readOnly
+                  style={styles.linkInput}
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  style={{
+                    ...styles.copyButton,
+                    ...(copied ? styles.copyButtonSuccess : {}),
+                  }}
+                  onClick={() => { void handleCopy(); }}
+                >
+                  {copied ? '✓ Kopiert!' : '📋 Kopieren'}
+                </button>
+              </div>
+
+              {/* Share Code Display */}
+              <div style={{
+                padding: cssVars.spacing.md,
+                background: cssVars.colors.primarySubtle,
+                borderRadius: cssVars.borderRadius.md,
+                textAlign: 'center',
+              }}>
+                <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.bodySm }}>
+                  Share-Code:
+                </span>
+                <div style={{
+                  fontSize: cssVars.fontSizes.headlineLg,
+                  fontWeight: cssVars.fontWeights.bold,
+                  // eslint-disable-next-line local-rules/no-hardcoded-font-styles -- Monospace is intentional for share code display
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.2em',
+                  color: cssVars.colors.primary,
+                  marginTop: cssVars.spacing.xs,
+                }}>
+                  {shareCode}
+                </div>
+              </div>
+
+              <div style={styles.qrPreview}>
+                <div style={styles.qrPlaceholder}>
+                  <span>QR</span>
+                </div>
+                <div style={styles.qrActions}>
+                  <button
+                    style={styles.actionButton}
+                    onClick={() => window.open(publicUrl, '_blank')}
+                  >
+                    <span>🔗</span>
+                    <span>Public View öffnen</span>
+                  </button>
+                  <button
+                    style={styles.actionButton}
+                    onClick={() => { void handleRegenerateCode(); }}
+                    disabled={isUpdating}
+                  >
+                    <span>🔄</span>
+                    <span>{isUpdating ? 'Wird generiert...' : 'Neuen Code generieren'}</span>
+                  </button>
+                  <button style={styles.actionButton}>
+                    <span>🖨️</span>
+                    <span>QR-Code drucken</span>
+                  </button>
+                  <button style={styles.actionButton}>
+                    <span>📥</span>
+                    <span>QR-Code herunterladen</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={styles.tip}>
+                <span>💡</span>
+                <span>
+                  Tipp: Hänge den QR-Code in der Halle aus, damit Eltern live mitverfolgen können.
+                </span>
+              </div>
+            </>
+          ) : (
+            <div style={{
+              textAlign: 'center',
+              padding: cssVars.spacing.xl,
+              color: cssVars.colors.textMuted,
+            }}>
+              <p style={{ marginBottom: cssVars.spacing.md }}>
+                Das Turnier ist derzeit privat. Aktiviere "Mit Link teilbar" um einen Share-Link zu generieren.
+              </p>
+              {!isSupabaseConfigured && (
+                <p style={{ fontSize: cssVars.fontSizes.bodySm, color: cssVars.colors.warning }}>
+                  ⚠️ Cloud-Funktionen sind nicht verfügbar. Prüfe die Supabase-Konfiguration.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 
@@ -367,13 +552,30 @@ export function VisibilityCategory({
         </div>
       </CollapsibleSection>
 
-      {/* Visibility Level - informational for now */}
+      {/* Visibility Level */}
       <CollapsibleSection icon="🔒" title="Turnier-Sichtbarkeit">
         <div style={styles.radioGroup}>
+          {/* Private Option */}
           <label
-            style={styles.radioOption}
+            style={{
+              ...styles.radioOption,
+              ...(!isPublic ? styles.radioOptionSelected : {}),
+              opacity: isUpdating ? 0.6 : 1,
+              cursor: isUpdating || !isSupabaseConfigured ? 'not-allowed' : 'pointer',
+            }}
+            onClick={() => {
+              if (!isUpdating && isSupabaseConfigured && isPublic) {
+                void handleMakePrivate();
+              }
+            }}
           >
-            <input type="radio" name="visibility" disabled />
+            <input
+              type="radio"
+              name="visibility"
+              checked={!isPublic}
+              readOnly
+              disabled={isUpdating || !isSupabaseConfigured}
+            />
             <div>
               <div style={styles.radioLabel}>🔒 Privat</div>
               <div style={styles.radioDescription}>
@@ -382,17 +584,40 @@ export function VisibilityCategory({
             </div>
           </label>
 
-          <label style={{ ...styles.radioOption, ...styles.radioOptionSelected }}>
-            <input type="radio" name="visibility" checked readOnly />
+          {/* Shareable Option */}
+          <label
+            style={{
+              ...styles.radioOption,
+              ...(isPublic ? styles.radioOptionSelected : {}),
+              opacity: isUpdating ? 0.6 : 1,
+              cursor: isUpdating || !isSupabaseConfigured ? 'not-allowed' : 'pointer',
+            }}
+            onClick={() => {
+              if (!isUpdating && isSupabaseConfigured && !isPublic) {
+                void handleMakePublic();
+              }
+            }}
+          >
+            <input
+              type="radio"
+              name="visibility"
+              checked={isPublic}
+              readOnly
+              disabled={isUpdating || !isSupabaseConfigured}
+            />
             <div>
-              <div style={styles.radioLabel}>🔗 Mit Link teilbar (Standard)</div>
+              <div style={styles.radioLabel}>
+                🔗 Mit Link teilbar
+                {isUpdating && <span style={{ marginLeft: cssVars.spacing.sm }}>⏳</span>}
+              </div>
               <div style={styles.radioDescription}>
                 Jeder mit dem Link kann zuschauen. Nicht in Suchmaschinen auffindbar.
               </div>
             </div>
           </label>
 
-          <label style={styles.radioOption}>
+          {/* Public Listed Option (future) */}
+          <label style={{ ...styles.radioOption, opacity: 0.5, cursor: 'not-allowed' }}>
             <input type="radio" name="visibility" disabled />
             <div>
               <div style={styles.radioLabel}>🌍 Öffentlich gelistet</div>
@@ -402,10 +627,27 @@ export function VisibilityCategory({
             </div>
           </label>
         </div>
+
+        {!isSupabaseConfigured && (
+          <div style={{
+            ...styles.tip,
+            marginTop: cssVars.spacing.md,
+            background: cssVars.colors.warningLight,
+            borderColor: cssVars.colors.warningBorder,
+            color: cssVars.colors.warning,
+          }}>
+            <span>⚠️</span>
+            <span>
+              Cloud-Funktionen sind nicht verfügbar. Sichtbarkeits-Einstellungen erfordern eine Supabase-Verbindung.
+            </span>
+          </div>
+        )}
+
         <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
           <span>ℹ️</span>
           <span>
-            Erweiterte Sichtbarkeits-Optionen werden in einer zukünftigen Version verfügbar sein.
+            Bei "Mit Link teilbar" wird ein 6-stelliger Share-Code generiert (z.B. ABC123).
+            Der Code ist leicht merkbar und tippbar.
           </span>
         </div>
       </CollapsibleSection>

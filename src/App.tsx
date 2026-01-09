@@ -35,6 +35,12 @@ const TournamentManagementScreen = lazy(() =>
 const PublicTournamentViewScreen = lazy(() =>
   import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen }))
 );
+const LiveViewScreen = lazy(() =>
+  import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen }))
+);
+const PublicLiveViewScreen = lazy(() =>
+  import('./screens/PublicLiveViewScreen').then(m => ({ default: m.PublicLiveViewScreen }))
+);
 const ImpressumScreen = lazy(() =>
   import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen }))
 );
@@ -89,7 +95,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
 
 function AppContent() {
   const { showError } = useToast();
@@ -109,6 +115,11 @@ function AppContent() {
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
   const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath;
   const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
+
+  // Check if current path is a public live view path (/live/:shareCode)
+  const publicLiveMatch = location.pathname.match(/^\/live\/([A-Za-z0-9]+)$/);
+  const isPublicLivePath = !!publicLiveMatch;
+  const shareCodeFromUrl = publicLiveMatch?.[1] ?? null;
 
   // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
   const isNewWizardPath = location.pathname === '/tournament/new';
@@ -194,6 +205,7 @@ function AppContent() {
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
+  const [liveShareCode, setLiveShareCode] = useState<string | null>(null);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
@@ -208,6 +220,7 @@ function AppContent() {
   useEffect(() => {
     const path = window.location.pathname;
     const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
+    const liveMatch = path.match(/^\/live\/([A-Z0-9]{6})$/i);
     const inviteMatch = path.match(/^\/invite$/);
     // MON-KONF-01: Monitor Display route /display/:tournamentId/:monitorId
     const displayMatch = path.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
@@ -216,6 +229,10 @@ function AppContent() {
       // Monitor Display route (for TVs/Beamer)
       setMonitorDisplayParams({ tournamentId: displayMatch[1], monitorId: displayMatch[2] });
       setScreen('monitor-display');
+    } else if (liveMatch) {
+      // Live View via share code (e.g., /live/ABC123)
+      setLiveShareCode(liveMatch[1].toUpperCase());
+      setScreen('live');
     } else if (publicMatch) {
       setPublicTournamentId(publicMatch[1]);
       setScreen('public');
@@ -565,8 +582,18 @@ function AppContent() {
           />
         )}
 
+        {/* Public Live View via Share Code (/live/:code) */}
+        {isPublicLivePath && shareCodeFromUrl && (
+          <PublicLiveViewScreen shareCode={shareCodeFromUrl} />
+        )}
+
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />
+        )}
+
+        {/* Live View via Share Code (e.g., /live/ABC123) */}
+        {screen === 'live' && liveShareCode && (
+          <LiveViewScreen shareCode={liveShareCode} />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}

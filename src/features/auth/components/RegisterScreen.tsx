@@ -95,9 +95,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
     }
 
-    // Registration code validation
+    // Registration code validation (case-insensitive)
     const expectedCode = import.meta.env.VITE_REGISTRATION_CODE as string | undefined;
-    if (expectedCode && registrationCode !== expectedCode) {
+    const providedCode = registrationCode.trim().toLowerCase();
+    const expectedCodeNormalized = expectedCode?.trim().toLowerCase();
+
+    if (expectedCodeNormalized && providedCode !== expectedCodeNormalized) {
       newErrors.registrationCode = 'Ungültiger Einladungscode';
     }
 

@@ -10,6 +10,7 @@ export interface ITournamentRepository {
      * Returns null if not found.
      */
     get(id: string): Promise<Tournament | null>;
+    getByShareCode(code: string): Promise<Tournament | null>;
 
     /**
      * Saves a full tournament object.

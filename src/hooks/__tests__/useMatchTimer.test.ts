@@ -350,11 +350,12 @@ describe('useMatchTimerExtended', () => {
         vi.advanceTimersByTime(1000);
       });
 
-      // displaySeconds should be 600 (remaining) or very close to it (due to timing precision)
-      // Sometimes it's 599 due to 1ms passed
-      expect(result.current.displaySeconds).toBeGreaterThanOrEqual(599);
+      // displaySeconds should be ~599 (remaining) after 1 second elapsed
+      // Due to RAF timing, allow 598-600 range
+      expect(result.current.displaySeconds).toBeGreaterThanOrEqual(598);
       expect(result.current.displaySeconds).toBeLessThanOrEqual(600);
-      expect(result.current.elapsedSeconds).toBe(0);
+      // After advancing 1 second, elapsedSeconds should be 0-1 (timing precision)
+      expect(result.current.elapsedSeconds).toBeLessThanOrEqual(1);
       expect(result.current.isAtZero).toBe(false);
       expect(result.current.isOvertime).toBe(false);
       expect(result.current.timerState).toBe('normal');

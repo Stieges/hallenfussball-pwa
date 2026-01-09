@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-08
+> **Letzte Aktualisierung:** 2026-01-09
 
 ---
 
@@ -132,6 +132,40 @@
 ---
 
 ## 🔴 Aktuell in Arbeit
+
+### Public View (Zuschauer-Ansicht) – IN ARBEIT
+
+**Referenz:** `docs/concepts/PUBLIC-PAGE-KONZEPT-v4-FINAL.md`
+**Route:** `/live/:shareCode`
+
+| Phase | Status | Beschreibung |
+|-------|--------|--------------|
+| Phase 1: Foundation | ✅ Erledigt | Route, Supabase-Integration, LiveViewScreen |
+| Phase 2: Mein Team & Filter | ✅ Erledigt | Teamauswahl, Nur-meine-Spiele, Filter (Gruppe/Phase/Status) |
+| Phase 3: Public View UI | ✅ Erledigt | PublicBottomNav, Tabs (Spiele/Tabellen/Info) |
+| Phase 4: UX & Themes | ✅ Erledigt | Theme-Switch, Pull-to-Refresh, Deep-Link Persistence |
+| Phase 5: PWA & Polish | ✅ Erledigt | Haptic Feedback, Service Worker caching |
+
+**Implementierte Komponenten:**
+
+| Komponente | Status | Pfad |
+|------------|--------|------|
+| `LiveViewScreen` | ✅ | `src/screens/LiveViewScreen.tsx` |
+| `PublicLiveViewScreen` | ✅ | `src/screens/PublicLiveViewScreen.tsx` |
+| `PublicBottomNav` | ✅ | `src/components/ui/PublicBottomNav.tsx` |
+| Filter-UI (Gruppe/Phase/Status) | ✅ | In `LiveViewScreen.tsx` |
+| "Mein Team" Selector | ✅ | In `LiveViewScreen.tsx` |
+| "Nur meine Spiele" Toggle | ✅ | In `LiveViewScreen.tsx` |
+| Tab-Navigation (Spiele/Tabellen/Info) | ✅ | In `LiveViewScreen.tsx` |
+| Theme-Switch (BaseThemeSelector) | ✅ | In Settings-Tab |
+| Pull-to-Refresh | ✅ | In `LiveViewScreen.tsx` |
+| Deep-Link Persistence (URL Query-Params) | ✅ | In `LiveViewScreen.tsx` |
+| Haptic Feedback Hook | ✅ | `src/hooks/useHaptic.ts` |
+| Service Worker Supabase Caching | ✅ | `vite.config.ts` (workbox) |
+
+**Status:** ✅ **Public View Feature ist komplett!**
+
+---
 
 ### Live-Cockpit (Scoreboard)
 
