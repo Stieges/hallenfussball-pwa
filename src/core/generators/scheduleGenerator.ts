@@ -76,16 +76,53 @@ export function generateFullSchedule(
 
   if (hasMatches) {
     // USE ESTABLISHED MATCHES (Truth from Repository)
+    // BUG-FIX: Calculate sequential times for imported matches that lack scheduledTime
+    // Sort by slot (or round-1 as fallback) to determine time slots
+    const sortedBySlot = [...tournament.matches].sort((a, b) => {
+      const slotA = a.slot ?? (a.round - 1);
+      const slotB = b.slot ?? (b.round - 1);
+      if (slotA !== slotB) { return slotA - slotB; }
+      return a.field - b.field;
+    });
+
+    // Calculate slot duration (game + break)
+    const gameDuration = tournament.groupPhaseGameDuration;
+    const breakDuration = tournament.groupPhaseBreakDuration ?? 0;
+    const slotDuration = gameDuration + breakDuration;
+
+    // Build a map from match ID to calculated time
+    const matchTimeMap = new Map<string, { startTime: Date; endTime: Date }>();
+    let currentSlot = -1;
+    let currentSlotStartTime = startTime;
+
+    for (const m of sortedBySlot) {
+      const matchSlot = m.slot ?? (m.round - 1);
+
+      // If we moved to a new slot, update the start time
+      if (matchSlot !== currentSlot) {
+        currentSlot = matchSlot;
+        currentSlotStartTime = new Date(startTime.getTime() + matchSlot * slotDuration * 60000);
+      }
+
+      const matchEnd = new Date(currentSlotStartTime.getTime() + gameDuration * 60000);
+      matchTimeMap.set(m.id, { startTime: currentSlotStartTime, endTime: matchEnd });
+    }
+
     // First, map all existing matches to ScheduledMatch format
     const mappedMatches = tournament.matches.map((m, index) => {
-      const extMatch = m as unknown as ExtendedMatchInput
-      const matchStart = m.scheduledTime ? new Date(m.scheduledTime) : startTime
-      // Estimate end time based on duration
-      const duration = tournament.groupPhaseGameDuration
-      const matchEnd = new Date(matchStart.getTime() + duration * 60000)
+      const extMatch = m as unknown as ExtendedMatchInput;
+
+      // Use persisted scheduledTime if available, otherwise use calculated time from slot
+      const calculatedTime = matchTimeMap.get(m.id);
+      const matchStart = m.scheduledTime
+        ? new Date(m.scheduledTime)
+        : (calculatedTime?.startTime ?? startTime);
+      const matchEnd = m.scheduledTime
+        ? new Date(new Date(m.scheduledTime).getTime() + gameDuration * 60000)
+        : (calculatedTime?.endTime ?? new Date(startTime.getTime() + gameDuration * 60000));
 
       // BUG-FIX: Derive phase from isFinal for backward compatibility with old data
-      const phase = m.phase || extMatch.phase || (m.isFinal ? 'final' : 'groupStage')
+      const phase = m.phase || extMatch.phase || (m.isFinal ? 'final' : 'groupStage');
 
       return {
         ...m,
@@ -97,7 +134,7 @@ export function generateFullSchedule(
         time: formatTime(matchStart),
         originalTeamA: m.teamA,
         originalTeamB: m.teamB,
-        duration,
+        duration: gameDuration,
 
         homeTeam: teamMap.get(m.teamA) || m.teamA,
         awayTeam: teamMap.get(m.teamB) || m.teamB,
@@ -106,7 +143,7 @@ export function generateFullSchedule(
         // Ensure scores are preserved
         scoreA: m.scoreA,
         scoreB: m.scoreB
-      } as ScheduledMatch
+      } as ScheduledMatch;
     })
 
     // Categorize into group/final for stats
