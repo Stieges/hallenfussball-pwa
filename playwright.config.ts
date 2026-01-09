@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = process.env.PORT || '3000';
+// In CI with preview mode, Vite uses port 4173; otherwise dev server uses 3000
+const usePreview = !!process.env.CI_E2E_USE_PREVIEW;
+const PORT = process.env.PORT || (usePreview ? '4173' : '3000');
 const baseURL = `http://localhost:${PORT}`;
 
 // Network Throttling Presets for performance testing
@@ -145,7 +147,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
+    // In CI with CI_E2E_USE_PREVIEW, use production build (faster, no Vite cold-start)
+    // Locally, use dev server for hot reload
+    command: process.env.CI_E2E_USE_PREVIEW ? 'npm run preview' : 'npm run dev',
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

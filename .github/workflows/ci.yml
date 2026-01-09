@@ -59,8 +59,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Build for E2E tests
+        run: npm run build
+
       - name: Run E2E tests
         run: npx playwright test --project="${{ matrix.project }}"
+        env:
+          CI_E2E_USE_PREVIEW: 'true'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
