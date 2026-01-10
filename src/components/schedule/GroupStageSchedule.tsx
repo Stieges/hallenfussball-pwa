@@ -745,6 +745,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                 minWidth: '280px',
                 maxWidth: '100%',
                 cursor: 'grabbing',
+                height: '100%', // Match height
+                boxSizing: 'border-box'
               }}>
                 <span style={{ color: cssVars.colors.primary, fontSize: cssVars.fontSizes.lg }}>⋮⋮</span>
                 <span style={{ fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.primary }}>
