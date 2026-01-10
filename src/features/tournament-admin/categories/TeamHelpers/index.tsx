@@ -7,7 +7,7 @@
  * @see docs/concepts/MULTI-USER-KONZEPT.md
  */
 
-import { useState, CSSProperties } from 'react';
+import { useState, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { Button } from '../../../../components/ui/Button';
@@ -15,6 +15,7 @@ import { MemberList } from '../../../auth/components/MemberList';
 import { InviteDialog } from '../../../auth/components/InviteDialog';
 import { useTournamentMembers } from '../../../auth/hooks/useTournamentMembers';
 import { useInvitation } from '../../../auth/hooks/useInvitation';
+import type { Invitation } from '../../../auth/types/auth.types';
 import { useAuth } from '../../../auth/hooks/useAuth';
 import type { Tournament } from '../../../../types/tournament';
 
@@ -44,12 +45,17 @@ export function TeamHelpersCategory({
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [createdInviteLink, setCreatedInviteLink] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [activeInvitations, setActiveInvitations] = useState<Invitation[]>([]);
 
   // Permission check: Can manage members?
   const canManageMembers = myMembership?.role === 'owner' || myMembership?.role === 'co-admin';
 
-  // Get active invitations
-  const activeInvitations = getActiveInvitations(tournamentId);
+  // Load active invitations
+  useEffect(() => {
+    if (canManageMembers) {
+      void getActiveInvitations(tournamentId).then(setActiveInvitations);
+    }
+  }, [tournamentId, canManageMembers, getActiveInvitations]);
 
   // Teams for trainer assignment
   const availableTeams = tournament.teams.map(team => ({

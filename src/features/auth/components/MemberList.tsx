@@ -21,6 +21,8 @@ interface MemberListProps {
   onInvite?: () => void;
   /** Teams für Trainer-Zuordnung */
   availableTeams?: Array<{ id: string; name: string }>;
+  /** User IDs that are currently online (from useRealtime) */
+  onlineUserIds?: string[];
 }
 
 // Rollen die vergeben werden können (ohne Owner)
@@ -30,6 +32,7 @@ export const MemberList: React.FC<MemberListProps> = ({
   tournamentId,
   onInvite,
   availableTeams = [],
+  onlineUserIds = [],
 }) => {
   const {
     members,
@@ -99,8 +102,13 @@ export const MemberList: React.FC<MemberListProps> = ({
             <div key={membership.id} style={styles.memberCard}>
               {/* Member Info */}
               <div style={styles.memberInfo}>
-                <div style={styles.avatar}>
-                  {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+                <div style={styles.avatarContainer}>
+                  <div style={styles.avatar}>
+                    {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  {user?.id && onlineUserIds.includes(user.id) && (
+                    <div style={styles.onlineIndicator} title="Online" />
+                  )}
                 </div>
                 <div style={styles.memberDetails}>
                   <p style={styles.memberName}>
@@ -270,6 +278,10 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: cssVars.spacing.md,
   },
+  avatarContainer: {
+    position: 'relative',
+    flexShrink: 0,
+  },
   avatar: {
     width: '40px',
     height: '40px',
@@ -282,6 +294,16 @@ const styles: Record<string, CSSProperties> = {
     background: cssVars.colors.primary,
     borderRadius: cssVars.borderRadius.full,
     flexShrink: 0,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: '0px',
+    right: '0px',
+    width: '12px',
+    height: '12px',
+    background: cssVars.colors.success,
+    borderRadius: cssVars.borderRadius.full,
+    border: `2px solid ${cssVars.colors.surface}`,
   },
   memberDetails: {
     flex: 1,
