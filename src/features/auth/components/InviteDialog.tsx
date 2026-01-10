@@ -40,10 +40,10 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
   const [maxUses, setMaxUses] = useState<number>(1);
   const [expiresInDays, setExpiresInDays] = useState<number>(7);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     clearError();
 
-    const result = createNewInvitation({
+    const result = await createNewInvitation({
       tournamentId,
       role: selectedRole,
       teamIds: selectedRole === 'trainer' ? selectedTeamIds : undefined,
@@ -151,7 +151,7 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
           </Button>
           <Button
             variant="primary"
-            onClick={handleCreate}
+            onClick={() => void handleCreate()}
             loading={isLoading}
             disabled={selectedRole === 'trainer' && selectedTeamIds.length === 0 && availableTeams.length > 0}
           >

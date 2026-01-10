@@ -13,7 +13,6 @@ import { useAuth } from '../hooks/useAuth';
 import { useInvitation } from '../hooks/useInvitation';
 import type { Invitation } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
-import type { InvitationValidationResult } from '../services/invitationService';
 
 interface InviteAcceptScreenProps {
   /** Token aus der URL */
@@ -44,19 +43,23 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
 
   // Validate token on mount
   useEffect(() => {
-    const result: InvitationValidationResult = validateToken(token);
+    const validate = async () => {
+      const result = await validateToken(token);
 
-    if (result.valid && result.invitation) {
-      setInvitation(result.invitation);
-      setTournamentName(result.tournament?.name ?? 'Unbekanntes Turnier');
-      setState('valid');
-    } else {
-      setErrorMessage(result.error ?? 'Ungültige Einladung');
-      setState('invalid');
-    }
+      if (result.valid && result.invitation) {
+        setInvitation(result.invitation);
+        setTournamentName(result.tournament?.name ?? 'Unbekanntes Turnier');
+        setState('valid');
+      } else {
+        setErrorMessage(result.error ?? 'Ungültige Einladung');
+        setState('invalid');
+      }
+    };
+
+    void validate();
   }, [token, validateToken]);
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     // Guest users need to login first
     if (!isAuthenticated || isGuest) {
       onNeedLogin?.();
@@ -66,7 +69,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
     setState('accepting');
     clearError();
 
-    const result = acceptToken(token);
+    const result = await acceptToken(token);
 
     if (result.success && result.membership) {
       const tournamentId = result.membership.tournamentId;
@@ -172,7 +175,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
           <Button
             variant="primary"
             fullWidth
-            onClick={handleAccept}
+            onClick={() => void handleAccept()}
             loading={state === 'accepting'}
             style={styles.acceptButton}
           >
