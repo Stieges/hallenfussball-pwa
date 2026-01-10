@@ -645,9 +645,9 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             return activeMatch ? (
               <div style={{
                 // BUG-FIX: Do not use height: '100%' here as it expands to viewport height in portal
-                // height: '100%', 
+                // height: '100%',
+                // BUG-FIX: Removed scale(1.02) to prevent visual "jumping" when drag starts
                 opacity: 0.9,
-                transform: 'scale(1.02)'
               }}>
                 <DraggableMatch
                   match={activeMatch}
