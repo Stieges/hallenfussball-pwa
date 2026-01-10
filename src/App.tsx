@@ -20,6 +20,7 @@ import {
   UserProfileScreen,
   InviteAcceptScreen,
   AuthCallback,
+  SetPasswordScreen,
 } from './features/auth/components';
 import { Footer } from './components/layout';
 
@@ -96,7 +97,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'set-password';
 
 function AppContent() {
   const { showError } = useToast();
@@ -256,6 +257,8 @@ function AppContent() {
       setScreen('register');
     } else if (path === '/login') {
       setScreen('login');
+    } else if (path === '/set-password') {
+      setScreen('set-password');
     }
   }, [location.pathname]); // Depend on location.pathname to react to URL changes
 
@@ -466,6 +469,8 @@ function AppContent() {
         )}
 
         {screen === 'auth-callback' && <AuthCallback />}
+
+        {screen === 'set-password' && <SetPasswordScreen />}
 
         {screen === 'profile' && (
           <UserProfileScreen
