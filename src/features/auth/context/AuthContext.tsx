@@ -101,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Fetches profile data from profiles table
    */
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, userMetadata?: { full_name?: string }) => {
     if (!isSupabaseConfigured || !supabase) {
       return null;
     }
@@ -114,8 +114,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single();
 
       if (error) {
-        // Warning is expected if profile doesn't exist yet (e.g. very fresh signup)
-        if (error.code !== 'PGRST116') {
+        // If profile doesn't exist (PGRST116), try to create it (Self-Healing)
+        if (error.code === 'PGRST116') {
+          // eslint-disable-next-line no-console
+          console.log('Profile missing, attempting self-healing creation...');
+          try {
+            const displayName = userMetadata?.full_name?.trim() || 'User';
+            const { data: newData, error: createError } = await supabase
+              .from('profiles')
+              .insert({
+                id: userId,
+                display_name: displayName,
+                role: 'user', // Default
+              })
+              .select('display_name, avatar_url, role')
+              .single();
+
+            if (createError) {
+              console.error('Self-healing profile creation failed:', createError.message);
+              return null;
+            }
+
+            return {
+              name: newData.display_name ?? '',
+              avatar_url: newData.avatar_url,
+              role: (newData.role as 'user' | 'admin' | null) ?? 'user',
+            };
+          } catch (createErr) {
+            console.error('Self-healing failed unexpectedly:', createErr);
+          }
+        } else {
           console.warn('Profile fetch error:', error.message);
         }
         return null;
@@ -162,8 +190,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
 
-    // Fetch profile data
-    const profileData = await fetchProfile(supabaseSession.user.id);
+    // Fetch profile data (pass metadata for self-healing)
+    const userMetadata = supabaseSession.user.user_metadata as { full_name?: string } | undefined;
+    const profileData = await fetchProfile(supabaseSession.user.id, userMetadata);
 
     // Map to our types
     const mappedUser = mapSupabaseUser(supabaseSession.user, profileData);
@@ -307,7 +336,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Get profile data (might need a small delay or retry if trigger is slow, 
       // but usually fast enough for next render)
-      const profileData = await fetchProfile(data.user.id);
+      const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
+      const profileData = await fetchProfile(data.user.id, userMetadata);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
       return {
@@ -357,7 +387,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Clear guest data
       localStorage.removeItem('auth:guestUser');
 
-      const profileData = await fetchProfile(data.user.id);
+      const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
+      const profileData = await fetchProfile(data.user.id, userMetadata);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
       return {
