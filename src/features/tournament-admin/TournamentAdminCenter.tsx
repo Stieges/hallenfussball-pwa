@@ -9,7 +9,7 @@
 
 import { useState, useEffect, lazy, Suspense, CSSProperties, useCallback } from 'react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useTournamentManager } from '../../hooks/useTournamentManager';
@@ -128,6 +128,8 @@ const styles = {
 
 interface TournamentAdminCenterProps {
   tournamentId: string;
+  /** Initial category from URL, parsed by parent (App.tsx) */
+  initialCategory?: string;
   onBackToTournament: () => void;
 }
 
@@ -137,16 +139,14 @@ interface TournamentAdminCenterProps {
 
 export function TournamentAdminCenter({
   tournamentId,
+  initialCategory,
   onBackToTournament,
 }: TournamentAdminCenterProps) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { isMobile } = useBreakpoint();
 
-  // Parse category from URL
-  const pathParts = location.pathname.split('/');
-  const adminIndex = pathParts.indexOf('admin');
-  const categoryFromUrl = adminIndex >= 0 ? pathParts[adminIndex + 1] : undefined;
+  // Category from URL is now passed as prop from App.tsx (single source of truth)
+  const categoryFromUrl = initialCategory;
 
   // Determine active category
   const [activeCategory, setActiveCategory] = useState<AdminCategoryId>('dashboard');

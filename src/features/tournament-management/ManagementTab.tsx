@@ -8,17 +8,12 @@
  * - Persistierung in localStorage
  * - Match-Selektor für flexible Auswahl
  * - Zeit-Editor für manuelle Anpassungen
- *
- * Refactored:
- * - Uses useMatchExecution hook for state management
- * - Uses ConfirmDialog instead of window.confirm
- * - Uses CSS Modules for responsive styles
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
-import { LiveCockpitMockup } from '../../components/live-cockpit';
+import { LiveCockpit } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useMatchExecution } from '../../hooks/useMatchExecution';
@@ -354,9 +349,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         </select>
       </div>
 
-      {/* LIVE COCKPIT - Based on HTML Mockups */}
+      {/* LIVE COCKPIT */}
       {currentMatch ? (
-        <LiveCockpitMockup
+        <LiveCockpit
           fieldName={`Feld ${selectedFieldNumber}`}
           tournamentName={tournament.title}
           tournamentId={tournament.id}

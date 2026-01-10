@@ -1,207 +1,227 @@
 /**
- * @deprecated ARCHIVED - Use LiveCockpitMockup instead!
- *
- * This component is NOT used in production. The ManagementTab uses LiveCockpitMockup.
- * Keeping for reference only - do not modify.
- *
- * ============================================================================
- *
- * LiveCockpit - Redesigned Live Match Control Interface
+ * LiveCockpit - Live Match Control Interface
  *
  * A touch-optimized interface for tournament directors to manage live matches.
- * Features:
- * - Touch Zone Layout (Actions in thumb-reachable area)
- * - Progressive Disclosure (Focus → Standard → Extended modes)
- * - Score Correction (Minus buttons, Undo)
- * - Tiebreaker Support (Overtime, Golden Goal, Penalty Shootout)
- * - Proactive Hints (Next match warnings)
+ * Features: Timer, Score Control, Event Tracking, Fouls, Cards, Substitutions.
  *
- * Props interface matches MatchCockpit for drop-in replacement.
- *
- * @see docs/concepts/LIVE-SCREEN-REDESIGN.md
- * @see docs/user-stories/US-LIVE-REDESIGN.md
+ * Layout:
+ * - Desktop: Main grid (scoreboard + sidebar)
+ * - Mobile: Stacked layout with bottom footer
  */
 
-import { useState, useCallback, useMemo, type CSSProperties } from 'react';
+import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
-import { useBreakpoint, useIsMobile, useMatchTimer } from '../../hooks';
-import type { LiveCockpitProps, LiveCockpitMode, TeamSide } from './types';
-import type { MatchEvent } from '../../types/tournament';
+import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import type { LiveCockpitProps } from './types';
+import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
+import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 
 // Sub-components
 import {
-  Header,
-  ScoreDisplay,
-  ActionZone,
-  FooterBar,
-  TiebreakerBanner,
+  TeamBlock,
+  FoulBar,
+  Sidebar,
+  GameControls,
   TimeAdjustDialog,
   ToastContainer,
-  ExtendedActionsPanel,
-  ScoreEditDialog,
   CardDialog,
   TimePenaltyDialog,
   SubstitutionDialog,
-  PenaltyIndicators,
+  GoalScorerDialog,
+  EventEditDialog,
+  // BUG-002: Event Log Bottom Sheet for Mobile
+  EventLogBottomSheet,
+  // Overflow Menu for quick actions + settings link
+
+  SettingsDialog,
 } from './components';
-import { GoalScorerDialog } from './components/Dialogs/GoalScorerDialog';
-import { EventEditDialog } from './components/Dialogs/EventEditDialog';
-import { FoulWarningBanner, useFoulWarning } from './components/FoulWarning';
-import { OpenEntriesBottomSheet } from './components/OpenEntries';
 
 // Hooks
 import { useToast } from './hooks';
-import { useSyncedPenalties } from '../../hooks/useSyncedPenalties';
-
-// CSS Module for focus states and animations
-import styles from './LiveCockpit.module.css';
 
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
 
+// Helper to get cockpit settings with defaults
+function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCockpitSettings {
+  return {
+    ...DEFAULT_MATCH_COCKPIT_SETTINGS,
+    ...settings,
+  };
+}
+
 export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   fieldName,
-  tournamentName: _tournamentName, // TODO: Display in header
+  tournamentName: _tournamentName,
+  tournamentId,
+  cockpitSettings: cockpitSettingsProp,
   currentMatch,
-  lastFinishedMatch,
+  lastFinishedMatch: _lastFinishedMatch,
   upcomingMatches,
-  highlightNextMatchMinutesBefore: _highlightNextMatchMinutesBefore = 5, // TODO: Implement warning toasts
+  highlightNextMatchMinutesBefore: _highlightNextMatchMinutesBefore = 5,
   onStart,
   onPause,
   onResume,
   onFinish,
   onGoal,
   onUndoLastEvent,
-  onManualEditResult,
+  onManualEditResult: _onManualEditResult,
   onAdjustTime,
-  onLoadNextMatch,
-  onReopenLastMatch,
-  onStartOvertime,
-  onStartGoldenGoal,
-  onStartPenaltyShootout,
-  onRecordPenaltyResult: _onRecordPenaltyResult, // TODO: Implement penalty dialog
-  onForceFinish: _onForceFinish, // TODO: Implement force finish
-  onCancelTiebreaker,
+  onLoadNextMatch: _onLoadNextMatch,
+  onReopenLastMatch: _onReopenLastMatch,
+  onStartOvertime: _onStartOvertime,
+  onStartGoldenGoal: _onStartGoldenGoal,
+  onStartPenaltyShootout: _onStartPenaltyShootout,
+  onRecordPenaltyResult: _onRecordPenaltyResult,
+  onForceFinish: _onForceFinish,
+  onCancelTiebreaker: _onCancelTiebreaker,
+  // Event tracking handlers (new)
+  onTimePenalty,
+  onCard,
+  onSubstitution,
+  onFoul,
+  onUpdateEvent,
+  onUpdateSettings,
 }) => {
+  // Get cockpit settings with defaults
+  const cockpitSettings = useMemo(
+    () => getCockpitSettings(cockpitSettingsProp),
+    [cockpitSettingsProp]
+  );
+
+  // Sound hook for match end horn
+  const sound = useMatchSound(
+    cockpitSettings.soundId,
+    cockpitSettings.soundVolume,
+    cockpitSettings.soundEnabled,
+    tournamentId
+  );
   // Responsive breakpoint detection
   const { breakpoint, isMobile, isTablet } = useBreakpoint();
 
-  // State - all hooks MUST be called before any early returns
-  const [mode, setMode] = useState<LiveCockpitMode>('standard');
-  const [_showOverflowMenu, setShowOverflowMenu] = useState(false);
+  // State
   const [showTimeAdjustDialog, setShowTimeAdjustDialog] = useState(false);
-  const [showScoreEditDialog, setShowScoreEditDialog] = useState(false);
   const [showCardDialog, setShowCardDialog] = useState(false);
   const [showTimePenaltyDialog, setShowTimePenaltyDialog] = useState(false);
   const [showSubstitutionDialog, setShowSubstitutionDialog] = useState(false);
-  // BUG-009: Track which team side triggered the substitution dialog
-  const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<TeamSide | null>(null);
-
-  // GoalScorerDialog State
   const [showGoalDialog, setShowGoalDialog] = useState(false);
-  const [pendingGoalTeam, setPendingGoalTeam] = useState<TeamSide | null>(null);
-
-  // EventEditDialog State
+  const [pendingGoalSide, setPendingGoalSide] = useState<'home' | 'away' | null>(null);
+  // BUG-006: Track which team side triggered the penalty dialog
+  const [pendingPenaltySide, setPendingPenaltySide] = useState<'home' | 'away' | null>(null);
+  // BUG-007: Track which card type and team side triggered the card dialog
+  const [pendingCardType, setPendingCardType] = useState<'YELLOW' | 'RED' | null>(null);
+  const [pendingCardTeamSide, setPendingCardTeamSide] = useState<'home' | 'away' | null>(null);
+  // BUG-009: Track which team side triggered the substitution dialog
+  const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
+  // BUG-010: Event editing state
   const [showEventEditDialog, setShowEventEditDialog] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EditableMatchEvent | null>(null);
+  const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
+  // BUG-002: Event Log Bottom Sheet for Mobile
+  const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
+  // Overflow Menu (⋮ button in header)
 
-  // OpenEntriesBottomSheet State (Mobile)
-  const isMobileDevice = useIsMobile();
+  const [homeFouls, setHomeFouls] = useState(0);
+  const [awayFouls, setAwayFouls] = useState(0);
+  // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
+  const [sidesSwapped, setSidesSwapped] = useState(false);
+  // Settings Dialog
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, dismissToast } = useToast();
-
-  // Synced Penalties - pauses with game timer
-  const isGameRunning = currentMatch?.status === 'RUNNING';
-  const {
-    activePenalties,
-    addPenalty,
-    removePenalty: _removePenalty,
-  } = useSyncedPenalties({
-    isGameRunning,
-    onPenaltyExpired: (penaltyId) => {
-      showSuccess(`Zeitstrafe ${penaltyId.slice(-4)} abgelaufen`);
-    },
-  });
-
-  // Foul Warning - shows banner when team reaches 5 fouls
-  const { warningTeam, dismissWarning, checkFouls, isWarningVisible } = useFoulWarning();
-
-  // Field ID extracted from fieldName for navigation callbacks
-  const fieldId = useMemo(() => fieldName.replace(/\D/g, '') || '1', [fieldName]);
 
   // Next match info
   const nextMatch = useMemo(() => {
     return upcomingMatches.length > 0 ? upcomingMatches[0] : null;
   }, [upcomingMatches]);
 
-  // BUG-004 FIX: Real-time timer display using useMatchTimer
-  // This calculates elapsed time locally from timerStartTime for smooth 1-second updates
-  // instead of waiting for the 5-second persistence interval
-  const displayElapsedSeconds = useMatchTimer(
+  // BUG-004 FIX: Real-time timer display using useMatchTimerExtended
+  // Supports Countdown, Netto-Warning and Timer State
+  const {
+    displaySeconds,
+    isOvertime,
+    timerState
+  } = useMatchTimerExtended(
     currentMatch?.timerStartTime ?? null,
     currentMatch?.timerElapsedSeconds ?? 0,
-    currentMatch?.status ?? 'NOT_STARTED'
+    currentMatch?.status ?? 'NOT_STARTED',
+    currentMatch?.durationSeconds ?? 900, // Default 15 min if missing
+    cockpitSettings.timerDirection,
+    cockpitSettings.nettoWarningSeconds
   );
 
-  // Mode change handler
-  const handleModeChange = useCallback((newMode: LiveCockpitMode) => {
-    setMode(newMode);
-    try {
-      localStorage.setItem('liveCockpit-mode', newMode);
-    } catch {
-      // Ignore storage errors
+
+
+  // BUG-008 FIX: Update penalty countdowns every second when match is RUNNING
+  // Also removes expired penalties and pauses countdown when match is paused
+  useEffect(() => {
+    if (!currentMatch || activePenalties.length === 0) {
+      return;
     }
-  }, []);
+
+    // Only countdown when match is running
+    if (currentMatch.status !== 'RUNNING') {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setActivePenalties((prev) => {
+        // Decrement remaining seconds and filter out expired penalties
+        return prev
+          .map((penalty) => ({
+            ...penalty,
+            remainingSeconds: Math.max(0, penalty.remainingSeconds - 1),
+          }))
+          .filter((penalty) => penalty.remainingSeconds > 0);
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [currentMatch?.status, activePenalties.length, currentMatch]);
 
   // ---------------------------------------------------------------------------
-  // Handler Adapters - all useCallback hooks BEFORE early return
-  // Handlers check for currentMatch validity inside
+  // Handler Adapters
   // ---------------------------------------------------------------------------
 
-  // Open GoalScorerDialog for +Tor, direct call for -Tor
-  const handleGoal = useCallback(
-    (side: TeamSide, direction: 'INC' | 'DEC') => {
-      if (!currentMatch) {
-        return;
-      }
+  // Open GoalScorerDialog instead of direct goal
+  const handleGoalHome = useCallback(() => {
+    if (!currentMatch) { return; }
+    setPendingGoalSide('home');
+    setShowGoalDialog(true);
+  }, [currentMatch]);
 
-      if (direction === 'INC') {
-        // Open GoalScorerDialog for +Tor
-        setPendingGoalTeam(side);
-        setShowGoalDialog(true);
-      } else {
-        // Direct call for -Tor (score correction)
-        const teamId = side === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
-        const teamName = side === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
-        onGoal(currentMatch.id, teamId, -1);
-        showInfo(`Tor für ${teamName} entfernt`);
-      }
-    },
-    [currentMatch, onGoal, showInfo]
-  );
+  const handleGoalAway = useCallback(() => {
+    if (!currentMatch) { return; }
+    setPendingGoalSide('away');
+    setShowGoalDialog(true);
+  }, [currentMatch]);
 
   // Callback when GoalScorerDialog confirms
   const handleGoalConfirm = useCallback(
     (jerseyNumber: number | null, assists?: (number | null)[], incomplete?: boolean) => {
-      if (!currentMatch || !pendingGoalTeam) {
-        return;
-      }
+      if (!currentMatch || !pendingGoalSide) { return; }
 
-      const teamId = pendingGoalTeam === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
-      const teamName = pendingGoalTeam === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
+      const teamId = pendingGoalSide === 'home' ? currentMatch.homeTeam.id : currentMatch.awayTeam.id;
+      const teamName = pendingGoalSide === 'home' ? currentMatch.homeTeam.name : currentMatch.awayTeam.name;
 
-      // Call the parent handler with delta +1
-      // Note: Jersey number is tracked locally for now, full support requires event system update
-      onGoal(currentMatch.id, teamId, 1);
+      // Filter out null assists and convert to number array
+      const validAssists = assists?.filter((a): a is number => a !== null) ?? [];
+
+      // Call the parent handler with delta +1 and player options
+      onGoal(currentMatch.id, teamId, 1, {
+        playerNumber: jerseyNumber ?? undefined,
+        assists: validAssists.length > 0 ? validAssists : undefined,
+        incomplete: incomplete ?? false,
+      });
 
       // Build toast message with jersey number and assists
       if (incomplete) {
         showInfo(`⚽ Tor für ${teamName} (ohne Nr.)`);
       } else if (jerseyNumber !== null) {
-        const assistText = assists && assists.length > 0
-          ? ` (Assist: ${assists.map(a => `#${a}`).join(', ')})`
+        const assistText = validAssists.length > 0
+          ? ` (Assist: ${validAssists.map(a => `#${a}`).join(', ')})`
           : '';
         showSuccess(`⚽ Tor für ${teamName} (#${jerseyNumber})${assistText}`);
       } else {
@@ -209,40 +229,75 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       }
 
       // Reset state
-      setPendingGoalTeam(null);
+      setPendingGoalSide(null);
       setShowGoalDialog(false);
     },
-    [currentMatch, pendingGoalTeam, onGoal, showSuccess, showInfo]
+    [currentMatch, pendingGoalSide, onGoal, showSuccess, showInfo]
   );
 
+  const handleMinusHome = useCallback(() => {
+    if (!currentMatch || currentMatch.homeScore <= 0) { return; }
+    onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
+    showInfo(`Tor für ${currentMatch.homeTeam.name} entfernt`);
+  }, [currentMatch, onGoal, showInfo]);
+
+  const handleMinusAway = useCallback(() => {
+    if (!currentMatch || currentMatch.awayScore <= 0) { return; }
+    onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
+    showInfo(`Tor für ${currentMatch.awayTeam.name} entfernt`);
+  }, [currentMatch, onGoal, showInfo]);
+
   const handleStart = useCallback(() => {
-    if (!currentMatch) {
-      return;
-    }
+    if (!currentMatch) { return; }
     onStart(currentMatch.id);
     showSuccess('Spiel gestartet!');
   }, [currentMatch, onStart, showSuccess]);
 
   const handleFinish = useCallback(() => {
-    if (!currentMatch) {
-      return;
+    if (!currentMatch) { return; }
+
+    // Play match end sound if enabled
+    if (cockpitSettings.soundEnabled) {
+      void sound.play();
     }
+
+    // Trigger haptic feedback if enabled (navigator.vibrate is not available on all browsers)
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: vibrate API not available in all browsers
+    if (cockpitSettings.hapticEnabled && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]); // Double pulse pattern
+    }
+
     onFinish(currentMatch.id);
+    // BUG-008: Clear all active penalties when match ends
+    setActivePenalties([]);
     showInfo('Spiel beendet');
-  }, [currentMatch, onFinish, showInfo]);
+  }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound]);
+
+  // Auto-Finish Logic (Moved safely after handleFinish declaration)
+  useEffect(() => {
+    if (
+      cockpitSettings.autoFinishEnabled &&
+      currentMatch?.status === 'RUNNING' &&
+      isOvertime
+    ) {
+      // console.log('⏰ Auto-Finish triggered');
+      handleFinish();
+    }
+  }, [
+    cockpitSettings.autoFinishEnabled,
+    currentMatch?.status,
+    isOvertime,
+    handleFinish
+  ]);
 
   const handleUndo = useCallback(() => {
-    if (!currentMatch) {
-      return;
-    }
+    if (!currentMatch) { return; }
     onUndoLastEvent(currentMatch.id);
     showInfo('Letzte Aktion rückgängig gemacht');
   }, [currentMatch, onUndoLastEvent, showInfo]);
 
   const handlePauseResume = useCallback(() => {
-    if (!currentMatch) {
-      return;
-    }
+    if (!currentMatch) { return; }
     if (currentMatch.status === 'RUNNING') {
       onPause(currentMatch.id);
       showInfo('Spiel pausiert');
@@ -252,118 +307,142 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     }
   }, [currentMatch, onPause, onResume, showInfo, showSuccess]);
 
-  // Time adjustment handler
   const handleTimeAdjust = useCallback(
-    (newTimeSeconds: number) => {
-      if (!currentMatch) {
-        return;
+    (newDisplaySeconds: number) => {
+      if (!currentMatch) { return; }
+
+      let newElapsedSeconds = newDisplaySeconds;
+
+      // If in countdown mode, convert display time (remaining) back to elapsed
+      if (cockpitSettings.timerDirection === 'countdown') {
+        // User sets "remaining time", so elapsed = duration - remaining
+        const duration = currentMatch.durationSeconds; // durationSeconds is required in LiveMatch, defaults handled upstream
+        newElapsedSeconds = duration - newDisplaySeconds;
+        // Ensure strictly positive bounds (optional, but good practice)
+        // newElapsedSeconds = Math.max(0, newElapsedSeconds); 
+        // Actually, negative elapsed is possible if user sets > duration (not typical but possible logic)
       }
-      onAdjustTime(currentMatch.id, newTimeSeconds);
-      const mins = Math.floor(newTimeSeconds / 60);
-      const secs = newTimeSeconds % 60;
+
+      onAdjustTime(currentMatch.id, newElapsedSeconds);
+
+      const mins = Math.floor(newDisplaySeconds / 60);
+      const secs = newDisplaySeconds % 60;
       showInfo(`Zeit auf ${mins}:${secs.toString().padStart(2, '0')} gesetzt`);
     },
-    [currentMatch, onAdjustTime, showInfo]
+    [currentMatch, onAdjustTime, showInfo, cockpitSettings.timerDirection]
   );
 
-  // Score edit handler
-  const handleScoreEdit = useCallback(
-    (homeScore: number, awayScore: number) => {
-      if (!currentMatch) {
-        return;
-      }
-      onManualEditResult(currentMatch.id, homeScore, awayScore);
-      showInfo(`Ergebnis auf ${homeScore}:${awayScore} korrigiert`);
-    },
-    [currentMatch, onManualEditResult, showInfo]
-  );
+  const handleSwitchSides = useCallback(() => {
+    setSidesSwapped(prev => !prev);
+    showInfo('Seiten getauscht');
+  }, [showInfo]);
 
-  // Tiebreaker handlers
-  const handleStartOvertime = useCallback(() => {
-    if (!currentMatch || !onStartOvertime) {
-      return;
+  const handleHalfTime = useCallback(() => {
+    // Reset fouls
+    setHomeFouls(0);
+    setAwayFouls(0);
+    showInfo('Halbzeit - Fouls zurückgesetzt');
+  }, [showInfo]);
+
+  const handleFoulHome = useCallback(() => {
+    if (!currentMatch) { return; }
+    const newFouls = homeFouls + 1;
+    setHomeFouls(newFouls);
+
+    // Call parent handler to create event
+    onFoul?.(currentMatch.id, currentMatch.homeTeam.id);
+
+    showInfo(`Foul für ${currentMatch.homeTeam.name} (${newFouls})`);
+    if (newFouls === 5) {
+      showInfo(`⚠ ACHTUNG: ${currentMatch.homeTeam.name} hat 5 Fouls!`);
     }
-    onStartOvertime(currentMatch.id);
-  }, [currentMatch, onStartOvertime]);
+  }, [currentMatch, homeFouls, onFoul, showInfo]);
 
-  const handleStartGoldenGoal = useCallback(() => {
-    if (!currentMatch || !onStartGoldenGoal) {
-      return;
+  const handleFoulAway = useCallback(() => {
+    if (!currentMatch) { return; }
+    const newFouls = awayFouls + 1;
+    setAwayFouls(newFouls);
+
+    // Call parent handler to create event
+    onFoul?.(currentMatch.id, currentMatch.awayTeam.id);
+
+    showInfo(`Foul für ${currentMatch.awayTeam.name} (${newFouls})`);
+    if (newFouls === 5) {
+      showInfo(`⚠ ACHTUNG: ${currentMatch.awayTeam.name} hat 5 Fouls!`);
     }
-    onStartGoldenGoal(currentMatch.id);
-  }, [currentMatch, onStartGoldenGoal]);
+  }, [currentMatch, awayFouls, onFoul, showInfo]);
 
-  const handleStartPenaltyShootout = useCallback(() => {
-    if (!currentMatch || !onStartPenaltyShootout) {
-      return;
-    }
-    onStartPenaltyShootout(currentMatch.id);
-  }, [currentMatch, onStartPenaltyShootout]);
-
-  const handleCancelTiebreaker = useCallback(() => {
-    if (!currentMatch || !onCancelTiebreaker) {
-      return;
-    }
-    onCancelTiebreaker(currentMatch.id);
-  }, [currentMatch, onCancelTiebreaker]);
-
-  // Field navigation handlers
-  const handleLoadNextMatch = useCallback(() => {
-    onLoadNextMatch(fieldId);
-  }, [fieldId, onLoadNextMatch]);
-
-  const handleReopenLastMatch = useCallback(() => {
-    onReopenLastMatch(fieldId);
-  }, [fieldId, onReopenLastMatch]);
-
-  // Card, Penalty, Substitution handlers
+  // Card/Penalty/Substitution handlers
   const handleCardConfirm = useCallback(
     (cardType: 'YELLOW' | 'RED', teamId: string, playerNumber?: number) => {
-      const teamName = currentMatch?.homeTeam.id === teamId
+      if (!currentMatch) { return; }
+
+      const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
-        : currentMatch?.awayTeam.name;
+        : currentMatch.awayTeam.name;
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
       const cardName = cardType === 'YELLOW' ? 'Gelbe' : 'Rote';
+
+      // Call parent handler to create event
+      onCard?.(currentMatch.id, teamId, cardType, { playerNumber });
+
       showInfo(`${cardName} Karte für ${teamName}${playerInfo}`);
       setShowCardDialog(false);
-      // TODO: Persist card event when backend supports it
+      // BUG-007: Reset pending card state
+      setPendingCardType(null);
+      setPendingCardTeamSide(null);
     },
-    [currentMatch, showInfo]
+    [currentMatch, onCard, showInfo]
   );
 
   const handleTimePenaltyConfirm = useCallback(
     (durationSeconds: number, teamId: string, playerNumber?: number) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
       const mins = Math.floor(durationSeconds / 60);
       const playerInfo = playerNumber ? ` (#${playerNumber})` : '';
+
+      // Call parent handler to create event
+      onTimePenalty?.(currentMatch.id, teamId, {
+        playerNumber,
+        durationSeconds,
+      });
+
       showInfo(`${mins} Min Zeitstrafe für ${teamName}${playerInfo}`);
 
-      // Add to synced penalties (pauses with game timer)
-      addPenalty(teamId, durationSeconds, playerNumber);
-
-      // Check for 5-foul warning
-      const currentFouls = activePenalties.filter(p => p.teamId === teamId).length + 1;
-      if (currentFouls >= 5) {
-        checkFouls(teamId, teamName, currentFouls);
-      }
-
+      // Add to active penalties (local UI state for countdown)
+      const now = new Date();
+      const endsAt = new Date(now.getTime() + durationSeconds * 1000);
+      const newPenalty: ActivePenalty = {
+        eventId: `penalty-${Date.now()}`,
+        teamId,
+        playerNumber,
+        remainingSeconds: durationSeconds,
+        startedAt: now,
+        endsAt,
+      };
+      setActivePenalties((prev) => [...prev, newPenalty]);
       setShowTimePenaltyDialog(false);
+      setPendingPenaltySide(null);
     },
-    [currentMatch, showInfo, addPenalty, activePenalties, checkFouls]
+    [currentMatch, onTimePenalty, showInfo]
   );
-
-  // handlePenaltyExpire is now handled by useSyncedPenalties hook
 
   // BUG-009: Updated to handle multi-player substitutions
   const handleSubstitutionConfirm = useCallback(
     (teamId: string, playersOut: number[], playersIn: number[]) => {
-      if (!currentMatch) {return;}
+      if (!currentMatch) { return; }
       const teamName = currentMatch.homeTeam.id === teamId
         ? currentMatch.homeTeam.name
         : currentMatch.awayTeam.name;
+
+      // Call parent handler to create event
+      onSubstitution?.(currentMatch.id, teamId, {
+        playersOut: playersOut.length > 0 ? playersOut : undefined,
+        playersIn: playersIn.length > 0 ? playersIn : undefined,
+      });
 
       // Format player numbers for display
       const outInfo = playersOut.length > 0 ? playersOut.map(n => `#${n}`).join(',') : '?';
@@ -371,21 +450,99 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       showInfo(`🔄 Wechsel ${teamName}: ${outInfo} → ${inInfo}`);
       setShowSubstitutionDialog(false);
       setPendingSubstitutionSide(null);
-      // TODO: Persist substitution event when backend supports it
     },
-    [currentMatch, showInfo]
+    [currentMatch, onSubstitution, showInfo]
   );
 
-  // TODO: OpenEntriesSection requires MatchEvent from tournament.ts
-  // but LiveMatch.events uses a different type from match-cockpit.
-  // Once types are unified, enable this feature.
-  // const openEvents = useMemo(() => {
-  //   if (!currentMatch) {return [];}
-  //   return currentMatch.events.filter(event => !event.playerNumber);
-  // }, [currentMatch]);
+  // BUG-010: Handler for editing events from the sidebar
+  const handleEventEdit = useCallback(
+    (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown>; incomplete?: boolean }) => {
+      if (!currentMatch) { return; }
+      // Find the full event from match.events to get all properties
+      const fullEvent = currentMatch.events.find(e => e.id === event.id);
+      if (fullEvent) {
+        // Cast to our compatible interface
+        const editableEvent: EditableMatchEvent = {
+          id: fullEvent.id,
+          type: fullEvent.type,
+          timestampSeconds: fullEvent.timestampSeconds,
+          payload: fullEvent.payload as EditableMatchEvent['payload'],
+        };
+        setEditingEvent(editableEvent);
+        setShowEventEditDialog(true);
+      }
+    },
+    [currentMatch]
+  );
+
+  // BUG-010: Handler for updating event details
+  const handleEventUpdate = useCallback(
+    (eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => {
+      if (!currentMatch) { return; }
+      const event = currentMatch.events.find(e => e.id === eventId);
+      if (!event) { return; }
+
+      // Show success toast with event type
+      const eventTypeLabels: Record<string, string> = {
+        GOAL: 'Tor',
+        YELLOW_CARD: 'Gelbe Karte',
+        RED_CARD: 'Rote Karte',
+        TIME_PENALTY: 'Zeitstrafe',
+        SUBSTITUTION: 'Wechsel',
+        FOUL: 'Foul',
+      };
+      const label = eventTypeLabels[event.type] ?? event.type;
+      const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
+
+      // Call parent handler to persist update
+      if (onUpdateEvent) {
+        onUpdateEvent(currentMatch.id, eventId, updates);
+        showSuccess(`✅ ${label}${playerInfo} aktualisiert`);
+      } else {
+        showInfo(`(Preview) ${label}${playerInfo} aktualisiert`);
+      }
+    },
+    [currentMatch, showSuccess, showInfo, onUpdateEvent]
+  );
+
+  // BUG-010: Handler for deleting events (with score adjustment for GOALs)
+  const handleEventDelete = useCallback(
+    (eventId: string) => {
+      if (!currentMatch) { return; }
+      const event = currentMatch.events.find(e => e.id === eventId);
+      if (!event) { return; }
+
+      const eventTypeLabels: Record<string, string> = {
+        GOAL: 'Tor',
+        YELLOW_CARD: 'Gelbe Karte',
+        RED_CARD: 'Rote Karte',
+        TIME_PENALTY: 'Zeitstrafe',
+        SUBSTITUTION: 'Wechsel',
+        FOUL: 'Foul',
+      };
+      const label = eventTypeLabels[event.type] ?? event.type;
+
+      // If it's a GOAL event, also decrement the score
+      // match-cockpit format: payload.teamId
+      const eventTeamId = event.payload.teamId;
+      if (event.type === 'GOAL' && eventTeamId) {
+        onGoal(currentMatch.id, eventTeamId, -1);
+        const teamName = eventTeamId === currentMatch.homeTeam.id
+          ? currentMatch.homeTeam.name
+          : currentMatch.awayTeam.name;
+        showInfo(`🗑️ ${label} für ${teamName} gelöscht (Spielstand angepasst)`);
+      } else {
+        showInfo(`🗑️ ${label} gelöscht`);
+      }
+
+      // Note: Full persistence would require parent callback
+      // TODO: Add onDeleteEvent prop to LiveCockpitProps when backend is ready
+    },
+    [currentMatch, onGoal, showInfo]
+  );
 
   // ---------------------------------------------------------------------------
-  // Early return AFTER all hooks have been called
+  // Early return AFTER all hooks
   // ---------------------------------------------------------------------------
 
   if (!currentMatch) {
@@ -396,73 +553,165 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     );
   }
 
-  // Alias for cleaner code below
   const match = currentMatch;
-
-  // Computed values (not hooks, so can be after early return)
   const isFinished = match.status === 'FINISHED';
   const isNotStarted = match.status === 'NOT_STARTED';
   const canUndo = match.events.length > 0 && !isFinished;
   const canDecrementHome = match.homeScore > 0 && !isFinished;
   const canDecrementAway = match.awayScore > 0 && !isFinished;
+  const isDesktop = !isMobile && !isTablet;
 
   // ---------------------------------------------------------------------------
-  // Styles
+  // Styles based on mockup
   // ---------------------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    height: 'var(--h-screen)', // Feste Höhe statt minHeight - verhindert Scrollen
-    overflow: 'hidden', // Kein Overflow
     background: cssVars.colors.background,
     color: cssVars.colors.textPrimary,
-  };
-
-  // Responsive padding - KOMPAKT
-  const getMainPadding = () => {
-    if (isMobile) {return cssVars.spacing.sm;}
-    if (isTablet) {return cssVars.spacing.md;}
-    return cssVars.spacing.lg;
-  };
-
-  const mainContentStyle: CSSProperties = {
-    flex: '1 1 0',
-    minHeight: 0,
+    minHeight: 'var(--min-h-screen)',
     display: 'flex',
     flexDirection: 'column',
-    padding: getMainPadding(),
-    paddingBottom: isMobile ? '60px' : '70px', // Platz für fixierten Footer
-    gap: isMobile ? cssVars.spacing.xs : cssVars.spacing.sm,
-    maxWidth: '1200px',
-    margin: '0 auto',
-    width: '100%',
-    overflow: 'hidden',
   };
 
-  const hardToReachZoneStyle: CSSProperties = {
-    flex: '0 0 auto',
-  };
-
-  const naturalZoneStyle: CSSProperties = {
-    flex: '1 1 0', // Flex-grow ohne Basis - nimmt verfügbaren Platz
+  const contentStyle: CSSProperties = {
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
+    gap: cssVars.spacing.lg,
+    flex: 1,
+  };
+
+  // Match Header
+  const matchHeaderStyle: CSSProperties = {
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+    display: 'flex',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    minHeight: 0, // Erlaubt Schrumpfen unter Content-Größe
-    overflow: 'auto', // Falls Content zu groß, hier scrollen
+    flexWrap: 'wrap',
+    gap: cssVars.spacing.md,
   };
 
-  const thumbZoneStyle: CSSProperties = {
-    flex: '0 0 auto',
+  const matchInfoStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.md,
   };
 
-  const eventListSectionStyle: CSSProperties = {
-    flex: '0 0 auto',
-    maxHeight: isMobile ? '80px' : '100px', // Kompakter
-    overflow: 'auto',
-    width: '100%',
+  const matchNumberStyle: CSSProperties = {
+    fontWeight: cssVars.fontWeights.bold,
+    fontSize: cssVars.fontSizes.md,
+  };
+
+  const matchFieldStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
+  };
+
+  const statusBadgeStyle: CSSProperties = {
+    background: match.status === 'RUNNING'
+      ? cssVars.colors.primaryLight
+      : cssVars.colors.surfaceElevated,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    borderRadius: cssVars.borderRadius.sm,
+    fontSize: cssVars.fontSizes.xs,
+    fontWeight: cssVars.fontWeights.semibold,
+    textTransform: 'uppercase',
+    color: match.status === 'RUNNING' ? cssVars.colors.primary : cssVars.colors.textPrimary,
+  };
+
+
+
+  // Next Banner
+  const nextBannerStyle: CSSProperties = {
+    background: `linear-gradient(90deg, ${cssVars.colors.dangerGradientStart} 0%, ${cssVars.colors.dangerGradientEnd} 100%)`,
+    border: `1px solid ${cssVars.colors.dangerBorder}`,
+    borderRadius: cssVars.borderRadius.sm,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    fontSize: cssVars.fontSizes.sm,
+    display: 'flex',
+    gap: cssVars.spacing.sm,
+  };
+
+  // Main Grid
+  const mainGridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: isDesktop ? '1fr 300px' : '1fr',
+    gap: cssVars.spacing.lg,
+  };
+
+  // Scoreboard
+  const scoreboardStyle: CSSProperties = {
+    background: cssVars.colors.surfaceSolid,
+    borderRadius: cssVars.borderRadius.lg,
+    padding: isMobile ? cssVars.spacing.md : cssVars.spacing.xl,
+  };
+
+  // Timer Row
+  const timerRowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: cssVars.spacing.md,
+    marginBottom: cssVars.spacing.lg,
+  };
+
+  const timerLabelStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+  };
+
+  const timerStyle: CSSProperties = {
+    fontSize: isMobile ? '48px' : '64px',
+    fontWeight: cssVars.fontWeights.bold,
+    fontVariantNumeric: 'tabular-nums',
+    cursor: !isFinished ? 'pointer' : 'default',
+    color: timerState === 'netto-warning'
+      ? cssVars.colors.warning
+      : timerState === 'overtime' || timerState === 'zero'
+        ? cssVars.colors.error
+        : cssVars.colors.textPrimary,
+    transition: 'color 0.3s ease',
+  };
+
+  const timerTotalStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.lg,
+    color: cssVars.colors.textSecondary,
+  };
+
+  // Score Row
+  const scoreRowStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
+    gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.lg,
+    alignItems: 'start',
+  };
+
+  const scoreDividerStyle: CSSProperties = {
+    fontSize: '48px',
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.textMuted,
+    alignSelf: 'center',
+    paddingTop: '60px',
+  };
+
+  // Format time
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getStatusLabel = (): string => {
+    switch (match.status) {
+      case 'RUNNING': return 'LÄUFT';
+      case 'PAUSED': return 'PAUSIERT';
+      case 'FINISHED': return 'BEENDET';
+      default: return 'NICHT GESTARTET';
+    }
   };
 
   // ---------------------------------------------------------------------------
@@ -470,218 +719,225 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={containerStyle} className={styles.liveCockpitContainer}>
-      {/* Header */}
-      <Header
-        matchNumber={match.number}
-        fieldName={fieldName}
-        status={match.status}
-        playPhase={match.playPhase}
-        mode={mode}
-        onModeChange={handleModeChange}
-        onUndo={canUndo ? handleUndo : undefined}
-        showUndo={mode !== 'focus'}
-        onMenuOpen={() => setShowOverflowMenu(true)}
-        breakpoint={breakpoint}
-      />
+    <div style={containerStyle}>
+      {/* Content */}
+      <main style={contentStyle}>
+        {/* Match Header */}
+        <div style={matchHeaderStyle}>
+          <div style={matchInfoStyle}>
+            <span style={matchNumberStyle}>Spiel {match.number}</span>
+            <span style={matchFieldStyle}>{fieldName}</span>
+          </div>
 
-      <main style={mainContentStyle}>
-        {/* Next Match Hint - shows upcoming match */}
-        {mode !== 'focus' && nextMatch && (
-          <section style={hardToReachZoneStyle}>
-            <NextMatchHint
-              homeTeamName={nextMatch.homeTeam.name}
-              awayTeamName={nextMatch.awayTeam.name}
-              matchNumber={nextMatch.number}
-              scheduledTime={nextMatch.scheduledKickoff}
-              isMobile={isMobile}
+          {/* Foul Counter - Desktop inline, Mobile separate */}
+          {!isMobile && (
+            <FoulBar
+              homeTeamName={match.homeTeam.name}
+              awayTeamName={match.awayTeam.name}
+              homeFouls={homeFouls}
+              awayFouls={awayFouls}
+              variant="inline"
             />
-          </section>
-        )}
+          )}
 
-        {/* Score Display */}
-        <section style={naturalZoneStyle}>
-          <ScoreDisplay
-            homeTeam={match.homeTeam}
-            awayTeam={match.awayTeam}
-            homeScore={match.homeScore}
-            awayScore={match.awayScore}
-            elapsedSeconds={displayElapsedSeconds}
-            durationSeconds={match.durationSeconds}
-            status={match.status}
-            playPhase={match.playPhase}
-            overtimeScore={
-              match.playPhase === 'overtime'
-                ? { home: match.overtimeScoreA ?? 0, away: match.overtimeScoreB ?? 0 }
-                : undefined
-            }
-            penaltyScore={
-              match.playPhase === 'penalty'
-                ? { home: match.penaltyScoreA ?? 0, away: match.penaltyScoreB ?? 0 }
-                : undefined
-            }
-            onTimerClick={
-              !isFinished && mode !== 'focus'
-                ? () => setShowTimeAdjustDialog(true)
-                : undefined
-            }
-            breakpoint={breakpoint}
-            compact={mode === 'focus'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+            <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
+
+          </div>
+        </div>
+
+        {/* Foul Bar - Mobile only */}
+        {isMobile && (
+          <FoulBar
+            homeTeamName={match.homeTeam.name}
+            awayTeamName={match.awayTeam.name}
+            homeFouls={homeFouls}
+            awayFouls={awayFouls}
+            variant="bar"
           />
-        </section>
-
-        {/* Foul Warning Banner - shows when team reaches 5 fouls */}
-        <FoulWarningBanner
-          teamName={warningTeam?.name ?? ''}
-          foulCount={warningTeam?.count ?? 0}
-          onDismiss={dismissWarning}
-          isVisible={isWarningVisible}
-        />
-
-        {/* Penalty Indicators - show active time penalties */}
-        {activePenalties.length > 0 && (
-          <section style={{ flex: '0 0 auto' }}>
-            <PenaltyIndicators
-              activePenalties={activePenalties.map((p) => ({
-                eventId: p.id,
-                teamId: p.teamId,
-                playerNumber: p.playerNumber,
-                remainingSeconds: p.remainingSeconds,
-                startedAt: new Date(p.startedAt),
-                endsAt: new Date(p.startedAt + p.durationSeconds * 1000),
-              }))}
-              homeTeam={match.homeTeam}
-              awayTeam={match.awayTeam}
-              isMatchRunning={match.status === 'RUNNING'}
-            />
-          </section>
         )}
 
-        {/* Extended Actions Panel - only in extended mode */}
-        {mode === 'extended' && !isFinished && (
-          <section style={{ flex: '0 0 auto' }}>
-            <ExtendedActionsPanel
-              onEditScore={() => setShowScoreEditDialog(true)}
-              onAdjustTime={() => setShowTimeAdjustDialog(true)}
-              onYellowCard={() => setShowCardDialog(true)}
-              onRedCard={() => setShowCardDialog(true)}
-              onTimePenalty={() => setShowTimePenaltyDialog(true)}
-              onSubstitution={() => setShowSubstitutionDialog(true)}
-              disabled={isNotStarted}
+        {/* Next Banner */}
+        {nextMatch && (
+          <div style={nextBannerStyle}>
+            <span style={{ color: cssVars.colors.error, fontWeight: cssVars.fontWeights.semibold }}>
+              Nächstes →
+            </span>
+            <span>
+              {nextMatch.homeTeam.name} vs {nextMatch.awayTeam.name}
+              {nextMatch.scheduledKickoff && ` (${nextMatch.scheduledKickoff})`}
+            </span>
+          </div>
+        )}
+
+        {/* Main Grid */}
+        <div style={mainGridStyle}>
+          {/* Scoreboard */}
+          <div style={scoreboardStyle}>
+            {/* Timer Row */}
+            <div style={timerRowStyle}>
+              <span style={timerLabelStyle}>Spielzeit</span>
+              <span
+                style={timerStyle}
+                onClick={() => !isFinished && setShowTimeAdjustDialog(true)}
+                role="button"
+                tabIndex={0}
+                data-testid="match-timer-display"
+              >
+                {formatTime(displaySeconds)}
+              </span>
+              <span style={timerTotalStyle}>
+                / {formatTime(match.durationSeconds)}
+              </span>
+            </div>
+
+            {/* Score Row - Teams können mit "Seiten tauschen" vertauscht werden */}
+            <div style={scoreRowStyle}>
+              {/* Linkes Team (Home oder Away je nach sidesSwapped) */}
+              <TeamBlock
+                teamName={sidesSwapped ? match.awayTeam.name : match.homeTeam.name}
+                teamLabel={sidesSwapped ? 'Gast' : 'Heim'}
+                score={sidesSwapped ? match.awayScore : match.homeScore}
+                fouls={sidesSwapped ? awayFouls : homeFouls}
+                disabled={isFinished || isNotStarted}
+                breakpoint={breakpoint}
+                side={sidesSwapped ? 'away' : 'home'}
+                onGoal={sidesSwapped ? handleGoalAway : handleGoalHome}
+                onMinus={sidesSwapped ? handleMinusAway : handleMinusHome}
+                onPenalty={() => {
+                  setPendingPenaltySide(sidesSwapped ? 'away' : 'home');
+                  setShowTimePenaltyDialog(true);
+                }}
+                onYellowCard={() => {
+                  setPendingCardType('YELLOW');
+                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
+                  setShowCardDialog(true);
+                }}
+                onRedCard={() => {
+                  setPendingCardType('RED');
+                  setPendingCardTeamSide(sidesSwapped ? 'away' : 'home');
+                  setShowCardDialog(true);
+                }}
+                onSubstitution={() => {
+                  setPendingSubstitutionSide(sidesSwapped ? 'away' : 'home');
+                  setShowSubstitutionDialog(true);
+                }}
+                onFoul={sidesSwapped ? handleFoulAway : handleFoulHome}
+                canDecrement={sidesSwapped ? canDecrementAway : canDecrementHome}
+              />
+
+              {/* Divider */}
+              <span style={scoreDividerStyle}>:</span>
+
+              {/* Rechtes Team (Away oder Home je nach sidesSwapped) */}
+              <TeamBlock
+                teamName={sidesSwapped ? match.homeTeam.name : match.awayTeam.name}
+                teamLabel={sidesSwapped ? 'Heim' : 'Gast'}
+                score={sidesSwapped ? match.homeScore : match.awayScore}
+                fouls={sidesSwapped ? homeFouls : awayFouls}
+                disabled={isFinished || isNotStarted}
+                breakpoint={breakpoint}
+                side={sidesSwapped ? 'home' : 'away'}
+                onGoal={sidesSwapped ? handleGoalHome : handleGoalAway}
+                onMinus={sidesSwapped ? handleMinusHome : handleMinusAway}
+                onPenalty={() => {
+                  setPendingPenaltySide(sidesSwapped ? 'home' : 'away');
+                  setShowTimePenaltyDialog(true);
+                }}
+                onYellowCard={() => {
+                  setPendingCardType('YELLOW');
+                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
+                  setShowCardDialog(true);
+                }}
+                onRedCard={() => {
+                  setPendingCardType('RED');
+                  setPendingCardTeamSide(sidesSwapped ? 'home' : 'away');
+                  setShowCardDialog(true);
+                }}
+                onSubstitution={() => {
+                  setPendingSubstitutionSide(sidesSwapped ? 'home' : 'away');
+                  setShowSubstitutionDialog(true);
+                }}
+                onFoul={sidesSwapped ? handleFoulHome : handleFoulAway}
+                canDecrement={sidesSwapped ? canDecrementHome : canDecrementAway}
+              />
+            </div>
+
+            {/* Game Controls */}
+            <GameControls
+              status={match.status}
+              onUndo={canUndo ? handleUndo : undefined}
+              onStart={handleStart}
+              onPauseResume={handlePauseResume}
+              onEditTime={() => setShowTimeAdjustDialog(true)}
+              onSwitchSides={handleSwitchSides}
+              onHalfTime={handleHalfTime}
+              onFinish={handleFinish}
+              onSettings={() => setShowSettingsDialog(true)}
+              // BUG-002: Event Log for Mobile
+              onEventLog={() => setShowEventLogBottomSheet(true)}
+              canUndo={canUndo}
               breakpoint={breakpoint}
             />
-          </section>
-        )}
+          </div>
 
-        {/* TODO: Open Entries - events without player numbers
-            Disabled until MatchEvent types are unified between match-cockpit and tournament.ts
-        {mode === 'extended' && openEvents.length > 0 && (
-          <section style={{ flex: '0 0 auto' }}>
-            <OpenEntriesSection
-              openEvents={openEvents}
-              homeTeam={match.homeTeam}
-              awayTeam={match.awayTeam}
-              onEditEvent={(eventId) => {
-                showInfo(`Event ${eventId} bearbeiten - noch nicht implementiert`);
-              }}
-            />
-          </section>
-        )}
-        */}
-
-        {/* Event List - only in extended mode */}
-        {mode === 'extended' && match.events.length > 0 && (
-          <section style={eventListSectionStyle}>
-            <EventList
+          {/* Sidebar - Desktop only */}
+          {isDesktop && (
+            <Sidebar
+              activePenalties={activePenalties}
               events={match.events}
               homeTeamName={match.homeTeam.name}
               awayTeamName={match.awayTeam.name}
-              isMobile={isMobile}
+              homeTeamId={match.homeTeam.id}
+              awayTeamId={match.awayTeam.id}
+              // BUG-010: Enable event editing
+              onEventEdit={handleEventEdit}
             />
-          </section>
-        )}
-
-        {/* Goal Buttons */}
-        <section style={thumbZoneStyle}>
-          <ActionZone
-            onGoal={handleGoal}
-            canDecrementHome={canDecrementHome}
-            canDecrementAway={canDecrementAway}
-            homeTeamName={match.homeTeam.name}
-            awayTeamName={match.awayTeam.name}
-            disabled={isFinished || isNotStarted}
-            showMinusButtons={mode !== 'focus'}
-            breakpoint={breakpoint}
-          />
-        </section>
+          )}
+        </div>
       </main>
 
-      {/* Footer Controls */}
-      <FooterBar
-        status={match.status}
-        onStart={handleStart}
-        onPauseResume={handlePauseResume}
-        onFinish={handleFinish}
-        onLoadNextMatch={handleLoadNextMatch}
-        onReopenLastMatch={handleReopenLastMatch}
-        hasNextMatch={nextMatch !== null}
-        hasLastFinished={lastFinishedMatch !== null}
-        breakpoint={breakpoint}
-      />
-
-      {/* Tiebreaker Banner */}
-      {match.awaitingTiebreakerChoice && (
-        <TiebreakerBanner
-          homeTeamName={match.homeTeam.name}
-          awayTeamName={match.awayTeam.name}
-          score={match.homeScore}
-          tiebreakerMode={match.tiebreakerMode}
-          onStartOvertime={onStartOvertime ? handleStartOvertime : undefined}
-          onStartGoldenGoal={onStartGoldenGoal ? handleStartGoldenGoal : undefined}
-          onStartPenaltyShootout={onStartPenaltyShootout ? handleStartPenaltyShootout : undefined}
-          onCancel={onCancelTiebreaker ? handleCancelTiebreaker : undefined}
-        />
-      )}
-
-      {/* Time Adjust Dialog */}
+      {/* Dialogs */}
       <TimeAdjustDialog
         isOpen={showTimeAdjustDialog}
         onClose={() => setShowTimeAdjustDialog(false)}
         onConfirm={handleTimeAdjust}
-        currentTimeSeconds={displayElapsedSeconds}
+        currentTimeSeconds={displaySeconds}
         matchDurationMinutes={Math.floor(match.durationSeconds / 60)}
       />
 
-      {/* Score Edit Dialog */}
-      <ScoreEditDialog
-        isOpen={showScoreEditDialog}
-        onClose={() => setShowScoreEditDialog(false)}
-        onConfirm={handleScoreEdit}
-        currentHomeScore={match.homeScore}
-        currentAwayScore={match.awayScore}
-        homeTeamName={match.homeTeam.name}
-        awayTeamName={match.awayTeam.name}
-      />
-
-      {/* Card Dialog */}
       <CardDialog
         isOpen={showCardDialog}
-        onClose={() => setShowCardDialog(false)}
+        onClose={() => {
+          setShowCardDialog(false);
+          // BUG-007: Reset pending card state
+          setPendingCardType(null);
+          setPendingCardTeamSide(null);
+        }}
         onConfirm={handleCardConfirm}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
+        // BUG-007: Pre-select card type and team based on button clicked
+        initialCardType={pendingCardType ?? undefined}
+        preselectedTeamSide={pendingCardTeamSide ?? undefined}
+        autoDismissSeconds={10}
       />
 
-      {/* Time Penalty Dialog */}
       <TimePenaltyDialog
         isOpen={showTimePenaltyDialog}
-        onClose={() => setShowTimePenaltyDialog(false)}
+        onClose={() => {
+          setShowTimePenaltyDialog(false);
+          setPendingPenaltySide(null);
+        }}
         onConfirm={handleTimePenaltyConfirm}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
+        // BUG-006: Pre-select 2 minutes and team based on button clicked
+        preselectedDurationSeconds={120}
+        preselectedTeamSide={pendingPenaltySide ?? undefined}
+        autoDismissSeconds={10}
       />
 
-      {/* Substitution Dialog - BUG-009: Updated for multi-player substitutions */}
       <SubstitutionDialog
         isOpen={showSubstitutionDialog}
         onClose={() => {
@@ -691,22 +947,23 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         onConfirm={handleSubstitutionConfirm}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
+        // BUG-009: Pre-select team based on button clicked
         preselectedTeamSide={pendingSubstitutionSide ?? undefined}
         autoDismissSeconds={10}
       />
 
-      {/* GoalScorerDialog - opens when +Tor is clicked */}
+      {/* GoalScorerDialog - BUG-002: Torschütze + Assist erfassen */}
       <GoalScorerDialog
         isOpen={showGoalDialog}
         onClose={() => {
           setShowGoalDialog(false);
-          setPendingGoalTeam(null);
+          setPendingGoalSide(null);
         }}
         onConfirm={handleGoalConfirm}
         teamName={
-          pendingGoalTeam === 'home'
+          pendingGoalSide === 'home'
             ? match.homeTeam.name
-            : pendingGoalTeam === 'away'
+            : pendingGoalSide === 'away'
               ? match.awayTeam.name
               : ''
         }
@@ -714,231 +971,52 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         autoDismissSeconds={10}
       />
 
-      {/* EventEditDialog - for editing incomplete events */}
+      {/* BUG-010: EventEditDialog for editing/deleting events */}
       <EventEditDialog
         isOpen={showEventEditDialog}
         onClose={() => {
           setShowEventEditDialog(false);
-          setSelectedEventId(null);
+          setEditingEvent(null);
         }}
-        event={
-          selectedEventId
-            ? (match.events.find((e) => e.id === selectedEventId) as unknown as MatchEvent | null)
-            : null
-        }
+        event={editingEvent}
         homeTeam={match.homeTeam}
         awayTeam={match.awayTeam}
-        onUpdate={(eventId, updates) => {
-          // TODO: Implement event update when backend supports it
-          showInfo(`Event ${eventId} aktualisiert: ${JSON.stringify(updates)}`);
-          setShowEventEditDialog(false);
-          setSelectedEventId(null);
-        }}
-        onDelete={(eventId) => {
-          // TODO: Implement event deletion when backend supports it
-          showInfo(`Event ${eventId} gelöscht`);
-          setShowEventEditDialog(false);
-          setSelectedEventId(null);
+        onUpdate={handleEventUpdate}
+        onDelete={handleEventDelete}
+      />
+
+      {/* BUG-002: Event Log Bottom Sheet for Mobile */}
+      <EventLogBottomSheet
+        isOpen={showEventLogBottomSheet}
+        onClose={() => setShowEventLogBottomSheet(false)}
+        events={match.events}
+        homeTeamName={match.homeTeam.name}
+        awayTeamName={match.awayTeam.name}
+        homeTeamId={match.homeTeam.id}
+        awayTeamId={match.awayTeam.id}
+        onEventEdit={(event) => {
+          setShowEventLogBottomSheet(false);
+          setEditingEvent(event);
+          setShowEventEditDialog(true);
         }}
       />
 
-      {/* OpenEntriesBottomSheet - Mobile bottom sheet for incomplete events */}
-      {isMobileDevice && (
-        <OpenEntriesBottomSheet
-          openEvents={match.events
-            .filter((e) => e.type === 'GOAL' && !(e.payload as { playerNumber?: number }).playerNumber)
-            .map((e) => ({
-              ...e,
-              // Map to MatchEvent format required by OpenEntriesBottomSheet
-              timestamp: new Date(),
-              matchMinute: Math.floor(e.timestampSeconds / 60),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-              incomplete: !(e.payload as { playerNumber?: number }).playerNumber,
-            })) as unknown as MatchEvent[]}
-          homeTeam={match.homeTeam}
-          awayTeam={match.awayTeam}
-          onEditEvent={(eventId) => {
-            setSelectedEventId(eventId);
-            setShowEventEditDialog(true);
-          }}
-          isVisible={true} // Always visible on mobile, component handles expand/collapse
-        />
-      )}
 
-      {/* Toast Notifications */}
+
+      <SettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
+        settings={cockpitSettings}
+        onChange={(newSettings) => {
+          if (onUpdateSettings) {
+            onUpdateSettings(newSettings);
+          }
+        }}
+        tournamentId={tournamentId}
+        onTestSound={() => void sound.play()}
+      />
+
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// NextMatchHint Component
-// ---------------------------------------------------------------------------
-
-interface NextMatchHintProps {
-  homeTeamName: string;
-  awayTeamName: string;
-  matchNumber: number;
-  scheduledTime?: string;
-  isMobile: boolean;
-}
-
-const NextMatchHint: React.FC<NextMatchHintProps> = ({
-  homeTeamName,
-  awayTeamName,
-  matchNumber: _matchNumber,
-  scheduledTime,
-  isMobile,
-}) => {
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
-    background: cssVars.colors.infoLight,
-    borderRadius: cssVars.borderRadius.sm,
-    border: `1px solid ${cssVars.colors.info}30`,
-    fontSize: cssVars.fontSizes.xs,
-  };
-
-  return (
-    <div style={containerStyle}>
-      <span style={{ color: cssVars.colors.info, fontWeight: cssVars.fontWeights.medium }}>
-        Nächstes →
-      </span>
-      <span style={{ color: cssVars.colors.textPrimary, fontWeight: cssVars.fontWeights.semibold }}>
-        {homeTeamName} vs {awayTeamName}
-      </span>
-      {scheduledTime && !isMobile && (
-        <span style={{ color: cssVars.colors.textSecondary }}>({scheduledTime})</span>
-      )}
-    </div>
-  );
-};
-
-// ---------------------------------------------------------------------------
-// EventList Component (Extended Mode)
-// ---------------------------------------------------------------------------
-
-interface EventListProps {
-  events: Array<{
-    id: string;
-    type: string;
-    timestampSeconds: number;
-    payload?: {
-      teamId?: string;
-      teamName?: string;
-      direction?: 'INC' | 'DEC';
-    };
-  }>;
-  homeTeamName: string;
-  awayTeamName: string;
-  isMobile: boolean;
-}
-
-const EventList: React.FC<EventListProps> = ({
-  events,
-  homeTeamName,
-  awayTeamName,
-  isMobile,
-}) => {
-  // Show most recent events first, limit to last 3 on mobile, 5 on desktop
-  const recentEvents = [...events].reverse().slice(0, isMobile ? 3 : 5);
-
-  const containerStyle: CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px',
-    padding: cssVars.spacing.xs,
-    background: cssVars.colors.surfaceDark,
-    borderRadius: cssVars.borderRadius.sm,
-    border: `1px solid ${cssVars.colors.border}`,
-  };
-
-  const headerStyle: CSSProperties = {
-    fontSize: '10px',
-    color: cssVars.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  };
-
-  const eventRowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    padding: `2px ${cssVars.spacing.xs}`,
-    background: cssVars.colors.surface,
-    borderRadius: '2px',
-    fontSize: isMobile ? '11px' : cssVars.fontSizes.xs,
-  };
-
-  const eventIconStyle: CSSProperties = {
-    fontSize: isMobile ? '12px' : '14px',
-  };
-
-  const eventTimeStyle: CSSProperties = {
-    fontSize: '10px',
-    color: cssVars.colors.textSecondary,
-    minWidth: '32px',
-  };
-
-  const eventTextStyle: CSSProperties = {
-    flex: 1,
-    color: cssVars.colors.textPrimary,
-  };
-
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case 'GOAL': return '⚽';
-      case 'UNDO_GOAL': return '↩️';
-      case 'START': return '▶️';
-      case 'PAUSE': return '⏸️';
-      case 'RESUME': return '▶️';
-      case 'FINISH': return '🏁';
-      default: return '•';
-    }
-  };
-
-  const getEventDescription = (event: EventListProps['events'][0]) => {
-    const teamName = event.payload?.teamName ??
-      (event.payload?.teamId === 'home' ? homeTeamName : awayTeamName);
-
-    switch (event.type) {
-      case 'GOAL':
-        return event.payload?.direction === 'DEC'
-          ? `Tor entfernt (${teamName})`
-          : `Tor für ${teamName}`;
-      case 'RESULT_EDIT':
-        return 'Ergebnis korrigiert';
-      case 'STATUS_CHANGE':
-        return 'Status geändert';
-      default:
-        return event.type;
-    }
-  };
-
-  const formatEventTime = (timestampSeconds: number) => {
-    const mins = Math.floor(timestampSeconds / 60);
-    const secs = timestampSeconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  if (recentEvents.length === 0) {
-    return null;
-  }
-
-  return (
-    <div style={containerStyle}>
-      <span style={headerStyle}>Letzte Ereignisse</span>
-      {recentEvents.map((event) => (
-        <div key={event.id} style={eventRowStyle}>
-          <span style={eventIconStyle}>{getEventIcon(event.type)}</span>
-          <span style={eventTimeStyle}>{formatEventTime(event.timestampSeconds)}</span>
-          <span style={eventTextStyle}>{getEventDescription(event)}</span>
-        </div>
-      ))}
     </div>
   );
 };

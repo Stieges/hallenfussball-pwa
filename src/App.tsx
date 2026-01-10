@@ -111,6 +111,7 @@ function AppContent() {
   const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
   const isAdminPath = !!adminMatch;
   const adminTournamentId = adminMatch?.[1] ?? null;
+  const adminCategory = adminMatch?.[2];
 
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
@@ -567,6 +568,7 @@ function AppContent() {
         {isAdminPath && adminTournamentId && (
           <TournamentAdminCenter
             tournamentId={adminTournamentId}
+            initialCategory={adminCategory}
             onBackToTournament={() => void navigate(`/tournament/${adminTournamentId}`)}
           />
         )}
