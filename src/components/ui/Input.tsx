@@ -62,7 +62,8 @@ export const Input: React.FC<InputProps> = ({
     border: `1px solid ${hasError ? cssVars.colors.error : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.md,
+    // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus
+    fontSize: cssVars.fontSizes.lg,
     fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',

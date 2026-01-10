@@ -51,7 +51,8 @@ export const Select: React.FC<SelectProps> = ({
     border: `1px solid ${error ? cssVars.colors.error : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     color: cssVars.colors.textPrimary,
-    fontSize: cssVars.fontSizes.md,
+    // Minimum 16px (fontSizes.lg) required to prevent iOS auto-zoom on focus
+    fontSize: cssVars.fontSizes.lg,
     fontFamily: cssVars.fontFamilies.body,
     outline: 'none',
     cursor: 'pointer',
