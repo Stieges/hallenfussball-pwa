@@ -470,17 +470,19 @@ function AppContent() {
         {screen === 'profile' && (
           <UserProfileScreen
             onBack={() => void navigate('/')}
-            onOpenSettings={() => setScreen('settings')}
+            onOpenSettings={() => {
+              setScreen('settings');
+              void navigate('/settings');
+            }}
           />
         )}
 
         {screen === 'settings' && (
           <SettingsScreen
             onBack={() => {
+              // Use navigate(-1) if we have history, or fallback to profile
+              // For now, explicit navigation to profile is safer for this hub-and-spoke model
               setScreen('profile');
-              // Optionally update URL if needed, but 'profile' screen logic handles its own state
-              // But wait, profile screen is also just a 'screen' state. 
-              // Let's also navigate to /profile if that's the desired URL behavior
               void navigate('/profile');
             }}
             onNavigateToImpressum={() => setScreen('impressum')}
