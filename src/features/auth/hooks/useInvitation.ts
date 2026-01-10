@@ -1,5 +1,5 @@
 /**
- * useInvitation - Hook für Einladungs-Handling
+ * useInvitation - Hook für Einladungs-Handling (Supabase)
  *
  * Validiert und akzeptiert Einladungen.
  *
@@ -30,18 +30,18 @@ export interface UseInvitationReturn {
   isLoading: boolean;
   error: string | null;
 
-  // Validation
-  validateToken: (token: string) => InvitationValidationResult;
+  // Validation (async)
+  validateToken: (token: string) => Promise<InvitationValidationResult>;
 
-  // Accept
-  acceptToken: (token: string) => AcceptInvitationResult;
+  // Accept (async)
+  acceptToken: (token: string) => Promise<AcceptInvitationResult>;
 
-  // Create (for admins)
-  createNewInvitation: (options: Omit<CreateInvitationOptions, 'createdBy'>) => CreateInvitationResult;
+  // Create (for admins, async)
+  createNewInvitation: (options: Omit<CreateInvitationOptions, 'createdBy'>) => Promise<CreateInvitationResult>;
 
-  // Manage
-  deactivate: (invitationId: string) => boolean;
-  getActiveInvitations: (tournamentId: string) => Invitation[];
+  // Manage (async)
+  deactivate: (invitationId: string) => Promise<boolean>;
+  getActiveInvitations: (tournamentId: string) => Promise<Invitation[]>;
 
   // Clear error
   clearError: () => void;
@@ -60,16 +60,20 @@ export const useInvitation = (): UseInvitationReturn => {
    * Validiert einen Einladungs-Token
    */
   const validateToken = useCallback(
-    (token: string): InvitationValidationResult => {
+    async (token: string): Promise<InvitationValidationResult> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const result: InvitationValidationResult = validateInvitation(token);
+        const result = await validateInvitation(token);
         if (!result.valid) {
           setError(result.error ?? 'Ungültige Einladung');
         }
         return result;
+      } catch (err) {
+        console.error('Error validating token:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return { valid: false, error: 'not_found' };
       } finally {
         setIsLoading(false);
       }
@@ -80,30 +84,8 @@ export const useInvitation = (): UseInvitationReturn => {
   /**
    * Akzeptiert eine Einladung
    */
-  const acceptToken = useCallback((token: string): AcceptInvitationResult => {
-    if (!user) {
-      return { success: false, error: 'Nicht angemeldet' };
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = acceptInvitation(token, user.id);
-      if (!result.success) {
-        setError(result.error ?? 'Fehler beim Annehmen der Einladung');
-      }
-      return result;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
-
-  /**
-   * Erstellt eine neue Einladung (für Admins)
-   */
-  const createNewInvitation = useCallback(
-    (options: Omit<CreateInvitationOptions, 'createdBy'>): CreateInvitationResult => {
+  const acceptToken = useCallback(
+    async (token: string): Promise<AcceptInvitationResult> => {
       if (!user) {
         return { success: false, error: 'Nicht angemeldet' };
       }
@@ -112,7 +94,36 @@ export const useInvitation = (): UseInvitationReturn => {
       setError(null);
 
       try {
-        const result: CreateInvitationResult = createInvitation({
+        const result = await acceptInvitation(token, user.id);
+        if (!result.success) {
+          setError(result.error ?? 'Fehler beim Annehmen der Einladung');
+        }
+        return result;
+      } catch (err) {
+        console.error('Error accepting invitation:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user]
+  );
+
+  /**
+   * Erstellt eine neue Einladung (für Admins)
+   */
+  const createNewInvitation = useCallback(
+    async (options: Omit<CreateInvitationOptions, 'createdBy'>): Promise<CreateInvitationResult> => {
+      if (!user) {
+        return { success: false, error: 'Nicht angemeldet' };
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await createInvitation({
           ...options,
           createdBy: user.id,
         });
@@ -120,6 +131,10 @@ export const useInvitation = (): UseInvitationReturn => {
           setError(result.error ?? 'Fehler beim Erstellen der Einladung');
         }
         return result;
+      } catch (err) {
+        console.error('Error creating invitation:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
       } finally {
         setIsLoading(false);
       }
@@ -130,16 +145,20 @@ export const useInvitation = (): UseInvitationReturn => {
   /**
    * Deaktiviert eine Einladung
    */
-  const deactivate = useCallback((invitationId: string): boolean => {
+  const deactivate = useCallback(async (invitationId: string): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const success = deactivateInvitation(invitationId);
+      const success = await deactivateInvitation(invitationId);
       if (!success) {
         setError('Einladung konnte nicht deaktiviert werden');
       }
       return success;
+    } catch (err) {
+      console.error('Error deactivating invitation:', err);
+      setError('Ein unerwarteter Fehler ist aufgetreten');
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -148,8 +167,13 @@ export const useInvitation = (): UseInvitationReturn => {
   /**
    * Lädt aktive Einladungen für ein Turnier
    */
-  const getActiveInvitations = useCallback((tournamentId: string): Invitation[] => {
-    return getActiveInvitationsForTournament(tournamentId);
+  const getActiveInvitations = useCallback(async (tournamentId: string): Promise<Invitation[]> => {
+    try {
+      return await getActiveInvitationsForTournament(tournamentId);
+    } catch (err) {
+      console.error('Error getting active invitations:', err);
+      return [];
+    }
   }, []);
 
   /**

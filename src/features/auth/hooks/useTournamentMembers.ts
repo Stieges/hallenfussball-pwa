@@ -1,12 +1,12 @@
 /**
- * useTournamentMembers - Hook für Turnier-Mitglieder-Verwaltung
+ * useTournamentMembers - Hook für Turnier-Mitglieder-Verwaltung (Supabase)
  *
  * Lädt und verwaltet Mitglieder eines Turniers.
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 5.5
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { TournamentMembership, TournamentRole, User } from '../types/auth.types';
 import {
   getTournamentMembers,
@@ -39,12 +39,12 @@ export interface UseTournamentMembersReturn {
   isLoading: boolean;
   error: string | null;
 
-  // Actions
-  refresh: () => void;
-  setRole: (membershipId: string, newRole: TournamentRole, teamIds?: string[]) => boolean;
-  setTrainerTeams: (membershipId: string, teamIds: string[]) => boolean;
-  remove: (membershipId: string) => boolean;
-  transfer: (newOwnerId: string) => boolean;
+  // Actions (all async now)
+  refresh: () => Promise<void>;
+  setRole: (membershipId: string, newRole: TournamentRole, teamIds?: string[]) => Promise<boolean>;
+  setTrainerTeams: (membershipId: string, teamIds: string[]) => Promise<boolean>;
+  remove: (membershipId: string) => Promise<boolean>;
+  transfer: (newOwnerId: string) => Promise<boolean>;
 
   // Permission checks
   canEditMember: (targetMembership: TournamentMembership) => boolean;
@@ -61,36 +61,47 @@ export interface UseTournamentMembersReturn {
 
 export const useTournamentMembers = (tournamentId: string): UseTournamentMembersReturn => {
   const { user } = useAuth();
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [members, setMembers] = useState<MemberWithUser[]>([]);
+  const [coAdmins, setCoAdmins] = useState<TournamentMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /**
    * Lädt alle Mitglieder mit User-Daten
    */
-  const members = useMemo((): MemberWithUser[] => {
+  const loadMembers = useCallback(async () => {
     if (!tournamentId) {
-      return [];
+      setMembers([]);
+      setCoAdmins([]);
+      return;
     }
 
-    const memberships = getTournamentMembers(tournamentId);
-    return memberships.map((membership) => ({
-      membership,
-      user: getUserById(membership.userId),
-    }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId, refreshCounter]);
+    setIsLoading(true);
+    try {
+      const [memberships, coAdminList] = await Promise.all([
+        getTournamentMembers(tournamentId),
+        getCoAdmins(tournamentId),
+      ]);
 
-  /**
-   * Lädt alle Co-Admins
-   */
-  const coAdmins = useMemo((): TournamentMembership[] => {
-    if (!tournamentId) {
-      return [];
+      const membersWithUsers: MemberWithUser[] = memberships.map((membership) => ({
+        membership,
+        user: getUserById(membership.userId),
+      }));
+
+      setMembers(membersWithUsers);
+      setCoAdmins(coAdminList);
+    } catch (err) {
+      console.error('Error loading members:', err);
+      setError('Mitglieder konnten nicht geladen werden');
+    } finally {
+      setIsLoading(false);
     }
-    return getCoAdmins(tournamentId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tournamentId, refreshCounter]);
+  }, [tournamentId]);
+
+  // Load members on mount and when tournamentId changes
+  useEffect(() => {
+    void loadMembers();
+  }, [loadMembers]);
 
   /**
    * Eigene Membership
@@ -106,26 +117,30 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Aktualisiert die Mitglieder-Liste
    */
-  const refresh = useCallback(() => {
-    setRefreshCounter((c) => c + 1);
-  }, []);
+  const refresh = useCallback(async () => {
+    await loadMembers();
+  }, [loadMembers]);
 
   /**
    * Ändert die Rolle eines Mitglieds
    */
-  const setRole = useCallback(
-    (membershipId: string, newRole: TournamentRole, teamIds?: string[]): boolean => {
+  const setRoleAsync = useCallback(
+    async (membershipId: string, newRole: TournamentRole, teamIds?: string[]): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = changeRole(membershipId, newRole, teamIds);
+        const result = await changeRole(membershipId, newRole, teamIds);
         if (!result.success) {
           setError(result.error ?? 'Rolle konnte nicht geändert werden');
           return false;
         }
-        refresh();
+        await refresh();
         return true;
+      } catch (err) {
+        console.error('Error changing role:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return false;
       } finally {
         setIsLoading(false);
       }
@@ -136,19 +151,23 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Aktualisiert die Team-Zuordnungen eines Trainers
    */
-  const setTrainerTeams = useCallback(
-    (membershipId: string, teamIds: string[]): boolean => {
+  const setTrainerTeamsAsync = useCallback(
+    async (membershipId: string, teamIds: string[]): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = updateTrainerTeams(membershipId, teamIds);
+        const result = await updateTrainerTeams(membershipId, teamIds);
         if (!result.success) {
           setError(result.error ?? 'Teams konnten nicht aktualisiert werden');
           return false;
         }
-        refresh();
+        await refresh();
         return true;
+      } catch (err) {
+        console.error('Error updating trainer teams:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return false;
       } finally {
         setIsLoading(false);
       }
@@ -159,19 +178,23 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Entfernt ein Mitglied
    */
-  const remove = useCallback(
-    (membershipId: string): boolean => {
+  const removeAsync = useCallback(
+    async (membershipId: string): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const success = removeMember(membershipId);
+        const success = await removeMember(membershipId);
         if (!success) {
           setError('Mitglied konnte nicht entfernt werden');
           return false;
         }
-        refresh();
+        await refresh();
         return true;
+      } catch (err) {
+        console.error('Error removing member:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return false;
       } finally {
         setIsLoading(false);
       }
@@ -182,19 +205,23 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Überträgt Ownership
    */
-  const transfer = useCallback(
-    (newOwnerId: string): boolean => {
+  const transferAsync = useCallback(
+    async (newOwnerId: string): Promise<boolean> => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const result = transferOwnership(tournamentId, newOwnerId);
+        const result = await transferOwnership(tournamentId, newOwnerId);
         if (!result.success) {
           setError(result.error ?? 'Ownership konnte nicht übertragen werden');
           return false;
         }
-        refresh();
+        await refresh();
         return true;
+      } catch (err) {
+        console.error('Error transferring ownership:', err);
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+        return false;
       } finally {
         setIsLoading(false);
       }
@@ -218,7 +245,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Prüft ob eine bestimmte Rolle vergeben werden kann
    */
-  const canSetRole = useCallback(
+  const canSetRoleCheck = useCallback(
     (targetMembership: TournamentMembership, newRole: TournamentRole): boolean => {
       if (!myMembership) {
         return false;
@@ -231,7 +258,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
   /**
    * Prüft ob Ownership übertragen werden kann
    */
-  const canTransfer = useCallback((): boolean => {
+  const canTransferCheck = useCallback((): boolean => {
     if (!myMembership) {
       return false;
     }
@@ -252,13 +279,13 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
     isLoading,
     error,
     refresh,
-    setRole,
-    setTrainerTeams,
-    remove,
-    transfer,
+    setRole: setRoleAsync,
+    setTrainerTeams: setTrainerTeamsAsync,
+    remove: removeAsync,
+    transfer: transferAsync,
     canEditMember,
-    canSetRole,
-    canTransfer,
+    canSetRole: canSetRoleCheck,
+    canTransfer: canTransferCheck,
     clearError,
   };
 };

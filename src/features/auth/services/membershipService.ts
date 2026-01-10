@@ -1,16 +1,15 @@
 /**
- * Membership Service - Turnier-Mitgliedschafts-Verwaltung
+ * Membership Service - Turnier-Mitgliedschafts-Verwaltung (Supabase)
  *
- * Verwaltet User-Rollen in Turnieren.
+ * Verwaltet User-Rollen in Turnieren über die tournament_collaborators Tabelle.
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 5.5
  */
 
 import type { TournamentMembership, TournamentRole } from '../types/auth.types';
-import { AUTH_STORAGE_KEYS } from '../types/auth.types';
-import { generateUUID } from '../utils/tokenGenerator';
 import { canChangeRole, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
 import { getCurrentUser } from './authService';
+import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 // ============================================
 // TYPES
@@ -30,27 +29,51 @@ export interface TransferOwnershipResult {
 }
 
 // ============================================
-// STORAGE
+// DATABASE TYPES (from Supabase)
+// ============================================
+
+interface CollaboratorRow {
+  id: string;
+  tournament_id: string;
+  user_id: string | null;
+  invite_email: string | null;
+  invite_code: string | null;
+  role: string;
+  team_ids: string[] | null;
+  label: string | null;
+  max_uses: number | null;
+  use_count: number | null;
+  expires_at: string | null;
+  invited_at: string | null;
+  invited_by: string | null;
+  accepted_at: string | null;
+  declined_at: string | null;
+  created_at: string | null;
+  allowed_fields: number[] | null;
+  allowed_groups: string[] | null;
+}
+
+// ============================================
+// MAPPER FUNCTIONS
 // ============================================
 
 /**
- * Lädt alle Memberships
+ * Maps DB row to Membership type
  */
-const getMemberships = (): TournamentMembership[] => {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEYS.MEMBERSHIPS);
-    return raw ? (JSON.parse(raw) as TournamentMembership[]) : [];
-  } catch {
-    return [];
-  }
-};
-
-/**
- * Speichert alle Memberships
- */
-const saveMemberships = (memberships: TournamentMembership[]): void => {
-  localStorage.setItem(AUTH_STORAGE_KEYS.MEMBERSHIPS, JSON.stringify(memberships));
-};
+function mapRowToMembership(row: CollaboratorRow): TournamentMembership {
+  return {
+    id: row.id,
+    userId: row.user_id ?? '',
+    tournamentId: row.tournament_id,
+    role: row.role as TournamentRole,
+    teamIds: row.team_ids ?? [],
+    invitedBy: row.invited_by ?? undefined,
+    invitedAt: row.invited_at ?? undefined,
+    acceptedAt: row.accepted_at ?? undefined,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    updatedAt: row.created_at ?? new Date().toISOString(),
+  };
+}
 
 // ============================================
 // PUBLIC API
@@ -61,40 +84,75 @@ const saveMemberships = (memberships: TournamentMembership[]): void => {
  *
  * @param tournamentId - ID des Turniers
  * @param userId - ID des Erstellers
- * @returns Die erstellte Membership
+ * @returns Die erstellte Membership oder undefined
  */
-export const createOwnerMembership = (
+export const createOwnerMembership = async (
   tournamentId: string,
   userId: string
-): TournamentMembership => {
+): Promise<TournamentMembership | undefined> => {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('Supabase is not configured');
+    return undefined;
+  }
+
   const now = new Date().toISOString();
 
-  const membership: TournamentMembership = {
-    id: generateUUID(),
-    userId,
-    tournamentId,
-    role: 'owner',
-    teamIds: [],
-    createdAt: now,
-    updatedAt: now,
-  };
+  try {
+    const { data, error } = await supabase
+      .from('tournament_collaborators')
+      .insert({
+        tournament_id: tournamentId,
+        user_id: userId,
+        role: 'owner',
+        team_ids: [],
+        created_at: now,
+        accepted_at: now, // Owner is automatically accepted
+      })
+      .select()
+      .single();
 
-  const memberships = getMemberships();
-  memberships.push(membership);
-  saveMemberships(memberships);
+    if (error) {
+      console.error('Create owner membership error:', error);
+      return undefined;
+    }
 
-  return membership;
+    return mapRowToMembership(data as CollaboratorRow);
+  } catch (err) {
+    console.error('Create owner membership error:', err);
+    return undefined;
+  }
 };
 
 /**
- * Lädt alle Mitglieder eines Turniers
+ * Lädt alle Mitglieder eines Turniers (nur akzeptierte)
  *
  * @param tournamentId - Turnier-ID
  * @returns Array von Memberships
  */
-export const getTournamentMembers = (tournamentId: string): TournamentMembership[] => {
-  const memberships = getMemberships();
-  return memberships.filter((m) => m.tournamentId === tournamentId);
+export const getTournamentMembers = async (tournamentId: string): Promise<TournamentMembership[]> => {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .not('user_id', 'is', null) // Only accepted members (have user_id)
+      .is('declined_at', null); // Not declined
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (error || !data) {
+      console.error('Get tournament members error:', error);
+      return [];
+    }
+
+    return (data as CollaboratorRow[]).map(mapRowToMembership);
+  } catch (err) {
+    console.error('Get tournament members error:', err);
+    return [];
+  }
 };
 
 /**
@@ -104,12 +162,32 @@ export const getTournamentMembers = (tournamentId: string): TournamentMembership
  * @param userId - User-ID
  * @returns Membership oder undefined
  */
-export const getUserMembership = (
+export const getUserMembership = async (
   tournamentId: string,
   userId: string
-): TournamentMembership | undefined => {
-  const memberships = getMemberships();
-  return memberships.find((m) => m.tournamentId === tournamentId && m.userId === userId);
+): Promise<TournamentMembership | undefined> => {
+  if (!isSupabaseConfigured || !supabase) {
+    return undefined;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('user_id', userId)
+      .is('declined_at', null)
+      .single();
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (error || !data) {
+      return undefined;
+    }
+
+    return mapRowToMembership(data as CollaboratorRow);
+  } catch {
+    return undefined;
+  }
 };
 
 /**
@@ -120,54 +198,72 @@ export const getUserMembership = (
  * @param newTeamIds - Neue Team-Zuordnungen (für Trainer)
  * @returns Ergebnis
  */
-export const changeRole = (
+export const changeRole = async (
   membershipId: string,
   newRole: TournamentRole,
   newTeamIds?: string[]
-): ChangeRoleResult => {
+): Promise<ChangeRoleResult> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
-  const memberships = getMemberships();
-  const targetIndex = memberships.findIndex((m) => m.id === membershipId);
-
-  if (targetIndex < 0) {
-    return { success: false, error: 'Mitglied nicht gefunden' };
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar' };
   }
 
-  const targetMembership = memberships[targetIndex];
+  try {
+    // Get target membership
+    const { data: targetData, error: targetError } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('id', membershipId)
+      .single();
 
-  // Eigene Membership finden
-  const myMembership = memberships.find(
-    (m) => m.tournamentId === targetMembership.tournamentId && m.userId === currentUser.id
-  );
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (targetError || !targetData) {
+      return { success: false, error: 'Mitglied nicht gefunden' };
+    }
 
-  if (!myMembership) {
-    return { success: false, error: 'Keine Berechtigung' };
+    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+
+    // Get my membership in the same tournament
+    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+
+    if (!myMembership) {
+      return { success: false, error: 'Keine Berechtigung' };
+    }
+
+    // Permission checks
+    if (!canChangeRole(myMembership.role, targetMembership.role)) {
+      return { success: false, error: 'Keine Berechtigung für diese Aktion' };
+    }
+
+    if (!canSetRoleTo(myMembership.role, targetMembership.role, newRole)) {
+      return { success: false, error: 'Diese Rolle kann nicht vergeben werden' };
+    }
+
+    // Update role
+    const { data: updatedData, error: updateError } = await supabase
+      .from('tournament_collaborators')
+      .update({
+        role: newRole,
+        team_ids: newRole === 'trainer' ? (newTeamIds ?? targetMembership.teamIds) : [],
+      })
+      .eq('id', membershipId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Change role error:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
+  } catch (err) {
+    console.error('Change role error:', err);
+    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
-
-  // Berechtigungs-Check
-  if (!canChangeRole(myMembership.role, targetMembership.role)) {
-    return { success: false, error: 'Keine Berechtigung für diese Aktion' };
-  }
-
-  if (!canSetRoleTo(myMembership.role, targetMembership.role, newRole)) {
-    return { success: false, error: 'Diese Rolle kann nicht vergeben werden' };
-  }
-
-  // Rolle ändern
-  memberships[targetIndex] = {
-    ...targetMembership,
-    role: newRole,
-    teamIds: newRole === 'trainer' ? (newTeamIds ?? targetMembership.teamIds) : [],
-    updatedAt: new Date().toISOString(),
-  };
-
-  saveMemberships(memberships);
-
-  return { success: true, membership: memberships[targetIndex] };
 };
 
 /**
@@ -177,47 +273,64 @@ export const changeRole = (
  * @param teamIds - Neue Team-IDs
  * @returns Ergebnis
  */
-export const updateTrainerTeams = (
+export const updateTrainerTeams = async (
   membershipId: string,
   teamIds: string[]
-): ChangeRoleResult => {
+): Promise<ChangeRoleResult> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
-  const memberships = getMemberships();
-  const targetIndex = memberships.findIndex((m) => m.id === membershipId);
-
-  if (targetIndex < 0) {
-    return { success: false, error: 'Mitglied nicht gefunden' };
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar' };
   }
 
-  const targetMembership = memberships[targetIndex];
+  try {
+    // Get target membership
+    const { data: targetData, error: targetError } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('id', membershipId)
+      .single();
 
-  if (targetMembership.role !== 'trainer') {
-    return { success: false, error: 'Nur Trainer haben Team-Zuordnungen' };
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (targetError || !targetData) {
+      return { success: false, error: 'Mitglied nicht gefunden' };
+    }
+
+    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+
+    if (targetMembership.role !== 'trainer') {
+      return { success: false, error: 'Nur Trainer haben Team-Zuordnungen' };
+    }
+
+    // Get my membership
+    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+
+    if (!myMembership || (myMembership.role !== 'owner' && myMembership.role !== 'co-admin')) {
+      return { success: false, error: 'Keine Berechtigung' };
+    }
+
+    // Update team assignments
+    // Note: team_ids exists in DB but Supabase types may be out of sync
+    const { data: updatedData, error: updateError } = await supabase
+      .from('tournament_collaborators')
+      .update({ team_ids: teamIds } as Record<string, unknown>)
+      .eq('id', membershipId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Update trainer teams error:', updateError);
+      return { success: false, error: updateError.message };
+    }
+
+    return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
+  } catch (err) {
+    console.error('Update trainer teams error:', err);
+    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
-
-  // Eigene Membership finden
-  const myMembership = memberships.find(
-    (m) => m.tournamentId === targetMembership.tournamentId && m.userId === currentUser.id
-  );
-
-  if (!myMembership || (myMembership.role !== 'owner' && myMembership.role !== 'co-admin')) {
-    return { success: false, error: 'Keine Berechtigung' };
-  }
-
-  // Team-Zuordnungen aktualisieren
-  memberships[targetIndex] = {
-    ...targetMembership,
-    teamIds,
-    updatedAt: new Date().toISOString(),
-  };
-
-  saveMemberships(memberships);
-
-  return { success: true, membership: memberships[targetIndex] };
 };
 
 /**
@@ -226,45 +339,58 @@ export const updateTrainerTeams = (
  * @param membershipId - ID der Membership
  * @returns true wenn erfolgreich
  */
-export const removeMember = (membershipId: string): boolean => {
+export const removeMember = async (membershipId: string): Promise<boolean> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return false;
   }
 
-  const memberships = getMemberships();
-  const targetIndex = memberships.findIndex((m) => m.id === membershipId);
-
-  if (targetIndex < 0) {
+  if (!isSupabaseConfigured || !supabase) {
     return false;
   }
 
-  const targetMembership = memberships[targetIndex];
+  try {
+    // Get target membership
+    const { data: targetData, error: targetError } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('id', membershipId)
+      .single();
 
-  // Owner kann nicht entfernt werden
-  if (targetMembership.role === 'owner') {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (targetError || !targetData) {
+      return false;
+    }
+
+    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+
+    // Owner cannot be removed
+    if (targetMembership.role === 'owner') {
+      return false;
+    }
+
+    // Get my membership
+    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+
+    if (!myMembership) {
+      return false;
+    }
+
+    // Permission check
+    if (!canChangeRole(myMembership.role, targetMembership.role)) {
+      return false;
+    }
+
+    // Delete the membership
+    const { error: deleteError } = await supabase
+      .from('tournament_collaborators')
+      .delete()
+      .eq('id', membershipId);
+
+    return !deleteError;
+  } catch {
     return false;
   }
-
-  // Eigene Membership finden
-  const myMembership = memberships.find(
-    (m) => m.tournamentId === targetMembership.tournamentId && m.userId === currentUser.id
-  );
-
-  if (!myMembership) {
-    return false;
-  }
-
-  // Berechtigungs-Check
-  if (!canChangeRole(myMembership.role, targetMembership.role)) {
-    return false;
-  }
-
-  // Entfernen
-  memberships.splice(targetIndex, 1);
-  saveMemberships(memberships);
-
-  return true;
 };
 
 /**
@@ -274,70 +400,84 @@ export const removeMember = (membershipId: string): boolean => {
  * @param newOwnerId - User-ID des neuen Owners
  * @returns Ergebnis
  */
-export const transferOwnership = (
+export const transferOwnership = async (
   tournamentId: string,
   newOwnerId: string
-): TransferOwnershipResult => {
+): Promise<TransferOwnershipResult> => {
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
-  const memberships = getMemberships();
-
-  // Aktuelle Owner-Membership finden
-  const ownerIndex = memberships.findIndex(
-    (m) => m.tournamentId === tournamentId && m.userId === currentUser.id
-  );
-
-  if (ownerIndex < 0) {
-    return { success: false, error: 'Nicht Mitglied dieses Turniers' };
+  if (!isSupabaseConfigured || !supabase) {
+    return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar' };
   }
 
-  const ownerMembership = memberships[ownerIndex];
+  try {
+    // Get my membership (must be owner)
+    const myMembership = await getUserMembership(tournamentId, currentUser.id);
 
-  if (!canTransferOwnership(ownerMembership.role)) {
-    return { success: false, error: 'Nur der Owner kann Ownership übertragen' };
+    if (!myMembership) {
+      return { success: false, error: 'Nicht Mitglied dieses Turniers' };
+    }
+
+    if (!canTransferOwnership(myMembership.role)) {
+      return { success: false, error: 'Nur der Owner kann Ownership übertragen' };
+    }
+
+    // Get new owner's membership
+    const newOwnerMembership = await getUserMembership(tournamentId, newOwnerId);
+
+    if (!newOwnerMembership) {
+      return { success: false, error: 'Ziel-User ist nicht Mitglied' };
+    }
+
+    if (newOwnerMembership.role !== 'co-admin') {
+      return { success: false, error: 'Ownership kann nur an Co-Admins übertragen werden' };
+    }
+
+    // Use a transaction-like approach: update both in sequence
+    // Old owner becomes co-admin
+    const { data: oldOwnerData, error: oldOwnerError } = await supabase
+      .from('tournament_collaborators')
+      .update({ role: 'co-admin' })
+      .eq('id', myMembership.id)
+      .select()
+      .single();
+
+    if (oldOwnerError) {
+      console.error('Transfer ownership error (old owner):', oldOwnerError);
+      return { success: false, error: oldOwnerError.message };
+    }
+
+    // New owner becomes owner
+    const { data: newOwnerData, error: newOwnerError } = await supabase
+      .from('tournament_collaborators')
+      .update({ role: 'owner' })
+      .eq('id', newOwnerMembership.id)
+      .select()
+      .single();
+
+    if (newOwnerError) {
+      // Try to rollback old owner change
+      await supabase
+        .from('tournament_collaborators')
+        .update({ role: 'owner' })
+        .eq('id', myMembership.id);
+
+      console.error('Transfer ownership error (new owner):', newOwnerError);
+      return { success: false, error: newOwnerError.message };
+    }
+
+    return {
+      success: true,
+      oldOwnerMembership: mapRowToMembership(oldOwnerData as CollaboratorRow),
+      newOwnerMembership: mapRowToMembership(newOwnerData as CollaboratorRow),
+    };
+  } catch (err) {
+    console.error('Transfer ownership error:', err);
+    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
-
-  // Neue Owner-Membership finden
-  const newOwnerIndex = memberships.findIndex(
-    (m) => m.tournamentId === tournamentId && m.userId === newOwnerId
-  );
-
-  if (newOwnerIndex < 0) {
-    return { success: false, error: 'Ziel-User ist nicht Mitglied' };
-  }
-
-  const newOwnerMembership = memberships[newOwnerIndex];
-
-  if (newOwnerMembership.role !== 'co-admin') {
-    return { success: false, error: 'Ownership kann nur an Co-Admins übertragen werden' };
-  }
-
-  const now = new Date().toISOString();
-
-  // Alter Owner wird Co-Admin
-  memberships[ownerIndex] = {
-    ...ownerMembership,
-    role: 'co-admin',
-    updatedAt: now,
-  };
-
-  // Neuer Owner
-  memberships[newOwnerIndex] = {
-    ...newOwnerMembership,
-    role: 'owner',
-    updatedAt: now,
-  };
-
-  saveMemberships(memberships);
-
-  return {
-    success: true,
-    oldOwnerMembership: memberships[ownerIndex],
-    newOwnerMembership: memberships[newOwnerIndex],
-  };
 };
 
 /**
@@ -346,7 +486,65 @@ export const transferOwnership = (
  * @param tournamentId - Turnier-ID
  * @returns Array von Co-Admin Memberships
  */
-export const getCoAdmins = (tournamentId: string): TournamentMembership[] => {
-  const memberships = getMemberships();
-  return memberships.filter((m) => m.tournamentId === tournamentId && m.role === 'co-admin');
+export const getCoAdmins = async (tournamentId: string): Promise<TournamentMembership[]> => {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('tournament_collaborators')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('role', 'co-admin')
+      .not('user_id', 'is', null);
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (error || !data) {
+      return [];
+    }
+
+    return (data as CollaboratorRow[]).map(mapRowToMembership);
+  } catch {
+    return [];
+  }
+};
+
+// ============================================
+// LEGACY SYNC WRAPPERS (for backward compatibility)
+// ============================================
+
+/**
+ * @deprecated Use async version instead
+ * Synchronous wrapper - triggers async operation and returns empty result
+ */
+export const createOwnerMembershipSync = (
+  tournamentId: string,
+  userId: string
+): TournamentMembership | undefined => {
+  console.warn('createOwnerMembershipSync is deprecated. Use createOwnerMembership() async function.');
+  // Trigger async operation
+  void createOwnerMembership(tournamentId, userId);
+  return undefined;
+};
+
+/**
+ * @deprecated Use async version instead
+ */
+export const getTournamentMembersSync = (tournamentId: string): TournamentMembership[] => {
+  console.warn('getTournamentMembersSync is deprecated. Use getTournamentMembers() async function.');
+  void getTournamentMembers(tournamentId);
+  return [];
+};
+
+/**
+ * @deprecated Use async version instead
+ */
+export const getUserMembershipSync = (
+  tournamentId: string,
+  userId: string
+): TournamentMembership | undefined => {
+  console.warn('getUserMembershipSync is deprecated. Use getUserMembership() async function.');
+  void getUserMembership(tournamentId, userId);
+  return undefined;
 };

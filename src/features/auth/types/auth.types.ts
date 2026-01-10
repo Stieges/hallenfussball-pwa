@@ -244,7 +244,7 @@ export interface InvitationValidationResult {
     id: string;
     name: string;
   };
-  error?: 'not_found' | 'expired' | 'max_uses_reached' | 'deactivated';
+  error?: 'not_found' | 'expired' | 'max_uses_reached' | 'deactivated' | 'already_used';
 }
 
 // ============================================

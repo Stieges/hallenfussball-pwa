@@ -47,16 +47,18 @@ export const MemberList: React.FC<MemberListProps> = ({
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
-  const handleRoleChange = (membershipId: string, newRole: TournamentRole) => {
+  const handleRoleChange = async (membershipId: string, newRole: TournamentRole) => {
     clearError();
-    if (setRole(membershipId, newRole)) {
+    const success = await setRole(membershipId, newRole);
+    if (success) {
       setEditingMemberId(null);
     }
   };
 
-  const handleRemove = (membershipId: string) => {
+  const handleRemove = async (membershipId: string) => {
     clearError();
-    if (remove(membershipId)) {
+    const success = await remove(membershipId);
+    if (success) {
       setConfirmRemoveId(null);
     }
   };
@@ -140,7 +142,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                               ...(membership.role === role ? styles.roleOptionActive : {}),
                               ...(canAssign ? {} : styles.roleOptionDisabled),
                             }}
-                            onClick={() => canAssign && handleRoleChange(membership.id, role)}
+                            onClick={() => canAssign && void handleRoleChange(membership.id, role)}
                             disabled={!canAssign || isLoading}
                           >
                             {ROLE_LABELS[role].label}
@@ -160,7 +162,7 @@ export const MemberList: React.FC<MemberListProps> = ({
                       <Button
                         variant="danger"
                         size="sm"
-                        onClick={() => handleRemove(membership.id)}
+                        onClick={() => void handleRemove(membership.id)}
                         loading={isLoading}
                       >
                         Ja, entfernen
