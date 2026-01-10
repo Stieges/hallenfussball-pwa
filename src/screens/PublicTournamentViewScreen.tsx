@@ -2,7 +2,8 @@
  * PublicTournamentViewScreen - Öffentliche Readonly-Ansicht für Zuschauer
  *
  * Features:
- * - Lädt Turnier aus localStorage basierend auf ID
+ * - Lädt Turnier aus Supabase (für externe Zuschauer)
+ * - Fallback auf localStorage (für lokale Entwicklung)
  * - Respektiert Privacy-Settings (hideScoresForPublic, hideRankingsForPublic)
  * - Readonly ScheduleDisplay
  * - Share & PDF Export Buttons
@@ -17,6 +18,8 @@ import { ScheduleDisplay } from '../components/ScheduleDisplay';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { ScheduleActionButtons } from '../components/ScheduleActionButtons';
 import { Card } from '../components/ui/Card';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
 
 export interface PublicTournamentViewScreenProps {
   tournamentId: string;
@@ -30,46 +33,86 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
   const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
-  // Load tournament from localStorage
+  // Load tournament - try Supabase first, fallback to localStorage
   useEffect(() => {
-    const loadTournament = () => {
+    const loadFromSupabase = async (): Promise<Tournament | null> => {
+      if (!isSupabaseConfigured || !supabase) {
+        return null;
+      }
+
+      try {
+        // Use SupabaseRepository for proper mapping
+        const repo = new SupabaseRepository();
+
+        // First try as share code (6 chars alphanumeric)
+        if (/^[A-Z0-9]{6}$/i.test(tournamentId)) {
+          const tournament = await repo.getByShareCode(tournamentId.toUpperCase());
+          if (tournament) {
+            return tournament;
+          }
+        }
+
+        // Then try as tournament ID (UUID or other format)
+        const tournament = await repo.get(tournamentId);
+        return tournament;
+      } catch (error) {
+        console.error('[PublicTournamentView] Supabase load failed:', error);
+        return null;
+      }
+    };
+
+    const loadFromLocalStorage = (): Tournament | null => {
       try {
         const stored = localStorage.getItem('tournaments');
-
-        if (!stored) {
-          setLoadingError('Turnier nicht gefunden');
-          return;
-        }
+        if (!stored) {return null;}
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
         const tournaments: Tournament[] = JSON.parse(stored);
-        const found = tournaments.find((t) => t.id === tournamentId);
+        return tournaments.find((t) => t.id === tournamentId) ?? null;
+      } catch {
+        return null;
+      }
+    };
+
+    const processLoadedTournament = (found: Tournament) => {
+      setTournament(found);
+
+      // Generate schedule
+      const generatedSchedule = generateFullSchedule(found);
+      setSchedule(generatedSchedule);
+
+      // Calculate standings
+      const uniqueGroups = Array.from(
+        new Set(found.teams.map((t) => t.group).filter(Boolean))
+      ) as string[];
+
+      const allStandings: Standing[] = [];
+      uniqueGroups.forEach((group) => {
+        const teamsInGroup = found.teams.filter((t) => t.group === group);
+        const groupStandings = calculateStandings(
+          teamsInGroup,
+          found.matches,
+          found,
+          group
+        );
+        allStandings.push(...groupStandings);
+      });
+
+      setCurrentStandings(allStandings);
+    };
+
+    const loadTournament = async () => {
+      try {
+        // Try Supabase first (for external visitors)
+        let found = await loadFromSupabase();
+
+        // Fallback to localStorage (for local development or offline)
+        if (!found) {
+          found = loadFromLocalStorage();
+        }
 
         if (found) {
-          setTournament(found);
-
-          // Generate schedule
-          const generatedSchedule = generateFullSchedule(found);
-          setSchedule(generatedSchedule);
-
-          // Calculate standings
-          const uniqueGroups = Array.from(
-            new Set(found.teams.map((t) => t.group).filter(Boolean))
-          ) as string[];
-
-          const allStandings: Standing[] = [];
-          uniqueGroups.forEach((group) => {
-            const teamsInGroup = found.teams.filter((t) => t.group === group);
-            const groupStandings = calculateStandings(
-              teamsInGroup,
-              found.matches,
-              found,
-              group
-            );
-            allStandings.push(...groupStandings);
-          });
-
-          setCurrentStandings(allStandings);
+          processLoadedTournament(found);
         } else {
           setLoadingError('Turnier nicht gefunden');
         }
@@ -79,7 +122,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
       }
     };
 
-    loadTournament();
+    void loadTournament();
   }, [tournamentId]);
 
   // Apply privacy filters
