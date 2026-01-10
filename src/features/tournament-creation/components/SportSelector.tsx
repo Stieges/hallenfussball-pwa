@@ -125,7 +125,7 @@ export const SportSelector: React.FC<SportSelectorProps> = ({
           grid-template-columns: repeat(2, 1fr);
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
           .sport-selector-grid {
             grid-template-columns: 1fr !important;
           }

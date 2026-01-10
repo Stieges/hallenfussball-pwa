@@ -655,12 +655,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
               Zurück
             </Button>
 
-            <div style={{
-              display: 'flex',
-              gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
-              flexWrap: isMobile ? 'wrap' : 'nowrap',
-              justifyContent: isMobile ? 'flex-end' : 'flex-start',
-            }}>
+            <div className="wizard-footer-actions">
               {/* Speichern-Button - nur ab Step 2 anzeigen wenn grundlegende Daten vorhanden */}
               {step >= 2 && formData.title && formData.date && formData.location && (
                 <Button
@@ -762,6 +757,34 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
           to {
             transform: translateX(0);
             opacity: 1;
+          }
+        }
+
+        .wizard-footer-actions {
+          display: flex;
+          gap: ${cssVars.spacing.md};
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+        }
+
+        @media (max-width: 600px) {
+          .wizard-footer-actions {
+            gap: ${cssVars.spacing.sm};
+            justify-content: flex-end;
+            flex-wrap: wrap;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .wizard-footer-actions {
+            flex-direction: column;
+            width: 100%;
+          }
+          
+          .wizard-footer-actions > button {
+             width: 100% !important;
+             margin-left: 0 !important;
+             margin-right: 0 !important;
           }
         }
       `}</style>

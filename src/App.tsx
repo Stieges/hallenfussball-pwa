@@ -220,8 +220,11 @@ function AppContent() {
   } | null>(null);
 
   // Parse URL on mount to detect public tournament view, invite, or monitor display
+  // IMPORTANT: Use location.pathname from useLocation() hook, NOT window.location.pathname
+  // because HashRouter puts routes in the hash fragment, not pathname
   useEffect(() => {
-    const path = window.location.pathname;
+    const path = location.pathname; // Use React Router's parsed pathname
+    const search = location.search; // Use React Router's parsed search params
     const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
     const liveMatch = path.match(/^\/live\/([A-Z0-9]{6})$/i);
     const inviteMatch = path.match(/^\/invite$/);
@@ -240,7 +243,7 @@ function AppContent() {
       setPublicTournamentId(publicMatch[1]);
       setScreen('public');
     } else if (inviteMatch) {
-      const params = new URLSearchParams(window.location.search);
+      const params = new URLSearchParams(search);
       const token = params.get('token');
       if (token) {
         setInviteToken(token);
@@ -262,7 +265,7 @@ function AppContent() {
     } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
       setScreen('dashboard');
     }
-  }, [location.pathname]); // Depend on location.pathname to react to URL changes
+  }, [location.pathname, location.search]); // Depend on location to react to URL changes
 
   if (loading) {
     return (

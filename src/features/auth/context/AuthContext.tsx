@@ -271,7 +271,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             full_name: name.trim(),
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/#/auth/callback`,
         },
       });
 
@@ -387,7 +387,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/#/auth/callback`,
         },
       });
 
@@ -423,7 +423,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/#/auth/callback`,
         },
       });
 
@@ -518,7 +518,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/#/auth/callback`,
         }
       );
 
