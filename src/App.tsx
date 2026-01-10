@@ -259,6 +259,8 @@ function AppContent() {
       setScreen('login');
     } else if (path === '/set-password') {
       setScreen('set-password');
+    } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
+      setScreen('dashboard');
     }
   }, [location.pathname]); // Depend on location.pathname to react to URL changes
 
