@@ -439,7 +439,7 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: cssVars.shadows.lg,
     border: `1px solid ${cssVars.colors.border}`,
     overflow: 'hidden',
-    zIndex: 1000,
+    zIndex: 1100, // Higher than BottomNavigation (1000)
   },
 
   dropdownHeader: {

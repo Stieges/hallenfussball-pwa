@@ -120,7 +120,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: cssVars.shadows.lg,
-    zIndex: 1000,
+    zIndex: 1100, // Higher than BottomNavigation (1000) to appear above it
     overflow: 'hidden',
     animation: 'menuFadeIn 0.15s ease-out',
   };
