@@ -8,12 +8,63 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { cssVars } from '../../../design-tokens';
 
+/**
+ * Parses URL parameters from HashRouter URLs
+ *
+ * HashRouter URLs look like: https://example.com/#/auth/callback?code=xxx&type=recovery
+ * - window.location.hash = "#/auth/callback?code=xxx&type=recovery"
+ * - window.location.search = "" (empty!)
+ *
+ * We need to extract query params from within the hash.
+ */
+function parseHashRouterParams(): { query: URLSearchParams; fragment: URLSearchParams } {
+  const hash = window.location.hash; // e.g., "#/auth/callback?code=xxx&type=recovery"
+
+  // For HashRouter, the query string is inside the hash
+  // Format: #/path?query or #/path#fragment
+  const hashContent = hash.substring(1); // Remove leading #
+
+  // Check if there's a query string in the hash
+  const queryIndex = hashContent.indexOf('?');
+  const fragmentIndex = hashContent.indexOf('#', 1); // Look for second # (for implicit flow tokens)
+
+  let queryString = '';
+  let fragmentString = '';
+
+  if (queryIndex !== -1) {
+    // Query params exist in hash
+    const afterQuery = hashContent.substring(queryIndex + 1);
+    // Check if there's also a fragment after the query
+    const fragInQuery = afterQuery.indexOf('#');
+    if (fragInQuery !== -1) {
+      queryString = afterQuery.substring(0, fragInQuery);
+      fragmentString = afterQuery.substring(fragInQuery + 1);
+    } else {
+      queryString = afterQuery;
+    }
+  } else if (fragmentIndex !== -1) {
+    // Only fragment (implicit flow tokens)
+    fragmentString = hashContent.substring(fragmentIndex + 1);
+  }
+
+  // Also check window.location.search as fallback (for BrowserRouter or direct calls)
+  if (!queryString && window.location.search) {
+    queryString = window.location.search.substring(1);
+  }
+
+  return {
+    query: new URLSearchParams(queryString),
+    fragment: new URLSearchParams(fragmentString),
+  };
+}
+
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,20 +76,47 @@ export const AuthCallback: React.FC = () => {
       }
 
       try {
-        // Get the hash fragment from the URL (Supabase puts tokens there)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        const errorDescription = hashParams.get('error_description');
-        const type = hashParams.get('type'); // 'recovery' for password reset
+        // Parse parameters from HashRouter URL structure
+        const { query: queryParams, fragment: fragmentParams } = parseHashRouterParams();
+
+        // Also try React Router's search params as additional fallback
+        const routerParams = new URLSearchParams(location.search);
+
+        // Check fragment first (implicit flow), then query (PKCE flow), then router params
+        const accessToken = fragmentParams.get('access_token') ?? queryParams.get('access_token') ?? routerParams.get('access_token');
+        const refreshToken = fragmentParams.get('refresh_token') ?? queryParams.get('refresh_token') ?? routerParams.get('refresh_token');
+        const errorDescription = fragmentParams.get('error_description') ?? queryParams.get('error_description') ?? routerParams.get('error_description');
+        const type = fragmentParams.get('type') ?? queryParams.get('type') ?? routerParams.get('type'); // 'recovery' for password reset
+        const code = queryParams.get('code') ?? routerParams.get('code'); // PKCE flow uses code in query
 
         if (errorDescription) {
           setError(decodeURIComponent(errorDescription));
           return;
         }
 
+        // Handle PKCE flow (code in query params)
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (exchangeError) {
+            console.error('Code exchange error:', exchangeError);
+            setError(exchangeError.message);
+            return;
+          }
+
+          // Check if this is a recovery flow
+          if (type === 'recovery') {
+            void navigate('/set-password', { replace: true });
+            return;
+          }
+
+          // Successfully authenticated
+          void navigate('/', { replace: true });
+          return;
+        }
+
+        // Handle Implicit flow (tokens in hash)
         if (accessToken && refreshToken) {
-          // Set the session manually
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
@@ -48,9 +126,19 @@ export const AuthCallback: React.FC = () => {
             setError(sessionError.message);
             return;
           }
+
+          // Check if this is a password recovery flow
+          if (type === 'recovery') {
+            void navigate('/set-password', { replace: true });
+            return;
+          }
+
+          // Successfully authenticated, redirect to home
+          void navigate('/', { replace: true });
+          return;
         }
 
-        // Check if we have a valid session
+        // Check if we already have a valid session (e.g., from onAuthStateChange)
         const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
 
         if (getSessionError) {
@@ -61,7 +149,6 @@ export const AuthCallback: React.FC = () => {
         if (session) {
           // Check if this is a password recovery flow
           if (type === 'recovery') {
-            // Redirect to set password screen
             void navigate('/set-password', { replace: true });
             return;
           }
@@ -69,20 +156,8 @@ export const AuthCallback: React.FC = () => {
           // Successfully authenticated, redirect to home
           void navigate('/', { replace: true });
         } else {
-          // No session, might be a confirmation email link
-          // Check for email confirmation
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-            window.location.href
-          );
-
-          if (exchangeError) {
-            // Not a code exchange flow, just redirect to login
-            void navigate('/login', { replace: true });
-            return;
-          }
-
-          // Successfully exchanged code, redirect to home
-          void navigate('/', { replace: true });
+          // No session and no tokens - redirect to login
+          void navigate('/login', { replace: true });
         }
       } catch (err) {
         console.error('Auth callback error:', err);
@@ -91,7 +166,7 @@ export const AuthCallback: React.FC = () => {
     };
 
     void handleAuthCallback();
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   if (error) {
     return (

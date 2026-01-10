@@ -302,11 +302,12 @@ const styles: Record<string, CSSProperties> = {
   },
 
   // Select
+  // Note: font-size must be >= 16px to prevent iOS auto-zoom on focus
   select: {
     minWidth: '140px',
     height: '36px',
     padding: `0 ${cssVars.spacing.lg} 0 ${cssVars.spacing.sm}`,
-    fontSize: cssVars.fontSizes.sm,
+    fontSize: cssVars.fontSizes.lg, // 16px - iOS zoom prevention
     color: cssVars.colors.textPrimary,
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,

@@ -53,10 +53,10 @@ const SelectionButton: React.FC<SelectionButtonProps> = ({
       onClick={onClick}
       style={buttonStyle}
       onMouseEnter={(e) => {
-        if (!isSelected) {e.currentTarget.style.borderColor = cssVars.colors.borderMedium;}
+        if (!isSelected) { e.currentTarget.style.borderColor = cssVars.colors.borderMedium; }
       }}
       onMouseLeave={(e) => {
-        if (!isSelected) {e.currentTarget.style.borderColor = 'transparent';}
+        if (!isSelected) { e.currentTarget.style.borderColor = 'transparent'; }
       }}
       role="radio"
       aria-checked={isSelected}
@@ -239,7 +239,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
           grid-template-columns: 1fr 1fr;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
           .sport-type-grid {
             grid-template-columns: 1fr !important;
           }
