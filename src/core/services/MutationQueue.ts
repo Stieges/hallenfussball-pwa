@@ -117,23 +117,20 @@ export class MutationQueue {
      */
     public async process(): Promise<void> {
         if (this.isProcessing || this.queue.length === 0) { return; }
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!navigator.onLine) { return; }
+        if (!(navigator.onLine as boolean)) { return; }
 
         this.isProcessing = true;
 
         try {
             // Process head of queue
             while (this.queue.length > 0) {
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (!navigator.onLine) { break; }
+                if (!(navigator.onLine as boolean)) { break; }
 
                 const item = this.queue[0]; // Peek
-                let success = false;
+
 
                 try {
                     await this.executeMutation(item);
-                    success = true;
                 } catch (error) {
                     console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error);
 
@@ -156,12 +153,9 @@ export class MutationQueue {
                     }
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                if (success) {
-                    this.queue.shift(); // Remove handled item
-                    this.save();
-                    this.notifyListeners();
-                }
+                this.queue.shift(); // Remove handled item
+                this.save();
+                this.notifyListeners();
             }
         } finally {
             this.isProcessing = false;
@@ -174,20 +168,15 @@ export class MutationQueue {
                 await this.supabaseRepo.save(item.payload as Tournament);
                 break;
             case 'DELETE_TOURNAMENT':
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 await this.supabaseRepo.delete(item.payload as string);
                 break;
             case 'UPDATE_MATCH': {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const { tournamentId, update } = item.payload as { tournamentId: string, update: MatchUpdate };
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 await this.supabaseRepo.updateMatch(tournamentId, update);
                 break;
             }
             case 'UPDATE_MATCHES': {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 const { tournamentId, updates } = item.payload as { tournamentId: string, updates: MatchUpdate[] };
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
                 await this.supabaseRepo.updateMatches(tournamentId, updates);
                 break;
             }
