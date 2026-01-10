@@ -11,6 +11,8 @@ import { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
+import { SyncStatusBar } from '../../collaboration';
+import { useSyncStatus } from '../../../hooks/useSyncStatus';
 
 // =============================================================================
 // STYLES
@@ -119,9 +121,18 @@ export function AdminHeader({
   onBackToHub,
   onBackToTournament,
   onSearch,
+  tournamentId,
+  showSyncStatus = false,
 }: AdminHeaderProps) {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { status, isSyncing, lastSyncedAt, syncTournament } = useSyncStatus();
+
+  const handleSyncClick = () => {
+    if (tournamentId) {
+      void syncTournament(tournamentId);
+    }
+  };
 
   const handleSearchToggle = () => {
     if (isSearchExpanded && searchQuery) {
@@ -179,6 +190,17 @@ export function AdminHeader({
       >
         {showBackToHub ? title : 'ADMIN CENTER'}
       </div>
+
+      {/* Sync Status */}
+      {showSyncStatus && (
+        <SyncStatusBar
+          status={status}
+          isSyncing={isSyncing}
+          lastSyncedAt={lastSyncedAt}
+          onSyncClick={handleSyncClick}
+          compact
+        />
+      )}
 
       {/* Search */}
       {onSearch && (

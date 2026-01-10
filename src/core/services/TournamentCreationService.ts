@@ -3,6 +3,7 @@ import { Tournament } from '../models/types';
 import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
+import { generateShareCode } from '../../utils/shareCode';
 
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
@@ -151,6 +152,12 @@ export class TournamentCreationService {
      */
     async publish(data: Partial<Tournament>): Promise<Tournament> {
         const tournament = this.createDraft(data, data.id);
+
+        // Generate share code if public and no share code exists
+        if (tournament.isPublic && !tournament.shareCode) {
+            tournament.shareCode = generateShareCode();
+            tournament.shareCodeCreatedAt = new Date().toISOString();
+        }
 
         // Generate full schedule
         const schedule = generateFullSchedule(tournament);

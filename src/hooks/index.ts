@@ -34,6 +34,7 @@ export { useLiveProgress, formatTime, type UseLiveProgressReturn, type ProgressM
 export { useMultiTabSync } from './useMultiTabSync'
 export { useOnlineStatus } from './useOnlineStatus'
 export { useSyncedPenalties } from './useSyncedPenalties'
+export { useSyncStatus, type SyncState, type UseSyncStatusReturn } from './useSyncStatus'
 
 // Domain Specific
 export { useTournaments } from './useTournaments'
