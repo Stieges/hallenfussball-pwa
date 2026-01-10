@@ -94,11 +94,47 @@ export const AuthCallback: React.FC = () => {
           return;
         }
 
+        // IMPORTANT: Check for existing session FIRST
+        // Supabase with detectSessionInUrl:true may have already processed the code/tokens
+        // OAuth codes are single-use, so trying to exchange again would fail
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+        if (existingSession) {
+          // Session already exists (Supabase auto-detected or previous login)
+          // Check if this is a password recovery flow
+          const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
+
+          if (isPasswordRecovery) {
+            sessionStorage.removeItem('auth:passwordRecovery');
+            void navigate('/set-password', { replace: true });
+            return;
+          }
+
+          // Successfully authenticated, redirect to home
+          void navigate('/', { replace: true });
+          return;
+        }
+
         // Handle PKCE flow (code in query params)
+        // Only try if no existing session (code wasn't auto-processed)
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
           if (exchangeError) {
+            // If code was already used, check if session exists now
+            if (exchangeError.message.includes('code') || exchangeError.message.includes('expired')) {
+              const { data: { session: retrySession } } = await supabase.auth.getSession();
+              if (retrySession) {
+                const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
+                if (isPasswordRecovery) {
+                  sessionStorage.removeItem('auth:passwordRecovery');
+                  void navigate('/set-password', { replace: true });
+                  return;
+                }
+                void navigate('/', { replace: true });
+                return;
+              }
+            }
             console.error('Code exchange error:', exchangeError);
             setError(exchangeError.message);
             return;
@@ -144,34 +180,13 @@ export const AuthCallback: React.FC = () => {
           return;
         }
 
-        // Check if we already have a valid session (e.g., from onAuthStateChange)
-        const { data: { session }, error: getSessionError } = await supabase.auth.getSession();
-
-        if (getSessionError) {
-          setError(getSessionError.message);
-          return;
-        }
-
-        if (session) {
-          // Check if this is a password recovery flow
-          // Check both URL param (legacy/implicit) and sessionStorage flag (PKCE)
-          const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
-
-          if (isPasswordRecovery) {
-            // Clear the flag so it doesn't persist
-            sessionStorage.removeItem('auth:passwordRecovery');
-            void navigate('/set-password', { replace: true });
-            return;
-          }
-
-          // Successfully authenticated, redirect to home
-          void navigate('/', { replace: true });
-        } else {
-          // No session and no tokens - redirect to login
-          void navigate('/login', { replace: true });
-        }
+        // No code, no tokens, no session - redirect to login
+        void navigate('/login', { replace: true });
       } catch (err) {
         console.error('Auth callback error:', err);
+        // Provide more context in development
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('Error details:', errorMessage);
         setError('Ein unerwarteter Fehler ist aufgetreten.');
       }
     };
