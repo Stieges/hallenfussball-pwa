@@ -17,6 +17,8 @@ import { LiveCockpit } from '../../components/live-cockpit';
 import { MatchSummary } from '../../components/match-cockpit/MatchCockpit';
 import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useMatchExecution } from '../../hooks/useMatchExecution';
+import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
+import { canEditResults } from '../auth/utils/permissions';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -66,6 +68,18 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleCancelTiebreaker,
     handleUpdateEvent,
   } = useMatchExecution({ tournament, onTournamentUpdate });
+
+  // Permission check: Get current user's role in this tournament
+  const { myMembership } = useTournamentMembers(tournament.id);
+
+  // Determine if user can edit results for a specific match
+  const userTeamIds = useMemo(() => myMembership?.teamIds ?? [], [myMembership?.teamIds]);
+  const checkCanEditMatch = useCallback((matchTeamIds: string[]) => {
+    if (!myMembership) {
+      return true; // No membership info = allow by default (offline/local mode)
+    }
+    return canEditResults(myMembership.role, userTeamIds, matchTeamIds);
+  }, [myMembership, userTeamIds]);
 
   // Confirm dialogs
   const startWithResultDialog = useConfirmDialog({
@@ -356,6 +370,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           tournamentName={tournament.title}
           tournamentId={tournament.id}
           cockpitSettings={tournament.matchCockpitSettings}
+          readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
           currentMatch={currentMatch}
           lastFinishedMatch={lastFinishedMatch}
           upcomingMatches={upcomingMatches}

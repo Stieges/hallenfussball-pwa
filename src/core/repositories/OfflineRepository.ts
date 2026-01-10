@@ -3,6 +3,32 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 
+// =============================================================================
+// SYNC TYPES
+// =============================================================================
+
+export type SyncStatus = 'synced' | 'updated' | 'conflict' | 'error' | 'offline';
+
+export interface SyncResult {
+    status: SyncStatus;
+    data?: Tournament;
+    error?: string;
+    conflicts?: SyncConflict[];
+}
+
+export interface SyncConflict {
+    id: string;
+    entityType: 'match' | 'tournament';
+    entityId: string;
+    entityName: string;
+    field: string;
+    localValue: unknown;
+    remoteValue: unknown;
+    localTimestamp: string;
+    remoteTimestamp: string;
+    remoteUser?: string;
+}
+
 export class OfflineRepository implements ITournamentRepository {
     constructor(
         private localRepo: LocalStorageRepository,
@@ -161,6 +187,190 @@ export class OfflineRepository implements ITournamentRepository {
             }
         } catch (error) {
             console.error('Sync up failed:', error);
+        }
+    }
+
+    /**
+     * Pull changes from cloud to local.
+     * Strategy:
+     * 1. Get remote version from Supabase
+     * 2. Compare with local version
+     * 3. If remote is newer → update local
+     * 4. If local is newer → return 'synced' (handled by syncUp)
+     * 5. Detect conflicts for concurrent edits
+     */
+    async syncDown(tournamentId: string): Promise<SyncResult> {
+        try {
+            // 1. Get both versions
+            const [remoteT, localT] = await Promise.all([
+                this.supabaseRepo.get(tournamentId),
+                this.localRepo.get(tournamentId),
+            ]);
+
+            // Case: No remote data
+            if (!remoteT) {
+                if (localT) {
+                    // Local exists but not remote - needs syncUp
+                    return { status: 'synced', data: localT };
+                }
+                return { status: 'error', error: 'Tournament not found' };
+            }
+
+            // Case: No local data - just save remote
+            if (!localT) {
+                await this.localRepo.save(remoteT);
+                return { status: 'updated', data: remoteT };
+            }
+
+            // 2. Compare timestamps
+            const localDate = new Date(localT.updatedAt).getTime();
+            const remoteDate = new Date(remoteT.updatedAt).getTime();
+
+            // Case: Already in sync
+            if (localDate === remoteDate) {
+                return { status: 'synced', data: localT };
+            }
+
+            // Case: Remote is newer - update local
+            if (remoteDate > localDate) {
+                // Check for conflicts in match scores (most critical data)
+                const conflicts = this.detectMatchConflicts(localT, remoteT);
+
+                if (conflicts.length > 0) {
+                    // We have conflicts - don't auto-merge, return conflict status
+                    return { status: 'conflict', data: remoteT, conflicts };
+                }
+
+                // No conflicts - safe to update local
+                await this.localRepo.save(remoteT);
+                return { status: 'updated', data: remoteT };
+            }
+
+            // Case: Local is newer - nothing to do for syncDown
+            // This will be handled by syncUp
+            return { status: 'synced', data: localT };
+
+        } catch (error) {
+            // Check if we're offline
+            if (!navigator.onLine) {
+                return { status: 'offline', error: 'No internet connection' };
+            }
+
+            console.error('SyncDown failed:', error);
+            return {
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    }
+
+    /**
+     * Detects conflicts between local and remote match scores.
+     * Uses Last-Write-Wins (LWW) for automatic resolution where possible.
+     */
+    private detectMatchConflicts(local: Tournament, remote: Tournament): SyncConflict[] {
+        const conflicts: SyncConflict[] = [];
+
+        for (const localMatch of local.matches) {
+            const remoteMatch = remote.matches.find(m => m.id === localMatch.id);
+
+            if (!remoteMatch) {
+                continue; // New local match, handled by syncUp
+            }
+
+            // Check for score conflicts
+            const localHasScore = localMatch.scoreA !== undefined && localMatch.scoreB !== undefined;
+            const remoteHasScore = remoteMatch.scoreA !== undefined && remoteMatch.scoreB !== undefined;
+
+            if (localHasScore && remoteHasScore) {
+                const scoresDiffer =
+                    localMatch.scoreA !== remoteMatch.scoreA ||
+                    localMatch.scoreB !== remoteMatch.scoreB;
+
+                if (scoresDiffer) {
+                    // Get team names for conflict display
+                    const homeTeam = local.teams.find(t => t.id === localMatch.teamA);
+                    const awayTeam = local.teams.find(t => t.id === localMatch.teamB);
+                    const matchName = `${homeTeam?.name ?? 'Team A'} vs ${awayTeam?.name ?? 'Team B'}`;
+
+                    conflicts.push({
+                        id: `${localMatch.id}-score`,
+                        entityType: 'match',
+                        entityId: localMatch.id,
+                        entityName: matchName,
+                        field: 'score',
+                        localValue: `${localMatch.scoreA}:${localMatch.scoreB}`,
+                        remoteValue: `${remoteMatch.scoreA}:${remoteMatch.scoreB}`,
+                        localTimestamp: local.updatedAt,
+                        remoteTimestamp: remote.updatedAt,
+                    });
+                }
+            }
+        }
+
+        return conflicts;
+    }
+
+    /**
+     * Resolves a conflict by choosing local or remote version.
+     */
+    async resolveConflict(
+        tournamentId: string,
+        resolution: 'local' | 'remote'
+    ): Promise<SyncResult> {
+        try {
+            if (resolution === 'local') {
+                // Push local to cloud
+                const local = await this.localRepo.get(tournamentId);
+                if (local) {
+                    await this.supabaseRepo.save(local);
+                    return { status: 'synced', data: local };
+                }
+            } else {
+                // Pull remote to local
+                const remote = await this.supabaseRepo.get(tournamentId);
+                if (remote) {
+                    await this.localRepo.save(remote);
+                    return { status: 'updated', data: remote };
+                }
+            }
+            return { status: 'error', error: 'Tournament not found' };
+        } catch (error) {
+            return {
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Resolution failed',
+            };
+        }
+    }
+
+    /**
+     * Full bidirectional sync for a single tournament.
+     * 1. Pull remote changes (syncDown)
+     * 2. Push local changes (syncUp for single tournament)
+     */
+    async syncTournament(tournamentId: string): Promise<SyncResult> {
+        // First, pull remote changes
+        const downResult = await this.syncDown(tournamentId);
+
+        // If there was a conflict or error, return that
+        if (downResult.status === 'conflict' || downResult.status === 'error') {
+            return downResult;
+        }
+
+        // Then, try to push local changes if needed
+        try {
+            const local = await this.localRepo.get(tournamentId);
+            if (local) {
+                const remote = await this.supabaseRepo.get(tournamentId);
+                if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
+                    await this.supabaseRepo.save(local);
+                }
+            }
+            return { status: 'synced', data: local ?? downResult.data };
+        } catch (error) {
+            // If push fails (offline), still return success for the pull
+            console.warn('SyncUp part failed, but syncDown succeeded:', error);
+            return downResult;
         }
     }
 }

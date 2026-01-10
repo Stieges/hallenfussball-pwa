@@ -252,6 +252,10 @@ export interface AdminHeaderProps {
   onBackToHub?: () => void;
   onBackToTournament: () => void;
   onSearch?: (query: string) => void;
+  /** Tournament ID for sync status */
+  tournamentId?: string;
+  /** Show sync status indicator */
+  showSyncStatus?: boolean;
 }
 
 // =============================================================================

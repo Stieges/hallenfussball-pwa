@@ -53,6 +53,8 @@ export interface LiveCockpitProps {
   tournamentId: string;
   /** Match Cockpit Pro settings from tournament */
   cockpitSettings?: import('../../types/tournament').MatchCockpitSettings;
+  /** If true, actions are disabled (viewer mode) */
+  readOnly?: boolean;
 
   /** The current match being played */
   currentMatch: import('../match-cockpit/MatchCockpit').LiveMatch | null;
