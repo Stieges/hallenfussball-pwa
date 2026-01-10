@@ -109,12 +109,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, avatar_url')
+        .select('display_name, avatar_url, role')
         .eq('id', userId)
         .single();
 
       if (error) {
-        console.warn('Profile fetch error (may not exist yet):', error.message);
+        // Warning is expected if profile doesn't exist yet (e.g. very fresh signup)
+        if (error.code !== 'PGRST116') {
+          console.warn('Profile fetch error:', error.message);
+        }
         return null;
       }
 
@@ -122,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return {
         name: data.display_name ?? '',
         avatar_url: data.avatar_url,
-        role: 'user' as const, // Default role since it's not stored in profiles
+        role: (data.role as 'user' | 'admin' | null) ?? 'user',
       };
     } catch (err) {
       console.error('Profile fetch failed:', err);
@@ -266,8 +269,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Check if current user is a guest (for migration)
       const wasGuest = isGuest && user?.globalRole === 'guest';
-      // Note: guestId could be used later for migrating local data to the new user account
-      // const guestId = wasGuest ? user.id : undefined;
 
       const { data, error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -296,18 +297,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         };
       }
 
-      // Update profile with display_name
-      await supabase
-        .from('profiles')
-        .update({ display_name: name.trim() })
-        .eq('id', data.user.id);
+      // NO MANUAL PROFILE UPDATE HERE!
+      // Rely on DB Trigger (auth_hardening.sql) to create profile from metadata
 
       // Clear guest data
       if (wasGuest) {
         localStorage.removeItem('auth:guestUser');
       }
 
-      // Get profile data
+      // Get profile data (might need a small delay or retry if trigger is slow, 
+      // but usually fast enough for next render)
       const profileData = await fetchProfile(data.user.id);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 

@@ -18,12 +18,10 @@
  * @see live-cockpit.spec.ts for the working pattern
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
 
-// Skip all tests in CI until localStorage seeding is fixed
-test.beforeEach(() => {
-  test.skip(!!process.env.CI, 'Temporarily skipped in CI - localStorage seeding needs migration');
-});
+// CI skip removed - using reliable seeding fixture
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -144,13 +142,14 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   // Skip iPhone - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async ({ page }, testInfo) => {
+  // Skip iPhone - Safe Area viewport emulation causes click interception issues
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -225,13 +224,14 @@ test.describe('Spielplan 2.0 - Desktop Layout', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
   // Skip iPhone - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async ({ page }, testInfo) => {
+  // Skip iPhone - Safe Area viewport emulation causes click interception issues
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -296,13 +296,13 @@ test.describe('Spielplan 2.0 - Desktop Layout', () => {
 // =============================================================================
 
 test.describe('Spielplan 2.0 - Progress-Ring', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -362,13 +362,13 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
 // =============================================================================
 
 test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -477,13 +477,13 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 // =============================================================================
 
 test.describe('Spielplan 2.0 - Score-Eingabe', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -588,13 +588,13 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
 // =============================================================================
 
 test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -725,13 +725,13 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
 test.describe('Spielplan 2.0 - Design Tokens', () => {
   // Skip iPhone - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -783,13 +783,14 @@ test.describe('Spielplan 2.0 - Design Tokens', () => {
 
 test.describe('Spielplan 2.0 - Accessibility', () => {
   // Skip iPhone - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async ({ page }, testInfo) => {
+  // Skip iPhone - Safe Area viewport emulation causes click interception issues
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await page.addInitScript((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test.afterEach(async ({ page }) => {

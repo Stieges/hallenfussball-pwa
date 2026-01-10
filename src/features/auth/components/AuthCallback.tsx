@@ -194,6 +194,16 @@ export const AuthCallback: React.FC = () => {
     void handleAuthCallback();
   }, [navigate, location.search]);
 
+  // Auto-redirect on error
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        void navigate('/login', { replace: true });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, navigate]);
+
   if (error) {
     return (
       <div style={styles.container}>
@@ -201,6 +211,9 @@ export const AuthCallback: React.FC = () => {
           <div style={styles.errorIcon}>!</div>
           <h2 style={styles.title}>Authentifizierung fehlgeschlagen</h2>
           <p style={styles.text}>{error}</p>
+          <p style={{ ...styles.text, fontSize: cssVars.fontSizes.sm }}>
+            Du wirst in 5 Sekunden zum Login weitergeleitet...
+          </p>
           <button
             onClick={() => void navigate('/login', { replace: true })}
             style={styles.button}
