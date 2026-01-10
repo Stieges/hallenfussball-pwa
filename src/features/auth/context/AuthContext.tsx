@@ -41,10 +41,15 @@ function mapSupabaseUser(
   // Extract user_metadata with proper typing
   const metadata = supabaseUser.user_metadata as { full_name?: string; avatar_url?: string } | undefined;
 
+  // Use profile name if non-empty, otherwise fall back through the chain
+  const profileName = profileData?.name && profileData.name.trim() !== '' ? profileData.name : undefined;
+  const metadataName = metadata?.full_name && metadata.full_name.trim() !== '' ? metadata.full_name : undefined;
+  const emailName = supabaseUser.email?.split('@')[0];
+
   return {
     id: supabaseUser.id,
     email: supabaseUser.email ?? '',
-    name: profileData?.name ?? metadata?.full_name ?? supabaseUser.email?.split('@')[0] ?? 'User',
+    name: profileName ?? metadataName ?? emailName ?? 'User',
     avatarUrl: profileData?.avatar_url ?? metadata?.avatar_url,
     globalRole: profileData?.role as 'user' | 'admin' | undefined ?? 'user',
     createdAt: supabaseUser.created_at,
