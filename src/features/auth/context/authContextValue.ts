@@ -31,4 +31,6 @@ export interface AuthContextValue extends AuthState {
   updateProfile: (updates: { name?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
   /** Sendet eine Passwort-Reset E-Mail (async) */
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  /** Setzt ein neues Passwort (nach Recovery) (async) */
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }

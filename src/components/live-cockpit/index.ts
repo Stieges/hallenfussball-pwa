@@ -1,15 +1,15 @@
 /**
- * Live Cockpit - Redesigned Match Control Interface
+ * Live Cockpit - Match Control Interface
  *
  * A touch-optimized interface for tournament directors to manage live matches.
- *
- * @see docs/concepts/LIVE-SCREEN-REDESIGN.md
- * @see docs/user-stories/US-LIVE-REDESIGN.md
+ * Features: Timer, Score Control, Event Tracking, Fouls, Cards, Substitutions.
  */
 
 export { LiveCockpit } from './LiveCockpit';
-export { LiveCockpitMockup } from './LiveCockpitMockup';
 export { default } from './LiveCockpit';
+
+// Backwards compatibility alias (deprecated - use LiveCockpit instead)
+export { LiveCockpit as LiveCockpitMockup } from './LiveCockpit';
 
 // Export types
 export type {

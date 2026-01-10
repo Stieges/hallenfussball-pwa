@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
-import { DndContext, closestCenter, DragOverlay } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragOverlay, Announcements } from '@dnd-kit/core';
 import { Tournament, Match } from '../../types/tournament';
 
 // ============================================================================
@@ -437,6 +437,49 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     validateDrop,
   });
 
+  // DnD Accessibility Announcements for screenreaders
+  const announcements: Announcements = useMemo(() => {
+    const getMatchLabel = (matchId: string | number): string => {
+      const match = tournament.matches.find(m => m.id === String(matchId));
+      if (!match) {
+        return `Spiel ${matchId}`;
+      }
+      const teams = tournament.teams;
+      const homeTeam = teams.find(t => t.id === match.teamA)?.name || match.teamA;
+      const awayTeam = teams.find(t => t.id === match.teamB)?.name || match.teamB;
+      return `Spiel ${match.round}: ${homeTeam} gegen ${awayTeam}`;
+    };
+
+    const getSlotLabel = (slotId: string | number): string => {
+      const slotMatch = String(slotId).match(/^slot-(.+)-(\d+)$/);
+      if (!slotMatch) {
+        return `Zeitslot ${slotId}`;
+      }
+      return `${slotMatch[1]} Uhr, Feld ${slotMatch[2]}`;
+    };
+
+    return {
+      onDragStart({ active }) {
+        return `${getMatchLabel(active.id)} wird gezogen. Nutze Pfeiltasten zum Verschieben.`;
+      },
+      onDragOver({ active, over }) {
+        if (over) {
+          return `${getMatchLabel(active.id)} über ${getSlotLabel(over.id)}`;
+        }
+        return undefined;
+      },
+      onDragEnd({ active, over }) {
+        if (over) {
+          return `${getMatchLabel(active.id)} wurde auf ${getSlotLabel(over.id)} verschoben.`;
+        }
+        return `Verschieben von ${getMatchLabel(active.id)} abgebrochen.`;
+      },
+      onDragCancel({ active }) {
+        return `Verschieben von ${getMatchLabel(active.id)} abgebrochen.`;
+      },
+    };
+  }, [tournament.matches, tournament.teams]);
+
   // Build schedule grid
   const scheduleGrid = useMemo(
     () => groupMatchesByTimeSlot(filteredMatches, tournament.numberOfFields),
@@ -529,6 +572,12 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
+      accessibility={{
+        announcements,
+        screenReaderInstructions: {
+          draggable: 'Drücke Leertaste um das Spiel zu greifen. Nutze Pfeiltasten zum Verschieben, Leertaste zum Ablegen, Escape zum Abbrechen.',
+        },
+      }}
     >
       <div style={containerStyle}>
         {/* Toolbar - hidden when parent provides unified toolbar */}
@@ -645,9 +694,9 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             return activeMatch ? (
               <div style={{
                 // BUG-FIX: Do not use height: '100%' here as it expands to viewport height in portal
-                // height: '100%', 
+                // height: '100%',
+                // BUG-FIX: Removed scale(1.02) to prevent visual "jumping" when drag starts
                 opacity: 0.9,
-                transform: 'scale(1.02)'
               }}>
                 <DraggableMatch
                   match={activeMatch}

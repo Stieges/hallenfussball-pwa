@@ -20,6 +20,132 @@ import { Button } from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
 
+// =============================================================================
+// EMAIL VALIDATION
+// =============================================================================
+
+/** Common valid TLDs */
+const VALID_TLDS = new Set([
+  // Generic
+  'com', 'net', 'org', 'edu', 'gov', 'info', 'biz', 'io', 'co', 'app', 'dev',
+  // European
+  'de', 'at', 'ch', 'nl', 'be', 'fr', 'uk', 'es', 'it', 'pt', 'pl', 'cz', 'eu',
+  // Other major
+  'us', 'ca', 'au', 'nz', 'jp', 'kr', 'cn', 'in', 'br', 'mx', 'ru',
+]);
+
+/** Common disposable email domains to block */
+const DISPOSABLE_DOMAINS = new Set([
+  'tempmail.com', 'throwaway.email', '10minutemail.com', 'guerrillamail.com',
+  'mailinator.com', 'trashmail.com', 'fakeinbox.com', 'temp-mail.org',
+  'disposablemail.com', 'yopmail.com', 'tempail.com', 'mohmal.com',
+  'getnada.com', 'mailnesia.com', 'emailondeck.com', 'dispostable.com',
+]);
+
+/** Common email provider typos */
+const EMAIL_TYPO_SUGGESTIONS: Record<string, string> = {
+  'gmial.com': 'gmail.com',
+  'gmal.com': 'gmail.com',
+  'gamil.com': 'gmail.com',
+  'gnail.com': 'gmail.com',
+  'gmail.de': 'gmail.com', // Gmail doesn't have .de
+  'gmx.com': 'gmx.de', // GMX is mostly .de
+  'outook.com': 'outlook.com',
+  'outlok.com': 'outlook.com',
+  'hotmal.com': 'hotmail.com',
+  'hotmai.com': 'hotmail.com',
+  'yahooo.com': 'yahoo.com',
+  'yaho.com': 'yahoo.com',
+  'web.com': 'web.de',
+};
+
+interface EmailValidationResult {
+  isValid: boolean;
+  error?: string;
+  suggestion?: string;
+}
+
+/**
+ * Enhanced email validation
+ * Checks format, TLD validity, disposable domains, and common typos
+ */
+function validateEmail(email: string): EmailValidationResult {
+  const trimmed = email.trim().toLowerCase();
+
+  // Basic format check
+  if (!trimmed) {
+    return { isValid: false, error: 'E-Mail ist erforderlich' };
+  }
+
+  // More comprehensive regex: local@domain.tld
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) {
+    return { isValid: false, error: 'Bitte gib eine gültige E-Mail-Adresse ein' };
+  }
+
+  // Extract domain parts
+  const parts = trimmed.split('@');
+  if (parts.length !== 2) {
+    return { isValid: false, error: 'Ungültiges E-Mail-Format' };
+  }
+
+  const [localPart, domain] = parts;
+
+  // Local part checks
+  if (localPart.length < 1) {
+    return { isValid: false, error: 'E-Mail-Adresse vor @ ist zu kurz' };
+  }
+  if (localPart.length > 64) {
+    return { isValid: false, error: 'E-Mail-Adresse vor @ ist zu lang' };
+  }
+
+  // Domain checks
+  if (domain.length < 4) {
+    return { isValid: false, error: 'Domain ist zu kurz' };
+  }
+  if (domain.length > 255) {
+    return { isValid: false, error: 'Domain ist zu lang' };
+  }
+
+  // Check for typos in common providers
+  const suggestion = EMAIL_TYPO_SUGGESTIONS[domain];
+  if (suggestion) {
+    return {
+      isValid: false,
+      error: `Meintest du ${localPart}@${suggestion}?`,
+      suggestion: `${localPart}@${suggestion}`,
+    };
+  }
+
+  // Check for disposable email domains
+  if (DISPOSABLE_DOMAINS.has(domain)) {
+    return {
+      isValid: false,
+      error: 'Wegwerf-E-Mail-Adressen sind nicht erlaubt',
+    };
+  }
+
+  // Extract and validate TLD
+  const domainParts = domain.split('.');
+  const tld = domainParts[domainParts.length - 1];
+
+  if (tld.length < 2) {
+    return { isValid: false, error: 'Ungültige Domain-Endung' };
+  }
+
+  // Check if TLD is in our known list (warning, not blocking)
+  // We don't block unknown TLDs as new ones are created regularly
+  if (!VALID_TLDS.has(tld) && tld.length > 6) {
+    // Very long unknown TLDs are suspicious
+    return {
+      isValid: false,
+      error: 'Bitte überprüfe die Domain-Endung',
+    };
+  }
+
+  return { isValid: true };
+}
+
 interface RegisterScreenProps {
   /** Called when registration is successful */
   onSuccess?: () => void;
@@ -50,6 +176,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     registrationCode?: string;
     general?: string;
   }>({});
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
@@ -76,11 +203,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       newErrors.name = 'Name darf maximal 100 Zeichen haben.';
     }
 
-    // Email validation
-    if (!email.trim()) {
-      newErrors.email = 'E-Mail ist erforderlich';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Bitte gib eine gültige E-Mail-Adresse ein';
+    // Enhanced email validation
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      newErrors.email = emailValidation.error;
+      // Store suggestion for typo correction
+      if (emailValidation.suggestion) {
+        setEmailSuggestion(emailValidation.suggestion);
+      } else {
+        setEmailSuggestion(null);
+      }
+    } else {
+      setEmailSuggestion(null);
     }
 
     // Password validation
@@ -308,7 +442,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               name="email"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Clear suggestion when user types
+                setEmailSuggestion(null);
+              }}
               placeholder="name@mein-verein.de"
               style={{
                 ...styles.input,
@@ -317,6 +455,19 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               autoComplete="email"
             />
             {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+            {emailSuggestion && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail(emailSuggestion);
+                  setEmailSuggestion(null);
+                  setErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                style={styles.suggestionButton}
+              >
+                ✓ {emailSuggestion} verwenden
+              </button>
+            )}
           </div>
 
           <div style={styles.inputGroup}>
@@ -566,6 +717,17 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.xs,
     color: cssVars.colors.textMuted,
     marginTop: cssVars.spacing.xs,
+  },
+  suggestionButton: {
+    marginTop: cssVars.spacing.xs,
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.primary,
+    background: cssVars.colors.primarySubtle,
+    border: `1px solid ${cssVars.colors.primary}`,
+    borderRadius: cssVars.borderRadius.sm,
+    cursor: 'pointer',
+    fontWeight: cssVars.fontWeights.medium,
   },
   generalError: {
     padding: cssVars.spacing.md,

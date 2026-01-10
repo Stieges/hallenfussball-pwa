@@ -592,6 +592,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [user, isGuest]);
 
+  /**
+   * Update password (after password recovery)
+   */
+  const updatePassword = useCallback(async (
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return {
+        success: false,
+        error: 'Cloud-Funktionen sind nicht verfügbar.',
+      };
+    }
+
+    // Validate password
+    if (newPassword.length < 6) {
+      return {
+        success: false,
+        error: 'Passwort muss mindestens 6 Zeichen haben.',
+      };
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: error.message === 'New password should be different from the old password.'
+            ? 'Das neue Passwort muss sich vom alten unterscheiden.'
+            : error.message,
+        };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error('Update password error:', err);
+      return {
+        success: false,
+        error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      };
+    }
+  }, []);
+
   // Context value
   const value: AuthContextValue = {
     user,
@@ -608,6 +653,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     refreshAuth,
     updateProfile,
     resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

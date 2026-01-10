@@ -20,6 +20,7 @@ import {
   UserProfileScreen,
   InviteAcceptScreen,
   AuthCallback,
+  SetPasswordScreen,
 } from './features/auth/components';
 import { Footer } from './components/layout';
 
@@ -96,7 +97,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'set-password';
 
 function AppContent() {
   const { showError } = useToast();
@@ -111,6 +112,7 @@ function AppContent() {
   const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
   const isAdminPath = !!adminMatch;
   const adminTournamentId = adminMatch?.[1] ?? null;
+  const adminCategory = adminMatch?.[2];
 
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
   const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
@@ -255,6 +257,8 @@ function AppContent() {
       setScreen('register');
     } else if (path === '/login') {
       setScreen('login');
+    } else if (path === '/set-password') {
+      setScreen('set-password');
     }
   }, [location.pathname]); // Depend on location.pathname to react to URL changes
 
@@ -466,20 +470,24 @@ function AppContent() {
 
         {screen === 'auth-callback' && <AuthCallback />}
 
+        {screen === 'set-password' && <SetPasswordScreen />}
+
         {screen === 'profile' && (
           <UserProfileScreen
             onBack={() => void navigate('/')}
-            onOpenSettings={() => setScreen('settings')}
+            onOpenSettings={() => {
+              setScreen('settings');
+              void navigate('/settings');
+            }}
           />
         )}
 
         {screen === 'settings' && (
           <SettingsScreen
             onBack={() => {
+              // Use navigate(-1) if we have history, or fallback to profile
+              // For now, explicit navigation to profile is safer for this hub-and-spoke model
               setScreen('profile');
-              // Optionally update URL if needed, but 'profile' screen logic handles its own state
-              // But wait, profile screen is also just a 'screen' state. 
-              // Let's also navigate to /profile if that's the desired URL behavior
               void navigate('/profile');
             }}
             onNavigateToImpressum={() => setScreen('impressum')}
@@ -567,6 +575,7 @@ function AppContent() {
         {isAdminPath && adminTournamentId && (
           <TournamentAdminCenter
             tournamentId={adminTournamentId}
+            initialCategory={adminCategory}
             onBackToTournament={() => void navigate(`/tournament/${adminTournamentId}`)}
           />
         )}

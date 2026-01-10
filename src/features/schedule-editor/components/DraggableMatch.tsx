@@ -132,7 +132,7 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
             ? cssVars.colors.editorDirtyRowBg
             : cssVars.colors.surface,
     border: isDragging
-      ? `3px dashed ${cssVars.colors.primary}` // Dashed border when dragging
+      ? `2px dashed ${cssVars.colors.primary}` // BUG-FIX: Keep 2px (was 3px) to prevent layout shift
       : `2px solid ${isSelected
         ? cssVars.colors.primary
         : hasErrors
@@ -262,8 +262,10 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '28px',
-    height: '28px',
+    width: '44px',
+    height: '44px',
+    minWidth: '44px',
+    minHeight: '44px',
     color: cssVars.colors.primary,
     backgroundColor: cssVars.colors.editorDragActiveBg,
     borderRadius: cssVars.borderRadius.sm,

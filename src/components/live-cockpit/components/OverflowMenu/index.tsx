@@ -158,11 +158,12 @@ export function OverflowMenu({
 
 
   // Styles
+  // z-index must be higher than BottomNavigation (1000)
   const overlayStyle: CSSProperties = {
     position: 'fixed',
     inset: 0,
     background: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 100,
+    zIndex: 1050,
   };
 
   const menuStyle: CSSProperties = {
@@ -175,7 +176,7 @@ export function OverflowMenu({
     borderRadius: cssVars.borderRadius.lg,
     boxShadow: cssVars.shadows.lg,
     padding: cssVars.spacing.xs,
-    zIndex: 101,
+    zIndex: 1100,
   };
 
   const sectionLabelStyle: CSSProperties = {

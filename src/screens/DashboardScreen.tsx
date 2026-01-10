@@ -158,10 +158,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   const containerStyle: CSSProperties = {
     padding: isMobile ? '20px 16px' : '40px 20px',
-    // Add bottom padding on mobile for fixed bottom nav (64px nav + safe area)
-    paddingBottom: isMobile ? 'calc(64px + env(safe-area-inset-bottom, 0px) + 20px)' : '40px',
+    // Add bottom padding on mobile for fixed bottom nav (64px nav + safe area + extra buffer)
+    paddingBottom: isMobile ? 'calc(80px + env(safe-area-inset-bottom, 0px) + 40px)' : '40px',
     maxWidth: '1200px',
     margin: '0 auto',
+    minHeight: isMobile ? '100vh' : 'auto',
   };
 
   const headerStyle: CSSProperties = {

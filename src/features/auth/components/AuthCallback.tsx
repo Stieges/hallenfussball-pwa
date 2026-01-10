@@ -30,6 +30,7 @@ export const AuthCallback: React.FC = () => {
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
         const errorDescription = hashParams.get('error_description');
+        const type = hashParams.get('type'); // 'recovery' for password reset
 
         if (errorDescription) {
           setError(decodeURIComponent(errorDescription));
@@ -58,6 +59,13 @@ export const AuthCallback: React.FC = () => {
         }
 
         if (session) {
+          // Check if this is a password recovery flow
+          if (type === 'recovery') {
+            // Redirect to set password screen
+            void navigate('/set-password', { replace: true });
+            return;
+          }
+
           // Successfully authenticated, redirect to home
           void navigate('/', { replace: true });
         } else {

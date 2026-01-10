@@ -17,7 +17,8 @@ import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'reac
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
-import { cssVars } from '../../design-tokens'
+import { cssVars } from '../../design-tokens';
+import { Icons } from '../ui/Icons';
 
 interface AuthSectionProps {
   onNavigateToLogin: () => void;
@@ -231,7 +232,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={styles.dropdownItem}
               data-testid="auth-profile-button"
             >
-              <span style={styles.dropdownIcon}>👤</span>
+              <span style={styles.dropdownIcon}><Icons.User size={18} color="currentColor" /></span>
               Mein Profil
             </button>
 
@@ -246,7 +247,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={styles.dropdownItem}
               data-testid="auth-settings-button"
             >
-              <span style={styles.dropdownIcon}>⚙️</span>
+              <span style={styles.dropdownIcon}><Icons.Settings size={18} color="currentColor" /></span>
               Einstellungen
             </button>
 
@@ -263,7 +264,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={{ ...styles.dropdownItem, ...styles.dropdownItemDanger }}
               data-testid="auth-logout-button"
             >
-              <span style={styles.dropdownIcon}>🚪</span>
+              <span style={styles.dropdownIcon}><Icons.LogOut size={18} color="currentColor" /></span>
               Abmelden
             </button>
           </div>
@@ -281,7 +282,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
           {/* Gast-Badge (nur Desktop) */}
           {!isMobile && (
             <div style={styles.guestBadge} data-testid="auth-guest-badge">
-              <span style={styles.guestIcon}>👤</span>
+              <Icons.User size={16} color={cssVars.colors.textTertiary} />
               Gast
               <span style={styles.guestInfoIcon}>ℹ</span>
             </div>
@@ -296,7 +297,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               aria-label="Konto-Optionen öffnen (aktuell als Gast)"
               data-testid="auth-mobile-guest-button"
             >
-              <span style={styles.mobileIcon}>👤</span>
+              <Icons.User size={24} color={cssVars.colors.textSecondary} />
               <span style={styles.guestDot} />
             </button>
           )}
@@ -341,7 +342,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
             aria-label="Konto-Optionen öffnen"
             data-testid="auth-mobile-button"
           >
-            <span style={styles.mobileIcon}>👤</span>
+            <Icons.User size={24} color={cssVars.colors.textSecondary} />
           </button>
         ) : (
           <>
@@ -439,7 +440,7 @@ const styles: Record<string, CSSProperties> = {
     boxShadow: cssVars.shadows.lg,
     border: `1px solid ${cssVars.colors.border}`,
     overflow: 'hidden',
-    zIndex: 1000,
+    zIndex: 1100, // Higher than BottomNavigation (1000)
   },
 
   dropdownHeader: {

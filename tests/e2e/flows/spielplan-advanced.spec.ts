@@ -219,7 +219,7 @@ test.describe('Spielwechsel-Logik', () => {
         await page.waitForURL(/.*\/live/, { timeout: 10000 });
 
         // Wait for the ManagementTab to fully render
-        // The LiveCockpitMockup needs time to initialize with the match data
+        // The LiveCockpit needs time to initialize with the match data
         // Use a more robust wait strategy: wait for the timer display (always visible in cockpit)
         const timerDisplay = page.getByTestId('match-timer-display');
 
@@ -228,7 +228,7 @@ test.describe('Spielwechsel-Logik', () => {
         await expect(timerDisplay.first()).toBeVisible({ timeout: 10000 });
 
         // THEN - Should be in cockpit with new match
-        // Timer display is in LiveCockpitMockup component
+        // Timer display is in LiveCockpit component
         // Test passes if we're in the cockpit (timer is visible)
         expect(await timerDisplay.first().isVisible()).toBeTruthy();
       }

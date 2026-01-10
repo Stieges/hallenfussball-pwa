@@ -293,8 +293,10 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     onClick={() => toggleExpanded(team.id)}
                     style={{
                       flexShrink: 0,
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
+                      minWidth: 44,
+                      minHeight: 44,
                       padding: 0,
                       background: cssVars.colors.surface,
                       border: `1px solid ${cssVars.colors.border}`,

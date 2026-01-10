@@ -6,7 +6,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 4.3
  */
 
-import React, { CSSProperties, useState } from 'react';
+import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
@@ -99,6 +99,15 @@ const ToggleRow: React.FC<{ label: string; checked: boolean; onChange: () => voi
 // MAIN COMPONENT
 // =============================================================================
 
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+/** Cooldown period for password reset requests (in seconds) */
+const PASSWORD_RESET_COOLDOWN_SECONDS = 60;
+/** localStorage key for tracking last password reset request */
+const PASSWORD_RESET_TIMESTAMP_KEY = 'hallenfussball_password_reset_last';
+
 export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onBack,
   onOpenSettings,
@@ -112,17 +121,51 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   const [sortBy, setSortBy] = useState<TournamentSortOption>('status');
   const { tournaments, isLoading, counts } = useUserTournaments(sortBy);
 
-  if (!user) {
-    return null;
-  }
+  // Password reset rate limiting state
+  const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
 
-  const handleLogout = () => {
-    void logout();
-    onBack?.();
-  };
+  // Check for existing cooldown on mount and handle countdown
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastReset = localStorage.getItem(PASSWORD_RESET_TIMESTAMP_KEY);
+      if (lastReset) {
+        const elapsed = Math.floor((Date.now() - parseInt(lastReset, 10)) / 1000);
+        const remaining = PASSWORD_RESET_COOLDOWN_SECONDS - elapsed;
+        if (remaining > 0) {
+          setPasswordResetCooldown(remaining);
+        } else {
+          localStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
+          setPasswordResetCooldown(0);
+        }
+      }
+    };
 
-  const handleChangePassword = async () => {
-    if (!user.email) {
+    // Initial check
+    checkCooldown();
+
+    // Countdown timer
+    const interval = setInterval(() => {
+      setPasswordResetCooldown((prev) => {
+        if (prev <= 1) {
+          localStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Password change handler - defined before early return to satisfy connection rules
+  const handleChangePassword = useCallback(async () => {
+    // Rate limiting check
+    if (passwordResetCooldown > 0) {
+      showInfo(`Bitte warte noch ${passwordResetCooldown} Sekunden.`);
+      return;
+    }
+
+    if (!user?.email) {
       showError('Keine E-Mail-Adresse hinterlegt.');
       return;
     }
@@ -130,14 +173,25 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     try {
       const result = await resetPassword(user.email);
       if (result.success) {
+        // Set cooldown timestamp
+        localStorage.setItem(PASSWORD_RESET_TIMESTAMP_KEY, Date.now().toString());
+        setPasswordResetCooldown(PASSWORD_RESET_COOLDOWN_SECONDS);
         showSuccess(`E-Mail zum Zurücksetzen wurde an ${user.email} gesendet.`);
       } else {
         showError(result.error ?? 'E-Mail konnte nicht gesendet werden.');
       }
     } catch (err) {
-      console.error('Change password error:', err);
       showError('Ein Fehler ist aufgetreten.');
     }
+  }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError]);
+
+  if (!user) {
+    return null;
+  }
+
+  const handleLogout = () => {
+    void logout();
+    onBack?.();
   };
 
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -228,8 +282,17 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
               checked={false}
               onChange={() => alert('2FA Einrichtung startet...')}
             />
-            <button style={styles.actionButton} onClick={() => void handleChangePassword()}>
-              🔑 Passwort ändern
+            <button
+              style={{
+                ...styles.actionButton,
+                ...(passwordResetCooldown > 0 ? styles.actionButtonDisabled : {}),
+              }}
+              onClick={() => void handleChangePassword()}
+              disabled={passwordResetCooldown > 0}
+            >
+              🔑 {passwordResetCooldown > 0
+                ? `Passwort ändern (${passwordResetCooldown}s)`
+                : 'Passwort ändern'}
             </button>
             <div style={styles.divider} />
             <button style={{ ...styles.actionButton, color: cssVars.colors.error }} onClick={handleLogout}>
@@ -464,6 +527,11 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
+  },
+  actionButtonDisabled: {
+    color: cssVars.colors.textMuted,
+    cursor: 'not-allowed',
+    opacity: 0.6,
   },
   selectInput: {
     padding: '4px 8px',
