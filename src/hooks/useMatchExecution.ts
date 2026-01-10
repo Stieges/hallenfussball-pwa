@@ -12,10 +12,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tournament } from '../types/tournament';
 import { ScheduledMatch } from '../core/generators';
 import { MatchExecutionService } from '../core/services/MatchExecutionService';
-import { LocalStorageLiveMatchRepository } from '../core/repositories/LocalStorageLiveMatchRepository';
 import { LiveMatch, MatchStatus } from '../core/models/LiveMatch';
 import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
+import { useRepositories } from '../core/contexts/RepositoryContext';
 
 // ============================================================================
 // TYPES
@@ -96,11 +96,13 @@ export function useMatchExecution({
     // Get auth-aware tournament repository (Supabase for authenticated, localStorage for guests)
     const tournamentRepo = useRepository();
 
+    // Get live match repository from context (Supabase or localStorage based on auth)
+    const { liveMatchRepository } = useRepositories();
+
     // Repositories and Service (memoized, recreate if repository changes)
     const service = useMemo(() => {
-        const liveMatchRepo = new LocalStorageLiveMatchRepository();
-        return new MatchExecutionService(liveMatchRepo, tournamentRepo);
-    }, [tournamentRepo]);
+        return new MatchExecutionService(liveMatchRepository, tournamentRepo);
+    }, [liveMatchRepository, tournamentRepo]);
 
     // State
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
@@ -117,8 +119,7 @@ export function useMatchExecution({
     // Load initial state
     useEffect(() => {
         const load = async () => {
-            const repo = new LocalStorageLiveMatchRepository();
-            const matches = await repo.getAll(tournament.id);
+            const matches = await liveMatchRepository.getAll(tournament.id);
 
             // Sync metadata (referees) on load/update
             const updates = Array.from(matches.values()).map(async (liveMatch) => {
@@ -138,7 +139,7 @@ export function useMatchExecution({
             setLiveMatches(new Map(synced.map(m => [m.id, m])));
         };
         void load();
-    }, [tournament.id, tournament.matches, service]); // Re-run when tournament matches change (e.g. referee assignment)
+    }, [tournament.id, tournament.matches, service, liveMatchRepository]); // Re-run when tournament matches change (e.g. referee assignment)
 
     // Timer for display updates (not persistence)
     useEffect(() => {
@@ -215,7 +216,7 @@ export function useMatchExecution({
 
         if (result.needsTiebreaker) {
             // Update local state to show tiebreaker choice
-            const match = await new LocalStorageLiveMatchRepository().get(tournament.id, matchId);
+            const match = await liveMatchRepository.get(tournament.id, matchId);
             if (match) {
                 setLiveMatches(prev => new Map(prev).set(matchId, match));
             }
@@ -230,14 +231,13 @@ export function useMatchExecution({
         }
 
         // Update local state
-        const liveRepo = new LocalStorageLiveMatchRepository();
-        const match = await liveRepo.get(tournament.id, matchId);
+        const match = await liveMatchRepository.get(tournament.id, matchId);
         if (match) {
             setLiveMatches(prev => new Map(prev).set(matchId, match));
         }
 
         announceMatchFinished(matchId);
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -252,14 +252,13 @@ export function useMatchExecution({
             onTournamentUpdate(updated, false);
         }
 
-        const liveRepo = new LocalStorageLiveMatchRepository();
-        const updatedMatch = await liveRepo.get(tournament.id, matchId);
+        const updatedMatch = await liveMatchRepository.get(tournament.id, matchId);
         if (updatedMatch) {
             setLiveMatches(prev => new Map(prev).set(matchId, updatedMatch));
         }
 
         announceMatchFinished(matchId);
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository]);
 
     const handleGoal = useCallback(async (
         matchId: string,
@@ -368,12 +367,11 @@ export function useMatchExecution({
     const handleCancelTiebreaker = useCallback(async (matchId: string): Promise<void> => {
         await service.cancelTiebreaker(tournament.id, matchId);
 
-        const liveRepo = new LocalStorageLiveMatchRepository();
-        const match = await liveRepo.get(tournament.id, matchId);
+        const match = await liveMatchRepository.get(tournament.id, matchId);
         if (match) {
             setLiveMatches(prev => new Map(prev).set(matchId, match));
         }
-    }, [service, tournament.id]);
+    }, [service, tournament.id, liveMatchRepository]);
 
     const handleManualEditResult = useCallback(async (
         matchId: string,
@@ -412,8 +410,7 @@ export function useMatchExecution({
 
     const handleReopenMatch = useCallback(async (matchData: ScheduledMatch): Promise<void> => {
         // Re-initialize with NOT_STARTED status
-        const liveRepo = new LocalStorageLiveMatchRepository();
-        const match = await liveRepo.get(tournament.id, matchData.id);
+        const match = await liveMatchRepository.get(tournament.id, matchData.id);
         if (match) {
             const reopened: LiveMatch = {
                 ...match,
@@ -423,10 +420,10 @@ export function useMatchExecution({
                 timerPausedAt: undefined,
                 timerElapsedSeconds: undefined,
             };
-            await liveRepo.save(tournament.id, reopened);
+            await liveMatchRepository.save(tournament.id, reopened);
             setLiveMatches(prev => new Map(prev).set(matchData.id, reopened));
         }
-    }, [tournament.id]);
+    }, [tournament.id, liveMatchRepository]);
 
     const handleUpdateEvent = useCallback(async (
         matchId: string,
