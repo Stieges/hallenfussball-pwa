@@ -213,6 +213,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.log('Auth state change:', event);
 
           if (mounted) {
+            // Handle password recovery - set flag for AuthCallback to redirect
+            if (event === 'PASSWORD_RECOVERY' && newSession) {
+              sessionStorage.setItem('auth:passwordRecovery', 'true');
+            }
+
             // Clear guest state on real login
             if (event === 'SIGNED_IN' && newSession) {
               localStorage.removeItem('auth:guestUser');
