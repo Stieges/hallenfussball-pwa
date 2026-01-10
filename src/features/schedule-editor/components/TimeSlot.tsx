@@ -9,6 +9,7 @@ import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { cssVars } from '../../../design-tokens'
 import { createSlotId } from '../hooks/useDragDrop';
+import { Icons } from '../../../components/ui/Icons';
 
 // ============================================================================
 // Types
@@ -125,10 +126,35 @@ export const TimeSlot: React.FC<TimeSlotProps> = ({
   // Render
   // =========================================================================
 
+  // Swap overlay styles
+  const swapOverlayStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: cssVars.colors.surface,
+    opacity: 0.85,
+    zIndex: 10,
+    borderRadius: cssVars.borderRadius.md,
+    pointerEvents: 'none', // Allow clicks to pass through
+  };
+
   return (
     <div ref={setNodeRef} style={containerStyle}>
       {hasMatch ? (
-        children
+        <>
+          {children}
+          {/* Swap Overlay with Icon */}
+          {isSwapTarget && (
+            <div style={swapOverlayStyle}>
+              <Icons.ArrowRightLeft
+                size={28}
+                color={cssVars.colors.warning}
+              />
+            </div>
+          )}
+        </>
       ) : (
         <div style={placeholderStyle}>
           <span style={iconStyle}>{isDropTarget ? '⬇️' : '+'}</span>
