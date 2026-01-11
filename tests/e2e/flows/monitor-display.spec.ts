@@ -113,7 +113,8 @@ test.describe('Monitor Display', () => {
 
   test.describe('MON-D01/D02: Error States', () => {
     test('zeigt Fehler bei ungültiger Tournament-ID', async ({ page }) => {
-      await page.goto('/display/invalid-tournament/monitor-1');
+      // HashRouter requires /#/ prefix for routes
+      await page.goto('/#/display/invalid-tournament/monitor-1');
 
       // Use data-testid for reliable element selection (Best Practice)
       await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
@@ -121,7 +122,8 @@ test.describe('Monitor Display', () => {
 
     test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/invalid-monitor');
+      // HashRouter requires /#/ prefix for routes
+      await page.goto('/#/display/test-tournament/invalid-monitor');
 
       // Use data-testid for reliable element selection (Best Practice)
       await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
@@ -131,7 +133,8 @@ test.describe('Monitor Display', () => {
   test.describe('MON-B02: Monitor ohne Slides', () => {
     test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, { slides: [] });
-      await page.goto('/display/test-tournament/monitor-1');
+      // HashRouter requires /#/ prefix for routes
+      await page.goto('/#/display/test-tournament/monitor-1');
 
       // Use data-testid for reliable element selection (Best Practice)
       await expect(page.getByTestId('monitor-no-slides-message')).toBeVisible({ timeout: 10000 });
@@ -147,7 +150,8 @@ test.describe('Monitor Display', () => {
         ],
       });
 
-      await page.goto('/display/test-tournament/monitor-1');
+      // HashRouter requires /#/ prefix for routes
+      await page.goto('/#/display/test-tournament/monitor-1');
 
       // Wait for slide content to render (auto-wait doesn't help here as we need keyboard focus)
       await page.waitForTimeout(1000);
@@ -176,7 +180,7 @@ test.describe('Monitor Display', () => {
         ],
       });
 
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
 
       // Wait for initial slide to render
       await page.waitForTimeout(1000);
@@ -200,7 +204,7 @@ test.describe('Monitor Display', () => {
 
     test('Escape navigiert zurück', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
 
       // Wait for page to load and focus
       await page.waitForTimeout(1000);
@@ -219,7 +223,7 @@ test.describe('Monitor Display', () => {
       page.on('pageerror', (error) => errors.push(error.message));
 
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
       // Wait a bit for any async errors
@@ -238,7 +242,7 @@ test.describe('Monitor Display - Responsive', () => {
 
     test('rendert korrekt in HD', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
       // Check that the page renders without overflow
@@ -259,7 +263,7 @@ test.describe('Monitor Display - TV/Beamer Tests', () => {
 
     test('Score hat lesbare Schriftgröße', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
       // Wait for content to render
@@ -276,7 +280,7 @@ test.describe('Monitor Display - TV/Beamer Tests', () => {
       // Note: Playwright can't truly test F11 fullscreen due to browser security
       // This test just ensures the key handler doesn't crash
       await setupTournamentWithMonitor(seedLocalStorage, {});
-      await page.goto('/display/test-tournament/monitor-1');
+      await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
       // Press F11 (won't actually fullscreen but shouldn't error)
@@ -294,7 +298,7 @@ test.describe('Monitor Display - Theme Tests', () => {
 
   test('Dark Theme rendert korrekt', async ({ page, seedLocalStorage }) => {
     await setupTournamentWithMonitor(seedLocalStorage, { theme: 'dark' });
-    await page.goto('/display/test-tournament/monitor-1');
+    await page.goto('/#/display/test-tournament/monitor-1');
     await page.waitForLoadState('networkidle');
 
     // Take screenshot for theme verification
@@ -303,7 +307,7 @@ test.describe('Monitor Display - Theme Tests', () => {
 
   test('Light Theme rendert korrekt', async ({ page, seedLocalStorage }) => {
     await setupTournamentWithMonitor(seedLocalStorage, { theme: 'light' });
-    await page.goto('/display/test-tournament/monitor-1');
+    await page.goto('/#/display/test-tournament/monitor-1');
     await page.waitForLoadState('networkidle');
 
     // Take screenshot for theme verification

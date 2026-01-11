@@ -124,6 +124,13 @@ function AppContent() {
   const isPublicLivePath = !!publicLiveMatch;
   const shareCodeFromUrl = publicLiveMatch?.[1] ?? null;
 
+  // Check if current path is a monitor display path (/display/:tournamentId/:monitorId)
+  const monitorDisplayMatch = location.pathname.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
+  const isMonitorDisplayPath = !!monitorDisplayMatch;
+  const monitorDisplayParamsFromUrl = monitorDisplayMatch
+    ? { tournamentId: monitorDisplayMatch[1], monitorId: monitorDisplayMatch[2] }
+    : null;
+
   // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
   const isNewWizardPath = location.pathname === '/tournament/new';
   const editWizardMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/edit$/);
@@ -213,11 +220,8 @@ function AppContent() {
   const [quickEditMode, setQuickEditMode] = useState(false); // Für schnelles Bearbeiten & Zurück
   const originalStatusRef = useRef<TournamentStatus | null>(null); // Original-Status vor Wizard-Edit
 
-  // MON-KONF-01: Monitor Display Route params
-  const [monitorDisplayParams, setMonitorDisplayParams] = useState<{
-    tournamentId: string;
-    monitorId: string;
-  } | null>(null);
+  // MON-KONF-01: Monitor Display Route params (now using URL-based detection above)
+  // Removed monitorDisplayParams state in favor of monitorDisplayParamsFromUrl
 
   // Parse URL on mount to detect public tournament view, invite, or monitor display
   // IMPORTANT: Use location.pathname from useLocation() hook, NOT window.location.pathname
@@ -233,7 +237,7 @@ function AppContent() {
 
     if (displayMatch) {
       // Monitor Display route (for TVs/Beamer)
-      setMonitorDisplayParams({ tournamentId: displayMatch[1], monitorId: displayMatch[2] });
+      // Note: Using URL-based detection (monitorDisplayParamsFromUrl) for rendering
       setScreen('monitor-display');
     } else if (liveMatch) {
       // Live View via share code (e.g., /live/ABC123)
@@ -269,9 +273,10 @@ function AppContent() {
 
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
-  const isPublicScreen = ['monitor-display', 'public', 'live'].includes(screen);
+  // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/');
 
-  if (loading && !isPublicScreen) {
+  if (loading && !isPublicScreenByPath) {
     return (
       <div
         style={{
@@ -616,12 +621,12 @@ function AppContent() {
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}
-        {screen === 'monitor-display' && monitorDisplayParams && (
+        {/* Use URL-based detection for immediate rendering without waiting for useEffect */}
+        {isMonitorDisplayPath && monitorDisplayParamsFromUrl && (
           <MonitorDisplayPage
-            tournamentId={monitorDisplayParams.tournamentId}
-            monitorId={monitorDisplayParams.monitorId}
+            tournamentId={monitorDisplayParamsFromUrl.tournamentId}
+            monitorId={monitorDisplayParamsFromUrl.monitorId}
             onBack={() => {
-              setMonitorDisplayParams(null);
               void navigate('/');
             }}
           />
