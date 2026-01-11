@@ -2,6 +2,7 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
+import { hydrateTournament } from './hydration';
 
 export class LocalStorageRepository implements ITournamentRepository {
 
@@ -86,11 +87,13 @@ export class LocalStorageRepository implements ITournamentRepository {
                 // Validate each item
                 const result = TournamentSchema.safeParse(itemData);
                 if (result.success) {
-                    return result.data as unknown as Tournament;
+                    // Hydrate: Convert date strings back to Date objects
+                    return hydrateTournament(result.data as unknown);
                 }
                 // If validation fails, log but return raw item to avoid data loss during migration
+                // Still hydrate to ensure date fields are proper Date objects
                 console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
-                return itemData as unknown as Tournament;
+                return hydrateTournament(itemData);
             });
         } catch (e) {
             console.error('Failed to load tournaments', e);
