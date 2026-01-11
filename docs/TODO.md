@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-09
+> **Letzte Aktualisierung:** 2026-01-11
 
 ---
 
@@ -34,6 +34,65 @@
 - `src/hooks/useScheduleManager.ts` → nutzt jetzt `useRepository`
 
 **Nächste Session:** E2E-Test mit authentifiziertem User durchführen.
+
+---
+
+## 🔴 KRITISCH: Guest Data Migration (Auth)
+
+**Status:** ⬜ Offen
+**Quelle:** Externes Code-Review (2026-01-11)
+**Priorität:** 🔴 KRITISCH
+
+> **Problem:** Wenn ein Gast-User Turniere erstellt und sich danach registriert, gehen die Turnierdaten verloren.
+> Die lokalen Turniere haben keine `owner_id` und werden nicht in die Cloud migriert.
+
+### Aktueller Ablauf (FEHLERHAFT)
+
+1. Guest erstellt Turnier → Turnier in `localStorage` (ohne `owner_id`)
+2. Guest registriert sich → `wasMigrated: true` Flag wird gesetzt
+3. `auth:guestUser` wird aus localStorage gelöscht
+4. **Lokale Turnierdaten bleiben ohne `owner_id`** ❌
+5. RLS-Policies blockieren Zugriff → User verliert Turniere
+
+### Erforderliche Implementierung
+
+| Aufgabe | Status | Datei |
+|---------|--------|-------|
+| Migration-Service erstellen | ⬜ Offen | `src/features/auth/services/guestMigrationService.ts` |
+| Lokale Turniere laden bei Registrierung | ⬜ Offen | `AuthContext.tsx` → `register()` |
+| `owner_id` setzen für alle lokalen Turniere | ⬜ Offen | Migration-Service |
+| Turniere nach Supabase hochladen | ⬜ Offen | `SupabaseRepository.save()` |
+| Lokale Kopie löschen oder als Cache behalten | ⬜ Offen | Migration-Service |
+| Fehlerbehandlung (partielle Migration) | ⬜ Offen | Migration-Service |
+| User-Feedback (Toast/Progress) | ⬜ Offen | `RegisterScreen.tsx` |
+
+### Pseudo-Code
+
+```typescript
+// In register() nach erfolgreicher Registrierung:
+async function migrateGuestTournaments(newUserId: string): Promise<void> {
+  const localTournaments = localStorageRepo.listForCurrentUser();
+
+  for (const tournament of localTournaments) {
+    // 1. owner_id setzen
+    const migratedTournament = { ...tournament, ownerId: newUserId };
+
+    // 2. Nach Supabase hochladen
+    await supabaseRepo.save(migratedTournament);
+
+    // 3. Aus localStorage entfernen
+    await localStorageRepo.delete(tournament.id);
+  }
+}
+```
+
+### Akzeptanzkriterien
+
+- [ ] Guest erstellt Turnier → Registriert sich → Turnier ist in Cloud verfügbar
+- [ ] Mehrere Turniere werden korrekt migriert
+- [ ] Fehler bei einzelnem Turnier stoppt nicht die gesamte Migration
+- [ ] User sieht Feedback ("X Turniere wurden übertragen")
+- [ ] Keine Duplikate nach Migration
 
 ---
 
@@ -411,8 +470,9 @@ PWA-Installation auf `localhost` funktioniert nur in Chrome/Edge. Für vollstän
 
 | Aufgabe | Priorität | Betroffene Dateien |
 |---------|-----------|-------------------|
-| **Wizard: ~35 hardcoded rgba() migrieren** | Hoch | `features/tournament-creation/**` – IST-Analyse: [WIZARD-IST-ANALYSE.md](analysis/WIZARD-IST-ANALYSE.md) |
-| Wizard: Neue Subtle/Border Tokens erstellen | Hoch | `design-tokens/colors/semantic.ts` – primarySubtle, secondarySubtle, warningSubtle, goldSubtle + Border-Varianten |
+| **OfflineRepository: Side-Effects in Gettern entfernen** | Niedrig | `src/core/repositories/OfflineRepository.ts` – Getter-Methoden sollten keine Mutations-Queue triggern (Architecture Smell aus Review 2026-01-11) |
+| ~~Wizard: ~35 hardcoded rgba() migrieren~~ | ✅ Erledigt | `features/tournament-creation/**` – Verifiziert: 0 rgba() gefunden (2026-01-11) |
+| ~~Wizard: Neue Subtle/Border Tokens erstellen~~ | ✅ Erledigt | `design-tokens/colors/semantic.ts` – Tokens existieren bereits |
 | ~~Live-Cockpit: LiveCockpit.tsx aufteilen~~ | ❌ Obsolet | `LiveCockpit.tsx` ist @deprecated – Produktion nutzt `LiveCockpitMockup.tsx` |
 | Live-Cockpit: Dialog-Code extrahieren (~300 LOC) | Mittel | `live-cockpit/components/Dialogs/*.tsx` – DialogBase, TeamSelector, PlayerNumberInput |
 | Live-Cockpit: ~22 hardcoded fontSize migrieren | Mittel | `live-cockpit/**/*.tsx` – zu fontSizes.* |

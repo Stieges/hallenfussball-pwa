@@ -1,0 +1,77 @@
+{
+  "id": "libella-u11-vr1-2026",
+  "status": "published",
+  "isExternal": true,
+  "externalSource": "Import (komplett)",
+
+  "title": "Wieninger-Libella-Cup U11 (E1-Jun.) Vorrunde 1",
+  "organizer": "JFG Teisenberg",
+  "ageClass": "U11",
+  "date": "2026-01-11",
+  "startTime": "14:00",
+  "location": {
+    "name": "Sporthalle Fridolfing",
+    "city": "Fridolfing",
+    "country": "Deutschland"
+  },
+
+  "sport": "football",
+  "tournamentType": "classic",
+  "mode": "classic",
+
+  "numberOfFields": 1,
+  "numberOfTeams": 7,
+  "groupSystem": "roundRobin",
+  "numberOfGroups": 1,
+
+  "groupPhaseGameDuration": 9,
+  "groupPhaseBreakDuration": 2,
+  "gamePeriods": 1,
+
+  "placementLogic": [
+    { "id": "points", "label": "Punkte", "enabled": true },
+    { "id": "goalDifference", "label": "Tordifferenz", "enabled": true },
+    { "id": "goalsFor", "label": "Erzielte Tore", "enabled": true },
+    { "id": "directComparison", "label": "Direkter Vergleich", "enabled": true }
+  ],
+
+  "pointSystem": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+  },
+
+  "teams": [
+    { "id": "t1", "name": "TSV Fridolfing", "group": "A" },
+    { "id": "t2", "name": "TSV Waging", "group": "A" },
+    { "id": "t3", "name": "TSV Teisendorf", "group": "A" },
+    { "id": "t4", "name": "SG Schönau", "group": "A" },
+    { "id": "t5", "name": "ASV Piding 1", "group": "A" },
+    { "id": "t6", "name": "TSV Palling", "group": "A" },
+    { "id": "t7", "name": "SV Leobendorf", "group": "A" }
+  ],
+
+  "matches": [
+    { "id": "m1",  "matchNumber": 1,  "round": 1,  "slot": 0,  "field": 1, "scheduledTime": "2026-01-11T14:00:00", "teamA": "t2", "teamB": "t1", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m2",  "matchNumber": 2,  "round": 2,  "slot": 1,  "field": 1, "scheduledTime": "2026-01-11T14:11:00", "teamA": "t4", "teamB": "t3", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m3",  "matchNumber": 3,  "round": 3,  "slot": 2,  "field": 1, "scheduledTime": "2026-01-11T14:22:00", "teamA": "t5", "teamB": "t6", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m4",  "matchNumber": 4,  "round": 4,  "slot": 3,  "field": 1, "scheduledTime": "2026-01-11T14:33:00", "teamA": "t7", "teamB": "t1", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m5",  "matchNumber": 5,  "round": 5,  "slot": 4,  "field": 1, "scheduledTime": "2026-01-11T14:44:00", "teamA": "t3", "teamB": "t2", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m6",  "matchNumber": 6,  "round": 6,  "slot": 5,  "field": 1, "scheduledTime": "2026-01-11T14:55:00", "teamA": "t5", "teamB": "t4", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m7",  "matchNumber": 7,  "round": 7,  "slot": 6,  "field": 1, "scheduledTime": "2026-01-11T15:06:00", "teamA": "t6", "teamB": "t7", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m8",  "matchNumber": 8,  "round": 8,  "slot": 7,  "field": 1, "scheduledTime": "2026-01-11T15:17:00", "teamA": "t1", "teamB": "t3", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m9",  "matchNumber": 9,  "round": 9,  "slot": 8,  "field": 1, "scheduledTime": "2026-01-11T15:28:00", "teamA": "t5", "teamB": "t2", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m10", "matchNumber": 10, "round": 10, "slot": 9,  "field": 1, "scheduledTime": "2026-01-11T15:39:00", "teamA": "t4", "teamB": "t7", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m11", "matchNumber": 11, "round": 11, "slot": 10, "field": 1, "scheduledTime": "2026-01-11T15:50:00", "teamA": "t6", "teamB": "t1", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m12", "matchNumber": 12, "round": 12, "slot": 11, "field": 1, "scheduledTime": "2026-01-11T16:01:00", "teamA": "t3", "teamB": "t5", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m13", "matchNumber": 13, "round": 13, "slot": 12, "field": 1, "scheduledTime": "2026-01-11T16:12:00", "teamA": "t7", "teamB": "t2", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m14", "matchNumber": 14, "round": 14, "slot": 13, "field": 1, "scheduledTime": "2026-01-11T16:23:00", "teamA": "t4", "teamB": "t6", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m15", "matchNumber": 15, "round": 15, "slot": 14, "field": 1, "scheduledTime": "2026-01-11T16:34:00", "teamA": "t1", "teamB": "t5", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m16", "matchNumber": 16, "round": 16, "slot": 15, "field": 1, "scheduledTime": "2026-01-11T16:45:00", "teamA": "t3", "teamB": "t7", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m17", "matchNumber": 17, "round": 17, "slot": 16, "field": 1, "scheduledTime": "2026-01-11T16:56:00", "teamA": "t2", "teamB": "t6", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m18", "matchNumber": 18, "round": 18, "slot": 17, "field": 1, "scheduledTime": "2026-01-11T17:07:00", "teamA": "t1", "teamB": "t4", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m19", "matchNumber": 19, "round": 19, "slot": 18, "field": 1, "scheduledTime": "2026-01-11T17:18:00", "teamA": "t7", "teamB": "t5", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m20", "matchNumber": 20, "round": 20, "slot": 19, "field": 1, "scheduledTime": "2026-01-11T17:29:00", "teamA": "t6", "teamB": "t3", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" },
+    { "id": "m21", "matchNumber": 21, "round": 21, "slot": 20, "field": 1, "scheduledTime": "2026-01-11T17:40:00", "teamA": "t2", "teamB": "t4", "group": "A", "phase": "groupStage", "matchStatus": "scheduled" }
+  ]
+}

@@ -249,10 +249,14 @@ function parseJSONTournament(content: string): ImportValidationResult {
   const hasMatches = matches.length > 0;
   const externalSource = hasMatches ? 'Import (komplett)' : 'Import (nur Teams)';
 
+  // If JSON has complete match data, set status to 'published' (skip wizard/scheduler)
+  // If only teams, set to 'draft' (needs wizard to generate schedule)
+  const importStatus: Tournament['status'] = hasMatches ? 'published' : 'draft';
+
   // Build the tournament object
   const tournament: Tournament = {
     id: generateUniqueId(),
-    status: 'draft',
+    status: importStatus,
     isExternal: true,
     externalSource,
 

@@ -17,6 +17,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import type { User as SupabaseUser, Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
+import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
 import type { User, Session, LoginResult, RegisterResult } from '../types/auth.types';
 import type { AuthContextValue } from './authContextValue';
 import { AuthContext } from './authContextInstance';
@@ -167,7 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const updateAuthState = useCallback(async (supabaseSession: SupabaseSession | null) => {
     if (!supabaseSession?.user) {
       // Check if we have a guest user stored
-      const storedGuest = localStorage.getItem('auth:guestUser');
+      const storedGuest = safeLocalStorage.getItem('auth:guestUser');
       if (storedGuest) {
         try {
           const guestUser = JSON.parse(storedGuest) as User;
@@ -179,7 +180,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             return;
           }
         } catch {
-          localStorage.removeItem('auth:guestUser');
+          safeLocalStorage.removeItem('auth:guestUser');
         }
       }
 
@@ -247,12 +248,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
           if (mounted) {
             // Handle password recovery - set flag for AuthCallback to redirect
             if (event === 'PASSWORD_RECOVERY' && newSession) {
-              sessionStorage.setItem('auth:passwordRecovery', 'true');
+              safeSessionStorage.setItem('auth:passwordRecovery', 'true');
             }
 
             // Clear guest state on real login
             if (event === 'SIGNED_IN' && newSession) {
-              localStorage.removeItem('auth:guestUser');
+              safeLocalStorage.removeItem('auth:guestUser');
               setIsGuest(false);
             }
 
@@ -331,7 +332,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Clear guest data
       if (wasGuest) {
-        localStorage.removeItem('auth:guestUser');
+        safeLocalStorage.removeItem('auth:guestUser');
       }
 
       // Get profile data (might need a small delay or retry if trigger is slow, 
@@ -385,7 +386,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Clear guest data
-      localStorage.removeItem('auth:guestUser');
+      safeLocalStorage.removeItem('auth:guestUser');
 
       const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
       const profileData = await fetchProfile(data.user.id, userMetadata);
@@ -486,7 +487,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const logout = useCallback(async (): Promise<void> => {
     // Clear local state even if Supabase is not configured
     if (!isSupabaseConfigured || !supabase) {
-      localStorage.removeItem('auth:guestUser');
+      safeLocalStorage.removeItem('auth:guestUser');
       setUser(null);
       setSession(null);
       setIsGuest(false);
@@ -495,7 +496,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     try {
       await supabase.auth.signOut();
-      localStorage.removeItem('auth:guestUser');
+      safeLocalStorage.removeItem('auth:guestUser');
       setUser(null);
       setSession(null);
       setIsGuest(false);
@@ -509,7 +510,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
    */
   const continueAsGuest = useCallback((): User => {
     const guestUser = createLocalGuestUser();
-    localStorage.setItem('auth:guestUser', JSON.stringify(guestUser));
+    safeLocalStorage.setItem('auth:guestUser', JSON.stringify(guestUser));
     setUser(guestUser);
     setSession(null);
     setIsGuest(true);
