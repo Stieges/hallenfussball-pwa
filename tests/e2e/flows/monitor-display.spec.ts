@@ -115,16 +115,16 @@ test.describe('Monitor Display', () => {
     test('zeigt Fehler bei ungültiger Tournament-ID', async ({ page }) => {
       await page.goto('/display/invalid-tournament/monitor-1');
 
-      // Should show error
-      await expect(page.locator('text=/nicht gefunden|error/i')).toBeVisible({ timeout: 10000 });
+      // Use data-testid for reliable element selection (Best Practice)
+      await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
     });
 
     test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
       await page.goto('/display/test-tournament/invalid-monitor');
 
-      // Should show error about monitor not found
-      await expect(page.locator('text=/nicht gefunden|error/i')).toBeVisible({ timeout: 10000 });
+      // Use data-testid for reliable element selection (Best Practice)
+      await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -132,10 +132,9 @@ test.describe('Monitor Display', () => {
     test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, { slides: [] });
       await page.goto('/display/test-tournament/monitor-1');
-      await page.waitForLoadState('networkidle');
 
-      // Should show "no slides configured" message (exact text: "Keine Slides konfiguriert.")
-      await expect(page.getByText('Keine Slides konfiguriert')).toBeVisible({ timeout: 10000 });
+      // Use data-testid for reliable element selection (Best Practice)
+      await expect(page.getByTestId('monitor-no-slides-message')).toBeVisible({ timeout: 10000 });
     });
   });
 
@@ -149,9 +148,8 @@ test.describe('Monitor Display', () => {
       });
 
       await page.goto('/display/test-tournament/monitor-1');
-      await page.waitForLoadState('networkidle');
 
-      // Wait for slide to render
+      // Wait for slide content to render (auto-wait doesn't help here as we need keyboard focus)
       await page.waitForTimeout(1000);
 
       // Click on page to ensure focus for keyboard events
@@ -160,14 +158,14 @@ test.describe('Monitor Display', () => {
       // Press space to pause
       await page.keyboard.press('Space');
 
-      // Should show pause indicator (exact text: "⏸ Pausiert (Leertaste zum Fortsetzen)")
-      await expect(page.getByText('Pausiert')).toBeVisible({ timeout: 5000 });
+      // Use data-testid for reliable element selection (Best Practice)
+      await expect(page.getByTestId('monitor-pause-indicator')).toBeVisible({ timeout: 5000 });
 
       // Press space again to resume
       await page.keyboard.press('Space');
 
       // Pause indicator should disappear
-      await expect(page.getByText('Pausiert')).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId('monitor-pause-indicator')).not.toBeVisible({ timeout: 5000 });
     });
 
     test('Arrow keys navigieren zwischen Slides', async ({ page, seedLocalStorage }) => {
@@ -179,37 +177,39 @@ test.describe('Monitor Display', () => {
       });
 
       await page.goto('/display/test-tournament/monitor-1');
-      await page.waitForLoadState('networkidle');
 
-      // Wait for initial slide
+      // Wait for initial slide to render
       await page.waitForTimeout(1000);
 
       // Press right arrow to go to next slide
       await page.keyboard.press('ArrowRight');
 
       // Wait for transition
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(500);
 
       // Press left arrow to go back
       await page.keyboard.press('ArrowLeft');
 
       // Wait for transition
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(500);
 
-      // Should still be on first slide (or cycled back)
       // This test mainly ensures navigation doesn't crash
+      // Page should still be visible
+      await expect(page.locator('body')).toBeVisible();
     });
 
     test('Escape navigiert zurück', async ({ page, seedLocalStorage }) => {
       await setupTournamentWithMonitor(seedLocalStorage, {});
       await page.goto('/display/test-tournament/monitor-1');
-      await page.waitForLoadState('networkidle');
+
+      // Wait for page to load and focus
+      await page.waitForTimeout(1000);
 
       // Press escape
       await page.keyboard.press('Escape');
 
-      // Should navigate away from display
-      await expect(page).not.toHaveURL('/display/test-tournament/monitor-1');
+      // Should navigate away from display (URL changes)
+      await expect(page).not.toHaveURL(/\/display\/test-tournament\/monitor-1/);
     });
   });
 

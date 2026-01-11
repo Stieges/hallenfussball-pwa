@@ -1159,12 +1159,15 @@ export function MonitorDisplayPage({
   // Error state
   if (error || !tournament || !monitor) {
     return (
-      <div style={containerStyle}>
-        <div style={{
-          fontSize: displayFontSizes.headingMD,
-          color: displayColors.error,
-          marginBottom: displaySpacing.sectionMD,
-        }}>
+      <div style={containerStyle} data-testid="monitor-error-state">
+        <div
+          data-testid="monitor-error-message"
+          style={{
+            fontSize: displayFontSizes.headingMD,
+            color: displayColors.error,
+            marginBottom: displaySpacing.sectionMD,
+          }}
+        >
           {error ?? 'Konfiguration nicht gefunden'}
         </div>
         {onBack && (
@@ -1179,7 +1182,7 @@ export function MonitorDisplayPage({
   // No slides configured
   if (monitor.slides.length === 0) {
     return (
-      <div style={containerStyle}>
+      <div style={containerStyle} data-testid="monitor-no-slides-state">
         <div style={{
           fontSize: displayFontSizes.headingLG,
           color: displayColors.textSecondary,
@@ -1187,10 +1190,13 @@ export function MonitorDisplayPage({
         }}>
           📺 {monitor.name}
         </div>
-        <div style={{
-          fontSize: displayFontSizes.bodyLG,
-          color: displayColors.textMuted,
-        }}>
+        <div
+          data-testid="monitor-no-slides-message"
+          style={{
+            fontSize: displayFontSizes.bodyLG,
+            color: displayColors.textMuted,
+          }}
+        >
           Keine Slides konfiguriert.<br />
           Füge im Monitor-Konfigurator Slides hinzu.
         </div>
@@ -1260,18 +1266,21 @@ export function MonitorDisplayPage({
 
       {/* Pause Indicator */}
       {isPaused && (
-        <div style={{
-          position: 'fixed',
-          bottom: displaySpacing.sectionLG,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
-          background: 'rgba(0, 0, 0, 0.7)',
-          borderRadius: '8px',
-          fontSize: displayFontSizes.bodySM,
-          color: displayColors.textPrimary,
-          zIndex: 100,
-        }}>
+        <div
+          data-testid="monitor-pause-indicator"
+          style={{
+            position: 'fixed',
+            bottom: displaySpacing.sectionLG,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: `${displaySpacing.contentSM} ${displaySpacing.contentMD}`,
+            background: 'rgba(0, 0, 0, 0.7)',
+            borderRadius: '8px',
+            fontSize: displayFontSizes.bodySM,
+            color: displayColors.textPrimary,
+            zIndex: 100,
+          }}
+        >
           ⏸ Pausiert (Leertaste zum Fortsetzen)
         </div>
       )}
