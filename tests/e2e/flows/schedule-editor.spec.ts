@@ -15,12 +15,10 @@
  * @see live-cockpit.spec.ts for the working pattern
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
 
-// Skip all tests in CI until localStorage seeding is fixed
-test.beforeEach(() => {
-  test.skip(!!process.env.CI, 'Temporarily skipped in CI - localStorage seeding needs migration');
-});
+// CI skip removed - using reliable seeding fixture
 
 // =============================================================================
 // Test-Daten
@@ -99,51 +97,51 @@ function createTournamentWithResults() {
     id: 'results-test-tournament',
     title: 'Turnier mit Ergebnissen',
     matches: [
-    {
-      id: 'match-1',
-      round: 1,
-      slot: 0,
-      teamA: 'team-1',
-      teamB: 'team-2',
-      field: 1,
-      referee: 1,
-      scoreA: 2,
-      scoreB: 1,
-    },
-    {
-      id: 'match-2',
-      round: 1,
-      slot: 0,
-      teamA: 'team-3',
-      teamB: 'team-4',
-      field: 2,
-      referee: 2,
-      scoreA: null,
-      scoreB: null,
-    },
-    {
-      id: 'match-3',
-      round: 2,
-      slot: 1,
-      teamA: 'team-5',
-      teamB: 'team-6',
-      field: 1,
-      referee: 3,
-      scoreA: null,
-      scoreB: null,
-    },
-    {
-      id: 'match-4',
-      round: 2,
-      slot: 1,
-      teamA: 'team-1',
-      teamB: 'team-3',
-      field: 2,
-      referee: 1,
-      scoreA: null,
-      scoreB: null,
-    },
-  ],
+      {
+        id: 'match-1',
+        round: 1,
+        slot: 0,
+        teamA: 'team-1',
+        teamB: 'team-2',
+        field: 1,
+        referee: 1,
+        scoreA: 2,
+        scoreB: 1,
+      },
+      {
+        id: 'match-2',
+        round: 1,
+        slot: 0,
+        teamA: 'team-3',
+        teamB: 'team-4',
+        field: 2,
+        referee: 2,
+        scoreA: null,
+        scoreB: null,
+      },
+      {
+        id: 'match-3',
+        round: 2,
+        slot: 1,
+        teamA: 'team-5',
+        teamB: 'team-6',
+        field: 1,
+        referee: 3,
+        scoreA: null,
+        scoreB: null,
+      },
+      {
+        id: 'match-4',
+        round: 2,
+        slot: 1,
+        teamA: 'team-1',
+        teamB: 'team-3',
+        field: 2,
+        referee: 1,
+        scoreA: null,
+        scoreB: null,
+      },
+    ],
   };
 }
 
@@ -218,12 +216,12 @@ async function exitEditModeWithCancel(page: Page) {
 test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -320,12 +318,12 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
 test.describe('Editiermodus 2.0 - Mit Spielen', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area issues');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTournamentWithResults());
+    await seedLocalStorage({
+      tournaments: [createTournamentWithResults()]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -386,13 +384,13 @@ test.describe('Editiermodus 2.0 - Grenzfälle', () => {
     }
   });
 
-  test('Turnier ohne Matches: Spielplan generiert automatisch', async ({ page }, testInfo) => {
+  test('Turnier ohne Matches: Spielplan generiert automatisch', async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
     // GIVEN - Tournament with no pre-defined matches (schedule is auto-generated)
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
 
     // WHEN - Navigate to Spielplan
     await navigateToSpielplan(page);
@@ -402,12 +400,12 @@ test.describe('Editiermodus 2.0 - Grenzfälle', () => {
     await expect(page.getByText('FC Bayern').first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('Spielplan bearbeiten Button ist immer sichtbar', async ({ page }, testInfo) => {
+  test('Spielplan bearbeiten Button ist immer sichtbar', async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
 
     // WHEN - Navigate to Spielplan
     await navigateToSpielplan(page);
@@ -435,12 +433,12 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     }
   });
 
-  test('Speichern ohne Änderungen: Button existiert', async ({ page }, testInfo) => {
+  test('Speichern ohne Änderungen: Button existiert', async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
 
     // GIVEN - Navigate and enter edit mode
     await navigateToSpielplan(page);
@@ -451,12 +449,12 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     await expect(saveButton).toBeVisible();
   });
 
-  test('Abbrechen verlässt Editiermodus sauber', async ({ page }, testInfo) => {
+  test('Abbrechen verlässt Editiermodus sauber', async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
 
     // GIVEN - Navigate and enter edit mode
     await navigateToSpielplan(page);
@@ -481,12 +479,12 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
 test.describe('Editiermodus 2.0 - Accessibility', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
   });
 
   test.afterEach(async ({ page }) => {
@@ -551,12 +549,12 @@ test.describe('Editiermodus 2.0 - Performance', () => {
     }
   });
 
-  test('Editor-Modus aktiviert schnell', async ({ page }, testInfo) => {
+  test('Editor-Modus aktiviert schnell', async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await page.addInitScript((tournament) => {
-      localStorage.setItem('tournaments', JSON.stringify([tournament]));
-    }, createTestTournament());
+    await seedLocalStorage({
+      tournaments: [createTestTournament()]
+    });
 
     // GIVEN - Navigate to Spielplan
     await navigateToSpielplan(page);

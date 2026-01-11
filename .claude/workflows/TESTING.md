@@ -108,6 +108,7 @@ export default defineConfig({
 | Listen | `tournament-card-{id}`, `match-card-{index}`, `team-row-{index}` |
 | Wizard | `wizard-step-{n}`, `wizard-next-button`, `wizard-back-button` |
 | Inputs | `input-tournament-name`, `input-team-name-{index}` |
+| Monitor Display | `monitor-error-state`, `monitor-error-message`, `monitor-no-slides-state`, `monitor-no-slides-message`, `monitor-pause-indicator` |
 
 ### Regeln
 - ✅ Jedes interaktive Element MUSS data-testid haben
@@ -123,15 +124,99 @@ test.describe('Feature: [Name]', () => {
   test('[User Story]', async ({ page }) => {
     // GIVEN - Ausgangszustand
     await page.goto('/');
-    
+
     // WHEN - User-Aktionen
     await page.getByTestId('button-name').click();
-    
+
     // THEN - Erwartetes Ergebnis
     await expect(page.getByTestId('result')).toBeVisible();
   });
 });
 ```
+
+## 1.4 Best Practices (Playwright)
+
+### Zuverlässige Selektoren (Priorität)
+
+1. **`getByTestId()`** - Bevorzugt! Stabil und unabhängig von UI-Änderungen
+2. **`getByRole()`** - Für Accessibility-relevante Elemente
+3. **`getByText()`** - Nur für statischen Text, kein dynamischer Content
+
+```typescript
+// ✅ GUT - data-testid
+await expect(page.getByTestId('monitor-error-message')).toBeVisible();
+
+// ⚠️ OKAY - Role + Name
+await expect(page.getByRole('button', { name: 'Speichern' })).toBeVisible();
+
+// ❌ SCHLECHT - CSS Selektoren, DOM-Struktur
+await expect(page.locator('.error-message')).toBeVisible();
+await expect(page.locator('div > span:first-child')).toBeVisible();
+```
+
+### Auto-Wait nutzen (keine manuellen Waits)
+
+```typescript
+// ✅ GUT - Playwright wartet automatisch
+await expect(page.getByTestId('result')).toBeVisible({ timeout: 10000 });
+
+// ❌ SCHLECHT - Manuelle Timeouts
+await page.waitForTimeout(3000);
+await expect(page.getByTestId('result')).toBeVisible();
+```
+
+**Ausnahme:** `waitForTimeout` nur bei Keyboard-Events oder Animationen:
+```typescript
+// Keyboard-Focus braucht kurze Pause
+await page.waitForTimeout(500);
+await page.keyboard.press('Space');
+```
+
+### Seed-Fixtures für localStorage
+
+```typescript
+// tests/e2e/helpers/test-fixtures.ts
+export const test = base.extend<TestOptions>({
+  seedLocalStorage: async ({ page }, use) => {
+    const seedFn = async (data: Record<string, unknown>) => {
+      await page.goto('/');
+      await page.evaluate((data) => {
+        Object.entries(data).forEach(([key, value]) => {
+          localStorage.setItem(key, JSON.stringify(value));
+        });
+      }, data);
+      await page.reload();
+    };
+    await use(seedFn);
+  },
+});
+```
+
+### Praxis-Beispiel (Monitor Display Tests)
+
+```typescript
+// Component: data-testid Attribute hinzufügen
+<div data-testid="monitor-error-state">
+  <div data-testid="monitor-error-message">{error}</div>
+</div>
+
+<div data-testid="monitor-no-slides-state">
+  <div data-testid="monitor-no-slides-message">Keine Slides konfiguriert.</div>
+</div>
+
+{isPaused && <div data-testid="monitor-pause-indicator">⏸ Pausiert</div>}
+
+// Test: getByTestId verwenden
+test('zeigt Fehler bei ungültiger Tournament-ID', async ({ page }) => {
+  await page.goto('/display/invalid-tournament/monitor-1');
+  await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
+});
+```
+
+### Quellen
+
+- [Playwright Best Practices](https://playwright.dev/docs/best-practices)
+- [Playwright Locators](https://playwright.dev/docs/locators)
 
 ---
 

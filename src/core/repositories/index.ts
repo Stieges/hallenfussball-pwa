@@ -13,3 +13,6 @@ export type { LiveMatchChangeHandler, SubscriptionOptions } from './SupabaseLive
 export * from './supabaseMappers';
 export * from './liveMatchMappers';
 
+// Hydration Utilities
+export * from './hydration';
+

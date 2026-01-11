@@ -1,3 +1,4 @@
+import { MutationQueue } from '../services/MutationQueue';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
@@ -30,10 +31,14 @@ export interface SyncConflict {
 }
 
 export class OfflineRepository implements ITournamentRepository {
+    private mutationQueue: MutationQueue;
+
     constructor(
         private localRepo: LocalStorageRepository,
         private supabaseRepo: SupabaseRepository
-    ) { }
+    ) {
+        this.mutationQueue = new MutationQueue(supabaseRepo);
+    }
 
     /**
      * Tries to get from Supabase (Cloud).
@@ -47,15 +52,9 @@ export class OfflineRepository implements ITournamentRepository {
 
             if (cloudData) {
                 // 2. Update Cache
-                // We use void to not block the return, but for data consistency it might be better to await
-                // await this.localRepo.save(cloudData); 
-                // However, let's await to ensure cache is valid before next step
                 await this.localRepo.save(cloudData);
                 return cloudData;
             } else {
-                // Not found in cloud (deleted? or really new?). 
-                // If it returned null, it means 404. 
-                // Should we check local? Maybe it was created locally and not synced yet.
                 return await this.localRepo.get(id);
             }
         } catch (error) {
@@ -66,9 +65,7 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     async getByShareCode(code: string): Promise<Tournament | null> {
-        // Share codes are Cloud-only features usually.
-        // But if we cached it locally? LocalStorageRepo currently returns null.
-        // So we just pass through to Supabase.
+        // Share code lookups are primarily online
         try {
             return await this.supabaseRepo.getByShareCode(code);
         } catch (error) {
@@ -78,53 +75,31 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     /**
-     * Saves to BOTH Supabase and LocalStorage.
-     * Strategies:
-     * - Optimistic: Save Local -> Return -> Background Sync
-     * - Safety: Save Local -> Save Cloud -> Return
-     * 
-     * We choose "Safety with Offline Tberance":
-     * Always save Local. Try save Cloud. If Cloud fails, swallow error (it's cached locally now).
+     * PERSISTENCE STRATEGY:
+     * 1. Save Local (Optimistic UI)
+     * 2. Enqueue Mutation (Persistent Background Sync)
      */
     async save(tournament: Tournament): Promise<void> {
-        // 1. Save Local (Always succeeds unless disk full)
+        // 1. Save Local
         await this.localRepo.save(tournament);
 
-        // 2. Try Save Cloud
-        try {
-            await this.supabaseRepo.save(tournament);
-        } catch (error) {
-            console.warn('OfflineRepository: Cloud save failed (offline?), data saved locally.', error);
-            // We do NOT throw here. The user can continue working.
-            // Sync needs to happen later (e.g. on next app start/online event).
-        }
+        // 2. Enqueue Cloud Persistence
+        this.mutationQueue.enqueue('SAVE_TOURNAMENT', tournament);
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
         await this.localRepo.updateMatch(tournamentId, update);
-        try {
-            await this.supabaseRepo.updateMatch(tournamentId, update);
-        } catch (error) {
-            console.warn('OfflineRepository: Cloud updateMatch failed (offline?).', error);
-        }
+        this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update });
     }
 
     async updateMatches(tournamentId: string, updates: MatchUpdate[]): Promise<void> {
         await this.localRepo.updateMatches(tournamentId, updates);
-        try {
-            await this.supabaseRepo.updateMatches(tournamentId, updates);
-        } catch (error) {
-            console.warn('OfflineRepository: Cloud updateMatches failed (offline?).', error);
-        }
+        this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates });
     }
 
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
-        try {
-            await this.supabaseRepo.delete(id);
-        } catch (error) {
-            console.warn('OfflineRepository: Cloud delete failed (offline?).', error);
-        }
+        this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
     }
 
     // --- Extended Methods for Sync ---

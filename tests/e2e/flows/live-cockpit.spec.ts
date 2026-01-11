@@ -8,7 +8,7 @@
  * - Finishing a match
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
 
 /**
  * Generate a future date string (tomorrow) in YYYY-MM-DD format
@@ -67,32 +67,19 @@ function createTestTournament() {
   };
 }
 
-// Skip all tests in CI until localStorage seeding is fixed for production builds
-// The production build (with service worker) handles initialization differently
-// TODO: Investigate service worker caching behavior in production builds
-test.beforeEach(() => {
-  test.skip(!!process.env.CI, 'Temporarily skipped in CI - localStorage seeding issue with production builds');
-});
+// CI skip removed - using reliable seeding fixture
 
 test.describe('Live Cockpit', () => {
   // Skip iPhones - Safe Area viewport emulation causes click interception issues
   // The app works on real iOS devices, this is a Playwright limitation
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Navigate first to establish origin for localStorage access
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
+    // Use the seeding fixture which handles navigation and reloading correctly
     const tournament = createTestTournament();
-    await page.evaluate((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
-
-    // Navigate again (not reload) to let app initialize with seeded data
-    // This is more reliable than reload() in CI environments
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
 
     // Wait for seeded tournament to appear
     await expect(page.getByText('E2E Test Turnier')).toBeVisible({ timeout: 15000 });
@@ -416,21 +403,14 @@ test.describe('Live Cockpit - Mobile', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   // Skip iPhones - Safe Area viewport emulation causes click interception issues
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
-    // Navigate first to establish origin for localStorage access
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
+    // Use the seeding fixture which handles navigation and reloading correctly
     const tournament = createTestTournament();
-    await page.evaluate((t) => {
-      localStorage.setItem('tournaments', JSON.stringify([t]));
-    }, tournament);
-
-    // Navigate again (not reload) to let app initialize with seeded data
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await seedLocalStorage({
+      tournaments: [tournament]
+    });
   });
 
   test('Touch targets are appropriately sized on mobile', async ({ page }) => {
