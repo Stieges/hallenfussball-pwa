@@ -101,7 +101,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   // Filter tournaments by search query
   const filterBySearch = (tournament: Tournament): boolean => {
-    if (!searchQuery.trim()) {return true;}
+    if (!searchQuery.trim()) { return true; }
     const query = searchQuery.toLowerCase();
     return (
       tournament.title.toLowerCase().includes(query) ||
@@ -124,14 +124,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     // If filters are active, only show matching categories
     if (activeFilters.length > 0) {
-      if (!activeFilters.includes('running')) {result.running = [];}
-      if (!activeFilters.includes('upcoming')) {result.upcoming = [];}
-      if (!activeFilters.includes('finished')) {result.finished = [];}
-      if (!activeFilters.includes('draft')) {result.draft = [];}
+      if (!activeFilters.includes('running')) { result.running = []; }
+      if (!activeFilters.includes('upcoming')) { result.upcoming = []; }
+      if (!activeFilters.includes('finished')) { result.finished = []; }
+      if (!activeFilters.includes('draft')) { result.draft = []; }
     }
 
     return result;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- filterBySearch uses searchQuery
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterBySearch uses searchQuery
   }, [categorized, activeFilters, searchQuery]);
 
   // Extended categories with year grouping for archive
@@ -151,7 +151,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const expiringSoonCount = useMemo(() => {
     return trashedTournaments.filter(t => {
       const remaining = getRemainingDays(t);
-       
+
       return remaining !== null && remaining <= 7;
     }).length;
   }, [trashedTournaments]);
@@ -217,53 +217,53 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <h1 style={titleStyle}>{getAppTitle()}</h1>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
-          flexDirection: isMobile ? 'column' : 'row',
-          width: isMobile ? '100%' : 'auto',
-        }}>
-          {/* Auth Section */}
+        <h1 style={{ ...titleStyle, flex: isMobile ? 1 : undefined }}>{getAppTitle()}</h1>
+
+        {/* Auth Section - Always visible, right aligned on mobile via flex layout */}
+        <div style={{ order: isMobile ? 2 : undefined }}>
           <AuthSection
             onNavigateToLogin={onNavigateToLogin}
             onNavigateToRegister={onNavigateToRegister}
             onNavigateToProfile={onNavigateToProfile}
             onNavigateToSettings={onNavigateToSettings}
           />
+        </div>
 
-          {/* Action Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
-            flexDirection: isMobile ? 'column' : 'row',
-            width: isMobile ? '100%' : 'auto',
-          }}>
-            <Button
-              variant="secondary"
-              onClick={() => setShowImportDialog(true)}
-              icon={<Icons.Upload />}
-              style={{
-                padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
-                fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
-                fontWeight: cssVars.fontWeights.medium,
-              }}
-            >
-              Importieren
-            </Button>
-            <Button
-              variant="primary"
-              onClick={onCreateNew}
-              style={{
-                padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.xl}`,
-                fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
-                fontWeight: cssVars.fontWeights.bold,
-              }}
-            >
-              + Neues Turnier
-            </Button>
-          </div>
+        {/* Action Buttons - New line on mobile */}
+        <div style={{
+          display: 'flex',
+          gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
+          width: isMobile ? '100%' : 'auto',
+          order: isMobile ? 3 : undefined,
+          justifyContent: isMobile ? 'stretch' : 'flex-start',
+        }}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowImportDialog(true)}
+            icon={<Icons.Upload />}
+            style={{
+              padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+              fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+              fontWeight: cssVars.fontWeights.medium,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            Importieren
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={onCreateNew}
+            icon={<Icons.Plus />}
+            style={{
+              padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
+              fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
+              fontWeight: cssVars.fontWeights.medium,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            Neues Turnier
+          </Button>
         </div>
       </div>
 
@@ -358,7 +358,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         categoryLabel="Läuft"
                         onClick={() => onTournamentClick(tournament)}
                         onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
-                        // No delete for running tournaments
+                      // No delete for running tournaments
                       />
                     ))}
                   </div>
@@ -416,8 +416,8 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Empty state when no filters/search active and all sections are empty */}
               {!searchQuery && activeFilters.length === 0 &&
                 categorized.running.length === 0 && categorized.upcoming.length === 0 && categorized.draft.length === 0 && (
-                <div style={emptyStateStyle}>Keine aktiven Turniere vorhanden</div>
-              )}
+                  <div style={emptyStateStyle}>Keine aktiven Turniere vorhanden</div>
+                )}
             </>
           )}
         </>

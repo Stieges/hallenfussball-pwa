@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
+import { safeSessionStorage } from '../../../core/utils/safeStorage';
 import { cssVars } from '../../../design-tokens';
 
 /**
@@ -102,10 +103,10 @@ export const AuthCallback: React.FC = () => {
         if (existingSession) {
           // Session already exists (Supabase auto-detected or previous login)
           // Check if this is a password recovery flow
-          const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
+          const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
 
           if (isPasswordRecovery) {
-            sessionStorage.removeItem('auth:passwordRecovery');
+            safeSessionStorage.removeItem('auth:passwordRecovery');
             void navigate('/set-password', { replace: true });
             return;
           }
@@ -125,9 +126,9 @@ export const AuthCallback: React.FC = () => {
             if (exchangeError.message.includes('code') || exchangeError.message.includes('expired')) {
               const { data: { session: retrySession } } = await supabase.auth.getSession();
               if (retrySession) {
-                const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
+                const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
                 if (isPasswordRecovery) {
-                  sessionStorage.removeItem('auth:passwordRecovery');
+                  safeSessionStorage.removeItem('auth:passwordRecovery');
                   void navigate('/set-password', { replace: true });
                   return;
                 }
@@ -143,11 +144,11 @@ export const AuthCallback: React.FC = () => {
           // Check if this is a recovery flow
           // Check both URL param (legacy/implicit) and sessionStorage flag (PKCE)
           // The PASSWORD_RECOVERY event fires during exchangeCodeForSession and sets the flag
-          const isPasswordRecovery = type === 'recovery' || sessionStorage.getItem('auth:passwordRecovery') === 'true';
+          const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
 
           if (isPasswordRecovery) {
             // Clear the flag so it doesn't persist
-            sessionStorage.removeItem('auth:passwordRecovery');
+            safeSessionStorage.removeItem('auth:passwordRecovery');
             void navigate('/set-password', { replace: true });
             return;
           }
