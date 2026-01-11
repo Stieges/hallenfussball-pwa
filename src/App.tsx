@@ -40,9 +40,7 @@ const PublicTournamentViewScreen = lazy(() =>
 const LiveViewScreen = lazy(() =>
   import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen }))
 );
-const PublicLiveViewScreen = lazy(() =>
-  import('./screens/PublicLiveViewScreen').then(m => ({ default: m.PublicLiveViewScreen }))
-);
+// NOTE: PublicLiveViewScreen removed - LiveViewScreen handles /live/:code
 const ImpressumScreen = lazy(() =>
   import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen }))
 );
@@ -122,7 +120,6 @@ function AppContent() {
   // Check if current path is a public live view path (/live/:shareCode)
   const publicLiveMatch = location.pathname.match(/^\/live\/([A-Za-z0-9]+)$/);
   const isPublicLivePath = !!publicLiveMatch;
-  const shareCodeFromUrl = publicLiveMatch?.[1] ?? null;
 
   // Check if current path is a monitor display path (/display/:tournamentId/:monitorId)
   const monitorDisplayMatch = location.pathname.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
@@ -606,10 +603,8 @@ function AppContent() {
           />
         )}
 
-        {/* Public Live View via Share Code (/live/:code) */}
-        {isPublicLivePath && shareCodeFromUrl && (
-          <PublicLiveViewScreen shareCode={shareCodeFromUrl} />
-        )}
+        {/* NOTE: Public Live View removed - LiveViewScreen handles /live/:code
+            PublicLiveViewScreen was causing duplicate rendering with LiveViewScreen */}
 
         {screen === 'public' && publicTournamentId && (
           <PublicTournamentViewScreen tournamentId={publicTournamentId} />

@@ -416,8 +416,8 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
         return (
           <SummaryExpand
-            homeTeamName={String(homeTeam)}
-            awayTeamName={String(awayTeam)}
+            homeTeamName={homeTeam.name}
+            awayTeamName={awayTeam.name}
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
             homeTeamId={match.originalTeamA}
