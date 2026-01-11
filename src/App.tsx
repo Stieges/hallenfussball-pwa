@@ -310,8 +310,12 @@ function AppContent() {
       const hasMatches = tournament.matches.length > 0;
 
       if (hasMatches) {
-        // Complete import → Just save and stay in dashboard
-        await saveTournament(tournament);
+        // Complete import → Set status to 'published' (ready to use)
+        const completeTournament: Tournament = {
+          ...tournament,
+          status: 'published', // Complete imports are ready to use
+        };
+        await saveTournament(completeTournament);
         // Dashboard will auto-refresh via useTournaments hook
       } else {
         // Partial import → Open wizard at Step 2 to generate schedule

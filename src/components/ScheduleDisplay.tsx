@@ -276,6 +276,13 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
       {/* Global styles for responsive design */}
       <style>{`
+        /* Tailwind-like utility: hide on medium screens and above */
+        @media (min-width: 769px) {
+          .md\\:hidden {
+            display: none !important;
+          }
+        }
+
         @media (max-width: 768px) {
           .schedule-display {
             padding: 20px 12px !important;

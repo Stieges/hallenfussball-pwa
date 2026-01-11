@@ -156,7 +156,8 @@ export function getShareMessage(result: ShareResult): string {
  */
 export function generatePublicUrl(tournamentId: string, baseUrl?: string): string {
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
-  return `${origin}/public/${tournamentId}`;
+  // HashRouter requires /#/ prefix for all routes
+  return `${origin}/#/public/${tournamentId}`;
 }
 
 /**
@@ -164,9 +165,10 @@ export function generatePublicUrl(tournamentId: string, baseUrl?: string): strin
  *
  * @param shareCode - 6-character share code (e.g., "ABC123")
  * @param baseUrl - Base URL (defaults to current origin)
- * @returns Full live view URL (e.g., "https://example.com/live/ABC123")
+ * @returns Full live view URL (e.g., "https://example.com/#/live/ABC123")
  */
 export function generateLiveUrl(shareCode: string, baseUrl?: string): string {
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
-  return `${origin}/live/${shareCode}`;
+  // HashRouter requires /#/ prefix for all routes
+  return `${origin}/#/live/${shareCode}`;
 }
