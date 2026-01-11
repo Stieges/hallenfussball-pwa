@@ -267,7 +267,11 @@ function AppContent() {
     }
   }, [location.pathname, location.search]); // Depend on location to react to URL changes
 
-  if (loading) {
+  // Don't block public/display screens with global loading state
+  // These screens have their own data loading logic
+  const isPublicScreen = ['monitor-display', 'public', 'live'].includes(screen);
+
+  if (loading && !isPublicScreen) {
     return (
       <div
         style={{
