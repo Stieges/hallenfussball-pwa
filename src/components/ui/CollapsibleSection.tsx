@@ -103,7 +103,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   const contentStyle: CSSProperties = {
     padding: isOpen ? cssVars.spacing.md : `0 ${cssVars.spacing.md}`,
-    maxHeight: isOpen ? '2000px' : '0',
+    maxHeight: isOpen ? '50000px' : '0',
     overflow: 'hidden',
     transition: 'all 0.3s ease-in-out',
     opacity: isOpen ? 1 : 0,

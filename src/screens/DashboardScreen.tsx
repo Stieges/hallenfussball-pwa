@@ -159,19 +159,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   const containerStyle: CSSProperties = {
     padding: isMobile ? '20px 16px' : '40px 20px',
     // Add bottom padding on mobile for fixed bottom nav (64px nav + safe area + extra buffer)
-    paddingBottom: isMobile ? 'calc(80px + env(safe-area-inset-bottom, 0px) + 40px)' : '40px',
+    // Add extra bottom padding on mobile for fixed bottom nav (80px nav + safe area + 80px buffer)
+    paddingBottom: isMobile ? 'calc(160px + env(safe-area-inset-bottom, 20px))' : '40px',
     maxWidth: '1200px',
     margin: '0 auto',
     minHeight: isMobile ? '100vh' : 'auto',
-  };
-
-  const headerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: isMobile ? '24px' : '40px',
-    flexWrap: 'wrap',
-    gap: isMobile ? '12px' : '16px',
   };
 
   const titleStyle: CSSProperties = {
@@ -215,27 +207,34 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   return (
     <div style={containerStyle}>
-      {/* Header */}
-      <div style={headerStyle}>
-        <h1 style={{ ...titleStyle, flex: isMobile ? 1 : undefined }}>{getAppTitle()}</h1>
+      {/* Header Group */}
+      <div style={{ marginBottom: isMobile ? '24px' : '40px' }}>
+        {/* Top Row: Title + Auth */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: cssVars.spacing.md,
+          marginBottom: isMobile ? '16px' : '24px',
+        }}>
+          <h1 style={{ ...titleStyle, margin: 0 }}>{getAppTitle()}</h1>
 
-        {/* Auth Section - Always visible, right aligned on mobile via flex layout */}
-        <div style={{ order: isMobile ? 2 : undefined }}>
-          <AuthSection
-            onNavigateToLogin={onNavigateToLogin}
-            onNavigateToRegister={onNavigateToRegister}
-            onNavigateToProfile={onNavigateToProfile}
-            onNavigateToSettings={onNavigateToSettings}
-          />
+          <div style={{ flexShrink: 0 }}>
+            <AuthSection
+              onNavigateToLogin={onNavigateToLogin}
+              onNavigateToRegister={onNavigateToRegister}
+              onNavigateToProfile={onNavigateToProfile}
+              onNavigateToSettings={onNavigateToSettings}
+            />
+          </div>
         </div>
 
-        {/* Action Buttons - New line on mobile */}
+        {/* Action Buttons Row */}
         <div style={{
           display: 'flex',
           gap: isMobile ? cssVars.spacing.sm : cssVars.spacing.md,
-          width: isMobile ? '100%' : 'auto',
-          order: isMobile ? 3 : undefined,
-          justifyContent: isMobile ? 'stretch' : 'flex-start',
+          flexDirection: isMobile ? 'row' : 'row',
+          flexWrap: 'wrap',
         }}>
           <Button
             variant="secondary"
