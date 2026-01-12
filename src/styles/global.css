@@ -224,6 +224,7 @@
   --color-overlay: rgba(0, 0, 0, 0.5);
   --color-overlay-strong: rgba(0, 0, 0, 0.7);
   --color-overlay-dialog: rgba(0, 0, 0, 0.8);
+  --color-backdrop: rgba(10, 22, 40, 0.85);
   --color-focus: #00E676;
   --color-focus-ring: rgba(0, 230, 118, 0.2);
   --color-input-bg: rgba(0, 0, 0, 0.3);
@@ -726,6 +727,7 @@ html[data-font-size="x-large"] {
   --color-overlay: rgba(0, 0, 0, 0.4);
   --color-overlay-strong: rgba(0, 0, 0, 0.6);
   --color-overlay-dialog: rgba(0, 0, 0, 0.7);
+  --color-backdrop: rgba(0, 0, 0, 0.6);
   --color-focus: #059669;
   --color-focus-ring: rgba(5, 150, 105, 0.25);
   --color-input-bg: #F8FAFC;

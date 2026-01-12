@@ -230,7 +230,6 @@ const styles: Record<string, CSSProperties> = {
     background: cssVars.colors.surfaceSolid,
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
-    outline: 'none',
     // Fix: Prevent all options from rendering at once
     overflow: 'hidden',
     textOverflow: 'ellipsis',

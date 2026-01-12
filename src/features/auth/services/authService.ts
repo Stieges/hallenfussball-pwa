@@ -1,10 +1,28 @@
 /**
  * Auth Service - Authentifizierung (Registrierung, Login, Logout)
  *
- * Phase 1: Lokale Simulation mit localStorage
- * Phase 2: Wird durch Supabase Auth ersetzt
+ * @deprecated LEGACY CODE - DO NOT USE IN NEW CODE
+ *
+ * This service was Phase 1 (localStorage-based auth simulation).
+ * Phase 2 (Supabase Auth via AuthContext) is now the primary auth system.
+ *
+ * ## Why this still exists:
+ * - `getCurrentUser()` / `getCachedCurrentUser()` are used synchronously by:
+ *   - invitationService.ts (permission checks)
+ *   - membershipService.ts (permission checks)
+ *   - useCurrentUser.ts (fast initial render)
+ *
+ * ## Migration path:
+ * 1. Services need to be refactored to use async Supabase auth
+ * 2. useCurrentUser should use useAuth() from AuthContext
+ * 3. Once all consumers are migrated, this file can be deleted
+ *
+ * ## For new code:
+ * - Use `useAuth()` hook from '../context/AuthContext'
+ * - Use Supabase client directly for auth operations
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
+ * @see src/features/auth/context/AuthContext.tsx (modern auth)
  */
 
 import type {
