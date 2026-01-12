@@ -210,14 +210,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let mounted = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
-    const initAuth = async () => {
-      // Safety timeout: If auth takes too long (> 3s), force loading=false to let user interact
+    const initAuth = async (retryCount = 0) => {
+      // Safety timeout: If auth takes too long, force loading=false to let user interact
+      // Increased to 5s to allow for retries after AbortError
       const safetyTimeout = setTimeout(() => {
         if (mounted && isLoading) {
           console.warn('Auth init timed out - forcing offline mode');
           setIsLoading(false);
         }
-      }, 3000);
+      }, 5000);
 
       try {
         // If Supabase isn't configured, just check for guest user and finish
@@ -235,6 +236,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
           await updateAuthState(currentSession);
         }
       } catch (error) {
+        // AbortError is expected in React StrictMode (double mount/unmount)
+        // The Supabase lock gets aborted on first unmount
+        // Retry once after a short delay to let StrictMode settle
+        if (error instanceof Error && error.name === 'AbortError') {
+          if (retryCount < 2) {
+            // Wait for StrictMode to finish its double-mount cycle
+            await new Promise(resolve => setTimeout(resolve, 100));
+            clearTimeout(safetyTimeout);
+            return initAuth(retryCount + 1);
+          }
+          // After retries, silently ignore - user can refresh or app will recover
+          return;
+        }
         console.error('Auth init error:', error);
         if (mounted) {
           setUser(null);
@@ -249,30 +263,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     void initAuth();
 
     // Subscribe to auth changes (only if Supabase is configured)
-    // Subscribe to auth changes (only if Supabase is configured)
     if (isSupabaseConfigured && supabase) {
-      const { data } = supabase.auth.onAuthStateChange(
-        async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-          // eslint-disable-next-line no-console -- Useful for auth debugging
-          console.log('Auth state change:', event);
+      try {
+        const { data } = supabase.auth.onAuthStateChange(
+          async (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+            // eslint-disable-next-line no-console -- Useful for auth debugging
+            console.log('Auth state change:', event);
 
-          if (mounted) {
-            // Handle password recovery - set flag for AuthCallback to redirect
-            if (event === 'PASSWORD_RECOVERY' && newSession) {
-              safeSessionStorage.setItem('auth:passwordRecovery', 'true');
+            if (mounted) {
+              // Handle password recovery - set flag for AuthCallback to redirect
+              if (event === 'PASSWORD_RECOVERY' && newSession) {
+                safeSessionStorage.setItem('auth:passwordRecovery', 'true');
+              }
+
+              // Clear guest state on real login
+              if (event === 'SIGNED_IN' && newSession) {
+                safeLocalStorage.removeItem('auth:guestUser');
+                setIsGuest(false);
+              }
+
+              await updateAuthState(newSession);
             }
-
-            // Clear guest state on real login
-            if (event === 'SIGNED_IN' && newSession) {
-              safeLocalStorage.removeItem('auth:guestUser');
-              setIsGuest(false);
-            }
-
-            await updateAuthState(newSession);
           }
+        );
+        subscription = data.subscription;
+      } catch (error) {
+        // AbortError can happen in StrictMode during subscription setup
+        if (!(error instanceof Error && error.name === 'AbortError')) {
+          console.error('Auth subscription error:', error);
         }
-      );
-      subscription = data.subscription;
+      }
     }
 
     return () => {

@@ -69,7 +69,7 @@ export const AuthCallback: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
+    const handleAuthCallback = async (retryCount = 0) => {
       // Auth callback only works with Supabase configured
       if (!isSupabaseConfigured || !supabase) {
         void navigate('/', { replace: true });
@@ -184,8 +184,21 @@ export const AuthCallback: React.FC = () => {
         // No code, no tokens, no session - redirect to login
         void navigate('/login', { replace: true });
       } catch (err) {
+        // AbortError is expected in React StrictMode (double mount/unmount)
+        // The Supabase lock gets aborted on first unmount
+        // Retry after a short delay to let StrictMode settle
+        if (err instanceof Error && err.name === 'AbortError') {
+          if (retryCount < 2) {
+            // Wait for StrictMode to finish its double-mount cycle
+            await new Promise(resolve => setTimeout(resolve, 150));
+            return handleAuthCallback(retryCount + 1);
+          }
+          // After retries, redirect to home - auth might have succeeded via detectSessionInUrl
+          void navigate('/', { replace: true });
+          return;
+        }
+
         console.error('Auth callback error:', err);
-        // Provide more context in development
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         console.error('Error details:', errorMessage);
         setError('Ein unerwarteter Fehler ist aufgetreten.');
