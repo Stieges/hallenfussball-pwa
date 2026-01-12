@@ -9,6 +9,24 @@ import App from './App';
 import './styles/global.css';
 
 /**
+ * Global handler for unhandled promise rejections
+ *
+ * AbortError is expected in React StrictMode when Supabase auth initializes:
+ * - StrictMode mounts/unmounts/remounts components
+ * - First mount starts Supabase lock acquisition
+ * - Unmount aborts the lock (AbortError)
+ * - Second mount succeeds normally
+ *
+ * We suppress this specific error to keep the console clean.
+ */
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason instanceof Error && event.reason.name === 'AbortError') {
+    // Suppress AbortError - expected in StrictMode with Supabase
+    event.preventDefault();
+  }
+});
+
+/**
  * OAuth/Auth Redirect Fix for HashRouter
  *
  * Problem: Supabase auth redirects to /auth/callback with tokens in different formats:
