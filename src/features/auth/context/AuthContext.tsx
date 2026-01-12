@@ -207,23 +207,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Initial auth check and subscription
   useEffect(() => {
-    let mounted = true;
+    const mounted: { current: boolean } = { current: true }; // Explicit type so TS knows .current can change
     let subscription: { unsubscribe: () => void } | null = null;
+    let safetyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const initAuth = async (retryCount = 0) => {
-      // Safety timeout: If auth takes too long, force loading=false to let user interact
-      // Increased to 5s to allow for retries after AbortError
-      const safetyTimeout = setTimeout(() => {
-        if (mounted && isLoading) {
-          console.warn('Auth init timed out - forcing offline mode');
-          setIsLoading(false);
-        }
-      }, 5000);
+    // Safety timeout: If auth takes too long, force loading=false to let user interact
+    // Created ONCE, outside the retry loop to avoid multiple timeouts
+    safetyTimeoutId = setTimeout(() => {
+      if (mounted.current) {
+        console.warn('Auth init timed out - forcing offline mode');
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    const initAuth = async (retryCount = 0): Promise<void> => {
+      // Check if still mounted before any async operation
+      if (!mounted.current) {
+        return;
+      }
 
       try {
         // If Supabase isn't configured, just check for guest user and finish
         if (!isSupabaseConfigured || !supabase) {
-          if (mounted) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mounted.current changes in cleanup
+          if (mounted.current) {
             await updateAuthState(null);
           }
           return;
@@ -232,31 +239,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-        if (mounted) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mounted.current changes in cleanup
+        if (mounted.current) {
           await updateAuthState(currentSession);
+          // Success - clear safety timeout
+          if (safetyTimeoutId) {
+            clearTimeout(safetyTimeoutId);
+            safetyTimeoutId = null;
+          }
         }
       } catch (error) {
         // AbortError is expected in React StrictMode (double mount/unmount)
         // The Supabase lock gets aborted on first unmount
-        // Retry once after a short delay to let StrictMode settle
+        // Retry after a short delay to let StrictMode settle
         if (error instanceof Error && error.name === 'AbortError') {
-          if (retryCount < 2) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mounted.current changes in cleanup
+          if (retryCount < 2 && mounted.current) {
             // Wait for StrictMode to finish its double-mount cycle
             await new Promise(resolve => setTimeout(resolve, 100));
-            clearTimeout(safetyTimeout);
-            return initAuth(retryCount + 1);
+            // Check mounted again after waiting
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mounted.current changes in cleanup
+            if (mounted.current) {
+              return initAuth(retryCount + 1);
+            }
           }
-          // After retries, silently ignore - user can refresh or app will recover
+          // After retries or unmount, silently ignore - user can refresh or app will recover
           return;
         }
         console.error('Auth init error:', error);
-        if (mounted) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- mounted.current changes in cleanup
+        if (mounted.current) {
           setUser(null);
           setSession(null);
           setIsLoading(false);
         }
-      } finally {
-        clearTimeout(safetyTimeout);
       }
     };
 
@@ -270,7 +286,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // eslint-disable-next-line no-console -- Useful for auth debugging
             console.log('Auth state change:', event);
 
-            if (mounted) {
+            if (mounted.current) {
               // Handle password recovery - set flag for AuthCallback to redirect
               if (event === 'PASSWORD_RECOVERY' && newSession) {
                 safeSessionStorage.setItem('auth:passwordRecovery', 'true');
@@ -296,12 +312,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     return () => {
-      mounted = false;
+      mounted.current = false;
+      if (safetyTimeoutId) {
+        clearTimeout(safetyTimeoutId);
+      }
       if (subscription) {
         subscription.unsubscribe();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updateAuthState]);
 
   // Derived state
