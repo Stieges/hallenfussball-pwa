@@ -407,14 +407,11 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         const sourceEvents = match.events ?? liveEvents;
 
         // Flatten events for LiveInfoExpand (expects params at top level, not in payload)
-        const events = sourceEvents?.map(e => {
-          const evt = e as any;
-          return {
-            ...evt,
-            ...(evt.payload || {}), // Flatten payload
-            matchId: evt.matchId || match.id,
-          };
-        }) || [];
+        const events = sourceEvents?.map((e: RuntimeMatchEvent) => ({
+          ...e,
+          ...e.payload, // Flatten payload
+          matchId: e.matchId ?? match.id,
+        })) ?? [];
 
         return (
           <LiveInfoExpand
@@ -449,7 +446,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         const events: RuntimeMatchEvent[] = sourceEvents
           ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
             ...e,
-            matchId: e.matchId || match.id,
+            matchId: e.matchId ?? match.id,
             scoreAfter: e.scoreAfter,
           }))
           : [];
@@ -487,7 +484,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       default:
         return null;
     }
-  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams, liveMatches, _onStartCorrection]);
+  }, [expandedMatchId, expandType, handleExpandClose, handleExpandSave, handleNavigateToCockpit, tournament?.teams, liveMatches, _onStartCorrection, _editable]);
 
   // Sort matches by displayOrder for rendering
   const sortedMatches = useMemo(() => {
@@ -577,6 +574,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         const status = getMatchStatus(match);
         const isExpanded = expandedMatchId === match.id;
 
+        // Check if match has events (from persisted or live data)
+        const liveMatch = liveMatches.get(match.id);
+        const hasEvents = (match.events?.length ?? 0) > 0 || (liveMatch?.events.length ?? 0) > 0;
+
         return (
           <DesktopCard
             key={match.id}
@@ -588,6 +589,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCardClick={handleCardClick}
             onCircleClick={handleCircleClick}
             renderExpandContent={renderExpandContent}
+            hasEvents={hasEvents}
           />
         );
       })}
@@ -811,6 +813,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             const status = getMatchStatus(match);
             const isExpanded = expandedMatchId === match.id;
 
+            // Check if match has events (from persisted or live data)
+            const liveMatch = liveMatches.get(match.id);
+            const hasEvents = (match.events?.length ?? 0) > 0 || (liveMatch?.events.length ?? 0) > 0;
+
             const cardProps = {
               matchId: match.id,
               matchNumber: match.matchNumber,
@@ -835,6 +841,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
                   referee={match.referee ? `SR ${match.referee}` : undefined}
+                  hasEvents={hasEvents}
                 />
               </div>
             );

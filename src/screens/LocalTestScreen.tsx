@@ -171,7 +171,7 @@ export const LocalTestScreen: React.FC = () => {
 
   // Berechne Gesamtplatzierung wenn nicht ausgeblendet
   const finalRanking = useMemo(() => {
-    if (tournament.hideRankingsForPublic || currentStandings.length === 0) return [];
+    if (tournament.hideRankingsForPublic || currentStandings.length === 0) {return [];}
 
     // Check if we have any played matches to justify a ranking?
     // getMergedFinalRanking handles everything (finals + group standings).

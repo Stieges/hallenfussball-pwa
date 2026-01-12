@@ -146,7 +146,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
     const resolveName = (teamRef: string): string | undefined => {
       // 1. Try finding a real team first
       const team = schedule.teams.find(t => t.id === teamRef);
-      if (team) return team.name;
+      if (team) {return team.name;}
 
       // 2. If it's a placeholder, try to resolve it from standings
       if (isPlaceholder(teamRef) && standings.length > 0) {
@@ -164,14 +164,15 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
 
           if (groupMatches.length > 0) {
             const isGroupFinished = groupMatches.every(m => {
-              const status = (m as any).matchStatus ?? 'scheduled';
+              // Match type has matchStatus, ScheduledMatch doesn't - use type assertion
+              const status = (m as Match).matchStatus ?? 'scheduled';
               return status === 'finished' || status === 'skipped';
             });
             if (!isGroupFinished) {
               // Format placeholder to be readable and i18n-ready
               // TODO: Inject 'locale' from context/props in the future
               const getLocalizedGroupPlaceholder = (r: number, g: string, locale: string = 'de') => {
-                if (locale === 'en') return `${r}. Group ${g}`; // Simplified EN
+                if (locale === 'en') {return `${r}. Group ${g}`;} // Simplified EN
                 return `${r}. Gruppe ${g}`;
               };
               return getLocalizedGroupPlaceholder(rank, groupId);
@@ -181,12 +182,8 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
           // Filter standings for this group (assuming they are already sorted by rank)
           const groupStandings = standings.filter(s => s.team.group === groupId);
 
-          // Get team at the specific rank (1-based index)
-          const standing = groupStandings[rank - 1]; // Rank 1 = Index 0
-
-          if (standing) {
-            return standing.team.name;
-          }
+          // Get team at the specific rank (1-based index) - Rank 1 = Index 0
+          return groupStandings[rank - 1]?.team.name;
         }
       }
       return undefined;
@@ -216,10 +213,10 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
       // logic: m.originalTeamA is the ID/Placeholder. m.homeTeam is the Display Name (which might be "Gruppe A 1. Platz")
       // We check m.originalTeamA (from scheduleMatch)
       const resolvedHome = resolveName(m.originalTeamA);
-      if (resolvedHome) homeTeamName = resolvedHome;
+      if (resolvedHome) {homeTeamName = resolvedHome;}
 
       const resolvedAway = resolveName(m.originalTeamB);
-      if (resolvedAway) awayTeamName = resolvedAway;
+      if (resolvedAway) {awayTeamName = resolvedAway;}
 
       return {
         ...m,
@@ -227,7 +224,7 @@ export const ScheduleDisplay: React.FC<ScheduleDisplayProps> = ({
         awayTeam: awayTeamName
       };
     });
-  }, [finalMatches, currentMatches, schedule.teams, standings]);
+  }, [finalMatches, currentMatches, schedule.teams, standings, groupPhase?.matches]);
 
   // US-VIEWER-FILTERS: Filter matches based on visibleMatchIds (if provided)
   const filteredGroupPhaseMatches = useMemo(() => {

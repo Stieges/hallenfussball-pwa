@@ -27,7 +27,7 @@ export const ConnectionStatusBar: React.FC<ConnectionStatusBarProps> = ({
 }) => {
   // Format timestamp as HH:MM:SS
   const formatTime = (date: Date | null): string => {
-    if (!date) return '--:--:--';
+    if (!date) {return '--:--:--';}
     return date.toLocaleTimeString('de-DE', {
       hour: '2-digit',
       minute: '2-digit',

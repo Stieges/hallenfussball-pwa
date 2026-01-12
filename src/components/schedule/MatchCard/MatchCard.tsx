@@ -73,6 +73,8 @@ export interface MatchCardProps {
   expandContent?: React.ReactNode;
   /** Disable interactions */
   disabled?: boolean;
+  /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
+  hasEvents?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,6 +101,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   isExpanded = false,
   expandContent,
   disabled = false,
+  hasEvents = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -285,8 +288,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           </div>
         </div>
 
-        {/* Score Circle */}
-        <div data-score-circle>
+        {/* Score Circle + Events Indicator */}
+        <div data-score-circle style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.xs }}>
           <MatchCardScore
             homeScore={homeScore}
             awayScore={awayScore}
@@ -296,6 +299,20 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             onClick={handleCircleClick}
             disabled={disabled}
           />
+          {/* Chevron indicator for matches with events (shows expandability) */}
+          {hasEvents && !isLive && (
+            <span
+              style={{
+                color: cssVars.colors.textMuted,
+                fontSize: cssVars.fontSizes.sm,
+                transition: 'transform 0.2s ease',
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              }}
+              aria-hidden="true"
+            >
+              ▼
+            </span>
+          )}
         </div>
       </div>
 

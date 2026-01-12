@@ -233,7 +233,7 @@ export function resolvePlayoffPlaceholder(
   placeholder: string,
   locale: 'de' | 'en' = 'de'
 ): string {
-  if (!placeholder) return '';
+  if (!placeholder) {return '';}
 
   // Pattern: group-a-1st, group-B-2nd, etc.
   const groupMatch = placeholder.match(/^group-([a-zA-Z0-9]+)-(\d+)(?:st|nd|rd|th)$/i);

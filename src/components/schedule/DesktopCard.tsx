@@ -34,6 +34,8 @@ export interface DesktopCardProps {
   onCircleClick: (matchId: string) => void;
   /** Render function for expand content */
   renderExpandContent: (match: ScheduledMatch) => React.ReactNode;
+  /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
+  hasEvents?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   onCardClick,
   onCircleClick,
   renderExpandContent,
+  hasEvents = false,
 }) => {
   // ---------------------------------------------------------------------------
   // Styles
@@ -82,6 +85,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         onCircleClick={() => onCircleClick(match.id)}
         isExpanded={isExpanded}
         expandContent={renderExpandContent(match)}
+        hasEvents={hasEvents}
       />
     </div>
   );
