@@ -34,6 +34,8 @@ export interface DesktopCardProps {
   onCircleClick: (matchId: string) => void;
   /** Render function for expand content */
   renderExpandContent: (match: ScheduledMatch) => React.ReactNode;
+  /** Whether the match has events (goals, cards, etc.) - shows chevron indicator */
+  hasEvents?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,6 +51,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   onCardClick,
   onCircleClick,
   renderExpandContent,
+  hasEvents = false,
 }) => {
   // ---------------------------------------------------------------------------
   // Styles
@@ -70,7 +73,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         scheduledTime={match.time}
         field={match.field}
         referee={match.referee ? `SR ${match.referee}` : undefined}
-        group={match.group ? getGroupShortCode(match.group, tournament) : undefined}
+        group={match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
         homeTeam={getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam)}
         awayTeam={getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam)}
@@ -82,6 +85,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         onCircleClick={() => onCircleClick(match.id)}
         isExpanded={isExpanded}
         expandContent={renderExpandContent(match)}
+        hasEvents={hasEvents}
       />
     </div>
   );

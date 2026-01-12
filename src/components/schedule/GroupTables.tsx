@@ -15,6 +15,8 @@ interface GroupTablesProps {
   standings: Standing[];
   teams: Array<{ id: string; name: string; group?: string; logo?: TeamLogo; colors?: TeamColors }>;
   tournament?: Tournament;
+  /** Set of team IDs currently involved in a running match */
+  activeMatchTeamIds?: Set<string>;
   /** @deprecated No longer needed - responsive layout handled via CSS */
   isMobile?: boolean;
 }
@@ -23,6 +25,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   standings,
   teams,
   tournament,
+  activeMatchTeamIds,
 }) => {
   const groupStandings = getGroupStandings(standings, teams);
 
@@ -57,11 +60,17 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
             standings={groupTeams}
             title={getGroupDisplayName(group, tournament)}
             tournament={tournament}
+            activeMatchTeamIds={activeMatchTeamIds}
           />
         ))}
       </div>
 
       <style>{`
+        @keyframes pulse-live {
+          0% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
         @media (max-width: 768px) {
           .group-tables-container {
             padding: 12px !important;
@@ -80,10 +89,12 @@ interface StandingsTableProps {
   standings: Standing[];
   title: string;
   tournament?: Tournament;
+  activeMatchTeamIds?: Set<string>;
 }
 
-const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament }) => {
+const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds }) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  // ... (rest of logic)
 
   const toggleRowExpansion = (teamId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -183,6 +194,22 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                     }}>
                       <TeamAvatar team={standing.team} size="xs" />
                       {standing.team.name}
+                      {/* LIVE INDICATOR */}
+                      {activeMatchTeamIds?.has(standing.team.id) && (
+                        <span
+                          title="Gerade im Spiel"
+                          style={{
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: cssVars.colors.statusLive,
+                            animation: 'pulse-live 2s infinite',
+                            marginLeft: '6px',
+                            display: 'inline-block',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
                     </div>
                   </td>
                   <td style={{ ...tdStyle, textAlign: 'center' }}>
@@ -286,6 +313,22 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       }}>
                         <TeamAvatar team={standing.team} size="xs" />
                         {standing.team.name}
+                        {/* LIVE INDICATOR */}
+                        {activeMatchTeamIds?.has(standing.team.id) && (
+                          <span
+                            title="Gerade im Spiel"
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: cssVars.colors.statusLive,
+                              animation: 'pulse-live 2s infinite',
+                              marginLeft: '6px',
+                              display: 'inline-block',
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
                       </div>
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>

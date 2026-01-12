@@ -528,6 +528,39 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
     <div style={containerStyle} className="final-stage-schedule">
       {showTitle && <h2 style={titleStyle}>Finalrunde</h2>}
 
+      <style>{`
+        /* Hide mobile view by default */
+        .final-stage-schedule .mobile-view {
+          display: none;
+        }
+
+        /* Mobile: Show cards, hide table */
+        @media (max-width: 768px) {
+          .final-stage-schedule .desktop-view {
+            display: none !important;
+          }
+          .final-stage-schedule .mobile-view {
+            display: block !important;
+          }
+        }
+
+        /* Print: Always use table layout */
+        @media print {
+          .final-stage-schedule {
+            break-inside: avoid;
+          }
+          .final-stage-schedule .mobile-view {
+            display: none !important;
+          }
+          .final-stage-schedule .desktop-view {
+            display: block !important;
+          }
+          .final-stage-schedule table {
+            min-width: 100%;
+          }
+        }
+      `}</style>
+
       {/* Desktop Table View with DnD */}
       <div className="desktop-view" style={{ overflowX: 'auto' }}>
         {editingSchedule && onMatchSwap ? (

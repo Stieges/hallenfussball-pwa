@@ -47,3 +47,7 @@ export type { ScoreStepperProps } from './ScoreStepper';
 export { TeamAvatar } from './TeamAvatar';
 export { ColorPicker } from './ColorPicker';
 export { LogoUploadDialog } from './LogoUploadDialog';
+
+// Connection Status (Public View)
+export { ConnectionStatusBar } from './ConnectionStatusBar';
+export type { ConnectionStatusBarProps, ConnectionStatus } from './ConnectionStatusBar';

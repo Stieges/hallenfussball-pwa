@@ -60,7 +60,7 @@ export interface LiveInfoExpandProps {
   /** Maximum events to display */
   maxEvents?: number;
   /** Callback to navigate to cockpit */
-  onNavigateToCockpit: () => void;
+  onNavigateToCockpit?: () => void;
   /** Callback to close the expand */
   onClose?: () => void;
 }
@@ -335,14 +335,16 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             Schließen
           </Button>
         )}
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onNavigateToCockpit}
-          data-testid="goto-cockpit-btn"
-        >
-          → Zum Cockpit
-        </Button>
+        {onNavigateToCockpit && (
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onNavigateToCockpit}
+            data-testid="goto-cockpit-btn"
+          >
+            → Zum Cockpit
+          </Button>
+        )}
       </div>
     </div>
   );

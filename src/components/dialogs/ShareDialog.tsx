@@ -21,6 +21,10 @@ export interface ShareDialogProps {
   shareCode?: string | null;
   /** Whether the tournament is public */
   isPublic?: boolean;
+  /** Optional Base URL (replaces auto-generation) */
+  baseUrl?: string;
+  /** Optional Deep Link URL (e.g. current page with filters) */
+  deepLinkUrl?: string;
 }
 
 export const ShareDialog = ({
@@ -30,22 +34,29 @@ export const ShareDialog = ({
   tournamentTitle,
   shareCode,
   isPublic = false,
+  baseUrl,
+  deepLinkUrl,
 }: ShareDialogProps) => {
   const [qrCode, setQrCode] = useState<string>('');
   const [feedback, setFeedback] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [useDeepLink, setUseDeepLink] = useState(false);
 
-  // Use share code if available, otherwise fall back to tournamentId-based URL
+  // Determine Canonical URL
   const hasShareCode = isPublic && shareCode;
-  const publicUrl = hasShareCode
+  const canonicalUrl = baseUrl ?? (hasShareCode
     ? generateLiveUrl(shareCode)
-    : `${window.location.origin}/tournament/${tournamentId}`;
+    : `${window.location.origin}/tournament/${tournamentId}`);
 
-  // Generate QR code when dialog opens
+  // Determine effective URL
+  const hasDeepLinkOption = !!deepLinkUrl && deepLinkUrl !== canonicalUrl;
+  const activeUrl = (hasDeepLinkOption && useDeepLink) ? deepLinkUrl : canonicalUrl;
+
+  // Generate QR code when dialog opens or URL changes
   useEffect(() => {
-    if (isOpen && !qrCode) {
+    if (isOpen) {
       setIsGenerating(true);
-      generateQRCode(publicUrl)
+      generateQRCode(activeUrl)
         .then((dataUrl) => {
           setQrCode(dataUrl);
         })
@@ -56,7 +67,8 @@ export const ShareDialog = ({
           setIsGenerating(false);
         });
     }
-  }, [isOpen, publicUrl, qrCode]);
+
+  }, [isOpen, activeUrl]);
 
   // Clear feedback after 3 seconds
   useEffect(() => {
@@ -67,7 +79,7 @@ export const ShareDialog = ({
   }, [feedback]);
 
   const handleCopyLink = async () => {
-    const success = await copyToClipboard(publicUrl);
+    const success = await copyToClipboard(activeUrl);
     if (success) {
       setFeedback('Link in Zwischenablage kopiert!');
     } else {
@@ -77,7 +89,7 @@ export const ShareDialog = ({
 
   const handleNativeShare = async () => {
     const result = await shareUrl({
-      url: publicUrl,
+      url: activeUrl,
       title: `${tournamentTitle} - Spielplan`,
       text: `Sieh dir den Spielplan für ${tournamentTitle} an`,
     });
@@ -233,6 +245,8 @@ export const ShareDialog = ({
           </p>
         </div>
 
+
+
         {/* URL Display Section */}
         <div style={urlSectionStyle}>
           <label style={labelStyle}>
@@ -240,11 +254,33 @@ export const ShareDialog = ({
           </label>
           <input
             type="text"
-            value={publicUrl}
+            value={activeUrl}
             readOnly
             style={urlInputStyle}
             onClick={(e) => e.currentTarget.select()}
           />
+
+          {/* Deep Link Toggle */}
+          {hasDeepLinkOption && (
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: cssVars.spacing.sm,
+              cursor: 'pointer',
+              marginTop: cssVars.spacing.xs,
+              userSelect: 'none',
+            }}>
+              <input
+                type="checkbox"
+                checked={useDeepLink}
+                onChange={(e) => setUseDeepLink(e.target.checked)}
+                style={{ width: '16px', height: '16px', accentColor: cssVars.colors.primary }}
+              />
+              <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary }}>
+                Aktuelle Ansicht inkl. Filter teilen
+              </span>
+            </label>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -286,6 +322,6 @@ export const ShareDialog = ({
           }
         `}</style>
       </div>
-    </Dialog>
+    </Dialog >
   );
 };

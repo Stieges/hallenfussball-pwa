@@ -219,3 +219,58 @@ export function isFieldAllowedForGroup(
   }
   return group.allowedFieldIds.includes(fieldId);
 }
+
+// ============================================================================
+// Playoff Placeholder Resolution
+// ============================================================================
+
+/**
+ * Löst Platzhalter wie "group-a-1st" oder "semi1-winner" in lesbare Namen auf
+ * @param placeholder - Der interne Platzhalter-String
+ * @param locale - Sprache ('de' | 'en')
+ */
+export function resolvePlayoffPlaceholder(
+  placeholder: string,
+  locale: 'de' | 'en' = 'de'
+): string {
+  if (!placeholder) {return '';}
+
+  // Pattern: group-a-1st, group-B-2nd, etc.
+  const groupMatch = placeholder.match(/^group-([a-zA-Z0-9]+)-(\d+)(?:st|nd|rd|th)$/i);
+  if (groupMatch) {
+    const [, groupId, rank] = groupMatch;
+    const groupDisplay = groupId.length === 1 ? groupId.toUpperCase() : groupId;
+
+    if (locale === 'de') {
+      return `${rank}. Gruppe ${groupDisplay}`;
+    }
+    return `${rank}. Group ${groupDisplay}`;
+  }
+
+  // Pattern: semi1-winner, qf2-loser, etc.
+  const matchResult = placeholder.match(/^(.*)-(winner|loser)$/i);
+  if (matchResult) {
+    const [, matchId, type] = matchResult;
+    const isWinner = type.toLowerCase() === 'winner';
+    const prefix = isWinner
+      ? (locale === 'de' ? 'Sieger' : 'Winner')
+      : (locale === 'de' ? 'Verlierer' : 'Loser');
+
+    // Mappe gängige Match-IDs auf lesbare Namen
+    let matchLabel = matchId;
+    if (matchId.startsWith('semi')) {
+      const num = matchId.replace('semi', '');
+      matchLabel = locale === 'de' ? `${num}. Halbfinale` : `${num}. Semifinal`;
+    } else if (matchId.startsWith('qf')) {
+      const num = matchId.replace('qf', '');
+      matchLabel = locale === 'de' ? `VF ${num}` : `QF ${num}`;
+    } else if (matchId.startsWith('r16-')) {
+      const num = matchId.replace('r16-', '');
+      matchLabel = locale === 'de' ? `AF ${num}` : `Ro16 ${num}`;
+    }
+
+    return `${prefix} ${matchLabel}`;
+  }
+
+  return placeholder;
+}
