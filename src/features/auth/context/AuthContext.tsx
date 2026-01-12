@@ -211,15 +211,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let subscription: { unsubscribe: () => void } | null = null;
 
     const initAuth = async () => {
-      // If Supabase isn't configured, just check for guest user and finish
-      if (!isSupabaseConfigured || !supabase) {
-        if (mounted) {
-          await updateAuthState(null);
+      // Safety timeout: If auth takes too long (> 3s), force loading=false to let user interact
+      const safetyTimeout = setTimeout(() => {
+        if (mounted && isLoading) {
+          console.warn('Auth init timed out - forcing offline mode');
+          setIsLoading(false);
         }
-        return;
-      }
+      }, 3000);
 
       try {
+        // If Supabase isn't configured, just check for guest user and finish
+        if (!isSupabaseConfigured || !supabase) {
+          if (mounted) {
+            await updateAuthState(null);
+          }
+          return;
+        }
+
         // Get current session
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
@@ -233,11 +241,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setSession(null);
           setIsLoading(false);
         }
+      } finally {
+        clearTimeout(safetyTimeout);
       }
     };
 
     void initAuth();
 
+    // Subscribe to auth changes (only if Supabase is configured)
     // Subscribe to auth changes (only if Supabase is configured)
     if (isSupabaseConfigured && supabase) {
       const { data } = supabase.auth.onAuthStateChange(
@@ -270,6 +281,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         subscription.unsubscribe();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updateAuthState]);
 
   // Derived state
