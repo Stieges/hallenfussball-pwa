@@ -204,25 +204,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     overflowWrap: 'break-word',
   };
 
-  const liveBadgeStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    backgroundColor: cssVars.colors.primaryLight,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.bold,
-    padding: `3px ${cssVars.spacing.sm}`,
-    borderRadius: cssVars.borderRadius.sm,
-  };
 
-  const liveDotStyle: CSSProperties = {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    backgroundColor: cssVars.colors.primary,
-    animation: 'pulse 2s ease-in-out infinite',
-  };
 
   const expandStyle: CSSProperties = {
     borderTop: `1px solid ${cssVars.colors.border}`,
@@ -254,10 +236,35 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           {showGroupLabel && group && group !== 'all' && <span>• Gr. {group}</span>}
           {referee && <span>• SR: {referee}</span>}
           {isLive && (
-            <span style={liveBadgeStyle}>
-              <span style={liveDotStyle} />
-              LIVE
-            </span>
+            <>
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: cssVars.spacing.xs,
+                backgroundColor: cssVars.colors.statusLiveBg,
+                color: cssVars.colors.statusLive,
+                fontSize: cssVars.fontSizes.xs,
+                fontWeight: cssVars.fontWeights.bold,
+                padding: `3px ${cssVars.spacing.sm}`,
+                borderRadius: cssVars.borderRadius.sm,
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: cssVars.colors.statusLive,
+                  animation: 'pulse 2s ease-in-out infinite',
+                }} />
+                LIVE
+              </span>
+              <style>{`
+                @keyframes pulse {
+                  0% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.6; transform: scale(1.2); }
+                  100% { opacity: 1; transform: scale(1); }
+                }
+              `}</style>
+            </>
           )}
         </div>
       </div>

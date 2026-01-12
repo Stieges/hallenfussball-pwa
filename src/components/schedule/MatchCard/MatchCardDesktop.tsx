@@ -191,26 +191,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
     minWidth: '50px',
   };
 
-  const liveBadgeStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-    backgroundColor: cssVars.colors.primaryLight,
-    color: cssVars.colors.primary,
-    fontSize: cssVars.fontSizes.xs,
-    fontWeight: cssVars.fontWeights.bold,
-    padding: `2px 6px`,
-    borderRadius: cssVars.borderRadius.sm,
-    marginLeft: cssVars.spacing.sm,
-  };
 
-  const liveDotStyle: CSSProperties = {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    backgroundColor: cssVars.colors.primary,
-    animation: 'pulse 2s ease-in-out infinite',
-  };
 
   const expandStyle: CSSProperties = {
     borderTop: `1px solid ${cssVars.colors.border}`,
@@ -236,10 +217,36 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         <div style={timeStyle}>
           {formatTime(scheduledTime)}
           {isLive && (
-            <span style={liveBadgeStyle}>
-              <span style={liveDotStyle} />
-              LIVE
-            </span>
+            <>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: cssVars.spacing.xs,
+                backgroundColor: cssVars.colors.statusLiveBg,
+                color: cssVars.colors.statusLive,
+                fontSize: cssVars.fontSizes.xs,
+                fontWeight: cssVars.fontWeights.bold,
+                padding: `2px 6px`,
+                borderRadius: cssVars.borderRadius.sm,
+                marginLeft: cssVars.spacing.sm,
+              }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: cssVars.colors.statusLive,
+                  animation: 'pulse 2s ease-in-out infinite',
+                }} />
+                LIVE
+              </span>
+              <style>{`
+                @keyframes pulse {
+                  0% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.6; transform: scale(1.2); }
+                  100% { opacity: 1; transform: scale(1); }
+                }
+              `}</style>
+            </>
           )}
         </div>
 

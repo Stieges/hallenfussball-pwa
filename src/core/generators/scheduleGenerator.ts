@@ -160,11 +160,15 @@ export function generateFullSchedule(
     // Check if we already have finals in the persisted data
     const hasExistingFinals = finalMatches.length > 0;
 
+
+
     // Also sanity check: If we have NO finals but we SHOULD, we must regenerate.
     // AND: Safety check - don't regenerate if we actually have finals but they are somehow miscategorized (unlikely with our robust filtering above)
     if (shouldGeneratePlayoffs && !hasExistingFinals && groupStageMatches.length > 0) {
+
       // Generate Finals dynamically even though we are in "Persisted Mode"
       const generatedFinals = generateFinalMatches(tournament, groupStageMatches, startTime)
+
 
       // Schedule the finals (time slots)
       // Note: We need to convert mappedMatches back to scheduledGroupStage format for timing calc
@@ -183,6 +187,7 @@ export function generateFullSchedule(
       // Update finalMatches ref for consistency
       finalMatches = generatedFinals
     } else {
+
       // Standard Case: Use what we loaded
       allMatches = mappedMatches
     }

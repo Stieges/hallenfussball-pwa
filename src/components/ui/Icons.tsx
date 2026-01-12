@@ -46,6 +46,18 @@ export const Icons = {
     </svg>
   ),
 
+  ChevronUp: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M5 12l5-5 5 5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
+  ChevronDown: ({ size = 20, color = 'currentColor' }: IconProps) => (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+      <path d="M5 8l5 5 5-5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+
   ArrowUp: ({ size = 20, color = 'currentColor' }: IconProps) => (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
       <path d="M10 15V5m0 0L5 10m5-5l5 5" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

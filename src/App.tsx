@@ -51,6 +51,11 @@ const SettingsScreen = lazy(() =>
   import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen }))
 );
 
+// Local Test Screen (DEV only)
+const LocalTestScreen = lazy(() =>
+  import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen }))
+);
+
 // MON-KONF-01: Monitor Display für TVs/Beamer
 const MonitorDisplayPage = lazy(() =>
   import('./features/monitor-display').then(m => ({ default: m.MonitorDisplayPage }))
@@ -95,7 +100,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'set-password';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'set-password' | 'local-test';
 
 function AppContent() {
   const { showError } = useToast();
@@ -253,6 +258,9 @@ function AppContent() {
     } else if (path === '/auth/callback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
+    } else if (path === '/test-live') {
+      // Local test screen (DEV only)
+      setScreen('local-test');
     } else if (path === '/settings') {
       setScreen('settings');
     } else if (path === '/profile') {
@@ -271,7 +279,7 @@ function AppContent() {
   // Don't block public/display screens with global loading state
   // These screens have their own data loading logic
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
-  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/');
+  const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/') || location.pathname === '/test-live';
 
   if (loading && !isPublicScreenByPath) {
     return (
@@ -617,6 +625,11 @@ function AppContent() {
         {/* Live View via Share Code (e.g., /live/ABC123) */}
         {screen === 'live' && liveShareCode && (
           <LiveViewScreen shareCode={liveShareCode} />
+        )}
+
+        {/* Local Test Screen (DEV only) */}
+        {screen === 'local-test' && (
+          <LocalTestScreen />
         )}
 
         {/* MON-KONF-01: Monitor Display (fullscreen for TVs/Beamer) */}

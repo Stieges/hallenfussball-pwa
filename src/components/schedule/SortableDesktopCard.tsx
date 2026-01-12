@@ -126,8 +126,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
     alignItems: 'stretch',
     borderRadius: cssVars.borderRadius.md,
     overflow: 'hidden',
-    border: `1px solid ${
-      isOver && !isDragging
+    border: `1px solid ${isOver && !isDragging
         ? cssVars.colors.primary
         : hasErrors
           ? cssVars.colors.error
@@ -136,7 +135,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
             : hasUnsavedChanges
               ? cssVars.colors.editorDirtyBorder
               : cssVars.colors.border
-    }`,
+      }`,
     boxShadow: isOver && !isDragging ? `0 0 12px ${cssVars.colors.primaryGlowLight}` : undefined,
   };
 
@@ -337,7 +336,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
 
           {/* Group */}
           <div style={groupStyle}>
-            {showGroupLabel && match.group && match.group !== 'all' ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''}
+            {showGroupLabel && (match.label || (match.group && match.group !== 'all' ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''))}
           </div>
         </div>
       </div>

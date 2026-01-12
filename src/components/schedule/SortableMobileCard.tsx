@@ -151,7 +151,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
     matchNumber: match.matchNumber,
     scheduledTime: match.time,
     field: match.field,
-    group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+    group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
     showGroupLabel,
     homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
     awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
@@ -181,10 +181,10 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
         onRefereeChange={
           onRefereeChange
             ? (matchId, value) => {
-                const numValue =
-                  value === null ? null : typeof value === 'string' ? parseInt(value) : value;
-                onRefereeChange(matchId, numValue);
-              }
+              const numValue =
+                value === null ? null : typeof value === 'string' ? parseInt(value) : value;
+              onRefereeChange(matchId, numValue);
+            }
             : undefined
         }
         conflicts={conflicts}

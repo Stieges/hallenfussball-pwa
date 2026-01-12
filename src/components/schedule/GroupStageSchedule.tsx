@@ -234,7 +234,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     return 'scheduled';
   };
 
-  /**
+  /*
    * Handle card body click - opens QuickScore expand for non-live matches
    */
   const handleCardClick = (matchId: string) => {
@@ -242,6 +242,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     if (!match) { return; }
 
     const status = getMatchStatus(match);
+
+    // UX-FIX: Public View Hardening
+    // If not editable (Spectator) and match is scheduled, ignore click.
+    if (!_editable && status === 'scheduled') {
+      return;
+    }
 
     if (status === 'running') {
       // Live matches: Show hint that score is managed in cockpit
@@ -251,7 +257,19 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return;
     }
 
-    // Toggle expand for non-live matches
+    // UX-FIX: Public View - Finished matches show Summary
+    if (!_editable && status === 'finished') {
+      if (expandedMatchId === matchId && expandType === 'summary') {
+        setExpandedMatchId(null);
+        setExpandType(null);
+      } else {
+        setExpandedMatchId(matchId);
+        setExpandType('summary');
+      }
+      return;
+    }
+
+    // Toggle expand for non-live matches (Admin: QuickScore)
     if (expandedMatchId === matchId && expandType === 'quick') {
       setExpandedMatchId(null);
       setExpandType(null);
@@ -269,6 +287,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     if (!match) { return; }
 
     const status = getMatchStatus(match);
+
+    // UX-FIX: Public View Hardening
+    // If not editable (Spectator) and match is scheduled, ignore click.
+    if (!_editable && status === 'scheduled') {
+      return;
+    }
 
     switch (status) {
       case 'scheduled':
@@ -377,7 +401,21 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             onCancel={handleExpandClose}
           />
         );
-      case 'live':
+      case 'live': {
+        const liveMatch = liveMatches.get(match.id);
+        const liveEvents = liveMatch?.events;
+        const sourceEvents = match.events ?? liveEvents;
+
+        // Flatten events for LiveInfoExpand (expects params at top level, not in payload)
+        const events = sourceEvents?.map(e => {
+          const evt = e as any;
+          return {
+            ...evt,
+            ...(evt.payload || {}), // Flatten payload
+            matchId: evt.matchId || match.id,
+          };
+        }) || [];
+
         return (
           <LiveInfoExpand
             homeTeam={homeTeam}
@@ -385,10 +423,12 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             homeScore={match.scoreA ?? 0}
             awayScore={match.scoreB ?? 0}
             elapsedFormatted={match.time || '00:00'}
-            onNavigateToCockpit={() => handleNavigateToCockpit(match.id)}
+            events={events}
+            onNavigateToCockpit={_editable ? () => handleNavigateToCockpit(match.id) : undefined}
             onClose={handleExpandClose}
           />
         );
+      }
       case 'start':
         return (
           <StartMatchExpand
@@ -423,7 +463,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             homeTeamId={match.originalTeamA}
             awayTeamId={match.originalTeamB}
             events={events} // Pass events
-            onEditScore={() => {
+            onEditScore={_editable ? () => {
               setExpandedMatchId(null);
               setExpandType(null);
               // Fallback correction or emit event?
@@ -439,7 +479,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   correctionHandler(match.id);
                 }
               }
-            }}
+            } : undefined}
             onClose={handleExpandClose}
           />
         );
@@ -458,6 +498,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
       return indexA - indexB;
     });
   }, [matches, displayOrder]);
+
   if (matches.length === 0) {
     return (
       <div style={{
@@ -725,6 +766,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                     onCircleClick={handleCircleClick}
                     renderExpandContent={renderExpandContent}
                   />
+
                 );
               })}
             </SortableContext>
@@ -774,7 +816,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
               matchNumber: match.matchNumber,
               scheduledTime: match.time,
               field: match.field,
-              group: match.group ? getGroupShortCode(match.group, tournament) : undefined,
+              group: match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined),
               showGroupLabel,
               homeTeam: getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam),
               awayTeam: getTeamForDisplay(tournament?.teams, match.originalTeamB, match.awayTeam),
@@ -833,7 +875,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
             homeTeamName={match.homeTeam}
             awayTeamName={match.awayTeam}
             events={events}
-            onEditScore={() => {
+            onEditScore={_editable ? () => {
               // Close summary and start correction flow
               setShowMatchSummary(false);
               setSummaryMatchId(null);
@@ -850,7 +892,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   setExpandType('quick');
                 }
               }
-            }}
+            } : undefined}
           />
         );
       })()}
