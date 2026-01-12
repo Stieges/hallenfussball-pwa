@@ -124,6 +124,8 @@ export const AuthCallback: React.FC = () => {
           if (exchangeError) {
             // If code was already used, check if session exists now
             if (exchangeError.message.includes('code') || exchangeError.message.includes('expired')) {
+              // Wait briefly for PASSWORD_RECOVERY event to fire
+              await new Promise(resolve => setTimeout(resolve, 100));
               const { data: { session: retrySession } } = await supabase.auth.getSession();
               if (retrySession) {
                 const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
@@ -140,6 +142,10 @@ export const AuthCallback: React.FC = () => {
             setError(exchangeError.message);
             return;
           }
+
+          // Wait briefly for PASSWORD_RECOVERY event to fire and set the sessionStorage flag
+          // The event fires asynchronously after exchangeCodeForSession completes
+          await new Promise(resolve => setTimeout(resolve, 100));
 
           // Check if this is a recovery flow
           // Check both URL param (legacy/implicit) and sessionStorage flag (PKCE)
