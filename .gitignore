@@ -55,3 +55,4 @@ test-results/
 
 # Vercel
 .vercel/
+supabase/.temp/
