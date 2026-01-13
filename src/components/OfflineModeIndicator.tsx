@@ -38,8 +38,8 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
     justifyContent: 'space-between',
     gap: cssVars.spacing.md,
     padding: compact ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : cssVars.spacing.md,
-    backgroundColor: 'rgba(245, 158, 11, 0.1)', // warning color at 10% opacity
-    border: `1px solid ${cssVars.colors.warning}`,
+    backgroundColor: cssVars.colors.correctionBg, // Use token instead of hardcoded rgba
+    border: `1px solid ${cssVars.colors.correctionBorder}`,
     borderRadius: cssVars.borderRadius.md,
     marginBottom: cssVars.spacing.md,
   };
@@ -53,6 +53,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
 
   const iconStyle: CSSProperties = {
     fontSize: compact ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
+    color: cssVars.colors.correctionIcon, // Explicit icon color
   };
 
   const textContainerStyle: CSSProperties = {
@@ -70,7 +71,10 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
 
   const subtitleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.xs,
-    color: cssVars.colors.textSecondary,
+    // Change from textSecondary to correctionText (or primary) for better contrast on warning bg
+    // Using correctionText ensures it matches the theme of the alert
+    color: cssVars.colors.correctionText,
+    opacity: 0.9, // Slight visual hierarchy without breaking contrast
     margin: 0,
   };
 
