@@ -1,7 +1,29 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-11
+> **Letzte Aktualisierung:** 2026-01-13
+
+---
+
+## ✅ ERLEDIGT: Supabase Email Templates aktualisiert
+
+**Status:** ✅ Erledigt (2026-01-13, via Management API)
+**Priorität:** 🟠 Hoch
+
+> **Problem:** Outlook/O365 Email-Scanner öffnen Links automatisch und verbrauchen Token bevor User klickt.
+> **Lösung:** Links auf `/auth/confirm` geändert - diese Seite zeigt einen Button, Scanner klicken nicht auf Buttons.
+
+| Template | Status |
+|----------|--------|
+| Confirm signup | ✅ Erledigt |
+| Magic Link | ✅ Erledigt |
+| Reset Password | ✅ Erledigt |
+| Invite User | ✅ Erledigt |
+
+**Erledigt:**
+- [x] Templates via Supabase Management API aktualisiert
+- [x] Deutsche Betreffzeilen gesetzt
+- [x] `docs/wip/SUPABASE-EMAIL-TEMPLATES-TODO.md` gelöscht
 
 ---
 
