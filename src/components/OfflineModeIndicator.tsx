@@ -64,7 +64,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
   const titleStyle: CSSProperties = {
     fontSize: compact ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
-    color: cssVars.colors.warning,
+    color: cssVars.colors.correctionText,
     margin: 0,
   };
 
