@@ -39,6 +39,7 @@ mcp-adesso-analyzer/
 **/credentials.json
 **/*secret*
 **/*apikey*
+TEST-CREDENTIALS.md
 
 # Entwickler-Skripte mit API Keys (adesso AI Hub)
 evaluate-plan.js
