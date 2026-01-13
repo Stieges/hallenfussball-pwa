@@ -198,6 +198,11 @@ export const INVITATION_DURATION = {
 // ============================================
 
 /**
+ * Connection state to Supabase Auth
+ */
+export type ConnectionState = 'connected' | 'connecting' | 'offline';
+
+/**
  * Auth-State für Hooks
  */
 export interface AuthState {
@@ -206,6 +211,8 @@ export interface AuthState {
   isAuthenticated: boolean;
   isGuest: boolean;
   isLoading: boolean;
+  /** Connection state to Supabase - 'offline' means auth init timed out */
+  connectionState: ConnectionState;
 }
 
 /**

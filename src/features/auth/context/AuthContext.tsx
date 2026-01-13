@@ -18,7 +18,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import type { User as SupabaseUser, Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
-import type { User, Session, LoginResult, RegisterResult } from '../types/auth.types';
+import type { User, Session, LoginResult, RegisterResult, ConnectionState } from '../types/auth.types';
 import type { AuthContextValue } from './authContextValue';
 import { AuthContext } from './authContextInstance';
 import { generateUUID } from '../utils/tokenGenerator';
@@ -98,6 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
 
   /**
    * Fetches profile data from profiles table
@@ -212,18 +213,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const initAuth = async (retryCount = 0) => {
       // Safety timeout: If auth takes too long, force loading=false to let user interact
-      // Increased to 5s to allow for retries after AbortError
+      // Increased to 8s to allow for cold starts and slow networks
       const safetyTimeout = setTimeout(() => {
         if (mounted && isLoading) {
           console.warn('Auth init timed out - forcing offline mode');
+          setConnectionState('offline');
           setIsLoading(false);
         }
-      }, 5000);
+      }, 8000);
 
       try {
         // If Supabase isn't configured, just check for guest user and finish
         if (!isSupabaseConfigured || !supabase) {
           if (mounted) {
+            setConnectionState('offline');
             await updateAuthState(null);
           }
           return;
@@ -233,6 +236,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
 
         if (mounted) {
+          setConnectionState('connected');
           await updateAuthState(currentSession);
         }
       } catch (error) {
@@ -247,10 +251,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
             return initAuth(retryCount + 1);
           }
           // After retries, silently ignore - user can refresh or app will recover
+          if (mounted) {
+            setConnectionState('offline');
+          }
           return;
         }
         console.error('Auth init error:', error);
         if (mounted) {
+          setConnectionState('offline');
           setUser(null);
           setSession(null);
           setIsLoading(false);
@@ -303,6 +311,55 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updateAuthState]);
+
+  // Auto-reconnect when offline
+  useEffect(() => {
+    if (connectionState !== 'offline' || !isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    // Capture supabase reference for TypeScript narrowing
+    const supabaseClient = supabase;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const attemptReconnect = async () => {
+      // eslint-disable-next-line no-console
+      console.log('Attempting to reconnect to Supabase...');
+      setConnectionState('connecting');
+
+      try {
+        const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
+        setConnectionState('connected');
+        await updateAuthState(currentSession);
+        // eslint-disable-next-line no-console
+        console.log('Reconnected successfully');
+      } catch (error) {
+        console.warn('Reconnect failed:', error);
+        setConnectionState('offline');
+        // Schedule next retry
+        retryTimeout = setTimeout(() => { void attemptReconnect(); }, 30000);
+      }
+    };
+
+    // Listen for browser online event
+    const handleOnline = () => {
+      // eslint-disable-next-line no-console
+      console.log('Browser online event detected');
+      void attemptReconnect();
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    // Start periodic retry after initial delay
+    retryTimeout = setTimeout(() => { void attemptReconnect(); }, 30000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
+    };
+  }, [connectionState, updateAuthState]);
 
   // Derived state
   const isAuthenticated = useMemo(() => {
@@ -564,10 +621,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true);
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setConnectionState('connected');
       await updateAuthState(currentSession);
     } catch (err) {
       console.error('Refresh auth error:', err);
+      setConnectionState('offline');
       setIsLoading(false);
+    }
+  }, [updateAuthState]);
+
+  /**
+   * Manually trigger reconnection attempt
+   */
+  const reconnect = useCallback(async (): Promise<void> => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('Manual reconnect triggered');
+    setConnectionState('connecting');
+
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setConnectionState('connected');
+      await updateAuthState(currentSession);
+      // eslint-disable-next-line no-console
+      console.log('Manual reconnect successful');
+    } catch (err) {
+      console.error('Manual reconnect failed:', err);
+      setConnectionState('offline');
     }
   }, [updateAuthState]);
 
@@ -715,6 +798,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated,
     isGuest,
     isLoading,
+    connectionState,
     register,
     login,
     sendMagicLink,
@@ -722,6 +806,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     continueAsGuest,
     refreshAuth,
+    reconnect,
     updateProfile,
     resetPassword,
     updatePassword,
