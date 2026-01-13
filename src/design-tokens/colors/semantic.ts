@@ -178,6 +178,7 @@ export const semanticColorsDark = {
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayStrong: 'rgba(0, 0, 0, 0.7)',
   overlayDialog: 'rgba(0, 0, 0, 0.8)',
+  backdrop: 'rgba(10, 22, 40, 0.85)', // Modal/dialog backdrop with blur
   focus: palette.green[400],
   focusRing: 'rgba(0, 230, 118, 0.2)',
 

@@ -20,6 +20,7 @@ import {
   UserProfileScreen,
   InviteAcceptScreen,
   AuthCallback,
+  AuthConfirmPage,
   SetPasswordScreen,
 } from './features/auth/components';
 import { Footer } from './components/layout';
@@ -100,7 +101,7 @@ const ScreenLoader = () => (
   </div>
 );
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'set-password' | 'local-test';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test';
 
 function AppContent() {
   const { showError } = useToast();
@@ -258,6 +259,9 @@ function AppContent() {
     } else if (path === '/auth/callback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
+    } else if (path === '/auth/confirm') {
+      // Handle email confirmation with button click (defeats email scanners)
+      setScreen('auth-confirm');
     } else if (path === '/test-live') {
       // Local test screen (DEV only)
       setScreen('local-test');
@@ -492,6 +496,8 @@ function AppContent() {
         )}
 
         {screen === 'auth-callback' && <AuthCallback />}
+
+        {screen === 'auth-confirm' && <AuthConfirmPage />}
 
         {screen === 'set-password' && <SetPasswordScreen />}
 

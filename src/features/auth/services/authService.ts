@@ -1,15 +1,31 @@
 /**
- * Auth Service - Authentifizierung (Registrierung, Login, Logout)
+ * Auth Service - Legacy Authentifizierung (localStorage-basiert)
  *
- * Phase 1: Lokale Simulation mit localStorage
- * Phase 2: Wird durch Supabase Auth ersetzt
+ * @deprecated LEGACY CODE - DO NOT USE IN NEW CODE
+ *
+ * This service was Phase 1 (localStorage-based auth simulation).
+ * Phase 2 (Supabase Auth via AuthContext) is now the primary auth system.
+ *
+ * ## Remaining functionality:
+ * - User validation utilities (isValidName, isValidEmail)
+ * - Legacy login/register for local-only mode
+ * - Guest user creation
+ *
+ * ## Refactoring completed (January 2026):
+ * - getCurrentUser() and getCachedCurrentUser() REMOVED
+ * - Services now receive userId as parameter from hooks
+ * - useCurrentUser hook DELETED (was unused)
+ *
+ * ## For new code:
+ * - Use `useAuth()` hook from '../context/AuthContext'
+ * - Use Supabase client directly for auth operations
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
+ * @see src/features/auth/context/AuthContext.tsx (modern auth)
  */
 
 import type {
   User,
-  GlobalRole,
   LoginResult,
   RegisterResult,
 } from '../types/auth.types';
@@ -19,7 +35,6 @@ import {
   createSession,
   clearSession,
   getSession,
-  getSessionUserId,
 } from './sessionService';
 
 // ============================================
@@ -228,62 +243,14 @@ export const logout = (): void => {
 };
 
 // ============================================
-// CURRENT USER
+// SESSION STATUS
 // ============================================
-
-/**
- * Gibt den aktuell eingeloggten User zurück
- *
- * @returns User oder null wenn nicht eingeloggt
- */
-export const getCurrentUser = (): User | null => {
-  // Erst Session prüfen
-  const userId = getSessionUserId();
-  if (!userId) {
-    saveCurrentUser(null);
-    return null;
-  }
-
-  // User aus Users-Liste laden (für aktuelle Daten)
-  const users = getUsers();
-  const user = users.find((u) => u.id === userId);
-
-  if (!user) {
-    // Session existiert aber User nicht mehr → ausloggen
-    logout();
-    return null;
-  }
-
-  // Cached User aktualisieren
-  saveCurrentUser(user);
-  return user;
-};
-
-/**
- * Gibt den gecachten aktuellen User zurück (schneller, evtl. veraltet)
- */
-export const getCachedCurrentUser = (): User | null => {
-  try {
-    const userJson = localStorage.getItem(AUTH_STORAGE_KEYS.CURRENT_USER);
-    return userJson ? (JSON.parse(userJson) as User) : null;
-  } catch {
-    return null;
-  }
-};
 
 /**
  * Prüft ob ein User eingeloggt ist
  */
 export const isAuthenticated = (): boolean => {
   return getSession() !== null;
-};
-
-/**
- * Prüft ob der aktuelle User ein Gast ist
- */
-export const isCurrentUserGuest = (): boolean => {
-  const user = getCurrentUser();
-  return user?.globalRole === 'guest';
 };
 
 // ============================================
@@ -346,92 +313,6 @@ export const convertGuestToUser = (
   }
 
   return result;
-};
-
-// ============================================
-// USER UPDATES
-// ============================================
-
-/**
- * Aktualisiert den aktuellen User
- *
- * @param updates - Zu aktualisierende Felder
- * @returns Aktualisierter User oder null bei Fehler
- */
-export const updateCurrentUser = (
-  updates: Partial<Pick<User, 'name' | 'avatarUrl'>>
-): User | null => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
-    return null;
-  }
-
-  // Name validieren falls übergeben
-  if (updates.name !== undefined) {
-    const trimmedName = updates.name.trim();
-    if (trimmedName.length < 2 || trimmedName.length > 100) {
-      return null;
-    }
-    updates.name = trimmedName;
-  }
-
-  // User aktualisieren
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.id === currentUser.id);
-
-  if (userIndex === -1) {
-    return null;
-  }
-
-  const updatedUser: User = {
-    ...users[userIndex],
-    ...updates,
-    updatedAt: new Date().toISOString(),
-  };
-
-  users[userIndex] = updatedUser;
-  saveUsers(users);
-  saveCurrentUser(updatedUser);
-
-  return updatedUser;
-};
-
-/**
- * Ändert die globale Rolle eines Users (nur Admin)
- *
- * @param userId - ID des Users
- * @param newRole - Neue globale Rolle
- * @returns true wenn erfolgreich
- */
-export const setUserGlobalRole = (userId: string, newRole: GlobalRole): boolean => {
-  const currentUser = getCurrentUser();
-
-  // Nur Admins können globale Rollen ändern
-  if (currentUser?.globalRole !== 'admin') {
-    return false;
-  }
-
-  const users = getUsers();
-  const userIndex = users.findIndex((u) => u.id === userId);
-
-  if (userIndex === -1) {
-    return false;
-  }
-
-  users[userIndex] = {
-    ...users[userIndex],
-    globalRole: newRole,
-    updatedAt: new Date().toISOString(),
-  };
-
-  saveUsers(users);
-
-  // Falls es der aktuelle User ist, auch cached User aktualisieren
-  if (userId === currentUser.id) {
-    saveCurrentUser(users[userIndex]);
-  }
-
-  return true;
 };
 
 // ============================================

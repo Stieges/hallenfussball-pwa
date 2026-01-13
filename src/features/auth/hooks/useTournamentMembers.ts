@@ -130,7 +130,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
       setError(null);
 
       try {
-        const result = await changeRole(membershipId, newRole, teamIds);
+        const result = await changeRole(membershipId, newRole, user?.id ?? '', teamIds);
         if (!result.success) {
           setError(result.error ?? 'Rolle konnte nicht geändert werden');
           return false;
@@ -145,7 +145,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         setIsLoading(false);
       }
     },
-    [refresh]
+    [refresh, user?.id]
   );
 
   /**
@@ -157,7 +157,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
       setError(null);
 
       try {
-        const result = await updateTrainerTeams(membershipId, teamIds);
+        const result = await updateTrainerTeams(membershipId, teamIds, user?.id ?? '');
         if (!result.success) {
           setError(result.error ?? 'Teams konnten nicht aktualisiert werden');
           return false;
@@ -172,7 +172,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         setIsLoading(false);
       }
     },
-    [refresh]
+    [refresh, user?.id]
   );
 
   /**
@@ -184,7 +184,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
       setError(null);
 
       try {
-        const success = await removeMember(membershipId);
+        const success = await removeMember(membershipId, user?.id ?? '');
         if (!success) {
           setError('Mitglied konnte nicht entfernt werden');
           return false;
@@ -199,7 +199,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         setIsLoading(false);
       }
     },
-    [refresh]
+    [refresh, user?.id]
   );
 
   /**
@@ -211,7 +211,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
       setError(null);
 
       try {
-        const result = await transferOwnership(tournamentId, newOwnerId);
+        const result = await transferOwnership(tournamentId, newOwnerId, user?.id ?? '');
         if (!result.success) {
           setError(result.error ?? 'Ownership konnte nicht übertragen werden');
           return false;
@@ -226,7 +226,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         setIsLoading(false);
       }
     },
-    [tournamentId, refresh]
+    [tournamentId, refresh, user?.id]
   );
 
   /**

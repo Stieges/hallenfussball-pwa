@@ -6,6 +6,7 @@
 export { LoginScreen } from './LoginScreen';
 export { RegisterScreen } from './RegisterScreen';
 export { AuthCallback } from './AuthCallback';
+export { AuthConfirmPage } from './AuthConfirmPage';
 export { SetPasswordScreen } from './SetPasswordScreen';
 export { GuestBanner } from './GuestBanner';
 export { AuthGuard } from './AuthGuard';

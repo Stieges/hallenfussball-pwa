@@ -126,7 +126,7 @@ export const useInvitation = (): UseInvitationReturn => {
         const result = await createInvitation({
           ...options,
           createdBy: user.id,
-        });
+        }, user);
         if (!result.success) {
           setError(result.error ?? 'Fehler beim Erstellen der Einladung');
         }

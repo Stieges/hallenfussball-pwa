@@ -16,7 +16,7 @@ import type {
 // Re-export for consumers
 export type { InvitationValidationResult } from '../types/auth.types';
 import { generateToken } from '../utils/tokenGenerator';
-import { getCurrentUser } from './authService';
+// getCurrentUser removed - user now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 // ============================================
@@ -140,14 +140,15 @@ function mapRowToMembership(row: CollaboratorRow): TournamentMembership {
  * @param options - Einladungs-Optionen
  * @returns Ergebnis mit Einladung und Link
  */
-export const createInvitation = async (options: CreateInvitationOptions): Promise<CreateInvitationResult> => {
-  const currentUser = getCurrentUser();
-
-  if (!currentUser) {
+export const createInvitation = async (
+  options: CreateInvitationOptions,
+  user: { id: string; globalRole: string } | null
+): Promise<CreateInvitationResult> => {
+  if (!user) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
-  if (currentUser.globalRole === 'guest') {
+  if (user.globalRole === 'guest') {
     return { success: false, error: 'Gäste können keine Einladungen erstellen' };
   }
 
@@ -441,7 +442,7 @@ export const getInvitationByToken = async (token: string): Promise<Invitation | 
  */
 export const createInvitationSync = (options: CreateInvitationOptions): CreateInvitationResult => {
   console.warn('createInvitationSync is deprecated. Use createInvitation() async function.');
-  // Trigger async operation
-  void createInvitation(options);
+  // Trigger async operation (will fail immediately with null user, as expected)
+  void createInvitation(options, null);
   return { success: false, error: 'Use async version' };
 };

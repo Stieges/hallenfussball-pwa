@@ -203,6 +203,7 @@ export const cssColors = {
   overlay: 'var(--color-overlay)',
   overlayStrong: 'var(--color-overlay-strong)',
   overlayDialog: 'var(--color-overlay-dialog)',
+  backdrop: 'var(--color-backdrop)',
   focus: 'var(--color-focus)',
   focusRing: 'var(--color-focus-ring)',
   inputBg: 'var(--color-input-bg)',
