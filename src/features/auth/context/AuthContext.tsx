@@ -339,7 +339,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           data: {
             full_name: name.trim(),
           },
-          emailRedirectTo: `${window.location.origin}/#/auth/callback`,
+          // Redirect to /auth/confirm for scanner protection (requires button click)
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
         },
       });
 
@@ -455,7 +456,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
         options: {
-          emailRedirectTo: `${window.location.origin}/#/auth/callback`,
+          // Redirect to /auth/confirm for scanner protection (requires button click)
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=magiclink`,
         },
       });
 
@@ -586,7 +588,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
         {
-          redirectTo: `${window.location.origin}/#/auth/callback`,
+          // Redirect to /auth/confirm for scanner protection (requires button click)
+          redirectTo: `${window.location.origin}/auth/confirm?type=recovery`,
         }
       );
 

@@ -18,6 +18,7 @@ import React, { useState, useEffect, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
+import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
 
 interface LoginScreenProps {
   /** Called when login is successful */
@@ -129,6 +130,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setIsLoading(true);
 
     try {
+      // Ghost Password Prevention: Check if user registered via OAuth
+      const oauthCheck = await checkOAuthOnlyUser(email);
+
+      if (oauthCheck.isOAuthOnly) {
+        // User registered via OAuth - don't allow password reset
+        setError(getOAuthPasswordResetMessage(oauthCheck.provider));
+        setIsLoading(false);
+        return;
+      }
+
       const result = await resetPassword(email);
 
       if (result.success) {

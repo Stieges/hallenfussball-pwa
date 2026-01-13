@@ -1,9 +1,6 @@
 export { useAuth } from './useAuth';
 export type { UseAuthReturn } from './useAuth';
 
-export { useCurrentUser } from './useCurrentUser';
-export type { UseCurrentUserReturn } from './useCurrentUser';
-
 export { useUserTournaments } from './useUserTournaments';
 export type {
   UseUserTournamentsReturn,

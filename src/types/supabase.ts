@@ -340,6 +340,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_provider: string | null
           avatar_url: string | null
           created_at: string | null
           display_name: string | null
@@ -350,6 +351,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auth_provider?: string | null
           avatar_url?: string | null
           created_at?: string | null
           display_name?: string | null
@@ -360,6 +362,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auth_provider?: string | null
           avatar_url?: string | null
           created_at?: string | null
           display_name?: string | null

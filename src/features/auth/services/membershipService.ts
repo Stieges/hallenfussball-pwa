@@ -8,7 +8,7 @@
 
 import type { TournamentMembership, TournamentRole } from '../types/auth.types';
 import { canChangeRole, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
-import { getCurrentUser } from './authService';
+// getCurrentUser removed - userId now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 
 // ============================================
@@ -201,10 +201,10 @@ export const getUserMembership = async (
 export const changeRole = async (
   membershipId: string,
   newRole: TournamentRole,
+  userId: string,
   newTeamIds?: string[]
 ): Promise<ChangeRoleResult> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
+  if (!userId) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
@@ -228,7 +228,7 @@ export const changeRole = async (
     const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
 
     // Get my membership in the same tournament
-    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+    const myMembership = await getUserMembership(targetMembership.tournamentId, userId);
 
     if (!myMembership) {
       return { success: false, error: 'Keine Berechtigung' };
@@ -275,10 +275,10 @@ export const changeRole = async (
  */
 export const updateTrainerTeams = async (
   membershipId: string,
-  teamIds: string[]
+  teamIds: string[],
+  userId: string
 ): Promise<ChangeRoleResult> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
+  if (!userId) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
@@ -306,7 +306,7 @@ export const updateTrainerTeams = async (
     }
 
     // Get my membership
-    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+    const myMembership = await getUserMembership(targetMembership.tournamentId, userId);
 
     if (!myMembership || (myMembership.role !== 'owner' && myMembership.role !== 'co-admin')) {
       return { success: false, error: 'Keine Berechtigung' };
@@ -339,9 +339,8 @@ export const updateTrainerTeams = async (
  * @param membershipId - ID der Membership
  * @returns true wenn erfolgreich
  */
-export const removeMember = async (membershipId: string): Promise<boolean> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
+export const removeMember = async (membershipId: string, userId: string): Promise<boolean> => {
+  if (!userId) {
     return false;
   }
 
@@ -370,7 +369,7 @@ export const removeMember = async (membershipId: string): Promise<boolean> => {
     }
 
     // Get my membership
-    const myMembership = await getUserMembership(targetMembership.tournamentId, currentUser.id);
+    const myMembership = await getUserMembership(targetMembership.tournamentId, userId);
 
     if (!myMembership) {
       return false;
@@ -402,10 +401,10 @@ export const removeMember = async (membershipId: string): Promise<boolean> => {
  */
 export const transferOwnership = async (
   tournamentId: string,
-  newOwnerId: string
+  newOwnerId: string,
+  userId: string
 ): Promise<TransferOwnershipResult> => {
-  const currentUser = getCurrentUser();
-  if (!currentUser) {
+  if (!userId) {
     return { success: false, error: 'Nicht angemeldet' };
   }
 
@@ -415,7 +414,7 @@ export const transferOwnership = async (
 
   try {
     // Get my membership (must be owner)
-    const myMembership = await getUserMembership(tournamentId, currentUser.id);
+    const myMembership = await getUserMembership(tournamentId, userId);
 
     if (!myMembership) {
       return { success: false, error: 'Nicht Mitglied dieses Turniers' };
