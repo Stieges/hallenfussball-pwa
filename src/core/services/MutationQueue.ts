@@ -25,16 +25,35 @@ export interface MutationItem {
 }
 
 const STORAGE_KEY = 'mutation_queue_v1';
+const FAILED_STORAGE_KEY = 'mutation_queue_failed_v1';
 const MAX_RETRIES = 5;
+
+/**
+ * A mutation that failed permanently (exceeded max retries)
+ */
+export interface FailedMutationItem extends MutationItem {
+    failedAt: number;
+    lastError?: string;
+}
+
+/**
+ * Status info for subscribers
+ */
+export interface MutationQueueStatus {
+    pendingCount: number;
+    failedCount: number;
+}
 
 
 export class MutationQueue {
     private queue: MutationItem[] = [];
+    private failedQueue: FailedMutationItem[] = [];
     private isProcessing = false;
-    private listeners: ((pendingCount: number) => void)[] = [];
+    private listeners: ((status: MutationQueueStatus) => void)[] = [];
 
     constructor(private supabaseRepo: SupabaseRepository) {
         this.load();
+        this.loadFailed();
 
         // Auto-process on online
         if (typeof window !== 'undefined') {
@@ -80,7 +99,22 @@ export class MutationQueue {
         return this.queue.length;
     }
 
-    public subscribe(listener: (pendingCount: number) => void): () => void {
+    public getFailedCount(): number {
+        return this.failedQueue.length;
+    }
+
+    public getFailedMutations(): FailedMutationItem[] {
+        return [...this.failedQueue];
+    }
+
+    public getStatus(): MutationQueueStatus {
+        return {
+            pendingCount: this.queue.length,
+            failedCount: this.failedQueue.length,
+        };
+    }
+
+    public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
         this.listeners.push(listener);
         return () => {
             this.listeners = this.listeners.filter(l => l !== listener);
@@ -88,7 +122,124 @@ export class MutationQueue {
     }
 
     private notifyListeners() {
-        this.listeners.forEach(l => l(this.queue.length));
+        this.listeners.forEach(l => l(this.getStatus()));
+    }
+
+    /**
+     * Move a failed mutation to the dead-letter queue
+     */
+    private moveToDeadLetter(item: MutationItem, error?: string): void {
+        const failedItem: FailedMutationItem = {
+            ...item,
+            failedAt: Date.now(),
+            lastError: error,
+        };
+        this.failedQueue.push(failedItem);
+        this.saveFailed();
+        // eslint-disable-next-line no-console
+        console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`);
+    }
+
+    /**
+     * Retry a specific failed mutation
+     * Moves it back to the regular queue for processing
+     */
+    public retryFailedMutation(id: string): boolean {
+        const index = this.failedQueue.findIndex(item => item.id === id);
+        if (index === -1) {
+            return false;
+        }
+
+        const [failedItem] = this.failedQueue.splice(index, 1);
+        this.saveFailed();
+
+        // Reset retry count and re-enqueue
+        const retriedItem: MutationItem = {
+            id: failedItem.id,
+            type: failedItem.type,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            payload: failedItem.payload,
+            timestamp: Date.now(),
+            retryCount: 0,
+        };
+
+        this.queue.push(retriedItem);
+        this.save();
+        this.notifyListeners();
+
+        // eslint-disable-next-line no-console
+        console.log(`MutationQueue: Retrying failed mutation ${id}`);
+
+        // Try to process immediately
+        if (navigator.onLine) {
+            void this.process();
+        }
+
+        return true;
+    }
+
+    /**
+     * Retry all failed mutations
+     */
+    public retryAllFailed(): number {
+        const count = this.failedQueue.length;
+        if (count === 0) {
+            return 0;
+        }
+
+        // Move all failed items back to main queue
+        for (const failedItem of this.failedQueue) {
+            const retriedItem: MutationItem = {
+                id: failedItem.id,
+                type: failedItem.type,
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                payload: failedItem.payload,
+                timestamp: Date.now(),
+                retryCount: 0,
+            };
+            this.queue.push(retriedItem);
+        }
+
+        this.failedQueue = [];
+        this.saveFailed();
+        this.save();
+        this.notifyListeners();
+
+        // eslint-disable-next-line no-console
+        console.log(`MutationQueue: Retrying ${count} failed mutations`);
+
+        // Try to process immediately
+        if (navigator.onLine) {
+            void this.process();
+        }
+
+        return count;
+    }
+
+    /**
+     * Clear a specific failed mutation (discard it permanently)
+     */
+    public clearFailedMutation(id: string): boolean {
+        const index = this.failedQueue.findIndex(item => item.id === id);
+        if (index === -1) {
+            return false;
+        }
+
+        this.failedQueue.splice(index, 1);
+        this.saveFailed();
+        this.notifyListeners();
+        return true;
+    }
+
+    /**
+     * Clear all failed mutations
+     */
+    public clearAllFailed(): number {
+        const count = this.failedQueue.length;
+        this.failedQueue = [];
+        this.saveFailed();
+        this.notifyListeners();
+        return count;
     }
 
     private load() {
@@ -108,6 +259,26 @@ export class MutationQueue {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
         } catch (e) {
             console.error('MutationQueue: Failed to save queue', e);
+        }
+    }
+
+    private loadFailed() {
+        try {
+            const raw = localStorage.getItem(FAILED_STORAGE_KEY);
+            if (raw) {
+                this.failedQueue = JSON.parse(raw) as FailedMutationItem[];
+            }
+        } catch (e) {
+            console.error('MutationQueue: Failed to load failed queue', e);
+            this.failedQueue = [];
+        }
+    }
+
+    private saveFailed() {
+        try {
+            localStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(this.failedQueue));
+        } catch (e) {
+            console.error('MutationQueue: Failed to save failed queue', e);
         }
     }
 
@@ -137,16 +308,16 @@ export class MutationQueue {
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {
-                        console.error(`MutationQueue: Max retries exceeded for ${item.id}. Dropping item.`);
-                        // Move to dead letter queue? For now, we drop to unblock queue.
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                        console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`);
+                        // Move to dead-letter queue instead of dropping
                         this.queue.shift();
+                        this.moveToDeadLetter(item, errorMessage);
                         this.save();
                         this.notifyListeners();
                         continue; // Continue to next item
                     } else {
                         // Keep in queue, stop processing for now (retry later)
-                        // Wait a bit before retry? Or just exit loop to avoid spam loop?
-                        // Let's exit loop and wait for next trigger/backoff.
                         this.save();
                         // break loop to retry later
                         break;

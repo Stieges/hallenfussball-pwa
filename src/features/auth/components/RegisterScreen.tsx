@@ -160,7 +160,8 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onNavigateToLogin,
   onBack,
 }) => {
-  const { register, loginWithGoogle, isGuest } = useAuth();
+  const { register, loginWithGoogle, isGuest, connectionState, reconnect } = useAuth();
+  const isOffline = connectionState === 'offline';
   const { showMigrationSuccess } = useToast();
 
   const [name, setName] = useState('');
@@ -179,6 +180,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [migratedCount, setMigratedCount] = useState(0);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
 
   // ESC key to close
@@ -256,8 +258,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       const result = await register(name, email, password);
 
       if (result.success) {
-        // Show migration toast if guest was converted
-        if (result.wasMigrated) {
+        // Store migration count for feedback
+        if (result.migratedCount && result.migratedCount > 0) {
+          setMigratedCount(result.migratedCount);
           showMigrationSuccess();
         }
 
@@ -328,6 +331,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           <p style={styles.successText}>
             Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
             Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.
+            {migratedCount > 0 && (
+              <><br /><br />{migratedCount} Turnier{migratedCount === 1 ? ' wird' : 'e werden'} nach der Aktivierung synchronisiert.</>
+            )}
           </p>
           <Button
             variant="primary"
@@ -361,7 +367,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </button>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Willkommen!</h2>
-          <p style={styles.successText}>Dein Konto wurde erstellt.</p>
+          <p style={styles.successText}>
+            Dein Konto wurde erstellt.
+            {migratedCount > 0 && (
+              <><br />{migratedCount} Turnier{migratedCount === 1 ? '' : 'e'} synchronisiert!</>
+            )}
+          </p>
           <Button
             variant="primary"
             fullWidth
@@ -405,6 +416,25 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         <h1 id="register-title" style={styles.title}>
           {isGuest ? 'Konto erstellen' : 'Registrieren'}
         </h1>
+
+        {/* Offline Banner */}
+        {isOffline && (
+          <div style={styles.offlineBanner} role="alert">
+            <span style={styles.offlineIcon}>📡</span>
+            <div style={styles.offlineTextContainer}>
+              <span style={styles.offlineTitle}>Cloud nicht erreichbar</span>
+              <span style={styles.offlineSubtitle}>Registrierung nicht möglich</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void reconnect()}
+              style={styles.offlineRetryButton}
+            >
+              Erneut
+            </button>
+          </div>
+        )}
+
         <p style={styles.subtitle}>
           {isGuest
             ? 'Erstelle ein Konto, um deine Turniere zu synchronisieren.'
@@ -555,6 +585,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             variant="primary"
             fullWidth
             loading={isLoading}
+            disabled={isOffline}
             style={styles.button}
           >
             Konto erstellen
@@ -572,7 +603,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           variant="secondary"
           fullWidth
           onClick={() => void handleGoogleLogin()}
-          disabled={isLoading}
+          disabled={isLoading || isOffline}
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
@@ -835,6 +866,46 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.lg,
     cursor: 'pointer',
     transition: 'color 0.2s, background 0.2s',
+  },
+  offlineBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
+    marginBottom: cssVars.spacing.md,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    border: `1px solid ${cssVars.colors.warning}`,
+    borderRadius: cssVars.borderRadius.md,
+  },
+  offlineIcon: {
+    fontSize: cssVars.fontSizes.lg,
+    flexShrink: 0,
+  },
+  offlineTextContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    gap: '2px',
+  },
+  offlineTitle: {
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
+  },
+  offlineSubtitle: {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  },
+  offlineRetryButton: {
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: 'transparent',
+    border: `1px solid ${cssVars.colors.warning}`,
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    cursor: 'pointer',
+    flexShrink: 0,
   },
 };
 

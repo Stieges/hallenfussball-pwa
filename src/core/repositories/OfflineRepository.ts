@@ -31,13 +31,20 @@ export interface SyncConflict {
 }
 
 export class OfflineRepository implements ITournamentRepository {
-    private mutationQueue: MutationQueue;
+    private _mutationQueue: MutationQueue;
 
     constructor(
         private localRepo: LocalStorageRepository,
         private supabaseRepo: SupabaseRepository
     ) {
-        this.mutationQueue = new MutationQueue(supabaseRepo);
+        this._mutationQueue = new MutationQueue(supabaseRepo);
+    }
+
+    /**
+     * Get the mutation queue instance for status subscriptions
+     */
+    get mutationQueue(): MutationQueue {
+        return this._mutationQueue;
     }
 
     /**

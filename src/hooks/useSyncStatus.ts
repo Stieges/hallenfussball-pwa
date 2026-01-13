@@ -13,7 +13,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useRepositoryContext } from '../core/contexts/RepositoryContext';
-import { SyncStatus, SyncResult, SyncConflict } from '../core/repositories/OfflineRepository';
+import { SyncStatus, SyncResult, SyncConflict, OfflineRepository } from '../core/repositories/OfflineRepository';
+import type { MutationQueueStatus } from '../core/services/MutationQueue';
 
 export interface SyncState {
     /** Current sync status */
@@ -26,8 +27,10 @@ export interface SyncState {
     conflicts?: SyncConflict[];
     /** Timestamp of last successful sync */
     lastSyncedAt?: string;
-    /** Number of pending changes */
+    /** Number of pending changes in mutation queue */
     pendingChanges: number;
+    /** Number of failed mutations in dead-letter queue */
+    failedChanges: number;
 }
 
 export interface UseSyncStatusReturn extends SyncState {
@@ -65,9 +68,41 @@ export function useSyncStatus(): UseSyncStatusReturn {
         status: isOnline ? 'synced' : 'offline',
         isSyncing: false,
         pendingChanges: 0,
+        failedChanges: 0,
     });
 
     const isMounted = useRef(true);
+
+    // Subscribe to MutationQueue status updates
+    useEffect(() => {
+        // Check if repository is OfflineRepository with mutationQueue
+        if (!('mutationQueue' in repository)) {
+            return;
+        }
+
+        const offlineRepo = repository as OfflineRepository;
+        const mutationQueue = offlineRepo.mutationQueue;
+
+        // Get initial status
+        const initialStatus = mutationQueue.getStatus();
+        setState(prev => ({
+            ...prev,
+            pendingChanges: initialStatus.pendingCount,
+            failedChanges: initialStatus.failedCount,
+        }));
+
+        // Subscribe to updates
+        const unsubscribe = mutationQueue.subscribe((queueStatus: MutationQueueStatus) => {
+            if (!isMounted.current) {return;}
+            setState(prev => ({
+                ...prev,
+                pendingChanges: queueStatus.pendingCount,
+                failedChanges: queueStatus.failedCount,
+            }));
+        });
+
+        return unsubscribe;
+    }, [repository]);
 
     // Update status when online status changes
     useEffect(() => {

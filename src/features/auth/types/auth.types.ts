@@ -223,6 +223,10 @@ export interface LoginResult {
   user?: User;
   session?: Session;
   error?: string;
+  /** Indicates local guest tournaments were migrated to cloud */
+  wasMigrated?: boolean;
+  /** Number of tournaments migrated */
+  migratedCount?: number;
 }
 
 /**
@@ -233,8 +237,10 @@ export interface RegisterResult {
   user?: User;
   session?: Session;
   error?: string;
-  /** Indicates guest account was migrated to full user */
+  /** Indicates local guest tournaments were migrated to cloud */
   wasMigrated?: boolean;
+  /** Number of tournaments migrated */
+  migratedCount?: number;
 }
 
 /**
