@@ -14,7 +14,7 @@ module.exports = {
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', '*.js', '*.cjs', 'node_modules', 'mcp-adesso-analyzer', 'eslint-rules'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', '*.js', '*.cjs', 'node_modules', 'mcp-adesso-analyzer', 'eslint-rules', 'scripts'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',

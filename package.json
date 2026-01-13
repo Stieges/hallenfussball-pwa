@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@playwright/test": "^1.57.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
@@ -59,6 +60,7 @@
     "husky": "^9.1.7",
     "jsdom": "^27.3.0",
     "lint-staged": "^16.2.7",
+    "node-localstorage": "^3.0.5",
     "rollup-plugin-visualizer": "^6.0.5",
     "typescript": "^5.2.2",
     "vite": "^7.3.0",

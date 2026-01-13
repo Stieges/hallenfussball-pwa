@@ -363,11 +363,11 @@ function AppContent() {
         // Generate new IDs for teams
         teams: tournament.teams.map(team => ({
           ...team,
-          id: generateUniqueId('team'),
+          id: generateUniqueId(),
         })),
         // Generate new IDs for matches and update team references
         matches: tournament.matches.map(match => {
-          const newMatchId = generateUniqueId('match');
+          const newMatchId = generateUniqueId();
           return {
             ...match,
             id: newMatchId,
