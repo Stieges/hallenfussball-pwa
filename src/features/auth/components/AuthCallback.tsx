@@ -10,7 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
-import { safeSessionStorage } from '../../../core/utils/safeStorage';
+import { safeSessionStorage, safeLocalStorage } from '../../../core/utils/safeStorage';
 import { cssVars } from '../../../design-tokens';
 
 /**
@@ -97,12 +97,13 @@ export const AuthCallback: React.FC = () => {
 
         // IMPORTANT: Check for existing session FIRST
         // Supabase with detectSessionInUrl:true may have already processed the code/tokens
-        // OAuth codes are single-use, so trying to exchange again would fail
         const { data: { session: existingSession } } = await supabase.auth.getSession();
 
         if (existingSession) {
-          // Session already exists (Supabase auto-detected or previous login)
-          // Check if this is a password recovery flow
+          // Session found!
+          // Explicitly clear guest user to prevent any fallback
+          safeLocalStorage.removeItem('auth:guestUser');
+
           const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
 
           if (isPasswordRecovery) {
@@ -111,23 +112,24 @@ export const AuthCallback: React.FC = () => {
             return;
           }
 
-          // Successfully authenticated, redirect to home
           void navigate('/', { replace: true });
           return;
         }
 
         // Handle PKCE flow (code in query params)
-        // Only try if no existing session (code wasn't auto-processed)
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
           if (exchangeError) {
-            // If code was already used, check if session exists now
-            if (exchangeError.message.includes('code') || exchangeError.message.includes('expired')) {
-              // Wait briefly for PASSWORD_RECOVERY event to fire
-              await new Promise(resolve => setTimeout(resolve, 100));
+            // Check if code was already used (race condition with auto-detect)
+            if (exchangeError.message.includes('code') || exchangeError.message.includes('expired') || exchangeError.message.includes('used')) {
+              // Retry fetching session - it might have been set by auto-detect
+              await new Promise(resolve => setTimeout(resolve, 500)); // Increased wait
+
               const { data: { session: retrySession } } = await supabase.auth.getSession();
               if (retrySession) {
+                safeLocalStorage.removeItem('auth:guestUser');
+
                 const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
                 if (isPasswordRecovery) {
                   safeSessionStorage.removeItem('auth:passwordRecovery');
@@ -143,28 +145,36 @@ export const AuthCallback: React.FC = () => {
             return;
           }
 
-          // Wait briefly for PASSWORD_RECOVERY event to fire and set the sessionStorage flag
-          // The event fires asynchronously after exchangeCodeForSession completes
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Exchange successful - verify session is actually set
+          // Wait briefly for the session to propagate
+          await new Promise(resolve => setTimeout(resolve, 200));
 
-          // Check if this is a recovery flow
-          // Check both URL param (legacy/implicit) and sessionStorage flag (PKCE)
-          // The PASSWORD_RECOVERY event fires during exchangeCodeForSession and sets the flag
+          const { data: { session: verifySession } } = await supabase.auth.getSession();
+          if (!verifySession) {
+            console.error('Exchange successful but no session found. Retrying...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const { data: { session: finalRetry } } = await supabase.auth.getSession();
+            if (!finalRetry) {
+              setError('Sitzung konnte nicht erstellt werden. Bitte versuche es erneut.');
+              return;
+            }
+          }
+
+          safeLocalStorage.removeItem('auth:guestUser');
+
           const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
 
           if (isPasswordRecovery) {
-            // Clear the flag so it doesn't persist
             safeSessionStorage.removeItem('auth:passwordRecovery');
             void navigate('/set-password', { replace: true });
             return;
           }
 
-          // Successfully authenticated
           void navigate('/', { replace: true });
           return;
         }
 
-        // Handle Implicit flow (tokens in hash)
+        // Handle Implicit flow
         if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -176,18 +186,25 @@ export const AuthCallback: React.FC = () => {
             return;
           }
 
-          // Check if this is a password recovery flow
+          // Success
+          safeLocalStorage.removeItem('auth:guestUser');
+
           if (type === 'recovery') {
             void navigate('/set-password', { replace: true });
             return;
           }
 
-          // Successfully authenticated, redirect to home
           void navigate('/', { replace: true });
           return;
         }
 
-        // No code, no tokens, no session - redirect to login
+        // No code, no tokens, no session
+        // Check if we accidentally ended up here from Google redirect but parsing failed?
+        // Detailed log
+        console.warn('AuthCallback: No auth data found in URL', { hash: window.location.hash, search: window.location.search });
+
+        // Don't redirect immediately to login if we suspect we might have missed something
+        // But for now, standard behavior is redirect.
         void navigate('/login', { replace: true });
       } catch (err) {
         // AbortError is expected in React StrictMode (double mount/unmount)

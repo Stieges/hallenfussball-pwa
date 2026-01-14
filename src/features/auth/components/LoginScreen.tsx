@@ -137,13 +137,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     try {
       // Ghost Password Prevention: Check if user registered via OAuth
+      // We process this safely - if the check fails (e.g. network), we assume it's safe to proceed
+      // (Supabase will handle the actual email sending logic)
       const oauthCheck = await checkOAuthOnlyUser(email);
 
+      // If we positively identified as OAuth-only, block and show message
       if (oauthCheck.isOAuthOnly) {
-        // User registered via OAuth - don't allow password reset
         setError(getOAuthPasswordResetMessage(oauthCheck.provider));
         setIsLoading(false);
         return;
+      }
+
+      // If there was an error during check (e.g. network), we log it but proceed
+      if (oauthCheck.error) {
+        console.warn('OAuth check failed, processing with reset anyway:', oauthCheck.error);
       }
 
       const result = await resetPassword(email);
@@ -151,7 +158,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (result.success) {
         setResetPasswordSent(true);
       } else {
-        setError(result.error ?? 'Passwort-Reset konnte nicht gesendet werden');
+        // Handle "Failed to fetch" or other errors specifically if needed
+        const errorMessage = result.error ?? 'Passwort-Reset konnte nicht gesendet werden';
+        setError(errorMessage);
       }
     } catch (err) {
       console.error('Reset password error:', err);
