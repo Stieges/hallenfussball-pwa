@@ -3,16 +3,25 @@ import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 
 // Types for dynamically imported modules
+// Types for dynamically imported modules
 // import type { LocalStorageRepository as LocalStorageRepoType } from './core/repositories/LocalStorageRepository';
 import type { SupabaseRepository as SupabaseRepoType } from './core/repositories/SupabaseRepository';
 import type { OfflineRepository as OfflineRepoType } from './core/repositories/OfflineRepository';
 import type { TournamentCreationService as CreationServiceType } from './core/services/TournamentCreationService';
 
-describe('Integration: Cloud Sync Verification', () => {
+const hasEnvVars = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
+const runIntegration = hasEnvVars ? describe : describe.skip;
+
+runIntegration('Integration: Cloud Sync Verification', () => {
     let offlineRepo: OfflineRepoType;
     let supabaseRepo: SupabaseRepoType;
     let creationService: CreationServiceType;
     let testSupabase: any;
+
+    if (!hasEnvVars) {
+        console.warn('Skipping Cloud Sync Verification: Missing Supabase Environment Variables');
+        return;
+    }
 
     // Custom memory storage for Node.js
     const memoryStorage = (() => {
@@ -32,9 +41,8 @@ describe('Integration: Cloud Sync Verification', () => {
         const url = import.meta.env.VITE_SUPABASE_URL;
         const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-        if (!url || !key) {
-            throw new Error("Supabase env vars missing");
-        }
+        // Double check for type safety, though conditional describe handles it
+        if (!url || !key) {return;}
 
         // 1. Create a persistence-enabled client
         testSupabase = createClient(url, key, {
