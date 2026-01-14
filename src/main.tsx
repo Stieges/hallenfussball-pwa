@@ -43,12 +43,13 @@ window.addEventListener('unhandledrejection', (event) => {
 (function handleAuthRedirect() {
   const { pathname, search, hash } = window.location;
 
-  // Only intercept if we're at /auth/callback WITHOUT a hash route
+  // Only intercept if we're at /auth/callback or /auth/confirm WITHOUT a hash route
   // Hash might contain tokens (implicit flow) like #access_token=xxx
   // Or be empty (PKCE flow uses query params)
-  if (pathname === '/auth/callback' && !hash.startsWith('#/')) {
+  const authPaths = ['/auth/callback', '/auth/confirm'];
+  if (authPaths.includes(pathname) && !hash.startsWith('#/')) {
     // Build new URL with HashRouter path
-    let newUrl = `${window.location.origin}/#/auth/callback`;
+    let newUrl = `${window.location.origin}/#${pathname}`;
 
     // Collect all params - from both query string AND hash fragment
     // URLs can only have ONE hash, so we convert hash fragment tokens to query params
