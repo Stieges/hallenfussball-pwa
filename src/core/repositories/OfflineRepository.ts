@@ -119,7 +119,16 @@ export class OfflineRepository implements ITournamentRepository {
      */
     async listForCurrentUser(): Promise<Tournament[]> {
         try {
-            const cloudList = await this.supabaseRepo.listForCurrentUser();
+            // Create a timeout promise (5s) to avoid hanging indefinitely if network is slow/flaky
+            const timeoutPromise = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('Cloud fetch timeout')), 5000)
+            );
+
+            // Race between cloud fetch and timeout
+            const cloudList = await Promise.race([
+                this.supabaseRepo.listForCurrentUser(),
+                timeoutPromise
+            ]);
             const localList = await this.localRepo.listForCurrentUser();
 
             // Merge: Add local-only tournaments that haven't been synced yet
