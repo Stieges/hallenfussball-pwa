@@ -30,6 +30,10 @@ export interface SyncStatusBarProps {
     showLabel?: boolean;
     /** Compact mode (icon only) */
     compact?: boolean;
+    /** Number of pending changes waiting to sync */
+    pendingCount?: number;
+    /** Number of failed mutations in dead-letter queue */
+    failedCount?: number;
 }
 
 // =============================================================================
@@ -172,11 +176,17 @@ export function SyncStatusBar({
     onSyncClick,
     showLabel = false,
     compact = false,
+    pendingCount = 0,
+    failedCount = 0,
 }: SyncStatusBarProps) {
     const effectiveStatus: SyncStatus = isSyncing ? 'synced' : status;
     const config = STATUS_CONFIG[effectiveStatus];
     const styles = useMemo(() => createStyles(config, compact), [config, compact]);
     const lastSyncText = formatLastSync(lastSyncedAt);
+
+    // Build status text with pending/failed info
+    const hasPending = pendingCount > 0;
+    const hasFailed = failedCount > 0;
 
     const handleClick = () => {
         if (onSyncClick && !isSyncing) {
@@ -209,7 +219,7 @@ export function SyncStatusBar({
                 aria-label={isSyncing ? 'Wird synchronisiert...' : config.label}
                 title={isSyncing
                     ? 'Wird synchronisiert...'
-                    : `${config.label}${lastSyncText ? ` - ${lastSyncText}` : ''}`
+                    : `${config.label}${hasPending ? ` - ${pendingCount} ausstehend` : ''}${hasFailed ? ` - ${failedCount} fehlgeschlagen` : ''}${lastSyncText && !hasPending && !hasFailed ? ` - ${lastSyncText}` : ''}`
                 }
             >
                 <span
@@ -227,7 +237,29 @@ export function SyncStatusBar({
                     </span>
                 )}
 
-                {!compact && lastSyncText && !isSyncing && status === 'synced' && (
+                {/* Show pending count if any */}
+                {!compact && hasPending && !isSyncing && (
+                    <span style={{
+                        ...styles.label,
+                        color: cssVars.colors.warning,
+                        fontSize: cssVars.fontSizes.xs,
+                    }}>
+                        ({pendingCount} ausstehend)
+                    </span>
+                )}
+
+                {/* Show failed count if any */}
+                {!compact && hasFailed && !isSyncing && (
+                    <span style={{
+                        ...styles.label,
+                        color: cssVars.colors.error,
+                        fontSize: cssVars.fontSizes.xs,
+                    }}>
+                        ({failedCount} fehlgeschlagen)
+                    </span>
+                )}
+
+                {!compact && lastSyncText && !isSyncing && status === 'synced' && !hasPending && !hasFailed && (
                     <span style={styles.lastSync}>
                         {lastSyncText}
                     </span>

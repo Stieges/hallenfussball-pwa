@@ -363,11 +363,11 @@ function AppContent() {
         // Generate new IDs for teams
         teams: tournament.teams.map(team => ({
           ...team,
-          id: generateUniqueId('team'),
+          id: generateUniqueId(),
         })),
         // Generate new IDs for matches and update team references
         matches: tournament.matches.map(match => {
-          const newMatchId = generateUniqueId('match');
+          const newMatchId = generateUniqueId();
           return {
             ...match,
             id: newMatchId,
@@ -694,7 +694,8 @@ function AppContent() {
 }
 
 // Providers
-import { RepositoryProvider } from './core/contexts/RepositoryContext';
+import { RepositoryProvider, useRepositoryContext } from './core/contexts/RepositoryContext';
+import { OfflineRepository } from './core/repositories/OfflineRepository';
 
 /**
  * SyncManager - Background component that syncs local data to cloud
@@ -707,12 +708,52 @@ function SyncManager(): null {
   return null;
 }
 
+/**
+ * PendingChangesWarning - Warns user before closing tab with unsaved changes
+ * Shows browser confirmation dialog when:
+ * - There are pending mutations in the queue
+ */
+function PendingChangesWarning(): null {
+  const repository = useRepositoryContext();
+
+  useEffect(() => {
+    // Check if repository has mutationQueue
+    if (!('mutationQueue' in repository)) {
+      return;
+    }
+
+    const offlineRepo = repository as OfflineRepository;
+    const mutationQueue = offlineRepo.mutationQueue;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const pendingCount = mutationQueue.getPendingCount();
+      if (pendingCount > 0) {
+        // Standard way to show browser confirmation
+        e.preventDefault();
+        // Some browsers require returnValue to be set
+        const message = 'Ungespeicherte Änderungen vorhanden.';
+        e.returnValue = message;
+        return message;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [repository]);
+
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
         <RepositoryProvider>
           <SyncManager />
+          <PendingChangesWarning />
           <ToastProvider>
             <StorageWarningBanner />
             <OfflineBanner />

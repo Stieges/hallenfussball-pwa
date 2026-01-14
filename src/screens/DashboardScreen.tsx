@@ -29,6 +29,7 @@ import { getAppTitle } from '../config/app';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { AuthSection } from '../components/layout/AuthSection';
 import { DashboardNav, SearchFilterBar, FilterChip, getTabFromPath } from '../components/dashboard';
+import { OfflineModeIndicator } from '../components/OfflineModeIndicator';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
@@ -265,6 +266,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* Offline Mode Indicator */}
+      <OfflineModeIndicator />
 
       {/* Desktop Navigation Tabs */}
       {!isMobile && (

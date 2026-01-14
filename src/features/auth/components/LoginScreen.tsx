@@ -39,7 +39,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onContinueAsGuest,
   onBack,
 }) => {
-  const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword } = useAuth();
+  const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword, connectionState, reconnect } = useAuth();
+  const isOffline = connectionState === 'offline';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +48,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [migratedCount, setMigratedCount] = useState(0);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
 
@@ -81,6 +83,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         const result = await login(email, password);
 
         if (result.success) {
+          // Store migration count for success screen
+          if (result.migratedCount && result.migratedCount > 0) {
+            setMigratedCount(result.migratedCount);
+          }
           setShowSuccess(true);
           setTimeout(() => {
             onSuccess?.();
@@ -228,7 +234,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </button>
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Angemeldet!</h2>
-          <p style={styles.successText}>Du wirst weitergeleitet...</p>
+          <p style={styles.successText}>
+            {migratedCount > 0
+              ? `${migratedCount} Turnier${migratedCount === 1 ? '' : 'e'} synchronisiert!`
+              : 'Du wirst weitergeleitet...'}
+          </p>
           <Button
             variant="primary"
             fullWidth
@@ -270,6 +280,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </div>
 
         <h1 id="login-title" style={styles.title}>Anmelden</h1>
+
+        {/* Offline Banner */}
+        {isOffline && (
+          <div style={styles.offlineBanner} role="alert">
+            <span style={styles.offlineIcon}>📡</span>
+            <div style={styles.offlineTextContainer}>
+              <span style={styles.offlineTitle}>Cloud nicht erreichbar</span>
+              <span style={styles.offlineSubtitle}>Nur Gast-Modus verfügbar</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void reconnect()}
+              style={styles.offlineRetryButton}
+            >
+              Erneut
+            </button>
+          </div>
+        )}
+
         <p style={styles.subtitle}>
           {loginMode === 'password'
             ? 'Melde dich mit E-Mail und Passwort an.'
@@ -336,6 +365,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             variant="primary"
             fullWidth
             loading={isLoading}
+            disabled={isOffline}
             style={styles.button}
           >
             {loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
@@ -364,7 +394,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           variant="secondary"
           fullWidth
           onClick={() => void handleGoogleLogin()}
-          disabled={isLoading}
+          disabled={isLoading || isOffline}
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
@@ -633,6 +663,46 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.lg,
     cursor: 'pointer',
     transition: 'color 0.2s, background 0.2s',
+  },
+  offlineBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    padding: cssVars.spacing.md,
+    marginBottom: cssVars.spacing.md,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    border: `1px solid ${cssVars.colors.warning}`,
+    borderRadius: cssVars.borderRadius.md,
+  },
+  offlineIcon: {
+    fontSize: cssVars.fontSizes.lg,
+    flexShrink: 0,
+  },
+  offlineTextContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    gap: '2px',
+  },
+  offlineTitle: {
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.warning,
+  },
+  offlineSubtitle: {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  },
+  offlineRetryButton: {
+    padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    background: 'transparent',
+    border: `1px solid ${cssVars.colors.warning}`,
+    borderRadius: cssVars.borderRadius.sm,
+    color: cssVars.colors.warning,
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.medium,
+    cursor: 'pointer',
+    flexShrink: 0,
   },
 };
 

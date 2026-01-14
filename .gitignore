@@ -56,3 +56,4 @@ test-results/
 # Vercel
 .vercel/
 supabase/.temp/
+scripts/dev-mcp-server.ts

@@ -22,6 +22,7 @@ import type { User, Session, LoginResult, RegisterResult, ConnectionState } from
 import type { AuthContextValue } from './authContextValue';
 import { AuthContext } from './authContextInstance';
 import { generateUUID } from '../utils/tokenGenerator';
+import { migrateGuestTournaments } from '../services/guestMigrationService';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -425,17 +426,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
         safeLocalStorage.removeItem('auth:guestUser');
       }
 
-      // Get profile data (might need a small delay or retry if trigger is slow, 
+      // Get profile data (might need a small delay or retry if trigger is slow,
       // but usually fast enough for next render)
       const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
       const profileData = await fetchProfile(data.user.id, userMetadata);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
+      // Migrate any local guest tournaments to the new account
+      let migrationResult = { migratedCount: 0 };
+      try {
+        migrationResult = await migrateGuestTournaments();
+        if (migrationResult.migratedCount > 0) {
+          // eslint-disable-next-line no-console
+          console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after registration`);
+        }
+      } catch (migrationError) {
+        console.error('Migration after registration failed:', migrationError);
+        // Don't fail the registration if migration fails
+      }
+
       return {
         success: true,
         user: mappedUser ?? undefined,
         session: data.session ? mapSupabaseSession(data.session) ?? undefined : undefined,
-        wasMigrated: wasGuest,
+        wasMigrated: migrationResult.migratedCount > 0,
+        migratedCount: migrationResult.migratedCount,
       };
     } catch (err) {
       console.error('Register error:', err);
@@ -482,10 +497,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const profileData = await fetchProfile(data.user.id, userMetadata);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
+      // Migrate any local guest tournaments to the logged-in account
+      let migrationResult = { migratedCount: 0 };
+      try {
+        migrationResult = await migrateGuestTournaments();
+        if (migrationResult.migratedCount > 0) {
+          // eslint-disable-next-line no-console
+          console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after login`);
+        }
+      } catch (migrationError) {
+        console.error('Migration after login failed:', migrationError);
+        // Don't fail the login if migration fails
+      }
+
       return {
         success: true,
         user: mappedUser ?? undefined,
         session: mapSupabaseSession(data.session) ?? undefined,
+        wasMigrated: migrationResult.migratedCount > 0,
+        migratedCount: migrationResult.migratedCount,
       };
     } catch (err) {
       console.error('Login error:', err);
