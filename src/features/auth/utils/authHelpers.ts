@@ -51,7 +51,14 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
       if (error.code === 'PGRST116') {
         return { isOAuthOnly: false, provider: 'unknown', error: 'User not found' };
       }
+
       console.error('[authHelpers] checkOAuthOnlyUser error:', error);
+
+      // Handle network errors specifically
+      if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
+        return { isOAuthOnly: false, provider: 'unknown', error: 'Network error during check' };
+      }
+
       return { isOAuthOnly: false, provider: 'unknown', error: error.message };
     }
 
@@ -63,7 +70,12 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
     return { isOAuthOnly, provider };
   } catch (err) {
     console.error('[authHelpers] checkOAuthOnlyUser exception:', err);
-    return { isOAuthOnly: false, provider: 'unknown', error: 'Unexpected error' };
+    // Determine if it's a fetch error
+    const message = err instanceof Error ? err.message : 'Unexpected error';
+    if (message.includes('fetch') || message.includes('Load failed')) {
+      return { isOAuthOnly: false, provider: 'unknown', error: 'Network error during check' };
+    }
+    return { isOAuthOnly: false, provider: 'unknown', error: message };
   }
 }
 
