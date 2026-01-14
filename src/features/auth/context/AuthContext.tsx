@@ -217,8 +217,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Increased to 8s to allow for cold starts and slow networks
       const safetyTimeout = setTimeout(() => {
         if (mounted && isLoading) {
-          console.warn('Auth init timed out - forcing offline mode');
-          setConnectionState('offline');
+          console.warn('Auth init timed out - releasing UI but keeping connection state active');
+          // Start with 'connected' optimistically to avoid blocking UI, 
+          // real connection check will happen on user interaction or next auto-reconnect
+          setConnectionState('connected');
           setIsLoading(false);
         }
       }, 8000);
@@ -445,6 +447,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Don't fail the registration if migration fails
       }
 
+      setConnectionState('connected');
+
       return {
         success: true,
         user: mappedUser ?? undefined,
@@ -509,6 +513,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('Migration after login failed:', migrationError);
         // Don't fail the login if migration fails
       }
+
+      setConnectionState('connected');
 
       return {
         success: true,
