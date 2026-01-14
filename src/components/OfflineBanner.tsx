@@ -11,6 +11,7 @@
 
 import { CSSProperties } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useAuth } from '../features/auth/hooks/useAuth';
 import { cssVars } from '../design-tokens'
 interface OfflineBannerProps {
   /** Optional: Number of pending changes waiting to sync (Phase 3) */
@@ -21,6 +22,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   pendingSyncCount = 0,
 }) => {
   const { isOnline, wasOffline } = useOnlineStatus();
+  const { reconnect } = useAuth();
 
   // Don't render if online and not recently reconnected and no pending syncs
   if (isOnline && !wasOffline && pendingSyncCount === 0) {
@@ -69,6 +71,21 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
       <div style={bannerStyle} role="status" aria-live="polite">
         <span role="img" aria-label="Offline">📡</span>
         <span>Offline-Modus - Änderungen werden lokal gespeichert</span>
+        <button
+          onClick={() => void reconnect()}
+          style={{
+            background: 'transparent',
+            border: '1px solid currentColor',
+            borderRadius: '4px',
+            padding: '2px 8px',
+            color: 'inherit',
+            fontSize: 'inherit',
+            cursor: 'pointer',
+            marginLeft: '8px'
+          }}
+        >
+          Verbinden
+        </button>
         {pendingSyncCount > 0 && (
           <span style={badgeStyle}>
             {pendingSyncCount} ausstehend
@@ -92,6 +109,8 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
       </div>
     );
   }
+
+
 
   // Online with pending syncs (Phase 3)
   if (pendingSyncCount > 0) {

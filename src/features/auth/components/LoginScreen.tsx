@@ -403,7 +403,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           variant="secondary"
           fullWidth
           onClick={() => void handleGoogleLogin()}
-          disabled={isLoading || isOffline}
+          disabled={isLoading}
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
