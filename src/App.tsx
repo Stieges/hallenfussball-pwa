@@ -285,7 +285,10 @@ function AppContent() {
   // IMPORTANT: Use URL-based detection (defined above) to avoid timing issues with state
   const isPublicScreenByPath = isMonitorDisplayPath || isPublicLivePath || location.pathname.startsWith('/public/') || location.pathname === '/test-live';
 
-  if (loading && !isPublicScreenByPath) {
+  // Auth screens should not be blocked by tournament loading
+  const isAuthScreen = ['login', 'register', 'auth-callback', 'auth-confirm', 'set-password'].includes(screen);
+
+  if (loading && !isPublicScreenByPath && !isAuthScreen) {
     return (
       <div
         style={{
