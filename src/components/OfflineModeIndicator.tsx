@@ -74,7 +74,6 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
     // Change from textSecondary to correctionText (or primary) for better contrast on warning bg
     // Using correctionText ensures it matches the theme of the alert
     color: cssVars.colors.correctionText,
-    opacity: 0.9, // Slight visual hierarchy without breaking contrast
     margin: 0,
   };
 
