@@ -254,7 +254,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             return initAuth(retryCount + 1);
           }
           // After retries, silently ignore - user can refresh or app will recover
-          if (mounted) {
+          // IMPORTANT: If we already set 'connected' via safety timeout, DO NOT switch to offline on AbortError
+          // This prevents the "Offline Trap" when Supabase cancels requests but we are actually fine
+          if (mounted && connectionState !== 'connected') {
             setConnectionState('offline');
           }
           return;
@@ -337,6 +339,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // eslint-disable-next-line no-console
         console.log('Reconnected successfully');
       } catch (error) {
+        // Handle AbortError specifically - usually transient
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.warn('Reconnect aborted, retrying soon...');
+          // Don't set offline, just schedule a quick retry
+          if (retryTimeout) {clearTimeout(retryTimeout);}
+          retryTimeout = setTimeout(() => { void attemptReconnect(); }, 2000);
+          return;
+        }
+
         console.warn('Reconnect failed:', error);
         setConnectionState('offline');
         // Schedule next retry
