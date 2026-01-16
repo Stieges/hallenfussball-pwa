@@ -124,8 +124,9 @@ test.describe('Auth Resilience', () => {
 
       // Wait for slow request to complete or show error
       // (Since we're not hitting a real backend, expect error or timeout)
+      // Use .first() because both error-message and submitButton may be visible (strict mode)
       await expect(
-        page.locator('[data-testid="login-error-message"]').or(submitButton)
+        page.locator('[data-testid="login-error-message"]').or(submitButton).first()
       ).toBeVisible({ timeout: 10000 });
     });
 
@@ -185,7 +186,8 @@ test.describe('Auth Resilience', () => {
       const errorMessage = page.locator('[data-testid="login-error-message"]');
 
       // Wait for error or button to be re-enabled
-      await expect(errorMessage.or(submitButton)).toBeVisible({ timeout: 10000 });
+      // Use .first() because both may be visible simultaneously (strict mode)
+      await expect(errorMessage.or(submitButton).first()).toBeVisible({ timeout: 10000 });
 
       // After timeout handling, submit button should be re-enabled
       await expect(submitButton).toBeEnabled({ timeout: 5000 });
