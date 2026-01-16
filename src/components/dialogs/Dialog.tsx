@@ -2,6 +2,7 @@ import { ReactNode, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export interface DialogProps {
   isOpen: boolean;
@@ -20,17 +21,11 @@ export const Dialog = ({
   maxWidth = '500px',
   closeOnBackdropClick = true,
 }: DialogProps) => {
-  // Handle ESC key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  // Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   // Prevent body scroll when dialog is open
   useEffect(() => {
@@ -118,11 +113,22 @@ export const Dialog = ({
     padding: cssVars.spacing.xl,
   };
 
+  // Unique ID for aria-labelledby
+  const titleId = `dialog-title-${Math.random().toString(36).substr(2, 9)}`;
+
   const dialog = (
     <div style={overlayStyle} className="dialog-overlay" onClick={handleBackdropClick}>
-      <div style={modalStyle} className="dialog-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={modalStyle}
+        className="dialog-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <div style={headerStyle}>
-          <h2 style={titleStyle}>{title}</h2>
+          <h2 id={titleId} style={titleStyle}>{title}</h2>
           <button
             style={closeButtonStyle}
             onClick={onClose}

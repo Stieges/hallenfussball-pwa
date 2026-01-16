@@ -14,7 +14,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/Toast';
@@ -22,6 +22,7 @@ import { useAuth } from '../hooks/useAuth';
 import { validateEmail } from '../utils/emailValidation';
 import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 interface RegisterScreenProps {
   /** Called when registration is successful */
@@ -60,16 +61,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const [migratedCount, setMigratedCount] = useState(0);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
 
-  // ESC key to close
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onBack) {
-        onBack();
-      }
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onBack]);
+  // Focus trap for email confirmation dialog
+  const emailConfirmTrap = useFocusTrap({
+    isActive: showEmailConfirmation,
+    onEscape: onNavigateToLogin,
+  });
+
+  // Focus trap for success dialog
+  const successTrap = useFocusTrap({
+    isActive: showSuccess,
+    onEscape: onSuccess,
+  });
+
+  // Focus trap for main registration form
+  const formTrap = useFocusTrap({
+    isActive: !showEmailConfirmation && !showSuccess,
+    onEscape: onBack,
+  });
 
   const validateForm = async (): Promise<boolean> => {
     const newErrors: typeof errors = {};
@@ -197,7 +205,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
     return (
       <div style={styles.backdrop} onClick={handleEmailConfirmClose}>
-        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={emailConfirmTrap.containerRef}
+          style={styles.card}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="email-confirm-title"
+        >
           <button
             type="button"
             onClick={handleEmailConfirmClose}
@@ -207,7 +222,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             ✕
           </button>
           <div style={styles.successIcon}>✉</div>
-          <h2 style={styles.successTitle}>Bestätige deine E-Mail</h2>
+          <h2 id="email-confirm-title" style={styles.successTitle}>Bestätige deine E-Mail</h2>
           <p style={styles.successText}>
             Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
             Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.
@@ -236,7 +251,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
     return (
       <div style={styles.backdrop} onClick={handleSuccessClose}>
-        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={successTrap.containerRef}
+          style={styles.card}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="success-title"
+        >
           <button
             type="button"
             onClick={handleSuccessClose}
@@ -246,7 +268,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             ✕
           </button>
           <div style={styles.successIcon}>✓</div>
-          <h2 style={styles.successTitle}>Willkommen!</h2>
+          <h2 id="success-title" style={styles.successTitle}>Willkommen!</h2>
           <p style={styles.successText}>
             Dein Konto wurde erstellt.
             {migratedCount > 0 && (
@@ -268,7 +290,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   return (
     <div style={styles.backdrop} onClick={handleBackdropClick}>
-      <div style={styles.card} role="dialog" aria-modal="true" aria-labelledby="register-title">
+      <div
+        ref={formTrap.containerRef}
+        style={styles.card}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="register-title"
+      >
         {/* Header with back and close buttons */}
         <div style={styles.header}>
           {onBack && (

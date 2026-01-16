@@ -24,6 +24,8 @@ import {
   SetPasswordScreen,
 } from './features/auth/components';
 import { Footer } from './components/layout';
+import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
+import { ConflictResolutionDialog } from './features/sync/components/ConflictResolutionDialog';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -108,6 +110,9 @@ function AppContent() {
   const { isGuest } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // P0-4 Task 4.4: Conflict Resolution at app level
+  const { pendingConflict, resolveConflict, dismissConflict } = useSyncConflicts();
 
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
@@ -692,6 +697,18 @@ function AppContent() {
       {/* Confirm Dialogs */}
       <ConfirmDialog {...softDeleteDialog.dialogProps} />
       <ConfirmDialog {...permanentDeleteDialog.dialogProps} />
+
+      {/* P0-4 Task 4.4: Conflict Resolution Dialog */}
+      {pendingConflict && (
+        <ConflictResolutionDialog
+          isOpen={true}
+          onClose={dismissConflict}
+          conflict={pendingConflict}
+          onResolve={(strategy) => {
+            void resolveConflict(strategy);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import '@fontsource-variable/inter';
 
 import App from './App';
 import './styles/global.css';
+import { initInertPolyfill } from './utils/polyfills/inert';
 
 /**
  * Global handler for unhandled promise rejections
@@ -75,6 +76,12 @@ window.addEventListener('unhandledrejection', (event) => {
     return; // Stop execution, page will reload
   }
 })();
+
+// Initialize inert polyfill for Safari <15.5 compatibility
+// Must run before React renders to ensure dialogs work correctly
+initInertPolyfill().catch((error) => {
+  console.error('Failed to initialize inert polyfill:', error);
+});
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

@@ -14,12 +14,13 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
 import { loginStyles as styles } from './LoginScreen.styles';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 interface LoginScreenProps {
   /** Called when login is successful */
@@ -53,16 +54,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
 
-  // ESC key to close
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && onBack) {
-        onBack();
-      }
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onBack]);
+  // Focus trap for reset password dialog
+  const resetPasswordTrap = useFocusTrap({
+    isActive: resetPasswordSent,
+    onEscape: () => setResetPasswordSent(false),
+  });
+
+  // Focus trap for magic link dialog
+  const magicLinkTrap = useFocusTrap({
+    isActive: magicLinkSent,
+    onEscape: () => setMagicLinkSent(false),
+  });
+
+  // Focus trap for success dialog
+  const successTrap = useFocusTrap({
+    isActive: showSuccess,
+    onEscape: onSuccess,
+  });
+
+  // Focus trap for main login form
+  const formTrap = useFocusTrap({
+    isActive: !resetPasswordSent && !magicLinkSent && !showSuccess,
+    onEscape: onBack,
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,9 +195,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   if (resetPasswordSent) {
     return (
       <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div style={styles.card}>
+        <div
+          ref={resetPasswordTrap.containerRef}
+          style={styles.card}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-password-title"
+        >
           <div style={styles.successIcon}>✉</div>
-          <h2 style={styles.successTitle}>E-Mail gesendet!</h2>
+          <h2 id="reset-password-title" style={styles.successTitle}>E-Mail gesendet!</h2>
           <p style={styles.successText}>
             Wir haben einen Link zum Zurücksetzen deines Passworts an <strong>{email}</strong> gesendet.
             Klicke auf den Link in der E-Mail, um ein neues Passwort zu setzen.
@@ -205,9 +226,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   if (magicLinkSent) {
     return (
       <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div style={styles.card}>
+        <div
+          ref={magicLinkTrap.containerRef}
+          style={styles.card}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="magic-link-title"
+        >
           <div style={styles.successIcon}>✉</div>
-          <h2 style={styles.successTitle}>Magic Link gesendet!</h2>
+          <h2 id="magic-link-title" style={styles.successTitle}>Magic Link gesendet!</h2>
           <p style={styles.successText}>
             Wir haben einen Login-Link an <strong>{email}</strong> gesendet.
             Klicke auf den Link in der E-Mail, um dich anzumelden.
@@ -233,7 +261,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
     return (
       <div style={styles.backdrop} onClick={handleSuccessClose}>
-        <div style={styles.card} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={successTrap.containerRef}
+          style={styles.card}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="login-success-title"
+        >
           <button
             type="button"
             onClick={handleSuccessClose}
@@ -243,7 +278,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             ✕
           </button>
           <div style={styles.successIcon}>✓</div>
-          <h2 style={styles.successTitle}>Angemeldet!</h2>
+          <h2 id="login-success-title" style={styles.successTitle}>Angemeldet!</h2>
           <p style={styles.successText}>
             {migratedCount > 0
               ? `${migratedCount} Turnier${migratedCount === 1 ? '' : 'e'} synchronisiert!`
@@ -264,7 +299,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   return (
     <div style={styles.backdrop} onClick={handleBackdropClick}>
-      <div style={styles.card} role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <div
+        ref={formTrap.containerRef}
+        style={styles.card}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="login-title"
+      >
         {/* Header with back and close buttons */}
         <div style={styles.header}>
           {onBack && (
