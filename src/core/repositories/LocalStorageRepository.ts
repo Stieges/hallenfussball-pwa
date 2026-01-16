@@ -23,10 +23,29 @@ export class LocalStorageRepository implements ITournamentRepository {
         const index = list.findIndex(t => t.id === tournament.id);
 
         if (index >= 0) {
-            list[index] = { ...tournament, updatedAt: new Date().toISOString() };
+            const currentVersion = list[index].version ?? 0;
+            list[index] = { ...tournament, version: currentVersion + 1, updatedAt: new Date().toISOString() };
         } else {
-            list.push({ ...tournament, updatedAt: new Date().toISOString() });
+            list.push({ ...tournament, version: 1, updatedAt: new Date().toISOString() });
         }
+
+        this.saveList(list);
+    }
+
+    async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+        const list = this.loadList();
+        const index = list.findIndex(t => t.id === id);
+
+        if (index === -1) {
+            throw new Error(`Tournament ${id} not found`);
+        }
+
+        list[index] = {
+            ...list[index],
+            ...metadata,
+            version: (list[index].version ?? 0) + 1,
+            updatedAt: new Date().toISOString()
+        };
 
         this.saveList(list);
     }
@@ -35,7 +54,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         return this.updateMatches(tournamentId, [update]);
     }
 
-    async updateMatches(tournamentId: string, updates: MatchUpdate[]): Promise<void> {
+    async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
         const list = this.loadList();
         const tournamentIndex = list.findIndex(t => t.id === tournamentId);
 
@@ -57,6 +76,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         list[tournamentIndex] = {
             ...tournament,
             matches: updatedMatches,
+            version: (tournament.version ?? 0) + 1,
             updatedAt: new Date().toISOString()
         };
 
@@ -71,6 +91,19 @@ export class LocalStorageRepository implements ITournamentRepository {
 
     async listForCurrentUser(): Promise<Tournament[]> {
         return this.loadList();
+    }
+
+    /**
+     * Updates the local version number after a successful cloud sync.
+     * Does NOT increment - sets it to the exact value from cloud.
+     */
+    async updateLocalVersion(id: string, version: number): Promise<void> {
+        const list = this.loadList();
+        const index = list.findIndex(t => t.id === id);
+        if (index !== -1) {
+            list[index] = { ...list[index], version };
+            this.saveList(list);
+        }
     }
 
     // --- Private Helpers ---

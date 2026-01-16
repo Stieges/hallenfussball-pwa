@@ -454,6 +454,9 @@ export interface Tournament {
   shareCode?: string;
   /** ISO timestamp wann der Share-Code erstellt wurde */
   shareCodeCreatedAt?: string;
+
+  // Optimistic Locking
+  version?: number;
 }
 
 // ============================================================================

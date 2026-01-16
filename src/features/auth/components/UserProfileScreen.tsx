@@ -567,8 +567,8 @@ const styles: Record<string, CSSProperties> = {
     width: '20px',
     height: '20px',
     borderRadius: '50%',
-    background: '#fff',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+    background: cssVars.colors.textOnDark,
+    boxShadow: `0 1px 2px ${cssVars.colors.shadowSoft}`,
   },
 
   // TOURNAMENTS LIST AREA

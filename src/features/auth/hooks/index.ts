@@ -16,3 +16,18 @@ export type {
   UseTournamentMembersReturn,
   MemberWithUser,
 } from './useTournamentMembers';
+
+export { useRegisterForm } from './useRegisterForm';
+export type {
+  UseRegisterFormReturn,
+  RegisterFormData,
+  RegisterFormErrors,
+} from './useRegisterForm';
+
+export { useLoginForm } from './useLoginForm';
+export type {
+  UseLoginFormReturn,
+  LoginFormData,
+  LoginFormErrors,
+  LoginMode,
+} from './useLoginForm';

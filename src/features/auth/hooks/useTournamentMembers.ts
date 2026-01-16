@@ -16,7 +16,7 @@ import {
   transferOwnership,
   getCoAdmins,
 } from '../services/membershipService';
-import { getUserById } from '../services/authService';
+import { getUserById } from '../utils/authHelpers';
 import { useAuth } from './useAuth';
 import { canChangeRole, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
 

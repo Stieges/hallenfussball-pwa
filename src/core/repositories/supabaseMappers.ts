@@ -47,16 +47,16 @@ export function mapTeamFromSupabase(row: TeamRow): Team {
     removedAt: row.removed_at ?? undefined,
     logo: row.logo_path
       ? {
-          type: 'url',
-          value: row.logo_path,
-          backgroundColor: row.logo_background_color ?? undefined,
-        }
+        type: 'url',
+        value: row.logo_path,
+        backgroundColor: row.logo_background_color ?? undefined,
+      }
       : undefined,
     colors: row.color_primary
       ? {
-          primary: row.color_primary,
-          secondary: row.color_secondary ?? undefined,
-        }
+        primary: row.color_primary,
+        secondary: row.color_secondary ?? undefined,
+      }
       : undefined,
   };
 }
@@ -459,6 +459,7 @@ export function mapTournamentFromSupabase(
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
     dfbKeyPattern: config.dfbKeyPattern,
+    version: row.version ?? undefined,
   };
 }
 
@@ -543,6 +544,7 @@ export function mapTournamentToSupabase(
     config: config as unknown as Json,
     deleted_at: tournament.deletedAt || null,
     completed_at: tournament.completedAt || null,
+    version: tournament.version ?? null,
   };
 
   // Map teams

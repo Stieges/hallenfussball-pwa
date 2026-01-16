@@ -10,7 +10,8 @@ export type MutationType =
     | 'SAVE_TOURNAMENT'
     | 'DELETE_TOURNAMENT'
     | 'UPDATE_MATCH'
-    | 'UPDATE_MATCHES';
+    | 'UPDATE_MATCHES'
+    | 'UPDATE_TOURNAMENT_METADATA';
 
 /**
  * A requested change to be persisted to the cloud
@@ -349,6 +350,11 @@ export class MutationQueue {
             case 'UPDATE_MATCHES': {
                 const { tournamentId, updates } = item.payload as { tournamentId: string, updates: MatchUpdate[] };
                 await this.supabaseRepo.updateMatches(tournamentId, updates);
+                break;
+            }
+            case 'UPDATE_TOURNAMENT_METADATA': {
+                const { tournamentId, metadata } = item.payload as { tournamentId: string, metadata: Partial<Tournament> };
+                await this.supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
                 break;
             }
             default:
