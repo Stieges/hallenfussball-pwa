@@ -461,7 +461,6 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             variant="primary"
             fullWidth
             loading={isLoading}
-            disabled={isOffline}
             style={styles.button}
           >
             Konto erstellen
@@ -479,7 +478,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           variant="secondary"
           fullWidth
           onClick={() => void handleGoogleLogin()}
-          disabled={isLoading || isOffline}
+          disabled={isLoading}
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
@@ -492,6 +491,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             type="button"
             onClick={onNavigateToLogin}
             style={styles.link}
+            onFocus={(e) => {
+              Object.assign(e.currentTarget.style, styles.linkFocused);
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
+            }}
           >
             Anmelden
           </button>

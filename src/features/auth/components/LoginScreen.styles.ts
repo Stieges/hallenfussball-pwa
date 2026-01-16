@@ -128,13 +128,19 @@ export const loginStyles: Record<string, CSSProperties> = {
   forgotPasswordLink: {
     alignSelf: 'flex-end',
     marginTop: cssVars.spacing.xs,
-    padding: 0,
+    padding: cssVars.spacing.xs,
     background: 'transparent',
     border: 'none',
     color: cssVars.colors.textMuted,
     fontSize: cssVars.fontSizes.sm,
     cursor: 'pointer',
     textDecoration: 'underline',
+    borderRadius: cssVars.borderRadius.sm,
+    outline: 'none',
+  },
+  forgotPasswordLinkFocused: {
+    outline: `2px solid ${cssVars.colors.primary}`,
+    outlineOffset: '2px',
   },
   errorText: {
     fontSize: cssVars.fontSizes.sm,
@@ -155,6 +161,12 @@ export const loginStyles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     textAlign: 'center',
     textDecoration: 'underline',
+    borderRadius: cssVars.borderRadius.sm,
+    outline: 'none',
+  },
+  modeToggleFocused: {
+    outline: `2px solid ${cssVars.colors.primary}`,
+    outlineOffset: '2px',
   },
   divider: {
     display: 'flex',
@@ -197,11 +209,17 @@ export const loginStyles: Record<string, CSSProperties> = {
     color: cssVars.colors.primary,
     background: 'none',
     border: 'none',
-    padding: 0,
+    padding: cssVars.spacing.xs,
     font: 'inherit',
     cursor: 'pointer',
     fontWeight: cssVars.fontWeights.medium,
     textDecoration: 'none',
+    borderRadius: cssVars.borderRadius.sm,
+    outline: 'none',
+  },
+  linkFocused: {
+    outline: `2px solid ${cssVars.colors.primary}`,
+    outlineOffset: '2px',
   },
   successIcon: {
     width: '64px',

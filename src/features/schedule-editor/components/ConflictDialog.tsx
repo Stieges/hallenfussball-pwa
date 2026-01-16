@@ -87,13 +87,21 @@ const titleStyle: React.CSSProperties = {
 };
 
 const closeButtonStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '44px',
+  height: '44px',
+  minWidth: '44px',
+  minHeight: '44px',
   background: 'none',
   border: 'none',
   fontSize: cssVars.fontSizes.xl,
   color: cssVars.colors.textSecondary,
   cursor: 'pointer',
-  padding: cssVars.spacing.xs,
+  padding: 0,
   lineHeight: 1,
+  borderRadius: cssVars.borderRadius.sm,
 };
 
 const contentStyle: React.CSSProperties = {

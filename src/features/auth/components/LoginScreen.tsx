@@ -293,7 +293,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Offline Banner */}
         {isOffline && (
-          <div style={styles.offlineBanner} role="alert">
+          <div style={styles.offlineBanner} role="alert" data-testid="offline-banner">
             <span style={styles.offlineIcon}>📡</span>
             <div style={styles.offlineTextContainer}>
               <span style={styles.offlineTitle}>Cloud nicht erreichbar</span>
@@ -303,6 +303,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="button"
               onClick={() => void reconnect()}
               style={styles.offlineRetryButton}
+              data-testid="offline-retry-button"
             >
               Erneut
             </button>
@@ -334,6 +335,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               autoComplete="email"
               autoFocus
               required
+              data-testid="login-email-input"
             />
           </div>
 
@@ -356,27 +358,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 autoComplete="current-password"
                 required
                 minLength={6}
+                data-testid="login-password-input"
               />
               <button
                 type="button"
                 onClick={() => void handleForgotPassword()}
                 disabled={isLoading}
                 style={styles.forgotPasswordLink}
+                onFocus={(e) => {
+                  Object.assign(e.currentTarget.style, styles.forgotPasswordLinkFocused);
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                }}
               >
                 Passwort vergessen?
               </button>
             </div>
           )}
 
-          {error && <span style={styles.errorText}>{error}</span>}
+          {error && <span style={styles.errorText} data-testid="login-error-message">{error}</span>}
 
           <Button
             type="submit"
             variant="primary"
             fullWidth
             loading={isLoading}
-            disabled={isOffline}
             style={styles.button}
+            data-testid="login-submit-button"
           >
             {loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
           </Button>
@@ -387,6 +396,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           type="button"
           onClick={() => setLoginMode(loginMode === 'password' ? 'magic-link' : 'password')}
           style={styles.modeToggle}
+          onFocus={(e) => {
+            Object.assign(e.currentTarget.style, styles.modeToggleFocused);
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.outline = 'none';
+          }}
         >
           {loginMode === 'password'
             ? 'Stattdessen Magic Link verwenden'
@@ -418,6 +433,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           onClick={handleGuestContinue}
           disabled={isLoading}
           style={styles.ghostButton}
+          data-testid="login-guest-button"
         >
           Als Gast fortfahren
         </Button>
@@ -428,6 +444,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             type="button"
             onClick={onNavigateToRegister}
             style={styles.link}
+            onFocus={(e) => {
+              Object.assign(e.currentTarget.style, styles.linkFocused);
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
+            }}
           >
             Registrieren
           </button>

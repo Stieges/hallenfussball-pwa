@@ -25,7 +25,7 @@ export function SettingsDialog({
     const overlayStyle: CSSProperties = {
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
+        background: cssVars.colors.overlayStrong,
         zIndex: 200, // Higher than menu
         display: 'flex',
         alignItems: 'center',
@@ -60,13 +60,21 @@ export function SettingsDialog({
     };
 
     const closeButtonStyle: CSSProperties = {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '44px',
+        height: '44px',
+        minWidth: '44px',
+        minHeight: '44px',
         background: 'transparent',
         border: 'none',
         fontSize: '24px',
         cursor: 'pointer',
         color: cssVars.colors.textSecondary,
-        padding: cssVars.spacing.sm,
+        padding: 0,
         lineHeight: 1,
+        borderRadius: cssVars.borderRadius.sm,
     };
 
     const contentStyle: CSSProperties = {

@@ -33,6 +33,6 @@ export interface AuthContextValue extends AuthState {
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   /** Setzt ein neues Passwort (nach Recovery) (async) */
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
-  /** Versucht, die Verbindung zu Supabase wiederherzustellen */
-  reconnect: () => Promise<void>;
+  /** Versucht, die Verbindung zu Supabase wiederherzustellen. Returns true if successful. */
+  reconnect: () => Promise<boolean>;
 }

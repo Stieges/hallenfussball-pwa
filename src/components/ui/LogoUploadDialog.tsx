@@ -154,7 +154,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
   const overlayStyles: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: cssVars.colors.overlayStrong,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -187,12 +187,20 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
   };
 
   const closeButtonStyles: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '44px',
+    height: '44px',
+    minWidth: '44px',
+    minHeight: '44px',
     background: 'none',
     border: 'none',
+    borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.xxl,
     cursor: 'pointer',
     color: cssVars.colors.textSecondary,
-    padding: cssVars.spacing.xs,
+    padding: 0,
   };
 
   const contentStyles: CSSProperties = {
