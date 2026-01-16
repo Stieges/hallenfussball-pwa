@@ -190,11 +190,17 @@ export const registerStyles: Record<string, CSSProperties> = {
     color: cssVars.colors.primary,
     background: 'none',
     border: 'none',
-    padding: 0,
+    padding: cssVars.spacing.xs,
     font: 'inherit',
     cursor: 'pointer',
     fontWeight: cssVars.fontWeights.medium,
     textDecoration: 'none',
+    borderRadius: cssVars.borderRadius.sm,
+    outline: 'none',
+  },
+  linkFocused: {
+    outline: `2px solid ${cssVars.colors.primary}`,
+    outlineOffset: '2px',
   },
   legal: {
     marginTop: cssVars.spacing.md,

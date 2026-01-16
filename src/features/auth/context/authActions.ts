@@ -13,6 +13,7 @@ import type { User, Session, LoginResult, RegisterResult, ConnectionState } from
 import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
 import { migrateGuestTournaments } from '../services/guestMigrationService';
+import { createAuthRetryService, isAbortError } from '../../../core/services';
 
 /**
  * Dependencies required by auth actions
@@ -327,12 +328,25 @@ export async function refreshAuth(deps: AuthActionDeps): Promise<void> {
 }
 
 /**
- * Manually trigger reconnection attempt
+ * Shared RetryService instance for auth reconnection
  */
-export async function reconnect(deps: AuthActionDeps): Promise<void> {
+const authRetryService = createAuthRetryService();
+
+/**
+ * Manually trigger reconnection attempt with retry logic
+ *
+ * Uses exponential backoff for transient failures.
+ * AbortErrors are not retried (handled by browser event system).
+ *
+ * @returns true if reconnection succeeded, false otherwise
+ */
+export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) {
-    return;
+    return false;
   }
+
+  // Capture supabase reference for TypeScript narrowing inside callback
+  const supabaseClient = supabase;
 
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
@@ -341,17 +355,71 @@ export async function reconnect(deps: AuthActionDeps): Promise<void> {
   deps.setConnectionState('connecting');
 
   try {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const session = await authRetryService.execute(
+      async () => {
+        const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
+        return currentSession;
+      },
+      {
+        shouldRetry: (error) => {
+          // Don't retry AbortErrors - these are transient and will be
+          // retried via the browser online event or periodic retry
+          if (isAbortError(error)) {
+            if (import.meta.env.DEV) {
+              // eslint-disable-next-line no-console
+              console.debug('Reconnect aborted (transient), skipping retry');
+            }
+            return false;
+          }
+          return true;
+        },
+        onRetry: (attempt, _error, delayMs) => {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log(`Reconnect attempt ${attempt}, next retry in ${delayMs}ms`);
+          }
+        },
+        onSuccess: (_result, attempts) => {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log(`Reconnect successful after ${attempts} attempt(s)`);
+          }
+        },
+      }
+    );
+
     deps.setConnectionState('connected');
-    await deps.updateAuthState(currentSession);
-    if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
-      console.log('Manual reconnect successful');
-    }
+    await deps.updateAuthState(session);
+    return true;
   } catch (err) {
-    console.error('Manual reconnect failed:', err);
+    // Only log non-abort errors as actual errors
+    if (err instanceof Error && isAbortError(err)) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('Reconnect aborted (transient):', err.message);
+      }
+    } else {
+      console.error('Manual reconnect failed:', err);
+    }
     deps.setConnectionState('offline');
+    return false;
   }
+}
+
+/**
+ * Get the current state of the auth retry service
+ * Useful for displaying retry status in UI
+ */
+export function getReconnectState() {
+  return authRetryService.getState();
+}
+
+/**
+ * Reset the reconnect retry state
+ * Call this when manually canceling a reconnect attempt
+ */
+export function resetReconnectState(): void {
+  authRetryService.reset();
 }
 
 /**

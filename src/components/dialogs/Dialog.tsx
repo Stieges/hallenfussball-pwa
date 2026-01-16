@@ -98,10 +98,14 @@ export const Dialog = ({
   };
 
   const closeButtonStyle: CSSProperties = {
+    width: '44px',
+    height: '44px',
+    minWidth: '44px',
+    minHeight: '44px',
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
-    padding: cssVars.spacing.sm,
+    padding: 0,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

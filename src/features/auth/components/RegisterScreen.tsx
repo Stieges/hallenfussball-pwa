@@ -492,6 +492,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             type="button"
             onClick={onNavigateToLogin}
             style={styles.link}
+            onFocus={(e) => {
+              Object.assign(e.currentTarget.style, styles.linkFocused);
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
+            }}
           >
             Anmelden
           </button>
