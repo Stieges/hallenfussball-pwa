@@ -7,17 +7,16 @@
  */
 
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
-import { cssVars } from '../../../design-tokens';
-import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
 import { useTheme } from '../../../hooks/useTheme';
-import { TournamentCard } from './TournamentCard';
 import { GuestBanner } from './GuestBanner';
 import { useToast } from '../../../components/ui/Toast';
 import type { TournamentSortOption } from '../hooks/useUserTournaments';
 import { styles } from './UserProfileScreen.styles';
 import { ProfileHeader, ProfileStats, ProfileActions } from './profile';
+import { ProfileSettings } from './profile/ProfileSettings';
+import { ProfileTournaments } from './profile/ProfileTournaments';
 
 interface UserProfileScreenProps {
   /** Zurück-Handler */
@@ -40,22 +39,6 @@ const Card: React.FC<{ children: React.ReactNode; style?: CSSProperties; title?:
   <div style={{ ...styles.card, ...style }}>
     {title && <h3 style={styles.cardTitle}>{title}</h3>}
     {children}
-  </div>
-);
-
-const ToggleRow: React.FC<{ label: string; checked: boolean; onChange: () => void; icon?: string }> = ({ label, checked, onChange, icon }) => (
-  <div style={styles.toggleRow} onClick={onChange}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-      {icon && <span style={{ fontSize: cssVars.fontSizes.lg }}>{icon}</span>}
-      <span style={styles.toggleLabel}>{label}</span>
-    </div>
-    <div style={{
-      ...styles.toggleSwitch,
-      background: checked ? cssVars.colors.primary : cssVars.colors.surfaceSolid,
-      justifyContent: checked ? 'flex-end' : 'flex-start'
-    }}>
-      <div style={styles.toggleKnob} />
-    </div>
   </div>
 );
 
@@ -195,36 +178,12 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
           {/* Preferences Card */}
           <Card title="Einstellungen">
-            <ToggleRow
-              label="Dark Mode"
-              icon="🌙"
-              checked={isDark}
-              onChange={toggleTheme}
+            <ProfileSettings
+              isDark={isDark}
+              onToggleTheme={toggleTheme}
+              onOpenSettings={onOpenSettings ?? (() => undefined)}
+              onShowInfo={showInfo}
             />
-            <ToggleRow
-              label="Benachrichtigungen"
-              icon="🔔"
-              checked={true /* Mocked */}
-              onChange={() => showInfo('Benachrichtigungen werden in Kürze verfügbar sein.')}
-            />
-            <div style={styles.listRow}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
-                <span style={{ fontSize: cssVars.fontSizes.lg }}>🌐</span>
-                <span style={styles.listLabel}>Sprache</span>
-              </div>
-              <select
-                style={styles.selectInput}
-                value="de"
-                onChange={() => alert('Sprache ist aktuell auf Deutsch festgelegt.')}
-              >
-                <option value="de">Deutsch</option>
-                <option value="en">English (BETA)</option>
-              </select>
-            </div>
-            <div style={styles.divider} />
-            <button style={styles.actionButton} onClick={onOpenSettings}>
-              ⚙️ Weitere Einstellungen
-            </button>
           </Card>
 
           {/* Security Card */}
@@ -247,51 +206,15 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
         {/* RIGHT COLUMN: Tournaments */}
         <div style={styles.rightColumn}>
-          <div style={styles.sectionHeader}>
-            <h2 style={styles.sectionTitle}>Meine Turniere</h2>
-            {counts.total > 1 && (
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as TournamentSortOption)}
-                style={styles.sortSelect}
-              >
-                <option value="status">Status</option>
-                <option value="recent">Zuletzt</option>
-                <option value="name">A-Z</option>
-                <option value="date">Datum</option>
-              </select>
-            )}
-          </div>
-
-          {/* List */}
-          {isLoading ? (
-            <div style={styles.loadingState}>Lade Turniere...</div>
-          ) : tournaments.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p style={styles.emptyText}>Noch keine Turniere vorhanden.</p>
-              <Button variant="primary" onClick={onCreateTournament}>
-                Jetzt erstes Turnier erstellen
-              </Button>
-            </div>
-          ) : (
-            <div style={styles.tournamentList}>
-              {tournaments.map((item) => (
-                <TournamentCard
-                  key={item.tournament.id}
-                  tournament={item.tournament}
-                  membership={item.membership}
-                  teamNames={item.teamNames}
-                  onClick={() => onOpenTournament?.(item.tournament.id)}
-                />
-              ))}
-            </div>
-          )}
-          {/* Create Button (sticky or bottom) */}
-          {tournaments.length > 0 && (
-            <Button variant="secondary" fullWidth onClick={onCreateTournament} style={{ marginTop: cssVars.spacing.md }}>
-              ＋ Neues Turnier
-            </Button>
-          )}
+          <ProfileTournaments
+            tournaments={tournaments}
+            isLoading={isLoading}
+            totalCount={counts.total}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            onCreateTournament={onCreateTournament}
+            onOpenTournament={onOpenTournament}
+          />
         </div>
       </div>
     </div>
