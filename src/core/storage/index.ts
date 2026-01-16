@@ -28,9 +28,10 @@ export type { IStorageAdapter } from './IStorageAdapter';
 // Implementations
 export { IndexedDBAdapter } from './IndexedDBAdapter';
 export { LocalStorageAdapter } from './LocalStorageAdapter';
+export { StorageError } from './StorageError';
 
 // Factory
-export { createStorage, isIndexedDBAvailable, getStorageQuota } from './StorageFactory';
+export { createStorage, isIndexedDBAvailable, getStorageQuota, resetStorageInstance } from './StorageFactory';
 
 // Migration
 export {
@@ -40,3 +41,6 @@ export {
   type MigrationResult,
   type MigrationOptions,
 } from './migrateToIndexedDB';
+
+// Quota Monitoring
+export { getQuotaStatus, logQuotaStatus, type QuotaStatus } from './QuotaMonitor';

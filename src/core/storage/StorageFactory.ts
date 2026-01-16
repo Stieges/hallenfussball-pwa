@@ -1,101 +1,103 @@
-/**
- * StorageFactory - Auto-detects best available storage backend
- *
- * Priority:
- * 1. IndexedDB (preferred) - No 5MB limit, async, structured
- * 2. localStorage (fallback) - 5MB limit, sync, simple
- *
- * Usage:
- * ```typescript
- * const storage = await createStorage();
- * await storage.set('key', value);
- * const value = await storage.get<Type>('key');
- * ```
- */
-
 import { IStorageAdapter } from './IStorageAdapter';
 import { IndexedDBAdapter } from './IndexedDBAdapter';
 import { LocalStorageAdapter } from './LocalStorageAdapter';
 
+let storageInstance: IStorageAdapter | null = null;
+let initializationPromise: Promise<IStorageAdapter> | null = null;
+
 /**
- * Create storage adapter with automatic backend detection
- * @returns Initialized storage adapter (IndexedDB or localStorage)
+ * Creates and initializes the storage adapter.
+ * Uses Singleton pattern to ensure only one DB connection.
+ * Falls back to LocalStorage if IndexedDB is not available or fails.
  */
 export async function createStorage(): Promise<IStorageAdapter> {
-  // Try IndexedDB first (preferred for large tournaments)
-  if ('indexedDB' in window) {
-    try {
-      const adapter = new IndexedDBAdapter();
-      await adapter.init();
+  // Return existing instance if available
+  if (storageInstance) {
+    return storageInstance;
+  }
 
-      if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.log('✅ Storage: IndexedDB initialized');
-      }
+  // Prevent multiple simultaneous initializations
+  if (initializationPromise) {
+    return initializationPromise;
+  }
 
-      return adapter;
-    } catch (error) {
-      if (import.meta.env.DEV) {
-         
-        console.warn('⚠️ IndexedDB initialization failed, falling back to localStorage:', error);
+  initializationPromise = (async () => {
+    // 1. Try IndexedDB
+    if (await isIndexedDBAvailable()) {
+      try {
+        const adapter = new IndexedDBAdapter();
+        await adapter.init();
+        storageInstance = adapter;
+        return adapter;
+      } catch (error) {
+        console.warn('StorageFactory: IndexedDB initialization failed, falling back to LocalStorage.', error);
       }
-      // Fall through to localStorage
     }
-  } else if (import.meta.env.DEV) {
-    console.warn('⚠️ IndexedDB not available, using localStorage');
-  }
 
-  // Fallback to localStorage
-  const fallback = new LocalStorageAdapter();
+    // 2. Fallback to LocalStorage
+    storageInstance = new LocalStorageAdapter();
+    return storageInstance;
+  })();
 
-  if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
-    console.log('✅ Storage: localStorage initialized (5MB limit)');
-  }
-
-  return fallback;
+  return initializationPromise;
 }
 
 /**
- * Check if IndexedDB is available and functional
- * Useful for feature detection and error messages
+ * Resets the storage instance (mainly for testing).
  */
-export function isIndexedDBAvailable(): boolean {
-  if (!('indexedDB' in window)) {
+/**
+ * Checks if IndexedDB is available and usable (not blocked by privacy settings).
+ */
+export async function isIndexedDBAvailable(): Promise<boolean> {
+  if (typeof window === 'undefined' || !('indexedDB' in window)) {
     return false;
   }
 
   try {
-    // Quick check - some browsers have indexedDB but it's broken
-    const testDB = indexedDB.open('test');
-    testDB.onerror = () => false;
+    // Try to open a dummy DB to check for privacy blocking (Safari Private Mode)
+    await new Promise<void>((resolve, reject) => {
+      const dbName = 'idb-check';
+      const request = indexedDB.open(dbName);
+      request.onerror = () => {
+        reject(new Error(request.error?.message || 'Unknown IDB error'));
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        db.close();
+        indexedDB.deleteDatabase(dbName);
+        resolve();
+      };
+    });
     return true;
-  } catch {
+  } catch (e) {
     return false;
   }
 }
 
 /**
- * Estimate available storage quota (IndexedDB only)
- * Returns null if not supported or localStorage is used
+ * Gets the current storage usage and quota.
+ * Returns null if the API is not supported.
  */
-export async function getStorageQuota(): Promise<{
-  usage: number;
-  quota: number;
-  percentage: number;
-} | null> {
-  if (!('storage' in navigator && 'estimate' in navigator.storage)) {
-    return null;
-  }
-
+export async function getStorageQuota(): Promise<{ usage: number; quota: number } | null> {
   try {
     const estimate = await navigator.storage.estimate();
-    const usage = estimate.usage || 0;
-    const quota = estimate.quota || 0;
-    const percentage = quota > 0 ? (usage / quota) * 100 : 0;
-
-    return { usage, quota, percentage };
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (estimate && typeof estimate.usage === 'number' && typeof estimate.quota === 'number') {
+      return {
+        usage: estimate.usage,
+        quota: estimate.quota,
+      };
+    }
   } catch {
-    return null;
+    // Storage API not available
   }
+  return null;
+}
+
+/**
+ * Resets the storage instance (mainly for testing).
+ */
+export function resetStorageInstance(): void {
+  storageInstance = null;
+  initializationPromise = null;
 }

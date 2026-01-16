@@ -3,23 +3,22 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
-import { safeLocalStorage } from '../utils/safeStorage';
+import { createStorage } from '../storage/StorageFactory';
 
 export class LocalStorageRepository implements ITournamentRepository {
 
     async get(id: string): Promise<Tournament | null> {
-        const list = this.loadList();
+        const list = await this.loadList();
         return list.find(t => t.id === id) ?? null;
     }
 
     async getByShareCode(_code: string): Promise<Tournament | null> {
         // Local storage does not support share codes, as they are a cloud feature.
-        // potentially we could scan for them, but for now we return null.
         return null;
     }
 
     async save(tournament: Tournament): Promise<void> {
-        const list = this.loadList();
+        const list = await this.loadList();
         const index = list.findIndex(t => t.id === tournament.id);
 
         if (index >= 0) {
@@ -29,11 +28,11 @@ export class LocalStorageRepository implements ITournamentRepository {
             list.push({ ...tournament, version: 1, updatedAt: new Date().toISOString() });
         }
 
-        this.saveList(list);
+        await this.saveList(list);
     }
 
     async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
-        const list = this.loadList();
+        const list = await this.loadList();
         const index = list.findIndex(t => t.id === id);
 
         if (index === -1) {
@@ -47,7 +46,7 @@ export class LocalStorageRepository implements ITournamentRepository {
             updatedAt: new Date().toISOString()
         };
 
-        this.saveList(list);
+        await this.saveList(list);
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
@@ -55,7 +54,7 @@ export class LocalStorageRepository implements ITournamentRepository {
     }
 
     async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
-        const list = this.loadList();
+        const list = await this.loadList();
         const tournamentIndex = list.findIndex(t => t.id === tournamentId);
 
         if (tournamentIndex === -1) {
@@ -80,13 +79,13 @@ export class LocalStorageRepository implements ITournamentRepository {
             updatedAt: new Date().toISOString()
         };
 
-        this.saveList(list);
+        await this.saveList(list);
     }
 
     async delete(id: string): Promise<void> {
-        const list = this.loadList();
+        const list = await this.loadList();
         const filtered = list.filter(t => t.id !== id);
-        this.saveList(filtered);
+        await this.saveList(filtered);
     }
 
     async listForCurrentUser(): Promise<Tournament[]> {
@@ -98,26 +97,25 @@ export class LocalStorageRepository implements ITournamentRepository {
      * Does NOT increment - sets it to the exact value from cloud.
      */
     async updateLocalVersion(id: string, version: number): Promise<void> {
-        const list = this.loadList();
+        const list = await this.loadList();
         const index = list.findIndex(t => t.id === id);
         if (index !== -1) {
             list[index] = { ...list[index], version };
-            this.saveList(list);
+            await this.saveList(list);
         }
     }
 
     // --- Private Helpers ---
 
-    private loadList(): Tournament[] {
-        const stored = safeLocalStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
-        if (!stored) { return []; }
-
+    private async loadList(): Promise<Tournament[]> {
         try {
-            const raw = JSON.parse(stored) as unknown;
-            if (!Array.isArray(raw)) { return []; }
-            const rawArray = raw as unknown[];
+            const storage = await createStorage();
+            const raw = await storage.get(STORAGE_KEYS.TOURNAMENTS);
 
-            return rawArray.map((item) => {
+            if (!raw) { return []; }
+            if (!Array.isArray(raw)) { return []; }
+
+            return raw.map((item) => {
                 const itemData = item as Record<string, unknown>;
                 // Validate each item
                 const result = TournamentSchema.safeParse(itemData);
@@ -136,7 +134,13 @@ export class LocalStorageRepository implements ITournamentRepository {
         }
     }
 
-    private saveList(list: Tournament[]): void {
-        safeLocalStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(list));
+    private async saveList(list: Tournament[]): Promise<void> {
+        try {
+            const storage = await createStorage();
+            await storage.set(STORAGE_KEYS.TOURNAMENTS, list);
+        } catch (e) {
+            console.error('Failed to save tournaments', e);
+            throw e; // Propagate error so UI can handle it (or retry)
+        }
     }
 }
