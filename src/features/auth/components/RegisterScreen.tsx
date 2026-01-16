@@ -20,6 +20,7 @@ import { Button } from '../../../components/ui/Button';
 import { useToast } from '../../../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
 import { validateEmail } from '../utils/emailValidation';
+import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
 
 interface RegisterScreenProps {
@@ -70,7 +71,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     return () => document.removeEventListener('keydown', handleEsc);
   }, [onBack]);
 
-  const validateForm = (): boolean => {
+  const validateForm = async (): Promise<boolean> => {
     const newErrors: typeof errors = {};
 
     // Name validation
@@ -107,13 +108,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
       newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
     }
 
-    // Registration code validation (case-insensitive)
-    const expectedCode = import.meta.env.VITE_REGISTRATION_CODE as string | undefined;
-    const providedCode = registrationCode.trim().toLowerCase();
-    const expectedCodeNormalized = expectedCode?.trim().toLowerCase();
-
-    if (expectedCodeNormalized && providedCode !== expectedCodeNormalized) {
-      newErrors.registrationCode = 'Ungültiger Einladungscode';
+    // Server-side registration code validation
+    // This prevents exposure of the code in the client bundle
+    if (registrationCode.trim()) {
+      const codeValidation = await validateRegistrationCode(registrationCode.trim());
+      if (!codeValidation.valid) {
+        newErrors.registrationCode = codeValidation.error || 'Ungültiger Einladungscode';
+      }
+    } else {
+      // Registration code is required
+      newErrors.registrationCode = 'Einladungscode ist erforderlich';
     }
 
     setErrors(newErrors);
@@ -123,7 +127,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!(await validateForm())) {
       return;
     }
 
