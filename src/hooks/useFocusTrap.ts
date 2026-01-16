@@ -65,7 +65,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const inertElements: Element[] = [];
 
     for (const element of siblings) {
-      if (element !== container && !container.contains(element)) {
+      // Mark as inert if element is NOT the container AND doesn't contain the container
+      // (i.e., is not an ancestor of the container like an overlay wrapper)
+      if (element !== container && !element.contains(container)) {
         element.setAttribute('inert', '');
         inertElements.push(element);
       }
