@@ -8,6 +8,7 @@
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
 import { cssVars, fontSizesMd3, shadowSemantics } from '../../design-tokens'
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
 
 /** Secondary action button configuration */
@@ -75,20 +76,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }, [onCancel, onClose]);
 
-  const dialogRef = useRef<HTMLDivElement>(null);
+  // Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: effectiveOnCancel,
+  });
+
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Handle escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      effectiveOnCancel();
-    }
-  }, [effectiveOnCancel]);
-
-  // Focus management
+  // Focus management and body scroll prevention
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
       // Focus confirm button when dialog opens
       setTimeout(() => confirmButtonRef.current?.focus(), 50);
       // Prevent body scroll
@@ -96,10 +94,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen]);
 
   if (!isOpen) {return null;}
 
@@ -244,11 +241,15 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <div
         style={overlayStyle}
         onClick={handleOverlayClick}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
       >
-        <div ref={dialogRef} style={dialogStyle}>
+        <div
+          ref={focusTrap.containerRef}
+          style={dialogStyle}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
           <div style={headerStyle}>
             <span style={iconStyle}>{variantConfig.icon}</span>
             <h2 id="confirm-dialog-title" style={titleStyle}>{title}</h2>

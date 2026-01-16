@@ -1,7 +1,29 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-13
+> **Letzte Aktualisierung:** 2026-01-16
+
+---
+
+## 🔴 P0: Enterprise Review Critical Issues
+
+**Detaillierte Dokumentation:**
+- 📋 **Implementierungsplan:** [roadmap/P0-IMPLEMENTATION-PLAN.md](roadmap/P0-IMPLEMENTATION-PLAN.md)
+- ✅ **TODO-Tracking:** [roadmap/P0-TODOS.md](roadmap/P0-TODOS.md)
+
+| P0 | Problem | Aufwand | Status |
+|----|---------|---------|--------|
+| P0-1 | Registration Code im Client-Bundle (Sicherheitsrisiko) | 4h | ✅ Erledigt |
+| P0-2 | WCAG 4.1.3 Focus Management fehlt (Barrierefreiheit) | 6h | ⚠️ Basis-Komponenten ✅ |
+| P0-3 | Kein IndexedDB (localStorage 5MB Limit) | 8h | 🔴 Offen |
+| P0-4 | Keine Conflict Resolution UI (Cloud/Local Merge) | 6h | 🔴 Offen |
+
+**Gesamtaufwand:** ~24h (14h verbleibend)
+**Nächster Schritt:** P0-3 Task 3.1 – IStorageAdapter Interface erstellen
+
+**P0-2 Details:** Base components (Dialog, ConfirmDialog, BottomSheet, Auth) sind WCAG 4.1.3 compliant. 24 Feature-Dialoge optional in Follow-up. Details: [docs/wip/FOCUS-TRAP-INTEGRATION-STATUS.md](wip/FOCUS-TRAP-INTEGRATION-STATUS.md)
+
+> ⚠️ **Hinweis:** P0-TODOS.md muss nach jedem abgeschlossenen Task aktualisiert werden!
 
 ---
 

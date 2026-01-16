@@ -10,8 +10,9 @@
  * Gemäß Mobile UX Konzept (docs/concepts/MOBILE-UX-CONCEPT.md)
  */
 
-import { CSSProperties, useEffect, useCallback } from 'react';
+import { CSSProperties, useEffect } from 'react';
 import { cssVars } from '../../design-tokens'
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface BottomSheetProps {
   isOpen: boolean;
@@ -26,24 +27,21 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   title,
 }) => {
-  // Close on Escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+  // Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
       // Prevent body scroll when open
       document.body.style.overflow = 'hidden';
     }
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [isOpen, handleKeyDown]);
+  }, [isOpen]);
 
   if (!isOpen) {return null;}
 
@@ -94,6 +92,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     padding: cssVars.spacing.md,
   };
 
+  // Unique ID for aria-labelledby when title exists
+  const titleId = title ? `bottom-sheet-title-${Math.random().toString(36).substr(2, 9)}` : undefined;
+
   return (
     <>
       {/* Backdrop */}
@@ -104,11 +105,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       >
         {/* Sheet */}
         <div
+          ref={focusTrap.containerRef}
           style={sheetStyle}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
           aria-modal="true"
-          aria-label={title ?? 'Bottom Sheet'}
+          aria-labelledby={titleId}
+          aria-label={titleId ? undefined : 'Bottom Sheet'}
         >
           {/* Drag Handle */}
           <div style={handleStyle}>
@@ -116,7 +119,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           </div>
 
           {/* Title */}
-          {title && <h2 style={titleStyle}>{title}</h2>}
+          {title && <h2 id={titleId} style={titleStyle}>{title}</h2>}
 
           {/* Content */}
           <div style={contentStyle}>
