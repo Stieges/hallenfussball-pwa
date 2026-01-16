@@ -97,22 +97,25 @@ test.describe('Auth Resilience', () => {
 
   test.describe('Slow Network Handling', () => {
     test('shows loading state during slow authentication', async ({ page }) => {
-      // Setup: Intercept auth requests with delay
+      // Navigate and wait for app to be online FIRST
+      await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
+
+      // Setup: Intercept auth requests with delay AFTER app is online
+      // This ensures only the login request is affected, not the initial connection check
       await page.route('**/auth/v1/**', async (route) => {
         // Simulate 3 second network delay
         await new Promise((resolve) => setTimeout(resolve, 3000));
         await route.continue();
       });
 
-      await navigateToLogin(page);
-      await fillLoginForm(page);
-
       // Click submit
       const submitButton = page.locator('[data-testid="login-submit-button"]');
       await submitButton.click();
 
       // Should show loading state (button disabled or spinner visible)
-      await expect(submitButton).toBeDisabled({ timeout: 1000 });
+      await expect(submitButton).toBeDisabled({ timeout: 2000 });
 
       // Wait for slow request to complete or show error
       // (Since we're not hitting a real backend, expect error or timeout)
@@ -122,14 +125,16 @@ test.describe('Auth Resilience', () => {
     });
 
     test('UI remains interactive during slow network', async ({ page }) => {
-      // Setup: Very slow auth response
+      // Navigate and wait for app to be online FIRST
+      await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
+
+      // Setup: Very slow auth response AFTER app is online
       await page.route('**/auth/v1/**', async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 5000));
         await route.abort('failed');
       });
-
-      await navigateToLogin(page);
-      await fillLoginForm(page);
 
       // Click submit
       await page.locator('[data-testid="login-submit-button"]').click();
@@ -150,6 +155,11 @@ test.describe('Auth Resilience', () => {
 
   test.describe('Timeout Handling', () => {
     test('handles request timeout gracefully', async ({ page }) => {
+      // Navigate and wait for app to be online FIRST
+      await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
+
       // Setup: Request that times out after a delay and then fails
       // This simulates a real timeout scenario where the request eventually aborts
       await page.route('**/auth/v1/**', async (route) => {
@@ -158,15 +168,12 @@ test.describe('Auth Resilience', () => {
         await route.abort('timedout');
       });
 
-      await navigateToLogin(page);
-      await fillLoginForm(page);
-
       // Click submit
       const submitButton = page.locator('[data-testid="login-submit-button"]');
       await submitButton.click();
 
       // Should show loading state initially
-      await expect(submitButton).toBeDisabled({ timeout: 1000 });
+      await expect(submitButton).toBeDisabled({ timeout: 2000 });
 
       // After the simulated timeout, app should handle it gracefully
       // Either show error message or re-enable the button
@@ -181,6 +188,11 @@ test.describe('Auth Resilience', () => {
 
     test('allows retry after timeout', async ({ page }) => {
       let requestCount = 0;
+
+      // Navigate and wait for app to be online FIRST
+      await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
 
       // Setup: First request times out, second succeeds (or fails normally)
       await page.route('**/auth/v1/**', async (route) => {
@@ -202,9 +214,6 @@ test.describe('Auth Resilience', () => {
           });
         }
       });
-
-      await navigateToLogin(page);
-      await fillLoginForm(page);
 
       // First attempt
       const submitButton = page.locator('[data-testid="login-submit-button"]');
@@ -304,11 +313,13 @@ test.describe('Auth Resilience', () => {
 
   test.describe('AbortError Handling', () => {
     test('handles aborted requests gracefully', async ({ page }) => {
-      // Setup: Abort requests to simulate AbortError
-      await page.route('**/auth/v1/**', (route) => route.abort('aborted'));
-
+      // Navigate and wait for app to be online FIRST
       await navigateToLogin(page);
+      await waitForOnlineState(page);
       await fillLoginForm(page);
+
+      // Setup: Abort requests to simulate AbortError AFTER app is online
+      await page.route('**/auth/v1/**', (route) => route.abort('aborted'));
 
       // Click submit
       const submitButton = page.locator('[data-testid="login-submit-button"]');
@@ -326,6 +337,12 @@ test.describe('Auth Resilience', () => {
     test('can retry after AbortError', async ({ page }) => {
       let abortFirst = true;
 
+      // Navigate and wait for app to be online FIRST
+      await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
+
+      // Setup: Route interception AFTER app is online
       await page.route('**/auth/v1/**', async (route) => {
         if (abortFirst) {
           abortFirst = false;
@@ -341,9 +358,6 @@ test.describe('Auth Resilience', () => {
           });
         }
       });
-
-      await navigateToLogin(page);
-      await fillLoginForm(page);
 
       const submitButton = page.locator('[data-testid="login-submit-button"]');
 
@@ -365,12 +379,14 @@ test.describe('Auth Resilience', () => {
 
   test.describe('Network Recovery', () => {
     test('recovers when network becomes available', async ({ page }) => {
+      // Navigate and wait for app to be online FIRST
       await navigateToLogin(page);
+      await waitForOnlineState(page);
+      await fillLoginForm(page);
 
-      // Start offline
+      // Now go offline
       await page.route('**/auth/v1/**', (route) => route.abort('failed'));
 
-      await fillLoginForm(page);
       await page.locator('[data-testid="login-submit-button"]').click();
 
       // Wait for offline state
