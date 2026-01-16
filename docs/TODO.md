@@ -14,12 +14,11 @@
 | P0 | Problem | Aufwand | Status |
 |----|---------|---------|--------|
 | P0-1 | Registration Code im Client-Bundle (Sicherheitsrisiko) | 4h | ✅ Erledigt |
-| P0-2 | WCAG 4.1.3 Focus Management fehlt (Barrierefreiheit) | 6h | ⚠️ Basis-Komponenten ✅ |
-| P0-3 | Kein IndexedDB (localStorage 5MB Limit) | 8h | 🔴 Offen |
-| P0-4 | Keine Conflict Resolution UI (Cloud/Local Merge) | 6h | 🔴 Offen |
+| P0-2 | WCAG 4.1.3 Focus Management fehlt (Barrierefreiheit) | 6h | ✅ Erledigt (Basis-Komponenten) |
+| P0-3 | Kein IndexedDB (localStorage 5MB Limit) | 8h | ✅ Erledigt |
+| P0-4 | Keine Conflict Resolution UI (Cloud/Local Merge) | 6h | ✅ Erledigt |
 
-**Gesamtaufwand:** ~24h (14h verbleibend)
-**Nächster Schritt:** P0-3 Task 3.1 – IStorageAdapter Interface erstellen
+**Gesamtaufwand:** ~24h ✅ **ALLE P0 ABGESCHLOSSEN** (PR #42 merged 2026-01-16)
 
 **P0-2 Details:** Base components (Dialog, ConfirmDialog, BottomSheet, Auth) sind WCAG 4.1.3 compliant. 24 Feature-Dialoge optional in Follow-up. Details: [docs/wip/FOCUS-TRAP-INTEGRATION-STATUS.md](wip/FOCUS-TRAP-INTEGRATION-STATUS.md)
 
