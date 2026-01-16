@@ -99,7 +99,7 @@ export class OfflineRepository implements ITournamentRepository {
         this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update });
     }
 
-    async updateMatches(tournamentId: string, updates: MatchUpdate[]): Promise<void> {
+    async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
         await this.localRepo.updateMatches(tournamentId, updates);
         this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates });
     }
@@ -107,6 +107,11 @@ export class OfflineRepository implements ITournamentRepository {
     async delete(id: string): Promise<void> {
         await this.localRepo.delete(id);
         this.mutationQueue.enqueue('DELETE_TOURNAMENT', id);
+    }
+
+    async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+        await this.localRepo.updateTournamentMetadata(id, metadata);
+        this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', { tournamentId: id, metadata });
     }
 
     // --- Extended Methods for Sync ---
@@ -159,18 +164,31 @@ export class OfflineRepository implements ITournamentRepository {
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
                     if (!cloudT) {
-                        // Not in cloud -> Upload
+                        // Not in cloud -> Full Upload
                         await this.supabaseRepo.save(localT);
-                    } else {
-                        // Exists in cloud.
-                        // Check dates?
+                        continue;
+                    }
+
+                    // Exists in cloud. Check versions/timestamps.
+                    // Prefer version check if available
+                    const localVer = localT.version ?? 0;
+                    const cloudVer = cloudT.version ?? 0;
+
+                    if (localVer > cloudVer) {
+                        // Local is newer. Determine delta.
+                        await this.syncTournamentDelta(localT, cloudT);
+                    } else if (localVer === cloudVer) {
+                        // Versions match. Check timestamps as fallback (legacy) or if version not used.
                         const localDate = new Date(localT.updatedAt).getTime();
                         const cloudDate = new Date(cloudT.updatedAt).getTime();
-
                         if (localDate > cloudDate) {
-                            // Local is newer -> Upload
-                            await this.supabaseRepo.save(localT);
+                            await this.syncTournamentDelta(localT, cloudT);
                         }
+                    } else {
+                        // Cloud is newer (localVer < cloudVer).
+                        // syncUp is push-only. syncDown handles pull.
+                        // We might want to warn or trigger syncDown?
+                        // For now, do nothing.
                     }
                 } catch (err) {
                     console.error(`Failed to sync tournament ${localT.id}`, err);
@@ -179,6 +197,122 @@ export class OfflineRepository implements ITournamentRepository {
         } catch (error) {
             console.error('Sync up failed:', error);
         }
+    }
+
+    /**
+     * Pushes changes from local to cloud using granular updates if possible.
+     */
+    private async syncTournamentDelta(local: Tournament, remote: Tournament): Promise<void> {
+        // 1. Check for structural changes (requires full save)
+        if (this.hasStructuralChanges(local, remote)) {
+            // Be careful to pass the base version for optimistic locking
+            // We want to update 'remote' to state of 'local'.
+            // So base version is remote.version.
+            // But 'local' might have higher version. 
+            // We construct payload based on local, but with remote version as base?
+            // save() takes 'tournament'. It extracts version from it.
+            // If local.version = 5, remote.version = 4.
+            // We want to update remote to 5.
+            // SupabaseRepo.save(local) will check eq('version', local.version).
+            // But local.version is 5. It will check eq('version', 5). Remote is 4. Fail.
+
+            // Correct approach: We must update the record derived from remote.version.
+            // But local has valid data with version 5.
+            // If we blindly save(local), it checks version=5.
+            // We temporarily set version=4 for the save call so it passes optimistic lock?
+            // No, that sets new version to 5. Which matches local.
+            await this.supabaseRepo.save({ ...local, version: remote.version });
+
+            // Update local version explicitly to match the (single increment) result from save
+            // remote.version (e.g. 4) -> save -> becomes 5.
+            await this.localRepo.updateLocalVersion(local.id, (remote.version ?? 0) + 1);
+            return;
+        }
+
+        let baseVer = remote.version ?? 0;
+
+        // 2. Check Metadata
+        const metadataChanges = this.getMetadataChanges(local, remote);
+        if (metadataChanges) {
+            await this.supabaseRepo.updateTournamentMetadata(local.id, {
+                ...metadataChanges,
+                version: baseVer
+            });
+            baseVer++; // Version incremented after metadata update
+        }
+
+        // 3. Check Matches
+        const matchUpdates = this.getMatchUpdates(local, remote);
+        if (matchUpdates.length > 0) {
+            await this.supabaseRepo.updateMatches(local.id, matchUpdates, baseVer);
+            baseVer++;
+        }
+
+        // 4. Update local version to match the new cloud version
+        // This prevents the "Local is newer" loop
+        await this.localRepo.updateLocalVersion(local.id, baseVer);
+    }
+
+    private hasStructuralChanges(local: Tournament, remote: Tournament): boolean {
+        // Teams changed?
+        if (local.teams.length !== remote.teams.length) return true;
+        // Simple ID check (order matters?)
+        // Deep check for teams (names, etc.)
+        if (JSON.stringify(local.teams) !== JSON.stringify(remote.teams)) return true;
+
+        // Match count/ids
+        if (local.matches.length !== remote.matches.length) return true;
+        const localMatchIds = local.matches.map(m => m.id).sort().join(',');
+        const remoteMatchIds = remote.matches.map(m => m.id).sort().join(',');
+        if (localMatchIds !== remoteMatchIds) return true;
+
+        // Groups/Fields
+        if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) return true;
+        if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) return true;
+
+        return false;
+    }
+
+    private getMetadataChanges(local: Tournament, remote: Tournament): Partial<Tournament> | null {
+        const changes: Partial<Tournament> = {};
+        let hasChanges = false;
+
+        if (local.title !== remote.title) { changes.title = local.title; hasChanges = true; }
+        if (local.date !== remote.date) { changes.date = local.date; hasChanges = true; }
+        if (local.status !== remote.status) { changes.status = local.status; hasChanges = true; }
+        if (local.isPublic !== remote.isPublic) { changes.isPublic = local.isPublic; hasChanges = true; }
+        if (local.startTime !== remote.startTime) { changes.startTime = local.startTime; hasChanges = true; }
+
+        // Location (deep check or simple JSON)
+        if (JSON.stringify(local.location) !== JSON.stringify(remote.location)) {
+            changes.location = local.location;
+            hasChanges = true;
+        }
+
+        return hasChanges ? changes : null;
+    }
+
+    private getMatchUpdates(local: Tournament, remote: Tournament): MatchUpdate[] {
+        const updates: MatchUpdate[] = [];
+
+        for (const lMatch of local.matches) {
+            const rMatch = remote.matches.find(m => m.id === lMatch.id);
+            if (!rMatch) continue; // Should be caught by structural check
+
+            const update: MatchUpdate = { id: lMatch.id };
+            let updated = false;
+
+            if (lMatch.scoreA !== rMatch.scoreA) { update.scoreA = lMatch.scoreA; updated = true; }
+            if (lMatch.scoreB !== rMatch.scoreB) { update.scoreB = lMatch.scoreB; updated = true; }
+            if (lMatch.matchStatus !== rMatch.matchStatus) { update.matchStatus = lMatch.matchStatus; updated = true; }
+            if (lMatch.timerElapsedSeconds !== rMatch.timerElapsedSeconds) { update.timerElapsedSeconds = lMatch.timerElapsedSeconds; updated = true; }
+            // Add other granular fields if needed
+
+            if (updated) {
+                updates.push(update);
+            }
+        }
+        return updates;
     }
 
     /**

@@ -29,7 +29,7 @@ export interface ITournamentRepository {
      * Bulk updates multiple matches.
      * Useful for schedule generation or mass-edits.
      */
-    updateMatches(tournamentId: string, updates: MatchUpdate[]): Promise<void>;
+    updateMatches(tournamentId: string, updates: MatchUpdate[], baseVersion?: number): Promise<void>;
 
     /**
      * Delete a tournament.

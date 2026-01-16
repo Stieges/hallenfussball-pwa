@@ -11,6 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
+import { OptimisticLockError } from '../errors';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -95,6 +96,62 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   /**
+   * Updates only specific metadata fields of a tournament.
+   * Prevents overwriting valid teams/matches when only changing settings.
+   */
+  async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
+    const updatePayload: Record<string, unknown> = {};
+
+    // Map frontend fields to DB columns
+    if (metadata.title !== undefined) updatePayload.title = metadata.title;
+    if (metadata.date !== undefined) updatePayload.date = metadata.date;
+    if (metadata.status !== undefined) updatePayload.status = metadata.status;
+    if (metadata.startTime !== undefined) updatePayload.start_time = metadata.startTime;
+    if (metadata.location) {
+      if (metadata.location.name !== undefined) updatePayload.location_name = metadata.location.name;
+      if (metadata.location.street !== undefined) updatePayload.location_street = metadata.location.street;
+      if (metadata.location.city !== undefined) updatePayload.location_city = metadata.location.city;
+      if (metadata.location.postalCode !== undefined) updatePayload.location_postal_code = metadata.location.postalCode;
+      if (metadata.location.country !== undefined) updatePayload.location_country = metadata.location.country;
+    }
+    if (metadata.isPublic !== undefined) updatePayload.is_public = metadata.isPublic;
+    if (metadata.shareCode !== undefined) updatePayload.share_code = metadata.shareCode;
+
+    // Only update if there are fields to update
+    if (Object.keys(updatePayload).length === 0) {
+      return;
+    }
+
+    if (metadata.version !== undefined) {
+      updatePayload.version = metadata.version + 1;
+    }
+
+    updatePayload.updated_at = new Date().toISOString();
+
+    let query = getSupabase()
+      .from('tournaments')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (metadata.version !== undefined) {
+      query = query.eq('version', metadata.version);
+    }
+
+
+    const { data: updatedRows, error: updateError } = await query.select('id');
+
+    if (updateError) {
+      console.error('Failed to update tournament metadata:', updateError);
+      throw new Error(`Failed to update tournament metadata: ${updateError.message}`);
+    }
+
+    if (metadata.version !== undefined && (!updatedRows || updatedRows.length === 0)) {
+      // Optimistic Lock Failed
+      throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
+    }
+  }
+
+  /**
    * Saves a full tournament object (create or update)
    * Uses upsert for tournament, teams, and matches
    *
@@ -120,14 +177,53 @@ export class SupabaseRepository implements ITournamentRepository {
     // Note: Supabase doesn't support true transactions in the client,
     // but we can use RPC for atomic operations if needed
 
-    // 1. Upsert tournament
-    const { error: tournamentError } = await getSupabase()
-      .from('tournaments')
-      .upsert(tournamentRow, { onConflict: 'id' });
+    // 1. Persist Tournament (with Optimistic Locking)
+    let saveError = null;
 
-    if (tournamentError) {
-      console.error('Failed to save tournament:', tournamentError);
-      throw new Error(`Failed to save tournament: ${tournamentError.message}`);
+    if (tournament.version !== undefined && tournament.version !== null) {
+      // Optimistic Locking: Only update if version matches
+      const nextVersion = tournament.version + 1;
+
+      // Try update first
+      const { data, error } = await getSupabase()
+        .from('tournaments')
+        .update({ ...tournamentRow, version: nextVersion })
+        .eq('id', tournament.id)
+        .eq('version', tournament.version)
+        .select();
+
+      if (error) {
+        saveError = error;
+      } else if (!data || data.length === 0) {
+        // No update happened - check if it exists (Conflict) or is new (Insert)
+        const { data: existing } = await getSupabase()
+          .from('tournaments')
+          .select('id')
+          .eq('id', tournament.id)
+          .single();
+
+        if (existing) {
+          throw new OptimisticLockError('Turnier wurde zwischenzeitlich verändert. Bitte neu laden.');
+        } else {
+          // New tournament with predefined version? Treat as insert
+          const { error: insertError } = await getSupabase()
+            .from('tournaments')
+            .insert({ ...tournamentRow, version: 1 }); // Start at version 1
+          saveError = insertError;
+        }
+      }
+    } else {
+      // Legacy/Fallback: Upsert (Blind Overwrite)
+      // If version is missing, we initialize it to 1 if inserting
+      const { error } = await getSupabase()
+        .from('tournaments')
+        .upsert({ ...tournamentRow, version: tournamentRow.version ?? 1 }, { onConflict: 'id' });
+      saveError = error;
+    }
+
+    if (saveError) {
+      console.error('Failed to save tournament:', saveError);
+      throw new Error(`Failed to save tournament: ${saveError.message}`);
     }
 
     // 2. Handle teams - delete removed, upsert existing
@@ -219,7 +315,8 @@ export class SupabaseRepository implements ITournamentRepository {
    */
   async updateMatches(
     tournamentId: string,
-    updates: MatchUpdate[]
+    updates: MatchUpdate[],
+    baseVersion?: number
   ): Promise<void> {
     if (updates.length === 0) {
       return;
@@ -253,15 +350,33 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Update tournament's updated_at timestamp
-    await getSupabase()
+    // Update tournament's updated_at timestamp AND version if provided
+    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (baseVersion !== undefined) {
+      updatePayload.version = baseVersion + 1;
+    }
+
+    let query = getSupabase()
       .from('tournaments')
-      .update({ updated_at: new Date().toISOString() })
+      .update(updatePayload)
       .eq('id', tournamentId);
+
+    if (baseVersion !== undefined) {
+      query = query.eq('version', baseVersion);
+    }
+
+    // We utilize the version check here too
+    const { data: updatedT, error: tError } = await query.select('id');
+
+    if (tError) {
+      errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
+    } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
+      errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
+    }
 
     if (errors.length > 0) {
       throw new Error(
-        `Failed to update ${errors.length} match(es): ${errors.map((e) => e.message).join('; ')}`
+        `Failed to update matches/tournament: ${errors.map((e) => e.message).join('; ')}`
       );
     }
   }

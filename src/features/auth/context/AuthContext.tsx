@@ -104,7 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Fetches profile data from profiles table
    */
-  const fetchProfile = useCallback(async (userId: string, userMetadata?: { full_name?: string }) => {
+  const fetchProfile = useCallback(async (userId: string) => {
     if (!isSupabaseConfigured || !supabase) {
       return null;
     }
@@ -117,36 +117,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .single();
 
       if (error) {
-        // If profile doesn't exist (PGRST116), try to create it (Self-Healing)
-        if (error.code === 'PGRST116') {
-          // eslint-disable-next-line no-console
-          console.log('Profile missing, attempting self-healing creation...');
-          try {
-            const displayName = userMetadata?.full_name?.trim() || 'User';
-            const { data: newData, error: createError } = await supabase
-              .from('profiles')
-              .insert({
-                id: userId,
-                display_name: displayName,
-                role: 'user', // Default
-              })
-              .select('display_name, avatar_url, role')
-              .single();
-
-            if (createError) {
-              console.error('Self-healing profile creation failed:', createError.message);
-              return null;
-            }
-
-            return {
-              name: newData.display_name ?? '',
-              avatar_url: newData.avatar_url,
-              role: (newData.role as 'user' | 'admin' | null) ?? 'user',
-            };
-          } catch (createErr) {
-            console.error('Self-healing failed unexpectedly:', createErr);
-          }
-        } else {
+        // PGRST116 is "No Data Found" - expected if trigger hasn't finished yet
+        if (error.code !== 'PGRST116') {
           console.warn('Profile fetch error:', error.message);
         }
         return null;
@@ -194,8 +166,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     // Fetch profile data (pass metadata for self-healing)
-    const userMetadata = supabaseSession.user.user_metadata as { full_name?: string } | undefined;
-    const profileData = await fetchProfile(supabaseSession.user.id, userMetadata);
+    const profileData = await fetchProfile(supabaseSession.user.id);
 
     // Map to our types
     const mappedUser = mapSupabaseUser(supabaseSession.user, profileData);
@@ -244,21 +215,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       } catch (error) {
         // AbortError is expected in React StrictMode (double mount/unmount)
-        // The Supabase lock gets aborted on first unmount
-        // Retry once after a short delay to let StrictMode settle
-        if (error instanceof Error && error.name === 'AbortError') {
+        // or during serverless cold starts. Treat as transient.
+        if (
+          (error instanceof Error && error.name === 'AbortError') ||
+          (error instanceof Error && error.message.includes('aborted'))
+        ) {
           if (retryCount < 2) {
-            // Wait for StrictMode to finish its double-mount cycle
-            await new Promise(resolve => setTimeout(resolve, 100));
-            clearTimeout(safetyTimeout);
-            return initAuth(retryCount + 1);
+            setTimeout(() => void initAuth(retryCount + 1), 500);
+            return;
           }
-          // After retries, silently ignore - user can refresh or app will recover
-          // IMPORTANT: If we already set 'connected' via safety timeout, DO NOT switch to offline on AbortError
-          // This prevents the "Offline Trap" when Supabase cancels requests but we are actually fine
-          if (mounted && connectionState !== 'connected') {
-            setConnectionState('offline');
-          }
+          console.debug('Auth init aborted (transient):', error);
           return;
         }
         console.error('Auth init error:', error);
@@ -340,10 +306,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.log('Reconnected successfully');
       } catch (error) {
         // Handle AbortError specifically - usually transient
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.warn('Reconnect aborted, retrying soon...');
+        if (
+          (error instanceof Error && error.name === 'AbortError') ||
+          (error instanceof Error && error.message.includes('aborted'))
+        ) {
+          // Debug level only - this is expected behavior on Vercel/Serverless
+          console.debug('Reconnect attempt aborted (transient):', error);
+
           // Don't set offline, just schedule a quick retry
-          if (retryTimeout) {clearTimeout(retryTimeout);}
+          if (retryTimeout) { clearTimeout(retryTimeout); }
           retryTimeout = setTimeout(() => { void attemptReconnect(); }, 2000);
           return;
         }
@@ -441,8 +412,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Get profile data (might need a small delay or retry if trigger is slow,
       // but usually fast enough for next render)
-      const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
-      const profileData = await fetchProfile(data.user.id, userMetadata);
+      const profileData = await fetchProfile(data.user.id);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
       // Migrate any local guest tournaments to the new account
@@ -508,8 +478,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Clear guest data
       safeLocalStorage.removeItem('auth:guestUser');
 
-      const userMetadata = data.user.user_metadata as { full_name?: string } | undefined;
-      const profileData = await fetchProfile(data.user.id, userMetadata);
+      const profileData = await fetchProfile(data.user.id);
       const mappedUser = mapSupabaseUser(data.user, profileData);
 
       // Migrate any local guest tournaments to the logged-in account
