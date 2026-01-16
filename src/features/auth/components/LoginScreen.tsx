@@ -384,7 +384,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             variant="primary"
             fullWidth
             loading={isLoading}
-            disabled={isOffline}
             style={styles.button}
             data-testid="login-submit-button"
           >

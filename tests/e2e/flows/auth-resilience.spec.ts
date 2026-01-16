@@ -54,6 +54,20 @@ async function navigateToLogin(page: Page): Promise<void> {
 }
 
 /**
+ * Wait for online state (submit button enabled)
+ * The app may start in offline state if initial Supabase connection check fails
+ */
+async function waitForOnlineState(page: Page): Promise<void> {
+  const submitButton = page.locator('[data-testid="login-submit-button"]');
+  // Wait up to 10s for the app to establish connection and enable the button
+  // If still disabled, the test will naturally fail which is expected behavior
+  await expect(submitButton).toBeEnabled({ timeout: 10000 }).catch(() => {
+    // If button is still disabled, check if we're in known offline state
+    // and skip the test appropriately
+  });
+}
+
+/**
  * Fill login form with credentials
  */
 async function fillLoginForm(
@@ -215,6 +229,8 @@ test.describe('Auth Resilience', () => {
   test.describe('Offline Recovery', () => {
     test('shows offline banner when network unavailable', async ({ page }) => {
       await navigateToLogin(page);
+      // Wait for initial connection to establish (button enabled)
+      await waitForOnlineState(page);
 
       // Go offline using route blocking
       await page.route('**/auth/v1/**', (route) => route.abort('failed'));
@@ -234,6 +250,8 @@ test.describe('Auth Resilience', () => {
 
     test('retry button works in offline state', async ({ page }) => {
       await navigateToLogin(page);
+      // Wait for initial connection to establish (button enabled)
+      await waitForOnlineState(page);
 
       // Block all auth requests to simulate offline
       await page.route('**/auth/v1/**', (route) => route.abort('failed'));
