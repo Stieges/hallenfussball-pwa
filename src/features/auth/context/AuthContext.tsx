@@ -224,6 +224,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setTimeout(() => void initAuth(retryCount + 1), 500);
             return;
           }
+          // eslint-disable-next-line no-console -- intentional debug logging for transient errors
           console.debug('Auth init aborted (transient):', error);
           return;
         }
@@ -311,6 +312,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           (error instanceof Error && error.message.includes('aborted'))
         ) {
           // Debug level only - this is expected behavior on Vercel/Serverless
+          // eslint-disable-next-line no-console -- intentional debug logging for transient errors
           console.debug('Reconnect attempt aborted (transient):', error);
 
           // Don't set offline, just schedule a quick retry

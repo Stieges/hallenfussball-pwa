@@ -255,20 +255,20 @@ export class OfflineRepository implements ITournamentRepository {
 
     private hasStructuralChanges(local: Tournament, remote: Tournament): boolean {
         // Teams changed?
-        if (local.teams.length !== remote.teams.length) return true;
+        if (local.teams.length !== remote.teams.length) {return true;}
         // Simple ID check (order matters?)
         // Deep check for teams (names, etc.)
-        if (JSON.stringify(local.teams) !== JSON.stringify(remote.teams)) return true;
+        if (JSON.stringify(local.teams) !== JSON.stringify(remote.teams)) {return true;}
 
         // Match count/ids
-        if (local.matches.length !== remote.matches.length) return true;
+        if (local.matches.length !== remote.matches.length) {return true;}
         const localMatchIds = local.matches.map(m => m.id).sort().join(',');
         const remoteMatchIds = remote.matches.map(m => m.id).sort().join(',');
-        if (localMatchIds !== remoteMatchIds) return true;
+        if (localMatchIds !== remoteMatchIds) {return true;}
 
         // Groups/Fields
-        if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) return true;
-        if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) return true;
+        if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
+        if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) {return true;}
 
         return false;
     }
@@ -297,7 +297,7 @@ export class OfflineRepository implements ITournamentRepository {
 
         for (const lMatch of local.matches) {
             const rMatch = remote.matches.find(m => m.id === lMatch.id);
-            if (!rMatch) continue; // Should be caught by structural check
+            if (!rMatch) {continue;} // Should be caught by structural check
 
             const update: MatchUpdate = { id: lMatch.id };
             let updated = false;

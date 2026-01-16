@@ -14,22 +14,21 @@ describe('OfflineRepository - Granular Sync', () => {
     let mockSupabase: any;
     let mockLocal: any;
 
-    const baseTournament: Tournament = {
+    const baseTournament = {
         id: 't1',
         title: 'Base Title',
         date: '2025-01-01',
-        status: 'planned',
+        status: 'draft',
         version: 1,
-        ownerId: 'u1',
-        teams: [{ id: 'te1', name: 'A', tournamentId: 't1' }, { id: 'te2', name: 'B', tournamentId: 't1' }],
+        teams: [{ id: 'te1', name: 'A' }, { id: 'te2', name: 'B' }],
         matches: [
-            { id: 'm1', tournamentId: 't1', teamA: 'te1', teamB: 'te2', round: 1, matchNumber: 1, field: 1 }
+            { id: 'm1', teamA: 'te1', teamB: 'te2', round: 1, matchNumber: 1, field: 1 }
         ],
         groups: [],
-        fields: 1,
+        fields: [{ id: 'field-1', defaultName: 'Feld 1' }],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-    };
+    } as unknown as Tournament;
 
     beforeEach(() => {
         // Reset mocks
