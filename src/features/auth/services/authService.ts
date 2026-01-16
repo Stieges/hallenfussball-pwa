@@ -321,11 +321,14 @@ export const convertGuestToUser = (
 
 /**
  * Findet einen User anhand der ID
+ *
+ * @deprecated MOVED to src/features/auth/utils/authHelpers.ts
+ * Import from '../utils/authHelpers' instead.
  */
-export const getUserById = (userId: string): User | null => {
-  const users = getUsers();
-  return users.find((u) => u.id === userId) ?? null;
-};
+// export const getUserById = (userId: string): User | null => {
+//   const users = getUsers();
+//   return users.find((u) => u.id === userId) ?? null;
+// };
 
 /**
  * Findet einen User anhand der E-Mail

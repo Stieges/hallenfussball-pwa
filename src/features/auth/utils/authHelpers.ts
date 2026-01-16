@@ -8,6 +8,8 @@
  */
 
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
+import type { User } from '../types/auth.types';
+import { AUTH_STORAGE_KEYS } from '../types/auth.types';
 
 /**
  * Auth provider types
@@ -125,3 +127,36 @@ export async function userHasPassword(email: string): Promise<boolean> {
   const result = await checkOAuthOnlyUser(email);
   return !result.isOAuthOnly;
 }
+
+// ============================================
+// LEGACY USER LOOKUP (localStorage-based)
+// ============================================
+
+/**
+ * Gets all users from localStorage (legacy storage)
+ *
+ * @deprecated This is for backwards compatibility with localStorage-based users.
+ * New code should use Supabase for user data.
+ */
+const getLegacyUsers = (): User[] => {
+  try {
+    const usersJson = localStorage.getItem(AUTH_STORAGE_KEYS.USERS);
+    return usersJson ? (JSON.parse(usersJson) as User[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Finds a user by ID from localStorage (legacy storage)
+ *
+ * @deprecated This is for backwards compatibility with localStorage-based users.
+ * New code should use Supabase profiles table.
+ *
+ * @param userId - The user ID to look up
+ * @returns User or null if not found
+ */
+export const getUserById = (userId: string): User | null => {
+  const users = getLegacyUsers();
+  return users.find((u) => u.id === userId) ?? null;
+};

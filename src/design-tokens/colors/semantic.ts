@@ -189,6 +189,7 @@ export const semanticColorsDark = {
   // ---------------------------------------------------------------------------
   shadowSoft: 'rgba(0, 0, 0, 0.2)',
   shadowMedium: 'rgba(0, 0, 0, 0.3)',
+  shadowModal: 'rgba(0, 0, 0, 0.4)', // For modal/dialog boxShadow
   primaryGlow: 'rgba(0, 230, 118, 0.5)',
   primaryGlowLight: 'rgba(0, 230, 118, 0.2)',
   errorGlow: 'rgba(255, 82, 82, 0.25)',

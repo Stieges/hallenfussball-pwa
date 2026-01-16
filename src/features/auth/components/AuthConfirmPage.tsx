@@ -263,7 +263,7 @@ const styles: Record<string, CSSProperties> = {
     background: cssVars.colors.surfaceSolid,
     borderRadius: cssVars.borderRadius.lg,
     border: `1px solid ${cssVars.colors.border}`,
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    boxShadow: `0 8px 32px ${cssVars.colors.shadowModal}`,
     textAlign: 'center',
   },
   iconWrapper: {

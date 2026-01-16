@@ -214,6 +214,7 @@ export const cssColors = {
   // ---------------------------------------------------------------------------
   shadowSoft: 'var(--color-shadow-soft)',
   shadowMedium: 'var(--color-shadow-medium)',
+  shadowModal: 'var(--color-shadow-modal)',
 
   // ---------------------------------------------------------------------------
   // Danger Colors
