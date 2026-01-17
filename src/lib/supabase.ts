@@ -34,7 +34,9 @@ if (!isSupabaseConfigured && import.meta.env.DEV) {
  * Konfiguriert mit:
  * - Auto Token Refresh
  * - Session Persistence
- * - URL Session Detection (für OAuth Callbacks)
+ * - Manual URL handling (detectSessionInUrl: false)
+ *   → AuthCallback.tsx handles code exchange explicitly
+ *   → Prevents race conditions with double code processing
  *
  * Returns null if Supabase is not configured (offline-only mode)
  */
@@ -46,7 +48,7 @@ function createSupabaseClient(): SupabaseClient<Database> | null {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true,
+      detectSessionInUrl: false, // We handle code exchange manually in AuthCallback
       storage: safeLocalStorage,
     },
   });

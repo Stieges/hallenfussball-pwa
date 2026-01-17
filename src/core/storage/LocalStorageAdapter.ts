@@ -1,26 +1,11 @@
-/**
- * LocalStorageAdapter - localStorage-based storage implementation
- *
- * Fallback storage when IndexedDB is unavailable.
- *
- * Limitations:
- * - 5MB storage limit
- * - Synchronous API (wrapped in Promises for interface consistency)
- * - String-only storage (requires JSON serialization)
- * - May throw QuotaExceededError on large data
- *
- * Use cases:
- * - Private browsing modes where IndexedDB is disabled
- * - Older browsers without IndexedDB support
- * - Testing environments
- */
-
 import { IStorageAdapter } from './IStorageAdapter';
+import { StorageError } from './StorageError';
 
+/**
+ * LocalStorage implementation of IStorageAdapter.
+ * Used as a fallback when IndexedDB is not available.
+ */
 export class LocalStorageAdapter implements IStorageAdapter {
-  /**
-   * Get value by key
-   */
   async get<T>(key: string): Promise<T | null> {
     try {
       const item = localStorage.getItem(key);
@@ -29,59 +14,41 @@ export class LocalStorageAdapter implements IStorageAdapter {
       }
       return JSON.parse(item) as T;
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error(`LocalStorageAdapter.get failed for key "${key}":`, error);
-      }
-      return null;
+      throw new StorageError(`Failed to get item '${key}' from LocalStorage`, error);
     }
   }
 
-  /**
-   * Set value by key
-   */
   async set<T>(key: string, value: T): Promise<void> {
     try {
-      const serialized = JSON.stringify(value);
-      localStorage.setItem(key, serialized);
+      localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
-      // QuotaExceededError is common when approaching 5MB limit
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        throw new Error(
-          `localStorage quota exceeded. Consider using IndexedDB for large tournaments.`
-        );
+      // Check for quota exceeded error
+      if (error instanceof Error && (
+        error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+      )) {
+        throw new StorageError('LocalStorage quota exceeded', error);
       }
-      throw new Error(`LocalStorageAdapter.set failed: ${(error as Error).message}`);
+      throw new StorageError(`Failed to set item '${key}' in LocalStorage`, error);
     }
   }
 
-  /**
-   * Delete value by key
-   */
   async delete(key: string): Promise<void> {
     try {
       localStorage.removeItem(key);
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error(`LocalStorageAdapter.delete failed for key "${key}":`, error);
-      }
-      // Don't throw - deletion failure is non-critical
+      throw new StorageError(`Failed to delete item '${key}' from LocalStorage`, error);
     }
   }
 
-  /**
-   * Clear all data
-   */
   async clear(): Promise<void> {
     try {
       localStorage.clear();
     } catch (error) {
-      throw new Error(`LocalStorageAdapter.clear failed: ${(error as Error).message}`);
+      throw new StorageError('Failed to clear LocalStorage', error);
     }
   }
 
-  /**
-   * Get all keys
-   */
   async keys(): Promise<string[]> {
     try {
       const keys: string[] = [];
@@ -93,10 +60,7 @@ export class LocalStorageAdapter implements IStorageAdapter {
       }
       return keys;
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('LocalStorageAdapter.keys failed:', error);
-      }
-      return [];
+      throw new StorageError('Failed to get keys from LocalStorage', error);
     }
   }
 }

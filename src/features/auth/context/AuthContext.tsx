@@ -72,7 +72,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         role: (data.role as 'user' | 'admin' | null) ?? 'user',
       };
     } catch (err) {
-      console.error('Profile fetch failed:', err);
+      if (import.meta.env.DEV) {
+        console.error('Profile fetch failed:', err);
+      }
       return null;
     }
   }, []);
@@ -169,7 +171,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.debug('Auth init aborted (transient):', error);
           return;
         }
-        console.error('Auth init error:', error);
+        if (import.meta.env.DEV) {
+          console.error('Auth init error:', error);
+        }
         if (mounted) {
           setConnectionState('offline');
           setUser(null);
@@ -194,9 +198,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
 
             if (mounted) {
-              // Handle password recovery - set flag for AuthCallback to redirect
+              // Handle password recovery - set flag with TTL for AuthCallback to redirect
               if (event === 'PASSWORD_RECOVERY' && newSession) {
-                safeSessionStorage.setItem('auth:passwordRecovery', 'true');
+                const recoveryData = JSON.stringify({
+                  pending: true,
+                  expiresAt: Date.now() + 10 * 60 * 1000  // 10 minutes TTL
+                });
+                safeSessionStorage.setItem('auth:passwordRecovery', recoveryData);
               }
 
               // Clear guest state on real login
@@ -212,7 +220,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         subscription = data.subscription;
       } catch (error) {
         // AbortError can happen in StrictMode during subscription setup
-        if (!(error instanceof Error && error.name === 'AbortError')) {
+        if (!(error instanceof Error && error.name === 'AbortError') && import.meta.env.DEV) {
           console.error('Auth subscription error:', error);
         }
       }
@@ -268,7 +276,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        console.warn('Reconnect failed:', error);
+        if (import.meta.env.DEV) {
+          console.warn('Reconnect failed:', error);
+        }
         setConnectionState('offline');
         // Schedule next retry
         retryTimeout = setTimeout(() => { void attemptReconnect(); }, 30000);
