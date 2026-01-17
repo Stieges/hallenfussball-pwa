@@ -7,6 +7,7 @@ export { LocalStorageRepository } from './LocalStorageRepository';
 export { LocalStorageLiveMatchRepository } from './LocalStorageLiveMatchRepository';
 export { SupabaseRepository } from './SupabaseRepository';
 export { SupabaseLiveMatchRepository } from './SupabaseLiveMatchRepository';
+export { HybridRepository, hybridRepository, type HybridRepositoryOptions } from './HybridRepository';
 export type { LiveMatchChangeHandler, SubscriptionOptions } from './SupabaseLiveMatchRepository';
 
 // Mappers
