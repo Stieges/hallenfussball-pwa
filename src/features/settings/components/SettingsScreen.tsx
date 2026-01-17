@@ -14,6 +14,7 @@
  */
 
 import React, { CSSProperties, useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { useTheme } from '../../../hooks/useTheme';
 import { useSettings } from '../hooks/useSettings';
@@ -37,10 +38,6 @@ import { reinitializeSentry } from '../../../lib/sentry';
 interface SettingsScreenProps {
   /** Zurück-Handler */
   onBack: () => void;
-  /** Handler für Impressum */
-  onNavigateToImpressum?: () => void;
-  /** Handler für Datenschutz */
-  onNavigateToDatenschutz?: () => void;
 }
 
 // =============================================================================
@@ -55,9 +52,8 @@ const APP_VERSION = '2.3.0';
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onBack,
-  onNavigateToImpressum,
-  onNavigateToDatenschutz,
 }) => {
+  const navigate = useNavigate();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const {
     fontSize,
@@ -115,8 +111,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const handleRevokeConsent = useCallback(() => {
     const confirmed = window.confirm(
       'Möchten Sie Ihre Datenschutz-Einwilligung widerrufen?\n\n' +
-        'Dies deaktiviert Error-Tracking und Session-Replay. ' +
-        'Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.'
+      'Dies deaktiviert Error-Tracking und Session-Replay. ' +
+      'Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.'
     );
     if (confirmed) {
       revokeConsent();
@@ -381,13 +377,13 @@ Meine Nachricht:
             variant="link"
             icon="📄"
             label="Impressum"
-            onClick={() => onNavigateToImpressum?.()}
+            onClick={() => void navigate('/impressum')}
           />
           <SettingItem
             variant="link"
             icon="🔒"
             label="Datenschutz"
-            onClick={() => onNavigateToDatenschutz?.()}
+            onClick={() => void navigate('/datenschutz')}
           />
           <SettingItem
             variant="link"

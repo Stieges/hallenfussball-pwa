@@ -480,7 +480,7 @@ function AppContent() {
         <GuestBanner
           dismissible
           onDismiss={() => { /* stays dismissed */ }}
-          onRegisterClick={() => setScreen('register')}
+          onRegisterClick={() => void navigate('/register')}
         />
       )}
 
@@ -490,26 +490,17 @@ function AppContent() {
         {screen === 'login' && (
           <LoginScreen
             onSuccess={() => void navigate('/')}
-            onNavigateToRegister={() => setScreen('register')}
-            onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
-            onContinueAsGuest={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
+            onNavigateToRegister={() => void navigate('/register')}
+            onBack={() => void navigate(-1)}
+            onContinueAsGuest={() => void navigate('/')}
           />
         )}
 
         {screen === 'register' && (
           <RegisterScreen
             onSuccess={() => void navigate('/')}
-            onNavigateToLogin={() => setScreen('login')}
-            onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
+            onNavigateToLogin={() => void navigate('/login')}
+            onBack={() => void navigate(-1)}
           />
         )}
 
@@ -521,24 +512,14 @@ function AppContent() {
 
         {screen === 'profile' && (
           <UserProfileScreen
-            onBack={() => void navigate('/')}
-            onOpenSettings={() => {
-              setScreen('settings');
-              void navigate('/settings');
-            }}
+            onBack={() => void navigate(-1)}
+            onOpenSettings={() => void navigate('/settings')}
           />
         )}
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => {
-              // Use navigate(-1) if we have history, or fallback to profile
-              // For now, explicit navigation to profile is safer for this hub-and-spoke model
-              setScreen('profile');
-              void navigate('/profile');
-            }}
-            onNavigateToImpressum={() => setScreen('impressum')}
-            onNavigateToDatenschutz={() => setScreen('datenschutz')}
+            onBack={() => void navigate(-1)}
           />
         )}
 
@@ -566,10 +547,10 @@ function AppContent() {
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
             onCopyTournament={(tournament) => void handleCopyTournament(tournament)}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 
@@ -611,10 +592,10 @@ function AppContent() {
               (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined)
             }
             quickEditMode={quickEditMode}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 
@@ -632,10 +613,10 @@ function AppContent() {
             tournamentId={tournamentIdFromUrl}
             onBack={() => void navigate('/')}
             onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 

@@ -38,8 +38,9 @@ export const test = base.extend<TestOptions>({
             localStorage.setItem('app:consent', JSON.stringify(consent));
         }, TEST_CONSENT_STATUS);
 
-        // Reload to pick up the consent
+        // Reload to pick up the consent and wait for page to be ready
         await page.reload();
+        await page.waitForLoadState('domcontentloaded');
 
         // Now use the page with consent already set
         await use(page);
@@ -53,6 +54,7 @@ export const test = base.extend<TestOptions>({
                 });
             }, data);
             await page.reload(); // Reload to pick up changes
+            await page.waitForLoadState('domcontentloaded');
         };
         await use(seedFn);
     },
