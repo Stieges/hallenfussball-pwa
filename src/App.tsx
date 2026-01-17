@@ -26,6 +26,9 @@ import {
 import { Footer } from './components/layout';
 import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
 import { ConflictResolutionDialog } from './features/sync/components/ConflictResolutionDialog';
+import { ConsentDialog } from './components/dialogs/ConsentDialog';
+import { hasConsent } from './lib/consent';
+import { reinitializeSentry } from './lib/sentry';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -768,6 +771,15 @@ function PendingChangesWarning(): null {
 }
 
 function App() {
+  // DSGVO Consent Dialog - shows on first visit
+  const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
+
+  const handleConsent = useCallback(() => {
+    setShowConsentDialog(false);
+    // Re-initialize Sentry with new consent status
+    void reinitializeSentry();
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
@@ -778,6 +790,8 @@ function App() {
             <StorageWarningBanner />
             <OfflineBanner />
             <AppContent />
+            {/* DSGVO Consent Dialog - appears on first visit */}
+            <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
           </ToastProvider>
         </RepositoryProvider>
       </AuthProvider>
