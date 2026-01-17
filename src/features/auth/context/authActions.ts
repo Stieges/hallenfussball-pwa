@@ -104,7 +104,9 @@ export async function register(
         console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after registration`);
       }
     } catch (migrationError) {
-      console.error('Migration after registration failed:', migrationError);
+      if (import.meta.env.DEV) {
+        console.error('Migration after registration failed:', migrationError);
+      }
       // Don't fail the registration if migration fails
     }
 
@@ -118,7 +120,9 @@ export async function register(
       migratedCount: migrationResult.migratedCount,
     };
   } catch (err) {
-    console.error('Register error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Register error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -148,9 +152,17 @@ export async function login(
     });
 
     if (error) {
+      // Use generic message for credential errors to prevent account enumeration
+      // Attacker should not be able to tell if email exists or password is wrong
+      const isCredentialError =
+        error.message.includes('Invalid login credentials') ||
+        error.message.includes('User not found') ||
+        error.message.includes('invalid_credentials') ||
+        error.message.includes('Email not confirmed');
+
       return {
         success: false,
-        error: error.message === 'Invalid login credentials'
+        error: isCredentialError
           ? 'E-Mail oder Passwort ist falsch.'
           : error.message,
       };
@@ -171,7 +183,9 @@ export async function login(
         console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after login`);
       }
     } catch (migrationError) {
-      console.error('Migration after login failed:', migrationError);
+      if (import.meta.env.DEV) {
+        console.error('Migration after login failed:', migrationError);
+      }
       // Don't fail the login if migration fails
     }
 
@@ -185,7 +199,9 @@ export async function login(
       migratedCount: migrationResult.migratedCount,
     };
   } catch (err) {
-    console.error('Login error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Login error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -224,7 +240,9 @@ export async function sendMagicLink(
 
     return { success: true };
   } catch (err) {
-    console.error('Magic link error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Magic link error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -261,7 +279,9 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
     // OAuth redirects, so success means redirect initiated
     return { success: true };
   } catch (err) {
-    console.error('Google login error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Google login error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -289,7 +309,9 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
     deps.setSession(null);
     deps.setIsGuest(false);
   } catch (err) {
-    console.error('Logout error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Logout error:', err);
+    }
   }
 }
 
@@ -321,7 +343,9 @@ export async function refreshAuth(deps: AuthActionDeps): Promise<void> {
     deps.setConnectionState('connected');
     await deps.updateAuthState(currentSession);
   } catch (err) {
-    console.error('Refresh auth error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Refresh auth error:', err);
+    }
     deps.setConnectionState('offline');
     deps.setIsLoading(false);
   }
@@ -399,7 +423,9 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
         console.debug('Reconnect aborted (transient):', err.message);
       }
     } else {
-      console.error('Manual reconnect failed:', err);
+      if (import.meta.env.DEV) {
+        console.error('Manual reconnect failed:', err);
+      }
     }
     deps.setConnectionState('offline');
     return false;
@@ -453,7 +479,9 @@ export async function resetPassword(
 
     return { success: true };
   } catch (err) {
-    console.error('Reset password error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Reset password error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
@@ -512,7 +540,9 @@ export async function updateProfile(
 
     return { success: true };
   } catch (err) {
-    console.error('Update profile error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Update profile error:', err);
+    }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
   }
 }
@@ -554,7 +584,9 @@ export async function updatePassword(
 
     return { success: true };
   } catch (err) {
-    console.error('Update password error:', err);
+    if (import.meta.env.DEV) {
+      console.error('Update password error:', err);
+    }
     return {
       success: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',

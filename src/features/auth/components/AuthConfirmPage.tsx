@@ -17,15 +17,21 @@ import { Button } from '../../../components/ui/Button';
 
 type ConfirmType = 'signup' | 'recovery' | 'magiclink' | 'invite';
 
+/** Valid confirm types for type-safe URL parameter parsing */
+const VALID_CONFIRM_TYPES: readonly ConfirmType[] = ['signup', 'recovery', 'magiclink', 'invite'];
+
 export const AuthConfirmPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Parse URL parameters
+  // Parse URL parameters with validation
   const token = searchParams.get('token') ?? searchParams.get('token_hash');
-  const type = searchParams.get('type') as ConfirmType | null;
+  const rawType = searchParams.get('type');
+  const type: ConfirmType | null = rawType && VALID_CONFIRM_TYPES.includes(rawType as ConfirmType)
+    ? (rawType as ConfirmType)
+    : null;
   const redirectTo = searchParams.get('redirect_to') ?? '/';
 
   // Get type-specific UI text
@@ -136,7 +142,9 @@ export const AuthConfirmPage: React.FC = () => {
         }
       }
     } catch (err) {
-      console.error('Confirm error:', err);
+      if (import.meta.env.DEV) {
+        console.error('Confirm error:', err);
+      }
 
       // User-friendly error messages
       if (err instanceof Error) {

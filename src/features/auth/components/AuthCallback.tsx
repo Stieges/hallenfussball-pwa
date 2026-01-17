@@ -63,6 +63,35 @@ function parseHashRouterParams(): { query: URLSearchParams; fragment: URLSearchP
   };
 }
 
+/**
+ * Checks if a password recovery flow is pending (with TTL support)
+ * Handles both old format ('true') and new format ({pending, expiresAt})
+ */
+function isPasswordRecoveryPending(): boolean {
+  const data = safeSessionStorage.getItem('auth:passwordRecovery');
+  if (!data) {
+    return false;
+  }
+
+  // Handle old format (plain 'true')
+  if (data === 'true') {
+    return true;
+  }
+
+  try {
+    const parsed = JSON.parse(data) as { pending?: boolean; expiresAt?: number };
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      // Expired - clean up and return false
+      safeSessionStorage.removeItem('auth:passwordRecovery');
+      return false;
+    }
+    return parsed.pending === true;
+  } catch {
+    // Invalid JSON - treat as old format
+    return data === 'true';
+  }
+}
+
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,9 +133,9 @@ export const AuthCallback: React.FC = () => {
           // Explicitly clear guest user to prevent any fallback
           safeLocalStorage.removeItem('auth:guestUser');
 
-          const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
+          const isRecoveryFlow = type === 'recovery' || isPasswordRecoveryPending();
 
-          if (isPasswordRecovery) {
+          if (isRecoveryFlow) {
             safeSessionStorage.removeItem('auth:passwordRecovery');
             void navigate('/set-password', { replace: true });
             return;
@@ -117,54 +146,40 @@ export const AuthCallback: React.FC = () => {
         }
 
         // Handle PKCE flow (code in query params)
+        // Note: With detectSessionInUrl: false, we are the only code processor
+        // No more race conditions with Supabase auto-detect
         if (code) {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
           if (exchangeError) {
-            // Check if code was already used (race condition with auto-detect)
-            if (exchangeError.message.includes('code') || exchangeError.message.includes('expired') || exchangeError.message.includes('used')) {
-              // Retry fetching session - it might have been set by auto-detect
-              await new Promise(resolve => setTimeout(resolve, 500)); // Increased wait
-
-              const { data: { session: retrySession } } = await supabase.auth.getSession();
-              if (retrySession) {
-                safeLocalStorage.removeItem('auth:guestUser');
-
-                const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
-                if (isPasswordRecovery) {
-                  safeSessionStorage.removeItem('auth:passwordRecovery');
-                  void navigate('/set-password', { replace: true });
-                  return;
-                }
-                void navigate('/', { replace: true });
-                return;
-              }
+            // Code already used = user clicked link twice or link expired
+            // No race condition possible since detectSessionInUrl is false
+            if (import.meta.env.DEV) {
+              console.error('Code exchange error:', exchangeError);
             }
-            console.error('Code exchange error:', exchangeError);
-            setError(exchangeError.message);
+            setError(
+              exchangeError.message.includes('expired')
+                ? 'Der Link ist abgelaufen. Bitte fordere einen neuen an.'
+                : 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.'
+            );
             return;
           }
 
-          // Exchange successful - verify session is actually set
-          // Wait briefly for the session to propagate
-          await new Promise(resolve => setTimeout(resolve, 200));
-
+          // Exchange successful - session should be set immediately
           const { data: { session: verifySession } } = await supabase.auth.getSession();
           if (!verifySession) {
-            console.error('Exchange successful but no session found. Retrying...');
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const { data: { session: finalRetry } } = await supabase.auth.getSession();
-            if (!finalRetry) {
-              setError('Sitzung konnte nicht erstellt werden. Bitte versuche es erneut.');
-              return;
+            if (import.meta.env.DEV) {
+              console.error('Exchange successful but no session found');
             }
+            setError('Sitzung konnte nicht erstellt werden. Bitte versuche es erneut.');
+            return;
           }
 
           safeLocalStorage.removeItem('auth:guestUser');
 
-          const isPasswordRecovery = type === 'recovery' || safeSessionStorage.getItem('auth:passwordRecovery') === 'true';
+          const isRecoveryFlow = type === 'recovery' || isPasswordRecoveryPending();
 
-          if (isPasswordRecovery) {
+          if (isRecoveryFlow) {
             safeSessionStorage.removeItem('auth:passwordRecovery');
             void navigate('/set-password', { replace: true });
             return;
@@ -200,8 +215,9 @@ export const AuthCallback: React.FC = () => {
 
         // No code, no tokens, no session
         // Check if we accidentally ended up here from Google redirect but parsing failed?
-        // Detailed log
-        console.warn('AuthCallback: No auth data found in URL', { hash: window.location.hash, search: window.location.search });
+        if (import.meta.env.DEV) {
+          console.warn('AuthCallback: No auth data found in URL', { hash: window.location.hash, search: window.location.search });
+        }
 
         // Don't redirect immediately to login if we suspect we might have missed something
         // But for now, standard behavior is redirect.
@@ -221,9 +237,11 @@ export const AuthCallback: React.FC = () => {
           return;
         }
 
-        console.error('Auth callback error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        console.error('Error details:', errorMessage);
+        if (import.meta.env.DEV) {
+          console.error('Auth callback error:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          console.error('Error details:', errorMessage);
+        }
         setError('Ein unerwarteter Fehler ist aufgetreten.');
       }
     };

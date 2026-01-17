@@ -1,6 +1,7 @@
 import { IStorageAdapter } from './IStorageAdapter';
 import { IndexedDBAdapter } from './IndexedDBAdapter';
 import { LocalStorageAdapter } from './LocalStorageAdapter';
+import { autoMigrate } from './migrateToIndexedDB';
 
 let storageInstance: IStorageAdapter | null = null;
 let initializationPromise: Promise<IStorageAdapter> | null = null;
@@ -27,6 +28,8 @@ export async function createStorage(): Promise<IStorageAdapter> {
       try {
         const adapter = new IndexedDBAdapter();
         await adapter.init();
+        // Migrate existing localStorage data to IndexedDB on first use
+        await autoMigrate();
         storageInstance = adapter;
         return adapter;
       } catch (error) {

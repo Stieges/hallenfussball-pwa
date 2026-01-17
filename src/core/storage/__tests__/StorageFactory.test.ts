@@ -27,6 +27,11 @@ const mockIndexedDB = {
 vi.mock('../IndexedDBAdapter');
 vi.mock('../LocalStorageAdapter');
 
+// Mock autoMigrate to prevent it from creating its own LocalStorageAdapter
+vi.mock('../migrateToIndexedDB', () => ({
+    autoMigrate: vi.fn().mockResolvedValue(undefined),
+}));
+
 /** Helper to create a mock storage adapter with init() */
 function createMockAdapter(overrides: Partial<MockStorageAdapter> = {}): MockStorageAdapter {
     return {
