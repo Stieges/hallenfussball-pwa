@@ -4,7 +4,8 @@ import { Tournament } from '../core/models/types';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
 import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
-import { useRepository } from './useRepository';
+import { useRepositories } from '../core/contexts/RepositoryContext';
+import { useRealtimeTournament } from './useRealtimeTournament';
 
 /**
  * useTournamentManager Hook
@@ -13,13 +14,13 @@ import { useRepository } from './useRepository';
  * Replaces `useTournamentSync` for components needing the full Tournament object.
  */
 export function useTournamentManager(tournamentId: string) {
-    // Get auth-aware repository (Supabase for authenticated, localStorage for guests)
-    const repository = useRepository();
+    // Get auth-aware repository and realtime flag
+    const { tournamentRepository, isRealtimeEnabled } = useRepositories();
 
     // Service Instantiation (recreates if repository changes)
     const service = useMemo(() => {
-        return new TournamentService(repository);
-    }, [repository]);
+        return new TournamentService(tournamentRepository);
+    }, [tournamentRepository]);
 
     // State
     const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -47,6 +48,28 @@ export function useTournamentManager(tournamentId: string) {
     useEffect(() => {
         void loadTournament();
     }, [loadTournament]);
+
+    // Realtime Subscription (only when authenticated with Supabase)
+    const { isConnected: isRealtimeConnected, status: realtimeStatus } = useRealtimeTournament(
+        // Only enable realtime for authenticated users with Supabase
+        isRealtimeEnabled ? tournamentId : undefined,
+        {
+            enabled: isRealtimeEnabled && !!tournament,
+            onUpdate: () => {
+                // Refetch when any tournament data changes
+                if (import.meta.env.DEV) {
+                    // eslint-disable-next-line no-console
+                    console.log('[useTournamentManager] Realtime update received, refetching...');
+                }
+                void loadTournament();
+            },
+            onError: (error) => {
+                if (import.meta.env.DEV) {
+                    console.error('[useTournamentManager] Realtime error:', error);
+                }
+            },
+        }
+    );
 
     // Update Handler (matches signature of useTournamentSync)
     const handleTournamentUpdate = useCallback(async (updated: Tournament) => {
@@ -92,6 +115,9 @@ export function useTournamentManager(tournamentId: string) {
         loadingError: error,
         handleTournamentUpdate,
         reload: loadTournament,
-        scheduleService: service.schedule
+        scheduleService: service.schedule,
+        // Realtime status
+        isRealtimeConnected,
+        realtimeStatus,
     };
 }
