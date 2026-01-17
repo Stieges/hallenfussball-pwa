@@ -53,7 +53,7 @@ export type SyncTable = 'tournaments' | 'matches' | 'teams' | 'match_events';
 /**
  * Operations that can be queued for sync
  */
-export type SyncOperation = 'INSERT' | 'UPDATE' | 'DELETE';
+export type SyncOperation = 'INSERT' | 'UPDATE' | 'DELETE' | 'UPSERT';
 
 /**
  * Status of a queued mutation

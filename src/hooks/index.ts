@@ -36,6 +36,7 @@ export { useOnlineStatus } from './useOnlineStatus'
 export { useSyncedPenalties } from './useSyncedPenalties'
 export { useSyncStatus, type SyncState, type UseSyncStatusReturn } from './useSyncStatus'
 export { useSyncQueue, type SyncQueueState, type UseSyncQueueReturn } from './useSyncQueue'
+export { useRealtimeTournament, type UseRealtimeTournamentOptions, type UseRealtimeTournamentReturn } from './useRealtimeTournament'
 
 // Domain Specific
 export { useTournaments } from './useTournaments'

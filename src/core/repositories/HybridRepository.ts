@@ -153,7 +153,7 @@ export class HybridRepository implements ITournamentRepository {
 
     if (!this.isOnline) {
       // Queue for later sync
-      await this.queueMutation('UPSERT', tournament.id, tournament);
+      await this.queueMutation('UPSERT', tournament.id, tournament as unknown as Record<string, unknown>);
       return;
     }
 
@@ -167,7 +167,7 @@ export class HybridRepository implements ITournamentRepository {
         if (import.meta.env.DEV) {
           console.warn('Failed to save to cloud, queuing:', error);
         }
-        await this.queueMutation('UPSERT', tournament.id, tournament);
+        await this.queueMutation('UPSERT', tournament.id, tournament as unknown as Record<string, unknown>);
       }
     }
   }
@@ -444,7 +444,7 @@ export class HybridRepository implements ITournamentRepository {
 
     // Emit conflict event for UI notification
     if (result.hadConflict) {
-      syncService.emit('conflict', {
+      syncService.emitConflict({
         localVersion: local,
         remoteVersion: remote,
         conflictType: 'update',

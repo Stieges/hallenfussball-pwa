@@ -437,6 +437,13 @@ export class SyncService {
   }
 
   /**
+   * Emit a conflict event (for use by external components like HybridRepository)
+   */
+  emitConflict(conflict: SyncConflict): void {
+    this.emit('conflict', conflict);
+  }
+
+  /**
    * Get all failed mutations for display/retry
    */
   async getFailedMutations(): Promise<QueuedMutation[]> {
