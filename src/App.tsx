@@ -120,6 +120,9 @@ function AppContent() {
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
 
+  // Check if current path is a legal page path
+  const isLegalPath = ['/impressum', '/datenschutz'].includes(location.pathname);
+
   // Check if current path is an admin center path (e.g., /tournament/:id/admin or /tournament/:id/admin/:category)
   const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
   const isAdminPath = !!adminMatch;
@@ -283,6 +286,10 @@ function AppContent() {
       setScreen('login');
     } else if (path === '/set-password') {
       setScreen('set-password');
+    } else if (path === '/impressum') {
+      setScreen('impressum');
+    } else if (path === '/datenschutz') {
+      setScreen('datenschutz');
     } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
       setScreen('dashboard');
     }
@@ -662,18 +669,16 @@ function AppContent() {
         )}
 
         {/* Legal Screens */}
-        {screen === 'impressum' && (
+        {(screen === 'impressum' || isLegalPath && location.pathname === '/impressum') && (
           <ImpressumScreen onBack={() => {
-            setScreen('dashboard');
-            void navigate('/');
+            void navigate(-1); // Go back to previous page
           }} />
         )}
 
-        {screen === 'datenschutz' && (
+        {(screen === 'datenschutz' || isLegalPath && location.pathname === '/datenschutz') && (
           <DatenschutzScreen
             onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
+              void navigate(-1); // Go back to previous page
             }}
             onOpenCookieSettings={() => {
               // TODO: Integrate with Cookie Banner when implemented
@@ -683,13 +688,9 @@ function AppContent() {
         )}
       </Suspense>
 
-      {/* Footer - shown on main screens (not on public/invite flows) */}
-      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
+      {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
+      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
         <Footer
-          onNavigate={(target) => {
-            if (target === 'impressum') { setScreen('impressum'); }
-            if (target === 'datenschutz') { setScreen('datenschutz'); }
-          }}
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented
             // Cookie banner will be added in a future commit
