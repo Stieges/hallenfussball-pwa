@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components -- Context pattern requires exporting hooks alongside provider */
 import { createContext, useContext, useReducer, useCallback, ReactNode, useMemo } from 'react'
 import { Tournament, Match, Team } from '../types/tournament'
+import { useRealtimeTournament, type UseRealtimeTournamentReturn } from '../hooks/useRealtimeTournament'
+import type { RealtimePayload } from '../core/realtime'
 
 // ============================================================================
 // State Types
@@ -12,6 +14,8 @@ interface TournamentState {
   error: string | null
   isDirty: boolean
   lastSaved: string | null
+  /** Number of remote updates received (for UI feedback) */
+  remoteUpdateCount: number
 }
 
 // ============================================================================
@@ -31,6 +35,7 @@ type TournamentAction =
   | { type: 'MARK_DIRTY' }
   | { type: 'MARK_SAVED' }
   | { type: 'RESET' }
+  | { type: 'REMOTE_UPDATE'; payload: Tournament }
 
 // ============================================================================
 // Initial State
@@ -42,6 +47,7 @@ const initialState: TournamentState = {
   error: null,
   isDirty: false,
   lastSaved: null,
+  remoteUpdateCount: 0,
 }
 
 // ============================================================================
@@ -165,6 +171,19 @@ function tournamentReducer(state: TournamentState, action: TournamentAction): To
     case 'RESET':
       return initialState
 
+    case 'REMOTE_UPDATE':
+      // Remote update: replace tournament but don't mark dirty
+      // (changes came from server, not local edits)
+      return {
+        ...state,
+        tournament: action.payload,
+        isLoading: false,
+        error: null,
+        remoteUpdateCount: state.remoteUpdateCount + 1,
+        // Note: we keep isDirty as-is - if user has unsaved local changes,
+        // this could indicate a conflict (future: conflict resolution UI)
+      }
+
     default:
       return state
   }
@@ -181,6 +200,10 @@ interface TournamentContextValue {
   isLoading: boolean
   isDirty: boolean
   error: string | null
+
+  // Realtime State
+  realtime: Pick<UseRealtimeTournamentReturn, 'status' | 'isConnected' | 'isPaused' | 'hasError'>
+  remoteUpdateCount: number
 
   // Actions
   loadTournament: (tournament: Tournament) => void
@@ -212,12 +235,18 @@ interface TournamentProviderProps {
   children: ReactNode
   initialTournament?: Tournament
   onSave?: (tournament: Tournament) => Promise<void>
+  /** Enable Supabase Realtime subscriptions for live updates (default: false) */
+  enableRealtime?: boolean
+  /** Callback when remote update is received - should return fresh tournament data */
+  onRealtimeUpdate?: (payload: RealtimePayload) => Promise<Tournament | null>
 }
 
 export function TournamentProvider({
   children,
   initialTournament,
   onSave,
+  enableRealtime = false,
+  onRealtimeUpdate,
 }: TournamentProviderProps) {
   const [state, dispatch] = useReducer(
     tournamentReducer,
@@ -225,6 +254,46 @@ export function TournamentProvider({
       ? { ...initialState, tournament: initialTournament }
       : initialState
   )
+
+  // ========== Realtime Integration ==========
+
+  const handleRealtimeUpdate = useCallback(async (payload: RealtimePayload) => {
+    if (!onRealtimeUpdate) {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[TournamentContext] Realtime update received, but no onRealtimeUpdate handler');
+      }
+      return;
+    }
+
+    try {
+      const updatedTournament = await onRealtimeUpdate(payload);
+      if (updatedTournament) {
+        dispatch({ type: 'REMOTE_UPDATE', payload: updatedTournament });
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[TournamentContext] Applied remote update:', payload.table, payload.eventType);
+        }
+      }
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error('[TournamentContext] Failed to process realtime update:', error);
+      }
+    }
+  }, [onRealtimeUpdate]);
+
+  // Wrap async handler to satisfy void callback signature
+  const handleRealtimeUpdateSync = useCallback((payload: RealtimePayload) => {
+    void handleRealtimeUpdate(payload);
+  }, [handleRealtimeUpdate]);
+
+  const realtimeHook = useRealtimeTournament(
+    enableRealtime ? state.tournament?.id : undefined,
+    {
+      enabled: enableRealtime,
+      onUpdate: handleRealtimeUpdateSync,
+    }
+  );
 
   // ========== Actions ==========
 
@@ -315,6 +384,13 @@ export function TournamentProvider({
 
   // ========== Context Value ==========
 
+  const realtimeStatus = useMemo(() => ({
+    status: realtimeHook.status,
+    isConnected: realtimeHook.isConnected,
+    isPaused: realtimeHook.isPaused,
+    hasError: realtimeHook.hasError,
+  }), [realtimeHook.status, realtimeHook.isConnected, realtimeHook.isPaused, realtimeHook.hasError]);
+
   const value = useMemo<TournamentContextValue>(
     () => ({
       state,
@@ -322,6 +398,8 @@ export function TournamentProvider({
       isLoading: state.isLoading,
       isDirty: state.isDirty,
       error: state.error,
+      realtime: realtimeStatus,
+      remoteUpdateCount: state.remoteUpdateCount,
       loadTournament,
       updateTournament,
       updateMatch,
@@ -340,6 +418,7 @@ export function TournamentProvider({
     }),
     [
       state,
+      realtimeStatus,
       loadTournament,
       updateTournament,
       updateMatch,
@@ -438,5 +517,18 @@ export function useTeams() {
     updateTeam,
     addTeam,
     removeTeam,
+  }
+}
+
+/**
+ * Hook to get realtime connection status
+ * Useful for showing connection indicator in UI
+ */
+export function useTournamentRealtime() {
+  const { realtime, remoteUpdateCount } = useTournament()
+
+  return {
+    ...realtime,
+    remoteUpdateCount,
   }
 }
