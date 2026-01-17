@@ -40,3 +40,86 @@ export type SyncResult =
  * - 'merge': Attempt to merge both versions (newest changes win)
  */
 export type ConflictResolutionStrategy = 'local' | 'remote' | 'merge';
+
+// ============================================================================
+// Sync Queue Types (Phase 1: Offline-First)
+// ============================================================================
+
+/**
+ * Tables that can be synced
+ */
+export type SyncTable = 'tournaments' | 'matches' | 'teams' | 'match_events';
+
+/**
+ * Operations that can be queued for sync
+ */
+export type SyncOperation = 'INSERT' | 'UPDATE' | 'DELETE';
+
+/**
+ * Status of a queued mutation
+ */
+export type MutationStatus = 'pending' | 'processing' | 'failed';
+
+/**
+ * A mutation queued for synchronization
+ * Stored in IndexedDB and processed when online
+ */
+export interface QueuedMutation {
+  /** Unique ID for this mutation (UUID) */
+  id: string;
+
+  /** Target table in Supabase */
+  table: SyncTable;
+
+  /** Type of operation */
+  operation: SyncOperation;
+
+  /** ID of the record being mutated */
+  recordId: string;
+
+  /** The data payload for INSERT/UPDATE operations */
+  payload: Record<string, unknown>;
+
+  /** When the mutation was created locally */
+  createdAt: Date;
+
+  /** Number of failed sync attempts */
+  retries: number;
+
+  /** Current status */
+  status: MutationStatus;
+
+  /** Error message if failed */
+  errorMessage?: string;
+}
+
+/**
+ * Result of processing the sync queue
+ */
+export interface SyncQueueResult {
+  /** Number of mutations successfully synced */
+  success: number;
+
+  /** Number of mutations that failed */
+  failed: number;
+
+  /** Mutations that resulted in conflicts */
+  conflicts: SyncConflict[];
+}
+
+/**
+ * Sync status for UI display
+ */
+export interface SyncStatus {
+  /** Number of pending mutations */
+  pendingCount: number;
+
+  /** Whether sync is currently running */
+  isProcessing: boolean;
+
+  /** Last successful sync timestamp */
+  lastSyncAt: Date | null;
+
+  /** Whether device is online */
+  isOnline: boolean;
+}
