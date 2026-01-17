@@ -9,7 +9,9 @@ export class LocalStorageAdapter implements IStorageAdapter {
   async get<T>(key: string): Promise<T | null> {
     try {
       const item = localStorage.getItem(key);
-      if (item === null) {return null;}
+      if (item === null) {
+        return null;
+      }
       return JSON.parse(item) as T;
     } catch (error) {
       throw new StorageError(`Failed to get item '${key}' from LocalStorage`, error);

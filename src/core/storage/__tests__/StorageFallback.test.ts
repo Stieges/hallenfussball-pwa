@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { isIndexedDBAvailable, resetStorageInstance } from '../StorageFactory';
 
+/** Mock interface for IDBOpenDBRequest */
+interface MockIDBOpenDBRequest {
+    result?: { close: () => void };
+    error: Error | null;
+    onsuccess?: (() => void) | null;
+    onerror?: (() => void) | null;
+}
+
 /**
  * Tests for Safari Private Mode and other restricted storage scenarios.
  * These verify that our fallback mechanism works correctly.
@@ -41,7 +49,7 @@ describe('Storage Fallback Scenarios', () => {
             // Mock IDB that throws on open (simulates Safari Private Mode)
             const mockIDB = {
                 open: vi.fn().mockImplementation(() => {
-                    const request: any = {
+                    const request: MockIDBOpenDBRequest = {
                         error: new Error('Access to IndexedDB is denied'),
                     };
                     // Trigger error async
@@ -78,7 +86,7 @@ describe('Storage Fallback Scenarios', () => {
             // Mock working IDB
             const mockIDB = {
                 open: vi.fn().mockImplementation(() => {
-                    const request: any = {
+                    const request: MockIDBOpenDBRequest = {
                         result: { close: vi.fn() },
                         error: null,
                     };

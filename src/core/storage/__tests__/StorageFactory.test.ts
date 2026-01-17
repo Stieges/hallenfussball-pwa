@@ -2,10 +2,24 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createStorage, resetStorageInstance } from '../StorageFactory';
 import { IndexedDBAdapter } from '../IndexedDBAdapter';
 import { LocalStorageAdapter } from '../LocalStorageAdapter';
+import type { IStorageAdapter } from '../IStorageAdapter';
+
+/** Mock interface for IDBOpenDBRequest */
+interface MockIDBOpenDBRequest {
+    result?: { close: () => void };
+    error: Error | null;
+    onsuccess?: (() => void) | null;
+    onerror?: (() => void) | null;
+}
+
+/** Mock adapter interface that includes init() method from IndexedDBAdapter */
+interface MockStorageAdapter extends IStorageAdapter {
+    init: () => Promise<void>;
+}
 
 // Mock IndexedDB
 const mockIndexedDB = {
-    open: vi.fn(),
+    open: vi.fn(() => ({} as MockIDBOpenDBRequest)),
     deleteDatabase: vi.fn(),
 };
 
@@ -13,22 +27,36 @@ const mockIndexedDB = {
 vi.mock('../IndexedDBAdapter');
 vi.mock('../LocalStorageAdapter');
 
+/** Helper to create a mock storage adapter with init() */
+function createMockAdapter(overrides: Partial<MockStorageAdapter> = {}): MockStorageAdapter {
+    return {
+        init: vi.fn().mockResolvedValue(undefined),
+        get: vi.fn(),
+        set: vi.fn(),
+        delete: vi.fn(),
+        clear: vi.fn(),
+        keys: vi.fn(),
+        ...overrides,
+    };
+}
+
 describe('StorageFactory', () => {
     beforeEach(() => {
         resetStorageInstance();
         vi.clearAllMocks();
 
         // Default mock implementation for Adapters
-        (IndexedDBAdapter as any).mockImplementation(function () {
-            return {
-                init: vi.fn().mockResolvedValue(undefined),
-            };
-        });
-        (LocalStorageAdapter as any).mockImplementation(function () { return {}; });
+        // Note: Using function() instead of arrow for constructor compatibility
+        vi.mocked(IndexedDBAdapter).mockImplementation(function () {
+            return createMockAdapter();
+        } as unknown as () => IndexedDBAdapter);
+        vi.mocked(LocalStorageAdapter).mockImplementation(function () {
+            return createMockAdapter();
+        } as unknown as () => LocalStorageAdapter);
 
         // Improve IndexedDB mock to handle isIndexedDBAvailable check
-        (mockIndexedDB.open as any).mockImplementation(() => {
-            const request: any = {
+        mockIndexedDB.open.mockImplementation(() => {
+            const request: MockIDBOpenDBRequest = {
                 result: { close: vi.fn() },
                 error: null,
             };
@@ -74,12 +102,12 @@ describe('StorageFactory', () => {
     });
 
     it('should fallback to LocalStorageAdapter if IndexedDB init fails', async () => {
-        // Mock init failure using function (not arrow) for constructibility
-        (IndexedDBAdapter as any).mockImplementation(function () {
-            return {
+        // Mock init failure
+        vi.mocked(IndexedDBAdapter).mockImplementation(function () {
+            return createMockAdapter({
                 init: vi.fn().mockRejectedValue(new Error('Init failed')),
-            };
-        });
+            });
+        } as unknown as () => IndexedDBAdapter);
 
         await createStorage();
 

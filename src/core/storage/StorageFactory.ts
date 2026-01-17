@@ -30,7 +30,9 @@ export async function createStorage(): Promise<IStorageAdapter> {
         storageInstance = adapter;
         return adapter;
       } catch (error) {
-        console.warn('StorageFactory: IndexedDB initialization failed, falling back to LocalStorage.', error);
+        if (import.meta.env.DEV) {
+          console.warn('StorageFactory: IndexedDB initialization failed, falling back to LocalStorage.', error);
+        }
       }
     }
 
@@ -42,9 +44,6 @@ export async function createStorage(): Promise<IStorageAdapter> {
   return initializationPromise;
 }
 
-/**
- * Resets the storage instance (mainly for testing).
- */
 /**
  * Checks if IndexedDB is available and usable (not blocked by privacy settings).
  */
@@ -96,8 +95,12 @@ export async function getStorageQuota(): Promise<{ usage: number; quota: number 
 
 /**
  * Resets the storage instance (mainly for testing).
+ * Only available in development/test mode.
  */
 export function resetStorageInstance(): void {
+  if (!import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+    throw new Error('resetStorageInstance() is only available in development/test mode');
+  }
   storageInstance = null;
   initializationPromise = null;
 }

@@ -125,11 +125,15 @@ export class LocalStorageRepository implements ITournamentRepository {
                 }
                 // If validation fails, log but return raw item to avoid data loss during migration
                 // Still hydrate to ensure date fields are proper Date objects
-                console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
+                if (import.meta.env.DEV) {
+                    console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
+                }
                 return hydrateTournament(itemData);
             });
         } catch (e) {
-            console.error('Failed to load tournaments', e);
+            if (import.meta.env.DEV) {
+                console.error('Failed to load tournaments', e);
+            }
             return [];
         }
     }
@@ -139,7 +143,9 @@ export class LocalStorageRepository implements ITournamentRepository {
             const storage = await createStorage();
             await storage.set(STORAGE_KEYS.TOURNAMENTS, list);
         } catch (e) {
-            console.error('Failed to save tournaments', e);
+            if (import.meta.env.DEV) {
+                console.error('Failed to save tournaments', e);
+            }
             throw e; // Propagate error so UI can handle it (or retry)
         }
     }

@@ -16,3 +16,6 @@ export * from './repositories';
 
 // Services
 export * from './services';
+
+// Storage
+export * from './storage';
