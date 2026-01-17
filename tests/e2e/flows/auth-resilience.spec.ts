@@ -7,7 +7,8 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
+import { type Page } from '@playwright/test';
 
 // =============================================================================
 // TEST SETUP HELPERS

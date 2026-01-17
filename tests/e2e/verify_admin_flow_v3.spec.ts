@@ -1,5 +1,5 @@
 
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers/test-fixtures';
 
 // TEMPORARILY SKIPPED: This test uses hardcoded paths and needs CI-compatibility fixes
 // TODO: Fix absolute paths and stabilize for CI environment

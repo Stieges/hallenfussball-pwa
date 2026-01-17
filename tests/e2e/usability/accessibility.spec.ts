@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../helpers/test-fixtures';
 import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Accessibility (WCAG AA)', () => {
