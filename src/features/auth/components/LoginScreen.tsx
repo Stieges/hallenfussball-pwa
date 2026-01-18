@@ -111,7 +111,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         }
       }
     } catch (err) {
-      console.error('Login error:', err);
+      if (import.meta.env.DEV) {
+        console.error('Login error:', err);
+      }
       setError('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setIsLoading(false);
@@ -130,7 +132,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
       // On success, the page will redirect
     } catch (err) {
-      console.error('Google login error:', err);
+      if (import.meta.env.DEV) {
+        console.error('Google login error:', err);
+      }
       setError('Ein unerwarteter Fehler ist aufgetreten');
       setIsLoading(false);
     }
@@ -164,8 +168,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       }
 
       // If there was an error during check (e.g. network), we log it but proceed
-      if (oauthCheck.error) {
-        console.warn('OAuth check failed, processing with reset anyway:', oauthCheck.error);
+      if (oauthCheck.error && import.meta.env.DEV) {
+        console.warn('OAuth check failed, proceeding with reset anyway:', oauthCheck.error);
       }
 
       const result = await resetPassword(email);
@@ -178,7 +182,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         setError(errorMessage);
       }
     } catch (err) {
-      console.error('Reset password error:', err);
+      if (import.meta.env.DEV) {
+        console.error('Reset password error:', err);
+      }
       setError('Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setIsLoading(false);
