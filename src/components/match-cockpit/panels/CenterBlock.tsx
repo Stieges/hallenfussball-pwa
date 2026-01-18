@@ -1,7 +1,7 @@
 /**
  * CenterBlock - Timer display and match control buttons
  *
- * MF-002: Uses useMatchTimer for local timer calculation (performance)
+ * MF-002: Uses useMatchTimerExtended for local timer calculation (performance)
  * MF-004: Accessibility improvements (button, aria-label, role="status")
  */
 
@@ -10,7 +10,7 @@ import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useToast } from '../../ui/Toast';
 import { useIsMobile } from '../../../hooks/useIsMobile';
-import { useMatchTimer } from '../../../hooks/useMatchTimer';
+import { useMatchTimerExtended } from '../../../hooks/useMatchTimer';
 import { MatchStatus } from '../MatchCockpit';
 import { formatTime, getStatusLabel, getStatusColor } from '../utils/matchPanelUtils';
 
@@ -52,7 +52,13 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
   const isMobile = useIsMobile();
 
   // MF-002: Lokale Timer-Berechnung statt globaler State-Updates
-  const displayTime = useMatchTimer(timerStartTime, timerElapsedSeconds, status);
+  const { displaySeconds: displayTime } = useMatchTimerExtended(
+    timerStartTime,
+    timerElapsedSeconds,
+    status,
+    durationSeconds,
+    'elapsed' // CenterBlock displays elapsed time (00:00 → 10:00)
+  );
 
   const blockStyle: CSSProperties = {
     display: 'flex',
