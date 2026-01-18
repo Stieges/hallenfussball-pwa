@@ -432,17 +432,3 @@ export const getInvitationByToken = async (token: string): Promise<Invitation | 
   }
 };
 
-// ============================================
-// LEGACY SYNC FUNCTIONS (for backward compatibility)
-// ============================================
-
-/**
- * @deprecated Use async version instead
- * Synchronous wrapper - returns empty for non-async contexts
- */
-export const createInvitationSync = (options: CreateInvitationOptions): CreateInvitationResult => {
-  console.warn('createInvitationSync is deprecated. Use createInvitation() async function.');
-  // Trigger async operation (will fail immediately with null user, as expected)
-  void createInvitation(options, null);
-  return { success: false, error: 'Use async version' };
-};
