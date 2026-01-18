@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { AUTH_ERRORS } from '../constants';
 
 // ============================================
 // TYPES
@@ -114,12 +115,12 @@ export function useLoginForm(): UseLoginFormReturn {
     const trimmedEmail = formData.email.trim();
 
     if (!trimmedEmail) {
-      setErrors((prev) => ({ ...prev, email: 'E-Mail ist erforderlich' }));
+      setErrors((prev) => ({ ...prev, email: AUTH_ERRORS.EMAIL_REQUIRED }));
       return false;
     }
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
-      setErrors((prev) => ({ ...prev, email: 'Bitte gib eine gültige E-Mail-Adresse ein' }));
+      setErrors((prev) => ({ ...prev, email: AUTH_ERRORS.EMAIL_INVALID }));
       return false;
     }
 
@@ -137,12 +138,12 @@ export function useLoginForm(): UseLoginFormReturn {
     }
 
     if (!formData.password) {
-      setErrors((prev) => ({ ...prev, password: 'Passwort ist erforderlich' }));
+      setErrors((prev) => ({ ...prev, password: AUTH_ERRORS.PASSWORD_REQUIRED }));
       return false;
     }
 
     if (formData.password.length < 6) {
-      setErrors((prev) => ({ ...prev, password: 'Passwort muss mindestens 6 Zeichen haben' }));
+      setErrors((prev) => ({ ...prev, password: AUTH_ERRORS.PASSWORD_TOO_SHORT }));
       return false;
     }
 

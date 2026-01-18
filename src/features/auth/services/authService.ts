@@ -30,6 +30,7 @@ import type {
   RegisterResult,
 } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
+import { AUTH_ERRORS } from '../constants';
 import { generateUUID } from '../utils/tokenGenerator';
 import {
   createSession,
@@ -103,21 +104,21 @@ export const register = (
   if (trimmedName.length < 2) {
     return {
       success: false,
-      error: 'Name muss mindestens 2 Zeichen haben.',
+      error: AUTH_ERRORS.NAME_TOO_SHORT,
     };
   }
 
   if (trimmedName.length > 100) {
     return {
       success: false,
-      error: 'Name darf maximal 100 Zeichen haben.',
+      error: AUTH_ERRORS.NAME_TOO_LONG,
     };
   }
 
   if (!isValidEmail(normalizedEmail)) {
     return {
       success: false,
-      error: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+      error: AUTH_ERRORS.EMAIL_INVALID,
     };
   }
 
@@ -128,7 +129,7 @@ export const register = (
   if (existingUser) {
     return {
       success: false,
-      error: 'Diese E-Mail ist bereits registriert.',
+      error: AUTH_ERRORS.EMAIL_ALREADY_REGISTERED,
     };
   }
 
@@ -184,7 +185,7 @@ export const login = (
   if (!isValidEmail(normalizedEmail)) {
     return {
       success: false,
-      error: 'Bitte gib eine gültige E-Mail-Adresse ein.',
+      error: AUTH_ERRORS.EMAIL_INVALID,
     };
   }
 
@@ -195,7 +196,7 @@ export const login = (
   if (!user) {
     return {
       success: false,
-      error: 'Kein Account mit dieser E-Mail gefunden.',
+      error: AUTH_ERRORS.ACCOUNT_NOT_FOUND,
     };
   }
 
@@ -365,11 +366,11 @@ export const isValidName = (name: string): { valid: boolean; error?: string } =>
   const trimmed = name.trim();
 
   if (trimmed.length < 2) {
-    return { valid: false, error: 'Name muss mindestens 2 Zeichen haben.' };
+    return { valid: false, error: AUTH_ERRORS.NAME_TOO_SHORT };
   }
 
   if (trimmed.length > 100) {
-    return { valid: false, error: 'Name darf maximal 100 Zeichen haben.' };
+    return { valid: false, error: AUTH_ERRORS.NAME_TOO_LONG };
   }
 
   return { valid: true };

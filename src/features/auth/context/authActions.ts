@@ -9,6 +9,7 @@
 
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
+import { AUTH_ERRORS } from '../constants';
 import type { User, Session, LoginResult, RegisterResult, ConnectionState } from '../types/auth.types';
 import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
@@ -45,7 +46,7 @@ export async function register(
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE_GUEST,
     };
   }
 
@@ -70,7 +71,7 @@ export async function register(
       return {
         success: false,
         error: error.message === 'User already registered'
-          ? 'Diese E-Mail ist bereits registriert.'
+          ? AUTH_ERRORS.EMAIL_ALREADY_REGISTERED
           : error.message,
       };
     }
@@ -78,7 +79,7 @@ export async function register(
     if (!data.user) {
       return {
         success: false,
-        error: 'Registrierung fehlgeschlagen.',
+        error: AUTH_ERRORS.REGISTRATION_FAILED,
       };
     }
 
@@ -125,7 +126,7 @@ export async function register(
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
@@ -141,7 +142,7 @@ export async function login(
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE_GUEST,
     };
   }
 
@@ -163,7 +164,7 @@ export async function login(
       return {
         success: false,
         error: isCredentialError
-          ? 'E-Mail oder Passwort ist falsch.'
+          ? AUTH_ERRORS.INVALID_CREDENTIALS
           : error.message,
       };
     }
@@ -204,7 +205,7 @@ export async function login(
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
@@ -218,7 +219,7 @@ export async function sendMagicLink(
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE_GUEST,
     };
   }
 
@@ -245,7 +246,7 @@ export async function sendMagicLink(
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
@@ -257,7 +258,7 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE_GUEST,
     };
   }
 
@@ -284,7 +285,7 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
@@ -457,7 +458,7 @@ export async function resetPassword(
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE,
     };
   }
 
@@ -485,7 +486,7 @@ export async function resetPassword(
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
@@ -500,11 +501,11 @@ export async function updateProfile(
   const { user, isGuest } = deps.getCurrentState();
 
   if (!user || isGuest) {
-    return { success: false, error: 'Nicht angemeldet.' };
+    return { success: false, error: AUTH_ERRORS.NOT_LOGGED_IN };
   }
 
   if (!isSupabaseConfigured || !supabase) {
-    return { success: false, error: 'Cloud-Funktionen sind nicht verfügbar.' };
+    return { success: false, error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE };
   }
 
   try {
@@ -513,7 +514,7 @@ export async function updateProfile(
     if (updates.name !== undefined) {
       const trimmedName = updates.name.trim();
       if (trimmedName.length < 2 || trimmedName.length > 100) {
-        return { success: false, error: 'Name muss 2-100 Zeichen haben.' };
+        return { success: false, error: AUTH_ERRORS.NAME_LENGTH_INVALID };
       }
       profileUpdates.display_name = trimmedName;
     }
@@ -544,7 +545,7 @@ export async function updateProfile(
     if (import.meta.env.DEV) {
       console.error('Update profile error:', err);
     }
-    return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
+    return { success: false, error: AUTH_ERRORS.UNEXPECTED };
   }
 }
 
@@ -557,7 +558,7 @@ export async function updatePassword(
   if (!isSupabaseConfigured || !supabase) {
     return {
       success: false,
-      error: 'Cloud-Funktionen sind nicht verfügbar.',
+      error: AUTH_ERRORS.CLOUD_NOT_AVAILABLE,
     };
   }
 
@@ -565,7 +566,7 @@ export async function updatePassword(
   if (newPassword.length < 6) {
     return {
       success: false,
-      error: 'Passwort muss mindestens 6 Zeichen haben.',
+      error: AUTH_ERRORS.PASSWORD_TOO_SHORT,
     };
   }
 
@@ -578,7 +579,7 @@ export async function updatePassword(
       return {
         success: false,
         error: error.message === 'New password should be different from the old password.'
-          ? 'Das neue Passwort muss sich vom alten unterscheiden.'
+          ? AUTH_ERRORS.PASSWORD_SAME_AS_OLD
           : error.message,
       };
     }
@@ -590,7 +591,7 @@ export async function updatePassword(
     }
     return {
       success: false,
-      error: 'Ein unerwarteter Fehler ist aufgetreten.',
+      error: AUTH_ERRORS.UNEXPECTED,
     };
   }
 }
