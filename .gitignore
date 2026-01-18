@@ -52,6 +52,7 @@ docs/
 
 # Playwright test results
 test-results/
+playwright-report/
 
 # Vercel
 .vercel/

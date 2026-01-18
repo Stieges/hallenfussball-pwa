@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+    groups:
+      dev-dependencies:
+        patterns: ["*"]
+        dependency-type: "development"
+      production:
+        patterns: ["*"]
+        dependency-type: "production"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+    reviewers:
+      - "Stieges"
