@@ -120,9 +120,10 @@ export const AuthConfirmPage: React.FC = () => {
 
         case 'magiclink': {
           // Magic Link Login
+          // Note: Supabase docs specify 'email' as the type for passwordless magic link verification
           const { error: magicError } = await supabase.auth.verifyOtp({
             token_hash: token,
-            type: 'magiclink',
+            type: 'email',
           });
           if (magicError) {
             throw magicError;
