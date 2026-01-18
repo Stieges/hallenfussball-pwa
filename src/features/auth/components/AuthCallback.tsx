@@ -96,9 +96,20 @@ export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [isTimedOut, setIsTimedOut] = useState(false);
 
   useEffect(() => {
+    // Timeout to prevent infinite loading (15 seconds)
+    const timeoutId = setTimeout(() => {
+      setIsTimedOut(true);
+    }, 15000);
+
     const handleAuthCallback = async (retryCount = 0) => {
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.log('[AuthCallback] Starting, retry:', retryCount, 'URL:', { hash: window.location.hash, search: window.location.search });
+      }
+
       // Auth callback only works with Supabase configured
       if (!isSupabaseConfigured || !supabase) {
         void navigate('/', { replace: true });
@@ -119,6 +130,11 @@ export const AuthCallback: React.FC = () => {
         const type = fragmentParams.get('type') ?? queryParams.get('type') ?? routerParams.get('type'); // 'recovery' for password reset
         const code = queryParams.get('code') ?? routerParams.get('code'); // PKCE flow uses code in query
 
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[AuthCallback] Parsed params:', { code: !!code, accessToken: !!accessToken, type, errorDescription });
+        }
+
         if (errorDescription) {
           setError(decodeURIComponent(errorDescription));
           return;
@@ -126,7 +142,15 @@ export const AuthCallback: React.FC = () => {
 
         // IMPORTANT: Check for existing session FIRST
         // Supabase with detectSessionInUrl:true may have already processed the code/tokens
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[AuthCallback] Checking for existing session...');
+        }
         const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[AuthCallback] Existing session:', !!existingSession);
+        }
 
         if (existingSession) {
           // Session found!
@@ -149,7 +173,15 @@ export const AuthCallback: React.FC = () => {
         // Note: With detectSessionInUrl: false, we are the only code processor
         // No more race conditions with Supabase auto-detect
         if (code) {
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[AuthCallback] Exchanging code for session...');
+          }
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('[AuthCallback] Code exchange result:', { error: !!exchangeError, errorMsg: exchangeError?.message });
+          }
 
           if (exchangeError) {
             // Code already used = user clicked link twice or link expired
@@ -247,6 +279,8 @@ export const AuthCallback: React.FC = () => {
     };
 
     void handleAuthCallback();
+
+    return () => clearTimeout(timeoutId);
   }, [navigate, location.search]);
 
   // Auto-redirect on error
@@ -274,6 +308,28 @@ export const AuthCallback: React.FC = () => {
             style={styles.button}
           >
             Zum Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Timeout state - authentication is taking too long
+  if (isTimedOut) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <div style={styles.errorIcon}>!</div>
+          <h2 style={styles.title}>Anmeldung dauert zu lange</h2>
+          <p style={styles.text}>
+            Die Authentifizierung konnte nicht abgeschlossen werden.
+            Bitte versuche es erneut.
+          </p>
+          <button
+            onClick={() => void navigate('/login', { replace: true })}
+            style={styles.button}
+          >
+            Zurück zum Login
           </button>
         </div>
       </div>

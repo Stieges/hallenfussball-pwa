@@ -465,8 +465,9 @@ export async function resetPassword(
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
       {
-        // Redirect to /auth/confirm for scanner protection (requires button click)
-        redirectTo: `${window.location.origin}/auth/confirm?type=recovery`,
+        // Redirect to /#/auth/confirm for scanner protection (requires button click)
+        // Note: HashRouter requires /#/ prefix for proper routing
+        redirectTo: `${window.location.origin}/#/auth/confirm?type=recovery`,
       }
     );
 
