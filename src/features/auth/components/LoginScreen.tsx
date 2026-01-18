@@ -19,6 +19,7 @@ import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
+import { AUTH_ERRORS } from '../constants';
 import { loginStyles as styles } from './LoginScreen.styles';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
@@ -91,7 +92,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         if (result.success) {
           setMagicLinkSent(true);
         } else {
-          setError(result.error ?? 'Magic Link konnte nicht gesendet werden');
+          setError(result.error ?? AUTH_ERRORS.MAGIC_LINK_FAILED);
         }
       } else {
         // Password login
@@ -107,14 +108,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             onSuccess?.();
           }, 500);
         } else {
-          setError(result.error ?? 'Login fehlgeschlagen');
+          setError(result.error ?? AUTH_ERRORS.LOGIN_FAILED);
         }
       }
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Login error:', err);
       }
-      setError('Ein unerwarteter Fehler ist aufgetreten');
+      setError(AUTH_ERRORS.UNEXPECTED);
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +128,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       const result = await loginWithGoogle();
       if (!result.success) {
-        setError(result.error ?? 'Google Login fehlgeschlagen');
+        setError(result.error ?? AUTH_ERRORS.GOOGLE_LOGIN_FAILED);
         setIsLoading(false);
       }
       // On success, the page will redirect
@@ -135,7 +136,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       if (import.meta.env.DEV) {
         console.error('Google login error:', err);
       }
-      setError('Ein unerwarteter Fehler ist aufgetreten');
+      setError(AUTH_ERRORS.UNEXPECTED);
       setIsLoading(false);
     }
   };
@@ -147,7 +148,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError('Bitte gib zuerst deine E-Mail-Adresse ein.');
+      setError(AUTH_ERRORS.EMAIL_REQUIRED);
       return;
     }
 
@@ -178,14 +179,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         setResetPasswordSent(true);
       } else {
         // Handle "Failed to fetch" or other errors specifically if needed
-        const errorMessage = result.error ?? 'Passwort-Reset konnte nicht gesendet werden';
-        setError(errorMessage);
+        setError(result.error ?? AUTH_ERRORS.PASSWORD_RESET_FAILED);
       }
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Reset password error:', err);
       }
-      setError('Ein unerwarteter Fehler ist aufgetreten');
+      setError(AUTH_ERRORS.UNEXPECTED);
     } finally {
       setIsLoading(false);
     }
