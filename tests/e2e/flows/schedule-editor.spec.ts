@@ -216,10 +216,10 @@ async function exitEditModeWithCancel(page: Page) {
 test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area issues');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
   });
@@ -318,10 +318,10 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
 test.describe('Editiermodus 2.0 - Mit Spielen', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area issues');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTournamentWithResults()]
     });
   });
@@ -384,11 +384,11 @@ test.describe('Editiermodus 2.0 - Grenzfälle', () => {
     }
   });
 
-  test('Turnier ohne Matches: Spielplan generiert automatisch', async ({ page, seedLocalStorage }, testInfo) => {
+  test('Turnier ohne Matches: Spielplan generiert automatisch', async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
     // GIVEN - Tournament with no pre-defined matches (schedule is auto-generated)
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
 
@@ -400,10 +400,10 @@ test.describe('Editiermodus 2.0 - Grenzfälle', () => {
     await expect(page.getByText('FC Bayern').first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('Spielplan bearbeiten Button ist immer sichtbar', async ({ page, seedLocalStorage }, testInfo) => {
+  test('Spielplan bearbeiten Button ist immer sichtbar', async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
 
@@ -433,10 +433,10 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     }
   });
 
-  test('Speichern ohne Änderungen: Button existiert', async ({ page, seedLocalStorage }, testInfo) => {
+  test('Speichern ohne Änderungen: Button existiert', async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
 
@@ -449,10 +449,10 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     await expect(saveButton).toBeVisible();
   });
 
-  test('Abbrechen verlässt Editiermodus sauber', async ({ page, seedLocalStorage }, testInfo) => {
+  test('Abbrechen verlässt Editiermodus sauber', async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
 
@@ -479,10 +479,10 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
 test.describe('Editiermodus 2.0 - Accessibility', () => {
   test.use({ viewport: { width: 1280, height: 720 } });
 
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
   });
@@ -549,10 +549,10 @@ test.describe('Editiermodus 2.0 - Performance', () => {
     }
   });
 
-  test('Editor-Modus aktiviert schnell', async ({ page, seedLocalStorage }, testInfo) => {
+  test('Editor-Modus aktiviert schnell', async ({ page, seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone');
 
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [createTestTournament()]
     });
 
