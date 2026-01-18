@@ -1,0 +1,15 @@
+# Default Owner
+* @Stieges
+
+# Design System
+/src/design-tokens/ @Stieges
+
+# Core Business Logic
+/src/core/ @Stieges
+/src/lib/fairScheduler.ts @Stieges
+
+# Auth Feature
+/src/features/auth/ @Stieges
+
+# CI/CD
+/.github/ @Stieges
