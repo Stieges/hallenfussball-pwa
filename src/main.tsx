@@ -8,6 +8,7 @@ import '@fontsource-variable/inter';
 import App from './App';
 import './styles/global.css';
 import { initInertPolyfill } from './utils/polyfills/inert';
+import { initSentry } from './lib/sentry';
 
 /**
  * Global handler for unhandled promise rejections
@@ -82,6 +83,10 @@ window.addEventListener('unhandledrejection', (event) => {
 initInertPolyfill().catch((error) => {
   console.error('Failed to initialize inert polyfill:', error);
 });
+
+// Initialize Sentry error tracking (only in production, with consent)
+// Must be called early to catch all errors
+initSentry();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

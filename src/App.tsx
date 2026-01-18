@@ -26,6 +26,9 @@ import {
 import { Footer } from './components/layout';
 import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
 import { ConflictResolutionDialog } from './features/sync/components/ConflictResolutionDialog';
+import { ConsentDialog } from './components/dialogs/ConsentDialog';
+import { hasConsent } from './lib/consent';
+import { reinitializeSentry } from './lib/sentry';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -116,6 +119,9 @@ function AppContent() {
 
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
+
+  // Check if current path is a legal page path
+  const isLegalPath = ['/impressum', '/datenschutz'].includes(location.pathname);
 
   // Check if current path is an admin center path (e.g., /tournament/:id/admin or /tournament/:id/admin/:category)
   const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
@@ -280,6 +286,10 @@ function AppContent() {
       setScreen('login');
     } else if (path === '/set-password') {
       setScreen('set-password');
+    } else if (path === '/impressum') {
+      setScreen('impressum');
+    } else if (path === '/datenschutz') {
+      setScreen('datenschutz');
     } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
       setScreen('dashboard');
     }
@@ -470,7 +480,7 @@ function AppContent() {
         <GuestBanner
           dismissible
           onDismiss={() => { /* stays dismissed */ }}
-          onRegisterClick={() => setScreen('register')}
+          onRegisterClick={() => void navigate('/register')}
         />
       )}
 
@@ -480,26 +490,17 @@ function AppContent() {
         {screen === 'login' && (
           <LoginScreen
             onSuccess={() => void navigate('/')}
-            onNavigateToRegister={() => setScreen('register')}
-            onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
-            onContinueAsGuest={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
+            onNavigateToRegister={() => void navigate('/register')}
+            onBack={() => void navigate(-1)}
+            onContinueAsGuest={() => void navigate('/')}
           />
         )}
 
         {screen === 'register' && (
           <RegisterScreen
             onSuccess={() => void navigate('/')}
-            onNavigateToLogin={() => setScreen('login')}
-            onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
-            }}
+            onNavigateToLogin={() => void navigate('/login')}
+            onBack={() => void navigate(-1)}
           />
         )}
 
@@ -511,24 +512,14 @@ function AppContent() {
 
         {screen === 'profile' && (
           <UserProfileScreen
-            onBack={() => void navigate('/')}
-            onOpenSettings={() => {
-              setScreen('settings');
-              void navigate('/settings');
-            }}
+            onBack={() => void navigate(-1)}
+            onOpenSettings={() => void navigate('/settings')}
           />
         )}
 
         {screen === 'settings' && (
           <SettingsScreen
-            onBack={() => {
-              // Use navigate(-1) if we have history, or fallback to profile
-              // For now, explicit navigation to profile is safer for this hub-and-spoke model
-              setScreen('profile');
-              void navigate('/profile');
-            }}
-            onNavigateToImpressum={() => setScreen('impressum')}
-            onNavigateToDatenschutz={() => setScreen('datenschutz')}
+            onBack={() => void navigate(-1)}
           />
         )}
 
@@ -556,10 +547,10 @@ function AppContent() {
             onRestore={(id, title) => void handleRestore(id, title)}
             onPermanentDelete={(id, title) => void handlePermanentDelete(id, title)}
             onCopyTournament={(tournament) => void handleCopyTournament(tournament)}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 
@@ -601,10 +592,10 @@ function AppContent() {
               (editingTournamentId ? tournaments.find(t => t.id === editingTournamentId) : undefined)
             }
             quickEditMode={quickEditMode}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 
@@ -622,10 +613,10 @@ function AppContent() {
             tournamentId={tournamentIdFromUrl}
             onBack={() => void navigate('/')}
             onEditInWizard={(tournament, step) => void handleEditInWizard(tournament, step)}
-            onNavigateToLogin={() => setScreen('login')}
-            onNavigateToRegister={() => setScreen('register')}
-            onNavigateToProfile={() => setScreen('profile')}
-            onNavigateToSettings={() => setScreen('settings')}
+            onNavigateToLogin={() => void navigate('/login')}
+            onNavigateToRegister={() => void navigate('/register')}
+            onNavigateToProfile={() => void navigate('/profile')}
+            onNavigateToSettings={() => void navigate('/settings')}
           />
         )}
 
@@ -659,18 +650,16 @@ function AppContent() {
         )}
 
         {/* Legal Screens */}
-        {screen === 'impressum' && (
+        {(screen === 'impressum' || isLegalPath && location.pathname === '/impressum') && (
           <ImpressumScreen onBack={() => {
-            setScreen('dashboard');
-            void navigate('/');
+            void navigate(-1); // Go back to previous page
           }} />
         )}
 
-        {screen === 'datenschutz' && (
+        {(screen === 'datenschutz' || isLegalPath && location.pathname === '/datenschutz') && (
           <DatenschutzScreen
             onBack={() => {
-              setScreen('dashboard');
-              void navigate('/');
+              void navigate(-1); // Go back to previous page
             }}
             onOpenCookieSettings={() => {
               // TODO: Integrate with Cookie Banner when implemented
@@ -680,13 +669,9 @@ function AppContent() {
         )}
       </Suspense>
 
-      {/* Footer - shown on main screens (not on public/invite flows) */}
-      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && (
+      {/* Footer - shown on main screens (not on public/invite flows or legal pages) */}
+      {(isDashboardPath || isTournamentPath || isAdminPath || isWizardPath || ['create', 'profile', 'settings', 'login', 'register'].includes(screen)) && !isLegalPath && (
         <Footer
-          onNavigate={(target) => {
-            if (target === 'impressum') { setScreen('impressum'); }
-            if (target === 'datenschutz') { setScreen('datenschutz'); }
-          }}
           onOpenCookieSettings={() => {
             // TODO: Integrate with Cookie Banner when implemented
             // Cookie banner will be added in a future commit
@@ -768,6 +753,15 @@ function PendingChangesWarning(): null {
 }
 
 function App() {
+  // DSGVO Consent Dialog - shows on first visit
+  const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
+
+  const handleConsent = useCallback(() => {
+    setShowConsentDialog(false);
+    // Re-initialize Sentry with new consent status
+    void reinitializeSentry();
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
@@ -778,6 +772,8 @@ function App() {
             <StorageWarningBanner />
             <OfflineBanner />
             <AppContent />
+            {/* DSGVO Consent Dialog - appears on first visit */}
+            <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
           </ToastProvider>
         </RepositoryProvider>
       </AuthProvider>

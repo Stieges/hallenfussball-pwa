@@ -1,11 +1,11 @@
 /**
  * API Service Layer
  *
- * Abstrahiert die Datenzugriff-Logik. Aktuell verwendet localStorage,
+ * Abstrahiert die Datenzugriff-Logik. Aktuell verwendet IndexedDB (mit localStorage Fallback),
  * kann später einfach gegen REST API oder andere Backends ausgetauscht werden.
  *
  * MIGRATION PATH:
- * 1. Aktuell: localStorage
+ * 1. Aktuell: IndexedDB via createStorage() (localStorage fallback)
  * 2. Später: Umstellung auf HTTP-Calls zu einer Cloud-API
  *    - Einfach die Funktionen in diesem File anpassen
  *    - Interface bleibt gleich
@@ -14,13 +14,14 @@
 
 import { Tournament } from '../types/tournament';
 import { STORAGE_KEYS } from '../constants/storage';
+import { createStorage } from '../core/storage/StorageFactory';
 
 /**
  * API Configuration
  * Später hier die Backend-URL konfigurieren
  */
 const API_CONFIG = {
-  // Für localStorage: nicht verwendet
+  // Für IndexedDB: nicht verwendet
   // Für Backend: BASE_URL: 'https://api.hallenfussball.de/v1'
   USE_LOCAL_STORAGE: true,
 };
@@ -35,7 +36,7 @@ const API_CONFIG = {
  */
 export async function getAllTournaments(): Promise<Tournament[]> {
   if (API_CONFIG.USE_LOCAL_STORAGE) {
-    return localStorageGetTournaments();
+    return storageGetTournaments();
   }
 
   // SPÄTER: Backend-Call
@@ -53,7 +54,7 @@ export async function getAllTournaments(): Promise<Tournament[]> {
  */
 export async function getTournamentById(id: string): Promise<Tournament | null> {
   if (API_CONFIG.USE_LOCAL_STORAGE) {
-    return localStorageGetTournamentById(id);
+    return storageGetTournamentById(id);
   }
 
   // SPÄTER: Backend-Call
@@ -74,7 +75,7 @@ export async function getTournamentById(id: string): Promise<Tournament | null> 
  */
 export async function saveTournament(tournament: Tournament): Promise<Tournament> {
   if (API_CONFIG.USE_LOCAL_STORAGE) {
-    return localStorageSaveTournament(tournament);
+    return storageSaveTournament(tournament);
   }
 
   // SPÄTER: Backend-Call
@@ -102,7 +103,7 @@ export async function saveTournament(tournament: Tournament): Promise<Tournament
  */
 export async function deleteTournament(id: string): Promise<void> {
   if (API_CONFIG.USE_LOCAL_STORAGE) {
-    return localStorageDeleteTournament(id);
+    return storageDeleteTournament(id);
   }
 
   // SPÄTER: Backend-Call
@@ -116,17 +117,18 @@ export async function deleteTournament(id: string): Promise<void> {
 }
 
 // ============================================================================
-// LOCAL STORAGE IMPLEMENTATION
+// INDEXED DB STORAGE IMPLEMENTATION (with localStorage fallback via createStorage)
 // ============================================================================
 
-function localStorageGetTournaments(): Tournament[] {
+async function storageGetTournaments(): Promise<Tournament[]> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.TOURNAMENTS);
+    const storage = await createStorage();
+    const stored = await storage.get(STORAGE_KEYS.TOURNAMENTS);
     if (!stored) {return [];}
 
-    const tournaments = JSON.parse(stored) as Tournament[];
+    const tournaments = stored as Tournament[];
 
-    // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder (legacy localStorage data)
+    // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder (legacy data)
     return tournaments.map(t => ({
       ...t,
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy data may lack status field
@@ -135,18 +137,19 @@ function localStorageGetTournaments(): Tournament[] {
       isExternal: t.isExternal ?? false,
     }));
   } catch (error) {
-    console.error('Error loading tournaments from localStorage:', error);
+    console.error('Error loading tournaments from storage:', error);
     return [];
   }
 }
 
-function localStorageGetTournamentById(id: string): Tournament | null {
-  const tournaments = localStorageGetTournaments();
+async function storageGetTournamentById(id: string): Promise<Tournament | null> {
+  const tournaments = await storageGetTournaments();
   return tournaments.find(t => t.id === id) ?? null;
 }
 
-function localStorageSaveTournament(tournament: Tournament): Tournament {
-  const tournaments = localStorageGetTournaments();
+async function storageSaveTournament(tournament: Tournament): Promise<Tournament> {
+  const storage = await createStorage();
+  const tournaments = await storageGetTournaments();
   const index = tournaments.findIndex(t => t.id === tournament.id);
 
   const updatedTournament = {
@@ -162,14 +165,15 @@ function localStorageSaveTournament(tournament: Tournament): Tournament {
     tournaments.push(updatedTournament);
   }
 
-  localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(tournaments));
+  await storage.set(STORAGE_KEYS.TOURNAMENTS, tournaments);
   return updatedTournament;
 }
 
-function localStorageDeleteTournament(id: string): void {
-  const tournaments = localStorageGetTournaments();
+async function storageDeleteTournament(id: string): Promise<void> {
+  const storage = await createStorage();
+  const tournaments = await storageGetTournaments();
   const filtered = tournaments.filter(t => t.id !== id);
-  localStorage.setItem(STORAGE_KEYS.TOURNAMENTS, JSON.stringify(filtered));
+  await storage.set(STORAGE_KEYS.TOURNAMENTS, filtered);
 }
 
 // ============================================================================

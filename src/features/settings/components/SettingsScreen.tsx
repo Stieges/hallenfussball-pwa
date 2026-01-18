@@ -13,7 +13,8 @@
  * @see docs/concepts/SETTINGS-KONZEPT.md
  */
 
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { useTheme } from '../../../hooks/useTheme';
 import { useSettings } from '../hooks/useSettings';
@@ -22,6 +23,13 @@ import { SettingItem } from './SettingItem';
 import { BaseThemeSelector } from './BaseThemeSelector';
 import { FontSizeSelector } from './FontSizeSelector';
 import { BaseTheme } from '../types/settings.types';
+import {
+  getConsentStatus,
+  setConsentStatus,
+  revokeConsent,
+  type ConsentStatus,
+} from '../../../lib/consent';
+import { reinitializeSentry } from '../../../lib/sentry';
 
 // =============================================================================
 // Types
@@ -30,10 +38,6 @@ import { BaseTheme } from '../types/settings.types';
 interface SettingsScreenProps {
   /** Zurück-Handler */
   onBack: () => void;
-  /** Handler für Impressum */
-  onNavigateToImpressum?: () => void;
-  /** Handler für Datenschutz */
-  onNavigateToDatenschutz?: () => void;
 }
 
 // =============================================================================
@@ -48,9 +52,8 @@ const APP_VERSION = '2.3.0';
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onBack,
-  onNavigateToImpressum,
-  onNavigateToDatenschutz,
 }) => {
+  const navigate = useNavigate();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const {
     fontSize,
@@ -64,6 +67,60 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     toggleTimerSound,
     toggleHapticFeedback,
   } = useSettings();
+
+  // Consent state
+  const [consent, setConsent] = useState<ConsentStatus | null>(() =>
+    getConsentStatus()
+  );
+
+  // Sync consent state with localStorage on mount
+  useEffect(() => {
+    setConsent(getConsentStatus());
+  }, []);
+
+  // Handle consent toggle changes
+  const handleConsentChange = useCallback(
+    (key: 'errorTracking' | 'sessionReplay', value: boolean) => {
+      const currentConsent = getConsentStatus();
+      if (!currentConsent) {
+        // If no consent exists, create new one
+        const newConsent = {
+          errorTracking: key === 'errorTracking' ? value : false,
+          sessionReplay: key === 'sessionReplay' ? value : false,
+        };
+        setConsentStatus(newConsent);
+        setConsent(getConsentStatus());
+      } else {
+        // Update existing consent
+        const updatedConsent = {
+          errorTracking:
+            key === 'errorTracking' ? value : currentConsent.errorTracking,
+          sessionReplay:
+            key === 'sessionReplay' ? value : currentConsent.sessionReplay,
+        };
+        setConsentStatus(updatedConsent);
+        setConsent(getConsentStatus());
+      }
+      // Reinitialize Sentry with new consent
+      void reinitializeSentry();
+    },
+    []
+  );
+
+  // Handle consent revocation
+  const handleRevokeConsent = useCallback(() => {
+    const confirmed = window.confirm(
+      'Möchten Sie Ihre Datenschutz-Einwilligung widerrufen?\n\n' +
+      'Dies deaktiviert Error-Tracking und Session-Replay. ' +
+      'Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.'
+    );
+    if (confirmed) {
+      revokeConsent();
+      setConsent(null);
+      void reinitializeSentry();
+      alert('Ihre Einwilligung wurde widerrufen.');
+    }
+  }, []);
 
   // Map current theme to BaseTheme
   const currentBaseTheme: BaseTheme = theme as BaseTheme;
@@ -284,19 +341,49 @@ Meine Nachricht:
           />
         </SettingsCategory>
 
+        {/* Datenschutz */}
+        <SettingsCategory title="Datenschutz" icon="🛡️">
+          <SettingItem
+            variant="toggle"
+            icon="📊"
+            label="Error-Tracking"
+            description="Anonymisierte Fehlerberichte senden"
+            value={consent?.errorTracking ?? false}
+            onChange={(value) => handleConsentChange('errorTracking', value)}
+          />
+          <SettingItem
+            variant="toggle"
+            icon="🎬"
+            label="Session Replay"
+            description="Anonymisierte Sitzungsaufzeichnungen zur Fehlerbehebung"
+            value={consent?.sessionReplay ?? false}
+            onChange={(value) => handleConsentChange('sessionReplay', value)}
+          />
+          {consent && (
+            <SettingItem
+              variant="action"
+              icon="🗑️"
+              label="Einwilligung widerrufen"
+              description="Alle Tracking-Einstellungen zurücksetzen"
+              actionLabel="Widerrufen"
+              onClick={handleRevokeConsent}
+            />
+          )}
+        </SettingsCategory>
+
         {/* Rechtliches */}
         <SettingsCategory title="Rechtliches" icon="⚖️">
           <SettingItem
             variant="link"
             icon="📄"
             label="Impressum"
-            onClick={() => onNavigateToImpressum?.()}
+            onClick={() => void navigate('/impressum')}
           />
           <SettingItem
             variant="link"
             icon="🔒"
             label="Datenschutz"
-            onClick={() => onNavigateToDatenschutz?.()}
+            onClick={() => void navigate('/datenschutz')}
           />
           <SettingItem
             variant="link"

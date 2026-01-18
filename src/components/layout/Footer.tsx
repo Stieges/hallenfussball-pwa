@@ -9,6 +9,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -17,8 +18,6 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 // ---------------------------------------------------------------------------
 
 interface FooterProps {
-  /** Navigate to a screen (e.g., 'impressum', 'datenschutz') */
-  onNavigate?: (screen: string) => void;
   /** Open cookie settings modal/banner */
   onOpenCookieSettings?: () => void;
 }
@@ -27,8 +26,9 @@ interface FooterProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
+export function Footer({ onOpenCookieSettings }: FooterProps) {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
 
   // ---------------------------------------------------------------------------
@@ -36,11 +36,11 @@ export function Footer({ onNavigate, onOpenCookieSettings }: FooterProps) {
   // ---------------------------------------------------------------------------
 
   const handleImpressumClick = () => {
-    onNavigate?.('impressum');
+    void navigate('/impressum');
   };
 
   const handleDatenschutzClick = () => {
-    onNavigate?.('datenschutz');
+    void navigate('/datenschutz');
   };
 
   const handleCookieSettingsClick = () => {

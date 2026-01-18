@@ -141,11 +141,11 @@ async function navigateToSpielplan(page: Page) {
 // =============================================================================
 
 test.describe('Spielwechsel-Logik', () => {
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [tournament]
     });
   });
@@ -270,11 +270,11 @@ test.describe('Spielwechsel-Logik', () => {
 // =============================================================================
 
 test.describe('Offline & Persistence', () => {
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [tournament]
     });
   });
@@ -399,11 +399,11 @@ test.describe('Offline & Persistence', () => {
 // =============================================================================
 
 test.describe('Timer-Stabilität', () => {
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [tournament]
     });
   });
@@ -506,11 +506,11 @@ test.describe('Timer-Stabilität', () => {
 // =============================================================================
 
 test.describe('Panel schließen', () => {
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [tournament]
     });
   });
@@ -627,11 +627,11 @@ test.describe('Panel schließen', () => {
 // =============================================================================
 
 test.describe('LiveInfoExpand', () => {
-  test.beforeEach(async ({ seedLocalStorage }, testInfo) => {
+  test.beforeEach(async ({ seedIndexedDB }, testInfo) => {
     test.skip(testInfo.project.name.includes('iPhone'), 'Skipping on iPhone due to Safe Area emulation issues');
 
     const tournament = createTestTournament();
-    await seedLocalStorage({
+    await seedIndexedDB({
       tournaments: [tournament]
     });
   });

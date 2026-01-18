@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- Error boundary with fallback component */
 import React, { Component, ReactNode } from 'react';
-import { cssVars } from '../design-tokens'
+import { cssVars } from '../design-tokens';
+import { captureFeatureError } from '../lib/sentry';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -30,6 +31,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+
+    // Report to Sentry (only in production, with consent)
+    captureFeatureError(error, 'react', 'error-boundary', {
+      componentStack: errorInfo.componentStack,
+    });
+
     this.props.onError?.(error, errorInfo);
   }
 

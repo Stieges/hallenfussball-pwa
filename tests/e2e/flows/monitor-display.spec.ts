@@ -23,7 +23,7 @@ import { test, expect, type TestOptions } from '../helpers/test-fixtures';
 // CI skip removed - using reliable seeding fixture
 
 // Helper to create a tournament with monitor config via localStorage
-async function setupTournamentWithMonitor(seedLocalStorage: TestOptions['seedLocalStorage'], monitorConfig: {
+async function setupTournamentWithMonitor(seedIndexedDB: TestOptions['seedIndexedDB'], monitorConfig: {
   slides?: Array<{ id: string; type: string; config: Record<string, unknown>; duration: number | null; order: number }>;
   theme?: string;
 }) {
@@ -102,7 +102,7 @@ async function setupTournamentWithMonitor(seedLocalStorage: TestOptions['seedLoc
     updatedAt: new Date().toISOString(),
   };
 
-  await seedLocalStorage({
+  await seedIndexedDB({
     tournaments: [tournament]
   });
 
@@ -120,8 +120,8 @@ test.describe('Monitor Display', () => {
       await expect(page.getByTestId('monitor-error-message')).toBeVisible({ timeout: 10000 });
     });
 
-    test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+    test('zeigt Fehler bei ungültiger Monitor-ID', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/test-tournament/invalid-monitor');
 
@@ -131,8 +131,8 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-B02: Monitor ohne Slides', () => {
-    test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, { slides: [] });
+    test('zeigt Hinweis wenn keine Slides konfiguriert', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, { slides: [] });
       // HashRouter requires /#/ prefix for routes
       await page.goto('/#/display/test-tournament/monitor-1');
 
@@ -142,8 +142,8 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-A10: Keyboard Navigation', () => {
-    test('Space pausiert/startet Diashow', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {
+    test('Space pausiert/startet Diashow', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {
         slides: [
           { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: 10, order: 0 },
           { id: 's2', type: 'standings', config: { groupId: 'A' }, duration: 10, order: 1 },
@@ -172,8 +172,8 @@ test.describe('Monitor Display', () => {
       await expect(page.getByTestId('monitor-pause-indicator')).not.toBeVisible({ timeout: 5000 });
     });
 
-    test('Arrow keys navigieren zwischen Slides', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {
+    test('Arrow keys navigieren zwischen Slides', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {
         slides: [
           { id: 's1', type: 'live', config: { fieldId: 'field-1' }, duration: 60, order: 0 },
           { id: 's2', type: 'standings', config: { groupId: 'A' }, duration: 60, order: 1 },
@@ -202,8 +202,8 @@ test.describe('Monitor Display', () => {
       await expect(page.locator('body')).toBeVisible();
     });
 
-    test('Escape navigiert zurück', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+    test('Escape navigiert zurück', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       await page.goto('/#/display/test-tournament/monitor-1');
 
       // Wait for page to load and focus
@@ -218,11 +218,11 @@ test.describe('Monitor Display', () => {
   });
 
   test.describe('MON-G01: Keyboard Accessibility', () => {
-    test('hat keine JavaScript Errors', async ({ page, seedLocalStorage }) => {
+    test('hat keine JavaScript Errors', async ({ page, seedIndexedDB }) => {
       const errors: string[] = [];
       page.on('pageerror', (error) => errors.push(error.message));
 
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
@@ -240,8 +240,8 @@ test.describe('Monitor Display - Responsive', () => {
   test.describe('MON-E05: Desktop HD (1920x1080)', () => {
     test.use({ viewport: { width: 1920, height: 1080 } });
 
-    test('rendert korrekt in HD', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+    test('rendert korrekt in HD', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
@@ -261,8 +261,8 @@ test.describe('Monitor Display - TV/Beamer Tests', () => {
   test.describe('MON-F01: Schriftgröße', () => {
     test.use({ viewport: { width: 1920, height: 1080 } });
 
-    test('Score hat lesbare Schriftgröße', async ({ page, seedLocalStorage }) => {
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+    test('Score hat lesbare Schriftgröße', async ({ page, seedIndexedDB }) => {
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
@@ -276,10 +276,10 @@ test.describe('Monitor Display - TV/Beamer Tests', () => {
   });
 
   test.describe('MON-F06: Fullscreen', () => {
-    test('F11 Fullscreen funktioniert nicht (browser limitation)', async ({ page, seedLocalStorage }) => {
+    test('F11 Fullscreen funktioniert nicht (browser limitation)', async ({ page, seedIndexedDB }) => {
       // Note: Playwright can't truly test F11 fullscreen due to browser security
       // This test just ensures the key handler doesn't crash
-      await setupTournamentWithMonitor(seedLocalStorage, {});
+      await setupTournamentWithMonitor(seedIndexedDB, {});
       await page.goto('/#/display/test-tournament/monitor-1');
       await page.waitForLoadState('networkidle');
 
@@ -296,8 +296,8 @@ test.describe('Monitor Display - TV/Beamer Tests', () => {
 
 test.describe('Monitor Display - Theme Tests', () => {
 
-  test('Dark Theme rendert korrekt', async ({ page, seedLocalStorage }) => {
-    await setupTournamentWithMonitor(seedLocalStorage, { theme: 'dark' });
+  test('Dark Theme rendert korrekt', async ({ page, seedIndexedDB }) => {
+    await setupTournamentWithMonitor(seedIndexedDB, { theme: 'dark' });
     await page.goto('/#/display/test-tournament/monitor-1');
     await page.waitForLoadState('networkidle');
 
@@ -305,8 +305,8 @@ test.describe('Monitor Display - Theme Tests', () => {
     await page.screenshot({ path: 'test-results/monitor-theme-dark.png' });
   });
 
-  test('Light Theme rendert korrekt', async ({ page, seedLocalStorage }) => {
-    await setupTournamentWithMonitor(seedLocalStorage, { theme: 'light' });
+  test('Light Theme rendert korrekt', async ({ page, seedIndexedDB }) => {
+    await setupTournamentWithMonitor(seedIndexedDB, { theme: 'light' });
     await page.goto('/#/display/test-tournament/monitor-1');
     await page.waitForLoadState('networkidle');
 
