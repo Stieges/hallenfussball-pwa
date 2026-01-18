@@ -12,6 +12,7 @@
 
 import { useState, useCallback } from 'react';
 import { validateEmail } from '../utils/emailValidation';
+import { AUTH_ERRORS } from '../constants';
 
 export interface RegisterFormErrors {
   name?: string;
@@ -77,9 +78,9 @@ export function useRegisterForm(): UseRegisterFormReturn {
     // Name validation
     const trimmedName = formData.name.trim();
     if (trimmedName.length < 2) {
-      newErrors.name = 'Name muss mindestens 2 Zeichen haben.';
+      newErrors.name = AUTH_ERRORS.NAME_TOO_SHORT;
     } else if (trimmedName.length > 100) {
-      newErrors.name = 'Name darf maximal 100 Zeichen haben.';
+      newErrors.name = AUTH_ERRORS.NAME_TOO_LONG;
     }
 
     // Enhanced email validation
@@ -98,14 +99,14 @@ export function useRegisterForm(): UseRegisterFormReturn {
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = 'Passwort ist erforderlich';
+      newErrors.password = AUTH_ERRORS.PASSWORD_REQUIRED;
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Passwort muss mindestens 6 Zeichen haben';
+      newErrors.password = AUTH_ERRORS.PASSWORD_TOO_SHORT;
     }
 
     // Confirm password validation
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
+      newErrors.confirmPassword = AUTH_ERRORS.PASSWORD_MISMATCH;
     }
 
     // Registration code validation (case-insensitive)
@@ -114,7 +115,7 @@ export function useRegisterForm(): UseRegisterFormReturn {
     const expectedCodeNormalized = expectedCode?.trim().toLowerCase();
 
     if (expectedCodeNormalized && providedCode !== expectedCodeNormalized) {
-      newErrors.registrationCode = 'Ungültiger Einladungscode';
+      newErrors.registrationCode = AUTH_ERRORS.REGISTRATION_CODE_INVALID;
     }
 
     setErrors(newErrors);

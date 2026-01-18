@@ -1,7 +1,5 @@
 /**
- * Auth Constants
- *
- * Centralized exports for auth-related constants.
+ * Auth Constants Barrel Export
  */
 
-export { AUTH_ERRORS, type AuthErrorKey } from './errorMessages';
+export { AUTH_ERRORS, type AuthErrorKey, type AuthErrorMessage } from './errorMessages';

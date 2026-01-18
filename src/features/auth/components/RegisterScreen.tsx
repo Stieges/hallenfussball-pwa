@@ -23,6 +23,7 @@ import { validateEmail } from '../utils/emailValidation';
 import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { AUTH_ERRORS } from '../constants';
 
 interface RegisterScreenProps {
   /** Called when registration is successful */
@@ -85,9 +86,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     // Name validation
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
-      newErrors.name = 'Name muss mindestens 2 Zeichen haben.';
+      newErrors.name = AUTH_ERRORS.NAME_TOO_SHORT;
     } else if (trimmedName.length > 100) {
-      newErrors.name = 'Name darf maximal 100 Zeichen haben.';
+      newErrors.name = AUTH_ERRORS.NAME_TOO_LONG;
     }
 
     // Enhanced email validation
@@ -106,14 +107,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
     // Password validation
     if (!password) {
-      newErrors.password = 'Passwort ist erforderlich';
+      newErrors.password = AUTH_ERRORS.PASSWORD_REQUIRED;
     } else if (password.length < 6) {
-      newErrors.password = 'Passwort muss mindestens 6 Zeichen haben';
+      newErrors.password = AUTH_ERRORS.PASSWORD_TOO_SHORT;
     }
 
     // Confirm password validation
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwörter stimmen nicht überein';
+      newErrors.confirmPassword = AUTH_ERRORS.PASSWORD_MISMATCH;
     }
 
     // Server-side registration code validation
@@ -121,11 +122,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     if (registrationCode.trim()) {
       const codeValidation = await validateRegistrationCode(registrationCode.trim());
       if (!codeValidation.valid) {
-        newErrors.registrationCode = codeValidation.error || 'Ungültiger Einladungscode';
+        newErrors.registrationCode = codeValidation.error || AUTH_ERRORS.REGISTRATION_CODE_INVALID;
       }
     } else {
       // Registration code is required
-      newErrors.registrationCode = 'Einladungscode ist erforderlich';
+      newErrors.registrationCode = AUTH_ERRORS.REGISTRATION_CODE_REQUIRED;
     }
 
     setErrors(newErrors);
@@ -166,8 +167,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         setErrors({ general: result.error });
       }
     } catch (err) {
-      console.error('Register error:', err);
-      setErrors({ general: 'Ein unerwarteter Fehler ist aufgetreten.' });
+      if (import.meta.env.DEV) {
+        console.error('Register error:', err);
+      }
+      setErrors({ general: AUTH_ERRORS.UNEXPECTED });
     } finally {
       setIsLoading(false);
     }
@@ -180,13 +183,15 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     try {
       const result = await loginWithGoogle();
       if (!result.success) {
-        setErrors({ general: result.error ?? 'Google Login fehlgeschlagen' });
+        setErrors({ general: result.error ?? AUTH_ERRORS.GOOGLE_LOGIN_FAILED });
         setIsLoading(false);
       }
       // On success, the page will redirect
     } catch (err) {
-      console.error('Google login error:', err);
-      setErrors({ general: 'Ein unerwarteter Fehler ist aufgetreten' });
+      if (import.meta.env.DEV) {
+        console.error('Google login error:', err);
+      }
+      setErrors({ general: AUTH_ERRORS.UNEXPECTED });
       setIsLoading(false);
     }
   };
