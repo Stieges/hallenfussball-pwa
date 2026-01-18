@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
+import { AUTH_ERRORS } from '../constants';
 
 export const SetPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -42,12 +43,12 @@ export const SetPasswordScreen: React.FC = () => {
 
     // Validation
     if (password.length < 6) {
-      setError('Passwort muss mindestens 6 Zeichen haben.');
+      setError(AUTH_ERRORS.PASSWORD_TOO_SHORT);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwörter stimmen nicht überein.');
+      setError(AUTH_ERRORS.PASSWORD_MISMATCH);
       return;
     }
 
@@ -59,13 +60,13 @@ export const SetPasswordScreen: React.FC = () => {
       if (result.success) {
         setShowSuccess(true);
       } else {
-        setError(result.error ?? 'Passwort konnte nicht geändert werden.');
+        setError(result.error ?? AUTH_ERRORS.PASSWORD_UPDATE_FAILED);
       }
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Update password error:', err);
       }
-      setError('Ein unerwarteter Fehler ist aufgetreten.');
+      setError(AUTH_ERRORS.UNEXPECTED);
     } finally {
       setIsSubmitting(false);
     }
