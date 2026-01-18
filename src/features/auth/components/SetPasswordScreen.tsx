@@ -5,7 +5,7 @@
  * Ermöglicht dem User ein neues Passwort zu setzen.
  */
 
-import React, { useState, CSSProperties } from 'react';
+import React, { useState, useEffect, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
@@ -13,20 +13,32 @@ import { useAuth } from '../hooks/useAuth';
 
 export const SetPasswordScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { updatePassword } = useAuth();
+  const { updatePassword, session, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [sessionError, setSessionError] = useState(false);
 
-  // Note: User is already authenticated when reaching this screen
-  // AuthCallback sets session before redirecting here
+  // Session-Check beim Mount: Wenn kein Auth geladen ist und keine Session existiert,
+  // muss der User einen neuen Reset-Link anfordern
+  useEffect(() => {
+    if (!authLoading && (!isAuthenticated || !session)) {
+      setSessionError(true);
+    }
+  }, [authLoading, isAuthenticated, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Double-check session (könnte während Eingabe abgelaufen sein)
+    if (!session) {
+      setSessionError(true);
+      return;
+    }
 
     // Validation
     if (password.length < 6) {
@@ -39,7 +51,7 @@ export const SetPasswordScreen: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const result = await updatePassword(password);
@@ -50,16 +62,58 @@ export const SetPasswordScreen: React.FC = () => {
         setError(result.error ?? 'Passwort konnte nicht geändert werden.');
       }
     } catch (err) {
-      console.error('Update password error:', err);
+      if (import.meta.env.DEV) {
+        console.error('Update password error:', err);
+      }
       setError('Ein unerwarteter Fehler ist aufgetreten.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleContinue = () => {
     void navigate('/');
   };
+
+  const handleBackToLogin = () => {
+    void navigate('/login', { replace: true });
+  };
+
+  // Session abgelaufen oder nicht vorhanden - User muss neu starten
+  if (sessionError) {
+    return (
+      <div style={styles.backdrop}>
+        <div style={styles.card}>
+          <div style={styles.errorIcon}>!</div>
+          <h1 style={styles.title}>Sitzung abgelaufen</h1>
+          <p style={styles.subtitle}>
+            Deine Sitzung ist abgelaufen. Bitte fordere einen neuen
+            Link zum Zurücksetzen deines Passworts an.
+          </p>
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleBackToLogin}
+            style={styles.button}
+          >
+            Zurück zum Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading-State: Auth wird noch initialisiert
+  if (authLoading) {
+    return (
+      <div style={styles.backdrop}>
+        <div style={styles.card}>
+          <div style={styles.spinner} />
+          <p style={styles.subtitle}>Wird geladen...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Success state
   if (showSuccess) {
@@ -142,7 +196,7 @@ export const SetPasswordScreen: React.FC = () => {
             type="submit"
             variant="primary"
             fullWidth
-            loading={isLoading}
+            loading={isSubmitting}
             style={styles.button}
           >
             Passwort speichern
@@ -153,7 +207,7 @@ export const SetPasswordScreen: React.FC = () => {
           variant="ghost"
           fullWidth
           onClick={handleContinue}
-          disabled={isLoading}
+          disabled={isSubmitting}
           style={styles.ghostButton}
         >
           Überspringen
@@ -275,6 +329,30 @@ const styles: Record<string, CSSProperties> = {
     margin: 0,
     textAlign: 'center',
     lineHeight: '1.5',
+  },
+  errorIcon: {
+    width: '64px',
+    height: '64px',
+    margin: '0 auto',
+    marginBottom: cssVars.spacing.md,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: cssVars.fontSizes.xxl,
+    fontWeight: cssVars.fontWeights.bold,
+    color: cssVars.colors.background,
+    background: cssVars.colors.error,
+    borderRadius: cssVars.borderRadius.full,
+  },
+  spinner: {
+    width: '48px',
+    height: '48px',
+    margin: '0 auto',
+    marginBottom: cssVars.spacing.md,
+    border: `4px solid ${cssVars.colors.border}`,
+    borderTopColor: cssVars.colors.primary,
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
   },
 };
 
