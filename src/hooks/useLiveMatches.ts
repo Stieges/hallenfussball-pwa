@@ -351,6 +351,11 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
 
   // Helper to update matches from repository (for Realtime mode)
   const loadFromRepository = useCallback(async () => {
+    // Guard: Don't query with empty tournamentId
+    if (!tournamentId) {
+      return;
+    }
+
     const matches = await liveMatchRepository.getAll(tournamentId);
     const converted = new Map<string, LiveMatch>();
     matches.forEach((match, id) => {
@@ -405,6 +410,11 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
 
   // Initial load and subscribe/poll based on mode
   useEffect(() => {
+    // Guard: Don't subscribe/poll with empty tournamentId
+    if (!tournamentId) {
+      return;
+    }
+
     // Reset initial load flag when tournament changes
     isInitialLoad.current = true;
 

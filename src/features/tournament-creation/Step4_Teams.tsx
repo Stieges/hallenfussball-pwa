@@ -4,6 +4,7 @@ import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
+import { generateTeamId } from '../../utils/idGenerator';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -175,7 +176,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
     const newTeams: Team[] = [];
     for (let i = 1; i <= numberOfTeams; i++) {
       newTeams.push({
-        id: `team-${Date.now()}-${i}`,
+        id: generateTeamId(),
         name: `Team ${i}`,
       });
     }

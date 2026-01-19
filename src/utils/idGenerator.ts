@@ -55,6 +55,14 @@ export function generateTournamentId(): string {
 }
 
 /**
+ * Generiert eine Team-ID
+ * @returns UUID (kompatibel mit Supabase)
+ */
+export function generateTeamId(): string {
+  return generateUniqueId();
+}
+
+/**
  * Reset counter (nur für Tests)
  */
 export function resetCounter(): void {
