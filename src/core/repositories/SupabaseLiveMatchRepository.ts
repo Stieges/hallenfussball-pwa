@@ -58,6 +58,11 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       return null;
     }
 
+    // Guard: Don't query with empty IDs
+    if (!tournamentId || !matchId) {
+      return null;
+    }
+
     try {
       // Load teams if not cached
       const teamsMap = await this.ensureTeamsLoaded(tournamentId);
@@ -96,6 +101,11 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
   async getAll(tournamentId: string): Promise<Map<string, LiveMatch>> {
     if (!isSupabaseConfigured || !supabase) {
+      return new Map();
+    }
+
+    // Guard: Don't query with empty tournamentId
+    if (!tournamentId) {
       return new Map();
     }
 
@@ -373,6 +383,11 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
   // ==========================================================================
 
   private async ensureTeamsLoaded(tournamentId: string): Promise<Map<string, TeamRow>> {
+    // Guard: Don't query with empty tournamentId
+    if (!tournamentId) {
+      return new Map();
+    }
+
     // Return cached if available
     const cached = this.teamsCache.get(tournamentId);
     if (cached) {
