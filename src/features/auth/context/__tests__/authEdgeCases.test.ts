@@ -78,7 +78,7 @@ describe('AuthContext Edge Cases', () => {
             const mockSession = createMockSupabaseSession(mockUser);
 
             // Slow login
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
+             
             supabaseMock.auth.signInWithPassword.mockImplementation(() => {
                 return new Promise(resolve => setTimeout(resolve, 50)).then(() => ({
                     data: { user: mockUser, session: mockSession },

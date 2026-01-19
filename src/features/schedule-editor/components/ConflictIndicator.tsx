@@ -60,7 +60,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({ conflict, onClick 
 
   return (
     <span style={badgeStyle} onClick={onClick} title={conflict.message}>
-      {/* eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Fallback for unknown conflict types */}
+      { }
       <span>{iconMap[conflict.type] ?? '⚠️'}</span>
       <span>{getConflictTypeLabel(conflict.type)}</span>
     </span>

@@ -315,8 +315,8 @@ export function ExportsCategory({
       setIsDragOver(false);
 
       const file = event.dataTransfer.files[0];
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: files[0] can be undefined
-      if (file && file.type === 'application/json') {
+       
+      if (file?.type === 'application/json') {
         void handleRestore(file);
       } else {
         setExportError('Bitte eine JSON-Datei auswählen');

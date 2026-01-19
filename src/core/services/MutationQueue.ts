@@ -289,14 +289,14 @@ export class MutationQueue {
      */
     public async process(): Promise<void> {
         if (this.isProcessing || this.queue.length === 0) { return; }
-        if (!(navigator.onLine as boolean)) { return; }
+        if (!(navigator.onLine)) { return; }
 
         this.isProcessing = true;
 
         try {
             // Process head of queue
             while (this.queue.length > 0) {
-                if (!(navigator.onLine as boolean)) { break; }
+                if (!(navigator.onLine)) { break; }
 
                 const item = this.queue[0]; // Peek
 

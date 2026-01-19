@@ -122,7 +122,7 @@ export function usePendingChanges({
       updated.refereeConfig = { ...updated.refereeConfig, manualAssignments };
       updated.matches = updated.matches.map(match => {
         const newRef = pendingChanges.refereeAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Can be null
+         
         if (newRef !== undefined) {
           return { ...match, referee: newRef ?? undefined };
         }
@@ -141,7 +141,7 @@ export function usePendingChanges({
 
       updated.matches = updated.matches.map(match => {
         const newField = pendingChanges.fieldAssignments[match.id];
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check
+         
         if (newField !== undefined) {
           return { ...match, field: newField };
         }

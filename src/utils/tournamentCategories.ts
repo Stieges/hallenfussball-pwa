@@ -69,7 +69,7 @@ export function isTournamentCompleted(tournament: Tournament): boolean {
   }
 
   // No matches = not completed
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check for legacy data
+   
   if (!tournament.matches || tournament.matches.length === 0) {
     return false;
   }
@@ -312,7 +312,7 @@ export function getExtendedCategories(tournaments: Tournament[], now: Date = new
   for (const tournament of base.finished) {
     const date = getTournamentDateTime(tournament);
     const year = date ? date.getFullYear() : new Date().getFullYear();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Initialize array for new year key
+     
     if (!archivedByYear[year]) {
       archivedByYear[year] = [];
     }
@@ -321,7 +321,7 @@ export function getExtendedCategories(tournaments: Tournament[], now: Date = new
 
   // Find finishable tournaments (100% matches complete but not archived)
   const finishable = [...base.running, ...base.upcoming].filter(tournament => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
+     
     if (!tournament.matches || tournament.matches.length === 0) {return false;}
     if (tournament.manuallyCompleted) {return false;}
 

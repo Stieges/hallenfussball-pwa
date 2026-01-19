@@ -131,7 +131,7 @@ async function storageGetTournaments(): Promise<Tournament[]> {
     // Migration: Setze defaults für bestehende Turniere ohne bestimmte Felder (legacy data)
     return tournaments.map(t => ({
       ...t,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- legacy data may lack status field
+       
       status: t.status ?? 'published',
       refereeConfig: t.refereeConfig ?? { mode: 'none' },
       isExternal: t.isExternal ?? false,

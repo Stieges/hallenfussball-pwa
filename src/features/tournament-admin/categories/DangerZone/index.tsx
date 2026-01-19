@@ -238,7 +238,7 @@ export function DangerZoneCategory({
   }, [isExecuting]);
 
   const handleConfirm = useCallback(async () => {
-    if (!pendingAction || confirmationInput !== pendingAction.confirmText) {
+    if (confirmationInput !== pendingAction?.confirmText) {
       return;
     }
 
@@ -333,7 +333,7 @@ export function DangerZoneCategory({
     }
   }, [pendingAction, confirmationInput, tournament, onTournamentUpdate]);
 
-  const isConfirmEnabled = pendingAction && confirmationInput === pendingAction.confirmText;
+  const isConfirmEnabled = confirmationInput === pendingAction?.confirmText;
 
   const renderActionCard = (action: DangerAction) => {
     const config = DANGER_ACTIONS[action];

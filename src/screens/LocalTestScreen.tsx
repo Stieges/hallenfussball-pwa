@@ -193,7 +193,7 @@ export const LocalTestScreen: React.FC = () => {
 
   // Pull-to-refresh handlers
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
+    if (containerRef.current?.scrollTop === 0) {
       pullStartY.current = e.touches[0].clientY;
     }
   }, []);
@@ -206,7 +206,7 @@ export const LocalTestScreen: React.FC = () => {
     const currentY = e.touches[0].clientY;
     const diff = currentY - pullStartY.current;
 
-    if (diff > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+    if (diff > 0 && containerRef.current?.scrollTop === 0) {
       const dampenedDistance = Math.min(diff * 0.5, 120);
       setPullDistance(dampenedDistance);
     }

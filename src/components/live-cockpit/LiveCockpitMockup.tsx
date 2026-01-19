@@ -264,7 +264,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
     }
 
     // Trigger haptic feedback if enabled (navigator.vibrate is not available on all browsers)
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: vibrate API not available in all browsers
+     
     if (cockpitSettings.hapticEnabled && navigator.vibrate) {
       navigator.vibrate([200, 100, 200]); // Double pulse pattern
     }

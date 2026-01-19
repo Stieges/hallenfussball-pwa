@@ -46,7 +46,7 @@ export function migrateFields(tournament: Tournament): TournamentField[] | undef
     return undefined; // Keine Migration nötig
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
+   
   const numberOfFields = tournament.numberOfFields ?? 1;
   const fields: TournamentField[] = [];
 
@@ -169,7 +169,7 @@ export function migrateMatchEvents(events: RuntimeMatchEvent[]): RuntimeMatchEve
 
   const migratedEvents = events.map((event) => {
     // Runtime safety: payload might be missing in corrupted/legacy data
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime safety for legacy data
+     
     if (!event.payload) {return event;}
 
     const legacyPayload = event.payload as LegacyEventPayload;
@@ -187,7 +187,7 @@ export function migrateMatchEvents(events: RuntimeMatchEvent[]): RuntimeMatchEve
     };
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- anyMigrated can be true for legacy data
+   
   return anyMigrated ? migratedEvents : undefined;
 }
 

@@ -212,7 +212,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
   // Pull-to-refresh handlers
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
     // Only trigger if at top of scroll
-    if (containerRef.current && containerRef.current.scrollTop === 0) {
+    if (containerRef.current?.scrollTop === 0) {
       pullStartY.current = e.touches[0].clientY;
     }
   }, []);
@@ -226,7 +226,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     const diff = currentY - pullStartY.current;
 
     // Only pull down, and apply dampening
-    if (diff > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+    if (diff > 0 && containerRef.current?.scrollTop === 0) {
       const dampenedDistance = Math.min(diff * 0.5, 120);
       setPullDistance(dampenedDistance);
     }

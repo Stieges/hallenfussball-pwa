@@ -95,7 +95,7 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
         // Also check if click is on anchor
-        if (anchorRef?.current && anchorRef.current.contains(event.target as Node)) {
+        if (anchorRef?.current?.contains(event.target as Node)) {
           return;
         }
         onClose();

@@ -18,7 +18,7 @@ let counter = 0;
 export function generateUniqueId(): string {
   // Use crypto.randomUUID for collision-free IDs (essential for sync)
   // Fallback for older browsers included
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+   
   if (crypto?.randomUUID) {
     return crypto.randomUUID();
   }

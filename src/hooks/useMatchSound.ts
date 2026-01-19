@@ -100,7 +100,7 @@ export function useMatchSound(
           soundUrl = url;
         } else if (soundId && soundId in PRESET_SOUNDS) {
           // Use preset sound
-          soundUrl = PRESET_SOUNDS[soundId as keyof typeof PRESET_SOUNDS];
+          soundUrl = PRESET_SOUNDS[soundId];
         } else {
           setError('Unbekannter Sound');
           return;

@@ -345,7 +345,7 @@ const resolvePlaceholder = (
 
   let standings: { teamId: string; position: number }[] | undefined;
   for (const key of possibleKeys) {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: object indexing can return undefined
+     
     if (groupStandings[key]) {
       standings = groupStandings[key];
       break;

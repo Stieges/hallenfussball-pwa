@@ -131,7 +131,7 @@ function generateRoundRobinPairings(teams: Team[]): TeamPairing[] {
  */
 function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] {
   const pattern = getDFBPattern(teams.length);
-  if (!pattern || pattern.code !== patternCode) {
+  if (pattern?.code !== patternCode) {
     console.warn(`[FairScheduler] DFB pattern ${patternCode} not found or doesn't match team count ${teams.length}, falling back to Circle Method`);
     return generateRoundRobinPairings(teams);
   }
@@ -144,7 +144,7 @@ function generateDFBPairings(teams: Team[], patternCode: string): TeamPairing[] 
     const teamA = teams[home - 1];
     const teamB = teams[away - 1];
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
+     
     if (teamA && teamB) {
       pairings.push({ teamA, teamB });
     }
