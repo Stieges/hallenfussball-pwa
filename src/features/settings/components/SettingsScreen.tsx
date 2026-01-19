@@ -107,6 +107,58 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     []
   );
 
+  // Force update: Clear Service Worker + Caches + Reload
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleForceUpdate = useCallback(async () => {
+    const confirmed = window.confirm(
+      'App-Update erzwingen?\n\n' +
+      'Dies löscht den Service Worker Cache und lädt die App neu. ' +
+      'Deine Turnierdaten bleiben erhalten.\n\n' +
+      'Nutze diese Funktion, wenn die App nicht richtig funktioniert.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsClearing(true);
+
+    try {
+      // 1. Unregister all Service Workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log(`[ForceUpdate] Unregistered ${registrations.length} service worker(s)`);
+        }
+      }
+
+      // 2. Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log(`[ForceUpdate] Cleared ${cacheNames.length} cache(s)`);
+        }
+      }
+
+      // 3. Small delay to ensure cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 4. Hard reload (bypass cache)
+      window.location.reload();
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('[ForceUpdate] Error:', err);
+      }
+      setIsClearing(false);
+      alert('Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell.');
+    }
+  }, []);
+
   // Handle consent revocation
   const handleRevokeConsent = useCallback(() => {
     const confirmed = window.confirm(
@@ -288,6 +340,15 @@ Meine Nachricht:
               }
               alert('Cache wurde geleert');
             }}
+          />
+          <SettingItem
+            variant="action"
+            icon="🔄"
+            label="App-Update erzwingen"
+            description="Service Worker zurücksetzen bei Problemen"
+            actionLabel={isClearing ? 'Lädt...' : 'Zurücksetzen'}
+            onClick={() => void handleForceUpdate()}
+            disabled={isClearing}
           />
         </SettingsCategory>
 
