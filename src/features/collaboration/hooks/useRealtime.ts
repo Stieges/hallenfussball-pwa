@@ -56,7 +56,7 @@ export function useRealtime(tournamentId: string | undefined): UseRealtimeReturn
     // Handle incoming "poke" - someone else made a change
     const handlePoke = useCallback((payload: RealtimePayload) => {
         // Ignore own changes
-        if (user && payload.user_name === user.name) {
+        if (payload.user_name === user?.name) {
             return;
         }
 

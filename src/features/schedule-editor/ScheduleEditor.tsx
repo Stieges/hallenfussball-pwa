@@ -395,7 +395,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
             field: targetSlot.fieldId,
           };
         }
-        if (targetMatch && m.id === targetMatch.id) {
+        if (m.id === targetMatch?.id) {
           // Target match moves to source position (swap)
           return {
             ...m,

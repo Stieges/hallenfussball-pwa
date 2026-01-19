@@ -123,7 +123,7 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
 
   // 9. Point system has all zeros
   const points = formData.pointSystem;
-  if (points && points.win === 0 && points.draw === 0 && points.loss === 0) {
+  if (points?.win === 0 && points.draw === 0 && points.loss === 0) {
     issues.push({
       type: 'warning',
       message: 'Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig',

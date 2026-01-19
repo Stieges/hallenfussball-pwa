@@ -142,7 +142,7 @@ export const getTournamentMembers = async (tournamentId: string): Promise<Tourna
       .not('user_id', 'is', null) // Only accepted members (have user_id)
       .is('declined_at', null); // Not declined
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       console.error('Get tournament members error:', error);
       return [];
@@ -179,7 +179,7 @@ export const getUserMembership = async (
       .is('declined_at', null)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       return undefined;
     }
@@ -220,7 +220,7 @@ export const changeRole = async (
       .eq('id', membershipId)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (targetError || !targetData) {
       return { success: false, error: 'Mitglied nicht gefunden' };
     }
@@ -294,7 +294,7 @@ export const updateTrainerTeams = async (
       .eq('id', membershipId)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (targetError || !targetData) {
       return { success: false, error: 'Mitglied nicht gefunden' };
     }
@@ -356,7 +356,7 @@ export const removeMember = async (membershipId: string, userId: string): Promis
       .eq('id', membershipId)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (targetError || !targetData) {
       return false;
     }
@@ -498,7 +498,7 @@ export const getCoAdmins = async (tournamentId: string): Promise<TournamentMembe
       .eq('role', 'co-admin')
       .not('user_id', 'is', null);
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       return [];
     }

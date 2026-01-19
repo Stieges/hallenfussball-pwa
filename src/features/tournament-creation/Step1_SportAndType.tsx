@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components -- SPORT_OPTIONS constant co-located with component */
+ 
 import { CSSProperties } from 'react';
 import { Card } from '../../components/ui';
 import { TournamentType, Tournament } from '../../types/tournament';

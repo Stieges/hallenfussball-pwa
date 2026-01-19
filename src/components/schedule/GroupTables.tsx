@@ -145,7 +145,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
 
   // Get enabled placement criteria (with fallback if tournament is not provided)
   // Note: placementLogic can be undefined at runtime for older tournaments despite type definition
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+   
   const enabledCriteria = tournament?.placementLogic?.filter(c => c.enabled && c.id !== 'directComparison') ?? [];
   const highlightPoints = enabledCriteria.some(c => c.id === 'points');
   const highlightWins = enabledCriteria.some(c => c.id === 'wins');

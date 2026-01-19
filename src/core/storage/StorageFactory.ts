@@ -83,7 +83,7 @@ export async function isIndexedDBAvailable(): Promise<boolean> {
 export async function getStorageQuota(): Promise<{ usage: number; quota: number } | null> {
   try {
     const estimate = await navigator.storage.estimate();
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (estimate && typeof estimate.usage === 'number' && typeof estimate.quota === 'number') {
       return {
         usage: estimate.usage,

@@ -219,7 +219,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   }, [fieldMatches]);
 
   const lastFinishedMatch = useMemo(() =>
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
+     
     lastFinishedMatchData ? {
       match: toMatchSummary(lastFinishedMatchData),
       homeScore: lastFinishedMatchData.scoreA,
@@ -302,7 +302,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Handler: Reopen last match
   const handleReopenLastMatch = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: array indexing can return undefined
+     
     if (!lastFinishedMatchData) { return; }
     setSelectedMatchId(lastFinishedMatchData.id);
     void handleReopenMatch(lastFinishedMatchData);

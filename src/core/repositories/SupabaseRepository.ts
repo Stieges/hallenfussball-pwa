@@ -107,7 +107,7 @@ export class SupabaseRepository implements ITournamentRepository {
     if (metadata.date !== undefined) {updatePayload.date = metadata.date;}
     if (metadata.status !== undefined) {updatePayload.status = metadata.status;}
     if (metadata.startTime !== undefined) {updatePayload.start_time = metadata.startTime;}
-    /* eslint-disable @typescript-eslint/no-unnecessary-condition -- defensive checks for partial updates */
+     
     if (metadata.location) {
       if (metadata.location.name !== undefined) {updatePayload.location_name = metadata.location.name;}
       if (metadata.location.street !== undefined) {updatePayload.location_street = metadata.location.street;}
@@ -115,7 +115,7 @@ export class SupabaseRepository implements ITournamentRepository {
       if (metadata.location.postalCode !== undefined) {updatePayload.location_postal_code = metadata.location.postalCode;}
       if (metadata.location.country !== undefined) {updatePayload.location_country = metadata.location.country;}
     }
-    /* eslint-enable @typescript-eslint/no-unnecessary-condition */
+     
     if (metadata.isPublic !== undefined) {updatePayload.is_public = metadata.isPublic;}
     if (metadata.shareCode !== undefined) {updatePayload.share_code = metadata.shareCode;}
 
@@ -147,7 +147,7 @@ export class SupabaseRepository implements ITournamentRepository {
       throw new Error(`Failed to update tournament metadata: ${updateError.message}`);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive check for API response
+     
     if (metadata.version !== undefined && (!updatedRows || updatedRows.length === 0)) {
       // Optimistic Lock Failed
       throw new OptimisticLockError('Turnier-Daten wurden zwischenzeitlich verändert.');
@@ -183,7 +183,7 @@ export class SupabaseRepository implements ITournamentRepository {
     // 1. Persist Tournament (with Optimistic Locking)
     let saveError = null;
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive null check
+     
     if (tournament.version !== undefined && tournament.version !== null) {
       // Optimistic Locking: Only update if version matches
       const nextVersion = tournament.version + 1;
@@ -198,7 +198,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (error) {
         saveError = error;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive check for API response
+       
       } else if (!data || data.length === 0) {
         // No update happened - check if it exists (Conflict) or is new (Insert)
         const { data: existing } = await getSupabase()
@@ -375,7 +375,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (tError) {
       errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- defensive check for API response
+     
     } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
       errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
     }
@@ -592,7 +592,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Convert to frontend types (database may return null for empty arrays)
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- DB can return null
+     
     return mapTournamentFromSupabase(tournamentRow, teamRows ?? [], matchRows ?? []);
   }
 

@@ -221,7 +221,7 @@ export const validateInvitation = async (token: string): Promise<InvitationValid
       .eq('invite_code', token)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       return { valid: false, error: 'not_found' };
     }
@@ -386,7 +386,7 @@ export const getActiveInvitationsForTournament = async (tournamentId: string): P
       .is('declined_at', null) // Not deactivated
       .gt('expires_at', new Date().toISOString()); // Not expired
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       return [];
     }
@@ -421,7 +421,7 @@ export const getInvitationByToken = async (token: string): Promise<Invitation | 
       .eq('invite_code', token)
       .single();
 
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+     
     if (error || !data) {
       return undefined;
     }

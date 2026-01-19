@@ -405,6 +405,29 @@ async function migrateGuestTournaments(newUserId: string): Promise<void> {
 | **Elfmeterschießen-Flow UI** | Mittel | - | - |
 | **PWA Install-Button in App** | Niedrig | 1h | - |
 
+### Quality Infrastructure (aus Phase 1 Plan)
+
+> **Plan:** Siehe `.claude/plans/fizzy-meandering-papert.md`
+> **Phase 1:** ✅ Erledigt (PR #55 merged)
+
+#### Phase 2: CI/CD Extensions (~2h)
+
+| # | Task | Aufwand | Status | Beschreibung |
+|---|------|---------|--------|--------------|
+| 2.1 | Test Tier Separation | ~30min | ⬜ Offen | Pre-commit nur Unit-Tests, CI alle Tests |
+| 2.2 | Bundle Size Check | ~20min | ⬜ Offen | size-limit Action + 250KB Limit |
+| 2.3 | Coverage Enforcement | ~10min | ⬜ Offen | Thresholds erhöhen (50% lines/functions) |
+| 2.4 | CodeQL Scanning | ~15min | ⬜ Offen | Security vulnerability scanning |
+
+#### Phase 3: Code Quality Gates (~1h)
+
+| # | Task | Aufwand | Status | Beschreibung |
+|---|------|---------|--------|--------------|
+| 3.1 | Commitlint | ~15min | ⬜ Offen | Conventional Commits enforcing |
+| 3.2 | Import Restrictions | ~20min | ⬜ Offen | ESLint no-restricted-imports |
+| 3.3 | Lighthouse CI | ~30min | ⬜ Offen | Performance Budget in CI |
+| 3.4 | Auto-Changelog | ~20min | ⬜ Offen | Changelog aus Conventional Commits |
+
 ### Elfmeterschießen-Flow (separates Feature)
 
 > **Status:** 📋 Konzept erforderlich

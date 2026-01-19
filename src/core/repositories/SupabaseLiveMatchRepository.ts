@@ -69,7 +69,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         .eq('id', matchId)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+       
       if (matchError || !matchRow) {
         return null;
       }
@@ -110,7 +110,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         .eq('tournament_id', tournamentId)
         .in('match_status', ['running', 'paused']);
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+       
       if (matchError || !matchRows) {
         return new Map();
       }

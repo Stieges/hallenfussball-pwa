@@ -229,7 +229,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   const showRemainingTimeWarning =
     remainingMinutes !== null &&
     remainingMinutes <= highlightNextMatchMinutesBefore &&
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Runtime check: upcomingMatches[0] can be undefined
+     
     nextMatch &&
     !isPhaseChange;
 

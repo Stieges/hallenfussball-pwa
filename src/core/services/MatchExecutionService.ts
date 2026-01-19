@@ -637,7 +637,7 @@ export class MatchExecutionService {
             (event as any).playerNumber = updates.playerNumber;
             // Also update payload for legacy compatibility
             // Also update payload for legacy compatibility. Payload is typed as object in MatchEvent/EditableMatchEvent
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+             
             if (event.payload && typeof (event.payload as unknown) === 'object') {
                 event.payload = { ...event.payload, playerNumber: updates.playerNumber };
             }
