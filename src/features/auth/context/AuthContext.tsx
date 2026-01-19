@@ -59,7 +59,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         // PGRST116 is "No Data Found" - expected if trigger hasn't finished yet
-        if (error.code !== 'PGRST116') {
+        // AbortError is expected in React StrictMode or during navigation
+        const isExpectedError =
+          error.code === 'PGRST116' ||
+          error.message?.includes('AbortError') ||
+          error.message?.includes('aborted');
+        if (!isExpectedError) {
           console.warn('Profile fetch error:', error.message);
         }
         return null;
@@ -167,8 +172,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setTimeout(() => void initAuth(retryCount + 1), 500);
             return;
           }
+          // Max retries reached - release UI and assume connected (optimistic)
           // eslint-disable-next-line no-console -- intentional debug logging for transient errors
-          console.debug('Auth init aborted (transient):', error);
+          console.debug('Auth init aborted after max retries - releasing UI:', error);
+          if (mounted) {
+            setConnectionState('connected');
+            setIsLoading(false);
+          }
           return;
         }
         if (import.meta.env.DEV) {

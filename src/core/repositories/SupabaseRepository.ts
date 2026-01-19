@@ -21,6 +21,22 @@ import {
 } from './supabaseMappers';
 
 /**
+ * Checks if an error is an AbortError (expected during navigation, StrictMode, etc.)
+ */
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const e = error as { name?: string; message?: string; code?: string };
+  return (
+    e.name === 'AbortError' ||
+    (e.message?.includes('AbortError') ?? false) ||
+    (e.message?.includes('aborted') ?? false) ||
+    e.code === '20' // DOMException abort code
+  );
+}
+
+/**
  * Gets the Supabase client or throws an error if not configured.
  * This is used by SupabaseRepository to ensure Supabase is available.
  */
@@ -59,6 +75,10 @@ export class SupabaseRepository implements ITournamentRepository {
         // Not found
         return null;
       }
+      // AbortError is expected during navigation, StrictMode unmount, etc.
+      if (isAbortError(tournamentError)) {
+        return null;
+      }
       console.error('Failed to fetch tournament:', tournamentError);
       throw new Error(`Failed to fetch tournament: ${tournamentError.message}`);
     }
@@ -71,6 +91,9 @@ export class SupabaseRepository implements ITournamentRepository {
       .order('sort_order', { ascending: true });
 
     if (teamsError) {
+      if (isAbortError(teamsError)) {
+        return null;
+      }
       console.error('Failed to fetch teams:', teamsError);
       throw new Error(`Failed to fetch teams: ${teamsError.message}`);
     }
@@ -83,6 +106,9 @@ export class SupabaseRepository implements ITournamentRepository {
       .order('match_number', { ascending: true });
 
     if (matchesError) {
+      if (isAbortError(matchesError)) {
+        return null;
+      }
       console.error('Failed to fetch matches:', matchesError);
       throw new Error(`Failed to fetch matches: ${matchesError.message}`);
     }

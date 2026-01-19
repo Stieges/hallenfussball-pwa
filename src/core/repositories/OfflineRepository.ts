@@ -5,6 +5,26 @@ import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Checks if an error is an AbortError (expected during navigation, StrictMode, etc.)
+ */
+function isAbortError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const e = error as { name?: string; message?: string };
+  return (
+    e.name === 'AbortError' ||
+    (e.message?.includes('AbortError') ?? false) ||
+    (e.message?.includes('aborted') ?? false) ||
+    (e.message?.includes('Cloud fetch timeout') ?? false)
+  );
+}
+
+// =============================================================================
 // SYNC TYPES
 // =============================================================================
 
@@ -65,7 +85,10 @@ export class OfflineRepository implements ITournamentRepository {
                 return await this.localRepo.get(id);
             }
         } catch (error) {
-            console.warn('OfflineRepository: Cloud fetch failed, falling back to local.', error);
+            // Only log non-AbortErrors (AbortError is expected during navigation)
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud fetch failed, falling back to local.', error);
+            }
             // 3. Fallback to Cache
             return await this.localRepo.get(id);
         }
@@ -76,7 +99,10 @@ export class OfflineRepository implements ITournamentRepository {
         try {
             return await this.supabaseRepo.getByShareCode(code);
         } catch (error) {
-            console.warn('OfflineRepository: Cloud fetch by share code failed.', error);
+            // Only log non-AbortErrors (AbortError is expected during navigation)
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud fetch by share code failed.', error);
+            }
             return null;
         }
     }
@@ -144,7 +170,10 @@ export class OfflineRepository implements ITournamentRepository {
             // Local-only items are marked so UI can show sync indicator if needed
             return [...cloudList, ...localOnly];
         } catch (error) {
-            console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
+            // Only log non-AbortErrors (AbortError is expected during navigation)
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
+            }
             // Fallback to all local tournaments
             return await this.localRepo.listForCurrentUser();
         }
