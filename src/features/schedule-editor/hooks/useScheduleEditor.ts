@@ -387,6 +387,7 @@ export function useScheduleEditor(
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (state.isDirty) {
         e.preventDefault();
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = '';
       }
     };

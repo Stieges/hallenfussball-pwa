@@ -60,8 +60,6 @@ interface TournamentCardProps {
   tournament: Tournament;
   onClick?: () => void;
   categoryLabel?: string; // Optional: "Läuft", "Bevorstehend", etc.
-  /** @deprecated Use onSoftDelete instead */
-  onDelete?: () => void;
   /** Soft delete callback (moves to trash) */
   onSoftDelete?: () => void;
   /** Copy/duplicate callback */
@@ -76,7 +74,6 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   tournament,
   onClick,
   categoryLabel,
-  onDelete,
   onSoftDelete,
   onCopy,
   onShare,
@@ -100,7 +97,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   };
 
   const category = getCategory();
-  const deleteHandler = onSoftDelete ?? onDelete;
+  const deleteHandler = onSoftDelete;
   const cardStyle: CSSProperties = {
     cursor: onClick ? 'pointer' : 'default',
     transition: 'all 0.2s ease',
@@ -236,6 +233,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       <article
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty categoryLabel should show 'Entwurf'
         aria-label={`Turnier: ${tournament.title}, ${categoryLabel || 'Entwurf'}${tournament.externalSource ? `, ${tournament.externalSource}` : ''}`}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
@@ -251,9 +249,11 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               {tournament.externalSource}
             </span>
           )}
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show badge if categoryLabel or draft */}
           {(categoryLabel || tournament.status === 'draft') && (
             <span
               style={{ ...badgeStyle, ...badgeColors }}
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty categoryLabel should show 'Entwurf'
               aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
             >
               {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}

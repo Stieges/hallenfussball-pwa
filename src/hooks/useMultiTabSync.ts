@@ -36,7 +36,7 @@ export interface UseMultiTabSyncReturn {
 }
 
 // Generate unique tab ID
-const TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const TAB_ID = `tab-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
 export function useMultiTabSync({
   tournamentId,

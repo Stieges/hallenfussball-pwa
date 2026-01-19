@@ -321,7 +321,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           {/* Field Selector */}
           {showFields && onFieldChange && (
             <select
-              value={displayedField || 1}
+              value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
               style={fieldSelectStyle}
               aria-label="Feld"
@@ -336,6 +336,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
 
           {/* Group */}
           <div style={groupStyle}>
+            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use group fallback */}
             {showGroupLabel && (match.label || (match.group && match.group !== 'all' ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''))}
           </div>
         </div>

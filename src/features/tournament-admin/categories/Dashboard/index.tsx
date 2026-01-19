@@ -524,6 +524,7 @@ export function DashboardCategory({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: cssVars.colors.textSecondary }}>Startzeit</span>
+            {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty time should use fallback */}
             <span>{tournament.startTime || tournament.timeSlot || '-'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>

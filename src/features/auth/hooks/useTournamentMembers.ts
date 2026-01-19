@@ -85,6 +85,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
 
       const membersWithUsers: MemberWithUser[] = memberships.map((membership) => ({
         membership,
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- BC for localStorage users until Supabase migration
         user: getUserById(membership.userId),
       }));
 

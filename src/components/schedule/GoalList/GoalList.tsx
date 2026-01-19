@@ -88,6 +88,7 @@ export const GoalList: React.FC<GoalListProps> = ({
 
   // Count incomplete goals
   const incompleteCount = goals.filter(g =>
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: incomplete is true OR player number is invalid
     g.incomplete || !g.playerNumber || g.playerNumber <= 0
   ).length;
 

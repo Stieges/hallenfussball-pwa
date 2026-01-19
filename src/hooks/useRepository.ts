@@ -5,11 +5,11 @@
  * This guarantees we use the same sync/state-aware instance across the app.
  */
 
-import { useRepositoryContext } from '../core/contexts/RepositoryContext';
+import { useRepositories } from '../core/contexts/RepositoryContext';
 import { ITournamentRepository } from '../core/repositories/ITournamentRepository';
 
 export function useRepository(): ITournamentRepository {
-  return useRepositoryContext();
+  return useRepositories().tournamentRepository;
 }
 
 /**

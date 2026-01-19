@@ -49,6 +49,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                 fontWeight: 600,
               }}
             >
+              {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use default */}
               {field.customName || field.defaultName}
             </div>
           ))}

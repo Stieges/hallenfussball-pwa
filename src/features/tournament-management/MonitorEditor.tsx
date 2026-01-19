@@ -294,13 +294,16 @@ export function MonitorEditor({
       case 'standings':
       case 'schedule-group': {
         const group = groups.find(g => g.id === config.groupId);
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
         return group?.customName || `Gruppe ${config.groupId}` || 'Nicht konfiguriert';
       }
       case 'sponsor': {
         const sponsor = sponsors.find(s => s.id === config.sponsorId);
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
         return sponsor?.name || 'Nicht konfiguriert';
       }
       case 'custom-text':
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty headline should use fallback
         return config.headline || 'Eigener Text';
       default:
         return '';
@@ -872,6 +875,7 @@ function SlideConfigEditor({
             <option value="">Alle Gruppen</option>
             {groups.map(g => (
               <option key={g.id} value={g.id}>
+                {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback */}
                 {g.customName || `Gruppe ${g.id}`}
               </option>
             ))}

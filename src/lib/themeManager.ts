@@ -129,7 +129,9 @@ export function applyCorporateColors(colors: CorporateColors): void {
   const root = document.documentElement.style
 
   // Calculate text colors if not provided
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should calculate from primary
   const textOnPrimary = colors.textOnPrimary || getOptimalTextColor(colors.primary)
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should calculate from secondary
   const textOnSecondary = colors.textOnSecondary || getOptimalTextColor(colors.secondary)
 
   // Apply primary colors

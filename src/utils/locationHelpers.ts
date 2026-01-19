@@ -95,6 +95,7 @@ export function hasExtendedLocationData(tournament: { location?: LocationDetails
 
   if (!location) {return false;}
 
+  /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any field has data */
   return !!(
     location.street ||
     location.postalCode ||
@@ -102,6 +103,7 @@ export function hasExtendedLocationData(tournament: { location?: LocationDetails
     location.country ||
     location.coordinates
   );
+  /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 }
 
 /**

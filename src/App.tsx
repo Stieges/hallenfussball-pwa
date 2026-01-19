@@ -699,7 +699,7 @@ function AppContent() {
 }
 
 // Providers
-import { RepositoryProvider, useRepositoryContext } from './core/contexts/RepositoryContext';
+import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryContext';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
 
 /**
@@ -719,7 +719,7 @@ function SyncManager(): null {
  * - There are pending mutations in the queue
  */
 function PendingChangesWarning(): null {
-  const repository = useRepositoryContext();
+  const { tournamentRepository: repository } = useRepositories();
 
   useEffect(() => {
     // Check if repository has mutationQueue
@@ -737,6 +737,7 @@ function PendingChangesWarning(): null {
         e.preventDefault();
         // Some browsers require returnValue to be set
         const message = 'Ungespeicherte Änderungen vorhanden.';
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = message;
         return message;
       }

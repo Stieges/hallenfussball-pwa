@@ -52,7 +52,7 @@ export const LogoUploadDialog: React.FC<LogoUploadDialogProps> = ({
 
     const validation = validateLogoFile(file);
     if (!validation.valid) {
-      setError(validation.error || 'Invalid file');
+      setError(validation.error ?? 'Invalid file');
       return;
     }
 

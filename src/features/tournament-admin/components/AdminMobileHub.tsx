@@ -260,12 +260,14 @@ export function AdminMobileHub({
       categories: ADMIN_CATEGORIES.filter(
         (cat) =>
           cat.label.toLowerCase().includes(query) ||
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR chain for filter conditions
           cat.shortLabel?.toLowerCase().includes(query) ||
           cat.description?.toLowerCase().includes(query)
       ),
       dangerItems: DANGER_ZONE_ITEMS.filter(
         (item) =>
           item.label.toLowerCase().includes(query) ||
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR chain for filter conditions
           item.shortLabel?.toLowerCase().includes(query) ||
           item.description?.toLowerCase().includes(query)
       ),

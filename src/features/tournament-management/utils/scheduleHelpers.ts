@@ -58,7 +58,8 @@ export function isMatchFinished(
  */
 export function getTeamName(teamId: string, teams: Team[]): string {
   const team = teams.find(t => t.id === teamId);
-  return team?.name || teamId; // || is intentional: empty name should also fallback
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should also fallback
+  return team?.name || teamId;
 }
 
 /**

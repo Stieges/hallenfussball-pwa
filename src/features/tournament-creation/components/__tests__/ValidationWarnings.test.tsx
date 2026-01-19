@@ -5,9 +5,9 @@ import { Tournament } from '../../../../types/tournament';
 function validateConfiguration(formData: Partial<Tournament>) {
   const issues: Array<{ type: 'error' | 'warning' | 'info'; message: string; suggestion?: string }> = [];
 
-  const teams = formData.numberOfTeams || 4;
-  const fields = formData.numberOfFields || 1;
-  const groups = formData.numberOfGroups || 2;
+  const teams = formData.numberOfTeams ?? 4;
+  const fields = formData.numberOfFields ?? 1;
+  const groups = formData.numberOfGroups ?? 2;
   const groupSystem = formData.groupSystem ?? 'roundRobin';
   const gameDuration = formData.groupPhaseGameDuration ?? 10;
   const breakDuration = formData.groupPhaseBreakDuration ?? 2;
@@ -72,7 +72,7 @@ function validateConfiguration(formData: Partial<Tournament>) {
 
   // DFB mismatch
   if (formData.useDFBKeys && formData.dfbKeyPattern) {
-    const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] || '0');
+    const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] ?? '0');
     if (patternTeams > 0 && patternTeams !== teams) {
       issues.push({
         type: 'warning',

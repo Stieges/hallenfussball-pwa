@@ -47,7 +47,7 @@ export function MatchOverridePanel({
   isFinalMatch = false,
   expanded = false,
   onToggleExpanded,
-}: MatchOverridePanelProps): JSX.Element {
+}: MatchOverridePanelProps): React.ReactNode {
   const [isOpen, setIsOpen] = useState(expanded);
 
   // Get effective value (override or default)
@@ -254,7 +254,7 @@ function OverrideRow({
   isOverridden,
   onReset,
   children,
-}: OverrideRowProps): JSX.Element {
+}: OverrideRowProps): React.ReactNode {
   return (
     <div style={styles.row}>
       <div style={styles.rowContent}>
@@ -293,7 +293,7 @@ interface QuickToggleProps {
   labelOff: string;
 }
 
-function QuickToggle({ checked, onChange, labelOn, labelOff }: QuickToggleProps): JSX.Element {
+function QuickToggle({ checked, onChange, labelOn, labelOff }: QuickToggleProps): React.ReactNode {
   return (
     <button
       type="button"

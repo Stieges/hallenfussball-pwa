@@ -165,6 +165,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     return {
       id: sm.id,
       number: sm.matchNumber,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use phase-based default
       phaseLabel: sm.label || (sm.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
       scheduledKickoff: sm.time,
       fieldId: `field-${sm.field}`,

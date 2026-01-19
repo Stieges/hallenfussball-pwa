@@ -95,6 +95,7 @@ function getEventIcon(type: MatchEvent['type']): string {
 }
 
 function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team): string {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
   const teamName = event.teamName || (event.teamId === homeTeam.id ? homeTeam.name : awayTeam.name);
   const playerInfo = event.playerNumber ? ` #${event.playerNumber}` : '';
 

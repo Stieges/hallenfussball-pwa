@@ -93,7 +93,7 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
 
   // 6. DFB mode but team count doesn't match pattern
   if (formData.useDFBKeys && formData.dfbKeyPattern) {
-    const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] || '0');
+    const patternTeams = parseInt(formData.dfbKeyPattern.match(/(\d+)M/)?.[1] ?? '0');
     if (patternTeams > 0 && patternTeams !== teams) {
       issues.push({
         type: 'info',

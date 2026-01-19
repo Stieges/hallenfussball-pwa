@@ -337,7 +337,7 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
     matches: tournament.matches,
     teams: tournament.teams,
     matchDurationMinutes: tournament.groupPhaseGameDuration,
-    minBreakMinutes: tournament.groupPhaseBreakDuration || 2,
+    minBreakMinutes: tournament.groupPhaseBreakDuration ?? 2,
     checkRefereeConflicts: tournament.refereeConfig?.mode !== 'none',
     checkFieldConflicts: true,
     enabled: isEditing,
@@ -445,7 +445,9 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
         return `Spiel ${matchId}`;
       }
       const teams = tournament.teams;
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
       const homeTeam = teams.find(t => t.id === match.teamA)?.name || match.teamA;
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
       const awayTeam = teams.find(t => t.id === match.teamB)?.name || match.teamB;
       return `Spiel ${match.round}: ${homeTeam} gegen ${awayTeam}`;
     };

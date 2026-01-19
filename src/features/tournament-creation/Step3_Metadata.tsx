@@ -35,6 +35,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
 
       <Combobox
         label="Altersklasse"
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty ageClass should use default
         value={formData.ageClass || DEFAULT_VALUES.ageClass}
         onChange={(v) => onUpdate('ageClass', v)}
         options={getAgeClassOptions(formData.sport ?? 'football')}

@@ -290,6 +290,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
           <div style={goalsListStyle}>
             {sortedGoals.map((goal) => {
               const isHome = goal.teamId === homeTeam.id;
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
               const teamName = goal.teamName || (isHome ? homeTeam.name : awayTeam.name);
               const hasNumber = goal.playerNumber !== undefined && goal.playerNumber > 0;
 

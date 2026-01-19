@@ -392,6 +392,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
       </div>
 
       {/* Additional scores for overtime/penalty */}
+      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show section if either score exists */}
       {(overtimeScore || penaltyScore) && (
         <div style={{ display: 'flex', gap: cssVars.spacing.md, flexWrap: 'wrap', justifyContent: 'center' }}>
           {overtimeScore && (

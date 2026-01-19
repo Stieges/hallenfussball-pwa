@@ -137,6 +137,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       feedback: 'Feedback – Spielplan App',
     };
 
+    /* eslint-disable @typescript-eslint/no-deprecated -- navigator.platform still useful for support emails */
     const body = `
 ───────────────────────────────
 App-Version: ${APP_VERSION}

@@ -91,6 +91,7 @@ runIntegration('Integration: Cloud Sync Verification', () => {
         const { data: { user }, error: userError } = await testSupabase.auth.getUser();
         if (userError || !user) {
             console.error("Authentication failed. Cannot verify cloud sync.");
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty message should use fallback
             throw new Error(`Pulse check: No authenticated user. Error: ${userError?.message || 'No session'}`);
         }
 

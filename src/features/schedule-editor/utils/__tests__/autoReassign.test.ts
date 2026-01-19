@@ -168,7 +168,7 @@ describe('autoReassignReferees', () => {
     const assignmentCounts = new Map<number, number>();
     for (const change of result.changes) {
       const refId = change.newValue as number;
-      assignmentCounts.set(refId, (assignmentCounts.get(refId) || 0) + 1);
+      assignmentCounts.set(refId, (assignmentCounts.get(refId) ?? 0) + 1);
     }
 
     // Each referee should have ~2 matches

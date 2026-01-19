@@ -396,6 +396,7 @@ export function VisibilityCategory({
       textArea.value = publicUrl;
       document.body.appendChild(textArea);
       textArea.select();
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
       document.execCommand('copy');
       document.body.removeChild(textArea);
       setCopied(true);
@@ -587,6 +588,7 @@ export function VisibilityCategory({
                         textArea.value = internalUrl;
                         document.body.appendChild(textArea);
                         textArea.select();
+                        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
                         document.execCommand('copy');
                         document.body.removeChild(textArea);
                         setCopied(true);

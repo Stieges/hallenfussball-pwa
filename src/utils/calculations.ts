@@ -459,7 +459,8 @@ export interface Scorer {
 export const calculateScorers = (tournament: Tournament): Scorer[] => {
   const scorerMap = new Map<string, Scorer>();
 
-  const getKey = (teamId: string, playerNum?: number) => `${teamId}-${playerNum || 'unknown'}`;
+  const getKey = (teamId: string, playerNum?: number) => `${teamId}-${playerNum ?? 'unknown'}`;
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty team name should use fallback
   const getTeamName = (id: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
 
   tournament.matches.forEach(match => {

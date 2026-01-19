@@ -139,6 +139,7 @@ export const InlineMatchEditor: React.FC<InlineMatchEditorProps> = ({
     if (refereeConfig.mode === 'organizer' && refereeConfig.numberOfReferees) {
       // Organizer-provided referees
       for (let i = 1; i <= refereeConfig.numberOfReferees; i++) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
         const name = refereeConfig.refereeNames?.[i] || `SR ${i}`;
         let hasConflict = false;
         let conflictMessage: string | undefined;

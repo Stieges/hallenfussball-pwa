@@ -434,6 +434,7 @@ const resolveBestSecondFromStandings = (
 
   // For now, return the first second place team
   // TODO: Implement proper comparison based on points, goal difference, etc.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Optional chaining returns undefined, need null fallback
   return secondPlaceTeams[0]?.teamId || null;
 };
 

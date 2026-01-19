@@ -153,6 +153,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick && !disabled ? 0 : undefined}
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty elapsedFormatted should show 'Live'
         aria-label={`Spielstand ${homeScore}:${awayScore}, ${elapsedFormatted || 'Live'}`}
         data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
         data-match-status="running"

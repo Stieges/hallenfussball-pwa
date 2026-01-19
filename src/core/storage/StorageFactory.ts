@@ -61,7 +61,7 @@ export async function isIndexedDBAvailable(): Promise<boolean> {
       const dbName = 'idb-check';
       const request = indexedDB.open(dbName);
       request.onerror = () => {
-        reject(new Error(request.error?.message || 'Unknown IDB error'));
+        reject(new Error(request.error?.message ?? 'Unknown IDB error'));
       };
       request.onsuccess = () => {
         const db = request.result;

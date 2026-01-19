@@ -13,7 +13,7 @@ import { Icons } from '../../../../components/ui/Icons';
 interface StatusConfig {
   id: MatchStatus;
   label: string;
-  icon: JSX.Element;
+  icon: React.ReactNode;
   color: string;
 }
 

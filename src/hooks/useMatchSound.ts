@@ -107,9 +107,7 @@ export function useMatchSound(
         }
 
         // Create or update audio element
-        if (!audioRef.current) {
-          audioRef.current = new Audio();
-        }
+        audioRef.current ??= new Audio();
 
         audioRef.current.src = soundUrl;
         audioRef.current.volume = volume / 100;

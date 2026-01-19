@@ -28,8 +28,6 @@ interface ActionZoneProps {
   awayTeamName: string;
   disabled?: boolean;
   showMinusButtons?: boolean;
-  /** @deprecated Use breakpoint instead */
-  isMobile?: boolean;
   breakpoint?: Breakpoint;
 }
 
@@ -45,11 +43,9 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
   awayTeamName,
   disabled = false,
   showMinusButtons = true,
-  isMobile: isMobileProp,
   breakpoint = 'desktop',
 }) => {
-  // Backwards compatibility: use isMobile prop if breakpoint not provided
-  const isMobile = isMobileProp ?? breakpoint === 'mobile';
+  const isMobile = breakpoint === 'mobile';
 
   const containerStyle: CSSProperties = {
     display: 'flex',

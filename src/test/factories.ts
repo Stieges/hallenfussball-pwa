@@ -43,7 +43,7 @@ export function createMockTournament(overrides?: Partial<Tournament>): Tournamen
  * Test Factory für Team-Objekte
  */
 export function createMockTeam(overrides?: Partial<Team>): Team {
-  const id = overrides?.id ?? `team-${Math.random().toString(36).substr(2, 9)}`
+  const id = overrides?.id ?? `team-${Math.random().toString(36).substring(2, 11)}`
   return {
     id,
     name: overrides?.name ?? `Team ${id.slice(-4)}`,
@@ -71,7 +71,7 @@ export function createMockTeams(count: number, groupCount = 2): Team[] {
  */
 export function createMockMatch(overrides?: Partial<Match>): Match {
   return {
-    id: `match-${Math.random().toString(36).substr(2, 9)}`,
+    id: `match-${Math.random().toString(36).substring(2, 11)}`,
     teamA: 'team-1',
     teamB: 'team-2',
     scoreA: undefined,
@@ -123,6 +123,7 @@ export function createMockPlacementLogic(): PlacementCriterion[] {
 /**
  * Test Factory für Finals (Legacy)
  */
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- Factory for legacy Finals type in tests
 export function createMockFinals(overrides?: Partial<Finals>): Finals {
   return {
     final: false,

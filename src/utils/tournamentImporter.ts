@@ -123,7 +123,9 @@ function parseJSONTournament(content: string): ImportValidationResult {
   let matches: Match[] = [];
   if (json.matches && Array.isArray(json.matches)) {
     matches = (json.matches as Array<Record<string, unknown>>).map((m, index) => {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
       const teamAId = teamIdMap.get(String(m.teamA)) || String(m.teamA);
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty mapped ID should use original
       const teamBId = teamIdMap.get(String(m.teamB)) || String(m.teamB);
 
       // Check if team IDs are valid
@@ -303,6 +305,7 @@ function parseJSONTournament(content: string): ImportValidationResult {
     // Step 3: Metadata
     title: String(json.title),
     ageClass: String(json.ageClass ?? 'Herren'),
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty date should use current date
     date: String(json.date || new Date().toISOString().split('T')[0]),
     timeSlot: String(json.timeSlot ?? '09:00'),
     startDate: json.startDate ? String(json.startDate) : json.date ? String(json.date) : new Date().toISOString().split('T')[0],
@@ -493,6 +496,7 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
   // Check for back-to-back matches
   for (const [teamId, matchIndices] of teamMatches) {
     const team = teams.find(t => t.id === teamId);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use teamId
     const teamName = team?.name || teamId;
 
     for (let i = 1; i < matchIndices.length; i++) {
@@ -512,6 +516,7 @@ export function checkFairnessWarnings(matches: Match[], teams: Team[]): ImportVa
       const team = teams.find(t => t.id === match.teamA);
       warnings.push({
         code: 'SELF_MATCH',
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use teamId
         message: `Team "${team?.name || match.teamA}" spielt gegen sich selbst`,
         severity: 'warning',
       });

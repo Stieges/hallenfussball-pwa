@@ -7,7 +7,7 @@
  * @see docs/concepts/MATCH-COCKPIT-PRO-KONZEPT.md Section 3.3
  */
 
-import { type CSSProperties, useCallback, useState } from 'react';
+import React, { type CSSProperties, useCallback, useState } from 'react';
 import { cssVars } from '../../design-tokens';
 
 export interface AudioActivationBannerProps {
@@ -20,7 +20,7 @@ export interface AudioActivationBannerProps {
 export function AudioActivationBanner({
   show,
   onActivate,
-}: AudioActivationBannerProps): JSX.Element | null {
+}: AudioActivationBannerProps): React.ReactNode {
   const [isActivating, setIsActivating] = useState(false);
 
   const handleActivate = useCallback(() => {

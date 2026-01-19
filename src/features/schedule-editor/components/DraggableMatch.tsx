@@ -44,6 +44,7 @@ interface DraggableMatchProps {
 
 function getTeamName(teamId: string, teams: Team[]): string {
   const team = teams.find(t => t.id === teamId);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID fallback
   return team?.name || teamId;
 }
 

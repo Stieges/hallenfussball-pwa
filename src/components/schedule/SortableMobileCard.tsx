@@ -209,7 +209,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>Feld</label>
             <select
-              value={displayedField || 1}
+              value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
               style={{
                 ...mobileSelectStyle,

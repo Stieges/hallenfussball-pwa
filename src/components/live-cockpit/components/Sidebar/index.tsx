@@ -18,8 +18,6 @@ export interface SidebarProps {
   awayTeamName: string;
   homeTeamId: string;
   awayTeamId: string;
-  /** @deprecated Use onEventEdit instead */
-  onEventClick?: (eventId: string) => void;
   /** BUG-010: Callback when edit button is clicked on any event */
   onEventEdit?: (event: RuntimeMatchEvent) => void;
 }
@@ -45,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   awayTeamName,
   homeTeamId,
   awayTeamId,
-  onEventClick,
   onEventEdit,
 }) => {
   const containerStyle: CSSProperties = {
@@ -106,18 +103,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     padding: `${cssVars.spacing.sm} 0`,
     borderBottom: `1px solid ${cssVars.colors.borderSolid}`,
     fontSize: cssVars.fontSizes.sm,
-  };
-
-  const logEntryClickableStyle: CSSProperties = {
-    ...logEntryStyle,
-    cursor: 'pointer',
-    backgroundColor: cssVars.colors.warningHighlight, // subtle warning highlight
-    margin: `0 -${cssVars.spacing.sm}`,
-    padding: cssVars.spacing.sm,
-    borderRadius: cssVars.borderRadius.sm,
-    borderBottom: 'none',
-    marginBottom: cssVars.spacing.xs,
-    transition: 'background-color 0.15s ease',
   };
 
   const logTimeStyle: CSSProperties = {
@@ -266,16 +251,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const isIncomplete = event.incomplete === true;
             // BUG-010: All events are now editable if onEventEdit is provided
             const canEdit = !!onEventEdit;
-            // Legacy: still support onEventClick for incomplete events
-            const isLegacyClickable = isIncomplete && onEventClick && !onEventEdit;
             const isLastItem = index === recentEvents.length - 1;
 
-            const entryStyle = isLegacyClickable
-              ? logEntryClickableStyle
-              : {
-                  ...logEntryStyle,
-                  borderBottom: isLastItem ? 'none' : logEntryStyle.borderBottom,
-                };
+            const entryStyle = {
+              ...logEntryStyle,
+              borderBottom: isLastItem ? 'none' : logEntryStyle.borderBottom,
+            };
 
             const handleEditClick = (e: React.MouseEvent) => {
               e.stopPropagation();
@@ -288,19 +269,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={event.id}
                 style={entryStyle}
-                onClick={isLegacyClickable ? () => onEventClick(event.id) : undefined}
-                role={isLegacyClickable ? 'button' : undefined}
-                tabIndex={isLegacyClickable ? 0 : undefined}
-                onKeyDown={
-                  isLegacyClickable
-                    ? (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onEventClick(event.id);
-                        }
-                      }
-                    : undefined
-                }
               >
                 <span>
                   {getEventIcon(event.type)} {getEventDescription(event)}

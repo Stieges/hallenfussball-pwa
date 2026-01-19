@@ -97,6 +97,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
     onUpdate('sportId', newSportId);
 
     // Update legacy sport field for backwards compatibility
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional for BC
     onUpdate('sport', sportIdToLegacySport(newSportId));
 
     // Apply sport-specific defaults

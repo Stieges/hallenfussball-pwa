@@ -28,6 +28,7 @@ export function filterMatches(
   return matches.filter((match) => {
     // Phase filter
     // Robustness: Check phase OR isFinal
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if phase check passes OR isFinal is set
     const isFinalPhase = (match.phase && match.phase !== 'groupStage') || match.isFinal;
 
     if (filters.phase === 'groupStage' && isFinalPhase) {
@@ -42,6 +43,7 @@ export function filterMatches(
       // If match is final (not groupStage) and has no group, it should NOT be filtered out by group filter
       // UNLESS the user is specifically looking for group matches (which they would do via Phase filter)
       // Robustness: Check phase OR isFinal (legacy/raw data compatibility)
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if phase check passes OR isFinal is set
       const isFinalPhase = (match.phase && match.phase !== 'groupStage') || match.isFinal;
 
       if (!isFinalPhase && match.group !== filters.group) {
@@ -72,9 +74,11 @@ export function filterMatches(
       if (searchLower.length >= 2) {
         const teamA = teams.find((t) => t.id === match.teamA);
         const teamB = teams.find((t) => t.id === match.teamB);
+        /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if either team matches */
         const matchesTeam =
           teamA?.name.toLowerCase().includes(searchLower) ||
           teamB?.name.toLowerCase().includes(searchLower);
+        /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
         if (!matchesTeam) {
           return false;
         }

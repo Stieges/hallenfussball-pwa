@@ -36,12 +36,14 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
     return null;
   }
 
+  /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Intentional: checking for truthy values, empty string means "no contact" */
   const hasContact = contactInfo && (
     contactInfo.name ||
     contactInfo.email ||
     contactInfo.phone ||
     contactInfo.website
   );
+  /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
   const containerStyle: CSSProperties = {
     marginTop: '40px',

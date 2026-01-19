@@ -221,6 +221,7 @@ export type PlayoffParallelMode = 'sequentialOnly' | 'parallelAllowed';
 export interface PlayoffMatchConfig {
   id: string;
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Legacy type still in use
   parallelMode: PlayoffParallelMode;
   enabled: boolean;
 }
@@ -378,6 +379,7 @@ export interface Tournament {
   monitorTemplates?: import('./monitor').MonitorTemplate[];
 
   // Legacy fields (will be migrated)
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Legacy type still in Tournament interface
   finals: Finals;
   playoffConfig?: PlayoffConfig;
   minRestSlots?: number; // Minimum rest slots between matches for a team (default: 1)

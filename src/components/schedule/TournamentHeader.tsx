@@ -20,7 +20,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
 }) => {
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const firstMatch = groupPhase?.matches[0];
-  const matchDuration = firstMatch?.duration || 10;
+  const matchDuration = firstMatch?.duration ?? 10;
   const numberOfTeams = schedule.teams.length;
   const numberOfMatches = schedule.allMatches.length;
 

@@ -45,10 +45,12 @@ export function useAutoSave({
 
   // Check if data has changed
   const hasUnsavedChanges = useCallback((): boolean => {
+    /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any field has data */
     const hasData =
       formData.title ||
       formData.location ||
       (formData.teams && formData.teams.length > 0);
+    /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
     if (!hasData) {return false;}
 
@@ -95,6 +97,7 @@ export function useAutoSave({
       if (hasUnsavedChanges()) {
         saveAsDraft();
         event.preventDefault();
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         event.returnValue = '';
       }
     };

@@ -47,6 +47,7 @@ export async function shareUrl(options: ShareOptions): Promise<ShareResult> {
     try {
       await navigator.share({
         title,
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty text should use title as fallback
         text: text || title,
         url,
       });
@@ -118,6 +119,7 @@ function legacyCopyToClipboard(text: string): boolean {
     textArea.focus();
     textArea.select();
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
 
@@ -155,6 +157,7 @@ export function getShareMessage(result: ShareResult): string {
  * @deprecated Use generateLiveUrl with shareCode for public view
  */
 export function generatePublicUrl(tournamentId: string, baseUrl?: string): string {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty baseUrl should use window.location.origin
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   // HashRouter requires /#/ prefix for all routes
   return `${origin}/#/public/${tournamentId}`;
@@ -168,6 +171,7 @@ export function generatePublicUrl(tournamentId: string, baseUrl?: string): strin
  * @returns Full live view URL (e.g., "https://example.com/#/live/ABC123")
  */
 export function generateLiveUrl(shareCode: string, baseUrl?: string): string {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty baseUrl should use window.location.origin
   const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
   // HashRouter requires /#/ prefix for all routes
   return `${origin}/#/live/${shareCode}`;

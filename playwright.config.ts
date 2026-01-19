@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 // In CI with preview mode, Vite uses port 4173; otherwise dev server uses 3000
 const usePreview = !!process.env.CI_E2E_USE_PREVIEW;
+// eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty PORT env var should use default
 const PORT = process.env.PORT || (usePreview ? '4173' : '3000');
 const baseURL = `http://localhost:${PORT}`;
 

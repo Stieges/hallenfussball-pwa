@@ -114,7 +114,7 @@ export const Dialog = ({
   };
 
   // Unique ID for aria-labelledby
-  const titleId = `dialog-title-${Math.random().toString(36).substr(2, 9)}`;
+  const titleId = `dialog-title-${Math.random().toString(36).substring(2, 11)}`;
 
   const dialog = (
     <div style={overlayStyle} className="dialog-overlay" onClick={handleBackdropClick}>

@@ -104,6 +104,7 @@ export const BottomActionBar: React.FC<BottomActionBarProps> = ({
         <button
           style={primaryButtonStyle}
           onClick={primaryAction.onClick}
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: disabled if either is true
           disabled={primaryAction.disabled || primaryAction.loading}
           data-testid={testId ? `${testId}-primary` : undefined}
         >

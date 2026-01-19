@@ -42,6 +42,7 @@ function calculateRefereeWorkloads(
   for (let i = 1; i <= numReferees; i++) {
     workloads.set(i, {
       refereeId: i,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty referee name should use default
       name: refereeConfig.refereeNames?.[i] || `SR ${i}`,
       assignedMatches: 0,
       consecutiveMatches: 0,

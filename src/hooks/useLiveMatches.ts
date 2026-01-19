@@ -258,6 +258,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
           return {
             matchId: match.id,
             teamId: event.payload.teamId ?? '',
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
             teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
             side: isHome ? 'home' : 'away',
             timestamp: Date.now(),
@@ -304,6 +305,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
           return {
             matchId: match.id,
             teamId: event.payload.teamId ?? '',
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
             teamName: event.payload.teamName || (isHome ? match.homeTeam.name : match.awayTeam.name),
             side: isHome ? 'home' : 'away',
             cardType: event.type === 'RED_CARD' ? 'RED' : 'YELLOW',

@@ -36,6 +36,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   };
 
   // Check if any contact info is set
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Intentional: empty strings should be treated as "no contact info"
   const hasContactInfo = contactInfo.name || contactInfo.email || contactInfo.phone || contactInfo.website;
 
   return (

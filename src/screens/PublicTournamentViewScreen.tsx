@@ -107,9 +107,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         let found = await loadFromSupabase();
 
         // Fallback to localStorage (for local development or offline)
-        if (!found) {
-          found = loadFromLocalStorage();
-        }
+        found ??= loadFromLocalStorage();
 
         if (found) {
           processLoadedTournament(found);

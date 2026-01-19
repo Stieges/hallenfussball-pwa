@@ -352,8 +352,9 @@ function mergeTeams(localTeams: Team[], remoteTeams: Team[]): Team[] {
         ...remoteTeam,
         ...localTeam,
         // If either marks as removed, keep removed
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if either is removed
         isRemoved: localTeam.isRemoved || remoteTeam.isRemoved,
-        removedAt: localTeam.removedAt || remoteTeam.removedAt,
+        removedAt: localTeam.removedAt ?? remoteTeam.removedAt,
       });
     } else if (localTeam) {
       merged.push(localTeam);

@@ -711,7 +711,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
           // THEN - Score should be updated (2:0)
           // Verify in localStorage - tournament data should exist
           await page.evaluate(() => {
-            return JSON.parse(localStorage.getItem('tournaments') || '[]') as unknown[];
+            return JSON.parse(localStorage.getItem('tournaments') ?? '[]') as unknown[];
           });
         }
       }
