@@ -9,6 +9,7 @@ import {
   copyToClipboard,
   isShareSupported,
   generateLiveUrl,
+  generateTournamentUrl,
   getShareMessage,
 } from '../../utils/shareUtils';
 
@@ -46,7 +47,7 @@ export const ShareDialog = ({
   const hasShareCode = isPublic && shareCode;
   const canonicalUrl = baseUrl ?? (hasShareCode
     ? generateLiveUrl(shareCode)
-    : `${window.location.origin}/tournament/${tournamentId}`);
+    : generateTournamentUrl(tournamentId));
 
   // Determine effective URL
   const hasDeepLinkOption = !!deepLinkUrl && deepLinkUrl !== canonicalUrl;

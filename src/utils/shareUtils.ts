@@ -176,3 +176,17 @@ export function generateLiveUrl(shareCode: string, baseUrl?: string): string {
   // HashRouter requires /#/ prefix for all routes
   return `${origin}/#/live/${shareCode}`;
 }
+
+/**
+ * Generate tournament URL
+ *
+ * @param tournamentId - Tournament ID
+ * @param baseUrl - Base URL (defaults to current origin)
+ * @returns Full tournament URL (e.g., "https://example.com/#/tournament/abc123")
+ */
+export function generateTournamentUrl(tournamentId: string, baseUrl?: string): string {
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty baseUrl should use window.location.origin
+  const origin = baseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+  // HashRouter requires /#/ prefix for all routes
+  return `${origin}/#/tournament/${tournamentId}`;
+}
