@@ -9,8 +9,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../types/supabase';
 import { safeLocalStorage } from '../core/utils/safeStorage';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// Trim to prevent issues with trailing newlines in env vars (e.g., from copy-paste in Vercel)
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
 
 /**
  * Check if Supabase is configured

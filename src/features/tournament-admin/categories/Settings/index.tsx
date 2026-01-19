@@ -16,6 +16,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { FieldManagement } from '../../../tournament-management/FieldManagement';
 import { useTournaments } from '../../../../hooks';
+import { generateTeamId } from '../../../../utils/idGenerator';
 import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
@@ -211,7 +212,7 @@ export function SettingsCategory({
         teams: duplicateOptions.teams
           ? tournament.teams.map((team) => ({
             ...team,
-            id: `team-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            id: generateTeamId(),
           }))
           : [],
         numberOfTeams: duplicateOptions.teams ? tournament.numberOfTeams : 0,
