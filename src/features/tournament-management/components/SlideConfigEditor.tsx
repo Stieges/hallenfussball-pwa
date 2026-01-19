@@ -111,6 +111,7 @@ export function SlideConfigEditor({
                         <option value="">Alle Gruppen</option>
                         {groups.map(g => (
                             <option key={g.id} value={g.id}>
+                                {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback */}
                                 {g.customName || `Gruppe ${g.id}`}
                             </option>
                         ))}

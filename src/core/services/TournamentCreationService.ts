@@ -13,6 +13,7 @@ export class TournamentCreationService {
      */
     createDraft(data?: Partial<Tournament>, existingId?: string): Tournament {
         const defaultConfig = getSportConfig(data?.sportId ?? DEFAULT_SPORT_ID);
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty id string should use fallback
         const id = data?.id || existingId || generateTournamentId();
 
         // Default values if not provided

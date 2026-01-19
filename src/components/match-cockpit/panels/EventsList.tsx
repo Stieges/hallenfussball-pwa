@@ -146,6 +146,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
   const getEventDescription = (event: MatchEvent) => {
     const { teamName, playerNumber, assists, playersOut, playersIn, penaltyDuration } = event.payload;
     // DEF-004: Robust fallback for missing teamName
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
     const displayName = teamName || 'Unbekanntes Team';
     const playerInfo = playerNumber ? ` #${playerNumber}` : '';
 
@@ -165,7 +166,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
     } else if (event.type === 'RESULT_EDIT') {
       return '✏️ Ergebnis manuell korrigiert';
     } else if (event.type === 'STATUS_CHANGE') {
-      const toStatus = event.payload.toStatus || event.payload.to;
+      const toStatus = event.payload.toStatus ?? event.payload.to;
       switch (toStatus) {
         case 'RUNNING':
           return '▶️ Spiel gestartet';

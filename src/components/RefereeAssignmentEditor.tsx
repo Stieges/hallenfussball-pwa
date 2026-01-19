@@ -91,7 +91,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
 
     if (refereeConfig.mode === 'organizer') {
       for (let i = 1; i <= numberOfReferees; i++) {
-        const name = refereeConfig.refereeNames?.[i] || `SR ${i}`;
+        const name = refereeConfig.refereeNames?.[i] ?? `SR ${i}`;
         const count = refereeWorkload[i] ?? 0;
         options.push({
           value: i.toString(),
@@ -138,7 +138,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
       const conflict = findOverlappingConflict(matches, matchId, draggedReferee);
       if (conflict) {
         const refName = refereeConfig.mode === 'organizer'
-          ? (refereeConfig.refereeNames?.[draggedReferee] || `SR ${draggedReferee}`)
+          ? (refereeConfig.refereeNames?.[draggedReferee] ?? `SR ${draggedReferee}`)
           : `Team ${draggedReferee}`;
 
         const confirmed = window.confirm(
@@ -305,7 +305,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                 }}
               >
                 <div style={{ fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.bold, marginBottom: '4px' }}>
-                  {refereeConfig.refereeNames?.[refNum] || `SR ${refNum}`}
+                  {refereeConfig.refereeNames?.[refNum] ?? `SR ${refNum}`}
                 </div>
                 <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
                   {refereeWorkload[refNum] ?? 0} Spiele
@@ -351,7 +351,7 @@ export const RefereeAssignmentEditor: React.FC<RefereeAssignmentEditorProps> = (
                   const conflict = findOverlappingConflict(matches, match.id, refNum);
                   if (conflict) {
                     const refName = refereeConfig.mode === 'organizer'
-                      ? (refereeConfig.refereeNames?.[refNum] || `SR ${refNum}`)
+                      ? (refereeConfig.refereeNames?.[refNum] ?? `SR ${refNum}`)
                       : `Team ${refNum}`;
 
                     const confirmed = window.confirm(

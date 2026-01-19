@@ -111,6 +111,7 @@ export function detectTeamConflicts(
           type: 'team_double_booking',
           severity: 'error',
           matchIds: [match1.id, match2.id],
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID
           message: `Team "${team?.name || teamId}" hat zwei Spiele gleichzeitig`,
           suggestion: 'Eines der Spiele in einen anderen Zeitslot verschieben',
           context: {
@@ -301,6 +302,7 @@ export function detectBreakViolations(
           type: 'break_violation',
           severity: 'warning',
           matchIds: [match1.id, match2.id],
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use team ID
           message: `Team "${team?.name || teamId}" hat nur ${Math.round(breakMinutes)} Min. Pause (min. ${minBreakMinutes} erforderlich)`,
           suggestion: 'Mehr Zeit zwischen den Spielen einplanen',
           context: {

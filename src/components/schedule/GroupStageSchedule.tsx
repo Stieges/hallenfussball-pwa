@@ -328,6 +328,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     const match = matches.find(m => m.id === matchId);
     if (!match) { return; }
 
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: finished if in Set OR has scores
     const isFinished = finishedMatches?.has(matchId) || (match.scoreA !== undefined && match.scoreB !== undefined);
 
     if (isFinished) {
@@ -519,7 +520,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     if (!refereeConfig) { return []; }
 
     const numberOfReferees = refereeConfig.mode === 'organizer'
-      ? (refereeConfig.numberOfReferees || 2)
+      ? (refereeConfig.numberOfReferees ?? 2)
       : matches.length;
 
     const options = [];
@@ -863,6 +864,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         const events: RuntimeMatchEvent[] = sourceEvents
           ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
             ...e,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty string matchId should use fallback
             matchId: e.matchId || summaryMatchId,
             scoreAfter: e.scoreAfter,
           }))

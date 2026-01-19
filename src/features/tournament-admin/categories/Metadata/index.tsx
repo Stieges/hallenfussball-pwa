@@ -229,6 +229,7 @@ export function MetadataCategory({
       if (isDirty) {
         e.preventDefault();
         const message = 'Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?';
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = message;
         return message;
       }

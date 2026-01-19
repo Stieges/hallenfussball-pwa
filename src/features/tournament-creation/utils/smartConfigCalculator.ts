@@ -145,6 +145,7 @@ export function calculateRecommendation(
   }
 
   // Check if constraints make it impossible
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any constraint is set
   const hasConstraints = constraints.fields || constraints.gameDuration || constraints.breakDuration;
   if (hasConstraints) {
     return {

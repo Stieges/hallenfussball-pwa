@@ -681,6 +681,7 @@ export class MatchExecutionService {
         const newMatch: LiveMatch = {
             id: scheduledMatch.id,
             number: scheduledMatch.matchNumber,
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use phase-based fallback
             phaseLabel: scheduledMatch.label || (scheduledMatch.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
             fieldId: `field-${scheduledMatch.field}`,
             scheduledKickoff: scheduledMatch.startTime.toISOString(),

@@ -49,12 +49,12 @@ export function Skeleton({
   lines = 1,
   'aria-label': ariaLabel = 'Loading...',
 }: SkeletonProps): React.ReactElement {
-  const variantClass = styles[variant] || styles.text;
+  const variantClass = styles[variant] ?? styles.text;
   const animationClass = animation !== 'none' ? styles[animation] : '';
 
   const combinedStyle: React.CSSProperties = {
-    width: width || (variant === 'text' ? '100%' : undefined),
-    height: height || (variant === 'text' ? '1em' : undefined),
+    width: width ?? (variant === 'text' ? '100%' : undefined),
+    height: height ?? (variant === 'text' ? '1em' : undefined),
     ...style,
   };
 
@@ -74,7 +74,7 @@ export function Skeleton({
             style={{
               ...combinedStyle,
               // Last line is shorter for realism
-              width: index === lines - 1 ? '70%' : width || '100%',
+              width: index === lines - 1 ? '70%' : width ?? '100%',
             }}
           />
         ))}

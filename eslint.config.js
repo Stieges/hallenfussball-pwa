@@ -83,7 +83,7 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
@@ -104,7 +104,7 @@ export default tseslint.config(
       // New rules in typescript-eslint v8 - temporarily disabled for migration
       '@typescript-eslint/prefer-regexp-exec': 'off',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
-      '@typescript-eslint/no-deprecated': 'off', // Re-enable after migration complete
+      '@typescript-eslint/no-deprecated': 'warn', // Re-enabled: warns about deprecated APIs
       '@typescript-eslint/unbound-method': 'off',
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/no-unnecessary-template-expression': 'off',

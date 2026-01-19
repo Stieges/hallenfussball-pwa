@@ -109,9 +109,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
     const updatedTournament = { ...currentTournament };
 
     // Update field assignments
-    if (!updatedTournament.fieldAssignments) {
-      updatedTournament.fieldAssignments = {};
-    }
+    updatedTournament.fieldAssignments ??= {};
 
     updatedTournament.fieldAssignments[matchId] = fieldNumber;
 

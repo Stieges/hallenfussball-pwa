@@ -122,12 +122,12 @@ export function generateFullSchedule(
         : (calculatedTime?.endTime ?? new Date(startTime.getTime() + gameDuration * 60000));
 
       // BUG-FIX: Derive phase from isFinal for backward compatibility with old data
-      const phase = m.phase || extMatch.phase || (m.isFinal ? 'final' : 'groupStage');
+      const phase = m.phase ?? extMatch.phase ?? (m.isFinal ? 'final' : 'groupStage');
 
       return {
         ...m,
         id: m.id,
-        matchNumber: m.matchNumber || index + 1,
+        matchNumber: m.matchNumber ?? index + 1,
         startTime: matchStart,
         endTime: matchEnd,
         // Properties required by ScheduledMatch interface
@@ -136,8 +136,8 @@ export function generateFullSchedule(
         originalTeamB: m.teamB,
         duration: gameDuration,
 
-        homeTeam: teamMap.get(m.teamA) || m.teamA,
-        awayTeam: teamMap.get(m.teamB) || m.teamB,
+        homeTeam: teamMap.get(m.teamA) ?? m.teamA,
+        awayTeam: teamMap.get(m.teamB) ?? m.teamB,
         phase: phase as ScheduledMatch['phase'],
         isFinal: !!m.isFinal || !!extMatch.isFinal,
         // Ensure scores are preserved
@@ -148,12 +148,14 @@ export function generateFullSchedule(
 
     // Categorize into group/final for stats
     groupStageMatches = mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage').map(m => m as unknown as Match)
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR logic: match is final if isFinal OR phase is not groupStage
     finalMatches = mappedMatches.filter(m => m.isFinal || m.phase !== 'groupStage').map(m => m as unknown as Match)
 
     // HYBRID MODE: If we have group matches but NO final matches (or they look incomplete), check if we SHOULD have finals
     // This happens if matches were persisted before finals were configured or generated
     const shouldGeneratePlayoffs =
       tournament.groupSystem === 'groupsAndFinals' &&
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if either finalsConfig exists OR finals has any truthy values
       ((tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
         Object.values(tournament.finals).some(Boolean))
 
@@ -285,6 +287,7 @@ function generateMatches(
   // 2. Generiere Playoffs
   const shouldGeneratePlayoffs =
     tournament.groupSystem === 'groupsAndFinals' &&
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: generate if finalsConfig exists OR legacy finals are set
     ((tournament.finalsConfig && tournament.finalsConfig.preset !== 'none') ||
       Object.values(tournament.finals).some(Boolean))
 
@@ -339,7 +342,8 @@ function generateFinalMatches(
   // Generate playoff definitions
   const playoffDefinitions = tournament.finalsConfig
     ? generatePlayoffDefinitions(numberOfGroups, tournament.finalsConfig, groupSizes)
-    : generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals)
+    : // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for old tournaments without finalsConfig
+      generatePlayoffDefinitionsLegacy(numberOfGroups, tournament.finals)
 
   // Calculate start slot
   const lastGroupSlot =

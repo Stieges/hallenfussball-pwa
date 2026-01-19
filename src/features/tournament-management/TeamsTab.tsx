@@ -432,6 +432,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             const analysis = teamAnalyses[team.id];
             const isEditing = editingTeamId === team.id;
             const isExpanded = expandedTeams.has(team.id);
+            // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should use fallback
             const primaryColor = team.colors?.primary || '#CCCCCC';
 
             return (
@@ -646,6 +647,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
+                  {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty warning should use default question */}
                   {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
                     `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
                 </p>

@@ -256,10 +256,7 @@ export function useScheduleTabActions({
       // Direct update (legacy behavior)
       const updatedTournament = { ...tournament };
 
-      if (!updatedTournament.fieldAssignments) {
-        updatedTournament.fieldAssignments = {};
-      }
-
+      updatedTournament.fieldAssignments ??= {};
       updatedTournament.fieldAssignments[matchId] = fieldNumber;
 
       onTournamentUpdate(updatedTournament, true);

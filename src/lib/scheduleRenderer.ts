@@ -62,6 +62,7 @@ export function formatScheduleForPrint(schedule: GeneratedSchedule): {
           <td>${match.time}</td>
           <td>${match.field}</td>
           <td>${match.homeTeam} - ${match.awayTeam}</td>
+          ${/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty group should show dash */ ''}
           ${phase.name === 'groupStage' ? `<td>${match.group || '-'}</td>` : ''}
           <td class="result">__ : __</td>
         </tr>

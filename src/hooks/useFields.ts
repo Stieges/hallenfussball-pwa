@@ -105,6 +105,7 @@ export function useFields(
     (id: string): string => {
       const field = fields.find(f => f.id === id);
       if (!field) {return `Feld ${id}`;}
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use default
       return field.customName || field.defaultName;
     },
     [fields]

@@ -28,6 +28,7 @@ export function getGroupDisplayName(
   source?: GroupLookupSource
 ): string {
   const resolvedGroup = resolveGroup(group, source);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use default
   return resolvedGroup.customName || `Gruppe ${resolvedGroup.id}`;
 }
 
@@ -83,6 +84,7 @@ export function getFieldDisplayName(
   source?: FieldLookupSource
 ): string {
   const resolvedField = resolveField(field, source);
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use default
   return resolvedField.customName || resolvedField.defaultName;
 }
 

@@ -261,11 +261,12 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         {/* Header: Field, Group, Status */}
         <div style={headerStyle}>
           <div style={fieldInfoStyle}>
-            ⚽ Feld {match.field || 1} - Spiel {match.number}
+            ⚽ Feld {match.field ?? 1} - Spiel {match.number}
           </div>
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either has value */}
           {(group || match.group) && (
             <div style={groupInfoStyle}>
-              Gruppe {group || match.group}
+              Gruppe {group ?? match.group}
             </div>
           )}
           <div style={statusBadgeStyle}>

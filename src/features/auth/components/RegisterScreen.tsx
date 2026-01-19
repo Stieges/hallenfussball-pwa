@@ -122,6 +122,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     if (registrationCode.trim()) {
       const codeValidation = await validateRegistrationCode(registrationCode.trim());
       if (!codeValidation.valid) {
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty error string should also trigger fallback
         newErrors.registrationCode = codeValidation.error || AUTH_ERRORS.REGISTRATION_CODE_INVALID;
       }
     } else {

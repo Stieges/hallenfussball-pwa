@@ -48,7 +48,7 @@ function toKebabCase(str: string): string {
 function getThemeNameFromSelector(selector: string): string {
   if (selector === ':root') {return 'dark';}
   const match = selector.match(/\[data-theme="([^"]+)"\]/);
-  return match?.[1] || '';
+  return match?.[1] ?? '';
 }
 
 function isOverlayTheme(selector: string): boolean {
@@ -85,7 +85,7 @@ function discoverSemanticFiles(): SemanticFile[] {
     .map((e) => {
       const match = e.match(/^semantic(-([a-z-]+))?\.ts$/);
       return {
-        name: match?.[2] || 'dark',
+        name: match?.[2] ?? 'dark',
         path: path.join(colorsDir, e),
       };
     })

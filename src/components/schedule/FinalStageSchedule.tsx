@@ -226,7 +226,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   const getRefereeOptions = () => {
     if (!refereeConfig) { return []; }
     const numberOfReferees = refereeConfig.mode === 'organizer'
-      ? (refereeConfig.numberOfReferees || 2)
+      ? (refereeConfig.numberOfReferees ?? 2)
       : matches.length;
     const options = [];
     for (let i = 1; i <= numberOfReferees; i++) {
@@ -785,6 +785,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               )}
 
               {/* Edit mode: Referee & Field selectors */}
+              {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either is enabled */}
               {editingSchedule && (showReferees || showFields) && (
                 <div style={{
                   display: 'flex',

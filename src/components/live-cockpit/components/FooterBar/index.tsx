@@ -29,8 +29,6 @@ interface FooterBarProps {
   onReopenLastMatch?: () => void;
   hasNextMatch?: boolean;
   hasLastFinished?: boolean;
-  /** @deprecated Use breakpoint instead */
-  isMobile?: boolean;
   breakpoint?: Breakpoint;
 }
 
@@ -47,14 +45,12 @@ export const FooterBar: React.FC<FooterBarProps> = ({
   onReopenLastMatch,
   hasNextMatch = false,
   hasLastFinished = false,
-  isMobile: isMobileProp,
   breakpoint = 'desktop',
 }) => {
   // State for showing slide-to-confirm
   const [showSlideConfirm, setShowSlideConfirm] = useState(false);
 
-  // Backwards compatibility: use isMobile prop if breakpoint not provided
-  const isMobile = isMobileProp ?? breakpoint === 'mobile';
+  const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
 
   const isNotStarted = status === 'NOT_STARTED';

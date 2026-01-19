@@ -11,11 +11,11 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { useRepositoryContext } from '../core/contexts/RepositoryContext';
+import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useOnlineStatus } from './useOnlineStatus';
 
 export function useSyncOnReconnect(): void {
-    const repository = useRepositoryContext();
+    const { tournamentRepository: repository } = useRepositories();
     const { isOnline, wasOffline } = useOnlineStatus();
     const hasSyncedOnMount = useRef(false);
 

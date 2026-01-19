@@ -60,7 +60,6 @@ export const TableTab: React.FC<TableTabProps> = ({
           standings={currentStandings}
           teams={schedule.teams}
           tournament={tournament}
-          isMobile={isMobile}
         />
       </Card>
     </div>

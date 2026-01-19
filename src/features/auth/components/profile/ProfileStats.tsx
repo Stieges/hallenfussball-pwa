@@ -27,7 +27,7 @@ const StatItem: React.FC<{
   color?: string;
 }> = ({ label, value, color }) => (
   <div style={styles.statItem}>
-    <div style={{ ...styles.statValue, color: color || cssVars.colors.textPrimary }}>
+    <div style={{ ...styles.statValue, color: color ?? cssVars.colors.textPrimary }}>
       {value}
     </div>
     <div style={styles.statLabel}>{label}</div>

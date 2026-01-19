@@ -185,6 +185,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
       </div>
 
       {/* Meta Info */}
+      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if any meta exists */}
       {(matchNumber || scheduledTime || field) && (
         <div style={metaStyle}>
           {matchNumber && <span>Spiel {matchNumber}</span>}

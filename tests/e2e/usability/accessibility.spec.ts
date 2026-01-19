@@ -52,9 +52,11 @@ test.describe('Accessibility (WCAG AA)', () => {
     });
 
     // Fokus sollte sichtbar sein (outline oder box-shadow)
+    /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any focus indicator exists */
     const hasFocusIndicator =
       (focusedElement?.outline && focusedElement.outline !== 'none') ||
       (focusedElement?.boxShadow && focusedElement.boxShadow !== 'none');
+    /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
     expect(hasFocusIndicator).toBe(true);
   });

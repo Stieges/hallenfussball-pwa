@@ -1,6 +1,7 @@
 /**
  * Sport Configuration Tests
  */
+/* eslint-disable @typescript-eslint/no-deprecated -- Tests for deprecated BC functions */
 
 import { describe, it, expect } from 'vitest';
 import {

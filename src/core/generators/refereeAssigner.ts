@@ -86,6 +86,7 @@ function assignOrganizerReferees<T extends MatchLike>(matches: T[], config: Refe
   const matchesWithMeta: MatchWithMetadata[] = matchesToAssign.map((match, index) => ({
     ...match,
     matchIndex: index,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Slot 0 is valid first slot, use index as fallback only for undefined
     timeSlot: match.slot || index, // Use slot for time-based ordering
   }));
 
@@ -178,8 +179,10 @@ function assignTeamReferees<T extends MatchLike>(matches: T[], teams: Team[]): T
   // Helper to get team name from match (handles both Match.teamA and ScheduledMatch.homeTeam)
   const getTeamName = (match: MatchLike, position: 'home' | 'away'): string | undefined => {
     if (position === 'home') {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback property
       return match.homeTeam || match.teamA;
     } else {
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback property
       return match.awayTeam || match.teamB;
     }
   };

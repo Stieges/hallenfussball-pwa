@@ -126,6 +126,7 @@ export function useSportConfigFromTournament(
   tournament: Pick<Tournament, 'sport'> & { sportId?: SportId }
 ): UseSportConfigReturn {
   // Use new sportId field if available, otherwise convert legacy sport field
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- intentional for BC with old tournaments
   const sportId = tournament.sportId ?? legacySportToSportId(tournament.sport);
   return useSportConfig(sportId);
 }

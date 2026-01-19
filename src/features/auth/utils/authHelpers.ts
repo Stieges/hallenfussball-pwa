@@ -157,6 +157,7 @@ const getLegacyUsers = (): User[] => {
  * @returns User or null if not found
  */
 export const getUserById = (userId: string): User | null => {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- Intentional use of deprecated helper
   const users = getLegacyUsers();
   return users.find((u) => u.id === userId) ?? null;
 };

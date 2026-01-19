@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-16
+> **Letzte Aktualisierung:** 2026-01-19
 
 ---
 
@@ -599,10 +599,51 @@ PWA-Installation auf `localhost` funktioniert nur in Chrome/Edge. Für vollstän
 
 ---
 
+## 🟡 Backlog: Dependency Updates (Major Upgrades)
+
+> **Hinweis:** Diese PRs wurden von Dependabot erstellt, erfordern aber manuelle Prüfung wegen Breaking Changes.
+
+| PR | Aufgabe | Priorität | Status | Notizen |
+|----|---------|-----------|--------|---------|
+| #60 | React 19 Upgrade evaluieren | Niedrig | ⬜ Offen | Build fehlgeschlagen - Breaking Changes (s.u.) |
+| #59 | eslint-plugin-react-hooks 7.x | Niedrig | ⬜ Offen | Unit Tests fehlgeschlagen - React Compiler Rules (s.u.) |
+
+**Empfehlung:** Nicht automatisch mergen. Breaking Changes zuerst analysieren.
+
+### PR #60: React 18 → 19 Breaking Changes
+
+**TypeScript-Fehler (Build schlägt fehl):**
+
+| Fehler | Betroffene Dateien | Ursache |
+|--------|-------------------|---------|
+| `Cannot find namespace 'JSX'` | 8 Komponenten (SearchFilterBar, AudioActivationBanner, etc.) | React 19 entfernt globalen `JSX` Namespace → `React.JSX` nutzen |
+| `RefObject<T \| null>` nicht kompatibel | ImportDialog, EditableMatchCard | Ref-Typen geändert in React 19 |
+| `useRef()` erwartet 1 Argument | usePrevious.ts | `useRef()` ohne Initial-Wert nicht mehr erlaubt |
+| Callback Ref Rückgabetyp | AdminSidebar | Cleanup-Funktion nicht mehr als Return erlaubt |
+
+**Aufwand:** ~4-8h für Migration (viele Dateien betroffen)
+
+### PR #59: eslint-plugin-react-hooks 5 → 7 Breaking Changes
+
+**ESLint-Fehler (Unit Tests schlagen fehl):**
+
+| Neue Rule | Problem | Betroffene Hooks |
+|-----------|---------|------------------|
+| `setState synchronously within an effect` | React Compiler Rule - verbietet `setState` direkt im useEffect Body | Mehrere Hooks |
+| `Cannot call impure function during render` | `Math.random()` während Render | Dialog.tsx:117 |
+
+**Ursache:** eslint-plugin-react-hooks 7.x enthält Rules vom React Compiler, die strenger sind.
+
+**Aufwand:** ~2-4h für Refactoring (setState in Callbacks verschieben, Math.random() via useMemo cachen)
+
+---
+
 ## Erledigt
 
 | Aufgabe | Erledigt am | Commit |
 |---------|-------------|--------|
+| ESLint 9 Flat Config Migration | 2026-01-19 | PR #58 – `eslint.config.js`, typescript-eslint v8 |
+| jspdf Security Fix (CVE-2025-29529) | 2026-01-19 | PR #53 – Update 3.0.4 → 4.0.0 |
 | ESLint Rule: `no-hardcoded-font-styles` | 2026-01-02 | `8d2aa0e` – Verhindert hardcoded px/font-family, erzwingt cssVars.fontSizes/fontFamilies |
 | Typography + Settings + URL-Filter | 2026-01-02 | `f277bc0` – Inter Font, rem-Scaling, High-Contrast Theme, useURLFilterSync |
 | Dashboard IST-Analyse | 2025-12-30 | [DASHBOARD-IST-ANALYSE.md](analysis/DASHBOARD-IST-ANALYSE.md) |

@@ -361,6 +361,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       {/* Color Section */}
                       <ColorPicker
                         label="Trikotfarbe"
+                        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should use fallback
                         value={team.colors?.primary || '#666666'}
                         onChange={(color) => handleColorChange(team.id, color)}
                         showCustomPicker={false}

@@ -152,10 +152,12 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   // Helper function to check if data has changed
   const hasUnsavedChanges = useCallback((): boolean => {
+    /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any field has data */
     const hasData =
       formData.title ||
       formData.location ||
       (formData.teams && formData.teams.length > 0);
+    /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
     if (!hasData) { return false; }
 
@@ -234,6 +236,7 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
         // Show browser warning (optional)
         event.preventDefault();
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         event.returnValue = '';
       }
     };
@@ -300,10 +303,12 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
 
   const handleBackToDashboard = () => {
     // Check if there are any unsaved changes
+    /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: true if any field has data */
     const hasChanges =
       formData.title ||
       (formData.location?.name && formData.location.name.trim() !== '') ||
       (formData.teams && formData.teams.length > 0);
+    /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
     if (hasChanges && !existingTournament) {
       // Show styled dialog instead of window.confirm

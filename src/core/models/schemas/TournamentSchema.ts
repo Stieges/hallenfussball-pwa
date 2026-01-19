@@ -86,4 +86,6 @@ export const TournamentSchema = z.object({
     cancelledAt: z.string().optional(),
     cancelledReason: z.string().optional(),
     lastVisitedStep: z.number().optional(),
-}).passthrough(); // Allow other fields for now to prevent data loss of unmapped fields
+})
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
+  .passthrough();

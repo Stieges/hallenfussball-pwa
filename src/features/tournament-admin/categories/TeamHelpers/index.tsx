@@ -85,6 +85,7 @@ export function TeamHelpersCategory({
       textArea.value = createdInviteLink;
       document.body.appendChild(textArea);
       textArea.select();
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- Fallback for browsers without Clipboard API
       document.execCommand('copy');
       document.body.removeChild(textArea);
       setCopySuccess(true);

@@ -10,6 +10,7 @@ export { useLocalStorage } from './useLocalStorage'
 export { useFormPersistence } from './useFormPersistence'
 
 // Timer & Animation
+// eslint-disable-next-line @typescript-eslint/no-deprecated -- Exported for backwards compatibility
 export { useMatchTimer, useMatchTimerExtended } from './useMatchTimer'
 export { useDialogTimer } from './useDialogTimer'
 export { useShake } from './useShake'

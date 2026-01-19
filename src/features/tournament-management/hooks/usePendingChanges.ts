@@ -105,9 +105,7 @@ export function usePendingChanges({
 
     // Apply pending SR assignments to both config and matches
     if (Object.keys(pendingChanges.refereeAssignments).length > 0) {
-      if (!updated.refereeConfig) {
-        updated.refereeConfig = { mode: 'teams', manualAssignments: {} };
-      }
+      updated.refereeConfig ??= { mode: 'teams', manualAssignments: {} };
       const manualAssignments = { ...updated.refereeConfig.manualAssignments };
 
       for (const [id, refereeNumber] of Object.entries(pendingChanges.refereeAssignments)) {
@@ -132,9 +130,7 @@ export function usePendingChanges({
 
     // Apply pending field assignments to both config and matches
     if (Object.keys(pendingChanges.fieldAssignments).length > 0) {
-      if (!updated.fieldAssignments) {
-        updated.fieldAssignments = {};
-      }
+      updated.fieldAssignments ??= {};
       for (const [id, fieldNumber] of Object.entries(pendingChanges.fieldAssignments)) {
         updated.fieldAssignments[id] = fieldNumber;
       }

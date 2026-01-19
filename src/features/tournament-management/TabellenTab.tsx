@@ -115,7 +115,6 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
         standings={currentStandings}
         teams={schedule.teams}
         tournament={tournament}
-        isMobile={isMobile}
       />
     );
   };

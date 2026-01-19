@@ -270,6 +270,7 @@ export function useMonitors(
       const duplicatedMonitor: TournamentMonitor = {
         ...sourceMonitor,
         id: generateMonitorId(),
+        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty trimmed name should use fallback
         name: newName?.trim() || `${sourceMonitor.name} (Kopie)`,
         slides: sourceMonitor.slides.map(slide => ({
           ...slide,

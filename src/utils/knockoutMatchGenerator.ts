@@ -63,7 +63,9 @@ const createMatchFromTemplate = (
     id: `match-${matchNumber}`,
     round: 1,
     field: 1,
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty ID should use TBD placeholder
     teamA: homeTeamId || 'TBD',
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty ID should use TBD placeholder
     teamB: awayTeamId || 'TBD',
     isFinal: true,
     label: phase,
@@ -93,6 +95,7 @@ const resolveTeamReference = (
       return null;
 
     case 'manual':
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamId should return null
       return ref.teamId || null;
 
     default:

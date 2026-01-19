@@ -70,7 +70,7 @@ export function PostMatchModal({
   onReopenMatch,
   hasNextMatch,
   nextMatchLabel,
-}: PostMatchModalProps): JSX.Element | null {
+}: PostMatchModalProps): React.ReactNode {
   const [countdown, setCountdown] = useState(autoAdvanceSeconds);
   const [isPaused, setIsPaused] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);

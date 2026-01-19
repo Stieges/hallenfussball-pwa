@@ -451,6 +451,7 @@ export function ActivityLogCategory({
                       {entry.matchLabel ? entry.description : formatDateTime(entry.timestamp)}
                       {entry.details && ` – ${entry.details}`}
                     </div>
+                    {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show section if either value is truthy */}
                     {(entry.oldValue || entry.newValue) && (
                       <div style={styles.entryChange}>
                         {entry.oldValue && (

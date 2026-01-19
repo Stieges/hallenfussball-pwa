@@ -42,7 +42,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
 
   // Get the label for the current value
   const selectedOption = options.find((opt) => String(opt.value) === String(value));
-  const displayValue = selectedOption?.label || '';
+  const displayValue = selectedOption?.label ?? '';
 
   // Filter options based on search term
   const filteredOptions = searchTerm

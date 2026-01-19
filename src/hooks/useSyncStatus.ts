@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
-import { useRepositoryContext } from '../core/contexts/RepositoryContext';
+import { useRepositories } from '../core/contexts/RepositoryContext';
 import { SyncStatus, SyncResult, SyncConflict, OfflineRepository } from '../core/repositories/OfflineRepository';
 import type { MutationQueueStatus } from '../core/services/MutationQueue';
 
@@ -61,7 +61,7 @@ export interface UseSyncStatusReturn extends SyncState {
  * ```
  */
 export function useSyncStatus(): UseSyncStatusReturn {
-    const repository = useRepositoryContext();
+    const { tournamentRepository: repository } = useRepositories();
     const { isOnline } = useOnlineStatus();
 
     const [state, setState] = useState<SyncState>({

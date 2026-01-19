@@ -97,7 +97,7 @@ export const TeamAvatar: React.FC<TeamAvatarProps> = ({
   const logoUrl = hasLogo ? logo.value : null;
 
   const initials = getInitials(team.name);
-  const bgColor = getBackgroundColor(team.name, team.logo?.backgroundColor || team.colors?.primary);
+  const bgColor = getBackgroundColor(team.name, team.logo?.backgroundColor ?? team.colors?.primary);
 
   const containerStyles: CSSProperties = {
     position: 'relative',

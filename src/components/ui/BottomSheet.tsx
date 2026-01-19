@@ -93,7 +93,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   };
 
   // Unique ID for aria-labelledby when title exists
-  const titleId = title ? `bottom-sheet-title-${Math.random().toString(36).substr(2, 9)}` : undefined;
+  const titleId = title ? `bottom-sheet-title-${Math.random().toString(36).substring(2, 11)}` : undefined;
 
   return (
     <>

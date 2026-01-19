@@ -72,7 +72,7 @@ export const DFBKeySystem: React.FC<DFBKeySystemProps> = ({
     onUpdate('useDFBKeys', enabled);
 
     if (enabled) {
-      const teamCount = formData.numberOfTeams || 4;
+      const teamCount = formData.numberOfTeams ?? 4;
       const pattern = getDFBPattern(teamCount);
       if (pattern) {
         onUpdate('dfbKeyPattern', pattern.code);

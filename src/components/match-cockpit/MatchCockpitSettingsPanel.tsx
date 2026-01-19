@@ -88,7 +88,7 @@ export function MatchCockpitSettingsPanel({
   onChange,
   tournamentId,
   onTestSound,
-}: MatchCockpitSettingsPanelProps): JSX.Element {
+}: MatchCockpitSettingsPanelProps): React.ReactNode {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -372,7 +372,7 @@ interface SettingRowProps {
   children: React.ReactNode;
 }
 
-function SettingRow({ label, description, children }: SettingRowProps): JSX.Element {
+function SettingRow({ label, description, children }: SettingRowProps): React.ReactNode {
   return (
     <div style={styles.row}>
       <div style={styles.rowContent}>
@@ -392,7 +392,7 @@ interface ToggleProps {
   label?: string;
 }
 
-function Toggle({ checked, onChange, disabled, label }: ToggleProps): JSX.Element {
+function Toggle({ checked, onChange, disabled, label }: ToggleProps): React.ReactNode {
   return (
     <button
       type="button"

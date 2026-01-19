@@ -559,11 +559,11 @@ export function ExportsCategory({
                     eventTypeLabel = 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
                     eventTypeLabel = 'Zeitstrafe';
-                    details = `${event.payload.penaltyDuration || 120}s`;
+                    details = `${event.payload.penaltyDuration ?? 120}s`;
                   } else if (event.type === 'SUBSTITUTION') {
                     eventTypeLabel = 'Wechsel';
-                    const inPlayers = event.payload.playersIn?.map(p => `#${p}`).join(', ') || '';
-                    const outPlayers = event.payload.playersOut?.map(p => `#${p}`).join(', ') || '';
+                    const inPlayers = event.payload.playersIn?.map(p => `#${p}`).join(', ') ?? '';
+                    const outPlayers = event.payload.playersOut?.map(p => `#${p}`).join(', ') ?? '';
                     details = `Raus: ${outPlayers} -> Rein: ${inPlayers}`;
                     player = '';
                   }
@@ -588,7 +588,7 @@ export function ExportsCategory({
                         eventItem.assists = event.payload.assists;
                       }
                     } else if (event.type === 'TIME_PENALTY') {
-                      eventItem.penaltyDuration = event.payload.penaltyDuration || 120;
+                      eventItem.penaltyDuration = event.payload.penaltyDuration ?? 120;
                     } else if (event.type === 'SUBSTITUTION') {
                       eventItem.playersIn = event.payload.playersIn;
                       eventItem.playersOut = event.payload.playersOut;
@@ -699,6 +699,7 @@ export function ExportsCategory({
               }
 
               const entries: AuditEntry[] = [];
+              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
               const getTeamName = (id?: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
               const getMatchLabel = (m: Match) => `${getTeamName(m.teamA)} vs ${getTeamName(m.teamB)}`;
 
@@ -749,6 +750,7 @@ export function ExportsCategory({
                       type: 'result_changed',
                       matchLabel: label,
                       description: 'Ergebnis korrigiert',
+                      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty reason/note should use fallback
                       details: c.reason || c.note || '',
                       oldValue: `${c.previousScoreA}:${c.previousScoreB}`,
                       newValue: `${c.newScoreA}:${c.newScoreB}`
@@ -757,7 +759,7 @@ export function ExportsCategory({
                 } else if (match.matchStatus === 'finished' && match.scoreA !== undefined) {
                   // Initial result (inferred)
                   entries.push({
-                    timestamp: match.finishedAt || new Date().toISOString(),
+                    timestamp: match.finishedAt ?? new Date().toISOString(),
                     type: 'result_entered',
                     matchLabel: label,
                     description: 'Ergebnis eingetragen',

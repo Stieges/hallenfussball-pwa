@@ -17,8 +17,6 @@ interface GroupTablesProps {
   tournament?: Tournament;
   /** Set of team IDs currently involved in a running match */
   activeMatchTeamIds?: Set<string>;
-  /** @deprecated No longer needed - responsive layout handled via CSS */
-  isMobile?: boolean;
 }
 
 export const GroupTables: React.FC<GroupTablesProps> = ({
