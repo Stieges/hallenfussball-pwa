@@ -8,6 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
+import { useFocusTrap } from '../../../hooks';
 import { Button } from '../../../components/ui/Button';
 import type { TournamentRole } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
@@ -34,6 +35,12 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
   onInviteCreated,
 }) => {
   const { createNewInvitation, isLoading, error, clearError } = useInvitation();
+
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when rendered
+    onEscape: onClose,
+  });
 
   const [selectedRole, setSelectedRole] = useState<TournamentRole>('collaborator');
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
@@ -66,9 +73,16 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-dialog-title"
+      >
         <div style={styles.header}>
-          <h2 style={styles.title}>Einladung erstellen</h2>
+          <h2 id="invite-dialog-title" style={styles.title}>Einladung erstellen</h2>
           <button style={styles.closeButton} onClick={onClose}>
             &times;
           </button>

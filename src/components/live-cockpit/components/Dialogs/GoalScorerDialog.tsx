@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer } from '../../../../hooks';
+import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface GoalScorerDialogProps {
@@ -49,17 +49,13 @@ export function GoalScorerDialog({
   const [assist2, setAssist2] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Escape key handler
-  useEffect(() => {
-    if (!isOpen) {return;}
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Focus trap for accessibility (WCAG 4.1.3)
+  // autoFocus: false because we have custom focus logic (inputRef)
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+    autoFocus: false,
+  });
 
   // Auto-dismiss callback (stable reference) - saves as incomplete
   const handleAutoSkip = useCallback(() => {
@@ -172,6 +168,7 @@ export function GoalScorerDialog({
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
       <div
+        ref={focusTrap.containerRef}
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

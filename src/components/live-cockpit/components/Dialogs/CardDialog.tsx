@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer } from '../../../../hooks';
+import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -66,17 +66,11 @@ export function CardDialog({
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Escape key handler
-  useEffect(() => {
-    if (!isOpen) {return;}
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Focus trap for accessibility (WCAG 4.1.3)
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   // BUG-007: Determine if we're in quick mode (both card type and team preselected)
   const isQuickMode = initialCardType !== undefined && preselectedTeamSide !== undefined;
@@ -352,6 +346,7 @@ export function CardDialog({
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
       <div
+        ref={focusTrap.containerRef}
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

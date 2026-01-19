@@ -10,6 +10,7 @@
 
 import { useState, CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens'
+import { useFocusTrap } from '../../hooks';
 import { useToast } from '../ui/Toast';
 import { CorrectionReason, CORRECTION_REASONS } from '../../types/userProfile';
 
@@ -41,6 +42,12 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   const [newScoreB, setNewScoreB] = useState<string>(String(originalScoreB));
   const [reason, setReason] = useState<CorrectionReason>('input_error');
   const [note, setNote] = useState<string>('');
+
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   if (!isOpen) { return null; }
 
@@ -231,10 +238,17 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={dialogStyle}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="correction-dialog-title"
+      >
         <div style={headerStyle}>
           <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">⚠️</span>
-          <h2 style={titleStyle}>Ergebnis korrigieren</h2>
+          <h2 id="correction-dialog-title" style={titleStyle}>Ergebnis korrigieren</h2>
         </div>
 
         {/* Match Info */}

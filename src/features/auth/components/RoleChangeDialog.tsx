@@ -8,6 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
+import { useFocusTrap } from '../../../hooks';
 import { Button } from '../../../components/ui/Button';
 import { RoleBadge } from './RoleBadge';
 import type { TournamentMembership, TournamentRole, User } from '../types/auth.types';
@@ -43,6 +44,12 @@ export const RoleChangeDialog: React.FC<RoleChangeDialogProps> = ({
   const [selectedRole, setSelectedRole] = useState<TournamentRole>(membership.role);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(membership.teamIds);
 
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when rendered
+    onEscape: onClose,
+  });
+
   const assignableRoles = getAssignableRoles(myRole);
 
   const handleTeamToggle = (teamId: string) => {
@@ -68,9 +75,16 @@ export const RoleChangeDialog: React.FC<RoleChangeDialogProps> = ({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="role-change-dialog-title"
+      >
         <div style={styles.header}>
-          <h2 style={styles.title}>Rolle ändern</h2>
+          <h2 id="role-change-dialog-title" style={styles.title}>Rolle ändern</h2>
           <button style={styles.closeButton} onClick={onClose}>
             &times;
           </button>

@@ -5,10 +5,10 @@
  * MF-004: Accessibility improvements (focus trap, Escape key, ARIA)
  */
 
-import { CSSProperties, useState, useEffect, useCallback, useRef } from 'react';
+import { CSSProperties, useState, useEffect } from 'react';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
-import { useIsMobile } from '../../hooks/useIsMobile';
+import { useIsMobile, useFocusTrap } from '../../hooks';
 
 interface EditTimeDialogProps {
   currentElapsedSeconds: number;
@@ -30,30 +30,20 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
   const [seconds, setSeconds] = useState(currentSeconds);
 
   const isMobile = useIsMobile();
-  const dialogRef = useRef<HTMLDivElement>(null);
 
-  // MF-004: Focus management and Escape key handler
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onCancel();
-    }
-  }, [onCancel]);
+  // MF-004: Focus trap for accessibility (WCAG 4.1.3)
+  const focusTrap = useFocusTrap({
+    isActive: true, // Dialog is always active when rendered
+    onEscape: onCancel,
+  });
 
+  // Prevent body scroll while dialog is open
   useEffect(() => {
-    // Focus dialog container on mount
-    setTimeout(() => dialogRef.current?.focus(), 50);
-
-    // Prevent body scroll
     document.body.style.overflow = 'hidden';
-
-    // Add keyboard listener
-    document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.body.style.overflow = '';
-      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [handleKeyDown]);
+  }, []);
 
   const maxMinutes = Math.floor(durationSeconds / 60) + 5; // Allow some overtime
 
@@ -211,13 +201,12 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
     <div style={overlayStyle} onClick={onCancel}>
       {/* MF-004: Modal mit korrekten ARIA-Attributen */}
       <div
-        ref={dialogRef}
+        ref={focusTrap.containerRef}
         style={containerStyle}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-time-dialog-title"
-        tabIndex={-1}
       >
         <div id="edit-time-dialog-title" style={titleStyle}>
           <span aria-hidden="true">⏱️</span>

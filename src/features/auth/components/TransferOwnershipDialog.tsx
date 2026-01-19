@@ -8,6 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
+import { useFocusTrap } from '../../../hooks';
 import { Button } from '../../../components/ui/Button';
 import { RoleBadge } from './RoleBadge';
 import type { TournamentMembership, User } from '../types/auth.types';
@@ -40,6 +41,12 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [confirmationStep, setConfirmationStep] = useState(false);
 
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when rendered
+    onEscape: onClose,
+  });
+
   const selectedCoAdmin = coAdmins.find((c) => c.membership.userId === selectedUserId);
 
   const handleTransfer = () => {
@@ -52,9 +59,16 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
   if (coAdmins.length === 0) {
     return (
       <div style={styles.overlay} onClick={onClose}>
-        <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={focusTrap.containerRef}
+          style={styles.dialog}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="transfer-ownership-dialog-title"
+        >
           <div style={styles.header}>
-            <h2 style={styles.title}>Ownership übertragen</h2>
+            <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership übertragen</h2>
             <button style={styles.closeButton} onClick={onClose}>
               &times;
             </button>
@@ -87,9 +101,16 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
   if (confirmationStep && selectedCoAdmin) {
     return (
       <div style={styles.overlay} onClick={onClose}>
-        <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={focusTrap.containerRef}
+          style={styles.dialog}
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="transfer-ownership-dialog-title"
+        >
           <div style={styles.header}>
-            <h2 style={styles.title}>Ownership bestätigen</h2>
+            <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership bestätigen</h2>
             <button style={styles.closeButton} onClick={onClose}>
               &times;
             </button>
@@ -152,9 +173,16 @@ export const TransferOwnershipDialog: React.FC<TransferOwnershipDialogProps> = (
   // Selection step
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transfer-ownership-dialog-title"
+      >
         <div style={styles.header}>
-          <h2 style={styles.title}>Ownership übertragen</h2>
+          <h2 id="transfer-ownership-dialog-title" style={styles.title}>Ownership übertragen</h2>
           <button style={styles.closeButton} onClick={onClose}>
             &times;
           </button>
