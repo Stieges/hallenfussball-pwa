@@ -12,6 +12,7 @@ import { countMatchesWithResults } from '../utils/teamHelpers';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../config/sports';
 import { TournamentCreationService } from '../core/services/TournamentCreationService';
 import { useRepository } from './useRepository';
+import { generateTeamId } from '../utils/idGenerator';
 
 export interface WizardState {
   step: number;
@@ -247,7 +248,7 @@ export function useTournamentWizard(
   // Team actions
   const addTeam = useCallback(() => {
     const newTeam = {
-      id: `team-${Date.now()}`,
+      id: generateTeamId(),
       name: `Team ${(formData.teams?.length ?? 0) + 1}`,
     };
     updateForm('teams', [...(formData.teams ?? []), newTeam]);
