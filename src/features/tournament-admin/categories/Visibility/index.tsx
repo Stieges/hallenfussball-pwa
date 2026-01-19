@@ -15,6 +15,7 @@ import type { Tournament } from '../../../../types/tournament';
 import { SupabaseRepository } from '../../../../core/repositories/SupabaseRepository';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
 import { generateShareCode } from '../../../../utils/shareCode';
+import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
 
 // =============================================================================
 // PROPS
@@ -276,8 +277,8 @@ export function VisibilityCategory({
     void autoGenerateShareCode();
   }, [tournament, tournamentId, onTournamentUpdate, isUpdating]);
 
-  // Generate public URL based on share code
-  const publicUrl = shareCode ? `${window.location.origin}/live/${shareCode}` : null;
+  // Generate public URL based on share code (uses HashRouter: /#/live/...)
+  const publicUrl = shareCode ? generateLiveUrl(shareCode) : null;
 
   // Make tournament public (generate share code)
   const handleMakePublic = useCallback(async () => {
@@ -565,7 +566,7 @@ export function VisibilityCategory({
               <div style={styles.linkRow}>
                 <input
                   type="text"
-                  value={`${window.location.origin}/tournament/${tournamentId}`}
+                  value={generateTournamentUrl(tournamentId)}
                   readOnly
                   style={styles.linkInput}
                   onClick={(e) => (e.target as HTMLInputElement).select()}
@@ -576,7 +577,7 @@ export function VisibilityCategory({
                     ...(copied ? styles.copyButtonSuccess : {}),
                   }}
                   onClick={() => {
-                    const internalUrl = `${window.location.origin}/tournament/${tournamentId}`;
+                    const internalUrl = generateTournamentUrl(tournamentId);
                     navigator.clipboard.writeText(internalUrl)
                       .then(() => {
                         setCopied(true);

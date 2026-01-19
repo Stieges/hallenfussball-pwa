@@ -39,6 +39,7 @@ import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
+import { generateTournamentUrl } from '../../utils/shareUtils';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -714,7 +715,7 @@ function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: 
   const logoSrc = sponsor.logoUrl ?? sponsor.logoBase64;
 
   // Generate QR code URL with validation to prevent XSS
-  const fallbackUrl = `${window.location.origin}/tournament/${tournament.id}`;
+  const fallbackUrl = generateTournamentUrl(tournament.id);
   const qrUrl = slide.config.qrTarget === 'sponsor-website' && sponsor.websiteUrl
     ? getSafeUrl(sponsor.websiteUrl, fallbackUrl)
     : slide.config.qrTarget === 'custom' && slide.config.customQrUrl
