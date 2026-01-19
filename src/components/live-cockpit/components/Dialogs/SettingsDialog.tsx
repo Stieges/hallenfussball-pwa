@@ -1,5 +1,6 @@
 import { CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
+import { useFocusTrap } from '../../../../hooks';
 import { MatchCockpitSettingsPanel } from '../../../match-cockpit/MatchCockpitSettingsPanel';
 import type { MatchCockpitSettings } from '../../../../types/tournament';
 
@@ -20,6 +21,12 @@ export function SettingsDialog({
     tournamentId,
     onTestSound,
 }: SettingsDialogProps) {
+    // WCAG 4.1.3: Focus trap for accessibility
+    const focusTrap = useFocusTrap({
+        isActive: isOpen,
+        onEscape: onClose,
+    });
+
     if (!isOpen) {return null;}
 
     const overlayStyle: CSSProperties = {
@@ -101,7 +108,7 @@ export function SettingsDialog({
 
     return (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && onClose()}>
-            <div style={dialogStyle} role="dialog" aria-modal="true">
+            <div ref={focusTrap.containerRef} style={dialogStyle} role="dialog" aria-modal="true">
                 <div style={headerStyle}>
                     <h2 style={titleStyle}>Cockpit Einstellungen</h2>
                     <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">

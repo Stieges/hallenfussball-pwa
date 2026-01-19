@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer } from '../../../../hooks';
+import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -64,17 +64,11 @@ export function TimePenaltyDialog({
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
-  // Escape key handler
-  useEffect(() => {
-    if (!isOpen) {return;}
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   // BUG-006: Determine if we're in quick mode (preselected values)
   const isQuickMode = preselectedDurationSeconds !== undefined && preselectedTeamSide !== undefined;
@@ -311,6 +305,7 @@ export function TimePenaltyDialog({
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
       <div
+        ref={focusTrap.containerRef}
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

@@ -59,6 +59,7 @@ export { useMatchSound, type UseMatchSoundReturn } from './useMatchSound'
 // Accessibility
 export { useHighContrast } from './useHighContrast'
 export { useFontScale, FONT_SCALES, FONT_SCALE_LABELS } from './useFontScale'
+export { useFocusTrap } from './useFocusTrap'
 
 // Scroll & Viewport
 export { useScrollDirection, type ScrollDirection, type UseScrollDirectionOptions, type UseScrollDirectionReturn } from './useScrollDirection'

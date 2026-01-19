@@ -8,6 +8,7 @@
 
 import React, { useState, CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens'
+import { useFocusTrap } from '../../../hooks';
 import { Button } from '../../../components/ui/Button';
 
 interface InviteLinkDialogProps {
@@ -22,6 +23,12 @@ export const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
   onClose,
 }) => {
   const [copied, setCopied] = useState(false);
+
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when rendered
+    onEscape: onClose,
+  });
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(link)
@@ -59,12 +66,19 @@ export const InviteLinkDialog: React.FC<InviteLinkDialogProps> = ({
 
   return (
     <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.dialog} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={focusTrap.containerRef}
+        style={styles.dialog}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-link-dialog-title"
+      >
         <div style={styles.header}>
           <div style={styles.successIcon}>
             <span>&#10003;</span>
           </div>
-          <h2 style={styles.title}>Einladung erstellt!</h2>
+          <h2 id="invite-link-dialog-title" style={styles.title}>Einladung erstellt!</h2>
           <p style={styles.subtitle}>
             Teile diesen Link mit der Person, die du einladen möchtest.
           </p>

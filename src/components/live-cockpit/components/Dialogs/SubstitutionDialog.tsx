@@ -12,7 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens'
-import { useDialogTimer } from '../../../../hooks';
+import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 interface Team {
@@ -51,17 +51,11 @@ export function SubstitutionDialog({
   // Track which input field is active for quick-select
   const [activeField, setActiveField] = useState<{ type: 'out' | 'in'; index: number } | null>(null);
 
-  // Escape key handler
-  useEffect(() => {
-    if (!isOpen) {return;}
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // Focus trap for accessibility (WCAG 4.1.3)
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   // Determine selected team from preselectedTeamSide
   const selectedTeam = preselectedTeamSide === 'home' ? homeTeam :
@@ -168,6 +162,7 @@ export function SubstitutionDialog({
     return (
       <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
         <div
+          ref={focusTrap.containerRef}
           style={styles.dialog}
           onClick={(e) => e.stopPropagation()}
           role="dialog"
@@ -198,6 +193,7 @@ export function SubstitutionDialog({
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
       <div
+        ref={focusTrap.containerRef}
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

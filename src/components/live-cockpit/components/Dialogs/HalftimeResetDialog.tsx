@@ -13,8 +13,9 @@
  * - Clear warning about what will be reset
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens'
+import { useFocusTrap } from '../../../../hooks';
 import { triggerHaptic } from '../../../../utils/haptics';
 import moduleStyles from '../../LiveCockpit.module.css';
 
@@ -53,17 +54,11 @@ export function HalftimeResetDialog({
   const [resetFouls, setResetFouls] = useState(true);
   const [resetTimer, setResetTimer] = useState(true);
 
-  // Escape key handler
-  useEffect(() => {
-    if (!isOpen) {return;}
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  // WCAG 4.1.3: Focus trap for accessibility
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: onClose,
+  });
 
   const handleConfirm = useCallback(() => {
     triggerHaptic('success');
@@ -80,6 +75,7 @@ export function HalftimeResetDialog({
   return (
     <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
       <div
+        ref={focusTrap.containerRef}
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

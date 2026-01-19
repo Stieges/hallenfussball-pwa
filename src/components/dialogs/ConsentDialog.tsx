@@ -12,6 +12,7 @@ import { useState, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { cssVars, mediaQueries } from '../../design-tokens';
 import { setConsentStatus, type ConsentStatus } from '../../lib/consent';
+import { useFocusTrap } from '../../hooks';
 
 interface ConsentDialogProps {
   isOpen: boolean;
@@ -20,6 +21,13 @@ interface ConsentDialogProps {
 
 export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Focus trap for accessibility (WCAG 4.1.3)
+  // Note: NO onEscape callback - this is a blocking dialog that cannot be dismissed with ESC
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    // onEscape intentionally omitted - user MUST make a choice
+  });
 
   // Prevent body scroll when dialog is open
   useEffect(() => {
@@ -177,6 +185,7 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
 
   const dialog = (
     <div
+      ref={focusTrap.containerRef}
       style={overlayStyle}
       className="consent-dialog-overlay"
       role="dialog"

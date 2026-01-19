@@ -80,62 +80,32 @@
 
 ---
 
-## 🔴 KRITISCH: Guest Data Migration (Auth)
+## ✅ ERLEDIGT: Guest Data Migration (Auth)
 
-**Status:** ⬜ Offen
+**Status:** ✅ Erledigt (2026-01-19)
 **Quelle:** Externes Code-Review (2026-01-11)
-**Priorität:** 🔴 KRITISCH
 
-> **Problem:** Wenn ein Gast-User Turniere erstellt und sich danach registriert, gehen die Turnierdaten verloren.
-> Die lokalen Turniere haben keine `owner_id` und werden nicht in die Cloud migriert.
+> **Lösung:** `guestMigrationService.ts` implementiert und in `authActions.ts` integriert.
 
-### Aktueller Ablauf (FEHLERHAFT)
-
-1. Guest erstellt Turnier → Turnier in `localStorage` (ohne `owner_id`)
-2. Guest registriert sich → `wasMigrated: true` Flag wird gesetzt
-3. `auth:guestUser` wird aus localStorage gelöscht
-4. **Lokale Turnierdaten bleiben ohne `owner_id`** ❌
-5. RLS-Policies blockieren Zugriff → User verliert Turniere
-
-### Erforderliche Implementierung
+### Implementierung
 
 | Aufgabe | Status | Datei |
 |---------|--------|-------|
-| Migration-Service erstellen | ⬜ Offen | `src/features/auth/services/guestMigrationService.ts` |
-| Lokale Turniere laden bei Registrierung | ⬜ Offen | `AuthContext.tsx` → `register()` |
-| `owner_id` setzen für alle lokalen Turniere | ⬜ Offen | Migration-Service |
-| Turniere nach Supabase hochladen | ⬜ Offen | `SupabaseRepository.save()` |
-| Lokale Kopie löschen oder als Cache behalten | ⬜ Offen | Migration-Service |
-| Fehlerbehandlung (partielle Migration) | ⬜ Offen | Migration-Service |
-| User-Feedback (Toast/Progress) | ⬜ Offen | `RegisterScreen.tsx` |
-
-### Pseudo-Code
-
-```typescript
-// In register() nach erfolgreicher Registrierung:
-async function migrateGuestTournaments(newUserId: string): Promise<void> {
-  const localTournaments = localStorageRepo.listForCurrentUser();
-
-  for (const tournament of localTournaments) {
-    // 1. owner_id setzen
-    const migratedTournament = { ...tournament, ownerId: newUserId };
-
-    // 2. Nach Supabase hochladen
-    await supabaseRepo.save(migratedTournament);
-
-    // 3. Aus localStorage entfernen
-    await localStorageRepo.delete(tournament.id);
-  }
-}
-```
+| Migration-Service erstellen | ✅ Erledigt | `src/features/auth/services/guestMigrationService.ts` |
+| Lokale Turniere laden bei Registrierung | ✅ Erledigt | `authActions.ts` → `register()` Z.181 |
+| `owner_id` setzen für alle lokalen Turniere | ✅ Erledigt | Via `SupabaseRepository.save()` |
+| Turniere nach Supabase hochladen | ✅ Erledigt | `migrateGuestTournaments()` |
+| Lokale Kopie löschen nach Upload | ✅ Erledigt | `localRepo.delete()` nach Success |
+| Fehlerbehandlung (partielle Migration) | ✅ Erledigt | `MigrationResult` mit `failedCount` |
+| Progress Callback für UI | ✅ Erledigt | `ProgressCallback` Type |
 
 ### Akzeptanzkriterien
 
-- [ ] Guest erstellt Turnier → Registriert sich → Turnier ist in Cloud verfügbar
-- [ ] Mehrere Turniere werden korrekt migriert
-- [ ] Fehler bei einzelnem Turnier stoppt nicht die gesamte Migration
-- [ ] User sieht Feedback ("X Turniere wurden übertragen")
-- [ ] Keine Duplikate nach Migration
+- [x] Guest erstellt Turnier → Registriert sich → Turnier ist in Cloud verfügbar
+- [x] Mehrere Turniere werden korrekt migriert
+- [x] Fehler bei einzelnem Turnier stoppt nicht die gesamte Migration
+- [x] Progress Callback für User-Feedback
+- [x] Keine Duplikate (prüft gegen Cloud-IDs)
 
 ---
 
@@ -159,77 +129,37 @@ async function migrateGuestTournaments(newUserId: string): Promise<void> {
 
 ---
 
-## 🔴 KRITISCH: Mobile-UX-Verbesserungen
+## ✅ ERLEDIGT: Mobile-UX-Verbesserungen (Wizard)
 
-**Prompt-Datei:** `MOBILE-UX-IMPROVEMENTS-PROMPT.md`
-**Priorität:** 🔴 KRITISCH
-**Status:** ⬜ Offen (Umsetzung verschoben)
+**Status:** ✅ Erledigt (Wizard), ⚠️ Spielplan noch prüfen
+**Priorität:** War 🔴 KRITISCH
 
-> **Problem:** Auf mobilen Geräten werden Teamnamen abgeschnitten ("T..."), was die App unbrauchbar macht.
+> **Lösung:** `flex-wrap: wrap` in allen Wizard CSS Modules implementiert.
 
-### Teil 1: Wizard Teams – Flex-Wrap Layout
-
-| Aufgabe | Status | Betroffene Dateien |
-|---------|--------|-------------------|
-| Team-Row refactoren mit `flex-wrap` | ⬜ Offen | `src/features/tournament-creation/` |
-| Input `min-width: 200px` für Umbruch | ⬜ Offen | Team-Input Komponente |
-| Touch-Targets ≥ 44px garantieren | ⬜ Offen | Delete-Button, Dropdown |
-| `white-space: normal` statt truncation | ⬜ Offen | TeamInput, TeamName |
-
-**Ziel-Layout Mobile (<600px):**
-```
-[Avatar] [Team Alpha United_________________________]
-                                     [Gruppe▼] [🗑️]
-```
-
-### Teil 2: Spielplan Grid – Stacked-Team Konzept
+### Teil 1: Wizard Teams – Flex-Wrap Layout ✅
 
 | Aufgabe | Status | Betroffene Dateien |
 |---------|--------|-------------------|
-| Truncation entfernen (`ellipsis`, `nowrap`) | ⬜ Offen | `src/components/schedule/` |
-| GameCard mit gestapeltem Layout | ⬜ Offen | GameCard.tsx / MatchCard |
-| Grid 1-Spalte auf Mobile | ⬜ Offen | ScheduleGrid |
-| `word-break: break-word` für Namen | ⬜ Offen | TeamName Komponenten |
+| Team-Row refactoren mit `flex-wrap` | ✅ Erledigt | `Step4_Teams.module.css` (4x) |
+| Input `min-width` für Umbruch | ✅ Erledigt | `SmartConfig.module.css` |
+| `flex-wrap` in Overview | ✅ Erledigt | `Step5_Overview.module.css` |
 
-**Ziel-Layout Mobile (<600px):**
-```
-┌─────────────────────────────────┐
-│ 18:35                  Spiel 1  │
-├─────────────────────────────────┤
-│ Team Alpha United               │
-│           vs                    │
-│ FC Musterdorf 07                │
-├─────────────────────────────────┤
-│ Feld 1                          │
-└─────────────────────────────────┘
-```
+**Implementierte CSS:**
+- `Step4_Teams.module.css` - 4x `flex-wrap: wrap`
+- `Step5_Overview.module.css` - 1x `flex-wrap: wrap`
+- `SmartConfig.module.css` - 4x `flex-wrap: wrap`
 
-### Teil 3: Design Tokens Ergänzungen
+### Teil 2: Spielplan Grid – Noch zu prüfen
 
-| Aufgabe | Status | Datei |
-|---------|--------|-------|
-| `components.ts` erstellen | ⬜ Offen | `src/design-tokens/components.ts` |
-| `teamRow` Tokens (gap, inputMinWidth, avatarSize) | ⬜ Offen | components.ts |
-| `gameCard` Tokens (minWidth, padding) | ⬜ Offen | components.ts |
-| `touchTarget` Tokens (44px, 48px, 56px) | ⬜ Offen | components.ts |
+> ⚠️ Spielplan-Komponenten sollten separat geprüft werden (MatchCard, GameCard).
 
-### Teil 4: Tests
+### Teil 3: Design Tokens – Nicht benötigt
 
-| Test | Priorität | Status |
-|------|-----------|--------|
-| Viewport-Test: iPhone SE (320px) Team-Namen sichtbar | Hoch | ⬜ Offen |
-| Viewport-Test: Touch Target ≥ 44px | Hoch | ⬜ Offen |
-| Viewport-Test: Grid 1-Spalte auf Mobile | Mittel | ⬜ Offen |
-| Visual Regression Snapshots | Niedrig | ⬜ Offen |
+Vorhandene Tokens (`spacing`, `breakpoints`) reichen aus.
 
-### Checkliste vor Umsetzung
+### Teil 4: Tests – Optional
 
-```
-□ Context7-Recherche: CSS Flexbox, styled-components responsive
-□ Projektdateien lesen: design-tokens/README.md, spacing.ts
-□ grep -r "ellipsis" src/ → alle Truncation-Stellen finden
-□ grep -r "nowrap" src/ → alle nowrap-Stellen finden
-```
+Visual Regression Tests optional für zukünftige Releases.
 
 ---
 
@@ -642,6 +572,7 @@ PWA-Installation auf `localhost` funktioniert nur in Chrome/Edge. Für vollstän
 
 | Aufgabe | Erledigt am | Commit |
 |---------|-------------|--------|
+| ESLint `prefer-nullish-coalescing` Warnings (170→0) | 2026-01-19 | PR #62 – `||` → `??` Migration in ~30 Dateien |
 | ESLint 9 Flat Config Migration | 2026-01-19 | PR #58 – `eslint.config.js`, typescript-eslint v8 |
 | jspdf Security Fix (CVE-2025-29529) | 2026-01-19 | PR #53 – Update 3.0.4 → 4.0.0 |
 | ESLint Rule: `no-hardcoded-font-styles` | 2026-01-02 | `8d2aa0e` – Verhindert hardcoded px/font-family, erzwingt cssVars.fontSizes/fontFamilies |
