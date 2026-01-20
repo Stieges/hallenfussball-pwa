@@ -183,6 +183,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Set to 'offline' to trigger reconnect logic, NOT 'connected' which would mask issues
           setConnectionState('offline');
           setIsLoading(false);
+
+          // Set flag for toast notification (read by useAuthTimeoutToast hook)
+          try {
+            safeSessionStorage.setItem('auth:timeoutFlag', Date.now().toString());
+          } catch {
+            // sessionStorage nicht verfügbar
+          }
         }
       }, AUTH_INIT_TIMEOUT_MS);
 

@@ -17,6 +17,7 @@ import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'reac
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
+import { Button } from '../ui/Button';
 import { cssVars } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
 
@@ -69,13 +70,40 @@ const VisuallyHidden: React.FC<{ children: React.ReactNode }> = ({ children }) =
   </span>
 );
 
+/**
+ * HeaderOfflineBadge - Compact offline indicator for header placement
+ * Shows when connectionState is 'offline' with a reconnect button
+ */
+const HeaderOfflineBadge: React.FC<{
+  onReconnect: () => void;
+}> = ({ onReconnect }) => (
+  <Button
+    variant="secondary"
+    size="sm"
+    onClick={onReconnect}
+    aria-label="Offline - Klicken zum erneut verbinden"
+    data-testid="auth-offline-badge"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: cssVars.spacing.xs,
+      backgroundColor: cssVars.colors.correctionBg,
+      borderColor: cssVars.colors.correctionBorder,
+      color: cssVars.colors.correctionText,
+    }}
+  >
+    <span role="img" aria-hidden="true">📡</span>
+    <span>Offline</span>
+  </Button>
+);
+
 export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToLogin,
   onNavigateToRegister,
   onNavigateToProfile,
   onNavigateToSettings,
 }) => {
-  const { user, isAuthenticated, isGuest, isLoading, logout } = useAuth();
+  const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
   const isMobile = useIsMobile();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
@@ -173,6 +201,9 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     return (
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
+        {connectionState === 'offline' && (
+          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+        )}
         <div style={styles.skeleton} aria-hidden="true" />
         <div style={{ ...styles.skeleton, width: isMobile ? 36 : 100 }} aria-hidden="true" />
       </div>
@@ -186,6 +217,10 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     return (
       <div style={styles.container} ref={dropdownRef}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
+        {/* Offline Badge */}
+        {connectionState === 'offline' && (
+          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+        )}
         {/* Name (nur Desktop) */}
         {!isMobile && (
           <span style={styles.userName}>{user.name}</span>
@@ -279,6 +314,10 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
       <>
         <div style={styles.container}>
           <VisuallyHidden>{statusText}</VisuallyHidden>
+          {/* Offline Badge */}
+          {connectionState === 'offline' && (
+            <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+          )}
           {/* Gast-Badge (nur Desktop) */}
           {!isMobile && (
             <div style={styles.guestBadge} data-testid="auth-guest-badge">
@@ -333,6 +372,10 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     <>
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
+        {/* Offline Badge */}
+        {connectionState === 'offline' && (
+          <HeaderOfflineBadge onReconnect={() => void reconnect()} />
+        )}
         {/* Mobile: Single Icon - öffnet BottomSheet */}
         {isMobile ? (
           <button
