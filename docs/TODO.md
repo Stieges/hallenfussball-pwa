@@ -1,7 +1,7 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-19
+> **Letzte Aktualisierung:** 2026-01-20
 
 ---
 
@@ -23,6 +23,35 @@
 **P0-2 Details:** Base components (Dialog, ConfirmDialog, BottomSheet, Auth) sind WCAG 4.1.3 compliant. 24 Feature-Dialoge optional in Follow-up. Details: [docs/wip/FOCUS-TRAP-INTEGRATION-STATUS.md](wip/FOCUS-TRAP-INTEGRATION-STATUS.md)
 
 > ⚠️ **Hinweis:** P0-TODOS.md muss nach jedem abgeschlossenen Task aktualisiert werden!
+
+---
+
+## ✅ ERLEDIGT: Quick Wins aus Three-Agent Review (PR #77)
+
+**Status:** ✅ Erledigt (2026-01-20, PR #77 merged)
+**Quelle:** Three-Agent Review nach BUG-001/BUG-002 Commit
+
+| QW | Beschreibung | Aufwand | Status |
+|----|--------------|---------|--------|
+| QW-001 | Offline-Indikator in AuthSection | 15min | ✅ Erledigt |
+| QW-002 | Toast bei Auth-Timeout | 10min | ✅ Erledigt |
+| QW-003 | OptimisticLockError UI-Handling | 20min | ✅ Erledigt |
+| QW-004 | OptimisticLockError konsolidieren | 30min | ✅ Erledigt |
+| QW-005 | LocalStorage Version-Inkrement | 15min | ✅ Erledigt |
+| QW-006 | Named Constants für Timeouts | 10min | ✅ Erledigt |
+
+**Betroffene Dateien:**
+- `src/core/errors.ts` - Erweiterte OptimisticLockError
+- `src/core/repositories/LocalStorageLiveMatchRepository.ts` - Version-Inkrement
+- `src/features/auth/context/AuthContext.tsx` - Named Constants + Timeout-Flag
+- `src/hooks/useAuthTimeoutToast.ts` - NEU: Toast Hook
+- `src/hooks/useMatchExecution.ts` - Toast bei Konflikten
+- `src/components/layout/AuthSection.tsx` - Offline-Indikator
+- `src/App.tsx` - useAuthTimeoutToast Integration
+
+**Inkludiert Bug-Fixes:**
+- **BUG-001:** Auth Session Persistence (15s Timeout, 5 Retries, Exponential Backoff) ✅
+- **BUG-002:** Optimistic Locking für Race Conditions ✅
 
 ---
 

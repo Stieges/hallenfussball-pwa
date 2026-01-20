@@ -9,6 +9,7 @@
 
 import { CSSProperties, useCallback, useEffect, useState, useRef } from 'react';
 import { cssVars } from '../../design-tokens';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 // =============================================================================
 // Types
@@ -134,6 +135,12 @@ export function PostMatchModal({
     onStay();
   }, [onStay]);
 
+  // Focus trap for accessibility (WCAG 4.1.3)
+  const focusTrap = useFocusTrap({
+    isActive: isOpen,
+    onEscape: handleCancel,
+  });
+
   if (!isOpen) {
     return null;
   }
@@ -145,7 +152,7 @@ export function PostMatchModal({
 
   return (
     <div style={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="post-match-title">
-      <div style={styles.modal}>
+      <div ref={focusTrap.containerRef} style={styles.modal}>
         {/* Header */}
         <div style={styles.header}>
           <div style={styles.matchLabel}>{matchLabel}</div>
