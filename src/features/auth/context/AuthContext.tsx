@@ -317,6 +317,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [connectionState, updateAuthState]);
 
+  // Cross-tab auth sync: Listen for localStorage changes from other tabs
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
+    // Capture supabase reference for TypeScript narrowing
+    const supabaseClient = supabase;
+
+    const handleStorageChange = (event: StorageEvent) => {
+      // Supabase stores auth token with key format: sb-{project-ref}-auth-token
+      // We check for any Supabase auth token change
+      if (event.key?.startsWith('sb-') && event.key?.endsWith('-auth-token')) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console -- Useful for auth debugging
+          console.log('Auth token changed in another tab, syncing...');
+        }
+
+        // Re-fetch session from Supabase (which reads from localStorage)
+        void supabaseClient.auth.getSession().then(({ data: { session: newSession } }) => {
+          void updateAuthState(newSession);
+        });
+      }
+
+      // Also sync guest user changes across tabs
+      if (event.key === 'auth:guestUser') {
+        if (event.newValue) {
+          // Guest user was set in another tab
+          try {
+            const guestUser = JSON.parse(event.newValue) as User;
+            if (guestUser.globalRole === 'guest') {
+              setUser(guestUser);
+              setIsGuest(true);
+              setSession(null);
+            }
+          } catch {
+            // Invalid JSON, ignore
+          }
+        } else {
+          // Guest user was removed (logged out or upgraded to real account)
+          // Re-fetch to check if there's a real session now
+          void supabaseClient.auth.getSession().then(({ data: { session: newSession } }) => {
+            void updateAuthState(newSession);
+          });
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [updateAuthState]);
+
   // Derived state
   const isAuthenticated = useMemo(() => {
     return user !== null && user.globalRole !== 'guest';
