@@ -196,8 +196,28 @@ export async function handleCodeExchange(
 }
 
 /**
+ * Creates a promise that rejects after a timeout
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    ),
+  ]);
+}
+
+/**
  * Handles implicit flow with access and refresh tokens
  * Sets session directly from URL tokens
+ *
+ * IMPORTANT: setSession() can hang indefinitely in some edge cases
+ * (e.g., Supabase internal lock acquisition, network issues).
+ * We add timeout protection to prevent infinite loading states.
  */
 export async function handleImplicitFlow(
   accessToken: string,
@@ -208,15 +228,66 @@ export async function handleImplicitFlow(
     return { handled: false };
   }
 
-  const { error: sessionError } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
-
-  if (sessionError) {
-    return { handled: true, error: sessionError.message };
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('[AuthCallback] Starting implicit flow with tokens...');
+    // eslint-disable-next-line no-console
+    console.log('[AuthCallback] Access token length:', accessToken.length);
+    // eslint-disable-next-line no-console
+    console.log('[AuthCallback] Refresh token length:', refreshToken.length);
   }
 
-  safeLocalStorage.removeItem('auth:guestUser');
-  return { handled: true, redirectTo: type === 'recovery' ? '/set-password' : '/' };
+  try {
+    // Timeout protection: setSession() should complete within 10 seconds
+    // This prevents infinite hangs that were observed in production
+    const { error: sessionError } = await withTimeout(
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
+      10000,
+      'Session-Erstellung hat zu lange gedauert. Bitte versuche es erneut.'
+    );
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('[AuthCallback] setSession completed:', { error: !!sessionError, errorMsg: sessionError?.message });
+    }
+
+    if (sessionError) {
+      if (import.meta.env.DEV) {
+        console.error('[AuthCallback] setSession error:', sessionError);
+      }
+      return { handled: true, error: sessionError.message };
+    }
+
+    // Verify session was actually created
+    const { data: { session } } = await withTimeout(
+      supabase.auth.getSession(),
+      5000,
+      'Session-Verifikation fehlgeschlagen.'
+    );
+
+    if (!session) {
+      if (import.meta.env.DEV) {
+        console.error('[AuthCallback] setSession succeeded but no session found');
+      }
+      return { handled: true, error: AUTH_ERRORS.SESSION_CREATE_FAILED };
+    }
+
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.log('[AuthCallback] Session verified, user:', session.user?.email);
+    }
+
+    safeLocalStorage.removeItem('auth:guestUser');
+    return { handled: true, redirectTo: type === 'recovery' ? '/set-password' : '/' };
+  } catch (err) {
+    // Handle timeout or other errors
+    if (import.meta.env.DEV) {
+      console.error('[AuthCallback] Implicit flow error:', err);
+    }
+    const message = err instanceof Error ? err.message : AUTH_ERRORS.LOGIN_FAILED;
+    return { handled: true, error: message };
+  }
 }
