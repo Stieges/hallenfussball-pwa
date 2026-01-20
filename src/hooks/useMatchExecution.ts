@@ -17,6 +17,7 @@ import { OptimisticLockError } from '../core/errors';
 import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
 import { useRepositories } from '../core/contexts/RepositoryContext';
+import { useToast } from '../components/ui/Toast/ToastContext';
 
 // ============================================================================
 // TYPES
@@ -102,6 +103,9 @@ export function useMatchExecution({
 
     // Get live match repository from context (Supabase or localStorage based on auth)
     const { liveMatchRepository } = useRepositories();
+
+    // QW-003: Toast for optimistic lock conflict feedback
+    const { showInfo } = useToast();
 
     // Repositories and Service (memoized, recreate if repository changes)
     const service = useMemo(() => {
@@ -252,16 +256,17 @@ export function useMatchExecution({
 
             announceMatchFinished(matchId);
         } catch (error) {
-            // BUG-002: Handle optimistic lock conflicts
+            // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                // Re-throw to let UI show appropriate feedback
-                throw error;
+                // Show info toast instead of re-throwing - conflict was resolved by refresh
+                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                return;
             }
             throw error;
         }
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -307,16 +312,17 @@ export function useMatchExecution({
                 announceMatchFinished(matchId);
             }
         } catch (error) {
-            // BUG-002: Handle optimistic lock conflicts
+            // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                // Re-throw to let UI show appropriate feedback
-                throw error;
+                // Show info toast instead of re-throwing - conflict was resolved by refresh
+                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                return;
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, refreshMatchState]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, refreshMatchState, showInfo]);
 
     const handleCard = useCallback(async (
         matchId: string,

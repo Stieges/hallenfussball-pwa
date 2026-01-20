@@ -45,7 +45,14 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
 
     async save(tournamentId: string, match: LiveMatch): Promise<void> {
         const all = await this.getAll(tournamentId);
-        all.set(match.id, match);
+
+        // Increment version for consistency with Supabase optimistic locking
+        const updatedMatch: LiveMatch = {
+            ...match,
+            version: (match.version ?? 0) + 1,
+        };
+
+        all.set(match.id, updatedMatch);
         await this.saveAll(tournamentId, all);
     }
 
