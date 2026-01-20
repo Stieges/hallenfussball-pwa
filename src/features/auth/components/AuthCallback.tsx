@@ -69,11 +69,29 @@ export const AuthCallback: React.FC = () => {
         }
 
         // Check for existing session FIRST (Supabase may have already processed tokens)
+        // Add timeout protection - getSession can hang in edge cases
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.log('[AuthCallback] Checking for existing session...');
         }
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+        let existingSession = null;
+        try {
+          const sessionResult = await Promise.race([
+            supabase.auth.getSession(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('Session check timed out')), 5000)
+            ),
+          ]);
+          existingSession = sessionResult.data.session;
+        } catch (_sessionCheckError) {
+          // If session check times out, continue with token processing
+          // The tokens in the URL are still valid
+          if (import.meta.env.DEV) {
+            console.warn('[AuthCallback] Session check timed out, continuing with token processing');
+          }
+        }
+
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.log('[AuthCallback] Existing session:', !!existingSession);
