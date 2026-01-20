@@ -79,6 +79,9 @@ export interface LiveMatch {
     scheduledKickoff: string; // ISO string
     refereeName?: string;
 
+    // Optimistic Locking (BUG-002)
+    version: number;
+
     // Teams
     homeTeam: LiveTeamInfo;
     awayTeam: LiveTeamInfo;

@@ -45,6 +45,7 @@ describe('MatchExecutionService - Event Persistence', () => {
             phaseLabel: 'Group A',
             fieldId: 'field-1',
             scheduledKickoff: new Date().toISOString(),
+            version: 1, // Optimistic locking version
             homeTeam: { id: 't1', name: 'Home' },
             awayTeam: { id: 't2', name: 'Away' },
             homeScore: 1,

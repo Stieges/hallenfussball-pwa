@@ -13,6 +13,7 @@ import { Tournament } from '../types/tournament';
 import { ScheduledMatch } from '../core/generators';
 import { MatchExecutionService } from '../core/services/MatchExecutionService';
 import { LiveMatch, MatchStatus } from '../core/models/LiveMatch';
+import { OptimisticLockError } from '../core/repositories/SupabaseLiveMatchRepository';
 import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
 import { useRepositories } from '../core/contexts/RepositoryContext';
@@ -84,6 +85,9 @@ export interface UseMatchExecutionReturn {
 // Timer update interval (display only, not persistence)
 const TIMER_UPDATE_INTERVAL_MS = 1000;
 
+// Error handler callback type (BUG-002)
+export type ConflictErrorHandler = (matchId: string, error: OptimisticLockError) => void;
+
 // ============================================================================
 // HOOK
 // ============================================================================
@@ -115,6 +119,15 @@ export function useMatchExecution({
     const { announceMatchStarted, announceMatchFinished } = useMultiTabSync({
         tournamentId: tournament.id,
     });
+
+    // Helper to refresh match state after conflict (BUG-002)
+    const refreshMatchState = useCallback(async (matchId: string): Promise<LiveMatch | null> => {
+        const freshMatch = await liveMatchRepository.get(tournament.id, matchId);
+        if (freshMatch) {
+            setLiveMatches(prev => new Map(prev).set(matchId, freshMatch));
+        }
+        return freshMatch;
+    }, [liveMatchRepository, tournament.id]);
 
     // Load initial state
     useEffect(() => {
@@ -212,32 +225,43 @@ export function useMatchExecution({
     }, [service, tournament.id]);
 
     const handleFinish = useCallback(async (matchId: string): Promise<void> => {
-        const result = await service.finishMatch(tournament.id, matchId);
+        try {
+            const result = await service.finishMatch(tournament.id, matchId);
 
-        if (result.needsTiebreaker) {
-            // Update local state to show tiebreaker choice
+            if (result.needsTiebreaker) {
+                // Update local state to show tiebreaker choice
+                const match = await liveMatchRepository.get(tournament.id, matchId);
+                if (match) {
+                    setLiveMatches(prev => new Map(prev).set(matchId, match));
+                }
+                return;
+            }
+
+            // Reload tournament to get updated match results
+            const repo = tournamentRepo;
+            const updated = await repo.get(tournament.id);
+            if (updated) {
+                onTournamentUpdate(updated, false);
+            }
+
+            // Update local state
             const match = await liveMatchRepository.get(tournament.id, matchId);
             if (match) {
                 setLiveMatches(prev => new Map(prev).set(matchId, match));
             }
-            return;
-        }
 
-        // Reload tournament to get updated match results
-        const repo = tournamentRepo;
-        const updated = await repo.get(tournament.id);
-        if (updated) {
-            onTournamentUpdate(updated, false);
+            announceMatchFinished(matchId);
+        } catch (error) {
+            // BUG-002: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
+                await refreshMatchState(matchId);
+                // Re-throw to let UI show appropriate feedback
+                throw error;
+            }
+            throw error;
         }
-
-        // Update local state
-        const match = await liveMatchRepository.get(tournament.id, matchId);
-        if (match) {
-            setLiveMatches(prev => new Map(prev).set(matchId, match));
-        }
-
-        announceMatchFinished(matchId);
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -270,17 +294,29 @@ export function useMatchExecution({
         if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
-        const updated = await service.recordGoal(tournament.id, matchId, team, delta, options);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
 
-        // If match finished (golden goal), update tournament
-        if (updated.status === 'FINISHED') {
-            const repo = tournamentRepo;
-            const t = await repo.get(tournament.id);
-            if (t) { onTournamentUpdate(t, false); }
-            announceMatchFinished(matchId);
+        try {
+            const updated = await service.recordGoal(tournament.id, matchId, team, delta, options);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+
+            // If match finished (golden goal), update tournament
+            if (updated.status === 'FINISHED') {
+                const repo = tournamentRepo;
+                const t = await repo.get(tournament.id);
+                if (t) { onTournamentUpdate(t, false); }
+                announceMatchFinished(matchId);
+            }
+        } catch (error) {
+            // BUG-002: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
+                await refreshMatchState(matchId);
+                // Re-throw to let UI show appropriate feedback
+                throw error;
+            }
+            throw error;
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, refreshMatchState]);
 
     const handleCard = useCallback(async (
         matchId: string,

@@ -205,6 +205,9 @@ export function mapLiveMatchFromSupabase(
     scheduledKickoff: matchRow.scheduled_start ?? new Date().toISOString(),
     refereeName: liveState?.refereeName,
 
+    // Optimistic Locking (BUG-002)
+    version: matchRow.version ?? 1,
+
     // Teams
     homeTeam: mapTeamToLiveTeamInfo(homeTeam ?? null),
     awayTeam: mapTeamToLiveTeamInfo(awayTeam ?? null),

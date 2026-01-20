@@ -131,18 +131,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let mounted = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
+    // Constants for retry logic
+    const MAX_RETRIES = 5;
+    const getRetryDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 8000);
+
     const initAuth = async (retryCount = 0) => {
       // Safety timeout: If auth takes too long, force loading=false to let user interact
-      // Increased to 8s to allow for cold starts and slow networks
+      // Set to 15s to allow for cold starts, slow networks, and serverless function warmup
       const safetyTimeout = setTimeout(() => {
         if (mounted && isLoading) {
-          console.warn('Auth init timed out - releasing UI but keeping connection state active');
-          // Start with 'connected' optimistically to avoid blocking UI, 
-          // real connection check will happen on user interaction or next auto-reconnect
-          setConnectionState('connected');
+          console.warn('Auth init timed out after 15s - releasing UI');
+          // Set to 'offline' to trigger reconnect logic, NOT 'connected' which would mask issues
+          setConnectionState('offline');
           setIsLoading(false);
         }
-      }, 8000);
+      }, 15000);
 
       try {
         // If Supabase isn't configured, just check for guest user and finish
@@ -168,15 +171,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           (error instanceof Error && error.name === 'AbortError') ||
           (error instanceof Error && error.message.includes('aborted'))
         ) {
-          if (retryCount < 2) {
-            setTimeout(() => void initAuth(retryCount + 1), 500);
+          if (retryCount < MAX_RETRIES) {
+            const delay = getRetryDelay(retryCount);
+            // eslint-disable-next-line no-console -- intentional debug logging for retry
+            console.debug(`Auth init aborted, retry ${retryCount + 1}/${MAX_RETRIES} in ${delay}ms`);
+            setTimeout(() => void initAuth(retryCount + 1), delay);
             return;
           }
-          // Max retries reached - release UI and assume connected (optimistic)
+          // Max retries reached - set offline to trigger reconnect logic
           // eslint-disable-next-line no-console -- intentional debug logging for transient errors
           console.debug('Auth init aborted after max retries - releasing UI:', error);
           if (mounted) {
-            setConnectionState('connected');
+            setConnectionState('offline');
             setIsLoading(false);
           }
           return;
