@@ -74,9 +74,46 @@ export class MutationQueue {
     /**
      * Add a mutation to the queue and persist it.
      * Triggers processing immediately if online.
+     *
+     * COALESCING: For certain mutation types, existing pending mutations
+     * for the same entity will be replaced instead of duplicated.
+     * This prevents queue bloat during rapid updates (e.g., team renaming).
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public enqueue(type: MutationType, payload: any): void {
+        // Try to coalesce with existing mutation
+        const coalesceKey = this.getCoalesceKey(type, payload);
+        if (coalesceKey) {
+            const existingIndex = this.queue.findIndex(
+                item => this.getCoalesceKey(item.type, item.payload) === coalesceKey
+            );
+
+            if (existingIndex !== -1) {
+                // Replace existing mutation with newer payload
+                this.queue[existingIndex] = {
+                    ...this.queue[existingIndex],
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+                    payload,
+                    timestamp: Date.now(),
+                    // Keep retryCount from existing item (don't reset on coalesce)
+                };
+                this.save();
+                this.notifyListeners();
+
+                if (import.meta.env.DEV) {
+                    // eslint-disable-next-line no-console
+                    console.log(`MutationQueue: Coalesced ${type} for ${coalesceKey}`);
+                }
+
+                // Still trigger processing
+                if (navigator.onLine) {
+                    void this.process();
+                }
+                return;
+            }
+        }
+
+        // No coalescing possible - add new item
         const item: MutationItem = {
             id: generateUniqueId(),
             type,
@@ -93,6 +130,35 @@ export class MutationQueue {
         // Optimistic processing
         if (navigator.onLine) {
             void this.process();
+        }
+    }
+
+    /**
+     * Get a coalesce key for mutations that can be merged.
+     * Returns null if the mutation type doesn't support coalescing.
+     *
+     * Coalescing rules:
+     * - SAVE_TOURNAMENT: Coalesce by tournament ID (keep latest full state)
+     * - UPDATE_TOURNAMENT_METADATA: Coalesce by tournament ID
+     * - DELETE_TOURNAMENT: Do NOT coalesce (order matters for delete)
+     * - UPDATE_MATCH/UPDATE_MATCHES: Do NOT coalesce (granular updates)
+     */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private getCoalesceKey(type: MutationType, payload: any): string | null {
+        switch (type) {
+            case 'SAVE_TOURNAMENT': {
+                // Tournament has 'id' field
+                const tournament = payload as Tournament;
+                return tournament?.id ? `SAVE_TOURNAMENT:${tournament.id}` : null;
+            }
+            case 'UPDATE_TOURNAMENT_METADATA': {
+                // Payload has 'tournamentId' field
+                const meta = payload as { tournamentId: string };
+                return meta?.tournamentId ? `UPDATE_METADATA:${meta.tournamentId}` : null;
+            }
+            default:
+                // No coalescing for other types
+                return null;
         }
     }
 
