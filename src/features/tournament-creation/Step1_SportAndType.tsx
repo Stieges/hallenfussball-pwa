@@ -23,6 +23,7 @@ interface SelectionButtonProps {
   details?: string[];
   variant?: 'default' | 'warning';
   layout?: 'center' | 'left';
+  testId?: string;
 }
 
 const SelectionButton: React.FC<SelectionButtonProps> = ({
@@ -33,6 +34,7 @@ const SelectionButton: React.FC<SelectionButtonProps> = ({
   details,
   variant = 'default',
   layout = 'center',
+  testId,
 }) => {
   const accentColor = variant === 'warning' ? cssVars.colors.warning : cssVars.colors.primary;
   const bgColor = variant === 'warning' ? cssVars.colors.warningSelected : cssVars.colors.primarySelected;
@@ -60,6 +62,7 @@ const SelectionButton: React.FC<SelectionButtonProps> = ({
       }}
       role="radio"
       aria-checked={isSelected}
+      data-testid={testId}
     >
       <div style={{ fontSize: layout === 'center' ? cssVars.fontSizes.md : cssVars.fontSizes.sm, fontWeight: '700', color: cssVars.colors.textPrimary }}>
         {title}
@@ -193,6 +196,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
               `• Normale ${currentConfig.terminology.goal}zählung`,
             ]}
             layout="left"
+            testId="wizard-type-classic"
           />
           <SelectionButton
             isSelected={formData.tournamentType === 'bambini'}
@@ -202,6 +206,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
             details={['• Ergebnisneutral', '• Ohne Tabellen/Platzierungen', '• Nur Sieg/Unentsch./Nied.']}
             variant="warning"
             layout="left"
+            testId="wizard-type-bambini"
           />
         </div>
       </div>

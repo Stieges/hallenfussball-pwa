@@ -181,6 +181,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                     alignItems: 'center',
                     gap: cssVars.spacing.xs,
                   }}
+                  data-testid="wizard-reset-tournament"
                 >
                   <span>🔄</span> Turnier zurücksetzen
                 </button>

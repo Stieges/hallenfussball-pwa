@@ -72,6 +72,7 @@ const SportCard: React.FC<SportCardProps> = ({
       }}
       role="radio"
       aria-checked={isSelected}
+      data-testid={`wizard-sport-${sport.id}`}
     >
       <div style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: '12px' }}>
         {sport.icon}
