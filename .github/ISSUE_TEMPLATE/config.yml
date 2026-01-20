@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Frage / Diskussion
+    url: https://github.com/Stieges/hallenfussball-pwa/discussions
+    about: Für allgemeine Fragen nutze bitte die Discussions

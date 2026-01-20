@@ -1,0 +1,88 @@
+name: Feature Request
+description: Schlage eine neue Funktion oder Verbesserung vor
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für deinen Feature-Vorschlag!
+        Bitte beschreibe das Problem, das du lösen möchtest, bevor du eine Lösung vorschlägst.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Welches Problem möchtest du lösen?
+      placeholder: |
+        Als [Rolle] möchte ich [Ziel], damit [Nutzen].
+
+        Beispiel: Als Turnierleiter möchte ich mehrere Spiele gleichzeitig starten können,
+        damit ich bei parallelen Spielen weniger klicken muss.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Lösungsvorschlag
+      description: Wie sollte die Lösung aussehen?
+      placeholder: |
+        Beschreibe deine ideale Lösung...
+
+        - Wo sollte die Funktion sein?
+        - Wie sollte sie funktionieren?
+        - Gibt es Mockups oder Referenzen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Wann ist das Feature fertig?
+      placeholder: |
+        - [ ] Kriterium 1
+        - [ ] Kriterium 2
+        - [ ] Kriterium 3
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Hast du andere Lösungen in Betracht gezogen?
+      placeholder: |
+        Andere Möglichkeiten, die du bedacht hast...
+        Oder: Wie löst du das Problem aktuell?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Betroffener Bereich
+      description: Welcher Teil der App ist betroffen?
+      options:
+        - Tournament Wizard (Turnier erstellen)
+        - Spielplan / Schedule
+        - Live-Cockpit (Spiel steuern)
+        - Match-Cockpit
+        - Tabellen / Standings
+        - Monitor-Ansicht
+        - Public View (Zuschauer)
+        - Import/Export
+        - Einstellungen
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Screenshots, Mockups, Links zu ähnlichen Features
+      placeholder: Ziehe Bilder hierher oder füge Links ein...
+    validations:
+      required: false

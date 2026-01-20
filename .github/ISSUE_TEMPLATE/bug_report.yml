@@ -1,0 +1,107 @@
+name: Bug Report
+description: Melde einen Fehler in der Hallenfußball-PWA
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke, dass du dir Zeit nimmst, einen Bug zu melden!
+        Bitte fülle die folgenden Felder so vollständig wie möglich aus.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was ist passiert?
+      placeholder: Beschreibe den Fehler so genau wie möglich...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduktionsschritte
+      description: Wie kann der Fehler reproduziert werden?
+      placeholder: |
+        1. Gehe zu '...'
+        2. Klicke auf '...'
+        3. Scroll zu '...'
+        4. Fehler erscheint
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was hättest du stattdessen erwartet?
+      placeholder: Die App sollte...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      description: In welchem Browser tritt der Fehler auf?
+      options:
+        - Chrome
+        - Safari
+        - Firefox
+        - Edge
+        - Anderer (bitte in Beschreibung angeben)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Gerät
+      description: Auf welchem Gerätetyp tritt der Fehler auf?
+      options:
+        - Desktop
+        - Tablet
+        - Mobile (Smartphone)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Welche App-Version nutzt du? (Footer der App oder "unbekannt")
+      placeholder: "z.B. v2.3.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Falls vorhanden, füge Screenshots hinzu (per Drag & Drop)
+      placeholder: Ziehe Bilder hierher oder füge sie per Paste ein...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie schwerwiegend ist der Fehler?
+      options:
+        - Low - Kosmetisch / Kleinigkeit
+        - Medium - Störend, aber Workaround möglich
+        - High - Wichtige Funktion beeinträchtigt
+        - Critical - App unbenutzbar / Datenverlust
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Weitere Informationen, die hilfreich sein könnten
+      placeholder: Console-Errors, Netzwerk-Logs, etc.
+    validations:
+      required: false
