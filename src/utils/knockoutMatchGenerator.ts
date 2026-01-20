@@ -177,60 +177,6 @@ const resolveBestSecondPlace = (tournament: Tournament): string | null => {
   return secondPlaceTeams[0].teamId;
 };
 
-/**
- * Aktualisiert K.O.-Matches nach Spielergebnissen
- * Wird aufgerufen, wenn ein K.O.-Spiel beendet wird
- */
-export const updateKnockoutMatchesAfterResult = (
-  matches: Match[],
-  completedMatchId: string,
-  winnerId: string,
-  loserId: string
-): Match[] => {
-  return matches.map((match) => {
-    let updated = false;
-    const newMatch = { ...match };
-
-    // Prüfe Home Team (teamA)
-    if (match.teamA === 'TBD') {
-      const homeRef = findTeamReferenceForMatch(match, 'home', completedMatchId);
-
-      if (homeRef?.source === 'winnerOf' && homeRef.matchId === completedMatchId) {
-        newMatch.teamA = winnerId;
-        updated = true;
-      } else if (homeRef?.source === 'loserOf' && homeRef.matchId === completedMatchId) {
-        newMatch.teamA = loserId;
-        updated = true;
-      }
-    }
-
-    // Prüfe Away Team (teamB)
-    if (match.teamB === 'TBD') {
-      const awayRef = findTeamReferenceForMatch(match, 'away', completedMatchId);
-
-      if (awayRef?.source === 'winnerOf' && awayRef.matchId === completedMatchId) {
-        newMatch.teamB = winnerId;
-        updated = true;
-      } else if (awayRef?.source === 'loserOf' && awayRef.matchId === completedMatchId) {
-        newMatch.teamB = loserId;
-        updated = true;
-      }
-    }
-
-    return updated ? newMatch : match;
-  });
-};
-
-/**
- * Findet die TeamReference für ein Match
- * (Diese Funktion würde in der Praxis eine Mapping-Struktur nutzen)
- */
-const findTeamReferenceForMatch = (
-  _match: Match,
-  _side: 'home' | 'away',
-  _completedMatchId: string
-): TeamReference | null => {
-  // Diese Funktion müsste Zugriff auf das ursprüngliche Schema haben
-  // Für jetzt ist sie ein Platzhalter
-  return null;
-};
+// NOTE: updateKnockoutMatchesAfterResult was removed (dead code - never called)
+// If knockout match result propagation is needed in the future, implement with
+// proper TeamReference mapping from TournamentCase schema.

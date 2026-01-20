@@ -218,22 +218,20 @@ function validateTournament(tournament: Tournament): Check[] {
   checks.push({
     name: 'Tournament exists',
     passed: !!tournament,
-    actual: tournament ? tournament.title : 'Not found',
+    actual: tournament.title,
   });
 
-  if (tournament) {
-    checks.push({
-      name: 'Tournament has share_code',
-      passed: !!tournament.share_code,
-      actual: tournament.share_code,
-    });
+  checks.push({
+    name: 'Tournament has share_code',
+    passed: !!tournament.share_code,
+    actual: tournament.share_code,
+  });
 
-    checks.push({
-      name: 'Tournament status is valid',
-      passed: ['draft', 'published', 'active', 'finished', 'archived'].includes(tournament.status),
-      actual: tournament.status,
-    });
-  }
+  checks.push({
+    name: 'Tournament status is valid',
+    passed: ['draft', 'published', 'active', 'finished', 'archived'].includes(tournament.status),
+    actual: tournament.status,
+  });
 
   return checks;
 }
@@ -248,7 +246,7 @@ function validateTeams(teams: Team[], expectedCount?: number): Check[] {
     expected: expectedCount || 'At least 1',
   });
 
-  if (expectedCount) {
+  if (expectedCount !== undefined) {
     checks.push({
       name: 'Team count matches expected',
       passed: teams.length === expectedCount,

@@ -185,9 +185,6 @@ function extractCssVarsProperties() {
  * @returns {string[]}
  */
 function extractCssVariablesFromBlock(cssContent, selector) {
-  // Escape special regex characters in selector
-  const selectorEscaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
   // Find the block - handle multi-line with a more robust approach
   // Match from selector to the closing brace, handling nested braces
   const startIndex = cssContent.indexOf(selector);
