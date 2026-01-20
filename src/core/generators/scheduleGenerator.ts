@@ -185,9 +185,6 @@ export function generateFullSchedule(
 
       // Merge: Existing Group Matches + Generated Final Matches
       allMatches = [...mappedMatches, ...scheduledFinalsByGen]
-
-      // Update finalMatches ref for consistency
-      finalMatches = generatedFinals
     } else {
 
       // Standard Case: Use what we loaded
