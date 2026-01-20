@@ -380,10 +380,10 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
         {/* Aktionen */}
         <div style={actionsStyle} className="tournament-actions">
-          <Button variant="secondary" onClick={onEdit}>
+          <Button variant="secondary" onClick={onEdit} data-testid="preview-edit">
             Bearbeiten
           </Button>
-          <Button variant="secondary" onClick={() => void handleExportPDF()}>
+          <Button variant="secondary" onClick={() => void handleExportPDF()} data-testid="preview-export-pdf">
             PDF Exportieren
           </Button>
           <Button
@@ -394,6 +394,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
               padding: '14px 32px',
               fontWeight: cssVars.fontWeights.bold,
             }}
+            data-testid="preview-publish"
           >
             Turnier freigeben
           </Button>

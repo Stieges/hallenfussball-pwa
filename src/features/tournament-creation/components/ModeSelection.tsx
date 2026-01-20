@@ -14,6 +14,7 @@ interface ModeButtonProps {
   subtitle: string;
   disabled?: boolean;
   badge?: string;
+  testId?: string;
 }
 
 const ModeButton: React.FC<ModeButtonProps> = ({
@@ -23,6 +24,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
   subtitle,
   disabled = false,
   badge,
+  testId,
 }) => {
   const buttonStyle: CSSProperties = {
     padding: '20px',
@@ -46,6 +48,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
       style={buttonStyle}
       disabled={disabled}
       title={disabled ? 'Dieses Feature wird in einer zukünftigen Version verfügbar sein' : undefined}
+      data-testid={testId}
     >
       {badge && (
         <span style={{
@@ -96,6 +99,7 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
           onClick={() => onModeChange('classic')}
           title="Klassisches Hallenturnier"
           subtitle="Gruppen + Finalrunde"
+          testId="wizard-mode-classic"
         />
         <ModeButton
           isSelected={selectedMode === 'miniFussball'}
@@ -104,6 +108,7 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
           subtitle="Feldrotation, mehrere Felder"
           disabled={true}
           badge="Coming Soon"
+          testId="wizard-mode-miniFussball"
         />
       </div>
     </div>

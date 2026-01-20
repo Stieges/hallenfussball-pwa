@@ -122,7 +122,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
 
         {/* Preview Button */}
         <div style={{ marginTop: '24px' }}>
-          <Button onClick={onSave} icon={<Icons.ChevronRight />} size="lg" fullWidth iconPosition="right">
+          <Button onClick={onSave} icon={<Icons.ChevronRight />} size="lg" fullWidth iconPosition="right" data-testid="wizard-show-preview">
             Vorschau anzeigen
           </Button>
         </div>

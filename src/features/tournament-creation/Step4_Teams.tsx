@@ -200,7 +200,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
       </h2>
 
       <div className={styles.buttonRow}>
-        <Button onClick={onAddTeam} icon={<Icons.Plus />} variant="secondary">
+        <Button onClick={onAddTeam} icon={<Icons.Plus />} variant="secondary" data-testid="wizard-add-team">
           Team hinzufügen
         </Button>
 
@@ -209,6 +209,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             onClick={handleGenerateTeams}
             icon={<Icons.Plus />}
             variant="primary"
+            data-testid="wizard-generate-teams"
           >
             {numberOfTeams} Teams generieren
           </Button>
@@ -218,6 +219,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           <Button
             onClick={handleAutoAssignGroups}
             variant="secondary"
+            data-testid="wizard-auto-assign-groups"
           >
             Gruppen automatisch zuweisen
           </Button>
@@ -319,6 +321,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     onClick={() => onRemoveTeam(team.id)}
                     className={styles.deleteButton}
                     aria-label={`Team ${team.name} löschen`}
+                    data-testid={`wizard-remove-team-${team.id}`}
                   >
                     <Icons.Trash size={18} />
                   </button>
