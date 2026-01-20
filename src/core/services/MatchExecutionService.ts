@@ -9,9 +9,17 @@
 
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
+import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { RuntimeMatchEvent } from '../../types/tournament';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Max retries for optimistic lock conflicts (BUG-002) */
+const MAX_OPTIMISTIC_LOCK_RETRIES = 3;
 
 // ============================================================================
 // TYPES
@@ -146,27 +154,45 @@ export class MatchExecutionService {
     }
 
     async finishMatch(tournamentId: string, matchId: string): Promise<FinishResult> {
-        const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) { throw new Error(`Match ${matchId} not found`); }
+        // Retry loop for optimistic lock conflicts (BUG-002)
+        for (let attempt = 0; attempt < MAX_OPTIMISTIC_LOCK_RETRIES; attempt++) {
+            try {
+                const match = await this.liveMatchRepo.get(tournamentId, matchId);
+                if (!match) { throw new Error(`Match ${matchId} not found`); }
 
-        // Check if finals match needs tiebreaker
-        if (this.needsTiebreaker(match)) {
-            const paused: LiveMatch = {
-                ...match,
-                status: 'PAUSED',
-                awaitingTiebreakerChoice: true,
-                timerPausedAt: new Date().toISOString(),
-                timerElapsedSeconds: match.elapsedSeconds,
-            };
-            await this.liveMatchRepo.save(tournamentId, paused);
-            return { success: false, needsTiebreaker: true, decidedBy: 'regular' };
+                // Check if finals match needs tiebreaker
+                if (this.needsTiebreaker(match)) {
+                    const paused: LiveMatch = {
+                        ...match,
+                        status: 'PAUSED',
+                        awaitingTiebreakerChoice: true,
+                        timerPausedAt: new Date().toISOString(),
+                        timerElapsedSeconds: match.elapsedSeconds,
+                    };
+                    await this.liveMatchRepo.save(tournamentId, paused);
+                    return { success: false, needsTiebreaker: true, decidedBy: 'regular' };
+                }
+
+                // Finish the match
+                const decidedBy = this.getDecidedBy(match);
+                await this.persistFinalResult(tournamentId, match, decidedBy);
+
+                return { success: true, needsTiebreaker: false, decidedBy };
+
+            } catch (error) {
+                // Retry on optimistic lock conflict
+                if (error instanceof OptimisticLockError && attempt < MAX_OPTIMISTIC_LOCK_RETRIES - 1) {
+                    console.warn(
+                        `[MatchExecutionService] Finish match conflict, retry ${attempt + 1}/${MAX_OPTIMISTIC_LOCK_RETRIES}`
+                    );
+                    continue;
+                }
+                throw error;
+            }
         }
 
-        // Finish the match
-        const decidedBy = this.getDecidedBy(match);
-        await this.persistFinalResult(tournamentId, match, decidedBy);
-
-        return { success: true, needsTiebreaker: false, decidedBy };
+        // Should never reach here, but TypeScript needs this
+        throw new Error(`Max retries exceeded for finishing match ${matchId}`);
     }
 
     // ==========================================================================
@@ -180,53 +206,72 @@ export class MatchExecutionService {
         delta: 1 | -1,
         options?: GoalOptions
     ): Promise<LiveMatch> {
-        const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) { throw new Error(`Match ${matchId} not found`); }
+        // Retry loop for optimistic lock conflicts (BUG-002)
+        for (let attempt = 0; attempt < MAX_OPTIMISTIC_LOCK_RETRIES; attempt++) {
+            try {
+                const match = await this.liveMatchRepo.get(tournamentId, matchId);
+                if (!match) { throw new Error(`Match ${matchId} not found`); }
 
-        const elapsed = this.calculateElapsedSeconds(match);
-        const isOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
+                const elapsed = this.calculateElapsedSeconds(match);
+                const isOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
 
-        let updated: LiveMatch;
+                let updated: LiveMatch;
 
-        if (isOvertime) {
-            updated = {
-                ...match,
-                overtimeScoreA: (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0),
-                overtimeScoreB: (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0),
-            };
-        } else {
-            updated = {
-                ...match,
-                homeScore: Math.max(0, match.homeScore + (team === 'home' ? delta : 0)),
-                awayScore: Math.max(0, match.awayScore + (team === 'away' ? delta : 0)),
-            };
+                if (isOvertime) {
+                    updated = {
+                        ...match,
+                        overtimeScoreA: (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0),
+                        overtimeScoreB: (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0),
+                    };
+                } else {
+                    updated = {
+                        ...match,
+                        homeScore: Math.max(0, match.homeScore + (team === 'home' ? delta : 0)),
+                        awayScore: Math.max(0, match.awayScore + (team === 'away' ? delta : 0)),
+                    };
+                }
+
+                // Add event (use unique ID to avoid duplicates on retry)
+                const eventId = `${matchId}-goal-${Date.now()}-${attempt}`;
+                const event: MatchEvent = {
+                    id: eventId,
+                    matchId,
+                    timestampSeconds: elapsed,
+                    type: 'GOAL',
+                    payload: {
+                        team,
+                        delta,
+                        playerNumber: options?.playerNumber,
+                        assists: options?.assists,
+                    },
+                    scoreAfter: { home: updated.homeScore, away: updated.awayScore },
+                };
+
+                updated.events = [...match.events, event];
+
+                // Golden Goal: Auto-finish if someone scored
+                if (match.playPhase === 'goldenGoal' && delta > 0) {
+                    await this.persistFinalResult(tournamentId, updated, 'goldenGoal');
+                    return { ...updated, status: 'FINISHED' };
+                }
+
+                await this.liveMatchRepo.save(tournamentId, updated);
+                return updated;
+
+            } catch (error) {
+                // Retry on optimistic lock conflict
+                if (error instanceof OptimisticLockError && attempt < MAX_OPTIMISTIC_LOCK_RETRIES - 1) {
+                    console.warn(
+                        `[MatchExecutionService] Goal recording conflict, retry ${attempt + 1}/${MAX_OPTIMISTIC_LOCK_RETRIES}`
+                    );
+                    continue;
+                }
+                throw error;
+            }
         }
 
-        // Add event
-        const event: MatchEvent = {
-            id: `${matchId}-${Date.now()}`,
-            matchId,
-            timestampSeconds: elapsed,
-            type: 'GOAL',
-            payload: {
-                team,
-                delta,
-                playerNumber: options?.playerNumber,
-                assists: options?.assists,
-            },
-            scoreAfter: { home: updated.homeScore, away: updated.awayScore },
-        };
-
-        updated.events = [...match.events, event];
-
-        // Golden Goal: Auto-finish if someone scored
-        if (match.playPhase === 'goldenGoal' && delta > 0) {
-            await this.persistFinalResult(tournamentId, updated, 'goldenGoal');
-            return { ...updated, status: 'FINISHED' };
-        }
-
-        await this.liveMatchRepo.save(tournamentId, updated);
-        return updated;
+        // Should never reach here, but TypeScript needs this
+        throw new Error(`Max retries exceeded for goal recording on match ${matchId}`);
     }
 
     async recordCard(
@@ -687,6 +732,7 @@ export class MatchExecutionService {
             scheduledKickoff: scheduledMatch.startTime.toISOString(),
             durationSeconds,
             refereeName: scheduledMatch.referee ? `SR ${scheduledMatch.referee}` : undefined,
+            version: 1, // Initial version for optimistic locking (BUG-002)
             homeTeam: {
                 id: homeTeam?.id ?? scheduledMatch.homeTeam,
                 name: homeTeam?.name ?? scheduledMatch.homeTeam,

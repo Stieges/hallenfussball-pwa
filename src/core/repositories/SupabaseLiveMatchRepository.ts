@@ -20,6 +20,7 @@ import {
   mapLiveMatchToSupabase,
   isMatchActive,
 } from './liveMatchMappers';
+import { OptimisticLockError } from '../errors';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
@@ -180,15 +181,35 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // Map to Supabase format
       const { matchUpdate, newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
 
-      // Update match
-      const { error: matchError } = await supabase
+      // CAS (Compare-And-Swap): Update ONLY if version matches (BUG-002)
+      // The DB trigger will auto-increment version on successful update
+      const { data: updatedRow, error: matchError } = await supabase
         .from('matches')
         .update(matchUpdate as unknown as Record<string, unknown>)
-        .eq('id', match.id);
+        .eq('id', match.id)
+        .eq('version', match.version) // Optimistic lock check
+        .select('version')
+        .maybeSingle(); // Returns null if no row matched (version mismatch)
 
       if (matchError) {
         console.error('[SupabaseLiveMatchRepository] match update failed:', matchError);
         throw matchError;
+      }
+
+      // No row updated = version mismatch (another client modified the match)
+      if (!updatedRow) {
+        // Fetch current version for informative error message
+        const { data: currentMatch } = await supabase
+          .from('matches')
+          .select('version')
+          .eq('id', match.id)
+          .single();
+
+        throw new OptimisticLockError(
+          match.id,
+          match.version,
+          currentMatch?.version ?? -1
+        );
       }
 
       // Insert new events
@@ -209,6 +230,10 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         this.eventIdsCache.set(match.id, existingEventIds);
       }
     } catch (error) {
+      // Re-throw OptimisticLockError without logging (expected case)
+      if (error instanceof OptimisticLockError) {
+        throw error;
+      }
       console.error('[SupabaseLiveMatchRepository] save failed:', error);
       throw error;
     }

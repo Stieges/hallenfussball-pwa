@@ -10,6 +10,7 @@ import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
+import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
@@ -113,6 +114,9 @@ function AppContent() {
   const { isGuest } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // QW-002: Show toast if auth initialization timed out
+  useAuthTimeoutToast();
 
   // P0-4 Task 4.4: Conflict Resolution at app level
   const { pendingConflict, resolveConflict, dismissConflict } = useSyncConflicts();
