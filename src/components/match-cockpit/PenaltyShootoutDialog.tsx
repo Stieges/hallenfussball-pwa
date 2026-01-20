@@ -4,10 +4,11 @@
  * Simple score input for both teams, with validation that scores are different.
  */
 
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useState, useCallback } from 'react';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { LiveMatch } from './MatchCockpit';
 
 interface PenaltyShootoutDialogProps {
@@ -26,6 +27,17 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const isMobile = useIsMobile();
+
+  // ESC handler for focus trap
+  const handleEscape = useCallback(() => {
+    onCancel(match.id);
+  }, [onCancel, match.id]);
+
+  // Focus trap for accessibility (WCAG 4.1.3)
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when component is rendered
+    onEscape: handleEscape,
+  });
 
   const handleSubmit = () => {
     if (homeScore === awayScore) {
@@ -140,9 +152,15 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   const totalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
 
   return (
-    <div style={containerStyle}>
+    <div
+      ref={focusTrap.containerRef}
+      style={containerStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="penalty-shootout-title"
+    >
       <div style={titleStyle}>
-        <span>Strafstoßschießen</span>
+        <span id="penalty-shootout-title">Strafstoßschießen</span>
       </div>
 
       <div style={regularScoreStyle}>

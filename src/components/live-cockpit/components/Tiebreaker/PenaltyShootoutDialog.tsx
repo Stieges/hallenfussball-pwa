@@ -11,9 +11,10 @@
  * @see docs/concepts/LIVE-SCREEN-REDESIGN.md#3.10
  */
 
-import { useState, useMemo, type CSSProperties } from 'react';
+import { useState, useMemo, useCallback, type CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens'
 import { useIsMobile } from '../../../../hooks/useIsMobile';
+import { useFocusTrap } from '../../../../hooks/useFocusTrap';
 import moduleStyles from '../../LiveCockpit.module.css';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +109,16 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const [shots, setShots] = useState<PenaltyShot[]>(initialShots);
+
+  // Focus trap for accessibility (WCAG 4.1.3)
+  const handleEscape = useCallback(() => {
+    onCancel();
+  }, [onCancel]);
+
+  const focusTrap = useFocusTrap({
+    isActive: true, // Always active when component is rendered
+    onEscape: handleEscape,
+  });
 
   // Computed values
   const homeScore = useMemo(() => calculateScore(shots, 'home'), [shots]);
@@ -341,10 +352,17 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={overlayStyle} className={moduleStyles.dialogOverlay}>
+    <div
+      ref={focusTrap.containerRef}
+      style={overlayStyle}
+      className={moduleStyles.dialogOverlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="penalty-shootout-title"
+    >
       {/* Header */}
       <header style={headerStyle}>
-        <span style={titleStyle}>
+        <span id="penalty-shootout-title" style={titleStyle}>
           <span>⚽</span>
           <span>Elfmeterschießen</span>
         </span>
