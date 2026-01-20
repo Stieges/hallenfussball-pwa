@@ -28,6 +28,45 @@ import type { AuthActionDeps } from './authActions';
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
 
+// ============================================================================
+// AUTH CONFIGURATION CONSTANTS
+// ============================================================================
+
+/**
+ * Maximum time to wait for Supabase auth initialization.
+ * After this timeout, the app falls back to offline/guest mode.
+ * 15s accounts for cold starts, slow networks, and serverless function warmup.
+ */
+const AUTH_INIT_TIMEOUT_MS = 15_000;
+
+/**
+ * Maximum number of retry attempts for transient auth errors (e.g., AbortError).
+ * Uses exponential backoff: 1s, 2s, 4s, 8s, 8s
+ */
+const AUTH_MAX_RETRIES = 5;
+
+/**
+ * Base delay for exponential backoff (in milliseconds).
+ */
+const AUTH_RETRY_BASE_DELAY_MS = 1_000;
+
+/**
+ * Maximum delay between retries (cap for exponential backoff).
+ */
+const AUTH_RETRY_MAX_DELAY_MS = 8_000;
+
+/**
+ * Interval for periodic reconnect attempts when offline.
+ */
+const AUTH_RECONNECT_INTERVAL_MS = 30_000;
+
+/**
+ * Quick retry delay after transient abort errors during reconnect.
+ */
+const AUTH_ABORT_RETRY_DELAY_MS = 2_000;
+
+// ============================================================================
+
 interface AuthProviderProps {
   children: React.ReactNode;
 }
@@ -131,9 +170,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     let mounted = true;
     let subscription: { unsubscribe: () => void } | null = null;
 
-    // Constants for retry logic
-    const MAX_RETRIES = 5;
-    const getRetryDelay = (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 8000);
+    // Retry delay calculation with exponential backoff
+    const getRetryDelay = (attempt: number) =>
+      Math.min(AUTH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt), AUTH_RETRY_MAX_DELAY_MS);
 
     const initAuth = async (retryCount = 0) => {
       // Safety timeout: If auth takes too long, force loading=false to let user interact
@@ -145,7 +184,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setConnectionState('offline');
           setIsLoading(false);
         }
-      }, 15000);
+      }, AUTH_INIT_TIMEOUT_MS);
 
       try {
         // If Supabase isn't configured, just check for guest user and finish
@@ -171,10 +210,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           (error instanceof Error && error.name === 'AbortError') ||
           (error instanceof Error && error.message.includes('aborted'))
         ) {
-          if (retryCount < MAX_RETRIES) {
+          if (retryCount < AUTH_MAX_RETRIES) {
             const delay = getRetryDelay(retryCount);
             // eslint-disable-next-line no-console -- intentional debug logging for retry
-            console.debug(`Auth init aborted, retry ${retryCount + 1}/${MAX_RETRIES} in ${delay}ms`);
+            console.debug(`Auth init aborted, retry ${retryCount + 1}/${AUTH_MAX_RETRIES} in ${delay}ms`);
             setTimeout(() => void initAuth(retryCount + 1), delay);
             return;
           }
@@ -288,7 +327,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Don't set offline, just schedule a quick retry
           if (retryTimeout) { clearTimeout(retryTimeout); }
-          retryTimeout = setTimeout(() => { void attemptReconnect(); }, 2000);
+          retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_ABORT_RETRY_DELAY_MS);
           return;
         }
 
@@ -297,7 +336,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         setConnectionState('offline');
         // Schedule next retry
-        retryTimeout = setTimeout(() => { void attemptReconnect(); }, 30000);
+        retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_RECONNECT_INTERVAL_MS);
       }
     };
 
@@ -313,7 +352,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     window.addEventListener('online', handleOnline);
 
     // Start periodic retry after initial delay
-    retryTimeout = setTimeout(() => { void attemptReconnect(); }, 30000);
+    retryTimeout = setTimeout(() => { void attemptReconnect(); }, AUTH_RECONNECT_INTERVAL_MS);
 
     return () => {
       window.removeEventListener('online', handleOnline);

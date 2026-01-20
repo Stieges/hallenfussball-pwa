@@ -9,7 +9,7 @@
 
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
-import { OptimisticLockError } from '../repositories/SupabaseLiveMatchRepository';
+import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { RuntimeMatchEvent } from '../../types/tournament';

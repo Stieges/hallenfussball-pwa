@@ -13,7 +13,7 @@ import { Tournament } from '../types/tournament';
 import { ScheduledMatch } from '../core/generators';
 import { MatchExecutionService } from '../core/services/MatchExecutionService';
 import { LiveMatch, MatchStatus } from '../core/models/LiveMatch';
-import { OptimisticLockError } from '../core/repositories/SupabaseLiveMatchRepository';
+import { OptimisticLockError } from '../core/errors';
 import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
 import { useRepositories } from '../core/contexts/RepositoryContext';

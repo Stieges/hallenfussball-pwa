@@ -20,31 +20,7 @@ import {
   mapLiveMatchToSupabase,
   isMatchActive,
 } from './liveMatchMappers';
-
-// ============================================================================
-// OPTIMISTIC LOCK ERROR (BUG-002)
-// ============================================================================
-
-/**
- * Thrown when a save operation fails due to version mismatch.
- * This indicates another client modified the match since we loaded it.
- */
-export class OptimisticLockError extends Error {
-  public readonly matchId: string;
-  public readonly expectedVersion: number;
-  public readonly actualVersion: number;
-
-  constructor(matchId: string, expectedVersion: number, actualVersion: number) {
-    super(
-      `Optimistic lock failed: Match ${matchId} was modified ` +
-      `(expected v${expectedVersion}, got v${actualVersion})`
-    );
-    this.name = 'OptimisticLockError';
-    this.matchId = matchId;
-    this.expectedVersion = expectedVersion;
-    this.actualVersion = actualVersion;
-  }
-}
+import { OptimisticLockError } from '../errors';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
