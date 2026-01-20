@@ -41,6 +41,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         options={getAgeClassOptions(formData.sport ?? 'football')}
         placeholder="Suchen oder auswählen..."
         style={{ marginTop: '16px' }}
+        data-testid="wizard-age-class"
       />
 
       <LocationForm
