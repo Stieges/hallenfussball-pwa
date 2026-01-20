@@ -2,9 +2,10 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     // PWA Plugin - Enables offline functionality
@@ -119,7 +120,19 @@ export default defineConfig({
       gzipSize: true,
       brotliSize: true,
     }),
-  ],
+    // Sentry source map upload - only in production with auth token
+    mode === 'production' && process.env.SENTRY_AUTH_TOKEN
+      ? sentryVitePlugin({
+          org: 'stieges',
+          project: 'hallenfussball-pwa',
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+          sourcemaps: {
+            filesToDeleteAfterUpload: ['./dist/**/*.map'],
+          },
+          telemetry: false,
+        })
+      : null,
+  ].filter(Boolean),
   server: {
     port: 3000,
     open: true
@@ -137,5 +150,5 @@ export default defineConfig({
         },
       },
     },
-  }
-})
+  },
+}))
