@@ -254,6 +254,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
               )}
               onClick={() => handleSelect(option)}
               onMouseEnter={() => setHighlightedIndex(index)}
+              data-testid={testId ? `${testId}-option-${option.value}` : undefined}
             >
               {option.label}
             </li>
