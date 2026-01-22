@@ -148,6 +148,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 variant="primary"
                 onClick={handleLoginClick}
                 style={styles.primaryButton}
+                data-testid="merge-login-button"
               >
                 Mit bestehendem Konto anmelden
               </Button>
@@ -156,6 +157,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 variant="ghost"
                 onClick={handleClose}
                 style={styles.secondaryButton}
+                data-testid="merge-different-email-button"
               >
                 Andere E-Mail verwenden
               </Button>
@@ -176,7 +178,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
 
       case 'success':
         return (
-          <>
+          <div data-testid="merge-success-message">
             {/* Icon */}
             <div style={styles.successIconContainer}>
               <span style={styles.icon} role="img" aria-label="Erfolg">
@@ -204,12 +206,12 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 Fertig
               </Button>
             </div>
-          </>
+          </div>
         );
 
       case 'error':
         return (
-          <>
+          <div data-testid="merge-error-message">
             {/* Icon */}
             <div style={styles.errorIconContainer}>
               <span style={styles.icon} role="img" aria-label="Fehler">
@@ -231,6 +233,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 variant="primary"
                 onClick={handleMerge}
                 style={styles.primaryButton}
+                data-testid="merge-retry-button"
               >
                 Erneut versuchen
               </Button>
@@ -243,7 +246,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 Abbrechen
               </Button>
             </div>
-          </>
+          </div>
         );
     }
   };
@@ -255,6 +258,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
       title="Konto bereits vorhanden"
       maxWidth="420px"
       closeOnBackdropClick={state !== 'merging'}
+      data-testid="merge-account-dialog"
     >
       <div style={styles.content}>{renderContent()}</div>
     </Dialog>
