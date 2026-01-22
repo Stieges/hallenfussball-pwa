@@ -69,6 +69,7 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
       onClose={onClose}
       title="Turnier-Limit erreicht"
       maxWidth="420px"
+      data-testid="tournament-limit-modal"
     >
       <div style={styles.content}>
         {/* Icon */}
@@ -116,6 +117,7 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
             variant="primary"
             onClick={handleRegister}
             style={styles.primaryButton}
+            data-testid="tournament-limit-register-button"
           >
             Kostenlos registrieren
           </Button>
@@ -125,6 +127,7 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
               variant="ghost"
               onClick={handleLogin}
               style={styles.secondaryButton}
+              data-testid="tournament-limit-login-button"
             >
               Ich habe bereits ein Konto
             </Button>

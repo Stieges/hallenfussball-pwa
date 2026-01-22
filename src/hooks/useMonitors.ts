@@ -143,10 +143,11 @@ export function useMonitors(
   );
 
   // Display-URL generieren
+  // HashRouter requires /#/ prefix for all routes
   const getDisplayUrl = useCallback(
     (monitorId: string): string => {
       if (!tournament) {return '#';}
-      return `/display/${tournament.id}/${monitorId}`;
+      return `/#/display/${tournament.id}/${monitorId}`;
     },
     [tournament]
   );

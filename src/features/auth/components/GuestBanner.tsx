@@ -57,7 +57,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
     };
 
     return (
-      <div style={compactBannerStyle}>
+      <div style={compactBannerStyle} data-testid="guest-banner-compact">
         <span style={styles.compactText}>
           {isAtLimit
             ? `Turnier-Limit erreicht (${used}/${ANONYMOUS_TOURNAMENT_LIMIT})`
@@ -69,6 +69,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
           type="button"
           onClick={onRegisterClick}
           style={urgencyLevel !== 'normal' ? styles.compactLinkUrgent : styles.compactLink}
+          data-testid="guest-banner-register-button"
         >
           {isAtLimit ? 'Jetzt upgraden' : 'Registrieren'}
         </button>
@@ -126,7 +127,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
   };
 
   return (
-    <div style={bannerStyle}>
+    <div style={bannerStyle} data-testid="guest-banner">
       <div style={styles.content}>
         <div style={iconContainerStyle}>
           <span style={styles.icon}>{getIcon()}</span>
@@ -166,6 +167,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
           type="button"
           onClick={onRegisterClick}
           style={registerButtonStyle}
+          data-testid="guest-banner-register-button"
         >
           {isAtLimit ? 'Jetzt upgraden' : 'Jetzt registrieren'}
         </button>
