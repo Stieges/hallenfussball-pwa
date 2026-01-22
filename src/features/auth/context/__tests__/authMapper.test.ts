@@ -43,6 +43,7 @@ describe('mapSupabaseUser', () => {
       name: 'John Doe',
       avatarUrl: 'https://example.com/john.jpg',
       globalRole: 'admin',
+      isAnonymous: false,
       createdAt: '2024-01-01T00:00:00.000Z',
       updatedAt: '2024-01-15T00:00:00.000Z',
       lastLoginAt: '2024-01-20T12:00:00.000Z',

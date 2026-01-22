@@ -105,6 +105,106 @@ export class LocalStorageRepository implements ITournamentRepository {
         }
     }
 
+    // ==========================================================================
+    // VISIBILITY & SHARING (local implementation)
+    // ==========================================================================
+
+    /**
+     * Makes a tournament publicly accessible by generating a local share code.
+     * Note: Local share codes are only valid within this browser instance.
+     */
+    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === tournamentId);
+
+        if (index === -1) {
+            return null;
+        }
+
+        const shareCode = this.generateLocalShareCode();
+        const createdAt = new Date().toISOString();
+
+        list[index] = {
+            ...list[index],
+            isPublic: true,
+            shareCode,
+            shareCodeCreatedAt: createdAt,
+            version: (list[index].version ?? 0) + 1,
+            updatedAt: createdAt
+        };
+
+        await this.saveList(list);
+
+        return { shareCode, createdAt };
+    }
+
+    /**
+     * Makes a tournament private by removing the share code.
+     */
+    async makeTournamentPrivate(tournamentId: string): Promise<void> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === tournamentId);
+
+        if (index === -1) {
+            throw new Error(`Tournament ${tournamentId} not found`);
+        }
+
+        list[index] = {
+            ...list[index],
+            isPublic: false,
+            shareCode: undefined,
+            shareCodeCreatedAt: undefined,
+            version: (list[index].version ?? 0) + 1,
+            updatedAt: new Date().toISOString()
+        };
+
+        await this.saveList(list);
+    }
+
+    /**
+     * Regenerates the share code for a public tournament.
+     */
+    async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        const list = await this.loadList();
+        const index = list.findIndex(t => t.id === tournamentId);
+
+        if (index === -1) {
+            return null;
+        }
+
+        const tournament = list[index];
+        if (!tournament.isPublic) {
+            return null;
+        }
+
+        const shareCode = this.generateLocalShareCode();
+        const createdAt = new Date().toISOString();
+
+        list[index] = {
+            ...list[index],
+            shareCode,
+            shareCodeCreatedAt: createdAt,
+            version: (list[index].version ?? 0) + 1,
+            updatedAt: createdAt
+        };
+
+        await this.saveList(list);
+
+        return { shareCode, createdAt };
+    }
+
+    /**
+     * Generates a 6-character alphanumeric share code for local use.
+     */
+    private generateLocalShareCode(): string {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+            code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+    }
+
     // --- Private Helpers ---
 
     private async loadList(): Promise<Tournament[]> {

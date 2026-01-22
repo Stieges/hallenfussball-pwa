@@ -57,6 +57,13 @@ export interface User {
   avatarUrl?: string;
   /** Globale Rolle */
   globalRole: GlobalRole;
+  /**
+   * True if user is a Supabase anonymous user.
+   * Anonymous users have a real auth.users entry but no email/password.
+   * They can later "claim" their account by adding credentials.
+   * Different from 'guest' (globalRole) which is local-only.
+   */
+  isAnonymous?: boolean;
   /** Erstellungszeitpunkt (ISO 8601) */
   createdAt: string;
   /** Letztes Update (ISO 8601) */
@@ -210,6 +217,11 @@ export interface AuthState {
   session: Session | null;
   isAuthenticated: boolean;
   isGuest: boolean;
+  /**
+   * True if user is a Supabase anonymous user.
+   * Anonymous users can sync to cloud but haven't created credentials yet.
+   */
+  isAnonymous: boolean;
   isLoading: boolean;
   /** Connection state to Supabase - 'offline' means auth init timed out */
   connectionState: ConnectionState;

@@ -29,3 +29,9 @@ export { TransferOwnershipDialog } from './TransferOwnershipDialog';
 
 // Phase 6: Mobile Auth UI
 export { MobileAuthBottomSheet } from './MobileAuthBottomSheet';
+
+// Phase 7: Tournament Limits (Anonymous Users)
+export { TournamentLimitModal } from './TournamentLimitModal';
+
+// Phase 8: Account Merge (Anonymous → Authenticated)
+export { MergeAccountDialog } from './MergeAccountDialog';

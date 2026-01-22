@@ -33,3 +33,12 @@ export type { ColorPreset, PresetCategory } from './colorPresets';
 
 // Sports configuration
 export * from './sports';
+
+// Feature flags
+export {
+  FEATURE_FLAGS,
+  isFeatureEnabled,
+  getEnabledFeatures,
+  logFeatureFlags,
+} from './featureFlags';
+export type { FeatureFlagKey } from './featureFlags';

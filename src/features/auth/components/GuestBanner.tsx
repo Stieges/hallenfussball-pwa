@@ -3,13 +3,16 @@
  *
  * Zeigt einen Banner wenn der User als Gast angemeldet ist.
  * Bietet Optionen zur Registrierung oder zum Schließen.
+ * Zeigt zusätzlich Turnier-Limit-Warnung wenn das Limit fast erreicht ist.
  *
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
+ * @see docs/concepts/AUTH-KONZEPT-ERWEITERT.md - Section on anonymous user limits
  */
 
 import React, { useState, CSSProperties } from 'react';
-import { cssVars } from '../../../design-tokens'
+import { cssVars } from '../../../design-tokens';
 import { useAuth } from '../hooks/useAuth';
+import { useTournamentLimit, ANONYMOUS_TOURNAMENT_LIMIT } from '../hooks/useTournamentLimit';
 
 interface GuestBannerProps {
   /** Whether to show a dismiss button */
@@ -29,6 +32,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
   onRegisterClick,
 }) => {
   const { isGuest } = useAuth();
+  const { isLimited, used, remaining, isNearLimit, isAtLimit, isLoading } = useTournamentLimit();
   const [isDismissed, setIsDismissed] = useState(false);
 
   // Don't render if not a guest or dismissed
@@ -36,38 +40,124 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
     return null;
   }
 
+  // Determine urgency level for styling
+  const urgencyLevel: 'normal' | 'warning' | 'critical' =
+    isAtLimit ? 'critical' : isNearLimit ? 'warning' : 'normal';
+
   const handleDismiss = () => {
     setIsDismissed(true);
     onDismiss?.();
   };
 
   if (compact) {
+    const compactBannerStyle = {
+      ...styles.compactBanner,
+      ...(urgencyLevel === 'critical' ? styles.compactBannerCritical : {}),
+      ...(urgencyLevel === 'warning' ? styles.compactBannerWarning : {}),
+    };
+
     return (
-      <div style={styles.compactBanner}>
-        <span style={styles.compactText}>Als Gast angemeldet</span>
+      <div style={compactBannerStyle}>
+        <span style={styles.compactText}>
+          {isAtLimit
+            ? `Turnier-Limit erreicht (${used}/${ANONYMOUS_TOURNAMENT_LIMIT})`
+            : isNearLimit
+              ? `Noch ${remaining} Turnier${remaining !== 1 ? 'e' : ''} verfügbar`
+              : 'Als Gast angemeldet'}
+        </span>
         <button
           type="button"
           onClick={onRegisterClick}
-          style={styles.compactLink}
+          style={urgencyLevel !== 'normal' ? styles.compactLinkUrgent : styles.compactLink}
         >
-          Registrieren
+          {isAtLimit ? 'Jetzt upgraden' : 'Registrieren'}
         </button>
       </div>
     );
   }
 
+  // Determine banner and icon styles based on urgency
+  const bannerStyle = {
+    ...styles.banner,
+    ...(urgencyLevel === 'critical' ? styles.bannerCritical : {}),
+    ...(urgencyLevel === 'warning' ? styles.bannerWarning : {}),
+  };
+
+  const iconContainerStyle = {
+    ...styles.iconContainer,
+    ...(urgencyLevel === 'critical' ? styles.iconContainerCritical : {}),
+    ...(urgencyLevel === 'warning' ? styles.iconContainerWarning : {}),
+  };
+
+  // Determine title and description based on limit state
+  const getTitle = () => {
+    if (isAtLimit) {
+      return 'Turnier-Limit erreicht';
+    }
+    if (isNearLimit) {
+      return `Noch ${remaining} Turnier${remaining !== 1 ? 'e' : ''} verfügbar`;
+    }
+    return 'Du bist als Gast angemeldet';
+  };
+
+  const getDescription = () => {
+    if (isAtLimit) {
+      return `Du hast das Limit von ${ANONYMOUS_TOURNAMENT_LIMIT} Turnieren erreicht. Registriere dich kostenlos für unbegrenzte Turniere.`;
+    }
+    if (isNearLimit) {
+      return `Als Gast kannst du maximal ${ANONYMOUS_TOURNAMENT_LIMIT} Turniere erstellen (${used}/${ANONYMOUS_TOURNAMENT_LIMIT} verwendet). Registriere dich für unbegrenzte Turniere.`;
+    }
+    return 'Erstelle ein Konto, um deine Turniere zu speichern und zu synchronisieren.';
+  };
+
+  const getIcon = () => {
+    if (urgencyLevel === 'critical') {
+      return '⚠️';
+    }
+    if (urgencyLevel === 'warning') {
+      return '⏳';
+    }
+    return '👤';
+  };
+
+  const registerButtonStyle = {
+    ...styles.registerButton,
+    ...(urgencyLevel === 'critical' ? styles.registerButtonCritical : {}),
+  };
+
   return (
-    <div style={styles.banner}>
+    <div style={bannerStyle}>
       <div style={styles.content}>
-        <div style={styles.iconContainer}>
-          <span style={styles.icon}>👤</span>
+        <div style={iconContainerStyle}>
+          <span style={styles.icon}>{getIcon()}</span>
         </div>
         <div style={styles.textContainer}>
-          <p style={styles.title}>Du bist als Gast angemeldet</p>
+          <p style={styles.title}>{getTitle()}</p>
           <p style={styles.description}>
-            Erstelle ein Konto, um deine Turniere zu speichern und zu
-            synchronisieren.
+            {getDescription()}
           </p>
+          {/* Progress indicator for limit */}
+          {isLimited && !isLoading && (
+            <div style={styles.progressContainer}>
+              <div style={styles.progressBar}>
+                <div
+                  style={{
+                    ...styles.progressFill,
+                    width: `${(used / ANONYMOUS_TOURNAMENT_LIMIT) * 100}%`,
+                    backgroundColor:
+                      urgencyLevel === 'critical'
+                        ? cssVars.colors.error
+                        : urgencyLevel === 'warning'
+                          ? cssVars.colors.warning
+                          : cssVars.colors.primary,
+                  }}
+                />
+              </div>
+              <span style={styles.progressText}>
+                {used}/{ANONYMOUS_TOURNAMENT_LIMIT} Turniere
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -75,11 +165,11 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
         <button
           type="button"
           onClick={onRegisterClick}
-          style={styles.registerButton}
+          style={registerButtonStyle}
         >
-          Jetzt registrieren
+          {isAtLimit ? 'Jetzt upgraden' : 'Jetzt registrieren'}
         </button>
-        {dismissible && (
+        {dismissible && !isAtLimit && (
           <button
             type="button"
             onClick={handleDismiss}
@@ -106,6 +196,15 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: cssVars.borderRadius.md,
     margin: cssVars.spacing.md,
   },
+  // Urgency variants
+  bannerWarning: {
+    background: cssVars.colors.warning + '20',
+    border: `1px solid ${cssVars.colors.warning}50`,
+  },
+  bannerCritical: {
+    background: cssVars.colors.error + '15',
+    border: `1px solid ${cssVars.colors.error}40`,
+  },
   content: {
     display: 'flex',
     gap: cssVars.spacing.md,
@@ -120,6 +219,12 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'center',
     background: cssVars.colors.warning + '20',
     borderRadius: cssVars.borderRadius.full,
+  },
+  iconContainerWarning: {
+    background: cssVars.colors.warning + '30',
+  },
+  iconContainerCritical: {
+    background: cssVars.colors.error + '20',
   },
   icon: {
     fontSize: cssVars.fontSizes.xl,
@@ -139,6 +244,30 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
     lineHeight: '1.5',
+  },
+  // Progress indicator for tournament limit
+  progressContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    marginTop: cssVars.spacing.sm,
+  },
+  progressBar: {
+    flex: 1,
+    height: '6px',
+    background: cssVars.colors.surfaceLight,
+    borderRadius: cssVars.borderRadius.full,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: cssVars.borderRadius.full,
+    transition: 'width 0.3s ease',
+  },
+  progressText: {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textTertiary,
+    whiteSpace: 'nowrap',
   },
   actions: {
     display: 'flex',
@@ -160,6 +289,9 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
     transition: 'opacity 0.2s ease',
+  },
+  registerButtonCritical: {
+    background: cssVars.colors.error,
   },
   dismissButton: {
     display: 'flex',
@@ -188,6 +320,14 @@ const styles: Record<string, CSSProperties> = {
     background: cssVars.colors.warning + '15',
     borderBottom: `1px solid ${cssVars.colors.warning}30`,
   },
+  compactBannerWarning: {
+    background: cssVars.colors.warning + '25',
+    borderBottom: `1px solid ${cssVars.colors.warning}50`,
+  },
+  compactBannerCritical: {
+    background: cssVars.colors.error + '15',
+    borderBottom: `1px solid ${cssVars.colors.error}40`,
+  },
   compactText: {
     fontSize: cssVars.fontSizes.sm,
     color: cssVars.colors.textSecondary,
@@ -196,6 +336,15 @@ const styles: Record<string, CSSProperties> = {
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
     color: cssVars.colors.warning,
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+  },
+  compactLinkUrgent: {
+    fontSize: cssVars.fontSizes.sm,
+    fontWeight: cssVars.fontWeights.semibold,
+    color: cssVars.colors.error,
     background: 'none',
     border: 'none',
     padding: 0,

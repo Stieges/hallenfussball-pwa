@@ -12,10 +12,10 @@ import { useState, useEffect, useCallback, useRef, CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament } from '../../../../types/tournament';
-import { SupabaseRepository } from '../../../../core/repositories/SupabaseRepository';
-import { isSupabaseConfigured } from '../../../../lib/supabase';
+import { useRepository } from '../../../../hooks/useRepository';
 import { generateShareCode } from '../../../../utils/shareCode';
 import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
+import { isSupabaseConfigured } from '../../../../lib/supabase';
 
 // =============================================================================
 // PROPS
@@ -199,6 +199,9 @@ export function VisibilityCategory({
   tournament,
   onTournamentUpdate,
 }: VisibilityCategoryProps) {
+  // Get repository from context (respects auth state)
+  const repository = useRepository();
+
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isPublic, setIsPublic] = useState(tournament.isPublic ?? false);
@@ -234,24 +237,21 @@ export function VisibilityCategory({
       setError(null);
 
       try {
-        if (isSupabaseConfigured) {
-          // Use Supabase RPC to generate and register share code
-          const repository = new SupabaseRepository();
-          const result = await repository.makeTournamentPublic(tournamentId);
+        // Use repository from context (supports both Supabase and localStorage)
+        const result = await repository.makeTournamentPublic(tournamentId);
 
-          if (result) {
-            setShareCode(result.shareCode);
-            setIsPublic(true);
-            onTournamentUpdate({
-              ...tournament,
-              isPublic: true,
-              shareCode: result.shareCode,
-              shareCodeCreatedAt: result.createdAt,
-              updatedAt: new Date().toISOString(),
-            });
-          }
+        if (result) {
+          setShareCode(result.shareCode);
+          setIsPublic(true);
+          onTournamentUpdate({
+            ...tournament,
+            isPublic: true,
+            shareCode: result.shareCode,
+            shareCodeCreatedAt: result.createdAt,
+            updatedAt: new Date().toISOString(),
+          });
         } else {
-          // Generate locally when Supabase is not available
+          // Fallback: Generate locally if repository returns null
           const newShareCode = generateShareCode();
           const createdAt = new Date().toISOString();
 
@@ -275,23 +275,17 @@ export function VisibilityCategory({
     };
 
     void autoGenerateShareCode();
-  }, [tournament, tournamentId, onTournamentUpdate, isUpdating]);
+  }, [tournament, tournamentId, onTournamentUpdate, isUpdating, repository]);
 
   // Generate public URL based on share code (uses HashRouter: /#/live/...)
   const publicUrl = shareCode ? generateLiveUrl(shareCode) : null;
 
   // Make tournament public (generate share code)
   const handleMakePublic = useCallback(async () => {
-    if (!isSupabaseConfigured) {
-      setError('Cloud-Funktionen sind nicht verfügbar.');
-      return;
-    }
-
     setIsUpdating(true);
     setError(null);
 
     try {
-      const repository = new SupabaseRepository();
       const result = await repository.makeTournamentPublic(tournamentId);
 
       if (result) {
@@ -313,20 +307,14 @@ export function VisibilityCategory({
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository]);
 
   // Make tournament private (remove share code)
   const handleMakePrivate = useCallback(async () => {
-    if (!isSupabaseConfigured) {
-      setError('Cloud-Funktionen sind nicht verfügbar.');
-      return;
-    }
-
     setIsUpdating(true);
     setError(null);
 
     try {
-      const repository = new SupabaseRepository();
       await repository.makeTournamentPrivate(tournamentId);
 
       setShareCode(null);
@@ -346,20 +334,14 @@ export function VisibilityCategory({
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository]);
 
   // Regenerate share code
   const handleRegenerateCode = useCallback(async () => {
-    if (!isSupabaseConfigured) {
-      setError('Cloud-Funktionen sind nicht verfügbar.');
-      return;
-    }
-
     setIsUpdating(true);
     setError(null);
 
     try {
-      const repository = new SupabaseRepository();
       const result = await repository.regenerateShareCode(tournamentId);
 
       if (result) {
@@ -379,7 +361,7 @@ export function VisibilityCategory({
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository]);
 
   // Handle copy to clipboard
   const handleCopy = async () => {
@@ -605,25 +587,24 @@ export function VisibilityCategory({
                 <div style={{
                   ...styles.tip,
                   marginTop: cssVars.spacing.md,
-                  background: cssVars.colors.warningLight,
-                  borderColor: cssVars.colors.warningBorder,
-                  color: cssVars.colors.warning,
+                  background: cssVars.colors.infoLight,
+                  borderColor: cssVars.colors.infoBorder,
+                  color: cssVars.colors.info,
                 }}>
-                  <span>⚠️</span>
+                  <span>ℹ️</span>
                   <span>
-                    Cloud-Funktionen sind nicht verfügbar. Öffentliche Share-Links erfordern eine Supabase-Verbindung.
+                    Lokaler Modus: Share-Codes werden lokal gespeichert und funktionieren nur auf diesem Gerät.
+                    Für geräteübergreifendes Teilen ist eine Cloud-Verbindung erforderlich.
                   </span>
                 </div>
               )}
 
-              {isSupabaseConfigured && (
-                <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
-                  <span>💡</span>
-                  <span>
-                    Aktiviere &quot;Mit Link teilbar&quot; unten, um einen öffentlichen Link mit kurzem Share-Code zu erhalten.
-                  </span>
-                </div>
-              )}
+              <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
+                <span>💡</span>
+                <span>
+                  Aktiviere &quot;Mit Link teilbar&quot; unten, um einen öffentlichen Link mit kurzem Share-Code zu erhalten.
+                </span>
+              </div>
             </>
           )}
         </div>
@@ -692,10 +673,10 @@ export function VisibilityCategory({
               ...styles.radioOption,
               ...(!isPublic ? styles.radioOptionSelected : {}),
               opacity: isUpdating ? 0.6 : 1,
-              cursor: isUpdating || !isSupabaseConfigured ? 'not-allowed' : 'pointer',
+              cursor: isUpdating ? 'not-allowed' : 'pointer',
             }}
             onClick={() => {
-              if (!isUpdating && isSupabaseConfigured && isPublic) {
+              if (!isUpdating && isPublic) {
                 void handleMakePrivate();
               }
             }}
@@ -705,7 +686,7 @@ export function VisibilityCategory({
               name="visibility"
               checked={!isPublic}
               readOnly
-              disabled={isUpdating || !isSupabaseConfigured}
+              disabled={isUpdating}
             />
             <div>
               <div style={styles.radioLabel}>🔒 Privat</div>
@@ -721,10 +702,10 @@ export function VisibilityCategory({
               ...styles.radioOption,
               ...(isPublic ? styles.radioOptionSelected : {}),
               opacity: isUpdating ? 0.6 : 1,
-              cursor: isUpdating || !isSupabaseConfigured ? 'not-allowed' : 'pointer',
+              cursor: isUpdating ? 'not-allowed' : 'pointer',
             }}
             onClick={() => {
-              if (!isUpdating && isSupabaseConfigured && !isPublic) {
+              if (!isUpdating && !isPublic) {
                 void handleMakePublic();
               }
             }}
@@ -734,7 +715,7 @@ export function VisibilityCategory({
               name="visibility"
               checked={isPublic}
               readOnly
-              disabled={isUpdating || !isSupabaseConfigured}
+              disabled={isUpdating}
             />
             <div>
               <div style={styles.radioLabel}>
@@ -763,13 +744,14 @@ export function VisibilityCategory({
           <div style={{
             ...styles.tip,
             marginTop: cssVars.spacing.md,
-            background: cssVars.colors.warningLight,
-            borderColor: cssVars.colors.warningBorder,
-            color: cssVars.colors.warning,
+            background: cssVars.colors.infoLight,
+            borderColor: cssVars.colors.infoBorder,
+            color: cssVars.colors.info,
           }}>
-            <span>⚠️</span>
+            <span>ℹ️</span>
             <span>
-              Cloud-Funktionen sind nicht verfügbar. Sichtbarkeits-Einstellungen erfordern eine Supabase-Verbindung.
+              Lokaler Modus aktiv: Share-Codes werden lokal gespeichert.
+              Für Cloud-Sync und geräteübergreifendes Teilen melde dich an.
             </span>
           </div>
         )}

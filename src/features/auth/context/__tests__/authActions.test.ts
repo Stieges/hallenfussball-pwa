@@ -449,8 +449,8 @@ describe('authActions', () => {
   // ===========================================================================
 
   describe('continueAsGuest', () => {
-    it('creates a local guest user', () => {
-      const guestUser = authActions.continueAsGuest(mockDeps);
+    it('creates a local guest user', async () => {
+      const guestUser = await authActions.continueAsGuest(mockDeps);
 
       expect(guestUser).toBeDefined();
       expect(guestUser.id).toBeDefined();
@@ -460,8 +460,8 @@ describe('authActions', () => {
       expect(mockDeps.setIsGuest).toHaveBeenCalledWith(true);
     });
 
-    it('sets session to null', () => {
-      authActions.continueAsGuest(mockDeps);
+    it('sets session to null', async () => {
+      await authActions.continueAsGuest(mockDeps);
 
       expect(mockDeps.setSession).toHaveBeenCalledWith(null);
     });

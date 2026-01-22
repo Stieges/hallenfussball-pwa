@@ -23,8 +23,11 @@ export interface AuthContextValue extends AuthState {
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   /** Loggt den User aus (async) */
   logout: () => Promise<void>;
-  /** Fährt als Gast fort */
-  continueAsGuest: () => User;
+  /**
+   * Fährt als Gast fort (async)
+   * Versucht zuerst Supabase Anonymous Auth, fällt auf lokalen Gast zurück
+   */
+  continueAsGuest: () => Promise<User>;
   /** Aktualisiert den Auth-State manuell (async) */
   refreshAuth: () => Promise<void>;
   /** Aktualisiert das User-Profil (async) */

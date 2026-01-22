@@ -62,12 +62,27 @@ export function mapTeamFromSupabase(row: TeamRow): Team {
 }
 
 /**
+ * Extended TeamInsert with denormalized owner_id for RLS
+ * owner_id is added via migration 002_denormalize_owner
+ */
+type TeamInsertWithOwner = TeamInsert & {
+  owner_id?: string | null;
+  is_public?: boolean | null;
+};
+
+/**
  * Maps a frontend Team to Supabase insert format
+ * @param team - The team to map
+ * @param tournamentId - The tournament ID
+ * @param ownerId - Optional owner ID for RLS denormalization
+ * @param isPublic - Optional public visibility flag
  */
 export function mapTeamToSupabase(
   team: Team,
-  tournamentId: string
-): TeamInsert {
+  tournamentId: string,
+  ownerId?: string,
+  isPublic?: boolean
+): TeamInsertWithOwner {
   return {
     id: team.id,
     tournament_id: tournamentId,
@@ -79,6 +94,9 @@ export function mapTeamToSupabase(
     logo_background_color: team.logo?.backgroundColor ?? null,
     color_primary: team.colors?.primary ?? null,
     color_secondary: team.colors?.secondary ?? null,
+    // Denormalized fields for RLS performance
+    owner_id: ownerId ?? null,
+    is_public: isPublic ?? false,
   };
 }
 
@@ -138,15 +156,31 @@ export function mapMatchFromSupabase(
 }
 
 /**
+ * Extended MatchInsert with denormalized owner_id for RLS
+ * owner_id is added via migration 002_denormalize_owner
+ */
+type MatchInsertWithOwner = MatchInsert & {
+  owner_id?: string | null;
+  is_public?: boolean | null;
+};
+
+/**
  * Maps a frontend Match to Supabase insert format
  * Note: teamA/teamB names need to be resolved to UUIDs
  * The teamNameToId map is used for conversion
+ * @param match - The match to map
+ * @param tournamentId - The tournament ID
+ * @param teamNameToId - Map from team names to IDs
+ * @param ownerId - Optional owner ID for RLS denormalization
+ * @param isPublic - Optional public visibility flag
  */
 export function mapMatchToSupabase(
   match: Match,
   tournamentId: string,
-  teamNameToId: Map<string, string>
-): MatchInsert {
+  teamNameToId: Map<string, string>,
+  ownerId?: string,
+  isPublic?: boolean
+): MatchInsertWithOwner {
   const teamAId = teamNameToId.get(match.teamA);
   const teamBId = teamNameToId.get(match.teamB);
 
@@ -184,6 +218,9 @@ export function mapMatchToSupabase(
     decided_by: match.decidedBy ?? null,
     skipped_reason: match.skippedReason ?? null,
     skipped_at: match.skippedAt ?? null,
+    // Denormalized fields for RLS performance
+    owner_id: ownerId ?? null,
+    is_public: isPublic ?? false,
   };
 }
 
@@ -547,18 +584,18 @@ export function mapTournamentToSupabase(
     version: tournament.version ?? null,
   };
 
-  // Map teams
+  // Map teams with owner_id for RLS denormalization
   const teamRows = tournament.teams.map((team) =>
-    mapTeamToSupabase(team, tournament.id)
+    mapTeamToSupabase(team, tournament.id, ownerId, false)
   );
 
   // Build team name to ID map for match conversion
   const teamNameToId = new Map<string, string>();
   tournament.teams.forEach((t) => teamNameToId.set(t.name, t.id));
 
-  // Map matches
+  // Map matches with owner_id for RLS denormalization
   const matchRows = tournament.matches.map((match) =>
-    mapMatchToSupabase(match, tournament.id, teamNameToId)
+    mapMatchToSupabase(match, tournament.id, teamNameToId, ownerId, false)
   );
 
   return { tournamentRow, teamRows, matchRows };

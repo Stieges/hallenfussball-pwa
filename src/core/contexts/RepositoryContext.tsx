@@ -37,8 +37,20 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const localTournamentRepo = new LocalStorageRepository();
         const localLiveMatchRepo = new LocalStorageLiveMatchRepository();
 
-        // If authenticated AND Supabase is configured -> Use Supabase repos
-        if (user && isSupabaseConfigured) {
+        // Use Supabase repos if:
+        // 1. Supabase is configured AND
+        // 2. User exists AND
+        // 3. User is NOT a local guest (local guests have globalRole='guest')
+        //
+        // This includes:
+        // - Authenticated users (email/password, OAuth)
+        // - Anonymous Supabase users (isAnonymous=true, can sync to cloud)
+        //
+        // Excludes:
+        // - Local guests (globalRole='guest', localStorage only)
+        const canUseSupabase = user && isSupabaseConfigured && user.globalRole !== 'guest';
+
+        if (canUseSupabase) {
             try {
                 const supabaseTournamentRepo = new SupabaseRepository();
                 const offlineTournamentRepo = new OfflineRepository(localTournamentRepo, supabaseTournamentRepo);
