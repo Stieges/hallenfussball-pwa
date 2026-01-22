@@ -40,6 +40,7 @@ import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation } from '../../components/monitor';
 import { generateTournamentUrl } from '../../utils/shareUtils';
+import { QRCodeSVG } from 'qrcode.react';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -768,21 +769,16 @@ function SponsorSlide({ slide, tournament, performanceSettings, theme, style }: 
           alignItems: 'center',
           marginTop: displaySpacing.sectionMD,
         }}>
-          <div style={{
-            width: '150px',
-            height: '150px',
-            background: '#fff',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: displayFontSizes.bodySM,
-            color: '#000',
-            textAlign: 'center',
-            padding: displaySpacing.contentSM,
-          }}>
-            QR-Code<br />{qrUrl.substring(0, 30)}...
-          </div>
+          <QRCodeSVG
+            value={qrUrl}
+            size={150}
+            bgColor="#ffffff"
+            fgColor="#000000"
+            level="M"
+            style={{
+              borderRadius: '12px',
+            }}
+          />
           <div style={{
             fontSize: displayFontSizes.bodySM,
             color: themeColors.textMuted,

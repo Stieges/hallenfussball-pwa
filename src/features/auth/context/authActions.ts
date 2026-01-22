@@ -64,8 +64,9 @@ export async function register(
         data: {
           full_name: name.trim(),
         },
-        // Redirect to /auth/confirm for scanner protection (requires button click)
-        emailRedirectTo: `${window.location.origin}/auth/confirm?type=signup`,
+        // Redirect to /#/auth/confirm for scanner protection (requires button click)
+        // Note: HashRouter requires /#/ prefix for proper routing
+        emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=signup`,
       },
     });
 
@@ -229,8 +230,9 @@ export async function sendMagicLink(
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        // Redirect to /auth/confirm for scanner protection (requires button click)
-        emailRedirectTo: `${window.location.origin}/auth/confirm?type=magiclink`,
+        // Redirect to /#/auth/confirm for scanner protection (requires button click)
+        // Note: HashRouter requires /#/ prefix for proper routing
+        emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=magiclink`,
       },
     });
 

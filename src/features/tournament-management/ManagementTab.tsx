@@ -40,6 +40,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 }) => {
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
 
   // Use extracted hook for live match management
   const {
@@ -198,12 +199,18 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
 
-  // Ensure match is initialized in service
+  // Ensure match is initialized in service (with loading state tracking)
   useEffect(() => {
     if (currentMatchData) {
-      void getLiveMatchData(currentMatchData);
+      const existingMatch = liveMatches.get(currentMatchData.id);
+      if (!existingMatch) {
+        setIsInitializingMatch(true);
+        void getLiveMatchData(currentMatchData).finally(() => {
+          setIsInitializingMatch(false);
+        });
+      }
     }
-  }, [currentMatchData, getLiveMatchData]);
+  }, [currentMatchData, getLiveMatchData, liveMatches]);
 
   // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
@@ -401,6 +408,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
           onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
         />
+      ) : isInitializingMatch ? (
+        <div className={styles.noMatches}>
+          Spiel wird geladen...
+        </div>
       ) : (
         <div className={styles.noMatches}>
           Keine Spiele auf diesem Feld vorhanden
