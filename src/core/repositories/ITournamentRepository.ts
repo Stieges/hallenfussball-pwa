@@ -48,4 +48,26 @@ export interface ITournamentRepository {
      * Only relevant for OfflineRepository - others can no-op.
      */
     syncUp?(): Promise<void>;
+
+    // ==========================================================================
+    // VISIBILITY & SHARING
+    // ==========================================================================
+
+    /**
+     * Makes a tournament publicly accessible by generating a share code.
+     * Returns the generated share code and creation timestamp.
+     * For local-only storage, this generates a local share code.
+     */
+    makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null>;
+
+    /**
+     * Makes a tournament private by removing the share code.
+     */
+    makeTournamentPrivate(tournamentId: string): Promise<void>;
+
+    /**
+     * Regenerates the share code for a public tournament.
+     * Returns the new share code and creation timestamp.
+     */
+    regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null>;
 }

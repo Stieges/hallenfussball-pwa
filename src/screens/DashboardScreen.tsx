@@ -15,7 +15,7 @@ import { TrashTournamentCard } from '../components/TrashTournamentCard';
 import { Button, CollapsibleSection } from '../components/ui';
 import { Icons } from '../components/ui/Icons';
 import { ConfirmDialog, useConfirmDialog } from '../components/ui/ConfirmDialog';
-import { cssVars } from '../design-tokens'
+import { cssVars } from '../design-tokens';
 import {
   categorizeTournaments,
   CategorizedTournaments,
@@ -30,6 +30,8 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { AuthSection } from '../components/layout/AuthSection';
 import { DashboardNav, SearchFilterBar, FilterChip, getTabFromPath } from '../components/dashboard';
 import { OfflineModeIndicator } from '../components/OfflineModeIndicator';
+import { useTournamentLimit } from '../features/auth/hooks/useTournamentLimit';
+import { TournamentLimitModal, GuestBanner } from '../features/auth/components';
 
 interface DashboardScreenProps {
   tournaments: Tournament[];
@@ -66,13 +68,26 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNavigateToSettings,
 }) => {
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<FilterChip[]>([]);
   const isMobile = useIsMobile();
   const location = useLocation();
 
+  // Tournament limit for anonymous users
+  const { canCreate, isAtLimit, isNearLimit, isLimited } = useTournamentLimit();
+
   // Get active tab from URL path
   const activeTab = getTabFromPath(location.pathname);
+
+  // Handle create new tournament with limit check
+  const handleCreateNewClick = () => {
+    if (!canCreate) {
+      setShowLimitModal(true);
+      return;
+    }
+    onCreateNew();
+  };
 
   // Empty Trash Confirmation Dialog
   const emptyTrashDialog = useConfirmDialog({
@@ -253,22 +268,32 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
           <Button
             variant="primary"
-            onClick={onCreateNew}
+            onClick={handleCreateNewClick}
             icon={<Icons.Plus />}
+            disabled={isAtLimit}
             style={{
               padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
               fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md,
               fontWeight: cssVars.fontWeights.medium,
               flex: isMobile ? 1 : undefined,
+              ...(isAtLimit ? { opacity: 0.6 } : {}),
             }}
           >
-            Neues Turnier
+            {isAtLimit ? 'Limit erreicht' : 'Neues Turnier'}
           </Button>
         </div>
       </div>
 
       {/* Offline Mode Indicator */}
       <OfflineModeIndicator />
+
+      {/* Guest Banner with Limit Warning (only on Turniere tab) */}
+      {activeTab === 'turniere' && isLimited && (isNearLimit || isAtLimit) && (
+        <GuestBanner
+          onRegisterClick={onNavigateToRegister}
+          dismissible={!isAtLimit}
+        />
+      )}
 
       {/* Desktop Navigation Tabs */}
       {!isMobile && (
@@ -600,6 +625,14 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
       {/* Confirm Dialog for Empty Trash */}
       <ConfirmDialog {...emptyTrashDialog.dialogProps} />
+
+      {/* Tournament Limit Modal for Anonymous Users */}
+      <TournamentLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        onRegisterClick={onNavigateToRegister}
+        onLoginClick={onNavigateToLogin}
+      />
     </div>
   );
 };

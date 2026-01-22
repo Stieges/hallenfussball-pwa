@@ -334,6 +334,104 @@ export class HybridRepository implements ITournamentRepository {
   }
 
   // =============================================================================
+  // VISIBILITY & SHARING
+  // =============================================================================
+
+  /**
+   * Makes a tournament publicly accessible by generating a share code.
+   * - Online: Uses cloud RPC for proper share code generation
+   * - Offline: Uses local implementation (limited functionality)
+   */
+  async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    if (!this.isOnline) {
+      // Offline: Use local implementation
+      const result = await this.local.makeTournamentPublic(tournamentId);
+      if (result) {
+        await this.queueMutation('UPDATE', tournamentId, { isPublic: true, shareCode: result.shareCode });
+      }
+      return result;
+    }
+
+    try {
+      const result = await this.getRemote().makeTournamentPublic(tournamentId);
+      if (result) {
+        // Update local cache
+        const tournament = await this.local.get(tournamentId);
+        if (tournament) {
+          await this.local.save({
+            ...tournament,
+            isPublic: true,
+            shareCode: result.shareCode,
+            shareCodeCreatedAt: result.createdAt,
+          });
+        }
+      }
+      return result;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to make tournament public in cloud, using local:', error);
+      }
+      return this.local.makeTournamentPublic(tournamentId);
+    }
+  }
+
+  /**
+   * Makes a tournament private by removing the share code.
+   */
+  async makeTournamentPrivate(tournamentId: string): Promise<void> {
+    // Always update local first
+    await this.local.makeTournamentPrivate(tournamentId);
+
+    if (!this.isOnline) {
+      await this.queueMutation('UPDATE', tournamentId, { isPublic: false, shareCode: null });
+      return;
+    }
+
+    try {
+      await this.getRemote().makeTournamentPrivate(tournamentId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to make tournament private in cloud, queuing:', error);
+      }
+      await this.queueMutation('UPDATE', tournamentId, { isPublic: false, shareCode: null });
+    }
+  }
+
+  /**
+   * Regenerates the share code for a public tournament.
+   */
+  async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+    if (!this.isOnline) {
+      const result = await this.local.regenerateShareCode(tournamentId);
+      if (result) {
+        await this.queueMutation('UPDATE', tournamentId, { shareCode: result.shareCode });
+      }
+      return result;
+    }
+
+    try {
+      const result = await this.getRemote().regenerateShareCode(tournamentId);
+      if (result) {
+        // Update local cache
+        const tournament = await this.local.get(tournamentId);
+        if (tournament) {
+          await this.local.save({
+            ...tournament,
+            shareCode: result.shareCode,
+            shareCodeCreatedAt: result.createdAt,
+          });
+        }
+      }
+      return result;
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to regenerate share code in cloud, using local:', error);
+      }
+      return this.local.regenerateShareCode(tournamentId);
+    }
+  }
+
+  // =============================================================================
   // Sync Methods
   // =============================================================================
 

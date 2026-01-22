@@ -527,4 +527,107 @@ export class OfflineRepository implements ITournamentRepository {
             return downResult;
         }
     }
+
+    // ==========================================================================
+    // VISIBILITY & SHARING
+    // ==========================================================================
+
+    /**
+     * Makes a tournament publicly accessible by generating a share code.
+     * Strategy: Try cloud first, fall back to local, queue for sync.
+     */
+    async makeTournamentPublic(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        try {
+            // Try cloud first for proper share code generation
+            const result = await this.supabaseRepo.makeTournamentPublic(tournamentId);
+            if (result) {
+                // Update local cache
+                const tournament = await this.localRepo.get(tournamentId);
+                if (tournament) {
+                    await this.localRepo.save({
+                        ...tournament,
+                        isPublic: true,
+                        shareCode: result.shareCode,
+                        shareCodeCreatedAt: result.createdAt,
+                    });
+                }
+                return result;
+            }
+        } catch (error) {
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud makeTournamentPublic failed, using local.', error);
+            }
+        }
+
+        // Fallback to local implementation
+        const localResult = await this.localRepo.makeTournamentPublic(tournamentId);
+        if (localResult) {
+            // Queue for cloud sync when back online
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
+                tournamentId,
+                metadata: { isPublic: true, shareCode: localResult.shareCode }
+            });
+        }
+        return localResult;
+    }
+
+    /**
+     * Makes a tournament private by removing the share code.
+     * Strategy: Update local first, then try cloud, queue if offline.
+     */
+    async makeTournamentPrivate(tournamentId: string): Promise<void> {
+        // Update local first (optimistic)
+        await this.localRepo.makeTournamentPrivate(tournamentId);
+
+        try {
+            await this.supabaseRepo.makeTournamentPrivate(tournamentId);
+        } catch (error) {
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud makeTournamentPrivate failed, queued for sync.', error);
+            }
+            // Queue for cloud sync when back online
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
+                tournamentId,
+                metadata: { isPublic: false, shareCode: null }
+            });
+        }
+    }
+
+    /**
+     * Regenerates the share code for a public tournament.
+     * Strategy: Try cloud first, fall back to local, queue for sync.
+     */
+    async regenerateShareCode(tournamentId: string): Promise<{ shareCode: string; createdAt: string } | null> {
+        try {
+            // Try cloud first for proper share code generation
+            const result = await this.supabaseRepo.regenerateShareCode(tournamentId);
+            if (result) {
+                // Update local cache
+                const tournament = await this.localRepo.get(tournamentId);
+                if (tournament) {
+                    await this.localRepo.save({
+                        ...tournament,
+                        shareCode: result.shareCode,
+                        shareCodeCreatedAt: result.createdAt,
+                    });
+                }
+                return result;
+            }
+        } catch (error) {
+            if (!isAbortError(error)) {
+                console.warn('OfflineRepository: Cloud regenerateShareCode failed, using local.', error);
+            }
+        }
+
+        // Fallback to local implementation
+        const localResult = await this.localRepo.regenerateShareCode(tournamentId);
+        if (localResult) {
+            // Queue for cloud sync when back online
+            this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
+                tournamentId,
+                metadata: { shareCode: localResult.shareCode }
+            });
+        }
+        return localResult;
+    }
 }

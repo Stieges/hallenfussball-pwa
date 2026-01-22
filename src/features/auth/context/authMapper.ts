@@ -27,7 +27,7 @@ export interface ProfileData {
  * 1. Profile display_name (from profiles table)
  * 2. user_metadata.full_name (from auth.users)
  * 3. Email prefix (before @)
- * 4. 'User' (default)
+ * 4. 'Gast' for anonymous users, 'User' otherwise
  */
 export function mapSupabaseUser(
   supabaseUser: SupabaseUser | null,
@@ -40,17 +40,25 @@ export function mapSupabaseUser(
   // Extract user_metadata with proper typing
   const metadata = supabaseUser.user_metadata as { full_name?: string; avatar_url?: string } | undefined;
 
+  // Check if this is an anonymous user (Supabase sets is_anonymous on the user object)
+  const isAnonymous = supabaseUser.is_anonymous === true;
+
   // Use profile name if non-empty, otherwise fall back through the chain
   const profileName = profileData?.name && profileData.name.trim() !== '' ? profileData.name : undefined;
   const metadataName = metadata?.full_name && metadata.full_name.trim() !== '' ? metadata.full_name : undefined;
   const emailName = supabaseUser.email?.split('@')[0];
 
+  // Default name for anonymous users is 'Gast', for regular users 'User'
+  const defaultName = isAnonymous ? 'Gast' : 'User';
+
   return {
     id: supabaseUser.id,
     email: supabaseUser.email ?? '',
-    name: profileName ?? metadataName ?? emailName ?? 'User',
+    name: profileName ?? metadataName ?? emailName ?? defaultName,
     avatarUrl: profileData?.avatar_url ?? metadata?.avatar_url,
+    // Anonymous users get 'user' role (not 'guest') since they have a real Supabase account
     globalRole: profileData?.role as 'user' | 'admin' | undefined ?? 'user',
+    isAnonymous,
     createdAt: supabaseUser.created_at,
     updatedAt: supabaseUser.updated_at ?? supabaseUser.created_at,
     lastLoginAt: supabaseUser.last_sign_in_at,

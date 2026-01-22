@@ -39,7 +39,7 @@ export const MobileAuthBottomSheet: React.FC<MobileAuthBottomSheetProps> = ({
   };
 
   const handleContinueAsGuest = () => {
-    continueAsGuest();
+    void continueAsGuest();
     onClose();
   };
 

@@ -24,6 +24,11 @@ import { AuthContext } from './authContextInstance';
 import { mapSupabaseUser, mapSupabaseSession } from './authMapper';
 import * as authActions from './authActions';
 import type { AuthActionDeps } from './authActions';
+import {
+  cacheUserProfile,
+  getCachedProfile,
+} from '../services/profileCacheService';
+import { isFeatureEnabled } from '../../../config';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -159,6 +164,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const mappedUser = mapSupabaseUser(supabaseSession.user, profileData);
     const mappedSession = mapSupabaseSession(supabaseSession);
 
+    // Cache authenticated user for offline fallback (BUG-004 fix)
+    // This allows us to restore the user if auth init fails after max retries
+    // Use both localStorage (sync, quick) and IndexedDB (async, more robust)
+    try {
+      safeLocalStorage.setItem('auth:cachedUser', JSON.stringify(mappedUser));
+    } catch {
+      // localStorage not available, skip caching
+    }
+    // Also cache to IndexedDB for better offline support (async, fire-and-forget)
+    // Only if OFFLINE_FIRST feature flag is enabled
+    if (mappedUser && isFeatureEnabled('OFFLINE_FIRST')) {
+      void cacheUserProfile(mappedUser);
+    }
+
     setUser(mappedUser);
     setSession(mappedSession);
     setIsGuest(false);
@@ -224,12 +243,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setTimeout(() => void initAuth(retryCount + 1), delay);
             return;
           }
-          // Max retries reached - set offline to trigger reconnect logic
+          // Max retries reached - try to restore cached user (BUG-004 fix)
           // eslint-disable-next-line no-console -- intentional debug logging for transient errors
-          console.debug('Auth init aborted after max retries - releasing UI:', error);
+          console.debug('Auth init aborted after max retries - attempting cached user fallback:', error);
           if (mounted) {
+            // Try to restore cached authenticated user (localStorage first, then IndexedDB)
+            let cachedUser: User | null = null;
+            const cachedUserJson = safeLocalStorage.getItem('auth:cachedUser');
+            if (cachedUserJson) {
+              try {
+                cachedUser = JSON.parse(cachedUserJson) as User;
+              } catch {
+                // Invalid cached user in localStorage
+              }
+            }
+            // If localStorage didn't have it, try IndexedDB (only if OFFLINE_FIRST enabled)
+            if (!cachedUser && isFeatureEnabled('OFFLINE_FIRST')) {
+              cachedUser = await getCachedProfile(true); // ignoreExpiry for offline
+            }
+            if (cachedUser) {
+              // eslint-disable-next-line no-console -- intentional debug logging
+              console.debug('Restored cached user for offline mode:', cachedUser.email);
+              setUser(cachedUser);
+              setConnectionState('offline');
+              setIsLoading(false);
+              return;
+            }
+            // No cached user - check for guest user via updateAuthState
             setConnectionState('offline');
-            setIsLoading(false);
+            await updateAuthState(null);
           }
           return;
         }
@@ -237,10 +279,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Auth init error:', error);
         }
         if (mounted) {
+          // Try to restore cached user on any auth error (BUG-004 fix)
+          // Check localStorage first (sync, quick), then IndexedDB (async, more robust)
+          let cachedUser: User | null = null;
+          const cachedUserJson = safeLocalStorage.getItem('auth:cachedUser');
+          if (cachedUserJson) {
+            try {
+              cachedUser = JSON.parse(cachedUserJson) as User;
+            } catch {
+              // Invalid cached user in localStorage
+            }
+          }
+          // If localStorage didn't have it, try IndexedDB (only if OFFLINE_FIRST enabled)
+          if (!cachedUser && isFeatureEnabled('OFFLINE_FIRST')) {
+            cachedUser = await getCachedProfile(true); // ignoreExpiry for offline
+          }
+          if (cachedUser) {
+            // eslint-disable-next-line no-console -- intentional debug logging
+            console.debug('Restored cached user after auth error:', cachedUser.email);
+            setUser(cachedUser);
+            setConnectionState('offline');
+            setIsLoading(false);
+            return;
+          }
+          // No cached user - check for guest user via updateAuthState
           setConnectionState('offline');
-          setUser(null);
-          setSession(null);
-          setIsLoading(false);
+          await updateAuthState(null);
         }
       } finally {
         clearTimeout(safetyTimeout);
@@ -429,6 +493,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return user !== null && user.globalRole !== 'guest';
   }, [user]);
 
+  // Check if user is an anonymous Supabase user (has account but no credentials)
+  const isAnonymous = useMemo(() => {
+    return user?.isAnonymous === true;
+  }, [user]);
+
   // ============================================
   // AUTH ACTION DEPENDENCIES
   // ============================================
@@ -515,6 +584,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     isAuthenticated,
     isGuest,
+    isAnonymous,
     isLoading,
     connectionState,
     register,

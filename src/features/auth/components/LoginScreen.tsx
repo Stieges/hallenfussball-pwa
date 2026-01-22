@@ -142,7 +142,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   const handleGuestContinue = () => {
-    continueAsGuest();
+    void continueAsGuest();
     onContinueAsGuest?.();
   };
 

@@ -15,6 +15,8 @@ import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
 import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
+import { clearProfileCache } from '../services/profileCacheService';
+import { isFeatureEnabled } from '../../../config';
 
 /**
  * Dependencies required by auth actions
@@ -297,6 +299,8 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
   // Clear local state even if Supabase is not configured
   if (!isSupabaseConfigured || !supabase) {
     safeLocalStorage.removeItem('auth:guestUser');
+    safeLocalStorage.removeItem('auth:cachedUser'); // BUG-004: Also clear cached user
+    void clearProfileCache(); // Also clear IndexedDB cache
     deps.setUser(null);
     deps.setSession(null);
     deps.setIsGuest(false);
@@ -306,6 +310,8 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
   try {
     await supabase.auth.signOut();
     safeLocalStorage.removeItem('auth:guestUser');
+    safeLocalStorage.removeItem('auth:cachedUser'); // BUG-004: Also clear cached user
+    void clearProfileCache(); // Also clear IndexedDB cache
     deps.setUser(null);
     deps.setSession(null);
     deps.setIsGuest(false);
@@ -317,9 +323,59 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
 }
 
 /**
- * Continue as guest (local only, no Supabase)
+ * Continue as guest
+ *
+ * Strategy:
+ * 1. If Supabase is configured, try signInAnonymously() for cloud sync
+ * 2. If Supabase not available or signInAnonymously fails, fall back to local guest
+ *
+ * Anonymous users vs Local guests:
+ * - Anonymous: Real Supabase auth.users entry, can sync to cloud, can later claim account
+ * - Local guest: localStorage only, no cloud sync, cannot claim account
  */
-export function continueAsGuest(deps: AuthActionDeps): User {
+export async function continueAsGuest(deps: AuthActionDeps): Promise<User> {
+  // Only use anonymous Supabase auth if ANONYMOUS_AUTH feature flag is enabled
+  // AND Supabase is configured
+  if (isFeatureEnabled('ANONYMOUS_AUTH') && isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase.auth.signInAnonymously();
+
+      if (!error && data.user) {
+        // Successfully created anonymous Supabase user
+        const profileData = await deps.fetchProfile(data.user.id);
+        const mappedUser = mapSupabaseUser(data.user, profileData);
+
+        if (mappedUser) {
+          // Clear any existing guest user data
+          safeLocalStorage.removeItem('auth:guestUser');
+
+          deps.setUser(mappedUser);
+          deps.setSession(data.session ? mapSupabaseSession(data.session) : null);
+          deps.setIsGuest(false); // Not a local guest, but an anonymous Supabase user
+          deps.setConnectionState('connected');
+
+          if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.log('Created anonymous Supabase user:', mappedUser.id);
+          }
+
+          return mappedUser;
+        }
+      }
+
+      // signInAnonymously failed, fall through to local guest
+      if (import.meta.env.DEV) {
+        console.warn('signInAnonymously failed, falling back to local guest:', error?.message);
+      }
+    } catch (err) {
+      // Unexpected error, fall through to local guest
+      if (import.meta.env.DEV) {
+        console.warn('Anonymous auth error, falling back to local guest:', err);
+      }
+    }
+  }
+
+  // Fall back to local guest (no cloud sync)
   const guestUser = createLocalGuestUser();
   safeLocalStorage.setItem('auth:guestUser', JSON.stringify(guestUser));
   deps.setUser(guestUser);

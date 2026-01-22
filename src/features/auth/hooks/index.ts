@@ -31,3 +31,6 @@ export type {
   LoginFormErrors,
   LoginMode,
 } from './useLoginForm';
+
+export { useTournamentLimit, ANONYMOUS_TOURNAMENT_LIMIT } from './useTournamentLimit';
+export type { UseTournamentLimitReturn } from './useTournamentLimit';
