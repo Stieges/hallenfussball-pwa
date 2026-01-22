@@ -1,6 +1,6 @@
 import { CSSProperties } from 'react';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, WhenIdleType } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 
 // Constants
@@ -9,6 +9,12 @@ const WHEN_IDLE_OPTIONS: { value: WhenIdleType; label: string; description: stri
     { value: 'last-result', label: 'Letztes Ergebnis', description: 'Zeigt das letzte Spielergebnis' },
     { value: 'sponsor', label: 'Sponsor', description: 'Zeigt einen Sponsor-Screen' },
     { value: 'skip', label: 'Überspringen', description: 'Springt zum nächsten Slide' },
+];
+
+const QR_TARGET_OPTIONS: { value: QrTargetType; label: string; description: string }[] = [
+    { value: 'tournament', label: 'Public View (Turnier)', description: 'Link zur öffentlichen Turnier-Ansicht' },
+    { value: 'sponsor-website', label: 'Sponsor-Website', description: 'Link zur Website des Sponsors' },
+    { value: 'custom', label: 'Eigene URL', description: 'Beliebige URL eingeben' },
 ];
 
 interface SlideConfigEditorProps {
@@ -184,6 +190,45 @@ export function SlideConfigEditor({
                             <span style={styles.labelStyle}>QR-Code anzeigen</span>
                         </label>
                     </div>
+
+                    {/* QR-Code Ziel - nur sichtbar wenn QR-Code aktiviert */}
+                    {config.showQrCode !== false && (
+                        <>
+                            <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+                                <label style={styles.labelStyle}>QR-Code Ziel</label>
+                                <select
+                                    style={styles.selectStyle}
+                                    value={config.qrTarget ?? 'tournament'}
+                                    onChange={(e) => handleConfigChange('qrTarget', e.target.value as QrTargetType)}
+                                >
+                                    {QR_TARGET_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                                <span style={{
+                                    fontSize: cssVars.fontSizes.xs,
+                                    color: cssVars.colors.textMuted,
+                                    marginTop: cssVars.spacing.xs,
+                                }}>
+                                    {QR_TARGET_OPTIONS.find(o => o.value === (config.qrTarget ?? 'tournament'))?.description}
+                                </span>
+                            </div>
+
+                            {/* Custom URL Input - nur sichtbar wenn qrTarget = 'custom' */}
+                            {config.qrTarget === 'custom' && (
+                                <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+                                    <label style={styles.labelStyle}>Eigene URL</label>
+                                    <input
+                                        type="url"
+                                        style={styles.inputStyle}
+                                        value={config.customQrUrl ?? ''}
+                                        onChange={(e) => handleConfigChange('customQrUrl', e.target.value)}
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
                 </>
             )}
 
