@@ -35,6 +35,7 @@ import {
 
   SettingsDialog,
 } from './components';
+import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
 
 // Hooks
 import { useToast } from './hooks';
@@ -1015,6 +1016,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         tournamentId={tournamentId}
         onTestSound={() => void sound.play()}
       />
+
+      {/* Audio Activation Banner - required for browser autoplay policy */}
+      {cockpitSettings.soundEnabled && !sound.isActivated && (
+        <AudioActivationBanner
+          show={true}
+          onActivate={sound.activate}
+        />
+      )}
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>

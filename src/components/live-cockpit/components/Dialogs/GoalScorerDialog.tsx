@@ -58,8 +58,18 @@ export function GoalScorerDialog({
   });
 
   // Auto-dismiss callback (stable reference) - saves as incomplete
+  // Also used when clicking outside the dialog
   const handleAutoSkip = useCallback(() => {
     onConfirm(null, [], true); // incomplete = true
+    setJerseyNumber('');
+    setAssist1('');
+    setAssist2('');
+    onClose();
+  }, [onConfirm, onClose]);
+
+  // Handle overlay click - saves goal as incomplete and closes
+  const handleOverlayClick = useCallback(() => {
+    onConfirm(null, [], true); // Goal IS counted, just marked incomplete
     setJerseyNumber('');
     setAssist1('');
     setAssist2('');
@@ -166,7 +176,7 @@ export function GoalScorerDialog({
   };
 
   return (
-    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={onClose}>
+    <div style={styles.overlay} className={moduleStyles.dialogOverlay} onClick={handleOverlayClick}>
       <div
         ref={focusTrap.containerRef}
         style={styles.dialog}
