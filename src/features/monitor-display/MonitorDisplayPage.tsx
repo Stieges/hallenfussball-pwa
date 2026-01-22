@@ -1099,16 +1099,14 @@ export function MonitorDisplayPage({
   }, [goToSlide, slideState.currentIndex]);
 
   // Auto-advance slides
-  // Note: We intentionally exclude slideState.currentIndex from dependencies
-  // Including it would cause the timeout to reset on every slide change,
-  // preventing auto-advance from working correctly.
+  // nextSlide changes when slideState.currentIndex changes, which correctly
+  // triggers a new timeout after each slide transition.
   useEffect(() => {
     if (isPaused || !monitor || monitor.slides.length <= 1) {return;}
 
     const timeout = setTimeout(nextSlide, slideDuration);
     return () => clearTimeout(timeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaused, monitor, slideDuration]);
+  }, [isPaused, monitor, slideDuration, nextSlide]);
 
   // ==========================================================================
   // KEYBOARD NAVIGATION
