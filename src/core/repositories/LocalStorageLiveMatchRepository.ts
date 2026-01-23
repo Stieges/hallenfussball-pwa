@@ -4,14 +4,48 @@ import { STORAGE_KEYS } from '../../constants/storage';
 
 /**
  * localStorage Implementation of ILiveMatchRepository
- * 
+ *
  * Stores live match data per tournament in localStorage.
  * Key format: liveMatchData_{tournamentId}
+ *
+ * C-5 FIX: Uses Web Locks API for atomic read-modify-write operations
+ * to prevent race conditions in multi-tab scenarios.
  */
 export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
 
+    // C-5 FIX: In-memory lock fallback for browsers without Web Locks API
+    private static lockPromises = new Map<string, Promise<void>>();
+
     private getStorageKey(tournamentId: string): string {
         return STORAGE_KEYS.liveMatches(tournamentId);
+    }
+
+    /**
+     * C-5 FIX: Acquire a lock for atomic operations
+     * Uses Web Locks API if available, falls back to in-memory locking
+     */
+    private async withLock<T>(lockName: string, fn: () => Promise<T>): Promise<T> {
+        // Try Web Locks API first (better for multi-tab)
+        if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+            return navigator.locks.request(lockName, async () => fn());
+        }
+
+        // Fallback: Simple in-memory lock (same-tab only)
+        const existingLock = LocalStorageLiveMatchRepository.lockPromises.get(lockName);
+        if (existingLock) {
+            await existingLock;
+        }
+
+        let resolve: () => void = () => { /* no-op, will be replaced */ };
+        const lockPromise = new Promise<void>(r => { resolve = r; });
+        LocalStorageLiveMatchRepository.lockPromises.set(lockName, lockPromise);
+
+        try {
+            return await fn();
+        } finally {
+            resolve();
+            LocalStorageLiveMatchRepository.lockPromises.delete(lockName);
+        }
     }
 
     async get(tournamentId: string, matchId: string): Promise<LiveMatch | null> {
@@ -44,16 +78,21 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
     }
 
     async save(tournamentId: string, match: LiveMatch): Promise<void> {
-        const all = await this.getAll(tournamentId);
+        const lockName = `live-match-${tournamentId}`;
 
-        // Increment version for consistency with Supabase optimistic locking
-        const updatedMatch: LiveMatch = {
-            ...match,
-            version: (match.version ?? 0) + 1,
-        };
+        // C-5 FIX: Use lock to prevent read-modify-write race conditions
+        await this.withLock(lockName, async () => {
+            const all = await this.getAll(tournamentId);
 
-        all.set(match.id, updatedMatch);
-        await this.saveAll(tournamentId, all);
+            // Increment version for consistency with Supabase optimistic locking
+            const updatedMatch: LiveMatch = {
+                ...match,
+                version: (match.version ?? 0) + 1,
+            };
+
+            all.set(match.id, updatedMatch);
+            await this.saveAll(tournamentId, all);
+        });
     }
 
     async saveAll(tournamentId: string, matches: Map<string, LiveMatch>): Promise<void> {
@@ -71,9 +110,14 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
     }
 
     async delete(tournamentId: string, matchId: string): Promise<void> {
-        const all = await this.getAll(tournamentId);
-        all.delete(matchId);
-        await this.saveAll(tournamentId, all);
+        const lockName = `live-match-${tournamentId}`;
+
+        // C-5 FIX: Use lock to prevent race conditions
+        await this.withLock(lockName, async () => {
+            const all = await this.getAll(tournamentId);
+            all.delete(matchId);
+            await this.saveAll(tournamentId, all);
+        });
     }
 
     async clear(tournamentId: string): Promise<void> {

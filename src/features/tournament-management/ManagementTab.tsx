@@ -199,18 +199,39 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
 
-  // Ensure match is initialized in service (with loading state tracking)
+  // C-3 FIX: Ensure match is initialized with proper cancellation to prevent race conditions
+  // When currentMatchData changes rapidly (e.g., quick field switching), we cancel pending inits
   useEffect(() => {
-    if (currentMatchData) {
-      const existingMatch = liveMatches.get(currentMatchData.id);
-      if (!existingMatch) {
-        setIsInitializingMatch(true);
-        void getLiveMatchData(currentMatchData).finally(() => {
-          setIsInitializingMatch(false);
-        });
-      }
+    if (!currentMatchData) {
+      return;
     }
-  }, [currentMatchData, getLiveMatchData, liveMatches]);
+
+    const matchId = currentMatchData.id;
+    const existingMatch = liveMatches.get(matchId);
+
+    if (existingMatch) {
+      // Match already exists, no need to initialize
+      return;
+    }
+
+    let cancelled = false;
+
+    setIsInitializingMatch(true);
+
+    void getLiveMatchData(currentMatchData)
+      .finally(() => {
+        // Only update state if this effect hasn't been cancelled
+        if (!cancelled) {
+          setIsInitializingMatch(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // C-3 FIX: Intentionally only depend on ID to prevent re-init on other property changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMatchData?.id, getLiveMatchData, liveMatches]);
 
   // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>

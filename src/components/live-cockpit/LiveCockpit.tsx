@@ -153,17 +153,57 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     cockpitSettings.nettoWarningSeconds
   );
 
+  // C-2 FIX: Reset all dialog states when match changes to prevent stale data
+  // C-6 FIX: Initialize foul counts from match events for persistence across reload/tab-sync
+  const currentMatchId = currentMatch?.id;
+  useEffect(() => {
+    // Reset all dialog visibility states
+    setShowTimeAdjustDialog(false);
+    setShowCardDialog(false);
+    setShowTimePenaltyDialog(false);
+    setShowSubstitutionDialog(false);
+    setShowGoalDialog(false);
+    setShowEventEditDialog(false);
+    setShowEventLogBottomSheet(false);
+    setShowSettingsDialog(false);
 
+    // Reset pending action states
+    setPendingGoalSide(null);
+    setPendingPenaltySide(null);
+    setPendingCardType(null);
+    setPendingCardTeamSide(null);
+    setPendingSubstitutionSide(null);
+    setEditingEvent(null);
+
+    // Reset match-specific states
+    setActivePenalties([]);
+
+    // C-6 FIX: Initialize foul counts from persisted match events
+    // This ensures fouls are synced across page reloads and multi-tab scenarios
+    if (currentMatch?.events && currentMatch.homeTeam && currentMatch.awayTeam) {
+      const homeTeamId = currentMatch.homeTeam.id;
+      const awayTeamId = currentMatch.awayTeam.id;
+      const foulEvents = currentMatch.events.filter(e => e.type === 'FOUL');
+      const homeCount = foulEvents.filter(e => e.payload.teamId === homeTeamId).length;
+      const awayCount = foulEvents.filter(e => e.payload.teamId === awayTeamId).length;
+      setHomeFouls(homeCount);
+      setAwayFouls(awayCount);
+    } else {
+      setHomeFouls(0);
+      setAwayFouls(0);
+    }
+    // C-6 FIX: Intentionally use team IDs instead of full team objects to prevent unnecessary re-runs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMatchId, currentMatch?.events, currentMatch?.homeTeam?.id, currentMatch?.awayTeam?.id]);
 
   // BUG-008 FIX: Update penalty countdowns every second when match is RUNNING
   // Also removes expired penalties and pauses countdown when match is paused
-  useEffect(() => {
-    if (!currentMatch || activePenalties.length === 0) {
-      return;
-    }
+  // C-1 FIX: Only depend on status and penalty count to prevent multiple intervals
+  const matchStatus = currentMatch?.status;
+  const hasPenalties = activePenalties.length > 0;
 
-    // Only countdown when match is running
-    if (currentMatch.status !== 'RUNNING') {
+  useEffect(() => {
+    if (!hasPenalties || matchStatus !== 'RUNNING') {
       return;
     }
 
@@ -180,7 +220,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentMatch?.status, activePenalties.length, currentMatch]);
+  }, [matchStatus, hasPenalties]);
 
   // ---------------------------------------------------------------------------
   // Handler Adapters
