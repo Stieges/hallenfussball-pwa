@@ -96,7 +96,7 @@ test.describe('Dashboard', () => {
     };
 
     await seedIndexedDB({
-      'app:tournaments': [testTournament],
+      tournaments: [testTournament],
     });
 
     await page.goto('/');
@@ -112,7 +112,7 @@ test.describe('Dashboard', () => {
   test('Suche filtert Turniere', async ({ page, seedIndexedDB }) => {
     // GIVEN - Dashboard mit mehreren Turnieren
     await seedIndexedDB({
-      'app:tournaments': [
+      tournaments: [
         { id: 't1', title: 'Bayern Turnier', status: 'published', teams: [], matches: [] },
         { id: 't2', title: 'Dortmund Cup', status: 'published', teams: [], matches: [] },
         { id: 't3', title: 'Leipzig Masters', status: 'published', teams: [], matches: [] },
@@ -136,7 +136,7 @@ test.describe('Dashboard', () => {
   test('Kontext-Menü: Turnier archivieren', async ({ page, seedIndexedDB }) => {
     // GIVEN - Aktives Turnier
     await seedIndexedDB({
-      'app:tournaments': [
+      tournaments: [
         { id: 'test-archive', title: 'Zu Archivierendes Turnier', status: 'published', teams: [], matches: [] },
       ],
     });

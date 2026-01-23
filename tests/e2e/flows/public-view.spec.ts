@@ -63,7 +63,7 @@ test.describe('Public Tournament View', () => {
   test.beforeEach(async ({ page: _page, seedIndexedDB }) => {
     const tournament = createPublicTournament();
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
   });
 
@@ -169,7 +169,7 @@ test.describe('Public Tournament View', () => {
     tournament.hideScoresForPublic = true;
 
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // WHEN - Public View öffnen
@@ -193,7 +193,7 @@ test.describe('Public Tournament View', () => {
     tournament.hideRankingsForPublic = true;
 
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // WHEN - Public View öffnen
@@ -226,7 +226,7 @@ test.describe('Public Tournament View', () => {
     tournament.matches[0].scoreB = 2;
 
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // WHEN - Public View öffnen
@@ -254,7 +254,7 @@ test.describe('Public Tournament View', () => {
     tournament.matches[0].scoreB = 0;
 
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     await page.goto('/live/public-test-tournament');
@@ -263,7 +263,7 @@ test.describe('Public Tournament View', () => {
     // WHEN - Score ändert sich im Backend (simuliert durch Reload mit neuem State)
     tournament.matches[0].scoreA = 1;
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // Wait for potential auto-refresh (if implemented)
@@ -393,7 +393,7 @@ test.describe('Public Tournament View', () => {
     tournament.status = 'draft';
 
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // WHEN - Public View öffnen versuchen

@@ -139,7 +139,7 @@ Alle Tests folgen diesem Pattern:
 ```typescript
 test('Feature funktioniert', async ({ page, seedIndexedDB }) => {
   // GIVEN - Ausgangszustand vorbereiten
-  await seedIndexedDB({ 'app:tournaments': [testTournament] });
+  await seedIndexedDB({ tournaments: [testTournament] });
   await page.goto('/tournament/test-id');
 
   // WHEN - User-Aktion ausführen

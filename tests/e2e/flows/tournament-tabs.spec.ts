@@ -53,7 +53,7 @@ test.describe('Tournament Management Tabs', () => {
     // Seed test tournament
     const tournament = createMinimalTournament('tab-test-tournament');
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
 
     // Navigate to tournament

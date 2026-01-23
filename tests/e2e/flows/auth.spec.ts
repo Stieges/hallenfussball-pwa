@@ -510,7 +510,7 @@ test.describe('Authentication Flows', () => {
 
       await seedIndexedDB({
         'auth:currentUser': testUser,
-        'tournaments': [testTournament], // Fixed: was 'app:tournaments'
+        'tournaments': [testTournament], // Fixed: was tournaments
       });
 
       await page.goto('/#/profile'); // Fixed: HashRouter format
@@ -546,7 +546,7 @@ test.describe('Authentication Flows', () => {
 
       await seedIndexedDB({
         'auth:currentUser': testUser,
-        'app:tournaments': [testTournament],
+        tournaments: [testTournament],
       });
 
       await page.goto('/profile');
@@ -584,7 +584,7 @@ test.describe('Authentication Flows', () => {
 
       await seedIndexedDB({
         'auth:currentUser': testUser,
-        'app:tournaments': [testTournament],
+        tournaments: [testTournament],
       });
 
       await page.goto('/profile');

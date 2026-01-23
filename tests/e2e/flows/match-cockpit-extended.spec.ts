@@ -50,7 +50,7 @@ test.describe('Match Cockpit Extended', () => {
   test.beforeEach(async ({ page: _page, seedIndexedDB }) => {
     const tournament = createTestTournamentWithMatch();
     await seedIndexedDB({
-      'app:tournaments': [tournament],
+      tournaments: [tournament],
     });
   });
 
