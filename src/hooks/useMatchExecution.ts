@@ -28,9 +28,25 @@ export interface UseMatchExecutionProps {
     onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
 }
 
+/**
+ * Loading states for async operations.
+ * Used to prevent double-taps and show loading indicators.
+ */
+export interface LoadingStates {
+    goal: boolean;
+    card: boolean;
+    finish: boolean;
+    undo: boolean;
+    start: boolean;
+}
+
 export interface UseMatchExecutionReturn {
     // State
     liveMatches: Map<string, LiveMatch>;
+    /** Loading states for async operations - use to disable buttons during operations */
+    loadingStates: LoadingStates;
+    /** True if any operation is currently loading */
+    isAnyLoading: boolean;
 
     // Get/Initialize
     getLiveMatchData: (matchData: ScheduledMatch) => Promise<LiveMatch>;
@@ -114,6 +130,20 @@ export function useMatchExecution({
 
     // State
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
+
+    // H-1 FIX: Loading states for async operations to prevent double-taps
+    const [loadingStates, setLoadingStates] = useState<LoadingStates>({
+        goal: false,
+        card: false,
+        finish: false,
+        undo: false,
+        start: false,
+    });
+
+    // Helper to update a specific loading state
+    const setLoading = useCallback((key: keyof LoadingStates, value: boolean) => {
+        setLoadingStates(prev => ({ ...prev, [key]: value }));
+    }, []);
 
     // Refs
     const tournamentRef = useRef(tournament);
@@ -219,11 +249,17 @@ export function useMatchExecution({
             return false; // UI should show confirmation dialog
         }
 
-        const updated = await service.startMatch(tournament.id, matchId);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-        announceMatchStarted(matchId);
-        return true;
-    }, [liveMatches, service, tournament.id, announceMatchStarted]);
+        // H-1 FIX: Prevent double-taps
+        setLoading('start', true);
+        try {
+            const updated = await service.startMatch(tournament.id, matchId);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            announceMatchStarted(matchId);
+            return true;
+        } finally {
+            setLoading('start', false);
+        }
+    }, [liveMatches, service, tournament.id, announceMatchStarted, setLoading]);
 
     const handlePause = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.pauseMatch(tournament.id, matchId);
@@ -240,6 +276,8 @@ export function useMatchExecution({
     }, [service, tournament.id, announceMatchResumed]);
 
     const handleFinish = useCallback(async (matchId: string): Promise<void> => {
+        // H-1 FIX: Prevent double-taps
+        setLoading('finish', true);
         try {
             const result = await service.finishMatch(tournament.id, matchId);
 
@@ -276,8 +314,10 @@ export function useMatchExecution({
                 return;
             }
             throw error;
+        } finally {
+            setLoading('finish', false);
         }
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo, setLoading]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -311,6 +351,8 @@ export function useMatchExecution({
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
 
+        // H-1 FIX: Prevent double-taps
+        setLoading('goal', true);
         try {
             const updated = await service.recordGoal(tournament.id, matchId, team, delta, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
@@ -335,8 +377,10 @@ export function useMatchExecution({
                 return;
             }
             throw error;
+        } finally {
+            setLoading('goal', false);
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo, setLoading]);
 
     const handleCard = useCallback(async (
         matchId: string,
@@ -349,6 +393,8 @@ export function useMatchExecution({
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
 
+        // H-1 FIX: Prevent double-taps
+        setLoading('card', true);
         try {
             const updated = await service.recordCard(tournament.id, matchId, team, cardType, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
@@ -363,8 +409,10 @@ export function useMatchExecution({
                 return;
             }
             throw error;
+        } finally {
+            setLoading('card', false);
         }
-    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated, setLoading]);
 
     const handleTimePenalty = useCallback(async (
         matchId: string,
@@ -527,6 +575,8 @@ export function useMatchExecution({
     }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
 
     const handleUndoLastEvent = useCallback(async (matchId: string): Promise<void> => {
+        // H-1 FIX: Prevent double-taps
+        setLoading('undo', true);
         try {
             const updated = await service.undoLastEvent(tournament.id, matchId);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
@@ -539,8 +589,10 @@ export function useMatchExecution({
                 return;
             }
             throw error;
+        } finally {
+            setLoading('undo', false);
         }
-    }, [service, tournament.id, refreshMatchState, showInfo]);
+    }, [service, tournament.id, refreshMatchState, showInfo, setLoading]);
 
     const handleReopenMatch = useCallback(async (matchData: ScheduledMatch): Promise<void> => {
         // Re-initialize with NOT_STARTED status
@@ -586,8 +638,15 @@ export function useMatchExecution({
         return Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
     }, [liveMatches]);
 
+    // H-1 FIX: Compute isAnyLoading from loadingStates
+    const isAnyLoading = useMemo(() =>
+        Object.values(loadingStates).some(Boolean),
+    [loadingStates]);
+
     return {
         liveMatches,
+        loadingStates,
+        isAnyLoading,
         getLiveMatchData,
         handleStart,
         handlePause,
