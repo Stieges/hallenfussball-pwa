@@ -186,6 +186,10 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
   const seenCardIds = useRef<Set<string>>(new Set());
   // Flag to skip event detection on initial load (don't animate old events)
   const isInitialLoad = useRef(true);
+  // M-2 FIX: Track last update time to debounce concurrent polling + storage events
+  const lastUpdateTime = useRef<number>(0);
+  // Minimum interval between updates to prevent race conditions (50ms)
+  const MIN_UPDATE_INTERVAL = 50;
 
   const storageKey = STORAGE_KEYS.liveMatches(tournamentId);
 
@@ -321,8 +325,17 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
 
   /**
    * Update state from localStorage
+   * M-2 FIX: Uses debounce to prevent race conditions when polling and storage events
+   * fire simultaneously.
    */
   const updateFromStorage = useCallback(() => {
+    // M-2 FIX: Debounce concurrent calls (polling + storage events can fire together)
+    const now = Date.now();
+    if (now - lastUpdateTime.current < MIN_UPDATE_INTERVAL && !isInitialLoad.current) {
+      return; // Skip redundant update
+    }
+    lastUpdateTime.current = now;
+
     const newMatches = parseLiveMatches();
 
     // On initial load, mark all existing events as seen (don't animate old events)

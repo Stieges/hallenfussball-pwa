@@ -169,7 +169,8 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
     }
 
     /**
-     * Safe localStorage setter with quota handling
+     * Safe localStorage setter with quota handling (H-5 FIX)
+     * On QuotaExceededError: cleanup old matches and retry
      */
     private safeLocalStorageSet(key: string, value: string): void {
         try {
@@ -177,9 +178,119 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
         } catch (error) {
             if (error instanceof DOMException && error.name === 'QuotaExceededError') {
                 console.warn('[LocalStorageLiveMatchRepository] Storage quota exceeded, attempting cleanup...');
-                // Could implement cleanup logic here
+
+                // Try cleanup and retry once
+                const freedBytes = this.cleanupOldMatches();
+                if (freedBytes > 0) {
+                    console.warn(`[LocalStorageLiveMatchRepository] Freed ${freedBytes} bytes, retrying save...`);
+                    try {
+                        localStorage.setItem(key, value);
+                        return; // Success after cleanup
+                    } catch (_) {
+                        console.error('[LocalStorageLiveMatchRepository] Save failed even after cleanup');
+                    }
+                }
+
+                // Cleanup didn't help or no cleanup possible
+                console.error(
+                    '[LocalStorageLiveMatchRepository] Storage quota exceeded. ' +
+                    'Please clear browser data or finish some live matches.'
+                );
             }
             throw error;
         }
+    }
+
+    /**
+     * H-5 FIX: Cleanup old/finished matches to free storage space
+     * Strategy:
+     * 1. Find all live-match keys in localStorage
+     * 2. Collect FINISHED matches older than 24 hours
+     * 3. Delete the oldest ones (keep max 5 finished per tournament)
+     *
+     * @returns Number of bytes freed
+     */
+    private cleanupOldMatches(): number {
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const MAX_FINISHED_PER_TOURNAMENT = 5;
+        const now = Date.now();
+        let freedBytes = 0;
+
+        try {
+            // Find all live-match storage keys
+            const liveMatchKeys: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('hallenfussball-live-matches-')) {
+                    liveMatchKeys.push(key);
+                }
+            }
+
+            for (const key of liveMatchKeys) {
+                const stored = localStorage.getItem(key);
+                if (!stored) {
+                    continue;
+                }
+
+                const beforeSize = stored.length;
+                const matches = JSON.parse(stored) as Record<string, LiveMatch>;
+                const entries = Object.entries(matches);
+
+                // Separate finished and active matches
+                const finished: Array<[string, LiveMatch]> = [];
+                const active: Array<[string, LiveMatch]> = [];
+
+                for (const [id, match] of entries) {
+                    if (match.status === 'FINISHED') {
+                        finished.push([id, match]);
+                    } else {
+                        active.push([id, match]);
+                    }
+                }
+
+                // Sort finished by estimated finish time (newest first)
+                // Use scheduledKickoff + durationSeconds as proxy since finishedAt isn't available
+                finished.sort((a, b) => {
+                    const aKickoff = a[1].scheduledKickoff ? new Date(a[1].scheduledKickoff).getTime() : 0;
+                    const bKickoff = b[1].scheduledKickoff ? new Date(b[1].scheduledKickoff).getTime() : 0;
+                    const aFinishTime = aKickoff + (a[1].durationSeconds * 1000);
+                    const bFinishTime = bKickoff + (b[1].durationSeconds * 1000);
+                    return bFinishTime - aFinishTime;
+                });
+
+                // Keep only MAX_FINISHED_PER_TOURNAMENT recent finished matches
+                // Delete those older than 24 hours OR beyond the limit
+                const toKeep: Array<[string, LiveMatch]> = [...active];
+                let deleted = 0;
+
+                for (let i = 0; i < finished.length; i++) {
+                    const [id, match] = finished[i];
+                    // Use scheduledKickoff + duration as estimated finish time
+                    const kickoff = match.scheduledKickoff ? new Date(match.scheduledKickoff).getTime() : 0;
+                    const estimatedFinishTime = kickoff + (match.durationSeconds * 1000);
+                    const age = now - estimatedFinishTime;
+
+                    // Keep if: within limit AND not older than 24 hours
+                    if (i < MAX_FINISHED_PER_TOURNAMENT && age < ONE_DAY_MS) {
+                        toKeep.push([id, match]);
+                    } else {
+                        deleted++;
+                        console.warn(`[LocalStorageLiveMatchRepository] Cleaning up old match: ${id}`);
+                    }
+                }
+
+                if (deleted > 0) {
+                    // Save the cleaned data back
+                    const cleanedData = JSON.stringify(Object.fromEntries(toKeep));
+                    localStorage.setItem(key, cleanedData);
+                    freedBytes += beforeSize - cleanedData.length;
+                    console.warn(`[LocalStorageLiveMatchRepository] Cleaned up ${deleted} old matches from ${key}`);
+                }
+            }
+        } catch (error) {
+            console.error('[LocalStorageLiveMatchRepository] Cleanup failed:', error);
+        }
+
+        return freedBytes;
     }
 }

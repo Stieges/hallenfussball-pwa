@@ -12,8 +12,16 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { BROADCAST_CHANNELS } from '../constants/storage';
 
+// H-3 FIX: Extended message types for comprehensive multi-tab sync
 export interface TabSyncMessage {
-  type: 'MATCH_ACTIVE' | 'MATCH_INACTIVE' | 'MATCH_STARTED' | 'MATCH_FINISHED';
+  type:
+    | 'MATCH_ACTIVE'
+    | 'MATCH_INACTIVE'
+    | 'MATCH_STARTED'
+    | 'MATCH_FINISHED'
+    | 'MATCH_PAUSED'
+    | 'MATCH_RESUMED'
+    | 'MATCH_UPDATED';  // Generic update: goals, cards, fouls, etc.
   matchId: string;
   tabId: string;
   timestamp: number;
@@ -33,6 +41,12 @@ export interface UseMultiTabSyncReturn {
   announceMatchStarted: (matchId: string) => void;
   /** Announce that a match was finished */
   announceMatchFinished: (matchId: string) => void;
+  /** H-3 FIX: Announce that a match was paused */
+  announceMatchPaused: (matchId: string) => void;
+  /** H-3 FIX: Announce that a match was resumed */
+  announceMatchResumed: (matchId: string) => void;
+  /** H-3 FIX: Announce generic match update (goal, card, foul, etc.) */
+  announceMatchUpdated: (matchId: string) => void;
 }
 
 // Generate unique tab ID
@@ -147,10 +161,49 @@ export function useMultiTabSync({
     }
   }, []);
 
+  // H-3 FIX: Announce match paused
+  const announceMatchPaused = useCallback((matchId: string) => {
+    if (channelRef.current) {
+      channelRef.current.postMessage({
+        type: 'MATCH_PAUSED',
+        matchId,
+        tabId: TAB_ID,
+        timestamp: Date.now(),
+      } as TabSyncMessage);
+    }
+  }, []);
+
+  // H-3 FIX: Announce match resumed
+  const announceMatchResumed = useCallback((matchId: string) => {
+    if (channelRef.current) {
+      channelRef.current.postMessage({
+        type: 'MATCH_RESUMED',
+        matchId,
+        tabId: TAB_ID,
+        timestamp: Date.now(),
+      } as TabSyncMessage);
+    }
+  }, []);
+
+  // H-3 FIX: Announce generic match update (goals, cards, fouls, etc.)
+  const announceMatchUpdated = useCallback((matchId: string) => {
+    if (channelRef.current) {
+      channelRef.current.postMessage({
+        type: 'MATCH_UPDATED',
+        matchId,
+        tabId: TAB_ID,
+        timestamp: Date.now(),
+      } as TabSyncMessage);
+    }
+  }, []);
+
   return {
     announceActive,
     announceInactive,
     announceMatchStarted,
     announceMatchFinished,
+    announceMatchPaused,
+    announceMatchResumed,
+    announceMatchUpdated,
   };
 }

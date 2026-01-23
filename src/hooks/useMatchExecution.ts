@@ -120,7 +120,14 @@ export function useMatchExecution({
     tournamentRef.current = tournament;
 
     // Multi-tab sync
-    const { announceMatchStarted, announceMatchFinished } = useMultiTabSync({
+    // H-3 FIX: Extended to include pause, resume, and update events
+    const {
+        announceMatchStarted,
+        announceMatchFinished,
+        announceMatchPaused,
+        announceMatchResumed,
+        announceMatchUpdated,
+    } = useMultiTabSync({
         tournamentId: tournament.id,
     });
 
@@ -221,12 +228,16 @@ export function useMatchExecution({
     const handlePause = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.pauseMatch(tournament.id, matchId);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        // H-3 FIX: Announce pause to other tabs
+        announceMatchPaused(matchId);
+    }, [service, tournament.id, announceMatchPaused]);
 
     const handleResume = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.resumeMatch(tournament.id, matchId);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        // H-3 FIX: Announce resume to other tabs
+        announceMatchResumed(matchId);
+    }, [service, tournament.id, announceMatchResumed]);
 
     const handleFinish = useCallback(async (matchId: string): Promise<void> => {
         try {
@@ -310,6 +321,9 @@ export function useMatchExecution({
                 const t = await repo.get(tournament.id);
                 if (t) { onTournamentUpdate(t, false); }
                 announceMatchFinished(matchId);
+            } else {
+                // H-3 FIX: Announce goal update to other tabs
+                announceMatchUpdated(matchId);
             }
         } catch (error) {
             // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
@@ -322,7 +336,7 @@ export function useMatchExecution({
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo]);
 
     const handleCard = useCallback(async (
         matchId: string,
@@ -338,6 +352,8 @@ export function useMatchExecution({
         try {
             const updated = await service.recordCard(tournament.id, matchId, team, cardType, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce card event to other tabs
+            announceMatchUpdated(matchId);
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
@@ -348,7 +364,7 @@ export function useMatchExecution({
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleTimePenalty = useCallback(async (
         matchId: string,
@@ -363,6 +379,8 @@ export function useMatchExecution({
         try {
             const updated = await service.recordTimePenalty(tournament.id, matchId, team, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce time penalty event to other tabs
+            announceMatchUpdated(matchId);
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
@@ -373,7 +391,7 @@ export function useMatchExecution({
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleSubstitution = useCallback(async (
         matchId: string,
@@ -388,6 +406,8 @@ export function useMatchExecution({
         try {
             const updated = await service.recordSubstitution(tournament.id, matchId, team, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce substitution event to other tabs
+            announceMatchUpdated(matchId);
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
@@ -398,7 +418,7 @@ export function useMatchExecution({
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleFoul = useCallback(async (
         matchId: string,
@@ -413,6 +433,8 @@ export function useMatchExecution({
         try {
             const updated = await service.recordFoul(tournament.id, matchId, team, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce foul event to other tabs
+            announceMatchUpdated(matchId);
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
@@ -423,7 +445,7 @@ export function useMatchExecution({
             }
             throw error;
         }
-    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleStartOvertime = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.startOvertime(tournament.id, matchId);

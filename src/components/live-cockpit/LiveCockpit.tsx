@@ -116,8 +116,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // BUG-009: Track which team side triggered the substitution dialog
   const [pendingSubstitutionSide, setPendingSubstitutionSide] = useState<'home' | 'away' | null>(null);
   // BUG-010: Event editing state
+  // M-1 FIX: Store only event ID, not the full object, to avoid stale data
   const [showEventEditDialog, setShowEventEditDialog] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<EditableMatchEvent | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [activePenalties, setActivePenalties] = useState<ActivePenalty[]>([]);
   // BUG-002: Event Log Bottom Sheet for Mobile
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
@@ -173,7 +174,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     setPendingCardType(null);
     setPendingCardTeamSide(null);
     setPendingSubstitutionSide(null);
-    setEditingEvent(null);
+    setEditingEventId(null);
 
     // Reset match-specific states
     setActivePenalties([]);
@@ -195,6 +196,24 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     // C-6 FIX: Intentionally use team IDs instead of full team objects to prevent unnecessary re-runs
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMatchId, currentMatch?.events, currentMatch?.homeTeam?.id, currentMatch?.awayTeam?.id]);
+
+  // M-1 FIX: Derive editing event from current match events to always have fresh data
+  // This prevents stale data when another tab modifies the event
+  const editingEvent = useMemo((): EditableMatchEvent | null => {
+    if (!editingEventId || !currentMatch?.events) {
+      return null;
+    }
+    const event = currentMatch.events.find(e => e.id === editingEventId);
+    if (!event) {
+      return null;
+    }
+    return {
+      id: event.id,
+      type: event.type,
+      timestampSeconds: event.timestampSeconds,
+      payload: event.payload as EditableMatchEvent['payload'],
+    };
+  }, [editingEventId, currentMatch?.events]);
 
   // BUG-008 FIX: Update penalty countdowns every second when match is RUNNING
   // Also removes expired penalties and pauses countdown when match is paused
@@ -496,20 +515,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   // BUG-010: Handler for editing events from the sidebar
+  // M-1 FIX: Store only event ID, the actual event is derived via useMemo
   const handleEventEdit = useCallback(
     (event: { id: string; type: string; timestampSeconds: number; payload?: Record<string, unknown>; incomplete?: boolean }) => {
       if (!currentMatch) { return; }
-      // Find the full event from match.events to get all properties
-      const fullEvent = currentMatch.events.find(e => e.id === event.id);
-      if (fullEvent) {
-        // Cast to our compatible interface
-        const editableEvent: EditableMatchEvent = {
-          id: fullEvent.id,
-          type: fullEvent.type,
-          timestampSeconds: fullEvent.timestampSeconds,
-          payload: fullEvent.payload as EditableMatchEvent['payload'],
-        };
-        setEditingEvent(editableEvent);
+      // Verify event exists in match (defensive check)
+      const exists = currentMatch.events.some(e => e.id === event.id);
+      if (exists) {
+        setEditingEventId(event.id);
         setShowEventEditDialog(true);
       }
     },
@@ -1017,7 +1030,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         isOpen={showEventEditDialog}
         onClose={() => {
           setShowEventEditDialog(false);
-          setEditingEvent(null);
+          setEditingEventId(null);
         }}
         event={editingEvent}
         homeTeam={match.homeTeam}
@@ -1037,7 +1050,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         awayTeamId={match.awayTeam.id}
         onEventEdit={(event) => {
           setShowEventLogBottomSheet(false);
-          setEditingEvent(event);
+          // M-1 FIX: Store only event ID for fresh data lookup
+          setEditingEventId(event.id);
           setShowEventEditDialog(true);
         }}
       />
