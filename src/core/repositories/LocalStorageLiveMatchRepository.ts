@@ -146,11 +146,13 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
         const MAX_STALE_MS = 30 * 60 * 1000; // 30 minutes
 
         if (timeSinceStart > maxExpectedDuration || timeSinceStart > MAX_STALE_MS) {
-            console.warn(
-                `[LocalStorageLiveMatchRepository] Stale match detected: ${match.id}. ` +
-                `Timer started ${Math.round(timeSinceStart / 1000 / 60)} minutes ago. ` +
-                `Auto-pausing and clamping elapsed time.`
-            );
+            if (import.meta.env.DEV) {
+                console.warn(
+                    `[LocalStorageLiveMatchRepository] Stale match detected: ${match.id}. ` +
+                    `Timer started ${Math.round(timeSinceStart / 1000 / 60)} minutes ago. ` +
+                    `Auto-pausing and clamping elapsed time.`
+                );
+            }
 
             const maxElapsed = match.durationSeconds;
             const calculatedElapsed = (match.timerElapsedSeconds ?? 0) + Math.floor(timeSinceStart / 1000);
@@ -177,12 +179,16 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
             localStorage.setItem(key, value);
         } catch (error) {
             if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-                console.warn('[LocalStorageLiveMatchRepository] Storage quota exceeded, attempting cleanup...');
+                if (import.meta.env.DEV) {
+                    console.warn('[LocalStorageLiveMatchRepository] Storage quota exceeded, attempting cleanup...');
+                }
 
                 // Try cleanup and retry once
                 const freedBytes = this.cleanupOldMatches();
                 if (freedBytes > 0) {
-                    console.warn(`[LocalStorageLiveMatchRepository] Freed ${freedBytes} bytes, retrying save...`);
+                    if (import.meta.env.DEV) {
+                        console.warn(`[LocalStorageLiveMatchRepository] Freed ${freedBytes} bytes, retrying save...`);
+                    }
                     try {
                         localStorage.setItem(key, value);
                         return; // Success after cleanup
@@ -275,7 +281,9 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
                         toKeep.push([id, match]);
                     } else {
                         deleted++;
-                        console.warn(`[LocalStorageLiveMatchRepository] Cleaning up old match: ${id}`);
+                        if (import.meta.env.DEV) {
+                            console.warn(`[LocalStorageLiveMatchRepository] Cleaning up old match: ${id}`);
+                        }
                     }
                 }
 
@@ -284,7 +292,9 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
                     const cleanedData = JSON.stringify(Object.fromEntries(toKeep));
                     localStorage.setItem(key, cleanedData);
                     freedBytes += beforeSize - cleanedData.length;
-                    console.warn(`[LocalStorageLiveMatchRepository] Cleaned up ${deleted} old matches from ${key}`);
+                    if (import.meta.env.DEV) {
+                        console.warn(`[LocalStorageLiveMatchRepository] Cleaned up ${deleted} old matches from ${key}`);
+                    }
                 }
             }
         } catch (error) {

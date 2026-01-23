@@ -307,7 +307,9 @@ export function useMatchExecution({
         } catch (error) {
             // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
@@ -370,7 +372,9 @@ export function useMatchExecution({
         } catch (error) {
             // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
@@ -403,7 +407,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Card recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Card recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
@@ -432,7 +438,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Time penalty recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Time penalty recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
@@ -459,7 +467,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Substitution recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Substitution recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
@@ -486,7 +496,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Foul recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Foul recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
@@ -535,7 +547,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Cancel tiebreaker failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Cancel tiebreaker failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
@@ -583,7 +597,9 @@ export function useMatchExecution({
         } catch (error) {
             // C-4 FIX: Handle optimistic lock conflicts
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Undo failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Undo failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;

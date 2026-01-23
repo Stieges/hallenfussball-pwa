@@ -111,11 +111,13 @@ export async function executeWithRetry<T>(
         maxBackoffMs
       );
 
-      // Log retry attempt
-      console.warn(
-        `[executeWithRetry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms:`,
-        lastError.message
-      );
+      // Log retry attempt (only in development)
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[executeWithRetry] Attempt ${attempt + 1}/${maxRetries} failed, retrying in ${delay}ms:`,
+          lastError.message
+        );
+      }
 
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
