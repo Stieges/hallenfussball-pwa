@@ -201,7 +201,8 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       if (typeof parsed !== 'object' || parsed === null) {return new Map();}
 
       return new Map(Object.entries(parsed));
-    } catch {
+    } catch (error) {
+      console.error('[useLiveMatches] Failed to parse live matches from localStorage:', error);
       return new Map();
     }
   }, [storageKey]);

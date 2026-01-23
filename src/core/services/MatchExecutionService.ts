@@ -13,6 +13,7 @@ import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { RuntimeMatchEvent } from '../../types/tournament';
+import { executeWithRetry } from '../utils/SingleFlight';
 
 // ============================================================================
 // CONSTANTS
@@ -154,9 +155,9 @@ export class MatchExecutionService {
     }
 
     async finishMatch(tournamentId: string, matchId: string): Promise<FinishResult> {
-        // Retry loop for optimistic lock conflicts (BUG-002)
-        for (let attempt = 0; attempt < MAX_OPTIMISTIC_LOCK_RETRIES; attempt++) {
-            try {
+        // Uses executeWithRetry for optimistic lock handling + timeout protection (H-4)
+        return executeWithRetry(
+            async () => {
                 const match = await this.liveMatchRepo.get(tournamentId, matchId);
                 if (!match) { throw new Error(`Match ${matchId} not found`); }
 
@@ -178,21 +179,10 @@ export class MatchExecutionService {
                 await this.persistFinalResult(tournamentId, match, decidedBy);
 
                 return { success: true, needsTiebreaker: false, decidedBy };
-
-            } catch (error) {
-                // Retry on optimistic lock conflict
-                if (error instanceof OptimisticLockError && attempt < MAX_OPTIMISTIC_LOCK_RETRIES - 1) {
-                    console.warn(
-                        `[MatchExecutionService] Finish match conflict, retry ${attempt + 1}/${MAX_OPTIMISTIC_LOCK_RETRIES}`
-                    );
-                    continue;
-                }
-                throw error;
-            }
-        }
-
-        // Should never reach here, but TypeScript needs this
-        throw new Error(`Max retries exceeded for finishing match ${matchId}`);
+            },
+            (error) => error instanceof OptimisticLockError,
+            { maxRetries: MAX_OPTIMISTIC_LOCK_RETRIES, timeoutMs: 10000, backoffBaseMs: 100 }
+        );
     }
 
     // ==========================================================================
@@ -206,9 +196,9 @@ export class MatchExecutionService {
         delta: 1 | -1,
         options?: GoalOptions
     ): Promise<LiveMatch> {
-        // Retry loop for optimistic lock conflicts (BUG-002)
-        for (let attempt = 0; attempt < MAX_OPTIMISTIC_LOCK_RETRIES; attempt++) {
-            try {
+        // Uses executeWithRetry for optimistic lock handling + timeout protection (H-4)
+        return executeWithRetry(
+            async () => {
                 const match = await this.liveMatchRepo.get(tournamentId, matchId);
                 if (!match) { throw new Error(`Match ${matchId} not found`); }
 
@@ -231,8 +221,8 @@ export class MatchExecutionService {
                     };
                 }
 
-                // Add event (use unique ID to avoid duplicates on retry)
-                const eventId = `${matchId}-goal-${Date.now()}-${attempt}`;
+                // Add event (timestamp + random ensures uniqueness across retries)
+                const eventId = `${matchId}-goal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
                 const event: MatchEvent = {
                     id: eventId,
                     matchId,
@@ -257,21 +247,10 @@ export class MatchExecutionService {
 
                 await this.liveMatchRepo.save(tournamentId, updated);
                 return updated;
-
-            } catch (error) {
-                // Retry on optimistic lock conflict
-                if (error instanceof OptimisticLockError && attempt < MAX_OPTIMISTIC_LOCK_RETRIES - 1) {
-                    console.warn(
-                        `[MatchExecutionService] Goal recording conflict, retry ${attempt + 1}/${MAX_OPTIMISTIC_LOCK_RETRIES}`
-                    );
-                    continue;
-                }
-                throw error;
-            }
-        }
-
-        // Should never reach here, but TypeScript needs this
-        throw new Error(`Max retries exceeded for goal recording on match ${matchId}`);
+            },
+            (error) => error instanceof OptimisticLockError,
+            { maxRetries: MAX_OPTIMISTIC_LOCK_RETRIES, timeoutMs: 10000, backoffBaseMs: 100 }
+        );
     }
 
     async recordCard(

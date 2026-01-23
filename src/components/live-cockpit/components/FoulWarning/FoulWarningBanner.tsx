@@ -43,22 +43,33 @@ export function FoulWarningBanner({
 
   // Handle visibility changes with animation
   useEffect(() => {
+    let rafId: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     if (isVisible) {
       setShouldRender(true);
       // Trigger haptic when warning appears
       triggerHaptic('warning');
       // Small delay for mount animation
-      requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
         setIsAnimating(true);
       });
     } else {
       setIsAnimating(false);
       // Wait for exit animation before unmounting
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         setShouldRender(false);
       }, 300);
-      return () => clearTimeout(timer);
     }
+
+    return () => {
+      if (rafId !== undefined) {
+        cancelAnimationFrame(rafId);
+      }
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+    };
   }, [isVisible]);
 
   // Auto-dismiss timer
