@@ -73,7 +73,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View lädt ohne Authentifizierung', async ({ page }) => {
     // WHEN - Public View URL öffnen
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Turnier-Infos sind sichtbar
@@ -82,7 +82,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View zeigt Spielplan', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Matches werden angezeigt
@@ -96,7 +96,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View zeigt Ergebnisse (wenn nicht ausgeblendet)', async ({ page }) => {
     // GIVEN - Public View mit sichtbaren Scores
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Scores sind sichtbar (finished match: 3:1)
@@ -106,7 +106,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View zeigt Tabelle (wenn nicht ausgeblendet)', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Zu Tabellen-Tab navigieren
@@ -129,7 +129,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View: Keine Bearbeitungs-Buttons sichtbar', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Keine Admin-Buttons
@@ -145,7 +145,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View: Ergebnis-Eingabe nicht möglich', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Keine Tor-Buttons
@@ -173,7 +173,7 @@ test.describe('Public Tournament View', () => {
     });
 
     // WHEN - Public View öffnen
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Scores sind nicht sichtbar
@@ -197,7 +197,7 @@ test.describe('Public Tournament View', () => {
     });
 
     // WHEN - Public View öffnen
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Tabellen-Tab ist nicht sichtbar
@@ -230,7 +230,7 @@ test.describe('Public Tournament View', () => {
     });
 
     // WHEN - Public View öffnen
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Live-Match ist gekennzeichnet
@@ -257,7 +257,7 @@ test.describe('Public Tournament View', () => {
       tournaments: [tournament],
     });
 
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Score ändert sich im Backend (simuliert durch Reload mit neuem State)
@@ -282,7 +282,7 @@ test.describe('Public Tournament View', () => {
 
   test('Share-Link kann kopiert werden', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Share-Button klicken
@@ -301,7 +301,7 @@ test.describe('Public Tournament View', () => {
 
   test('QR-Code für Public View wird angezeigt', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // WHEN - QR-Code Button/Section aufrufen
@@ -329,7 +329,7 @@ test.describe('Public Tournament View', () => {
     }
 
     // GIVEN - Mobile Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Touch Targets sind groß genug
@@ -350,7 +350,7 @@ test.describe('Public Tournament View', () => {
     }
 
     // GIVEN - Mobile Public View auf Spielplan-Tab
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Swipe nach links (simuliert)
@@ -397,7 +397,7 @@ test.describe('Public Tournament View', () => {
     });
 
     // WHEN - Public View öffnen versuchen
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Fehler oder Login-Aufforderung
@@ -411,7 +411,7 @@ test.describe('Public Tournament View', () => {
 
   test('Public View ist Screen-Reader freundlich', async ({ page }) => {
     // GIVEN - Public View
-    await page.goto('/#/live/public-test-tournament');
+    await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
     // THEN - Semantische HTML-Struktur

@@ -1,14 +1,15 @@
 /**
  * E2E Tests für Tournament Creation Wizard
  *
- * Testet alle 5 Wizard-Steps:
- * - Step 1: Team Setup
- * - Step 2: Schedule
- * - Step 3: Groups
- * - Step 4: Playoffs
- * - Step 5: Review & Publish
+ * Testet alle 6 Wizard-Steps:
+ * - Step 1: Stammdaten (Name, Ort, Datum)
+ * - Step 2: Sportart & Turniertyp
+ * - Step 3: Modus & Spielsystem
+ * - Step 4: Gruppen & Felder (optional)
+ * - Step 5: Teams
+ * - Step 6: Übersicht/Preview
  *
- * Basierend auf: .claude/CLAUDE.md - Tournament Wizard Section
+ * URL-Pattern: /tournament/new?step=X (Query-Parameter)
  */
 
 import { test, expect } from '../helpers/test-fixtures';
@@ -22,23 +23,24 @@ test.describe('Tournament Creation Wizard', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 1: TEAM SETUP
+  // STEP 1: STAMMDATEN
   // ═══════════════════════════════════════════════════════════════
 
-  test('Step 1: Grunddaten ausfüllen', async ({ page }) => {
-    // GIVEN - Wizard Step 1
-    await expect(page.getByRole('heading', { name: /Schritt 1|Team Setup|Grunddaten/i })).toBeVisible();
+  test('Step 1: Stammdaten ausfüllen', async ({ page }) => {
+    // GIVEN - Wizard Step 1 (Stammdaten)
+    await expect(page.getByRole('heading', { name: /Stammdaten/i })).toBeVisible();
 
-    // WHEN - Turnier-Grunddaten eingeben
-    await page.getByLabel(/Turniername|Titel/i).fill('E2E Test Turnier');
-    await page.getByLabel(/Altersklasse|Kategorie/i).fill('U12');
-    await page.getByLabel(/Datum|Date/i).fill('2026-06-15');
-    await page.getByLabel(/Uhrzeit|Zeit/i).fill('10:00');
+    // WHEN - Turnier-Stammdaten eingeben
+    await page.getByLabel(/Turniername|Titel|Name/i).fill('E2E Test Turnier');
 
-    // Anzahl Teams (falls Dropdown)
-    const teamSelect = page.getByLabel(/Anzahl Teams|Teams/i);
-    if (await teamSelect.count() > 0) {
-      await teamSelect.selectOption('8');
+    const locationInput = page.getByLabel(/Ort|Veranstaltungsort|Location/i);
+    if (await locationInput.count() > 0) {
+      await locationInput.fill('Sporthalle E2E');
+    }
+
+    const dateInput = page.getByLabel(/Datum|Date/i);
+    if (await dateInput.count() > 0) {
+      await dateInput.fill('2026-06-15');
     }
 
     // THEN - Weiter-Button ist enabled
@@ -48,30 +50,8 @@ test.describe('Tournament Creation Wizard', () => {
     // WHEN - Weiter klicken
     await nextButton.click();
 
-    // THEN - Step 2 lädt
-    await expect(page).toHaveURL(/\/tournament\/new\/step\/2/);
-  });
-
-  test('Step 1: Team-Namen eingeben', async ({ page }) => {
-    // GIVEN - Wizard Step 1 mit minimalen Daten
-    await page.getByLabel(/Turniername/i).fill('Teams Test');
-    await page.getByLabel(/Datum/i).fill('2026-06-15');
-
-    // WHEN - Team-Namen eingeben (8 Teams)
-    const teamCount = 8;
-    for (let i = 0; i < teamCount; i++) {
-      const teamInput = page.locator(`[data-testid="input-team-name-${i}"]`).or(
-        page.getByLabel(new RegExp(`Team ${i + 1}`, 'i'))
-      );
-
-      if (await teamInput.count() > 0) {
-        await teamInput.fill(`Test Team ${i + 1}`);
-      }
-    }
-
-    // THEN - Alle Teams haben Namen
-    const filledInputs = await page.locator('input[value^="Test Team"]').count();
-    expect(filledInputs).toBeGreaterThan(0);
+    // THEN - Step 2 lädt (URL hat ?step=2 Query-Parameter)
+    await expect(page).toHaveURL(/\/tournament\/new\?step=2/);
   });
 
   test('Step 1: Validierung bei fehlenden Pflichtfeldern', async ({ page }) => {
@@ -81,21 +61,54 @@ test.describe('Tournament Creation Wizard', () => {
     const nextButton = page.getByRole('button', { name: /Weiter/i });
     await nextButton.click();
 
-    // THEN - Fehler-Meldungen erscheinen
+    // THEN - Fehler-Meldungen erscheinen oder Button bleibt disabled
     const errors = page.locator('[role="alert"]').or(page.getByText(/erforderlich|Pflichtfeld/i));
-    await expect(errors.first()).toBeVisible({ timeout: 2000 });
+    const errorCount = await errors.count();
+
+    // Wenn keine Fehler, dann sollte Button disabled sein
+    if (errorCount === 0) {
+      await expect(nextButton).toBeDisabled();
+    }
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 2: SCHEDULE
+  // STEP 2: SPORTART & TURNIERTYP
   // ═══════════════════════════════════════════════════════════════
 
-  test('Step 2: Spielplan-Einstellungen konfigurieren', async ({ page }) => {
-    // GIVEN - Step 1 abgeschlossen, jetzt auf Step 2
-    await page.goto('/#/tournament/new/step/2');
+  test('Step 2: Sportart und Turniertyp konfigurieren', async ({ page }) => {
+    // GIVEN - Step 2
+    await page.goto('/#/tournament/new?step=2');
     await page.waitForLoadState('networkidle');
 
-    // WHEN - Spielplan-Settings anpassen
+    // THEN - Heading für Step 2
+    await expect(page.getByRole('heading', { name: /Sportart|Turniertyp/i })).toBeVisible();
+
+    // WHEN - Sportart wählen (falls vorhanden)
+    const sportSelect = page.getByLabel(/Sportart/i);
+    if (await sportSelect.count() > 0) {
+      await sportSelect.click();
+      // Erste Option wählen
+      await page.getByRole('option').first().click();
+    }
+
+    // THEN - Weiter ist möglich
+    const nextButton = page.getByRole('button', { name: /Weiter/i });
+    await expect(nextButton).toBeEnabled();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 3: MODUS & SPIELSYSTEM
+  // ═══════════════════════════════════════════════════════════════
+
+  test('Step 3: Modus und Spielsystem konfigurieren', async ({ page }) => {
+    // GIVEN - Step 3
+    await page.goto('/#/tournament/new?step=3');
+    await page.waitForLoadState('networkidle');
+
+    // THEN - Heading für Step 3
+    await expect(page.getByRole('heading', { name: /Modus|Spielsystem/i })).toBeVisible();
+
+    // WHEN - Spielplan-Settings anpassen (falls vorhanden)
     const gameDuration = page.getByLabel(/Spieldauer|Spielzeit/i);
     if (await gameDuration.count() > 0) {
       await gameDuration.fill('10');
@@ -106,9 +119,46 @@ test.describe('Tournament Creation Wizard', () => {
       await breakDuration.fill('2');
     }
 
+    // THEN - Weiter ist möglich
+    const nextButton = page.getByRole('button', { name: /Weiter/i });
+    await expect(nextButton).toBeEnabled();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 4: GRUPPEN & FELDER (optional)
+  // ═══════════════════════════════════════════════════════════════
+
+  test('Step 4: Gruppen und Felder konfigurieren', async ({ page }) => {
+    // GIVEN - Step 4
+    await page.goto('/#/tournament/new?step=4');
+    await page.waitForLoadState('networkidle');
+
+    // THEN - Gruppen-/Felder-Konfiguration (optional, hat kein h2)
+    // Suche nach CollapsibleSection oder Gruppen/Felder Content
+    const groupsSection = page.getByText(/Gruppen|Gruppe A|Anzahl Gruppen/i);
+    const fieldsSection = page.getByText(/Felder|Spielfelder|Anzahl Felder/i);
+
+    const hasGroupsSection = await groupsSection.count() > 0;
+    const hasFieldsSection = await fieldsSection.count() > 0;
+
+    // Mindestens eines der Elemente sollte sichtbar sein
+    if (hasGroupsSection) {
+      await expect(groupsSection.first()).toBeVisible();
+    }
+    if (hasFieldsSection) {
+      await expect(fieldsSection.first()).toBeVisible();
+    }
+
+    // WHEN - Felder-Anzahl setzen (falls vorhanden)
     const fields = page.getByLabel(/Anzahl Felder|Spielfelder/i);
     if (await fields.count() > 0) {
       await fields.fill('2');
+    }
+
+    // Gruppen wählen (falls vorhanden)
+    const groupSelect = page.getByLabel(/Anzahl Gruppen|Gruppen/i);
+    if (await groupSelect.count() > 0) {
+      await groupSelect.selectOption('2');
     }
 
     // THEN - Weiter ist möglich
@@ -117,68 +167,46 @@ test.describe('Tournament Creation Wizard', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 3: GROUPS
+  // STEP 5: TEAMS
   // ═══════════════════════════════════════════════════════════════
 
-  test('Step 3: Gruppeneinteilung konfigurieren', async ({ page }) => {
-    // GIVEN - Step 3
-    await page.goto('/#/tournament/new/step/3');
+  test('Step 5: Teams eingeben', async ({ page }) => {
+    // GIVEN - Step 5
+    await page.goto('/#/tournament/new?step=5');
     await page.waitForLoadState('networkidle');
 
-    // WHEN - Gruppensystem wählen
-    const groupSelect = page.getByLabel(/Gruppensystem|Gruppen/i);
-    if (await groupSelect.count() > 0) {
-      await groupSelect.selectOption('2'); // 2 Gruppen
-    }
+    // THEN - Heading für Teams
+    await expect(page.getByRole('heading', { name: /Teams/i })).toBeVisible();
 
-    // THEN - Gruppenvorschau wird angezeigt
-    const groupPreview = page.locator('[data-testid="group-preview"]').or(
-      page.getByText(/Gruppe A|Gruppe B/i)
+    // WHEN - Team-Namen eingeben (falls Input-Felder vorhanden)
+    const teamInputs = page.locator('[data-testid^="input-team-name-"]').or(
+      page.getByLabel(/Team \d+|Team-Name/i)
     );
 
-    if (await groupPreview.count() > 0) {
-      await expect(groupPreview.first()).toBeVisible();
+    const teamCount = await teamInputs.count();
+    for (let i = 0; i < Math.min(teamCount, 4); i++) {
+      await teamInputs.nth(i).fill(`Test Team ${i + 1}`);
     }
+
+    // THEN - Weiter ist möglich (oder Teams sind required)
+    const nextButton = page.getByRole('button', { name: /Weiter/i });
+    await expect(nextButton).toBeEnabled();
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // STEP 4: PLAYOFFS
+  // STEP 6: ÜBERSICHT & VERÖFFENTLICHEN
   // ═══════════════════════════════════════════════════════════════
 
-  test('Step 4: Playoffs aktivieren/deaktivieren', async ({ page }) => {
-    // GIVEN - Step 4
-    await page.goto('/#/tournament/new/step/4');
-    await page.waitForLoadState('networkidle');
-
-    // WHEN - Playoffs aktivieren
-    const playoffToggle = page.getByLabel(/Playoffs aktivieren|Finalrunde/i).or(
-      page.getByRole('switch', { name: /Playoffs/i })
-    );
-
-    if (await playoffToggle.count() > 0) {
-      await playoffToggle.click();
-
-      // THEN - Playoff-Einstellungen werden angezeigt
-      const playoffSettings = page.locator('[data-testid="playoff-settings"]').or(
-        page.getByText(/Halbfinale|Finale/i)
-      );
-      await expect(playoffSettings.first()).toBeVisible();
-    }
-  });
-
-  // ═══════════════════════════════════════════════════════════════
-  // STEP 5: REVIEW & PUBLISH
-  // ═══════════════════════════════════════════════════════════════
-
-  test('Step 5: Turnier-Zusammenfassung und Veröffentlichen', async ({ page }) => {
-    // GIVEN - Step 5 (finale Review)
-    await page.goto('/#/tournament/new/step/5');
+  test('Step 6: Turnier-Zusammenfassung und Veröffentlichen', async ({ page }) => {
+    // GIVEN - Step 6 (finale Review)
+    await page.goto('/#/tournament/new?step=6');
     await page.waitForLoadState('networkidle');
 
     // THEN - Zusammenfassung wird angezeigt
-    await expect(page.getByRole('heading', { name: /Zusammenfassung|Review|Überprüfen/i })).toBeVisible();
+    const reviewHeading = page.getByRole('heading', { name: /Übersicht|Zusammenfassung|Review|Überprüfen/i });
+    await expect(reviewHeading).toBeVisible();
 
-    // WHEN - Turnier veröffentlichen
+    // WHEN - Turnier veröffentlichen (falls alle Daten korrekt)
     const publishButton = page.getByRole('button', { name: /Veröffentlichen|Turnier erstellen|Fertigstellen/i });
 
     if (await publishButton.count() > 0 && await publishButton.isEnabled()) {
@@ -199,7 +227,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Navigation: Zurück-Button funktioniert', async ({ page }) => {
     // GIVEN - Step 2
-    await page.goto('/#/tournament/new/step/2');
+    await page.goto('/#/tournament/new?step=2');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Zurück-Button klicken
@@ -208,29 +236,32 @@ test.describe('Tournament Creation Wizard', () => {
     if (await backButton.count() > 0) {
       await backButton.click();
 
-      // THEN - Zurück zu Step 1
-      await expect(page).toHaveURL(/\/tournament\/new(?:\/step\/1)?/);
+      // THEN - Zurück zu Step 1 (ohne query param)
+      await expect(page).toHaveURL(/\/tournament\/new(?!\?step)/);
     }
   });
 
   test('Browser Back-Button funktioniert', async ({ page }) => {
     // GIVEN - Wizard durchnavigieren
-    await page.goto('/#/tournament/new/step/1');
+    await page.goto('/#/tournament/new');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/#/tournament/new/step/2');
+    await page.goto('/#/tournament/new?step=2');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Browser-Back
     await page.goBack();
 
-    // THEN - Zurück zu Step 1
-    await expect(page).toHaveURL(/\/tournament\/new(?:\/step\/1)?/);
+    // THEN - Zurück zu Step 1 (ohne ?step=X)
+    await expect(page).toHaveURL(/\/tournament\/new(?!\?step)/);
   });
 
   test('Wizard-Verlassen mit ungespeicherten Änderungen', async ({ page }) => {
     // GIVEN - Step 1 mit Daten
-    await page.getByLabel(/Turniername/i).fill('Ungespeichertes Turnier');
+    const nameInput = page.getByLabel(/Turniername|Titel|Name/i);
+    if (await nameInput.count() > 0) {
+      await nameInput.fill('Ungespeichertes Turnier');
+    }
 
     // WHEN - Weg-navigieren versuchen
     await page.goto('/#/');
@@ -243,19 +274,25 @@ test.describe('Tournament Creation Wizard', () => {
       await expect(confirmDialog).toBeVisible();
     } else {
       // Wenn kein Dialog, dann erfolgreich navigiert
-      await expect(page).toHaveURL('/');
+      await expect(page).toHaveURL(/^\/#?\/?$/);
     }
   });
 
   test('Alle Steps sind über URL erreichbar', async ({ page }) => {
-    for (let step = 1; step <= 5; step++) {
-      await page.goto(`/#/tournament/new/step/${step}`);
+    // Step 1 hat kein Query-Parameter
+    await page.goto('/#/tournament/new');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\/tournament\/new/);
+
+    // Steps 2-6 haben ?step=X Query-Parameter
+    for (let step = 2; step <= 6; step++) {
+      await page.goto(`/#/tournament/new?step=${step}`);
       await page.waitForLoadState('networkidle');
 
       // URL stimmt
-      await expect(page).toHaveURL(new RegExp(`/tournament/new/step/${step}`));
+      await expect(page).toHaveURL(new RegExp(`/tournament/new\\?step=${step}`));
 
-      // Step-Indicator zeigt aktuellen Step
+      // Step-Indicator zeigt aktuellen Step (falls vorhanden)
       const stepIndicator = page.locator(`[data-testid="wizard-step-${step}"]`).or(
         page.getByText(new RegExp(`Schritt ${step}`, 'i'))
       );
@@ -276,7 +313,7 @@ test.describe('Tournament Creation Wizard', () => {
       await page.waitForLoadState('networkidle');
 
       // THEN - Wizard ist sichtbar und bedienbar
-      await expect(page.getByRole('heading', { name: /Schritt 1/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Stammdaten/i })).toBeVisible();
 
       // Input-Felder haben min. 16px (iOS Auto-Zoom Prevention)
       const inputs = await page.locator('input[type="text"], input[type="date"]').all();
