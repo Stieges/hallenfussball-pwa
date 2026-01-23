@@ -47,9 +47,25 @@ export type TestOptions = {
  */
 export const test = base.extend<TestOptions>({
     // Auto-set consent before each test to bypass ConsentDialog
+    // Also clears Service Worker caches to prevent stale chunk issues
     page: async ({ page }, use) => {
         // Navigate to app first (needed to access storage for this origin)
         await page.goto('/');
+
+        // Clear any existing Service Worker caches to prevent "Importing a module script failed" errors
+        // This ensures we're testing against fresh assets, not stale cached chunks
+        await page.evaluate(async () => {
+            // Unregister all service workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(r => r.unregister()));
+            }
+            // Clear all caches
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+        });
 
         // Set consent status in localStorage first
         // The app's autoMigrate will move it to IndexedDB

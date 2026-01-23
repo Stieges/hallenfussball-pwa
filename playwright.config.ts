@@ -48,6 +48,9 @@ export default defineConfig({
     // Action and navigation timeouts
     actionTimeout: process.env.CI ? 15000 : 10000,
     navigationTimeout: process.env.CI ? 30000 : 15000,
+    // Disable Service Worker to prevent PWA cache conflicts in E2E tests
+    // This avoids "Importing a module script failed" errors from stale chunks
+    serviceWorkers: 'block',
   },
 
   expect: {
