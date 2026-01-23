@@ -39,17 +39,23 @@ export async function executeWithTimeout<T>(
   operation: () => Promise<T>,
   timeoutMs: number = 10000
 ): Promise<T> {
-  return Promise.race([
-    operation(),
-    new Promise<never>((_, reject) => {
-      const id = setTimeout(() => {
-        reject(new Error(`Operation timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-      // Allow the timer to be garbage collected if the operation completes first
-      // Note: This is a best-effort cleanup, Promise.race doesn't cancel the loser
-      void id;
-    }),
-  ]);
+  // Track timeout ID for cleanup - using object to allow assignment in callback
+  const timeoutRef = { id: undefined as ReturnType<typeof setTimeout> | undefined };
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutRef.id = setTimeout(() => {
+      reject(new Error(`Operation timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([operation(), timeoutPromise]);
+  } finally {
+    // Always clear the timeout to prevent memory leaks
+    if (timeoutRef.id !== undefined) {
+      clearTimeout(timeoutRef.id);
+    }
+  }
 }
 
 /**

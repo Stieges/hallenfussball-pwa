@@ -77,19 +77,19 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   };
 
   const teamNameStyle: CSSProperties = {
-    fontSize: isMobile ? '14px' : '22px',
+    fontSize: isMobile ? cssVars.fontSizes.titleSm : cssVars.fontSizes.titleLg,
     fontWeight: cssVars.fontWeights.bold,
     color: cssVars.colors.textPrimary,
   };
 
   const teamLabelStyle: CSSProperties = {
-    fontSize: isMobile ? '10px' : '11px',
+    fontSize: isMobile ? cssVars.fontSizes.statLabel : cssVars.fontSizes.labelSm,
     color: cssVars.colors.textMuted,
     textTransform: 'uppercase',
   };
 
   const scoreStyle: CSSProperties = {
-    fontSize: isMobile ? '64px' : '80px',
+    fontSize: isMobile ? cssVars.scoreSizes.lg : cssVars.scoreSizes.xl,
     fontWeight: cssVars.fontWeights.bold,
     textAlign: 'center',
     lineHeight: 1,
@@ -127,7 +127,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     color: cssVars.colors.onPrimary,
     border: 'none',
     padding: isMobile ? `${cssVars.spacing.md} ${cssVars.spacing.sm}` : cssVars.spacing.lg,
-    fontSize: isMobile ? '14px' : '15px',
+    fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.bold,
     flex: 1,
   };
@@ -148,7 +148,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     borderColor: cssVars.colors.warning,
     color: cssVars.colors.warning,
     padding: isMobile ? `${cssVars.spacing.sm} ${cssVars.spacing.md}` : `${cssVars.spacing.md} ${cssVars.spacing.lg}`,
-    fontSize: isMobile ? '12px' : '14px',
+    fontSize: isMobile ? cssVars.fontSizes.xs : cssVars.fontSizes.sm,
   };
 
   const btnYellowStyle: CSSProperties = {

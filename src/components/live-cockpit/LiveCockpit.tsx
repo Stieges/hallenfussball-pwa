@@ -796,7 +796,26 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
-
+            {/* ARIA-live region for screen readers to announce status changes */}
+            <span
+              aria-live="polite"
+              aria-atomic="true"
+              style={{
+                position: 'absolute',
+                left: -9999,
+                width: 1,
+                height: 1,
+                overflow: 'hidden',
+              }}
+            >
+              {match.status === 'RUNNING'
+                ? 'Spiel läuft'
+                : match.status === 'PAUSED'
+                  ? 'Spiel pausiert'
+                  : match.status === 'FINISHED'
+                    ? 'Spiel beendet'
+                    : 'Spiel noch nicht gestartet'}
+            </span>
           </div>
         </div>
 

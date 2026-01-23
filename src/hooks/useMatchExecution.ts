@@ -272,7 +272,7 @@ export function useMatchExecution({
                 console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -331,7 +331,7 @@ export function useMatchExecution({
                 console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -359,7 +359,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Card recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -386,7 +386,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Time penalty recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -413,7 +413,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Substitution recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -440,7 +440,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Foul recording failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -489,7 +489,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Cancel tiebreaker failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
@@ -535,7 +535,7 @@ export function useMatchExecution({
             if (error instanceof OptimisticLockError) {
                 console.warn('[useMatchExecution] Undo failed after retries, refreshing state');
                 await refreshMatchState(matchId);
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
