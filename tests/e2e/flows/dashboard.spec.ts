@@ -16,7 +16,7 @@ test.describe('Dashboard', () => {
 
   test('zeigt Dashboard mit Turnier-Liste', async ({ page }) => {
     // GIVEN - Dashboard laden
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // THEN - Haupt-Elemente sichtbar
@@ -26,7 +26,7 @@ test.describe('Dashboard', () => {
 
   test('zeigt leeren Zustand wenn keine Turniere', async ({ page }) => {
     // GIVEN - Dashboard ohne Turniere
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // THEN - Leerer Zustand mit Call-to-Action
@@ -43,7 +43,7 @@ test.describe('Dashboard', () => {
 
   test('Navigation zu Archiv-Tab', async ({ page }) => {
     // GIVEN - Dashboard
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Archiv-Tab klicken
@@ -58,7 +58,7 @@ test.describe('Dashboard', () => {
 
   test('Navigation zu Papierkorb-Tab', async ({ page }) => {
     // GIVEN - Dashboard
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Papierkorb-Tab klicken
@@ -73,7 +73,7 @@ test.describe('Dashboard', () => {
 
   test('Navigation zu Turnier-Erstellung', async ({ page }) => {
     // GIVEN - Dashboard
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - "Neues Turnier" Button klicken
@@ -99,7 +99,7 @@ test.describe('Dashboard', () => {
       tournaments: [testTournament],
     });
 
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Turnier-Karte klicken
@@ -119,7 +119,7 @@ test.describe('Dashboard', () => {
       ],
     });
 
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Suchfeld ausfüllen
@@ -141,7 +141,7 @@ test.describe('Dashboard', () => {
       ],
     });
 
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Kontext-Menü öffnen und Archivieren wählen
@@ -167,7 +167,7 @@ test.describe('Dashboard', () => {
     // GIVEN - Mobile Viewport
     const viewport = page.viewportSize();
     if (viewport && viewport.width < 768) {
-      await page.goto('/');
+      await page.goto('/#/');
       await page.waitForLoadState('networkidle');
 
       // THEN - Bottom Navigation sichtbar
@@ -182,7 +182,7 @@ test.describe('Dashboard', () => {
     // GIVEN - Desktop Viewport
     const viewport = page.viewportSize();
     if (viewport && viewport.width >= 1024) {
-      await page.goto('/');
+      await page.goto('/#/');
       await page.waitForLoadState('networkidle');
 
       // THEN - Sidebar Navigation sichtbar

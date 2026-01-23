@@ -89,7 +89,7 @@ function createTestTournament() {
 
 // Helper: Navigate to tournament and start a match
 async function navigateAndStartMatch(page: Page) {
-  await page.goto('/');
+  await page.goto('/#/');
   await page.waitForLoadState('networkidle');
   await page.getByText('Spielplan Advanced Test').click();
   await page.waitForLoadState('networkidle');
@@ -292,7 +292,7 @@ test.describe('Offline & Persistence', () => {
 
   test('P0: Score-Eingabe funktioniert offline', async ({ page, context }) => {
     // GIVEN - Navigate to Spielplan
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Advanced Test').click();
     await navigateToSpielplan(page);
@@ -541,7 +541,7 @@ test.describe('Panel schließen', () => {
     }
 
     // GIVEN - Navigate to Spielplan and open an expand
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Advanced Test').click();
     await navigateToSpielplan(page);

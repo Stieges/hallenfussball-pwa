@@ -50,7 +50,7 @@ export const test = base.extend<TestOptions>({
     // Also clears Service Worker caches to prevent stale chunk issues
     page: async ({ page }, use) => {
         // Navigate to app first (needed to access storage for this origin)
-        await page.goto('/');
+        await page.goto('/#/');
 
         // Clear any existing Service Worker caches to prevent "Importing a module script failed" errors
         // This ensures we're testing against fresh assets, not stale cached chunks

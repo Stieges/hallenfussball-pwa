@@ -5,14 +5,14 @@ test.describe('Device Compatibility', () => {
   test.describe('Viewport & Safe Area', () => {
     
     test('viewport-fit=cover ist gesetzt', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
       
       const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
       expect(viewport).toContain('viewport-fit=cover');
     });
 
     test('Kein 100vh ohne Fallback', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
 
       // Note: This test verifies the app loads correctly.
       // Actual 100vh → 100dvh migration is verified via code review.
@@ -25,7 +25,7 @@ test.describe('Device Compatibility', () => {
   test.describe('iOS Input Zoom', () => {
     
     test('Alle Inputs haben mindestens 16px font-size', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
       
       // Navigiere durch die App um Inputs zu finden
       const pages = ['/', '/wizard', '/settings'];
@@ -56,7 +56,7 @@ test.describe('Device Compatibility', () => {
   test.describe('Touch Interaction', () => {
     
     test('Buttons haben touch-action: manipulation', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
       
       const buttons = await page.locator('button').all();
       
@@ -78,21 +78,21 @@ test.describe('Device Compatibility', () => {
   test.describe('PWA Meta Tags', () => {
     
     test('theme-color ist gesetzt', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
       
       const themeColor = await page.locator('meta[name="theme-color"]').getAttribute('content');
       expect(themeColor).toBeTruthy();
     });
 
     test('apple-mobile-web-app-capable ist gesetzt', async ({ page }) => {
-      await page.goto('/');
+      await page.goto('/#/');
       
       const capable = await page.locator('meta[name="apple-mobile-web-app-capable"]').getAttribute('content');
       expect(capable).toBe('yes');
     });
 
     test('manifest.json ist valide', async ({ page, request }) => {
-      await page.goto('/');
+      await page.goto('/#/');
 
       // PWA manifest is injected by vite-plugin-pwa at build time
       const manifestLocator = page.locator('link[rel="manifest"]');

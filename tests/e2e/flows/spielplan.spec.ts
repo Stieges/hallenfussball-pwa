@@ -82,7 +82,7 @@ function createTestTournament() {
 
 // Helper: Navigate to Spielplan tab
 async function navigateToSpielplan(page: Page) {
-  await page.goto('/');
+  await page.goto('/#/');
   await page.waitForLoadState('networkidle');
   await page.getByText('Spielplan Test Turnier').click();
   await page.waitForLoadState('networkidle');
@@ -318,7 +318,7 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
 
   test('Progress-Ring nur bei Live-Spielen sichtbar', async ({ page }) => {
     // GIVEN - Navigate to Spielplan (no live matches yet)
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
 
@@ -343,7 +343,7 @@ test.describe('Spielplan 2.0 - Progress-Ring', () => {
 
   test('Live-Badge zeigt "LIVE" mit pulsierendem Dot', async ({ page }) => {
     // GIVEN - Start a match
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -409,7 +409,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 
   test('Circle-Tap bei laufendem Spiel zeigt Events + Cockpit-Link', async ({ page }) => {
     // GIVEN - Start a match
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -434,7 +434,7 @@ test.describe('Spielplan 2.0 - Tap/Click Logik', () => {
 
   test('Circle-Tap bei beendetem Spiel zeigt Detail-Expand', async ({ page }) => {
     // GIVEN - Start, play, and finish a match
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -610,7 +610,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
   test('Live-Spiele sind im Spielplan read-only', async ({ page }) => {
     // GIVEN - Start a match in cockpit
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -637,7 +637,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
   test('"Zum Cockpit" Button navigiert korrekt', async ({ page }) => {
     // GIVEN - Start a match and navigate to Spielplan
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -666,7 +666,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
 
   test('Score-Änderung in Spielplan bei beendetem Spiel wird persistiert', async ({ page }) => {
     // GIVEN - Finish a match with score 1:0
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Test Turnier').click();
     await startMatchInCockpit(page);
@@ -884,7 +884,7 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
     await seedIndexedDB({ tournaments: [emptyTournament] });
 
     // Navigate to Spielplan
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Leeres Turnier').click();
     await page.waitForTimeout(500);
@@ -919,7 +919,7 @@ test.describe('Spielplan 2.0 - Edge Cases', () => {
     await seedIndexedDB({ tournaments: [longNameTournament] });
 
     // Navigate to Spielplan
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Turnier mit langen Namen').click();
     await page.waitForTimeout(500);

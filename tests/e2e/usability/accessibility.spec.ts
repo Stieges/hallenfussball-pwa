@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 test.describe('Accessibility (WCAG AA)', () => {
 
   test('Homepage hat keine kritischen A11y Violations', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa'])
@@ -19,7 +19,7 @@ test.describe('Accessibility (WCAG AA)', () => {
   });
 
   test('Alle Bilder haben alt-Text', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
 
     const images = await page.locator('img').all();
 
@@ -36,7 +36,7 @@ test.describe('Accessibility (WCAG AA)', () => {
   });
 
   test('Fokus ist sichtbar', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
 
     // Tab zum ersten fokussierbaren Element
     await page.keyboard.press('Tab');
@@ -62,7 +62,7 @@ test.describe('Accessibility (WCAG AA)', () => {
   });
 
   test('Escape schließt Dialoge', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
 
     // Suche nach einem Button der einen Dialog öffnet
     const dialogTrigger = page.locator('[data-testid*="dialog"], [aria-haspopup="dialog"]').first();
