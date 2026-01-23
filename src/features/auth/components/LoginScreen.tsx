@@ -497,6 +497,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             onBlur={(e) => {
               e.currentTarget.style.outline = 'none';
             }}
+            data-testid="login-register-link"
           >
             Registrieren
           </button>
