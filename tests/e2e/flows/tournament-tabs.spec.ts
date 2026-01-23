@@ -56,8 +56,8 @@ test.describe('Tournament Management Tabs', () => {
       tournaments: [tournament],
     });
 
-    // Navigate to tournament
-    await page.goto('/tournament/tab-test-tournament');
+    // Navigate to tournament (HashRouter requires /#/ prefix)
+    await page.goto('/#/tournament/tab-test-tournament');
     await page.waitForLoadState('networkidle');
   });
 
@@ -217,7 +217,7 @@ test.describe('Tournament Management Tabs', () => {
 
   test('Deep-Link zu spezifischem Tab funktioniert', async ({ page }) => {
     // WHEN - Direkt zu Teams-Tab navigieren
-    await page.goto('/tournament/tab-test-tournament/teams');
+    await page.goto('/#/tournament/tab-test-tournament/teams');
     await page.waitForLoadState('networkidle');
 
     // THEN - Teams-Content wird geladen
@@ -235,7 +235,7 @@ test.describe('Tournament Management Tabs', () => {
 
   test('Browser Refresh behält Tab-State', async ({ page }) => {
     // GIVEN - Auf Teams-Tab navigiert
-    await page.goto('/tournament/tab-test-tournament/teams');
+    await page.goto('/#/tournament/tab-test-tournament/teams');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Page reload
@@ -249,10 +249,10 @@ test.describe('Tournament Management Tabs', () => {
 
   test('Browser Back-Button wechselt Tabs', async ({ page }) => {
     // GIVEN - Zwischen Tabs navigieren
-    await page.goto('/tournament/tab-test-tournament/schedule');
+    await page.goto('/#/tournament/tab-test-tournament/schedule');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/tournament/tab-test-tournament/standings');
+    await page.goto('/#/tournament/tab-test-tournament/standings');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Browser Back
@@ -268,7 +268,7 @@ test.describe('Tournament Management Tabs', () => {
 
   test('Ungültiger Tab in URL zeigt 404 oder Fallback', async ({ page }) => {
     // WHEN - Zu ungültigem Tab navigieren
-    await page.goto('/tournament/tab-test-tournament/invalid-tab');
+    await page.goto('/#/tournament/tab-test-tournament/invalid-tab');
     await page.waitForLoadState('networkidle');
 
     // THEN - Entweder 404 oder Redirect zu default Tab
@@ -284,7 +284,7 @@ test.describe('Tournament Management Tabs', () => {
 
   test('Nicht-existierendes Turnier zeigt Fehler', async ({ page }) => {
     // WHEN - Zu nicht-existierendem Turnier navigieren
-    await page.goto('/tournament/non-existent-tournament/schedule');
+    await page.goto('/#/tournament/non-existent-tournament/schedule');
     await page.waitForLoadState('networkidle');
 
     // THEN - Fehler-Meldung

@@ -409,7 +409,7 @@ test.describe('Match Cockpit Extended', () => {
 
   test('Settings: Audio kann deaktiviert werden', async ({ page }) => {
     // GIVEN - Settings screen
-    await page.goto('/settings');
+    await page.goto('/#/settings');
     await page.waitForLoadState('networkidle');
 
     const audioToggle = page
@@ -439,7 +439,7 @@ test.describe('Match Cockpit Extended', () => {
     }
 
     // GIVEN - Settings screen
-    await page.goto('/settings');
+    await page.goto('/#/settings');
     await page.waitForLoadState('networkidle');
 
     const hapticToggle = page

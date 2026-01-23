@@ -463,7 +463,7 @@ test.describe('Authentication Flows', () => {
   test.describe('User Profile', () => {
     test('Profil zeigt User-Daten', async ({ page }) => {
       // Skip if guest
-      await page.goto('/profile');
+      await page.goto('/#/profile');
       await page.waitForLoadState('networkidle');
 
       const profileName = page.locator('[data-testid="profile-name"]').or(
@@ -549,7 +549,7 @@ test.describe('Authentication Flows', () => {
         tournaments: [testTournament],
       });
 
-      await page.goto('/profile');
+      await page.goto('/#/profile');
       await page.waitForLoadState('networkidle');
 
       // Look for role badge (Owner, Trainer, etc.)
@@ -587,7 +587,7 @@ test.describe('Authentication Flows', () => {
         tournaments: [testTournament],
       });
 
-      await page.goto('/profile');
+      await page.goto('/#/profile');
       await page.waitForLoadState('networkidle');
 
       // Click tournament
@@ -615,7 +615,7 @@ test.describe('Authentication Flows', () => {
         'auth:currentUser': testUser,
       });
 
-      await page.goto('/profile');
+      await page.goto('/#/profile');
       await page.waitForLoadState('networkidle');
 
       // Find logout button
@@ -650,7 +650,7 @@ test.describe('Authentication Flows', () => {
     test.skip('Einladungs-Link zeigt Turnier-Info', async ({ page }) => {
       // Mock invite URL
       const mockToken = 'test-invite-token-123';
-      await page.goto(`/invite?token=${mockToken}`);
+      await page.goto(`/#/invite?token=${mockToken}`);
       await page.waitForLoadState('networkidle');
 
       // Should show invite accept screen
@@ -670,7 +670,7 @@ test.describe('Authentication Flows', () => {
     // Skip: Invite feature not implemented yet
     test.skip('Ungültiger Token zeigt Fehler', async ({ page }) => {
       const invalidToken = 'definitely-not-a-valid-token-xyz';
-      await page.goto(`/invite?token=${invalidToken}`);
+      await page.goto(`/#/invite?token=${invalidToken}`);
       await page.waitForLoadState('networkidle');
 
       // Should show error message

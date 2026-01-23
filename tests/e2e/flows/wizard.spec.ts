@@ -16,8 +16,8 @@ import { test, expect } from '../helpers/test-fixtures';
 test.describe('Tournament Creation Wizard', () => {
 
   test.beforeEach(async ({ page }) => {
-    // Navigate to wizard
-    await page.goto('/tournament/new');
+    // Navigate to wizard (HashRouter requires /#/ prefix)
+    await page.goto('/#/tournament/new');
     await page.waitForLoadState('networkidle');
   });
 
@@ -92,7 +92,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Step 2: Spielplan-Einstellungen konfigurieren', async ({ page }) => {
     // GIVEN - Step 1 abgeschlossen, jetzt auf Step 2
-    await page.goto('/tournament/new/step/2');
+    await page.goto('/#/tournament/new/step/2');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Spielplan-Settings anpassen
@@ -122,7 +122,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Step 3: Gruppeneinteilung konfigurieren', async ({ page }) => {
     // GIVEN - Step 3
-    await page.goto('/tournament/new/step/3');
+    await page.goto('/#/tournament/new/step/3');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Gruppensystem wählen
@@ -147,7 +147,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Step 4: Playoffs aktivieren/deaktivieren', async ({ page }) => {
     // GIVEN - Step 4
-    await page.goto('/tournament/new/step/4');
+    await page.goto('/#/tournament/new/step/4');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Playoffs aktivieren
@@ -172,7 +172,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Step 5: Turnier-Zusammenfassung und Veröffentlichen', async ({ page }) => {
     // GIVEN - Step 5 (finale Review)
-    await page.goto('/tournament/new/step/5');
+    await page.goto('/#/tournament/new/step/5');
     await page.waitForLoadState('networkidle');
 
     // THEN - Zusammenfassung wird angezeigt
@@ -199,7 +199,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Navigation: Zurück-Button funktioniert', async ({ page }) => {
     // GIVEN - Step 2
-    await page.goto('/tournament/new/step/2');
+    await page.goto('/#/tournament/new/step/2');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Zurück-Button klicken
@@ -215,10 +215,10 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Browser Back-Button funktioniert', async ({ page }) => {
     // GIVEN - Wizard durchnavigieren
-    await page.goto('/tournament/new/step/1');
+    await page.goto('/#/tournament/new/step/1');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/tournament/new/step/2');
+    await page.goto('/#/tournament/new/step/2');
     await page.waitForLoadState('networkidle');
 
     // WHEN - Browser-Back
@@ -233,7 +233,7 @@ test.describe('Tournament Creation Wizard', () => {
     await page.getByLabel(/Turniername/i).fill('Ungespeichertes Turnier');
 
     // WHEN - Weg-navigieren versuchen
-    await page.goto('/');
+    await page.goto('/#/');
 
     // THEN - Entweder Bestätigungs-Dialog oder direkt navigiert
     // (abhängig davon ob Bestätigungs-Dialog implementiert ist)
@@ -249,7 +249,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Alle Steps sind über URL erreichbar', async ({ page }) => {
     for (let step = 1; step <= 5; step++) {
-      await page.goto(`/tournament/new/step/${step}`);
+      await page.goto(`/#/tournament/new/step/${step}`);
       await page.waitForLoadState('networkidle');
 
       // URL stimmt
@@ -272,7 +272,7 @@ test.describe('Tournament Creation Wizard', () => {
     if (viewport && viewport.width < 768) {
 
       // WHEN - Wizard öffnen
-      await page.goto('/tournament/new');
+      await page.goto('/#/tournament/new');
       await page.waitForLoadState('networkidle');
 
       // THEN - Wizard ist sichtbar und bedienbar

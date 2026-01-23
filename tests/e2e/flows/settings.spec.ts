@@ -16,7 +16,7 @@ import { test, expect } from '../helpers/test-fixtures';
 test.describe('App Settings', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/settings');
+    await page.goto('/#/settings');
     await page.waitForLoadState('networkidle');
   });
 

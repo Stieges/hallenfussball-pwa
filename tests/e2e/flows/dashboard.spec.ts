@@ -157,7 +157,7 @@ test.describe('Dashboard', () => {
       await expect(page.getByText('Zu Archivierendes Turnier')).not.toBeVisible();
 
       // Und ist in Archiv verfügbar
-      await page.goto('/archiv');
+      await page.goto('/#/archiv');
       await page.waitForLoadState('networkidle');
       await expect(page.getByText('Zu Archivierendes Turnier')).toBeVisible();
     }
