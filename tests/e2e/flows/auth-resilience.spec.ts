@@ -20,7 +20,7 @@ import { type Page } from '@playwright/test';
  * On desktop: Click "Anmelden" button directly
  */
 async function navigateToLogin(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/#/');
 
   // Wait for app to load
   await page.waitForLoadState('networkidle');

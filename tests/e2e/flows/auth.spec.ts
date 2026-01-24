@@ -26,7 +26,7 @@ import { type Page } from '@playwright/test';
  * On desktop: Click "Anmelden" button directly
  */
 async function navigateToLogin(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/#/');
   await page.waitForLoadState('networkidle');
 
   const loginEmail = page.locator('[data-testid="login-email-input"]');
@@ -759,7 +759,7 @@ test.describe('Authentication Flows', () => {
       const viewport = page.viewportSize();
 
       if (viewport && viewport.width < 768) {
-        await page.goto('/');
+        await page.goto('/#/');
         await page.waitForLoadState('networkidle');
 
         const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
