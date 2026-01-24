@@ -542,6 +542,14 @@ test.describe('Authentication Flows', () => {
         teams: [],
         matches: [],
         ownerId: testUser.id,
+        sport: 'Hallenfußball',
+        sportId: 'indoor-soccer',
+        tournamentType: 'league',
+        mode: 'groups',
+        placementLogic: [],
+        ageClass: 'U11',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       await seedIndexedDB({
@@ -580,6 +588,14 @@ test.describe('Authentication Flows', () => {
         teams: [],
         matches: [],
         ownerId: testUser.id,
+        sport: 'Hallenfußball',
+        sportId: 'indoor-soccer',
+        tournamentType: 'league',
+        mode: 'groups',
+        placementLogic: [],
+        ageClass: 'U11',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       await seedIndexedDB({

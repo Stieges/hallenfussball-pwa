@@ -47,39 +47,27 @@ export type TestOptions = {
  */
 export const test = base.extend<TestOptions>({
     // Auto-set consent before each test to bypass ConsentDialog
-    // Also clears Service Worker caches to prevent stale chunk issues
     page: async ({ page }, use) => {
-        // Navigate to app first (needed to access storage for this origin)
-        await page.goto('/#/');
-
-        // Clear any existing Service Worker caches to prevent "Importing a module script failed" errors
-        // This ensures we're testing against fresh assets, not stale cached chunks
-        await page.evaluate(async () => {
-            // Unregister all service workers
-            if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(registrations.map(r => r.unregister()));
-            }
-            // Clear all caches
-            if ('caches' in window) {
-                const cacheNames = await caches.keys();
-                await Promise.all(cacheNames.map(name => caches.delete(name)));
-            }
-        });
-
-        // Set consent status in localStorage
-        // Tests navigate to their target URLs, picking up the consent.
-        // For tests using seedIndexedDB, the seed fixture handles the reload.
-        await page.evaluate((consent) => {
+        // Add init script that runs BEFORE any JavaScript on the page
+        // This sets consent before the app loads (preventing ConsentDialog)
+        await page.addInitScript((consent) => {
             localStorage.setItem('app:consent', JSON.stringify(consent));
         }, TEST_CONSENT_STATUS);
 
+        // DO NOT navigate here - let tests control navigation
+        // Tests using seedIndexedDB need to seed BEFORE the app loads
+        // to avoid storage singleton caching issues
         await use(page);
     },
 
     seedIndexedDB: async ({ page }, use) => {
         const seedFn = async (data: Record<string, unknown>) => {
-            await page.evaluate(({ data, config }) => {
+            // Navigate to app first (initializes storage, but we'll seed and reload)
+            await page.goto('/#/');
+            await page.waitForLoadState('domcontentloaded');
+
+            // Seed IndexedDB directly (bypassing app's storage layer)
+            await page.evaluate(async ({ data, config }) => {
                 return new Promise<void>((resolve, reject) => {
                     const request = indexedDB.open(config.dbName, config.version);
 
@@ -99,7 +87,7 @@ export const test = base.extend<TestOptions>({
                         const transaction = db.transaction(config.storeName, 'readwrite');
                         const store = transaction.objectStore(config.storeName);
 
-                        // Write each key-value pair
+                        // Write new data (don't clear - keep consent and other data)
                         Object.entries(data).forEach(([key, value]) => {
                             store.put({ key, value });
                         });
@@ -117,9 +105,9 @@ export const test = base.extend<TestOptions>({
                 });
             }, { data, config: INDEXED_DB_CONFIG });
 
-            // Reload to pick up changes
+            // Reload to pick up the seeded data (JS singleton resets on reload)
             await page.reload();
-            await page.waitForLoadState('domcontentloaded');
+            await page.waitForLoadState('networkidle');
         };
         await use(seedFn);
     },

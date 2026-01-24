@@ -81,10 +81,14 @@ test.describe('Dashboard', () => {
 
     // THEN - Wizard öffnet sich
     await expect(page).toHaveURL(/\/tournament\/new/);
-    await expect(page.getByRole('heading', { name: /Turnier erstellen|Schritt 1/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /NEUES TURNIER|Turnier erstellen/i })).toBeVisible();
   });
 
   test('Turnier-Karte klicken öffnet Turnier-Ansicht', async ({ page, seedIndexedDB }) => {
+    // Capture console messages
+    const consoleLogs: string[] = [];
+    page.on('console', msg => consoleLogs.push(`[${msg.type()}] ${msg.text()}`));
+
     // GIVEN - Dashboard mit Test-Turnier
     const testTournament = {
       id: 'test-dashboard-tournament',
@@ -93,14 +97,56 @@ test.describe('Dashboard', () => {
       date: new Date().toISOString().split('T')[0],
       teams: [],
       matches: [],
+      // Required fields for TournamentSchema validation
+      sport: 'Hallenfußball',
+      sportId: 'indoor-soccer',
+      tournamentType: 'league',
+      mode: 'groups',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // Required fields for TournamentCard rendering
+      placementLogic: [],
+      ageClass: 'U11',
     };
 
     await seedIndexedDB({
       tournaments: [testTournament],
     });
 
-    await page.goto('/#/');
-    await page.waitForLoadState('networkidle');
+    // seedIndexedDB already navigates and reloads, so we're at '/#/' now
+
+    // Log console messages for debugging
+    console.log('Console messages:', consoleLogs.slice(0, 20).join('\n'));
+
+    // DEBUG: Check what's in IndexedDB
+    const dbData = await page.evaluate(async () => {
+      return new Promise<unknown>((resolve) => {
+        const request = indexedDB.open('hallenfussball', 1);
+        request.onsuccess = (event) => {
+          const db = (event.target as IDBOpenDBRequest).result;
+          const transaction = db.transaction('cache', 'readonly');
+          const store = transaction.objectStore('cache');
+          const getRequest = store.getAll();
+          getRequest.onsuccess = () => {
+            db.close();
+            resolve(getRequest.result);
+          };
+          getRequest.onerror = () => {
+            db.close();
+            resolve({ error: 'getAll failed' });
+          };
+        };
+        request.onerror = () => {
+          resolve({ error: 'open failed' });
+        };
+      });
+    });
+    console.log('IndexedDB data after page load:', JSON.stringify(dbData, null, 2));
+
+    // DEBUG: Wait a bit more and check React state via DOM
+    await page.waitForTimeout(2000);
+    const pageContent = await page.textContent('body');
+    console.log('Page content after 2s:', pageContent?.substring(0, 500));
 
     // WHEN - Turnier-Karte klicken
     await page.getByText('Dashboard Test Turnier').click();
