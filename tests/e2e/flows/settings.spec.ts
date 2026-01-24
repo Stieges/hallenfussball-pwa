@@ -39,9 +39,10 @@ test.describe('App Settings', () => {
 
       // Toggle theme
       await themeToggle.click();
-      await page.waitForTimeout(300);
 
       // THEN - Theme hat sich geändert
+      // Wait for attribute to change to avoid race condition
+      await expect(htmlElement).not.toHaveAttribute('data-theme', initialTheme || '', { timeout: 5000 });
       const newTheme = await htmlElement.getAttribute('data-theme');
       expect(newTheme).not.toBe(initialTheme);
 
@@ -257,7 +258,7 @@ test.describe('App Settings', () => {
       await impressumLink.click();
 
       // THEN - Impressum-Seite lädt
-      await expect(page).toHaveURL(/\/impressum/);
+      await expect(page).toHaveURL(/.*\/impressum/);
       await expect(page.getByRole('heading', { name: /Impressum/i })).toBeVisible();
     }
   });
@@ -270,7 +271,7 @@ test.describe('App Settings', () => {
       await datenschutzLink.click();
 
       // THEN - Datenschutz-Seite lädt
-      await expect(page).toHaveURL(/\/datenschutz/);
+      await expect(page).toHaveURL(/.*\/datenschutz/);
       await expect(page.getByRole('heading', { name: /Datenschutz|Privacy/i })).toBeVisible();
     }
   });
@@ -325,7 +326,7 @@ test.describe('App Settings', () => {
         await expect(logoutConfirmation).toBeVisible({ timeout: 3000 });
       } else {
         // Oder redirect zu Login-Seite
-        await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+        await expect(page).toHaveURL(/.*\/login/, { timeout: 5000 });
       }
     }
   });
@@ -344,7 +345,7 @@ test.describe('App Settings', () => {
       await backButton.click();
 
       // THEN - Redirect zu Dashboard
-      await expect(page).toHaveURL(/^\/$|\/dashboard/);
+      await expect(page).toHaveURL(/.*\/dashboard|.*\/#\/$/);
     }
   });
 

@@ -51,7 +51,7 @@ test.describe('Tournament Creation Wizard', () => {
     await nextButton.click();
 
     // THEN - Step 2 lädt (URL hat ?step=2 Query-Parameter)
-    await expect(page).toHaveURL(/\/tournament\/new\?step=2/);
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=2/);
   });
 
   test('Step 1: Validierung bei fehlenden Pflichtfeldern', async ({ page }) => {
@@ -230,14 +230,14 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/tournament/new?step=2');
     await page.waitForLoadState('networkidle');
 
-    // WHEN - Zurück-Button klicken
-    const backButton = page.getByRole('button', { name: /Zurück|Previous/i });
+    // WHEN - Zurück-Button klicken (Scope to the wizard content to avoid banner/sidebar buttons)
+    const backButton = page.locator('main').getByRole('button', { name: /Zurück|Previous/i }).first();
 
     if (await backButton.count() > 0) {
       await backButton.click();
 
       // THEN - Zurück zu Step 1 (ohne query param)
-      await expect(page).toHaveURL(/\/tournament\/new(?!\?step)/);
+      await expect(page).toHaveURL(/.*\/tournament\/new(?!\?step)/);
     }
   });
 
@@ -253,7 +253,7 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goBack();
 
     // THEN - Zurück zu Step 1 (ohne ?step=X)
-    await expect(page).toHaveURL(/\/tournament\/new(?!\?step)/);
+    await expect(page).toHaveURL(/.*\/tournament\/new(?!\?step)/);
   });
 
   test('Wizard-Verlassen mit ungespeicherten Änderungen', async ({ page }) => {
@@ -282,7 +282,7 @@ test.describe('Tournament Creation Wizard', () => {
     // Step 1 hat kein Query-Parameter
     await page.goto('/#/tournament/new');
     await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL(/\/tournament\/new/);
+    await expect(page).toHaveURL(/.*\/tournament\/new/);
 
     // Steps 2-6 haben ?step=X Query-Parameter
     for (let step = 2; step <= 6; step++) {

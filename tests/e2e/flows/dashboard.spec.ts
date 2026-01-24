@@ -53,7 +53,7 @@ test.describe('Dashboard', () => {
     await archivButton.click();
 
     // THEN - URL ändert sich zu /archiv
-    await expect(page).toHaveURL(/\/archiv/);
+    await expect(page).toHaveURL(/.*\/archiv/);
   });
 
   test('Navigation zu Papierkorb-Tab', async ({ page }) => {
@@ -68,7 +68,7 @@ test.describe('Dashboard', () => {
     await trashButton.click();
 
     // THEN - URL ändert sich zu /papierkorb
-    await expect(page).toHaveURL(/\/papierkorb/);
+    await expect(page).toHaveURL(/.*\/papierkorb/);
   });
 
   test('Navigation zu Turnier-Erstellung', async ({ page }) => {
@@ -80,7 +80,7 @@ test.describe('Dashboard', () => {
     await page.getByRole('button', { name: /Neues Turnier/i }).click();
 
     // THEN - Wizard öffnet sich
-    await expect(page).toHaveURL(/\/tournament\/new/);
+    await expect(page).toHaveURL(/.*\/tournament\/new/);
     await expect(page.getByRole('heading', { name: /NEUES TURNIER|Turnier erstellen/i })).toBeVisible();
   });
 
@@ -152,7 +152,7 @@ test.describe('Dashboard', () => {
     await page.getByText('Dashboard Test Turnier').click();
 
     // THEN - Turnier-Management öffnet
-    await expect(page).toHaveURL(/\/tournament\/test-dashboard-tournament/);
+    await expect(page).toHaveURL(/.*\/tournament\/test-dashboard-tournament/);
   });
 
   test('Suche filtert Turniere', async ({ page, seedIndexedDB }) => {

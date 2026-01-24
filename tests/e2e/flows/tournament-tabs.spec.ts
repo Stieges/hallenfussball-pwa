@@ -121,7 +121,7 @@ test.describe('Tournament Management Tabs', () => {
     // GIVEN - Tournament Management geladen
 
     // THEN - Spielplan ist Standard-Tab (oder redirect dorthin)
-    await expect(page).toHaveURL(/\/tournament\/tab-test-tournament(\/schedule)?/);
+    await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament(\/schedule)?/);
 
     // Spielplan-Content ist sichtbar
     const scheduleContent = page.getByRole('heading', { name: /Spielplan/i }).or(
@@ -140,7 +140,7 @@ test.describe('Tournament Management Tabs', () => {
       await standingsTab.click();
 
       // THEN - URL ändert sich
-      await expect(page).toHaveURL(/\/tournament\/tab-test-tournament\/standings/);
+      await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/standings/);
 
       // Tabellen-Content ist sichtbar
       await expect(page.getByRole('heading', { name: /Tabelle|Gruppe/i })).toBeVisible();
@@ -157,7 +157,7 @@ test.describe('Tournament Management Tabs', () => {
       await teamsTab.click();
 
       // THEN - URL ändert sich
-      await expect(page).toHaveURL(/\/tournament\/tab-test-tournament\/teams/);
+      await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/teams/);
 
       // Teams-Content ist sichtbar
       const teamsList = page.getByText(/Team Alpha|Team Beta/i);
@@ -175,7 +175,7 @@ test.describe('Tournament Management Tabs', () => {
       await liveTab.click();
 
       // THEN - URL ändert sich
-      await expect(page).toHaveURL(/\/tournament\/tab-test-tournament\/live/);
+      await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/live/);
 
       // Live-Content ist sichtbar (z.B. "Keine laufenden Spiele" oder Live-Matches)
       const liveContent = page.getByText(/Keine laufenden Spiele|Live-Ansicht/i);
@@ -193,7 +193,7 @@ test.describe('Tournament Management Tabs', () => {
       await settingsTab.click();
 
       // THEN - URL ändert sich
-      await expect(page).toHaveURL(/\/tournament\/tab-test-tournament\/settings/);
+      await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/settings/);
 
       // Settings-Content ist sichtbar
       await expect(page.getByRole('heading', { name: /Einstellungen|Turnier-Einstellungen/i })).toBeVisible();
@@ -236,7 +236,7 @@ test.describe('Tournament Management Tabs', () => {
       await standingsButton.click();
 
       // THEN - Content ändert sich
-      await expect(page).toHaveURL(/\/standings/);
+      await expect(page).toHaveURL(/.*\/standings/);
       await expect(page.getByRole('heading', { name: /Tabelle/i })).toBeVisible();
     }
   });
@@ -273,7 +273,7 @@ test.describe('Tournament Management Tabs', () => {
     await page.waitForLoadState('networkidle');
 
     // THEN - Immer noch auf Teams-Tab
-    await expect(page).toHaveURL(/\/teams/);
+    await expect(page).toHaveURL(/.*\/teams/);
     await expect(page.getByText(/Team Alpha/i)).toBeVisible({ timeout: 5000 });
   });
 
@@ -289,7 +289,7 @@ test.describe('Tournament Management Tabs', () => {
     await page.goBack();
 
     // THEN - Zurück zu Schedule
-    await expect(page).toHaveURL(/\/schedule/);
+    await expect(page).toHaveURL(/.*\/schedule/);
   });
 
   // ═══════════════════════════════════════════════════════════════

@@ -369,7 +369,7 @@ test.describe('Authentication Flows', () => {
       await guestButton.click();
 
       // THEN - Redirected to dashboard
-      await expect(page).toHaveURL(/\/(dashboard|tournaments|$)/, { timeout: 5000 });
+      await expect(page).toHaveURL(/.*\/(dashboard|tournaments|$)/, { timeout: 5000 });
 
       // Guest banner should be visible
       const guestBanner = page.locator('[data-testid="guest-banner"]').or(
@@ -426,7 +426,7 @@ test.describe('Authentication Flows', () => {
         await newTournamentButton.click();
 
         // Wizard should open
-        await expect(page).toHaveURL(/\/tournament\/new/, { timeout: 5000 });
+        await expect(page).toHaveURL(/.*\/tournament\/new/, { timeout: 5000 });
         await expect(page.getByRole('heading', { name: /turnier erstellen|neues turnier|schritt 1/i })).toBeVisible();
       }
     });
@@ -613,7 +613,7 @@ test.describe('Authentication Flows', () => {
         await tournamentCard.click();
 
         // Should navigate to tournament
-        await expect(page).toHaveURL(/\/tournament\/test-tournament-nav/, { timeout: 5000 });
+        await expect(page).toHaveURL(/.*\/tournament\/test-tournament-nav/, { timeout: 5000 });
       }
     });
 
