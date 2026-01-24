@@ -100,7 +100,9 @@ test.describe('Public Tournament View', () => {
     await page.waitForLoadState('networkidle');
 
     // THEN - Turnier-Infos sind sichtbar
-    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i })).toBeVisible();
+    // Note: Explicit timeout needed because loadTournament() is async (IndexedDB read)
+    // and networkidle doesn't wait for local storage operations
+    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('Public View zeigt Spielplan', async ({ page }) => {
@@ -137,8 +139,8 @@ test.describe('Public Tournament View', () => {
       await standingsTab.click();
 
       // THEN - Tabelle wird angezeigt
-      await expect(page.getByRole('heading', { name: /Tabelle|Gruppe/i })).toBeVisible();
-      await expect(page.getByText(/FC Alpha|SV Beta/i).first()).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Tabelle|Gruppe/i })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/FC Alpha|SV Beta/i).first()).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -430,7 +432,8 @@ test.describe('Public Tournament View', () => {
     await page.waitForLoadState('networkidle');
 
     // THEN - Page loads successfully
-    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i })).toBeVisible({ timeout: 5000 });
+    // Note: Increased timeout for async IndexedDB load (CI can be slow)
+    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i })).toBeVisible({ timeout: 10000 });
 
     // Check for semantic structure: heading hierarchy
     const headings = page.locator('h1, h2, h3');
