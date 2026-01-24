@@ -67,17 +67,13 @@ export const test = base.extend<TestOptions>({
             }
         });
 
-        // Set consent status in localStorage first
-        // The app's autoMigrate will move it to IndexedDB
+        // Set consent status in localStorage
+        // Tests navigate to their target URLs, picking up the consent.
+        // For tests using seedIndexedDB, the seed fixture handles the reload.
         await page.evaluate((consent) => {
             localStorage.setItem('app:consent', JSON.stringify(consent));
         }, TEST_CONSENT_STATUS);
 
-        // Reload to pick up the consent and wait for page to be ready
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-
-        // Now use the page with consent already set
         await use(page);
     },
 
