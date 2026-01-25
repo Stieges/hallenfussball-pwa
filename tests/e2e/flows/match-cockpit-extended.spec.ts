@@ -246,6 +246,13 @@ test.describe('Match Cockpit Extended', () => {
     // GIVEN - Navigate to Mobile Cockpit
     await navigateToLiveCockpit(page);
 
+    // Start the match first (goal button is disabled until match is running)
+    const startButton = page.getByTestId('match-start-button');
+    if (await startButton.isVisible()) {
+      await startButton.click();
+      await expect(page.getByTestId('match-pause-button')).toBeVisible({ timeout: 5000 });
+    }
+
     // Spy on navigator.vibrate
     await page.evaluate(() => {
       (navigator as any).__vibrateCallCount = 0;

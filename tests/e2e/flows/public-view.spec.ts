@@ -60,6 +60,9 @@ function createPublicTournament() {
         teamA: 'team-1',
         teamB: 'team-2',
         field: 1,
+        round: 1,
+        slot: 0,
+        matchNumber: 1,
         status: 'scheduled',
         time: '10:00',
         scoreA: 0,
@@ -70,6 +73,9 @@ function createPublicTournament() {
         teamA: 'team-3',
         teamB: 'team-4',
         field: 1,
+        round: 2,
+        slot: 1,
+        matchNumber: 2,
         status: 'finished',
         time: '10:15',
         scoreA: 3,
@@ -111,6 +117,9 @@ test.describe('Public Tournament View', () => {
     await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
+    // Wait for tournament to be loaded first (async IndexedDB read)
+    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i }).first()).toBeVisible({ timeout: 10000 });
+
     // THEN - Matches werden angezeigt (team names visible, use first() for multiple matches)
     await expect(page.getByText('FC Alpha').first()).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('SV Beta').first()).toBeVisible();
@@ -120,6 +129,9 @@ test.describe('Public Tournament View', () => {
     // GIVEN - Public View mit sichtbaren Scores
     await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
+
+    // Wait for tournament to be loaded first (async IndexedDB read)
+    await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i }).first()).toBeVisible({ timeout: 10000 });
 
     // THEN - Scores sind sichtbar (finished match: 3:1)
     const score = page.getByText('3:1');
