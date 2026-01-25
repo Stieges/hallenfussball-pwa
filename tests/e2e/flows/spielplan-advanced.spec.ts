@@ -89,7 +89,7 @@ function createTestTournament() {
 
 // Helper: Navigate to tournament and start a match
 async function navigateAndStartMatch(page: Page) {
-  await page.goto('/');
+  await page.goto('/#/');
   await page.waitForLoadState('networkidle');
   await page.getByText('Spielplan Advanced Test').click();
   await page.waitForLoadState('networkidle');
@@ -292,7 +292,7 @@ test.describe('Offline & Persistence', () => {
 
   test('P0: Score-Eingabe funktioniert offline', async ({ page, context }) => {
     // GIVEN - Navigate to Spielplan
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Advanced Test').click();
     await navigateToSpielplan(page);
@@ -446,16 +446,19 @@ test.describe('Timer-Stabilität', () => {
     const timerAfter = await timerElement.textContent();
     const timestampAfter = Date.now();
 
-    // THEN - Timer should have advanced by approximately 5 seconds
+    // THEN - Timer should have changed by approximately the elapsed time
     // Parse timer values (format: MM:SS)
-
+    // NOTE: The app uses COUNTDOWN timers (10:00 → 0:00), so timer DECREASES over time
 
     const secondsBefore = parseTime(timerBefore);
     const secondsAfter = parseTime(timerAfter);
     const elapsedReal = (timestampAfter - timestampBefore) / 1000;
 
-    // Timer should have advanced at least 4 seconds (allowing some tolerance)
-    const timerDiff = secondsAfter - secondsBefore;
+    // For countdown timers: secondsBefore - secondsAfter should be approximately elapsedReal
+    // Use absolute value to handle both count-up and count-down timers
+    const timerDiff = Math.abs(secondsAfter - secondsBefore);
+
+    // Timer should have changed by at least 4 seconds (allowing some tolerance)
     expect(timerDiff).toBeGreaterThanOrEqual(4);
     // And not more than elapsed time + 3 seconds tolerance (increased from 2)
     expect(timerDiff).toBeLessThanOrEqual(elapsedReal + 3);
@@ -494,10 +497,11 @@ test.describe('Timer-Stabilität', () => {
     await page.waitForTimeout(4000); // Increased from 2000ms to 4000ms
     const timerAfterResume = await page.getByTestId('match-timer-display').textContent();
 
-    // THEN - Timer should have advanced after resume
-
-
-    expect(parseTime(timerAfterResume)).toBeGreaterThan(parseTime(timerBeforePause));
+    // THEN - Timer should have changed after resume
+    // NOTE: The app uses COUNTDOWN timers, so timerAfterResume will be LESS than timerBeforePause
+    // We check that the timer has changed by at least 2 seconds (allowing tolerance)
+    const timerChange = Math.abs(parseTime(timerAfterResume) - parseTime(timerBeforePause));
+    expect(timerChange).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -537,7 +541,7 @@ test.describe('Panel schließen', () => {
     }
 
     // GIVEN - Navigate to Spielplan and open an expand
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForLoadState('networkidle');
     await page.getByText('Spielplan Advanced Test').click();
     await navigateToSpielplan(page);

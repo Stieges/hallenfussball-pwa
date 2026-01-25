@@ -23,6 +23,7 @@ import {
   AuthCallback,
   AuthConfirmPage,
   SetPasswordScreen,
+  AuthGuard,
 } from './features/auth/components';
 import { Footer } from './components/layout';
 import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
@@ -515,10 +516,15 @@ function AppContent() {
         {screen === 'set-password' && <SetPasswordScreen />}
 
         {screen === 'profile' && (
-          <UserProfileScreen
-            onBack={() => void navigate(-1)}
-            onOpenSettings={() => void navigate('/settings')}
-          />
+          <AuthGuard
+            allowGuest={false}
+            onUnauthenticated={() => setScreen('login')}
+          >
+            <UserProfileScreen
+              onBack={() => void navigate(-1)}
+              onOpenSettings={() => void navigate('/settings')}
+            />
+          </AuthGuard>
         )}
 
         {screen === 'settings' && (

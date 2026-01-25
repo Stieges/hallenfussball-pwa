@@ -132,6 +132,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     }
   }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError]);
 
+  // AuthGuard in App.tsx handles guest redirect
   if (!user) {
     return null;
   }

@@ -36,7 +36,7 @@ export function Toast({ toast, onDismiss }: ToastProps) {
 
   useEffect(() => {
     // Animate in
-    requestAnimationFrame(() => setIsVisible(true));
+    const rafId = requestAnimationFrame(() => setIsVisible(true));
 
     // Auto dismiss
     const timer = setTimeout(() => {
@@ -44,7 +44,10 @@ export function Toast({ toast, onDismiss }: ToastProps) {
       setTimeout(() => onDismiss(toast.id), 200);
     }, duration);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer);
+    };
   }, [toast.id, duration, onDismiss]);
 
   const getTypeStyles = (): { bg: string; border: string; icon: string } => {

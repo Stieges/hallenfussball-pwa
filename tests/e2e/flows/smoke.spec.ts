@@ -3,12 +3,12 @@ import { test, expect } from '../helpers/test-fixtures';
 test.describe('Smoke Tests', () => {
   
   test('App lädt erfolgreich', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
     await expect(page).toHaveTitle(/Turnier|Hallenfußball/i);
   });
 
   test('Viewport Meta ist korrekt konfiguriert', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
     
     const viewport = await page.locator('meta[name="viewport"]').getAttribute('content');
     
@@ -25,14 +25,14 @@ test.describe('Smoke Tests', () => {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     
-    await page.goto('/');
+    await page.goto('/#/');
     await page.waitForTimeout(1000);
     
     expect(errors).toEqual([]);
   });
 
   test('PWA Manifest ist verlinkt', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/#/');
 
     // PWA manifest is injected by vite-plugin-pwa at build time, might not be present in dev mode
     const manifestLink = page.locator('link[rel="manifest"]');

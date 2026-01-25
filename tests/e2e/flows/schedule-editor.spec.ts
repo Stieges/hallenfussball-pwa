@@ -150,7 +150,7 @@ function createTournamentWithResults() {
 // =============================================================================
 
 async function navigateToSpielplan(page: Page, tournamentTitle: string = 'Editor Test Turnier') {
-  await page.goto('/');
+  await page.goto('/#/');
   await page.waitForLoadState('networkidle');
 
   // Click on the tournament card

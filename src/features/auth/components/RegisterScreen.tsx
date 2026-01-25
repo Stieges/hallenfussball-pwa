@@ -373,6 +373,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               }}
               autoComplete="name"
               autoFocus
+              data-testid="register-name-input"
             />
             {errors.name && <span style={styles.errorText}>{errors.name}</span>}
           </div>
@@ -397,8 +398,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 ...(errors.email ? styles.inputError : {}),
               }}
               autoComplete="email"
+              data-testid="register-email-input"
             />
-            {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+            {errors.email && <span style={styles.errorText} data-testid="register-email-error">{errors.email}</span>}
             {emailSuggestion && (
               <button
                 type="button"
@@ -439,6 +441,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               }}
               autoComplete="new-password"
               minLength={6}
+              data-testid="register-password-input"
             />
             {errors.password && <span style={styles.errorText}>{errors.password}</span>}
           </div>
@@ -459,6 +462,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 ...(errors.confirmPassword ? styles.inputError : {}),
               }}
               autoComplete="new-password"
+              data-testid="register-confirm-password-input"
             />
             {errors.confirmPassword && (
               <span style={styles.errorText}>{errors.confirmPassword}</span>
@@ -481,6 +485,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 ...(errors.registrationCode ? styles.inputError : {}),
               }}
               autoComplete="off"
+              data-testid="register-code-input"
             />
             {errors.registrationCode && (
               <span style={styles.errorText}>{errors.registrationCode}</span>
@@ -491,7 +496,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           </div>
 
           {errors.general && (
-            <div style={styles.generalError}>{errors.general}</div>
+            <div style={styles.generalError} data-testid="register-error-message">{errors.general}</div>
           )}
 
           <Button
@@ -500,6 +505,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             fullWidth
             loading={isLoading}
             style={styles.button}
+            data-testid="register-submit-button"
           >
             Konto erstellen
           </Button>
@@ -535,6 +541,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             onBlur={(e) => {
               e.currentTarget.style.outline = 'none';
             }}
+            data-testid="register-login-link"
           >
             Anmelden
           </button>

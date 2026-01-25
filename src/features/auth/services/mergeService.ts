@@ -128,10 +128,9 @@ export async function mergeAccounts(anonymousUserId: string): Promise<MergeResul
 
     if (error) {
       console.error('[MergeService] Edge function error:', error);
-      // Error is typed as FunctionsError which may have message property
-      const errorMsg = typeof error === 'object' && error !== null && 'message' in error
-        ? String((error as { message: unknown }).message)
-        : 'Fehler beim Zusammenführen der Konten';
+      // Extract error message from FunctionsError
+      // FunctionsError has a message property, but we use safe access pattern
+      const errorMsg = (error as { message?: string }).message ?? 'Fehler beim Zusammenführen der Konten';
       return {
         success: false,
         error: errorMsg,

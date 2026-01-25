@@ -20,6 +20,7 @@ import { ScheduleActionButtons } from '../components/ScheduleActionButtons';
 import { Card } from '../components/ui/Card';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
+import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 
 export interface PublicTournamentViewScreenProps {
   tournamentId: string;
@@ -61,15 +62,14 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
       }
     };
 
-    const loadFromLocalStorage = (): Tournament | null => {
+    const loadFromLocalStorage = async (): Promise<Tournament | null> => {
       try {
-        const stored = localStorage.getItem('tournaments');
-        if (!stored) {return null;}
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- JSON.parse returns any; validated by usage
-        const tournaments: Tournament[] = JSON.parse(stored);
-        return tournaments.find((t) => t.id === tournamentId) ?? null;
-      } catch {
+        const repo = new LocalStorageRepository();
+        return await repo.get(tournamentId);
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.error('[PublicTournamentView] Local load failed:', error);
+        }
         return null;
       }
     };
@@ -107,7 +107,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
         let found = await loadFromSupabase();
 
         // Fallback to localStorage (for local development or offline)
-        found ??= loadFromLocalStorage();
+        found ??= await loadFromLocalStorage();
 
         if (found) {
           processLoadedTournament(found);
@@ -125,7 +125,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
 
   // Apply privacy filters
   const getFilteredSchedule = (): GeneratedSchedule | null => {
-    if (!schedule || !tournament) {return null;}
+    if (!schedule || !tournament) { return null; }
 
     // Filter scores if hideScoresForPublic is enabled
     if (tournament.hideScoresForPublic) {
@@ -152,7 +152,7 @@ export const PublicTournamentViewScreen: React.FC<PublicTournamentViewScreenProp
 
   // Filter standings if hideRankingsForPublic is enabled
   const getFilteredStandings = (): Standing[] => {
-    if (!tournament) {return [];}
+    if (!tournament) { return []; }
     return tournament.hideRankingsForPublic ? [] : currentStandings;
   };
 

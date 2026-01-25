@@ -48,26 +48,26 @@ export type TestOptions = {
 export const test = base.extend<TestOptions>({
     // Auto-set consent before each test to bypass ConsentDialog
     page: async ({ page }, use) => {
-        // Navigate to app first (needed to access storage for this origin)
-        await page.goto('/');
-
-        // Set consent status in localStorage first
-        // The app's autoMigrate will move it to IndexedDB
-        await page.evaluate((consent) => {
+        // Add init script that runs BEFORE any JavaScript on the page
+        // This sets consent before the app loads (preventing ConsentDialog)
+        await page.addInitScript((consent) => {
             localStorage.setItem('app:consent', JSON.stringify(consent));
         }, TEST_CONSENT_STATUS);
 
-        // Reload to pick up the consent and wait for page to be ready
-        await page.reload();
-        await page.waitForLoadState('domcontentloaded');
-
-        // Now use the page with consent already set
+        // DO NOT navigate here - let tests control navigation
+        // Tests using seedIndexedDB need to seed BEFORE the app loads
+        // to avoid storage singleton caching issues
         await use(page);
     },
 
     seedIndexedDB: async ({ page }, use) => {
         const seedFn = async (data: Record<string, unknown>) => {
-            await page.evaluate(({ data, config }) => {
+            // Navigate to app first (initializes storage, but we'll seed and reload)
+            await page.goto('/#/');
+            await page.waitForLoadState('domcontentloaded');
+
+            // Seed IndexedDB directly (bypassing app's storage layer)
+            await page.evaluate(async ({ data, config }) => {
                 return new Promise<void>((resolve, reject) => {
                     const request = indexedDB.open(config.dbName, config.version);
 
@@ -87,7 +87,7 @@ export const test = base.extend<TestOptions>({
                         const transaction = db.transaction(config.storeName, 'readwrite');
                         const store = transaction.objectStore(config.storeName);
 
-                        // Write each key-value pair
+                        // Write new data (don't clear - keep consent and other data)
                         Object.entries(data).forEach(([key, value]) => {
                             store.put({ key, value });
                         });
@@ -105,9 +105,9 @@ export const test = base.extend<TestOptions>({
                 });
             }, { data, config: INDEXED_DB_CONFIG });
 
-            // Reload to pick up changes
+            // Reload to pick up the seeded data (JS singleton resets on reload)
             await page.reload();
-            await page.waitForLoadState('domcontentloaded');
+            await page.waitForLoadState('networkidle');
         };
         await use(seedFn);
     },

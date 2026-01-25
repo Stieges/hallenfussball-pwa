@@ -1,0 +1,316 @@
+{
+  "title": "Wieninger-Libella-Hallenturniere 2025/2026",
+  "organizer": "JFG Teisenberg",
+  "ageClass": "U9",
+  "tournamentRound": "Zwischenrunde 3",
+  "date": "2026-01-24",
+  "timeSlot": "14:00",
+  "startDate": "2026-01-24",
+  "startTime": "14:00",
+  "location": {
+    "name": "Bergader SportARENA",
+    "street": "Mühlberger Weg 5",
+    "postalCode": "83329",
+    "city": "Waging am See",
+    "country": "Deutschland"
+  },
+  "contactInfo": {
+    "name": "JFG Teisenberg",
+    "email": "",
+    "phone": "+49 8666 545",
+    "website": ""
+  },
+  "sport": "football",
+  "sportId": "football-indoor",
+  "tournamentType": "roundRobin",
+  "mode": "roundRobin",
+  "numberOfFields": 1,
+  "numberOfTeams": 7,
+  "groupSystem": "singleGroup",
+  "numberOfGroups": 1,
+  "groupPhaseGameDuration": 9,
+  "groupPhaseBreakDuration": 2,
+  "gamePeriods": 1,
+  "halftimeBreak": 0,
+  "finalRoundGameDuration": 0,
+  "finalRoundBreakDuration": 0,
+  "breakBetweenPhases": 0,
+  "minRestSlots": 1,
+  "placementLogic": [
+    {
+      "id": "points",
+      "label": "Punkte",
+      "enabled": true
+    },
+    {
+      "id": "goalDifference",
+      "label": "Tordifferenz",
+      "enabled": true
+    },
+    {
+      "id": "goalsFor",
+      "label": "Erzielte Tore",
+      "enabled": true
+    },
+    {
+      "id": "directComparison",
+      "label": "Direkter Vergleich",
+      "enabled": false
+    }
+  ],
+  "pointSystem": {
+    "win": 3,
+    "draw": 1,
+    "loss": 0
+  },
+  "finalsConfig": {
+    "preset": "none",
+    "parallelSemifinals": false,
+    "parallelQuarterfinals": false
+  },
+  "finals": {
+    "final": false,
+    "thirdPlace": false,
+    "fifthSixth": false,
+    "seventhEighth": false
+  },
+  "refereeConfig": {
+    "mode": "teams",
+    "numberOfReferees": 1,
+    "maxConsecutiveMatches": 2,
+    "refereeNames": {},
+    "finalsRefereeMode": "neutralTeams"
+  },
+  "isKidsTournament": true,
+  "hideScoresForPublic": false,
+  "hideRankingsForPublic": false,
+  "resultMode": "goals",
+  "teams": [
+    {
+      "id": "t1",
+      "name": "TSV Waging",
+      "group": "A"
+    },
+    {
+      "id": "t2",
+      "name": "SBC Traunstein U9",
+      "group": "A"
+    },
+    {
+      "id": "t3",
+      "name": "SV Erlstätt",
+      "group": "A"
+    },
+    {
+      "id": "t4",
+      "name": "SpVgg Pittenhart",
+      "group": "A"
+    },
+    {
+      "id": "t5",
+      "name": "SV Ruhpolding",
+      "group": "A"
+    },
+    {
+      "id": "t6",
+      "name": "FC Hammerau",
+      "group": "A"
+    },
+    {
+      "id": "t7",
+      "name": "TSV Bad Reichenhall",
+      "group": "A"
+    }
+  ],
+  "matches": [
+    {
+      "id": "m1",
+      "round": 1,
+      "field": 1,
+      "teamA": "t2",
+      "teamB": "t1",
+      "group": "A",
+      "time": "14:00"
+    },
+    {
+      "id": "m2",
+      "round": 2,
+      "field": 1,
+      "teamA": "t4",
+      "teamB": "t3",
+      "group": "A",
+      "time": "14:11"
+    },
+    {
+      "id": "m3",
+      "round": 3,
+      "field": 1,
+      "teamA": "t5",
+      "teamB": "t6",
+      "group": "A",
+      "time": "14:22"
+    },
+    {
+      "id": "m4",
+      "round": 4,
+      "field": 1,
+      "teamA": "t7",
+      "teamB": "t1",
+      "group": "A",
+      "time": "14:33"
+    },
+    {
+      "id": "m5",
+      "round": 5,
+      "field": 1,
+      "teamA": "t3",
+      "teamB": "t2",
+      "group": "A",
+      "time": "14:44"
+    },
+    {
+      "id": "m6",
+      "round": 6,
+      "field": 1,
+      "teamA": "t5",
+      "teamB": "t4",
+      "group": "A",
+      "time": "14:55"
+    },
+    {
+      "id": "m7",
+      "round": 7,
+      "field": 1,
+      "teamA": "t6",
+      "teamB": "t7",
+      "group": "A",
+      "time": "15:06"
+    },
+    {
+      "id": "m8",
+      "round": 8,
+      "field": 1,
+      "teamA": "t1",
+      "teamB": "t3",
+      "group": "A",
+      "time": "15:17"
+    },
+    {
+      "id": "m9",
+      "round": 9,
+      "field": 1,
+      "teamA": "t5",
+      "teamB": "t2",
+      "group": "A",
+      "time": "15:28"
+    },
+    {
+      "id": "m10",
+      "round": 10,
+      "field": 1,
+      "teamA": "t4",
+      "teamB": "t7",
+      "group": "A",
+      "time": "15:39"
+    },
+    {
+      "id": "m11",
+      "round": 11,
+      "field": 1,
+      "teamA": "t6",
+      "teamB": "t1",
+      "group": "A",
+      "time": "15:50"
+    },
+    {
+      "id": "m12",
+      "round": 12,
+      "field": 1,
+      "teamA": "t3",
+      "teamB": "t5",
+      "group": "A",
+      "time": "16:01"
+    },
+    {
+      "id": "m13",
+      "round": 13,
+      "field": 1,
+      "teamA": "t7",
+      "teamB": "t2",
+      "group": "A",
+      "time": "16:12"
+    },
+    {
+      "id": "m14",
+      "round": 14,
+      "field": 1,
+      "teamA": "t4",
+      "teamB": "t6",
+      "group": "A",
+      "time": "16:23"
+    },
+    {
+      "id": "m15",
+      "round": 15,
+      "field": 1,
+      "teamA": "t1",
+      "teamB": "t5",
+      "group": "A",
+      "time": "16:34"
+    },
+    {
+      "id": "m16",
+      "round": 16,
+      "field": 1,
+      "teamA": "t3",
+      "teamB": "t7",
+      "group": "A",
+      "time": "16:45"
+    },
+    {
+      "id": "m17",
+      "round": 17,
+      "field": 1,
+      "teamA": "t2",
+      "teamB": "t6",
+      "group": "A",
+      "time": "16:56"
+    },
+    {
+      "id": "m18",
+      "round": 18,
+      "field": 1,
+      "teamA": "t1",
+      "teamB": "t4",
+      "group": "A",
+      "time": "17:07"
+    },
+    {
+      "id": "m19",
+      "round": 19,
+      "field": 1,
+      "teamA": "t7",
+      "teamB": "t5",
+      "group": "A",
+      "time": "17:18"
+    },
+    {
+      "id": "m20",
+      "round": 20,
+      "field": 1,
+      "teamA": "t6",
+      "teamB": "t3",
+      "group": "A",
+      "time": "17:29"
+    },
+    {
+      "id": "m21",
+      "round": 21,
+      "field": 1,
+      "teamA": "t2",
+      "teamB": "t4",
+      "group": "A",
+      "time": "17:40"
+    }
+  ]
+}

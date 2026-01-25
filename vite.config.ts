@@ -44,6 +44,9 @@ export default defineConfig(({ mode }) => ({
         lang: 'de',
       },
       workbox: {
+        // Clean up outdated caches from previous builds
+        // This prevents "Importing a module script failed" errors when old chunks are requested
+        cleanupOutdatedCaches: true,
         // Cache all static assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Runtime caching for external resources

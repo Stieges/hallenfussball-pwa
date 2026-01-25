@@ -28,9 +28,25 @@ export interface UseMatchExecutionProps {
     onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
 }
 
+/**
+ * Loading states for async operations.
+ * Used to prevent double-taps and show loading indicators.
+ */
+export interface LoadingStates {
+    goal: boolean;
+    card: boolean;
+    finish: boolean;
+    undo: boolean;
+    start: boolean;
+}
+
 export interface UseMatchExecutionReturn {
     // State
     liveMatches: Map<string, LiveMatch>;
+    /** Loading states for async operations - use to disable buttons during operations */
+    loadingStates: LoadingStates;
+    /** True if any operation is currently loading */
+    isAnyLoading: boolean;
 
     // Get/Initialize
     getLiveMatchData: (matchData: ScheduledMatch) => Promise<LiveMatch>;
@@ -115,12 +131,33 @@ export function useMatchExecution({
     // State
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
 
+    // H-1 FIX: Loading states for async operations to prevent double-taps
+    const [loadingStates, setLoadingStates] = useState<LoadingStates>({
+        goal: false,
+        card: false,
+        finish: false,
+        undo: false,
+        start: false,
+    });
+
+    // Helper to update a specific loading state
+    const setLoading = useCallback((key: keyof LoadingStates, value: boolean) => {
+        setLoadingStates(prev => ({ ...prev, [key]: value }));
+    }, []);
+
     // Refs
     const tournamentRef = useRef(tournament);
     tournamentRef.current = tournament;
 
     // Multi-tab sync
-    const { announceMatchStarted, announceMatchFinished } = useMultiTabSync({
+    // H-3 FIX: Extended to include pause, resume, and update events
+    const {
+        announceMatchStarted,
+        announceMatchFinished,
+        announceMatchPaused,
+        announceMatchResumed,
+        announceMatchUpdated,
+    } = useMultiTabSync({
         tournamentId: tournament.id,
     });
 
@@ -212,23 +249,35 @@ export function useMatchExecution({
             return false; // UI should show confirmation dialog
         }
 
-        const updated = await service.startMatch(tournament.id, matchId);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-        announceMatchStarted(matchId);
-        return true;
-    }, [liveMatches, service, tournament.id, announceMatchStarted]);
+        // H-1 FIX: Prevent double-taps
+        setLoading('start', true);
+        try {
+            const updated = await service.startMatch(tournament.id, matchId);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            announceMatchStarted(matchId);
+            return true;
+        } finally {
+            setLoading('start', false);
+        }
+    }, [liveMatches, service, tournament.id, announceMatchStarted, setLoading]);
 
     const handlePause = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.pauseMatch(tournament.id, matchId);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        // H-3 FIX: Announce pause to other tabs
+        announceMatchPaused(matchId);
+    }, [service, tournament.id, announceMatchPaused]);
 
     const handleResume = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.resumeMatch(tournament.id, matchId);
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        // H-3 FIX: Announce resume to other tabs
+        announceMatchResumed(matchId);
+    }, [service, tournament.id, announceMatchResumed]);
 
     const handleFinish = useCallback(async (matchId: string): Promise<void> => {
+        // H-1 FIX: Prevent double-taps
+        setLoading('finish', true);
         try {
             const result = await service.finishMatch(tournament.id, matchId);
 
@@ -258,15 +307,19 @@ export function useMatchExecution({
         } catch (error) {
             // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Finish match failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
+        } finally {
+            setLoading('finish', false);
         }
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo]);
+    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo, setLoading]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -300,6 +353,8 @@ export function useMatchExecution({
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
 
+        // H-1 FIX: Prevent double-taps
+        setLoading('goal', true);
         try {
             const updated = await service.recordGoal(tournament.id, matchId, team, delta, options);
             setLiveMatches(prev => new Map(prev).set(matchId, updated));
@@ -310,19 +365,26 @@ export function useMatchExecution({
                 const t = await repo.get(tournament.id);
                 if (t) { onTournamentUpdate(t, false); }
                 announceMatchFinished(matchId);
+            } else {
+                // H-3 FIX: Announce goal update to other tabs
+                announceMatchUpdated(matchId);
             }
         } catch (error) {
             // BUG-002 + QW-003: Handle optimistic lock conflicts with toast feedback
             if (error instanceof OptimisticLockError) {
-                console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Goal recording failed after retries, refreshing state');
+                }
                 await refreshMatchState(matchId);
                 // Show info toast instead of re-throwing - conflict was resolved by refresh
-                showInfo('Spielstand wurde aktualisiert', { duration: 3000 });
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
                 return;
             }
             throw error;
+        } finally {
+            setLoading('goal', false);
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, refreshMatchState, showInfo]);
+    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo, setLoading]);
 
     const handleCard = useCallback(async (
         matchId: string,
@@ -334,9 +396,29 @@ export function useMatchExecution({
         if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
-        const updated = await service.recordCard(tournament.id, matchId, team, cardType, options);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [liveMatches, service, tournament.id]);
+
+        // H-1 FIX: Prevent double-taps
+        setLoading('card', true);
+        try {
+            const updated = await service.recordCard(tournament.id, matchId, team, cardType, options);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce card event to other tabs
+            announceMatchUpdated(matchId);
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Card recording failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        } finally {
+            setLoading('card', false);
+        }
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated, setLoading]);
 
     const handleTimePenalty = useCallback(async (
         matchId: string,
@@ -347,9 +429,25 @@ export function useMatchExecution({
         if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
-        const updated = await service.recordTimePenalty(tournament.id, matchId, team, options);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [liveMatches, service, tournament.id]);
+
+        try {
+            const updated = await service.recordTimePenalty(tournament.id, matchId, team, options);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce time penalty event to other tabs
+            announceMatchUpdated(matchId);
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Time penalty recording failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        }
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleSubstitution = useCallback(async (
         matchId: string,
@@ -360,9 +458,25 @@ export function useMatchExecution({
         if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
-        const updated = await service.recordSubstitution(tournament.id, matchId, team, options);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [liveMatches, service, tournament.id]);
+
+        try {
+            const updated = await service.recordSubstitution(tournament.id, matchId, team, options);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce substitution event to other tabs
+            announceMatchUpdated(matchId);
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Substitution recording failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        }
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleFoul = useCallback(async (
         matchId: string,
@@ -373,9 +487,25 @@ export function useMatchExecution({
         if (!match) { return; }
 
         const team = teamId === match.homeTeam.id ? 'home' : 'away';
-        const updated = await service.recordFoul(tournament.id, matchId, team, options);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [liveMatches, service, tournament.id]);
+
+        try {
+            const updated = await service.recordFoul(tournament.id, matchId, team, options);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            // H-3 FIX: Announce foul event to other tabs
+            announceMatchUpdated(matchId);
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Foul recording failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        }
+    }, [liveMatches, service, tournament.id, refreshMatchState, showInfo, announceMatchUpdated]);
 
     const handleStartOvertime = useCallback(async (matchId: string): Promise<void> => {
         const updated = await service.startOvertime(tournament.id, matchId);
@@ -407,13 +537,26 @@ export function useMatchExecution({
     }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleCancelTiebreaker = useCallback(async (matchId: string): Promise<void> => {
-        await service.cancelTiebreaker(tournament.id, matchId);
+        try {
+            await service.cancelTiebreaker(tournament.id, matchId);
 
-        const match = await liveMatchRepository.get(tournament.id, matchId);
-        if (match) {
-            setLiveMatches(prev => new Map(prev).set(matchId, match));
+            const match = await liveMatchRepository.get(tournament.id, matchId);
+            if (match) {
+                setLiveMatches(prev => new Map(prev).set(matchId, match));
+            }
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Cancel tiebreaker failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
         }
-    }, [service, tournament.id, liveMatchRepository]);
+    }, [service, tournament.id, liveMatchRepository, refreshMatchState, showInfo]);
 
     const handleManualEditResult = useCallback(async (
         matchId: string,
@@ -446,9 +589,26 @@ export function useMatchExecution({
     }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
 
     const handleUndoLastEvent = useCallback(async (matchId: string): Promise<void> => {
-        const updated = await service.undoLastEvent(tournament.id, matchId);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        // H-1 FIX: Prevent double-taps
+        setLoading('undo', true);
+        try {
+            const updated = await service.undoLastEvent(tournament.id, matchId);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+        } catch (error) {
+            // C-4 FIX: Handle optimistic lock conflicts
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Undo failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        } finally {
+            setLoading('undo', false);
+        }
+    }, [service, tournament.id, refreshMatchState, showInfo, setLoading]);
 
     const handleReopenMatch = useCallback(async (matchData: ScheduledMatch): Promise<void> => {
         // Re-initialize with NOT_STARTED status
@@ -494,8 +654,15 @@ export function useMatchExecution({
         return Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
     }, [liveMatches]);
 
+    // H-1 FIX: Compute isAnyLoading from loadingStates
+    const isAnyLoading = useMemo(() =>
+        Object.values(loadingStates).some(Boolean),
+    [loadingStates]);
+
     return {
         liveMatches,
+        loadingStates,
+        isAnyLoading,
         getLiveMatchData,
         handleStart,
         handlePause,

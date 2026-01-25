@@ -20,7 +20,7 @@ import { type Page } from '@playwright/test';
  * On desktop: Click "Anmelden" button directly
  */
 async function navigateToLogin(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/#/');
 
   // Wait for app to load
   await page.waitForLoadState('networkidle');
@@ -35,7 +35,8 @@ async function navigateToLogin(page: Page): Promise<void> {
   // Mobile flow: Click user icon to open bottom sheet
   const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
   if (await mobileAuthButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await mobileAuthButton.click();
+    // Use force:true because offline badge may overlap in CI (no Supabase configured)
+    await mobileAuthButton.click({ force: true });
 
     // Wait for bottom sheet and click "Anmelden"
     const bottomSheetLogin = page.locator('[data-testid="bottomsheet-login"]');
@@ -49,7 +50,8 @@ async function navigateToLogin(page: Page): Promise<void> {
   // Desktop flow: Click "Anmelden" button directly
   const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
   if (await desktopLoginButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await desktopLoginButton.click();
+    // Use force:true because offline badge may overlap in CI (no Supabase configured)
+    await desktopLoginButton.click({ force: true });
     await expect(loginEmail).toBeVisible({ timeout: 5000 });
   }
 }
