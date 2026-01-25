@@ -47,10 +47,16 @@ test.describe('Dashboard', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - Archiv-Tab klicken
-    const archivButton = page.getByRole('button', { name: /Archiv/i }).or(
-      page.getByRole('link', { name: /Archiv/i })
-    );
-    await archivButton.click();
+    // Mobile: bottom nav uses "nav-tab-archiv", Desktop: tab bar uses "tab-archiv"
+    const mobileNav = page.locator('[data-testid="nav-tab-archiv"]');
+    const desktopTab = page.locator('[data-testid="tab-archiv"]');
+
+    // Use the one that's visible, force click to bypass potential footer overlay on mobile
+    if (await mobileNav.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileNav.click({ force: true });
+    } else {
+      await desktopTab.click();
+    }
 
     // THEN - URL ändert sich zu /archiv
     await expect(page).toHaveURL(/.*\/archiv/);
@@ -62,10 +68,16 @@ test.describe('Dashboard', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - Papierkorb-Tab klicken
-    const trashButton = page.getByRole('button', { name: /Papierkorb/i }).or(
-      page.getByRole('link', { name: /Papierkorb/i })
-    );
-    await trashButton.click();
+    // Mobile: bottom nav uses "nav-tab-papierkorb", Desktop: tab bar uses "tab-papierkorb"
+    const mobileNav = page.locator('[data-testid="nav-tab-papierkorb"]');
+    const desktopTab = page.locator('[data-testid="tab-papierkorb"]');
+
+    // Use the one that's visible, force click to bypass potential footer overlay on mobile
+    if (await mobileNav.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileNav.click({ force: true });
+    } else {
+      await desktopTab.click();
+    }
 
     // THEN - URL ändert sich zu /papierkorb
     await expect(page).toHaveURL(/.*\/papierkorb/);

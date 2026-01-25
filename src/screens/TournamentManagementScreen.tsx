@@ -498,6 +498,7 @@ const TabButton: React.FC<TabButtonProps> = ({ label, isActive, onClick, isDirty
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      data-testid={`desktop-tab-${label.toLowerCase().replace(/\s+/g, '-')}`}
     >
       {label}
       {isDirty && (

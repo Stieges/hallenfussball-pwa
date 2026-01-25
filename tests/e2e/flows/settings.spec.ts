@@ -128,6 +128,7 @@ test.describe('App Settings', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip();
+      return;
     }
 
     // WHEN - Haptic-Toggle finden
@@ -370,6 +371,7 @@ test.describe('App Settings', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip();
+      return;
     }
 
     // THEN - Settings-Container ist scrollbar
@@ -385,6 +387,7 @@ test.describe('App Settings', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width < 1024) {
       test.skip();
+      return;
     }
 
     // THEN - Sidebar-Navigation sichtbar

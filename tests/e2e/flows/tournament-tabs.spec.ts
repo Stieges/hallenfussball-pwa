@@ -99,6 +99,7 @@ test.describe('Tournament Management Tabs', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width < 1024) {
       test.skip(); // Only run on desktop
+      return;
     }
 
     // THEN - Tab-Leiste mit allen Tabs
@@ -208,6 +209,7 @@ test.describe('Tournament Management Tabs', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip(); // Only run on mobile
+      return;
     }
 
     // THEN - Bottom Navigation mit Tab-Buttons
@@ -225,6 +227,7 @@ test.describe('Tournament Management Tabs', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip(); // Only run on mobile
+      return;
     }
 
     // WHEN - Tabellen-Button in Bottom Nav
@@ -332,6 +335,7 @@ test.describe('Tournament Management Tabs', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width < 1024) {
       test.skip(); // Only test on desktop with horizontal tabs
+      return;
     }
 
     // GIVEN - Tournament page loads

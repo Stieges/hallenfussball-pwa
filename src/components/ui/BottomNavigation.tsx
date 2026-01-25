@@ -91,6 +91,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
         return (
           <button
             key={item.id}
+            data-testid={`bottom-nav-${item.id}`}
             style={itemStyle(isActive)}
             onClick={() => onTabChange(item.id)}
             aria-label={item.label}

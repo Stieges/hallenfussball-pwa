@@ -71,11 +71,20 @@ async function navigateToLiveCockpit(page: any) {
   // Click on tournament card
   await page.getByText('Cockpit Test Turnier').click();
 
-  // Wait for tournament view to load
-  await expect(page.getByText('Live')).toBeVisible({ timeout: 10000 });
+  // Wait for tournament view to load - use data-testid for reliable selection
+  // Mobile: bottom-nav-management, Desktop: desktop-tab-live
+  const mobileTab = page.locator('[data-testid="bottom-nav-management"]');
+  const desktopTab = page.locator('[data-testid="desktop-tab-live"]');
 
-  // Click on Live tab
-  await page.getByText('Live').first().click({ force: true });
+  // Wait for either tab to be visible
+  await expect(mobileTab.or(desktopTab).first()).toBeVisible({ timeout: 10000 });
+
+  // Click the visible tab (force: true to bypass potential overlays on mobile)
+  if (await mobileTab.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await mobileTab.click({ force: true });
+  } else {
+    await desktopTab.click();
+  }
 
   // Wait for cockpit to load
   await page.waitForSelector('[data-testid="match-timer-display"], [data-testid="match-start-button"]', {
@@ -231,6 +240,7 @@ test.describe('Match Cockpit Extended', () => {
     const isMobile = viewport?.width && viewport.width < 768;
     if (!isMobile) {
       test.skip();
+      return;
     }
 
     // GIVEN - Navigate to Mobile Cockpit
@@ -375,8 +385,15 @@ test.describe('Match Cockpit Extended', () => {
 
     // Navigate to Live tab
     await page.getByText('Cockpit Test Turnier').click();
-    await expect(page.getByText('Live')).toBeVisible({ timeout: 10000 });
-    await page.getByText('Live').first().click({ force: true });
+    // Use data-testid for reliable selection - Mobile: bottom-nav-management, Desktop: desktop-tab-live
+    const mobileTab = page.locator('[data-testid="bottom-nav-management"]');
+    const desktopTab = page.locator('[data-testid="desktop-tab-live"]');
+    await expect(mobileTab.or(desktopTab).first()).toBeVisible({ timeout: 10000 });
+    if (await mobileTab.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileTab.click({ force: true });
+    } else {
+      await desktopTab.click();
+    }
 
     // THEN - Should show cockpit or an appropriate message
     // Either way, no crash should occur
@@ -436,6 +453,7 @@ test.describe('Match Cockpit Extended', () => {
     const isMobile = viewport?.width && viewport.width < 768;
     if (!isMobile) {
       test.skip();
+      return;
     }
 
     // GIVEN - Settings screen
@@ -470,8 +488,15 @@ test.describe('Match Cockpit Extended', () => {
 
     // Navigate to cockpit via UI
     await page.getByText('Cockpit Test Turnier').click();
-    await expect(page.getByText('Live')).toBeVisible({ timeout: 10000 });
-    await page.getByText('Live').first().click({ force: true });
+    // Use data-testid for reliable selection - Mobile: bottom-nav-management, Desktop: desktop-tab-live
+    const mobileTab = page.locator('[data-testid="bottom-nav-management"]');
+    const desktopTab = page.locator('[data-testid="desktop-tab-live"]');
+    await expect(mobileTab.or(desktopTab).first()).toBeVisible({ timeout: 10000 });
+    if (await mobileTab.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await mobileTab.click({ force: true });
+    } else {
+      await desktopTab.click();
+    }
 
     // Wait for cockpit to be interactive
     await expect(page.getByTestId('match-timer-display')).toBeVisible({ timeout: 3000 });

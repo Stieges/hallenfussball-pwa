@@ -343,6 +343,7 @@ test.describe('Public Tournament View', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip();
+      return;
     }
 
     // GIVEN - Mobile Public View
@@ -364,6 +365,7 @@ test.describe('Public Tournament View', () => {
     const viewport = page.viewportSize();
     if (!viewport || viewport.width >= 768) {
       test.skip();
+      return;
     }
 
     // GIVEN - Mobile Public View auf Spielplan-Tab
