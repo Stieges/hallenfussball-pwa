@@ -374,13 +374,19 @@ test.describe('App Settings', () => {
       return;
     }
 
-    // THEN - Settings-Container ist scrollbar
-    const settingsContainer = page.locator('main').or(page.locator('[role="main"]'));
-    const scrollHeight = await settingsContainer.evaluate(el => el.scrollHeight);
-    const clientHeight = await settingsContainer.evaluate(el => el.clientHeight);
+    // Wait for settings page to load
+    await expect(page.getByRole('heading', { name: /Einstellungen/i })).toBeVisible({ timeout: 10000 });
+
+    // THEN - Settings page is scrollable (body or document element)
+    // The settings screen uses a div container without a main element,
+    // so we check the document.documentElement which is the scrollable element on mobile
+    const scrollData = await page.evaluate(() => ({
+      scrollHeight: Math.max(document.body.scrollHeight, document.documentElement.scrollHeight),
+      clientHeight: window.innerHeight,
+    }));
 
     // Wenn Content größer als Viewport, ist scrollbar
-    expect(scrollHeight).toBeGreaterThanOrEqual(clientHeight);
+    expect(scrollData.scrollHeight).toBeGreaterThanOrEqual(scrollData.clientHeight);
   });
 
   test('Desktop: Settings in Sidebar-Layout', async ({ page }) => {
