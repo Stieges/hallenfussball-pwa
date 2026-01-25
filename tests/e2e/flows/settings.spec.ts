@@ -42,7 +42,7 @@ test.describe('App Settings', () => {
 
       // THEN - Theme hat sich geändert
       // Wait for attribute to change to avoid race condition
-      await expect(htmlElement).not.toHaveAttribute('data-theme', initialTheme || '', { timeout: 5000 });
+      await expect(htmlElement).not.toHaveAttribute('data-theme', initialTheme ?? '', { timeout: 5000 });
       const newTheme = await htmlElement.getAttribute('data-theme');
       expect(newTheme).not.toBe(initialTheme);
 
