@@ -120,9 +120,31 @@ test.describe('Public Tournament View', () => {
     // Wait for tournament to be loaded first (async IndexedDB read)
     await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i }).first()).toBeVisible({ timeout: 10000 });
 
-    // THEN - Matches werden angezeigt (team names visible, use first() for multiple matches)
-    await expect(page.getByText('FC Alpha').first()).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('SV Beta').first()).toBeVisible();
+    // THEN - Matches werden angezeigt
+    // Note: Schedule renders both desktop-view and mobile-view to DOM, one hidden via CSS.
+    // The assertion toBeVisible() checks actual CSS visibility, but we need to find the right element.
+    // Solution: Check that ANY match card with the team name is visible (not necessarily first in DOM)
+    await expect(async () => {
+      const alphaCards = page.locator('[data-match-card]', { hasText: 'FC Alpha' });
+      const count = await alphaCards.count();
+      for (let i = 0; i < count; i++) {
+        if (await alphaCards.nth(i).isVisible()) {
+          return;
+        }
+      }
+      throw new Error('No visible match card with FC Alpha found');
+    }).toPass({ timeout: 5000 });
+
+    await expect(async () => {
+      const betaCards = page.locator('[data-match-card]', { hasText: 'SV Beta' });
+      const count = await betaCards.count();
+      for (let i = 0; i < count; i++) {
+        if (await betaCards.nth(i).isVisible()) {
+          return;
+        }
+      }
+      throw new Error('No visible match card with SV Beta found');
+    }).toPass({ timeout: 5000 });
   });
 
   test('Public View zeigt Ergebnisse (wenn nicht ausgeblendet)', async ({ page }) => {
@@ -134,8 +156,17 @@ test.describe('Public Tournament View', () => {
     await expect(page.getByRole('heading', { name: /Öffentliches Test-Turnier/i }).first()).toBeVisible({ timeout: 10000 });
 
     // THEN - Scores sind sichtbar (finished match: 3:1)
-    const score = page.getByText('3:1');
-    await expect(score.first()).toBeVisible({ timeout: 5000 });
+    // Note: Score appears in both desktop-view (hidden on mobile) and mobile-view
+    await expect(async () => {
+      const scores = page.getByText('3:1');
+      const count = await scores.count();
+      for (let i = 0; i < count; i++) {
+        if (await scores.nth(i).isVisible()) {
+          return;
+        }
+      }
+      throw new Error('No visible score 3:1 found');
+    }).toPass({ timeout: 5000 });
   });
 
   test('Public View zeigt Tabelle (wenn nicht ausgeblendet)', async ({ page }) => {
@@ -267,12 +298,30 @@ test.describe('Public Tournament View', () => {
     await page.goto('/#/public/public-test-tournament');
     await page.waitForLoadState('networkidle');
 
-    // THEN - Tournament loads and teams are visible (use first() for multiple occurrences)
-    await expect(page.getByText('FC Alpha').first()).toBeVisible({ timeout: 5000 });
+    // THEN - Tournament loads and teams are visible
+    // Note: Both desktop-view and mobile-view render to DOM, one hidden via CSS
+    await expect(async () => {
+      const alphaCards = page.locator('[data-match-card]', { hasText: 'FC Alpha' });
+      const count = await alphaCards.count();
+      for (let i = 0; i < count; i++) {
+        if (await alphaCards.nth(i).isVisible()) {
+          return;
+        }
+      }
+      throw new Error('No visible match card with FC Alpha found');
+    }).toPass({ timeout: 5000 });
 
-    // Score 1:2 wird angezeigt (use first() to handle multiple matches)
-    const score = page.getByText('1:2');
-    await expect(score.first()).toBeVisible();
+    // Score 1:2 wird angezeigt
+    await expect(async () => {
+      const scores = page.getByText('1:2');
+      const count = await scores.count();
+      for (let i = 0; i < count; i++) {
+        if (await scores.nth(i).isVisible()) {
+          return;
+        }
+      }
+      throw new Error('No visible score 1:2 found');
+    }).toPass({ timeout: 5000 });
   });
 
   test('Auto-Refresh bei Live-Matches (Polling)', async ({ page, seedIndexedDB }) => {
