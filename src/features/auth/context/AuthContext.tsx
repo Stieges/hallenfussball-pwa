@@ -203,6 +203,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setConnectionState('offline');
           setIsLoading(false);
 
+          // Clear stale cached user to prevent skeleton-stuck issue on next page load
+          // The cache was likely created for a session that's now expired/invalid
+          try {
+            safeLocalStorage.removeItem('auth:cachedUser');
+          } catch {
+            // localStorage not available
+          }
+
           // Set flag for toast notification (read by useAuthTimeoutToast hook)
           try {
             safeSessionStorage.setItem('auth:timeoutFlag', Date.now().toString());
