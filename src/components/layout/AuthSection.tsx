@@ -2,12 +2,14 @@
  * AuthSection - Auth-Status und Navigation im Header
  *
  * Zeigt je nach Auth-Zustand:
- * - Loading: Skeleton
+ * - Loading (mit cached user): Avatar-Skeleton
+ * - Loading (ohne cached user): Sofort Login/Register Buttons (Optimistic UI)
  * - Gast: Gast-Badge + Registrieren
  * - Nicht eingeloggt: Anmelden + Registrieren
  * - Eingeloggt: Name + Avatar Dropdown
  *
  * Features:
+ * - Optimistic UI: Login-Buttons erscheinen sofort, nicht erst nach Auth-Timeout
  * - Aria-Live Region für Screenreader-Ankündigungen bei Auth-Wechsel
  *
  * @see docs/concepts/HEADER-AUTH-NAVIGATION-KONZEPT.md
@@ -181,6 +183,16 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     };
   }, [dropdownOpen]);
 
+  // Check if we have a cached authenticated user (for optimistic UI during loading)
+  // This allows us to show avatar skeleton only when we expect a logged-in user
+  const hasCachedUser = useMemo(() => {
+    try {
+      return localStorage.getItem('auth:cachedUser') !== null;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Aria-Live Status Text für Screenreader
   // Wird bei Auth-Zustandsänderungen angekündigt
   const statusText = useMemo(() => {
@@ -196,19 +208,22 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
     return 'Nicht angemeldet. Anmelden oder Registrieren möglich.';
   }, [isLoading, isAuthenticated, isGuest, user]);
 
-  // Loading State
-  if (isLoading) {
+  // Loading State - Optimistic UI:
+  // Only show skeleton if we expect a logged-in user (cached user exists).
+  // Otherwise, show login/register buttons immediately for instant interactivity.
+  if (isLoading && hasCachedUser) {
     return (
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
         {connectionState === 'offline' && (
           <HeaderOfflineBadge onReconnect={() => void reconnect()} />
         )}
-        <div style={styles.skeleton} aria-hidden="true" />
-        <div style={{ ...styles.skeleton, width: isMobile ? 36 : 100 }} aria-hidden="true" />
+        {/* Show avatar skeleton only - expecting authenticated user */}
+        <div style={styles.avatarSkeleton} aria-hidden="true" />
       </div>
     );
   }
+  // If isLoading && !hasCachedUser: fall through to "not logged in" buttons below
 
   // Eingeloggt
   if (isAuthenticated && user) {
@@ -440,6 +455,15 @@ const styles: Record<string, CSSProperties> = {
     height: 36,
     background: cssVars.colors.surfaceElevated,
     borderRadius: cssVars.borderRadius.md,
+    animation: 'pulse 1.5s ease-in-out infinite',
+  },
+
+  // Avatar Skeleton (for cached user loading state)
+  avatarSkeleton: {
+    width: 40,
+    height: 40,
+    borderRadius: '50%',
+    background: cssVars.colors.surfaceElevated,
     animation: 'pulse 1.5s ease-in-out infinite',
   },
 

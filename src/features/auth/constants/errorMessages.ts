@@ -23,6 +23,7 @@ export const AUTH_ERRORS = {
   // ============================================
   CLOUD_NOT_AVAILABLE: 'Cloud-Funktionen sind nicht verfügbar.',
   CLOUD_NOT_AVAILABLE_GUEST: 'Cloud-Funktionen sind nicht verfügbar. Bitte als Gast fortfahren.',
+  CONNECTION_TIMEOUT: 'Verbindung zum Server fehlgeschlagen. Bitte prüfe deine Internetverbindung und versuche es erneut.',
 
   // ============================================
   // SESSION ERRORS

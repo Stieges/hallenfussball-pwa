@@ -17,6 +17,13 @@ import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
 import { clearProfileCache } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
+import { executeWithTimeout } from '../../../core/utils/SingleFlight';
+
+/**
+ * Timeout for auth operations (login, register, etc.)
+ * Prevents indefinite hangs when Supabase is slow/unreachable (e.g., paused Free Tier project)
+ */
+const AUTH_OPERATION_TIMEOUT_MS = 15_000;
 
 /**
  * Dependencies required by auth actions
@@ -52,23 +59,30 @@ export async function register(
     };
   }
 
+  // Capture reference for TypeScript narrowing inside callbacks
+  const supabaseClient = supabase;
+
   try {
     // Check if current user is a guest (for migration)
     const { user, isGuest } = deps.getCurrentState();
     const wasGuest = isGuest && user?.globalRole === 'guest';
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
-      password,
-      options: {
-        data: {
-          full_name: name.trim(),
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    const { data, error } = await executeWithTimeout(
+      () => supabaseClient.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: name.trim(),
+          },
+          // Redirect to /#/auth/confirm for scanner protection (requires button click)
+          // Note: HashRouter requires /#/ prefix for proper routing
+          emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=signup`,
         },
-        // Redirect to /#/auth/confirm for scanner protection (requires button click)
-        // Note: HashRouter requires /#/ prefix for proper routing
-        emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=signup`,
-      },
-    });
+      }),
+      AUTH_OPERATION_TIMEOUT_MS
+    );
 
     if (error) {
       return {
@@ -124,6 +138,13 @@ export async function register(
       migratedCount: migrationResult.migratedCount,
     };
   } catch (err) {
+    // Handle timeout specifically
+    if (err instanceof Error && err.message.includes('timed out')) {
+      return {
+        success: false,
+        error: AUTH_ERRORS.CONNECTION_TIMEOUT,
+      };
+    }
     if (import.meta.env.DEV) {
       console.error('Register error:', err);
     }
@@ -149,11 +170,19 @@ export async function login(
     };
   }
 
+  // Capture reference for TypeScript narrowing inside callbacks
+  const supabaseClient = supabase;
+
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    // (e.g., paused Free Tier project cold start can take 30+ seconds)
+    const { data, error } = await executeWithTimeout(
+      () => supabaseClient.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+      AUTH_OPERATION_TIMEOUT_MS
+    );
 
     if (error) {
       // Use generic message for credential errors to prevent account enumeration
@@ -203,6 +232,13 @@ export async function login(
       migratedCount: migrationResult.migratedCount,
     };
   } catch (err) {
+    // Handle timeout specifically
+    if (err instanceof Error && err.message.includes('timed out')) {
+      return {
+        success: false,
+        error: AUTH_ERRORS.CONNECTION_TIMEOUT,
+      };
+    }
     if (import.meta.env.DEV) {
       console.error('Login error:', err);
     }
@@ -226,15 +262,22 @@ export async function sendMagicLink(
     };
   }
 
+  // Capture reference for TypeScript narrowing inside callbacks
+  const supabaseClient = supabase;
+
   try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim().toLowerCase(),
-      options: {
-        // Redirect to /#/auth/confirm for scanner protection (requires button click)
-        // Note: HashRouter requires /#/ prefix for proper routing
-        emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=magiclink`,
-      },
-    });
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    const { error } = await executeWithTimeout(
+      () => supabaseClient.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          // Redirect to /#/auth/confirm for scanner protection (requires button click)
+          // Note: HashRouter requires /#/ prefix for proper routing
+          emailRedirectTo: `${window.location.origin}/#/auth/confirm?type=magiclink`,
+        },
+      }),
+      AUTH_OPERATION_TIMEOUT_MS
+    );
 
     if (error) {
       return {
@@ -245,6 +288,13 @@ export async function sendMagicLink(
 
     return { success: true };
   } catch (err) {
+    // Handle timeout specifically
+    if (err instanceof Error && err.message.includes('timed out')) {
+      return {
+        success: false,
+        error: AUTH_ERRORS.CONNECTION_TIMEOUT,
+      };
+    }
     if (import.meta.env.DEV) {
       console.error('Magic link error:', err);
     }
@@ -266,13 +316,20 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
     };
   }
 
+  // Capture reference for TypeScript narrowing inside callbacks
+  const supabaseClient = supabase;
+
   try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/#/auth/callback`,
-      },
-    });
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    const { error } = await executeWithTimeout(
+      () => supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/#/auth/callback`,
+        },
+      }),
+      AUTH_OPERATION_TIMEOUT_MS
+    );
 
     if (error) {
       return {
@@ -284,6 +341,13 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
     // OAuth redirects, so success means redirect initiated
     return { success: true };
   } catch (err) {
+    // Handle timeout specifically
+    if (err instanceof Error && err.message.includes('timed out')) {
+      return {
+        success: false,
+        error: AUTH_ERRORS.CONNECTION_TIMEOUT,
+      };
+    }
     if (import.meta.env.DEV) {
       console.error('Google login error:', err);
     }
@@ -520,14 +584,21 @@ export async function resetPassword(
     };
   }
 
+  // Capture reference for TypeScript narrowing inside callbacks
+  const supabaseClient = supabase;
+
   try {
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-      {
-        // Redirect to /#/auth/confirm for scanner protection (requires button click)
-        // Note: HashRouter requires /#/ prefix for proper routing
-        redirectTo: `${window.location.origin}/#/auth/confirm?type=recovery`,
-      }
+    // Wrap Supabase call with timeout to prevent indefinite hangs
+    const { error } = await executeWithTimeout(
+      () => supabaseClient.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          // Redirect to /#/auth/confirm for scanner protection (requires button click)
+          // Note: HashRouter requires /#/ prefix for proper routing
+          redirectTo: `${window.location.origin}/#/auth/confirm?type=recovery`,
+        }
+      ),
+      AUTH_OPERATION_TIMEOUT_MS
     );
 
     if (error) {
@@ -539,6 +610,13 @@ export async function resetPassword(
 
     return { success: true };
   } catch (err) {
+    // Handle timeout specifically
+    if (err instanceof Error && err.message.includes('timed out')) {
+      return {
+        success: false,
+        error: AUTH_ERRORS.CONNECTION_TIMEOUT,
+      };
+    }
     if (import.meta.env.DEV) {
       console.error('Reset password error:', err);
     }
