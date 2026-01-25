@@ -185,13 +185,31 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
 
   // Check if we have a cached authenticated user (for optimistic UI during loading)
   // This allows us to show avatar skeleton only when we expect a logged-in user
-  const hasCachedUser = useMemo(() => {
+  // We use state instead of memo so we can clear it after a timeout
+  const [showSkeleton, setShowSkeleton] = useState(() => {
     try {
       return localStorage.getItem('auth:cachedUser') !== null;
     } catch {
       return false;
     }
-  }, []);
+  });
+
+  // Skeleton timeout: If auth takes longer than 3s, show buttons instead of skeleton
+  // This prevents users from being stuck on skeleton if session is stale
+  useEffect(() => {
+    if (isLoading && showSkeleton) {
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+        // Also clear the stale cache so next page load doesn't have this issue
+        try {
+          localStorage.removeItem('auth:cachedUser');
+        } catch {
+          // localStorage not available
+        }
+      }, 3000); // 3 seconds max skeleton time
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, showSkeleton]);
 
   // Aria-Live Status Text für Screenreader
   // Wird bei Auth-Zustandsänderungen angekündigt
@@ -210,8 +228,9 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
 
   // Loading State - Optimistic UI:
   // Only show skeleton if we expect a logged-in user (cached user exists).
+  // Skeleton auto-clears after 3s to prevent stuck UI on stale sessions.
   // Otherwise, show login/register buttons immediately for instant interactivity.
-  if (isLoading && hasCachedUser) {
+  if (isLoading && showSkeleton) {
     return (
       <div style={styles.container}>
         <VisuallyHidden>{statusText}</VisuallyHidden>
