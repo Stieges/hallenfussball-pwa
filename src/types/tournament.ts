@@ -459,6 +459,10 @@ export interface Tournament {
 
   // Optimistic Locking
   version?: number;
+
+  // Multi-User / Cloud Sync
+  /** User ID of the tournament owner (for cloud sync) */
+  ownerId?: string;
 }
 
 // ============================================================================
