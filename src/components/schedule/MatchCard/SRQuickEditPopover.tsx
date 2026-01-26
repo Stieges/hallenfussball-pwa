@@ -39,7 +39,7 @@ export interface SRQuickEditPopoverProps {
   /** Called when popover should close */
   onClose: () => void;
   /** Anchor element for positioning */
-  anchorRef?: React.RefObject<HTMLElement>;
+  anchorRef?: React.RefObject<HTMLElement | null>;
 }
 
 // ---------------------------------------------------------------------------
