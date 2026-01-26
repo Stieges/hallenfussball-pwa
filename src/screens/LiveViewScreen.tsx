@@ -26,6 +26,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PublicBottomNav, PublicNavTab } from '../components/ui/PublicBottomNav';
 import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
+import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useTheme } from '../hooks/useTheme';
 import { useHaptic } from '../hooks/useHaptic';
@@ -147,28 +148,41 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
     setShowTeamSelector(false);
   }, [shareCode, triggerHaptic]);
 
-  // Load tournament from Supabase
+  // Load tournament from Supabase (with localStorage fallback)
   const loadTournament = useCallback(async (isRefreshAction = false) => {
     if (!isRefreshAction) {
       setLoadingState('loading');
     }
     setErrorMessage(null);
 
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured) {
-      setLoadingState('error');
-      setErrorMessage('Cloud-Funktionen sind nicht verfügbar.');
+    let found: Tournament | null = null;
+
+    // Try Supabase first (if configured)
+    if (isSupabaseConfigured) {
+      try {
+        const supabaseRepo = new SupabaseRepository();
+        found = await supabaseRepo.getByShareCode(shareCode);
+      } catch (error) {
+        console.warn('Supabase lookup failed, trying localStorage:', error);
+      }
+    }
+
+    // Fallback to localStorage if not found in Supabase
+    if (!found) {
+      try {
+        const localRepo = new LocalStorageRepository();
+        found = await localRepo.getByShareCode(shareCode);
+      } catch (error) {
+        console.warn('LocalStorage lookup failed:', error);
+      }
+    }
+
+    if (!found) {
+      setLoadingState('not-found');
       return;
     }
 
     try {
-      const repository = new SupabaseRepository();
-      const found = await repository.getByShareCode(shareCode);
-
-      if (!found) {
-        setLoadingState('not-found');
-        return;
-      }
 
       setTournament(found);
 

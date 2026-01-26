@@ -10,6 +10,7 @@ import { ConfirmDialog, useConfirmDialog } from './components/ui/ConfirmDialog';
 import { StorageWarningBanner } from './components/StorageWarningBanner';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
+import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
@@ -724,6 +725,17 @@ function SyncManager(): null {
 }
 
 /**
+ * InitialSyncManager - Syncs localStorage tournaments to Supabase on login
+ * Triggers once per session when:
+ * - User logs in (not as guest)
+ * - There are local tournaments without an owner
+ */
+function InitialSyncManager(): null {
+  useInitialSync();
+  return null;
+}
+
+/**
  * PendingChangesWarning - Warns user before closing tab with unsaved changes
  * Shows browser confirmation dialog when:
  * - There are pending mutations in the queue
@@ -778,6 +790,7 @@ function App() {
       <AuthProvider>
         <RepositoryProvider>
           <SyncManager />
+          <InitialSyncManager />
           <PendingChangesWarning />
           <ToastProvider>
             <StorageWarningBanner />
