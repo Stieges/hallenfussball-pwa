@@ -26,6 +26,48 @@ import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 const AUTH_OPERATION_TIMEOUT_MS = 15_000;
 
 /**
+ * Checks if an error is an Invalid Refresh Token error from Supabase.
+ * These errors indicate the session is permanently invalid and cannot be recovered.
+ */
+export function isInvalidRefreshTokenError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('invalid refresh token') ||
+      message.includes('refresh token not found') ||
+      message.includes('refresh_token_not_found')
+    );
+  }
+  return false;
+}
+
+/**
+ * Clears all stale auth state from localStorage.
+ * Call this when detecting an invalid refresh token to allow fresh login.
+ */
+export function clearStaleAuthState(): void {
+  try {
+    // Clear cached user profile
+    safeLocalStorage.removeItem('auth:cachedUser');
+    safeLocalStorage.removeItem('auth:guestUser');
+
+    // Clear all Supabase auth tokens (pattern: sb-{project-ref}-auth-token)
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    if (import.meta.env.DEV) {
+      console.warn('[Auth] Cleared stale auth state due to invalid refresh token');
+    }
+  } catch {
+    // localStorage not available
+  }
+}
+
+/**
  * Dependencies required by auth actions
  */
 export interface AuthActionDeps {
@@ -518,6 +560,14 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
             }
             return false;
           }
+          // Don't retry Invalid Refresh Token errors - session is permanently invalid
+          if (isInvalidRefreshTokenError(error)) {
+            if (import.meta.env.DEV) {
+              console.warn('[Auth] Invalid refresh token detected, clearing stale state');
+            }
+            clearStaleAuthState();
+            return false;
+          }
           return true;
         },
         onRetry: (attempt, _error, delayMs) => {
@@ -539,6 +589,19 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
     await deps.updateAuthState(session);
     return true;
   } catch (err) {
+    // Handle invalid refresh token - clear state and allow fresh login
+    if (isInvalidRefreshTokenError(err)) {
+      if (import.meta.env.DEV) {
+        console.warn('[Auth] Session expired, clearing auth state for fresh login');
+      }
+      clearStaleAuthState();
+      deps.setUser(null);
+      deps.setSession(null);
+      deps.setIsGuest(false);
+      deps.setConnectionState('connected'); // Not 'offline' - Supabase is reachable, just need re-auth
+      return false;
+    }
+
     // Only log non-abort errors as actual errors
     if (err instanceof Error && isAbortError(err)) {
       if (import.meta.env.DEV) {
