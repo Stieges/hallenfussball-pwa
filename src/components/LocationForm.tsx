@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { LocationDetails } from '../types/tournament';
 import { Input } from './ui';
 import { cssVars } from '../design-tokens'
@@ -17,28 +17,21 @@ export const LocationForm: React.FC<LocationFormProps> = ({
   required = false,
 }) => {
   const { tournaments } = useTournaments();
-  const [showExtended, setShowExtended] = useState(false);
-  const [suggestions, setSuggestions] = useState<LocationDetails[]>([]);
+
+  // Initialize showExtended based on whether extended data exists
+  /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Intentional: empty strings should be treated as "no extended data" */
+  const [showExtended, setShowExtended] = useState(
+    () => !!(value.street || value.postalCode || value.city || value.country)
+  );
+  /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
+
+  // Derive suggestions from tournaments (no state needed)
+  const suggestions = useMemo(
+    () => getUniqueLocations(tournaments),
+    [tournaments]
+  );
 
   const locationDetails: LocationDetails = value;
-
-  // Lade Suggestions aus vorherigen Turnieren
-  useEffect(() => {
-    const uniqueLocations = getUniqueLocations(tournaments);
-    setSuggestions(uniqueLocations);
-  }, [tournaments]);
-
-  // Auto-open extended fields wenn Daten vorhanden
-  useEffect(() => {
-    if (
-      locationDetails.street ||
-      locationDetails.postalCode ||
-      locationDetails.city ||
-      locationDetails.country
-    ) {
-      setShowExtended(true);
-    }
-  }, [locationDetails]);
 
   const handleNameChange = (name: string) => {
     // Suche nach existierender Location
