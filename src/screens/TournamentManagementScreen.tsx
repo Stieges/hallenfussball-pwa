@@ -87,6 +87,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     tournament,
     schedule,
     currentStandings,
+    isLoading,
     loadingError,
     handleTournamentUpdate,
   } = useTournamentManager(tournamentId);
@@ -147,37 +148,44 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
 
   // Loading / Error state
   if (!tournament || !schedule) {
+    // Still loading - show spinner
+    if (isLoading) {
+      return (
+        <div style={loadingStyle}>
+          <div style={loadingTextStyle}>Lade Turnier...</div>
+        </div>
+      );
+    }
+
+    // Loading finished but no tournament - show error
+    const errorMessage = loadingError ?? 'Turnier nicht gefunden';
     return (
       <div style={loadingStyle}>
-        {loadingError ? (
-          <div>
-            <div style={{ ...loadingTextStyle, color: cssVars.colors.error, marginBottom: '16px' }}>
-              ❌ Fehler beim Laden
-            </div>
-            <div style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }}>
-              {loadingError}
-            </div>
-            {onBack && (
-              <button
-                onClick={onBack}
-                style={{
-                  marginTop: '24px',
-                  padding: '12px 24px',
-                  background: cssVars.colors.primary,
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: cssVars.borderRadius.md,
-                  cursor: 'pointer',
-                  fontSize: cssVars.fontSizes.md,
-                }}
-              >
-                Zurück zum Dashboard
-              </button>
-            )}
+        <div>
+          <div style={{ ...loadingTextStyle, color: cssVars.colors.error, marginBottom: '16px' }}>
+            ❌ {loadingError ? 'Fehler beim Laden' : 'Nicht gefunden'}
           </div>
-        ) : (
-          <div style={loadingTextStyle}>Lade Turnier...</div>
-        )}
+          <div style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary }}>
+            {errorMessage}
+          </div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              style={{
+                marginTop: '24px',
+                padding: '12px 24px',
+                background: cssVars.colors.primary,
+                color: 'white',
+                border: 'none',
+                borderRadius: cssVars.borderRadius.md,
+                cursor: 'pointer',
+                fontSize: cssVars.fontSizes.md,
+              }}
+            >
+              Zurück zum Dashboard
+            </button>
+          )}
+        </div>
       </div>
     );
   }

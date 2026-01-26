@@ -68,29 +68,65 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     /**
-     * Tries to get from Supabase (Cloud).
-     * If successful: Updates LocalStorage (Cache) and returns data.
-     * If fails (Offline): Returns data from LocalStorage.
+     * LOCAL-FIRST STRATEGY:
+     * 1. Try local storage first (instant response)
+     * 2. If found: return immediately, trigger background cloud sync
+     * 3. If not found locally: try cloud, cache result
+     *
+     * This avoids blocking on auth/network issues after navigation.
      */
     async get(id: string): Promise<Tournament | null> {
+        // 1. LOCAL-FIRST: Try local storage immediately
+        const localData = await this.localRepo.get(id);
+
+        if (localData) {
+            // Found locally - return immediately, sync in background
+            void this.refreshFromCloudInBackground(id);
+            return localData;
+        }
+
+        // 2. Not found locally - try cloud
         try {
-            // 1. Try Cloud
             const cloudData = await this.supabaseRepo.get(id);
 
             if (cloudData) {
-                // 2. Update Cache
+                // Cache for next time
                 await this.localRepo.save(cloudData);
                 return cloudData;
-            } else {
-                return await this.localRepo.get(id);
             }
         } catch (error) {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
-                console.warn('OfflineRepository: Cloud fetch failed, falling back to local.', error);
+                console.warn('OfflineRepository: Cloud fetch failed.', error);
             }
-            // 3. Fallback to Cache
-            return await this.localRepo.get(id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Background sync: Fetches latest from cloud and updates local if newer.
+     * Non-blocking, errors are silently ignored.
+     */
+    private async refreshFromCloudInBackground(id: string): Promise<void> {
+        try {
+            const cloudData = await this.supabaseRepo.get(id);
+            if (cloudData) {
+                // Only update if cloud version is newer
+                const localData = await this.localRepo.get(id);
+                const cloudVersion = cloudData.version ?? 0;
+                const localVersion = localData?.version ?? 0;
+
+                if (cloudVersion > localVersion) {
+                    await this.localRepo.save(cloudData);
+                    if (import.meta.env.DEV) {
+                        // eslint-disable-next-line no-console -- Debug logging for background sync updates
+                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}`);
+                    }
+                }
+            }
+        } catch {
+            // Silently ignore - this is a background operation
         }
     }
 

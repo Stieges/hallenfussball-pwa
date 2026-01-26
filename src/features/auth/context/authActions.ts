@@ -52,10 +52,11 @@ export function clearStaleAuthState(): void {
     safeLocalStorage.removeItem('auth:guestUser');
 
     // Clear all Supabase auth tokens (pattern: sb-{project-ref}-auth-token)
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
+    // Use safeLocalStorage for consistent access (falls back to MemoryStorage if needed)
+    for (let i = safeLocalStorage.length - 1; i >= 0; i--) {
+      const key = safeLocalStorage.key(i);
       if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
-        localStorage.removeItem(key);
+        safeLocalStorage.removeItem(key);
       }
     }
 

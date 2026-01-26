@@ -24,7 +24,7 @@ export interface SelectStepProps {
   isDragging: boolean;
   error: string;
   selectedFile: File | null;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onDragOver: (e: DragEvent<HTMLDivElement>) => void;
   onDragLeave: (e: DragEvent<HTMLDivElement>) => void;
   onDrop: (e: DragEvent<HTMLDivElement>) => void;
@@ -94,7 +94,7 @@ export const SelectStep = ({
       </div>
 
       <input
-        ref={fileInputRef}
+        ref={fileInputRef as React.RefObject<HTMLInputElement>}
         type="file"
         accept=".json,.csv"
         onChange={onFileSelect}

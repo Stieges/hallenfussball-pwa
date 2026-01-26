@@ -7,14 +7,14 @@
  * - Save confirmation notification
  */
 
-import { useState, useCallback, useEffect, MutableRefObject } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Tournament } from '../types/tournament';
 
 export interface UseAutoSaveOptions {
   /** Form data to check for changes */
   formData: Partial<Tournament>;
-  /** Reference to last saved data JSON string */
-  lastSavedDataRef: MutableRefObject<string>;
+  /** Reference to last saved data JSON string (mutable) */
+  lastSavedDataRef: { current: string };
   /** Function to save the tournament */
   saveTournament: (tournament: Tournament) => void | Promise<void>;
   /** Function to create a draft tournament from form data */
