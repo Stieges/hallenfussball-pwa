@@ -10,17 +10,15 @@ import { cssVars } from '../design-tokens'
 import { checkStorageHealth } from '../utils/storageCleanup';
 
 export const StorageWarningBanner: React.FC = () => {
-  const [warning, setWarning] = useState<string | null>(null);
+  // Initialize warning from health check (runs once on mount)
+  const [warning, setWarning] = useState<string | null>(() => {
+    const health = checkStorageHealth();
+    return (!health.isHealthy && health.message) ? health.message : null;
+  });
   const [isDismissed, setIsDismissed] = useState(false);
 
+  // Listen for quota warnings (event-based updates are allowed in useEffect)
   useEffect(() => {
-    // Initial health check
-    const health = checkStorageHealth();
-    if (!health.isHealthy && health.message) {
-      setWarning(health.message);
-    }
-
-    // Listen for quota warnings
     const handleQuotaWarning = (event: Event) => {
       const customEvent = event as CustomEvent<{ message: string; timestamp: number }>;
       setWarning(customEvent.detail.message);

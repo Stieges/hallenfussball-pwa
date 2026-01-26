@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState } from 'react';
 import { ContactInfo } from '../types/tournament';
 import { Input } from './ui';
 import { cssVars } from '../design-tokens'
@@ -11,22 +11,14 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   value,
   onChange,
 }) => {
-  const [showExtended, setShowExtended] = useState(false);
+  // Initialize showExtended based on whether contact info exists
+  /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Intentional: empty strings should be treated as "no contact info" */
+  const [showExtended, setShowExtended] = useState(
+    () => !!(value.name || value.email || value.phone || value.website)
+  );
+  /* eslint-enable @typescript-eslint/prefer-nullish-coalescing */
 
-  // Memoize to prevent useEffect from re-running on every render
-  const contactInfo: ContactInfo = useMemo(() => value, [value]);
-
-  // Auto-open wenn Daten vorhanden
-  useEffect(() => {
-    if (
-      contactInfo.name ||
-      contactInfo.email ||
-      contactInfo.phone ||
-      contactInfo.website
-    ) {
-      setShowExtended(true);
-    }
-  }, [contactInfo.name, contactInfo.email, contactInfo.phone, contactInfo.website]);
+  const contactInfo: ContactInfo = value;
 
   const handleFieldChange = (field: keyof ContactInfo, fieldValue: string) => {
     onChange({
