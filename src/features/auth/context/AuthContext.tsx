@@ -24,6 +24,7 @@ import { AuthContext } from './authContextInstance';
 import { mapSupabaseUser, mapSupabaseSession } from './authMapper';
 import * as authActions from './authActions';
 import type { AuthActionDeps } from './authActions';
+import { isInvalidRefreshTokenError, clearStaleAuthState } from './authActions';
 import {
   cacheUserProfile,
   getCachedProfile,
@@ -247,6 +248,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
           await updateAuthState(currentSession);
         }
       } catch (error) {
+        // Invalid Refresh Token means session is permanently expired - clear and allow fresh login
+        if (isInvalidRefreshTokenError(error)) {
+          if (import.meta.env.DEV) {
+            console.warn('[Auth] Invalid refresh token during init - clearing stale state');
+          }
+          clearStaleAuthState();
+          if (mounted) {
+            setUser(null);
+            setSession(null);
+            setIsGuest(false);
+            setConnectionState('connected'); // Supabase is reachable, just need re-auth
+            setIsLoading(false);
+          }
+          return;
+        }
+
         // AbortError is expected in React StrictMode (double mount/unmount)
         // or during serverless cold starts. Treat as transient.
         if (
