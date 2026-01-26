@@ -201,7 +201,9 @@ export function mapMatchToSupabase(
     final_type: match.finalType ?? null,
     label: match.label ?? null,
     scheduled_start: match.scheduledTime
-      ? match.scheduledTime.toTimeString().slice(0, 8)
+      ? (match.scheduledTime instanceof Date
+          ? match.scheduledTime.toTimeString().slice(0, 8)
+          : String(match.scheduledTime).slice(0, 8))
       : null,
     match_number: match.matchNumber ?? null,
     phase: match.phase ?? 'groupStage',

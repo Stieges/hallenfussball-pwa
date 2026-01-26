@@ -86,6 +86,13 @@ export const TournamentSchema = z.object({
     cancelledAt: z.string().optional(),
     cancelledReason: z.string().optional(),
     lastVisitedStep: z.number().optional(),
+
+    // Multi-User / Cloud Sync
+    ownerId: z.string().optional(),
+    version: z.number().optional(),
+    isPublic: z.boolean().optional(),
+    shareCode: z.string().optional(),
+    shareCodeCreatedAt: z.string().optional(),
 })
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- passthrough needed to prevent data loss of unmapped fields
   .passthrough();
