@@ -10,74 +10,95 @@
 src/
 ├── core/                    ← Pure Business Logic (KEIN React)
 │   ├── models/              ← Datentypen, Zod-Schemas
-│   ├── repositories/        ← Data Access Interfaces + localStorage
-│   ├── services/            ← Business Logic Services
-│   └── generators/          ← Schedule/Playoff-Generierung
+│   ├── repositories/        ← Data Access (Local, Supabase, Hybrid, Offline)
+│   ├── services/            ← Business Logic (MatchExecution, MutationQueue)
+│   ├── generators/          ← Schedule/Playoff-Generierung
+│   ├── storage/             ← IndexedDB/localStorage Adapter
+│   ├── sync/                ← Conflict Resolution, SyncService
+│   ├── realtime/            ← Supabase Realtime Integration
+│   └── utils/               ← SingleFlight, safeStorage
+│
+├── features/                ← Feature-basierte Module
+│   ├── auth/                ← Authentication (Supabase Auth)
+│   ├── tournament-creation/ ← Wizard Steps 1-5
+│   └── tournament-management/
 │
 ├── hooks/                   ← React Hooks (Thin Controllers)
-│   ├── useMatchExecution.ts ← Live-Spiel-Verwaltung (NEU)
+│   ├── useMatchExecution.ts ← Live-Spiel-Verwaltung
 │   ├── useTournamentManager.ts
-│   └── useTournamentWizard.ts
+│   ├── useLiveMatches.ts
+│   └── useMultiTabSync.ts
 │
-├── features/                ← Feature-basierte UI-Komponenten
 ├── components/              ← Shared UI-Komponenten
-├── lib/                     ← Legacy Generatoren (→ core/generators/)
-├── utils/                   ← Utility-Funktionen
+│   ├── live-cockpit/        ← Live-Match-Steuerung
+│   ├── monitor/             ← TV-Display-Komponenten
+│   └── ui/                  ← Basis-Komponenten
+│
+├── design-tokens/           ← Single Source of Truth für Styling
+├── lib/                     ← Supabase Client, externe Libs
 └── types/                   ← TypeScript-Definitionen
 ```
 
-## Wichtige Services
+## Wichtige Services & Repositories
 
-| Service | Datei | Zweck |
-|---------|-------|-------|
-| `MatchExecutionService` | `core/services/` | Live-Spiel-Logik (Start/Pause/Goal/Finish) |
-| `TournamentCreationService` | `core/services/` | Wizard-Validierung, Publish |
-| `TournamentService` | `core/services/` | Tournament CRUD |
-| `ScheduleService` | `core/services/` | Match Updates |
+| Komponente | Datei | Zweck |
+|------------|-------|-------|
+| `OfflineRepository` | `core/repositories/` | **Haupt-Repository** - Local-First mit Cloud-Sync |
+| `MutationQueue` | `core/services/` | Offline-Queue für Änderungen |
+| `MatchExecutionService` | `core/services/` | Live-Spiel-Logik |
+| `HybridRepository` | `core/repositories/` | Kombiniert Local + Supabase |
+| `StorageFactory` | `core/storage/` | IndexedDB mit localStorage-Fallback |
 
-## Repository Pattern
-
-```typescript
-// Interface
-import { ITournamentRepository } from './core/repositories';
-
-// localStorage-Implementierung (aktuell)
-import { LocalStorageRepository } from './core/repositories';
-
-// Supabase (Zukunft) - gleiche Signatur
-// import { SupabaseRepository } from './core/repositories';
-```
-
-## Datenvalidierung (Zod)
+## Repository Pattern (Implementiert)
 
 ```typescript
-import { TournamentSchema, parseTournament } from './core/models/schemas/TournamentSchema';
+// Haupt-Repository für authentifizierte User
+import { OfflineRepository } from './core/repositories/OfflineRepository';
 
-const tournament = parseTournament(rawData);
-if (!tournament) {
-  // Validierung fehlgeschlagen
-}
+// Strategie: Local-First
+// 1. Lesen: Erst lokal (instant), dann Background-Sync zu Cloud
+// 2. Schreiben: Lokal speichern + MutationQueue für Cloud-Sync
 ```
 
-## Dokumentation
+## Datenfluss
 
-Alle Architektur-Docs: `docs/architecture/`
-
-| Datei | Inhalt |
-|-------|--------|
-| `deep_analysis.md` | Tiefe Codebase-Analyse |
-| `migration_plan.md` | Umgesetzer Refactoring-Plan |
-| `final_review.md` | Abschluss-Review |
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  UI (React)                                                     │
+│    ↓ useRepository() / useTournamentManager()                   │
+├─────────────────────────────────────────────────────────────────┤
+│  OfflineRepository (Local-First Strategy)                       │
+│    ├── LocalStorageRepository (IndexedDB Cache)                 │
+│    ├── SupabaseRepository (Cloud)                               │
+│    └── MutationQueue (Offline Changes)                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Storage Layer                                                  │
+│    ├── IndexedDBAdapter (Primary)                               │
+│    └── LocalStorageAdapter (Fallback)                           │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Befehle
 
 ```bash
 npm run dev       # Entwicklungsserver
-npm run build     # Production Build
-npm run lint      # ESLint
-npx tsc --noEmit  # TypeScript Check
+npm run build     # Production Build (tsc + vite)
+npm run lint      # ESLint (max-warnings 0)
+npm test          # Vitest Unit Tests
+npx playwright test  # E2E Tests
 ```
 
-## Bekannte Probleme
+## Wichtige Konzepte
 
-- `SlideConfigEditor.tsx` hat pre-existing TypeScript-Fehler (unrelated zu Migration)
+| Konzept | Datei | Status |
+|---------|-------|--------|
+| Fair Scheduler | `core/generators/fairScheduler.ts` | ✅ Implementiert |
+| Offline-First | `core/repositories/OfflineRepository.ts` | ✅ Implementiert |
+| Multi-Tab Sync | `hooks/useMultiTabSync.ts` | ✅ Implementiert |
+| Supabase Auth | `features/auth/` | ✅ Implementiert |
+| Live-Cockpit | `components/live-cockpit/` | ✅ Implementiert |
+
+## Bekannte Einschränkungen
+
+- Auth-Timeout bei Supabase Cold Start (~15s) - UI zeigt optimistisch Login-Buttons
+- Safari Private Mode: Kein IndexedDB - Fallback zu localStorage/MemoryStorage

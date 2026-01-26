@@ -67,16 +67,21 @@ npm run preview
 | **Responsive** | Mobile-First mit 3 Breakpoints |
 | **WCAG AA** | Alle Kontraste validiert |
 
+| **Monitor-Ansicht** | TV-Modus für Großbildschirme (Slideshow) |
+| **Public View** | Zuschauer-Link mit Share-Code |
+| **Cloud-Sync** | Supabase-Backend mit Local-First Strategie |
+| **Offline-First** | Arbeitet offline, synced bei Verbindung |
+| **Multi-Tab Sync** | Änderungen synchron über Tabs/Fenster |
+
 ### In Entwicklung
 
-- Monitor-Ansicht für Großbildschirm (TV-Modus)
-- Public View (Zuschauer-Link)
+- Erweiterte Statistiken und Analysen
+- Trainer-Cockpit (Team-zentrierte Ansicht)
 
 ### Geplant
 
-- Multi-User mit Rollen (Trainer, Fan, Turnierleitung)
-- Cloud-Sync (Supabase)
 - Push Notifications
+- Fan-Mode mit hierarchischer Ereigniserfassung
 
 ---
 
@@ -94,6 +99,8 @@ npm run preview
 
 | Library | Zweck |
 |---------|-------|
+| **Supabase** | Backend (PostgreSQL + Auth + Realtime) |
+| **Zod** | Runtime-Validierung |
 | jsPDF + AutoTable | PDF-Generierung |
 | @dnd-kit | Drag & Drop (Schedule Editor) |
 | qrcode | QR-Code Generierung |
@@ -109,10 +116,16 @@ npm run preview
 | Husky + lint-staged | Pre-commit Hooks |
 | Token Sync Tests | Design Token Synchronisation |
 
-### Persistence
+### Persistence (Local-First Architecture)
 
-- **localStorage** - Browser-basierte Datenspeicherung
-- **IndexedDB** (via PWA) - Offline-Cache
+| Layer | Technologie | Zweck |
+|-------|-------------|-------|
+| **Cloud** | Supabase PostgreSQL | Single Source of Truth |
+| **Local Cache** | IndexedDB | Schnelle lokale Reads |
+| **Offline Queue** | MutationQueue | Pending Changes für Sync |
+| **Fallback** | localStorage | Legacy / Guest-Mode |
+
+**Strategie:** Local-First - Lesen immer lokal (instant), Schreiben in Queue → Cloud
 
 ---
 
@@ -126,15 +139,23 @@ src/
 │   │   ├── LiveMatch.ts       # Live-Spielstand-Typen
 │   │   └── schemas/           # Zod-Validierung
 │   ├── repositories/          # Data Access Layer
-│   │   ├── ITournamentRepository.ts
-│   │   ├── ILiveMatchRepository.ts
-│   │   ├── LocalStorageRepository.ts
+│   │   ├── ITournamentRepository.ts    # Interface
+│   │   ├── LocalStorageRepository.ts   # Local-only
+│   │   ├── SupabaseRepository.ts       # Cloud
+│   │   ├── OfflineRepository.ts        # Hybrid (Local-First)
 │   │   └── LocalStorageLiveMatchRepository.ts
+│   ├── contexts/               # React Context Providers
+│   │   └── RepositoryContext.tsx       # Auth-aware Repo Selection
 │   ├── services/              # Business Logic
 │   │   ├── MatchExecutionService.ts   # Live-Spiel-Logik
 │   │   ├── TournamentCreationService.ts
 │   │   ├── TournamentService.ts
-│   │   └── ScheduleService.ts
+│   │   ├── ScheduleService.ts
+│   │   └── MutationQueue.ts           # Offline-Sync Queue
+│   ├── storage/               # Storage Abstraction
+│   │   ├── IndexedDBAdapter.ts
+│   │   ├── LocalStorageAdapter.ts
+│   │   └── StorageFactory.ts
 │   └── generators/            # Schedule-Generierung
 │       └── index.ts           # Re-exports aus lib/utils
 │
@@ -185,10 +206,11 @@ src/
 
 | Priorität | Datei | Beschreibung |
 |-----------|-------|--------------|
+| ⭐⭐⭐ | `src/core/repositories/OfflineRepository.ts` | Local-First Hybrid Storage |
 | ⭐⭐⭐ | `src/core/services/MatchExecutionService.ts` | Live-Spiel Business Logic |
-| ⭐⭐⭐ | `src/core/services/TournamentCreationService.ts` | Wizard-Validierung, Publish |
+| ⭐⭐⭐ | `src/core/services/MutationQueue.ts` | Offline-Sync Queue |
 | ⭐⭐⭐ | `src/utils/fairScheduler.ts` | Kern-Scheduling-Algorithmus |
-| ⭐⭐ | `src/core/repositories/` | Data Access Layer |
+| ⭐⭐ | `src/core/contexts/RepositoryContext.tsx` | Auth-aware Repository Provider |
 | ⭐⭐ | `src/types/tournament.ts` | Datenstruktur-Definitionen |
 | ⭐⭐ | `src/design-tokens/` | Design System |
 
@@ -341,4 +363,4 @@ Siehe [LICENSE](LICENSE) für den vollständigen Text.
 
 ---
 
-**Letzte Aktualisierung:** 2026-01-01
+**Letzte Aktualisierung:** 2026-01-26

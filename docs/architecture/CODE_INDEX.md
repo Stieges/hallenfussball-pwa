@@ -61,6 +61,63 @@ const PublicTournamentViewScreen = lazy(() =>
 3. **Display** → ScheduleDisplay → GroupStageSchedule / FinalStageSchedule
 4. **PDF Export** → pdfExporter.ts → HTML-basiertes Layout → jsPDF + autoTable
 
+### Backend-Architektur (Local-First + Supabase)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         React Components                         │
+│      (Dashboard, Wizard, Management, Live-Cockpit)              │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │ useRepositories()
+┌─────────────────────────────▼───────────────────────────────────┐
+│                      RepositoryContext                           │
+│  Entscheidet basierend auf Auth-Status welches Repo zu nutzen   │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+        ┌─────────────────────┴─────────────────────┐
+        │ Authenticated                              │ Guest / Offline
+        ▼                                            ▼
+┌───────────────────┐                    ┌───────────────────┐
+│  OfflineRepository │                    │LocalStorageRepository│
+│  (Hybrid)          │                    │  (Pure Local)       │
+└────────┬──────────┘                    └───────────────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌────────┐ ┌────────────────┐ ┌────────────────┐
+│Local   │ │ Supabase       │ │ MutationQueue  │
+│Storage │ │ Repository     │ │ (Offline Sync) │
+│(Cache) │ │ (Cloud Truth)  │ │                │
+└────────┘ └────────────────┘ └────────────────┘
+```
+
+**Wichtige Dateien:**
+
+| Datei | Zweck |
+|-------|-------|
+| `src/core/contexts/RepositoryContext.tsx` | Wählt Repository basierend auf Auth |
+| `src/core/repositories/OfflineRepository.ts` | Local-First mit Cloud-Sync |
+| `src/core/repositories/SupabaseRepository.ts` | Supabase-Implementierung |
+| `src/core/services/MutationQueue.ts` | Queue für Offline-Änderungen |
+
+**Local-First Strategie:**
+```typescript
+// OfflineRepository.get() - Schnelle lokale Antwort
+async get(id: string): Promise<Tournament | null> {
+    // 1. IMMER erst lokal laden (instant)
+    const localData = await this.localRepo.get(id);
+    if (localData) {
+        // Background-Sync (non-blocking)
+        void this.refreshFromCloudInBackground(id);
+        return localData;
+    }
+
+    // 2. Nur wenn lokal nicht vorhanden → Cloud
+    return await this.supabaseRepo.get(id);
+}
+```
+
 ---
 
 ## 🔄 Variable Datenfelder (NIE hart codieren!)
@@ -207,7 +264,85 @@ const prevCount = usePrevious(count);
 
 ---
 
+## 🏗️ Core Services & Repositories
+
+### `/src/core/` - Business Logic Layer
+
+Die gesamte Business-Logik ist in `src/core/` gekapselt und framework-agnostisch (kein React).
+
+```
+src/core/
+├── contexts/           # React Contexts (Ausnahme)
+│   └── RepositoryContext.tsx
+├── models/             # Domain Types + Zod Schemas
+│   ├── types.ts
+│   └── schemas/
+├── repositories/       # Data Access Layer
+│   ├── ITournamentRepository.ts      # Interface
+│   ├── LocalStorageRepository.ts     # Local-only
+│   ├── SupabaseRepository.ts         # Cloud
+│   ├── OfflineRepository.ts          # Hybrid (Local-First)
+│   └── LocalStorageLiveMatchRepository.ts
+├── services/           # Business Logic
+│   ├── TournamentService.ts
+│   ├── ScheduleService.ts
+│   ├── MatchExecutionService.ts
+│   ├── TournamentCreationService.ts
+│   └── MutationQueue.ts
+├── generators/         # Schedule/Playoff Generation
+│   └── index.ts
+├── storage/            # Storage Abstraction
+│   ├── IndexedDBAdapter.ts
+│   ├── LocalStorageAdapter.ts
+│   └── StorageFactory.ts
+└── utils/              # Core Utilities
+    └── SingleFlight.ts
+```
+
+### Key Services
+
+| Service | Datei | Zweck |
+|---------|-------|-------|
+| `TournamentService` | `services/TournamentService.ts` | Tournament CRUD |
+| `ScheduleService` | `services/ScheduleService.ts` | Match Updates, Score Changes |
+| `MatchExecutionService` | `services/MatchExecutionService.ts` | Live-Spiel-Logik (Start/Pause/Goal/Finish) |
+| `TournamentCreationService` | `services/TournamentCreationService.ts` | Wizard-Validierung, Publish |
+| `MutationQueue` | `services/MutationQueue.ts` | Offline-Änderungen queuen |
+
+### Key Repositories
+
+| Repository | Datei | Wann verwendet |
+|------------|-------|----------------|
+| `LocalStorageRepository` | `repositories/LocalStorageRepository.ts` | Guest-Mode, Fallback |
+| `SupabaseRepository` | `repositories/SupabaseRepository.ts` | Cloud-Operationen |
+| `OfflineRepository` | `repositories/OfflineRepository.ts` | Authenticated Users (Hybrid) |
+
+---
+
 ## 🌍 Context & State Management
+
+### `/src/core/contexts/RepositoryContext.tsx` - Repository Provider (NEU)
+
+**Zweck**: Bereitstellung des korrekten Repositories basierend auf Auth-Status
+
+```typescript
+interface RepositoryContextValue {
+  tournamentRepository: ITournamentRepository;
+  liveMatchRepository: ILiveMatchRepository;
+  isRealtimeEnabled: boolean;
+}
+```
+
+**Verwendung:**
+```typescript
+const { tournamentRepository, isRealtimeEnabled } = useRepositories();
+```
+
+**Logik:**
+- **Authenticated (Supabase)** → `OfflineRepository` (Local-First mit Cloud-Sync)
+- **Guest/Offline** → `LocalStorageRepository` (Rein lokal)
+
+---
 
 ### `/src/contexts/TournamentContext.tsx` - Globaler Tournament State
 
@@ -1625,5 +1760,5 @@ const containerStyle: CSSProperties = {
 
 ---
 
-**Last Updated**: 2025-12-25
-**Version**: 2.4 (Performance Optimierungen + Testing Infrastructure + Modulares Schedule-System)
+**Last Updated**: 2026-01-26
+**Version**: 2.5.0 (Supabase Backend + Local-First Architecture + Offline-Sync)
