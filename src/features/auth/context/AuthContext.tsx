@@ -207,6 +207,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // The cache was likely created for a session that's now expired/invalid
           try {
             safeLocalStorage.removeItem('auth:cachedUser');
+            // Also clear any Supabase auth tokens - they're likely stale/corrupted
+            // and causing getSession() to hang trying to refresh them
+            // Pattern: sb-{project-ref}-auth-token
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+              const key = localStorage.key(i);
+              if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
+                localStorage.removeItem(key);
+              }
+            }
           } catch {
             // localStorage not available
           }
