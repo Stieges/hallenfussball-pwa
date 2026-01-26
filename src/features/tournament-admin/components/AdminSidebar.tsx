@@ -288,7 +288,7 @@ export function AdminSidebar({
     return (
       <button
         key={category.id}
-        ref={(el) => itemRefs.current.set(category.id, el)}
+        ref={(el) => { itemRefs.current.set(category.id, el); }}
         style={itemStyle}
         onClick={() => onNavigate(category.id)}
         onKeyDown={(e) => handleKeyDown(e, category.id)}

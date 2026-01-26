@@ -14,7 +14,7 @@ import { useRef, useEffect } from 'react'
  * console.log(`Count changed from ${prevCount} to ${count}`)
  */
 export function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T>()
+  const ref = useRef<T | undefined>(undefined)
 
   useEffect(() => {
     ref.current = value
@@ -37,7 +37,7 @@ export function usePrevious<T>(value: T): T | undefined {
  * // prevData only updates when data reference changes
  */
 export function usePreviousDistinct<T>(value: T): T | undefined {
-  const prevRef = useRef<T>()
+  const prevRef = useRef<T | undefined>(undefined)
   const curRef = useRef<T>(value)
 
   if (curRef.current !== value) {

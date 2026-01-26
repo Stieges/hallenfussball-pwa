@@ -61,7 +61,7 @@ export interface UseTournamentWizardReturn {
   stepErrors: Record<number, string[]>;
   scheduleError: string | null;
   hasResults: boolean;
-  lastSavedDataRef: React.MutableRefObject<string>;
+  lastSavedDataRef: React.RefObject<string>;
 
   // Actions
   setStep: (step: number) => void;
