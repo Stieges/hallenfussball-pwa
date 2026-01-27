@@ -53,6 +53,10 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
   const isAnimating = useRef(false);
   const seenTimestamps = useRef<Set<number>>(new Set());
 
+  // Ref to hold the processNextGoal function for recursive calls
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- Initialized in useCallback below
+  const processNextGoalRef = useRef<() => void>(() => {});
+
   /**
    * Process the next goal in queue
    */
@@ -76,10 +80,14 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
       setTimeout(() => {
         setCurrentEvent(null);
         onAnimationComplete();
-        processNextGoal();
+        // Use ref for recursive call to avoid stale closure
+        processNextGoalRef.current();
       }, 200);
     }, animationDuration);
   }, [animationDuration, onAnimationComplete]);
+
+  // Keep ref in sync with latest callback
+  processNextGoalRef.current = processNextGoal;
 
   /**
    * Handle new goal event - add to queue

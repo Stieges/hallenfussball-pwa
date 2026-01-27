@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, CSSProperties } from 'react';
+import { ReactNode, useEffect, CSSProperties, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
@@ -26,6 +26,9 @@ export const Dialog = ({
     isActive: isOpen,
     onEscape: onClose,
   });
+
+  // Stable unique ID for aria-labelledby (React 18+)
+  const titleId = useId();
 
   // Prevent body scroll when dialog is open
   useEffect(() => {
@@ -112,9 +115,6 @@ export const Dialog = ({
   const contentStyle: CSSProperties = {
     padding: cssVars.spacing.xl,
   };
-
-  // Unique ID for aria-labelledby
-  const titleId = `dialog-title-${Math.random().toString(36).substring(2, 11)}`;
 
   const dialog = (
     <div style={overlayStyle} className="dialog-overlay" onClick={handleBackdropClick}>

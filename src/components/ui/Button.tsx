@@ -24,6 +24,22 @@ interface ButtonProps {
   'data-testid'?: string;
 }
 
+/** Loading spinner - declared outside component to prevent recreation on each render */
+const LoadingSpinner = () => (
+  <span
+    style={{
+      display: 'inline-block',
+      width: '1em',
+      height: '1em',
+      border: '2px solid currentColor',
+      borderRightColor: 'transparent',
+      borderRadius: '50%',
+      animation: 'spin 1s linear infinite',
+    }}
+    aria-hidden="true"
+  />
+);
+
 export const Button: React.FC<ButtonProps> = ({
   children,
   onClick,
@@ -145,22 +161,6 @@ export const Button: React.FC<ButtonProps> = ({
     ...variantStyles[variant],
     ...style,
   };
-
-  // Loading spinner component
-  const LoadingSpinner = () => (
-    <span
-      style={{
-        display: 'inline-block',
-        width: '1em',
-        height: '1em',
-        border: '2px solid currentColor',
-        borderRightColor: 'transparent',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-      }}
-      aria-hidden="true"
-    />
-  );
 
   return (
     <button

@@ -66,6 +66,10 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
   const isAnimating = useRef(false);
   const seenTimestamps = useRef<Set<number>>(new Set());
 
+  // Ref to hold the processNextCard function for recursive calls
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- Initialized in useCallback below
+  const processNextCardRef = useRef<() => void>(() => {});
+
   /**
    * Process the next card in queue
    */
@@ -89,10 +93,14 @@ export const CardAnimation: React.FC<CardAnimationProps> = ({
       setTimeout(() => {
         setCurrentEvent(null);
         onAnimationComplete();
-        processNextCard();
+        // Use ref for recursive call to avoid stale closure
+        processNextCardRef.current();
       }, 200);
     }, animationDuration);
   }, [animationDuration, onAnimationComplete]);
+
+  // Keep ref in sync with latest callback
+  processNextCardRef.current = processNextCard;
 
   /**
    * Handle new card event - add to queue

@@ -10,7 +10,7 @@
  * Gemäß Mobile UX Konzept (docs/concepts/MOBILE-UX-CONCEPT.md)
  */
 
-import { CSSProperties, useEffect } from 'react';
+import { CSSProperties, useEffect, useId } from 'react';
 import { cssVars } from '../../design-tokens'
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -32,6 +32,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     isActive: isOpen,
     onEscape: onClose,
   });
+
+  // Stable unique ID for aria-labelledby (React 18+)
+  const generatedId = useId();
 
   useEffect(() => {
     if (isOpen) {
@@ -92,8 +95,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     padding: cssVars.spacing.md,
   };
 
-  // Unique ID for aria-labelledby when title exists
-  const titleId = title ? `bottom-sheet-title-${Math.random().toString(36).substring(2, 11)}` : undefined;
+  // Use stable ID for aria-labelledby when title exists
+  const titleId = title ? generatedId : undefined;
 
   return (
     <>

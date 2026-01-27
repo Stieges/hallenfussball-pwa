@@ -1,4 +1,4 @@
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, useId } from 'react';
 import { cssVars } from '../../design-tokens'
 interface InputProps {
   label?: string;
@@ -40,9 +40,9 @@ export const Input: React.FC<InputProps> = ({
 }) => {
   // Auto-set error state when errorMessage is provided
   const hasError = error || !!errorMessage;
-  // Generate unique ID for aria-describedby
-  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty testId should use random ID
-  const errorId = errorMessage ? `error-${testId || Math.random().toString(36).slice(2, 9)}` : undefined;
+  // Stable unique ID for aria-describedby (React 18+)
+  const generatedId = useId();
+  const errorId = errorMessage ? `error-${testId ?? generatedId}` : undefined;
   const containerStyles: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
