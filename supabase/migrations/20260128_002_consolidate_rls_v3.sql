@@ -282,7 +282,21 @@ DROP POLICY IF EXISTS "collaborators_manage_own_tournaments" ON tournament_colla
 DROP POLICY IF EXISTS "collaborators_select_invited" ON tournament_collaborators;
 DROP POLICY IF EXISTS "collaborators_update_accept" ON tournament_collaborators;
 
--- Note: Use subquery instead of EXISTS to avoid infinite recursion
+-- Helper function to check tournament ownership without RLS recursion
+-- Uses SECURITY DEFINER to bypass RLS when checking ownership
+CREATE OR REPLACE FUNCTION public.user_owns_tournament(p_tournament_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM tournaments
+    WHERE id = p_tournament_id AND owner_id = auth.uid()
+  );
+$function$;
+
+-- Note: Use user_owns_tournament() to avoid infinite recursion
 -- (tournaments_select_v3 checks collaborators, which would check tournaments again)
 CREATE POLICY "collaborators_select_v3" ON tournament_collaborators FOR SELECT
 TO authenticated, anon
@@ -291,17 +305,13 @@ USING (
   OR
   invite_email = (SELECT auth.email())
   OR
-  tournament_id IN (
-    SELECT id FROM tournaments WHERE owner_id = (SELECT auth.uid())
-  )
+  user_owns_tournament(tournament_id)
 );
 
 CREATE POLICY "collaborators_insert_v3" ON tournament_collaborators FOR INSERT
 TO authenticated, anon
 WITH CHECK (
-  tournament_id IN (
-    SELECT id FROM tournaments WHERE owner_id = (SELECT auth.uid())
-  )
+  user_owns_tournament(tournament_id)
 );
 
 CREATE POLICY "collaborators_update_v3" ON tournament_collaborators FOR UPDATE
@@ -311,18 +321,14 @@ USING (
   OR
   invite_email = (SELECT auth.email())
   OR
-  tournament_id IN (
-    SELECT id FROM tournaments WHERE owner_id = (SELECT auth.uid())
-  )
+  user_owns_tournament(tournament_id)
 )
 WITH CHECK (
   user_id = (SELECT auth.uid())
   OR
   invite_email = (SELECT auth.email())
   OR
-  tournament_id IN (
-    SELECT id FROM tournaments WHERE owner_id = (SELECT auth.uid())
-  )
+  user_owns_tournament(tournament_id)
 );
 
 CREATE POLICY "collaborators_delete_v3" ON tournament_collaborators FOR DELETE
@@ -330,9 +336,7 @@ TO authenticated, anon
 USING (
   user_id = (SELECT auth.uid())
   OR
-  tournament_id IN (
-    SELECT id FROM tournaments WHERE owner_id = (SELECT auth.uid())
-  )
+  user_owns_tournament(tournament_id)
 );
 
 -- ============================================
