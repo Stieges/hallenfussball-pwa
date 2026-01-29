@@ -1,9 +1,13 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, useMemo, useId } from 'react';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, COLOR_SCHEMES } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
+import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
 
-// Constants
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 const WHEN_IDLE_OPTIONS: { value: WhenIdleType; label: string; description: string }[] = [
     { value: 'next-match', label: 'Nächstes Spiel', description: 'Zeigt das nächste Spiel mit Countdown' },
     { value: 'last-result', label: 'Letztes Ergebnis', description: 'Zeigt das letzte Spielergebnis' },
@@ -17,6 +21,23 @@ const QR_TARGET_OPTIONS: { value: QrTargetType; label: string; description: stri
     { value: 'custom', label: 'Eigene URL', description: 'Beliebige URL eingeben' },
 ];
 
+const TEXT_ALIGN_OPTIONS: { value: 'left' | 'center' | 'right'; label: string }[] = [
+    { value: 'left', label: 'Linksbündig' },
+    { value: 'center', label: 'Zentriert' },
+    { value: 'right', label: 'Rechtsbündig' },
+];
+
+const COLOR_SCHEME_OPTIONS: { value: ColorScheme; label: string; description: string }[] = [
+    { value: 'default', label: 'Standard', description: COLOR_SCHEMES.default.description },
+    { value: 'highlight', label: 'Hervorgehoben', description: COLOR_SCHEMES.highlight.description },
+    { value: 'urgent', label: 'Dringend', description: COLOR_SCHEMES.urgent.description },
+    { value: 'celebration', label: 'Feier', description: COLOR_SCHEMES.celebration.description },
+];
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
 interface SlideConfigEditorProps {
     slide: MonitorSlide;
     fields: TournamentField[];
@@ -25,7 +46,47 @@ interface SlideConfigEditorProps {
     onUpdate: (config: Partial<SlideConfig>, duration?: number | null) => void;
     getFieldDisplayName: (id: string) => string;
     styles: Record<string, CSSProperties>;
+    /** Show validation errors. When true, validates on render. */
+    showErrors?: boolean;
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
+
+const errorStyle: CSSProperties = {
+    color: cssVars.colors.error,
+    fontSize: cssVars.fontSizes.sm,
+    marginTop: cssVars.spacing.xs,
+};
+
+const requiredMarkerStyle: CSSProperties = {
+    color: cssVars.colors.error,
+};
+
+const descriptionStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textMuted,
+    marginTop: cssVars.spacing.xs,
+};
+
+const checkboxLabelStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: cssVars.spacing.sm,
+    cursor: 'pointer',
+    minHeight: cssVars.touchTargets.minimum,
+};
+
+const infoBoxStyle: CSSProperties = {
+    padding: cssVars.spacing.sm,
+    background: 'rgba(0,0,0,0.05)',
+    borderRadius: cssVars.borderRadius.sm,
+};
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
 
 export function SlideConfigEditor({
     slide,
@@ -35,8 +96,18 @@ export function SlideConfigEditor({
     onUpdate,
     getFieldDisplayName,
     styles,
+    showErrors = false,
 }: SlideConfigEditorProps) {
     const { type, config, duration } = slide;
+    const idPrefix = useId();
+
+    // Validate config on each render when showErrors is true
+    const errors = useMemo(() => {
+        if (!showErrors) {
+            return {};
+        }
+        return validateSlideConfig(type, config as Record<string, unknown>);
+    }, [showErrors, type, config]);
 
     const handleConfigChange = (key: keyof SlideConfig, value: SlideConfig[keyof SlideConfig]) => {
         onUpdate({ [key]: value });
@@ -47,32 +118,67 @@ export function SlideConfigEditor({
         onUpdate({}, isNaN(num) || num <= 0 ? null : num);
     };
 
+    const getErrorId = (field: string) => `${idPrefix}-${field}-error`;
+    const hasError = (field: string) => !!errors[field];
+
+    // WCAG: minHeight for touch targets on all interactive elements
+    const accessibleSelectStyle: CSSProperties = {
+        ...styles.selectStyle,
+        minHeight: cssVars.touchTargets.minimum,
+    };
+
+    const accessibleInputStyle: CSSProperties = {
+        ...styles.inputStyle,
+        minHeight: cssVars.touchTargets.minimum,
+    };
+
     return (
-        <div style={styles.slideConfigStyle}>
-            {/* Feld-Auswahl für live, schedule-field */}
+        <div
+            style={styles.slideConfigStyle}
+            role="group"
+            aria-label={`Konfiguration für ${type}-Slide`}
+        >
+            {/* === Feld-Auswahl für live, schedule-field === */}
             {(type === 'live' || type === 'schedule-field') && (
                 <div style={styles.inputGroupStyle}>
-                    <label style={styles.labelStyle}>Spielfeld</label>
+                    <label style={styles.labelStyle} htmlFor={`${idPrefix}-fieldId`}>
+                        Spielfeld <span style={requiredMarkerStyle}>*</span>
+                    </label>
                     <select
-                        style={styles.selectStyle}
+                        id={`${idPrefix}-fieldId`}
+                        style={{
+                            ...accessibleSelectStyle,
+                            borderColor: hasError('fieldId') ? cssVars.colors.error : undefined,
+                        }}
                         value={config.fieldId ?? ''}
                         onChange={(e) => handleConfigChange('fieldId', e.target.value || undefined)}
+                        aria-invalid={hasError('fieldId') || undefined}
+                        aria-describedby={hasError('fieldId') ? getErrorId('fieldId') : undefined}
+                        aria-required="true"
                     >
                         <option value="">Bitte wählen...</option>
                         {fields.map(f => (
                             <option key={f.id} value={f.id}>{getFieldDisplayName(f.id)}</option>
                         ))}
                     </select>
+                    {hasError('fieldId') && (
+                        <span id={getErrorId('fieldId')} role="alert" style={errorStyle}>
+                            {errors.fieldId}
+                        </span>
+                    )}
                 </div>
             )}
 
-            {/* When Idle - nur für Live-Slides */}
+            {/* === When Idle - nur für Live-Slides === */}
             {type === 'live' && (
                 <>
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                        <label style={styles.labelStyle}>Wenn kein Spiel läuft</label>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-whenIdle`}>
+                            Wenn kein Spiel läuft
+                        </label>
                         <select
-                            style={styles.selectStyle}
+                            id={`${idPrefix}-whenIdle`}
+                            style={accessibleSelectStyle}
                             value={config.whenIdle?.type ?? 'next-match'}
                             onChange={(e) => handleConfigChange('whenIdle', {
                                 type: e.target.value as WhenIdleType,
@@ -83,17 +189,13 @@ export function SlideConfigEditor({
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                         </select>
-                        <span style={{
-                            fontSize: cssVars.fontSizes.xs,
-                            color: cssVars.colors.textMuted,
-                            marginTop: cssVars.spacing.xs,
-                        }}>
+                        <span style={descriptionStyle}>
                             {WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.description}
                         </span>
                     </div>
 
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, cursor: 'pointer' }}>
+                        <label style={checkboxLabelStyle}>
                             <input
                                 type="checkbox"
                                 checked={config.pauseRotationDuringMatch !== false}
@@ -105,12 +207,15 @@ export function SlideConfigEditor({
                 </>
             )}
 
-            {/* Gruppen-Auswahl für standings, schedule-group */}
+            {/* === Gruppen-Auswahl für standings, schedule-group === */}
             {(type === 'standings' || type === 'schedule-group') && groups.length > 1 && (
                 <div style={styles.inputGroupStyle}>
-                    <label style={styles.labelStyle}>Gruppe</label>
+                    <label style={styles.labelStyle} htmlFor={`${idPrefix}-groupId`}>
+                        Gruppe
+                    </label>
                     <select
-                        style={styles.selectStyle}
+                        id={`${idPrefix}-groupId`}
+                        style={accessibleSelectStyle}
                         value={config.groupId ?? ''}
                         onChange={(e) => handleConfigChange('groupId', e.target.value || undefined)}
                     >
@@ -125,19 +230,22 @@ export function SlideConfigEditor({
                 </div>
             )}
 
-            {/* All Standings - keine spezielle Config, aber Hinweis anzeigen */}
+            {/* === All Standings - Info-Hinweis === */}
             {type === 'all-standings' && (
-                <div style={{ ...styles.inputGroupStyle, padding: cssVars.spacing.sm, background: 'rgba(0,0,0,0.05)', borderRadius: cssVars.borderRadius.sm }}>
+                <div style={{ ...styles.inputGroupStyle, ...infoBoxStyle }}>
                     <span style={styles.labelStyle}>Zeigt Tabellen aller Gruppen in einer Übersicht an.</span>
                 </div>
             )}
 
-            {/* Next Matches */}
+            {/* === Next Matches === */}
             {type === 'next-matches' && (
                 <div style={styles.inputGroupStyle}>
-                    <label style={styles.labelStyle}>Anzahl Spiele</label>
+                    <label style={styles.labelStyle} htmlFor={`${idPrefix}-matchCount`}>
+                        Anzahl Spiele
+                    </label>
                     <select
-                        style={styles.selectStyle}
+                        id={`${idPrefix}-matchCount`}
+                        style={accessibleSelectStyle}
                         value={config.matchCount ?? 5}
                         onChange={(e) => handleConfigChange('matchCount', Number(e.target.value))}
                     >
@@ -148,12 +256,15 @@ export function SlideConfigEditor({
                 </div>
             )}
 
-            {/* Top Scorers */}
+            {/* === Top Scorers === */}
             {type === 'top-scorers' && (
                 <div style={styles.inputGroupStyle}>
-                    <label style={styles.labelStyle}>Anzahl Spieler</label>
+                    <label style={styles.labelStyle} htmlFor={`${idPrefix}-numberOfPlayers`}>
+                        Anzahl Spieler
+                    </label>
                     <select
-                        style={styles.selectStyle}
+                        id={`${idPrefix}-numberOfPlayers`}
+                        style={accessibleSelectStyle}
                         value={config.numberOfPlayers ?? 10}
                         onChange={(e) => handleConfigChange('numberOfPlayers', Number(e.target.value))}
                     >
@@ -164,24 +275,39 @@ export function SlideConfigEditor({
                 </div>
             )}
 
-            {/* Sponsor-Auswahl */}
+            {/* === Sponsor-Auswahl === */}
             {type === 'sponsor' && (
                 <>
                     <div style={styles.inputGroupStyle}>
-                        <label style={styles.labelStyle}>Sponsor</label>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-sponsorId`}>
+                            Sponsor <span style={requiredMarkerStyle}>*</span>
+                        </label>
                         <select
-                            style={styles.selectStyle}
+                            id={`${idPrefix}-sponsorId`}
+                            style={{
+                                ...accessibleSelectStyle,
+                                borderColor: hasError('sponsorId') ? cssVars.colors.error : undefined,
+                            }}
                             value={config.sponsorId ?? ''}
                             onChange={(e) => handleConfigChange('sponsorId', e.target.value || undefined)}
+                            aria-invalid={hasError('sponsorId') || undefined}
+                            aria-describedby={hasError('sponsorId') ? getErrorId('sponsorId') : undefined}
+                            aria-required="true"
                         >
                             <option value="">Bitte wählen...</option>
                             {sponsors.map(s => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
+                        {hasError('sponsorId') && (
+                            <span id={getErrorId('sponsorId')} role="alert" style={errorStyle}>
+                                {errors.sponsorId}
+                            </span>
+                        )}
                     </div>
+
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, cursor: 'pointer' }}>
+                        <label style={checkboxLabelStyle}>
                             <input
                                 type="checkbox"
                                 checked={config.showQrCode !== false}
@@ -195,9 +321,12 @@ export function SlideConfigEditor({
                     {config.showQrCode !== false && (
                         <>
                             <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                                <label style={styles.labelStyle}>QR-Code Ziel</label>
+                                <label style={styles.labelStyle} htmlFor={`${idPrefix}-qrTarget`}>
+                                    QR-Code Ziel
+                                </label>
                                 <select
-                                    style={styles.selectStyle}
+                                    id={`${idPrefix}-qrTarget`}
+                                    style={accessibleSelectStyle}
                                     value={config.qrTarget ?? 'tournament'}
                                     onChange={(e) => handleConfigChange('qrTarget', e.target.value as QrTargetType)}
                                 >
@@ -205,11 +334,7 @@ export function SlideConfigEditor({
                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                     ))}
                                 </select>
-                                <span style={{
-                                    fontSize: cssVars.fontSizes.xs,
-                                    color: cssVars.colors.textMuted,
-                                    marginTop: cssVars.spacing.xs,
-                                }}>
+                                <span style={descriptionStyle}>
                                     {QR_TARGET_OPTIONS.find(o => o.value === (config.qrTarget ?? 'tournament'))?.description}
                                 </span>
                             </div>
@@ -217,14 +342,27 @@ export function SlideConfigEditor({
                             {/* Custom URL Input - nur sichtbar wenn qrTarget = 'custom' */}
                             {config.qrTarget === 'custom' && (
                                 <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                                    <label style={styles.labelStyle}>Eigene URL</label>
+                                    <label style={styles.labelStyle} htmlFor={`${idPrefix}-customQrUrl`}>
+                                        Eigene URL
+                                    </label>
                                     <input
+                                        id={`${idPrefix}-customQrUrl`}
                                         type="url"
-                                        style={styles.inputStyle}
+                                        style={{
+                                            ...accessibleInputStyle,
+                                            borderColor: hasError('customQrUrl') ? cssVars.colors.error : undefined,
+                                        }}
                                         value={config.customQrUrl ?? ''}
                                         onChange={(e) => handleConfigChange('customQrUrl', e.target.value)}
                                         placeholder="https://..."
+                                        aria-invalid={hasError('customQrUrl') || undefined}
+                                        aria-describedby={hasError('customQrUrl') ? getErrorId('customQrUrl') : undefined}
                                     />
+                                    {hasError('customQrUrl') && (
+                                        <span id={getErrorId('customQrUrl')} role="alert" style={errorStyle}>
+                                            {errors.customQrUrl}
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </>
@@ -232,39 +370,108 @@ export function SlideConfigEditor({
                 </>
             )}
 
-            {/* Custom Text */}
+            {/* === Custom Text === */}
             {type === 'custom-text' && (
                 <>
                     <div style={styles.inputGroupStyle}>
-                        <label style={styles.labelStyle}>Überschrift</label>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-headline`}>
+                            Überschrift <span style={requiredMarkerStyle}>*</span>
+                        </label>
                         <input
+                            id={`${idPrefix}-headline`}
                             type="text"
-                            style={styles.inputStyle}
+                            style={{
+                                ...accessibleInputStyle,
+                                borderColor: hasError('headline') ? cssVars.colors.error : undefined,
+                            }}
                             value={config.headline ?? ''}
                             onChange={(e) => handleConfigChange('headline', e.target.value)}
                             placeholder="z.B. Wichtige Ankündigung"
+                            maxLength={100}
+                            aria-invalid={hasError('headline') || undefined}
+                            aria-describedby={hasError('headline') ? getErrorId('headline') : undefined}
+                            aria-required="true"
                         />
+                        {hasError('headline') && (
+                            <span id={getErrorId('headline')} role="alert" style={errorStyle}>
+                                {errors.headline}
+                            </span>
+                        )}
                     </div>
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                        <label style={styles.labelStyle}>Text</label>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-body`}>
+                            Text
+                        </label>
                         <textarea
-                            style={{ ...styles.inputStyle, minHeight: '80px', resize: 'vertical' }}
+                            id={`${idPrefix}-body`}
+                            style={{
+                                ...accessibleInputStyle,
+                                minHeight: '80px',
+                                resize: 'vertical',
+                                borderColor: hasError('body') ? cssVars.colors.error : undefined,
+                            }}
                             value={config.body ?? ''}
                             onChange={(e) => handleConfigChange('body', e.target.value)}
                             placeholder="Dein Text hier..."
+                            maxLength={500}
+                            aria-invalid={hasError('body') || undefined}
+                            aria-describedby={hasError('body') ? getErrorId('body') : undefined}
                         />
+                        {hasError('body') && (
+                            <span id={getErrorId('body')} role="alert" style={errorStyle}>
+                                {errors.body}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Textausrichtung */}
+                    <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-textAlign`}>
+                            Textausrichtung
+                        </label>
+                        <select
+                            id={`${idPrefix}-textAlign`}
+                            style={accessibleSelectStyle}
+                            value={config.textAlign ?? 'center'}
+                            onChange={(e) => handleConfigChange('textAlign', e.target.value as SlideConfig['textAlign'])}
+                        >
+                            {TEXT_ALIGN_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Farbschema */}
+                    <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
+                        <label style={styles.labelStyle} htmlFor={`${idPrefix}-colorScheme`}>
+                            Farbschema
+                        </label>
+                        <select
+                            id={`${idPrefix}-colorScheme`}
+                            style={accessibleSelectStyle}
+                            value={config.colorScheme ?? 'default'}
+                            onChange={(e) => handleConfigChange('colorScheme', e.target.value as ColorScheme)}
+                        >
+                            {COLOR_SCHEME_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                        <span style={descriptionStyle}>
+                            {COLOR_SCHEME_OPTIONS.find(o => o.value === (config.colorScheme ?? 'default'))?.description}
+                        </span>
                     </div>
                 </>
             )}
 
-            {/* Custom Duration */}
+            {/* === Custom Duration === */}
             <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-                <label style={styles.labelStyle}>
+                <label style={styles.labelStyle} htmlFor={`${idPrefix}-duration`}>
                     Eigene Dauer (Sek.) - leer = Monitor-Standard
                 </label>
                 <input
+                    id={`${idPrefix}-duration`}
                     type="number"
-                    style={{ ...styles.inputStyle, maxWidth: '100px' }}
+                    style={{ ...accessibleInputStyle, maxWidth: '100px' }}
                     value={duration ?? ''}
                     onChange={(e) => handleDurationChange(e.target.value)}
                     placeholder="Standard"
