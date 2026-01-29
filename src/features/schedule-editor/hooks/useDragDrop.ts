@@ -128,7 +128,6 @@ export function useDragDrop(options: UseDragDropOptions): UseDragDropReturn {
     // Parse the target slot
     const parsed = parseSlotId(slotId);
     if (!parsed) {
-      console.warn('Invalid slot ID:', slotId);
       return;
     }
 

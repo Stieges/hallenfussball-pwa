@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef, CSSProperties } from 'react';
 import { cssVars } from '../../design-tokens';
-import type { Tournament, TournamentField, TournamentGroup } from '../../types/tournament';
+import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
   MonitorSlide,
   SlideType,
@@ -22,10 +22,11 @@ import type {
   TransitionType,
   PerformanceMode,
   MonitorTheme,
-  WhenIdleType,
 } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors, useSponsors, useFields } from '../../hooks';
+import { SlideConfigEditor } from './components/SlideConfigEditor';
+import { SlidePreview } from './components/SlidePreview';
 
 // =============================================================================
 // TYPES
@@ -65,13 +66,6 @@ const THEME_OPTIONS: { value: MonitorTheme; label: string; description: string }
   { value: 'dark', label: 'Dunkel', description: 'Dunkler Hintergrund (Standard)' },
   { value: 'light', label: 'Hell', description: 'Heller Hintergrund für helle Räume' },
   { value: 'auto', label: 'Automatisch', description: 'Folgt Systemeinstellungen' },
-];
-
-const WHEN_IDLE_OPTIONS: { value: WhenIdleType; label: string; description: string }[] = [
-  { value: 'next-match', label: 'Nächstes Spiel', description: 'Zeigt das nächste Spiel mit Countdown' },
-  { value: 'last-result', label: 'Letztes Ergebnis', description: 'Zeigt das letzte Spielergebnis' },
-  { value: 'sponsor', label: 'Sponsor', description: 'Zeigt einen Sponsor-Screen' },
-  { value: 'skip', label: 'Überspringen', description: 'Springt zum nächsten Slide' },
 ];
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
@@ -723,7 +717,12 @@ export function MonitorEditor({
                       </div>
                     </div>
 
-                    {/* Slide Config (wenn bearbeitet) */}
+                    {/* Slide Preview + Config (wenn bearbeitet) */}
+                    {isEditing && (
+                      <div style={{ padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`, borderTop: `1px solid ${cssVars.colors.border}` }}>
+                        <SlidePreview slide={slide} tournament={tournament} scale={0.15} />
+                      </div>
+                    )}
                     {isEditing && (
                       <SlideConfigEditor
                         slide={slide}
@@ -766,191 +765,6 @@ export function MonitorEditor({
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// SUB-COMPONENT: SlideConfigEditor
-// =============================================================================
-
-interface SlideConfigEditorProps {
-  slide: MonitorSlide;
-  fields: TournamentField[];
-  groups: TournamentGroup[];
-  sponsors: { id: string; name: string }[];
-  onUpdate: (config: Partial<SlideConfig>, duration?: number | null) => void;
-  getFieldDisplayName: (id: string) => string;
-  styles: Record<string, CSSProperties>;
-}
-
-function SlideConfigEditor({
-  slide,
-  fields,
-  groups,
-  sponsors,
-  onUpdate,
-  getFieldDisplayName,
-  styles,
-}: SlideConfigEditorProps) {
-  const { type, config, duration } = slide;
-
-  const handleConfigChange = (key: keyof SlideConfig, value: SlideConfig[keyof SlideConfig]) => {
-    onUpdate({ [key]: value });
-  };
-
-  const handleDurationChange = (value: string) => {
-    const num = parseInt(value, 10);
-    onUpdate({}, isNaN(num) || num <= 0 ? null : num);
-  };
-
-  return (
-    <div style={styles.slideConfigStyle}>
-      {/* Feld-Auswahl für live, schedule-field */}
-      {(type === 'live' || type === 'schedule-field') && (
-        <div style={styles.inputGroupStyle}>
-          <label style={styles.labelStyle}>Spielfeld</label>
-          <select
-            style={styles.selectStyle}
-            value={config.fieldId ?? ''}
-            onChange={(e) => handleConfigChange('fieldId', e.target.value || undefined)}
-          >
-            <option value="">Bitte wählen...</option>
-            {fields.map(f => (
-              <option key={f.id} value={f.id}>{getFieldDisplayName(f.id)}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* When Idle - nur für Live-Slides */}
-      {type === 'live' && (
-        <>
-          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-            <label style={styles.labelStyle}>Wenn kein Spiel läuft</label>
-            <select
-              style={styles.selectStyle}
-              value={config.whenIdle?.type ?? 'next-match'}
-              onChange={(e) => handleConfigChange('whenIdle', {
-                type: e.target.value as WhenIdleType,
-                timeoutSeconds: config.whenIdle?.timeoutSeconds ?? 60,
-              })}
-            >
-              {WHEN_IDLE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <span style={{
-              fontSize: cssVars.fontSizes.xs,
-              color: cssVars.colors.textMuted,
-              marginTop: cssVars.spacing.xs,
-            }}>
-              {WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.description}
-            </span>
-          </div>
-
-          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={config.pauseRotationDuringMatch !== false}
-                onChange={(e) => handleConfigChange('pauseRotationDuringMatch', e.target.checked)}
-              />
-              <span style={styles.labelStyle}>Rotation bei laufendem Spiel pausieren</span>
-            </label>
-          </div>
-        </>
-      )}
-
-      {/* Gruppen-Auswahl für standings, schedule-group */}
-      {(type === 'standings' || type === 'schedule-group') && groups.length > 1 && (
-        <div style={styles.inputGroupStyle}>
-          <label style={styles.labelStyle}>Gruppe</label>
-          <select
-            style={styles.selectStyle}
-            value={config.groupId ?? ''}
-            onChange={(e) => handleConfigChange('groupId', e.target.value || undefined)}
-          >
-            <option value="">Alle Gruppen</option>
-            {groups.map(g => (
-              <option key={g.id} value={g.id}>
-                {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback */}
-                {g.customName || `Gruppe ${g.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Sponsor-Auswahl */}
-      {type === 'sponsor' && (
-        <>
-          <div style={styles.inputGroupStyle}>
-            <label style={styles.labelStyle}>Sponsor</label>
-            <select
-              style={styles.selectStyle}
-              value={config.sponsorId ?? ''}
-              onChange={(e) => handleConfigChange('sponsorId', e.target.value || undefined)}
-            >
-              <option value="">Bitte wählen...</option>
-              {sponsors.map(s => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={config.showQrCode !== false}
-                onChange={(e) => handleConfigChange('showQrCode', e.target.checked)}
-              />
-              <span style={styles.labelStyle}>QR-Code anzeigen</span>
-            </label>
-          </div>
-        </>
-      )}
-
-      {/* Custom Text */}
-      {type === 'custom-text' && (
-        <>
-          <div style={styles.inputGroupStyle}>
-            <label style={styles.labelStyle}>Überschrift</label>
-            <input
-              type="text"
-              style={styles.inputStyle}
-              value={config.headline ?? ''}
-              onChange={(e) => handleConfigChange('headline', e.target.value)}
-              placeholder="z.B. Wichtige Ankündigung"
-            />
-          </div>
-          <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-            <label style={styles.labelStyle}>Text</label>
-            <textarea
-              style={{ ...styles.inputStyle, minHeight: '80px', resize: 'vertical' }}
-              value={config.body ?? ''}
-              onChange={(e) => handleConfigChange('body', e.target.value)}
-              placeholder="Dein Text hier..."
-            />
-          </div>
-        </>
-      )}
-
-      {/* Custom Duration */}
-      <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-        <label style={styles.labelStyle}>
-          Eigene Dauer (Sek.) - leer = Monitor-Standard
-        </label>
-        <input
-          type="number"
-          style={{ ...styles.inputStyle, maxWidth: '100px' }}
-          value={duration ?? ''}
-          onChange={(e) => handleDurationChange(e.target.value)}
-          placeholder="Standard"
-          min="1"
-          max="300"
-        />
       </div>
     </div>
   );

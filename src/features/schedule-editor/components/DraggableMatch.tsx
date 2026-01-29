@@ -288,13 +288,12 @@ export const DraggableMatch: React.FC<DraggableMatchProps> = ({
       ref={setNodeRef}
       style={containerStyle}
       onClick={onSelect}
-      {...(canDrag ? { ...attributes, ...listeners } : {})}
     >
       <div style={cardStyle}>
         {/* Header */}
         <div style={headerStyle}>
           {canDrag && (
-            <div style={dragHandleStyle}>
+            <div style={dragHandleStyle} {...listeners} {...attributes}>
               <span>⋮⋮</span>
             </div>
           )}
