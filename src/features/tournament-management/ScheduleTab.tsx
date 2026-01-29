@@ -265,6 +265,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   const editModeCardStyle: CSSProperties = isEditing ? {
     border: `3px solid ${cssVars.colors.primary}`,
     boxShadow: `0 0 0 4px ${cssVars.colors.secondaryLight}`,
+    // Fix: backdrop-filter creates a new containing block for position:fixed,
+    // which breaks @dnd-kit DragOverlay positioning (ghost appears offset)
+    backdropFilter: 'none',
+    WebkitBackdropFilter: 'none',
   } : {};
 
   // Build finished matches set for display
