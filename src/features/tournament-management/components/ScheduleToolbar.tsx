@@ -99,21 +99,26 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
     display: 'flex',
     backgroundColor: cssVars.colors.background,
     borderRadius: cssVars.borderRadius.md,
-    padding: '2px',
+    padding: cssVars.spacing.xs,
     border: `1px solid ${cssVars.colors.border}`,
     marginLeft: isEditing ? cssVars.spacing.md : 0,
+    gap: cssVars.spacing.xs,
   };
 
   const getViewToggleButtonStyle = (mode: ScheduleViewMode): CSSProperties => ({
-    padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+    minHeight: cssVars.touchTargets.minimum,
     border: 'none',
     borderRadius: cssVars.borderRadius.sm,
     fontSize: cssVars.fontSizes.sm,
+    fontFamily: cssVars.fontFamilies.body,
     fontWeight: viewMode === mode ? cssVars.fontWeights.semibold : cssVars.fontWeights.medium,
     backgroundColor: viewMode === mode ? cssVars.colors.primary : 'transparent',
     color: viewMode === mode ? cssVars.colors.background : cssVars.colors.textSecondary,
     cursor: 'pointer',
     transition: 'all 150ms ease',
+    touchAction: 'manipulation',
+    outline: 'none',
   });
 
   return (
@@ -192,16 +197,20 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
         )}
 
         {/* View Mode Toggle */}
-        <div style={viewToggleContainerStyle}>
+        <div style={viewToggleContainerStyle} role="tablist" aria-label="Ansicht wechseln">
           <button
             onClick={() => onViewModeChange('table')}
             style={getViewToggleButtonStyle('table')}
+            aria-pressed={viewMode === 'table'}
+            data-testid="schedule-view-table"
           >
             Tabelle
           </button>
           <button
             onClick={() => onViewModeChange('grid')}
             style={getViewToggleButtonStyle('grid')}
+            aria-pressed={viewMode === 'grid'}
+            data-testid="schedule-view-grid"
           >
             Grid
           </button>
