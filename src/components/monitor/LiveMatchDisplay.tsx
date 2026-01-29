@@ -11,8 +11,9 @@
  * @see MONITOR-LIVE-SCORE-REDESIGN.md
  */
 
-import { CSSProperties } from 'react';
-import { cssVars, displayLayout, type MonitorThemeColors } from '../../design-tokens';
+import { CSSProperties, useState, useCallback } from 'react';
+import { cssVars, displayLayout, criticalPhaseColors, type MonitorThemeColors } from '../../design-tokens';
+import type { CriticalPhase } from '../../design-tokens/display';
 import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
 import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
 import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
@@ -89,6 +90,13 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
+  // Critical phase for pulsing border
+  const [criticalPhase, setCriticalPhase] = useState<CriticalPhase>('normal');
+  const handleCriticalPhaseChange = useCallback((phase: CriticalPhase) => {
+    setCriticalPhase(phase);
+  }, []);
+  const isPulsing = criticalPhase === 'final' || criticalPhase === 'countdown';
+
   const homeColor = resolveColor('home', scheme, match.homeTeam);
   const awayColor = resolveColor('away', scheme, match.awayTeam);
 
@@ -107,9 +115,15 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
     padding: fullscreen ? 'clamp(24px, 3vw, 48px)' : cssVars.spacing.xxl,
     background: themeColors.backgroundGradient,
     borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
-    border: fullscreen ? 'none' : `4px solid ${isRunning ? themeColors.borderActive : themeColors.border}`,
-    boxShadow: fullscreen ? 'none' : isRunning ? themeColors.glowActive : cssVars.shadows.lg,
-    animation: isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
+    border: fullscreen
+      ? isPulsing ? `4px solid ${criticalPhaseColors.critical}` : 'none'
+      : `4px solid ${isPulsing ? criticalPhaseColors.critical : isRunning ? themeColors.borderActive : themeColors.border}`,
+    boxShadow: isPulsing
+      ? `0 0 30px ${criticalPhaseColors.pulseGlow}, 0 0 60px ${criticalPhaseColors.pulseGlow}`
+      : fullscreen ? 'none' : isRunning ? themeColors.glowActive : cssVars.shadows.lg,
+    animation: isPulsing
+      ? 'borderPulse 0.8s ease-in-out infinite'
+      : isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
     position: 'relative',
     overflow: 'hidden',
   };
@@ -279,6 +293,7 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
               timerStartTime={match.timerStartTime}
               timerElapsedSeconds={match.timerElapsedSeconds}
               theme={theme}
+              onCriticalPhaseChange={handleCriticalPhaseChange}
             />
           </div>
         )}
@@ -305,6 +320,10 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
         @keyframes liveDotPulse {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.3); opacity: 0.8; }
+        }
+        @keyframes borderPulse {
+          0%, 100% { box-shadow: 0 0 30px rgba(253, 224, 71, 0.6), 0 0 60px rgba(253, 224, 71, 0.3); }
+          50% { box-shadow: 0 0 50px rgba(253, 224, 71, 0.9), 0 0 100px rgba(253, 224, 71, 0.5); }
         }
         @media (prefers-reduced-motion: reduce) {
           * {

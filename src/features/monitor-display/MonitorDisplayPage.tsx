@@ -42,6 +42,8 @@ import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
+import { usePixelShift } from '../../hooks/usePixelShift';
+import { supabase } from '../../lib/supabase';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -921,6 +923,9 @@ export function MonitorDisplayPage({
     [lastFetch]
   );
 
+  // Anti-burn-in pixel shift for OLED/Plasma displays
+  const pixelShift = usePixelShift(60_000, 2, performanceSettings.enableAnimations);
+
   // Current slide
   const currentSlide = useMemo(
     () => monitor?.slides[slideState.currentIndex] ?? null,
@@ -989,6 +994,36 @@ export function MonitorDisplayPage({
 
     return () => clearInterval(interval);
   }, [loadData, monitor, performanceSettings.pollingInterval]);
+
+  // Heartbeat sender — every 30s so admin dashboard can show online status
+  useEffect(() => {
+    if (!monitor || !tournament) {
+      return;
+    }
+
+    const sendHeartbeat = async () => {
+      if (!supabase) {
+        return;
+      }
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- monitor_heartbeats not yet in generated types
+        await (supabase as any).from('monitor_heartbeats').upsert({
+          monitor_id: monitor.id,
+          tournament_id: tournament.id,
+          last_seen: new Date().toISOString(),
+          slide_index: slideState.currentIndex,
+          cache_status: cacheStatus.connectionStatus,
+          user_agent: navigator.userAgent,
+        }, { onConflict: 'monitor_id' });
+      } catch {
+        // Heartbeat failure is non-critical — silently ignore
+      }
+    };
+
+    void sendHeartbeat();
+    const interval = setInterval(() => void sendHeartbeat(), 30_000);
+    return () => clearInterval(interval);
+  }, [monitor, tournament, slideState.currentIndex, cacheStatus.connectionStatus]);
 
   // ==========================================================================
   // SLIDESHOW LOGIC
@@ -1138,12 +1173,13 @@ export function MonitorDisplayPage({
 
   return (
     <div style={containerStyle}>
-      {/* Slide Container */}
+      {/* Slide Container — pixelShift for OLED anti-burn-in */}
       <div style={{
         position: 'relative',
         width: '100%',
         height: '100%',
         overflow: 'hidden',
+        ...pixelShift,
       }}>
         {currentSlide && (
           <TransitionWrapper

@@ -117,6 +117,9 @@ export {
   monitorThemes,
   monitorColorSchemes,
   getScoreTextColor,
+  criticalPhaseColors,
+  criticalPhaseThresholds,
+  getCriticalPhase,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,
@@ -125,6 +128,7 @@ export {
   type MonitorThemeKey,
   type MonitorThemeColors,
   type MonitorColorPresetKey,
+  type CriticalPhase,
 } from './display';
 
 export {

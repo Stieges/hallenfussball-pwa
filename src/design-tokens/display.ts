@@ -449,6 +449,62 @@ export function getScoreTextColor(backgroundHex: string): string {
 }
 
 // =============================================================================
+// CRITICAL PHASE (Last Minute Modus)
+// =============================================================================
+
+/**
+ * Farben für die Last-Minute-Eskalation im Timer.
+ *
+ * Stufen: warning (< 5 min) → danger (< 2 min) → critical (< 60s)
+ *       → final (< 30s, pulsierender Rahmen) → countdown (< 10s, Millisekunden)
+ */
+export const criticalPhaseColors = {
+  warning: '#F97316',      // Orange (< 5 min)
+  danger: '#EF4444',       // Rot (< 2 min)
+  critical: '#FDE047',     // Signal-Gelb (< 60s)
+  criticalText: '#171717', // Schwarz auf Signal-Gelb
+  pulseGlow: 'rgba(253, 224, 71, 0.6)',  // Gelber Glow für Rahmen-Pulse
+} as const;
+
+/**
+ * Schwellenwerte in Sekunden für Eskalationsstufen.
+ */
+export const criticalPhaseThresholds = {
+  warning: 300,   // 5 min — Progress-Bar orange
+  danger: 120,    // 2 min — Timer-Text orange
+  critical: 60,   // 1 min — Signal-Gelb Hintergrund
+  final: 30,      // 30s  — Pulsierender Rahmen
+  countdown: 10,  // 10s  — Millisekunden-Anzeige
+} as const;
+
+export type CriticalPhase = 'normal' | 'warning' | 'danger' | 'critical' | 'final' | 'countdown';
+
+/**
+ * Determine the current escalation phase based on remaining seconds.
+ */
+export function getCriticalPhase(remainingSeconds: number, isOvertime: boolean): CriticalPhase {
+  if (isOvertime || remainingSeconds <= 0) {
+    return 'normal';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.countdown) {
+    return 'countdown';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.final) {
+    return 'final';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.critical) {
+    return 'critical';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.danger) {
+    return 'danger';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.warning) {
+    return 'warning';
+  }
+  return 'normal';
+}
+
+// =============================================================================
 // COMBINED EXPORT
 // =============================================================================
 
@@ -465,6 +521,8 @@ export const displayTokens = {
   colorSchemes: displayColorSchemes,
   themes: monitorThemes,
   monitorColorSchemes,
+  criticalPhaseColors,
+  criticalPhaseThresholds,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

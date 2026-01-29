@@ -19,7 +19,7 @@ export type { TeamNameDisplayProps } from './TeamNameDisplay';
 
 // Timer component
 export { MatchTimer } from './MatchTimer';
-export type { MatchTimerProps } from './MatchTimer';
+export type { MatchTimerProps, CriticalPhase } from './MatchTimer';
 
 // Field selection
 export { FieldSelector } from './FieldSelector';

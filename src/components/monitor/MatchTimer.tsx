@@ -10,11 +10,15 @@
  * - Theme support (dark/light/auto)
  */
 
-import { CSSProperties, useState, useEffect } from 'react';
+import { CSSProperties, useState, useEffect, useRef } from 'react';
 import { cssVars } from '../../design-tokens';
+import { criticalPhaseColors, criticalPhaseThresholds, getCriticalPhase } from '../../design-tokens/display';
+import type { CriticalPhase } from '../../design-tokens/display';
 import type { MonitorTheme } from '../../types/monitor';
 import { MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
+
+export type { CriticalPhase } from '../../design-tokens/display';
 
 export interface MatchTimerProps {
   /** Current elapsed seconds */
@@ -35,6 +39,8 @@ export interface MatchTimerProps {
   timerElapsedSeconds?: number;
   /** Theme (dark/light/auto) */
   theme?: MonitorTheme;
+  /** Called when the critical phase changes (for pulse border on parent) */
+  onCriticalPhaseChange?: (phase: CriticalPhase) => void;
 }
 
 /**
@@ -44,6 +50,15 @@ function formatTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = Math.floor(totalSeconds % 60);
   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Format remaining seconds for countdown phase (SS:mm)
+ */
+function formatCountdown(remainingSeconds: number): string {
+  const secs = Math.floor(remainingSeconds);
+  const hundredths = Math.floor((remainingSeconds - secs) * 100);
+  return `${secs.toString().padStart(2, '0')}:${hundredths.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -80,6 +95,7 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
   timerStartTime,
   timerElapsedSeconds,
   theme = 'dark',
+  onCriticalPhaseChange,
 }) => {
   // Resolve auto theme based on system preference
   const { themeColors } = useMonitorTheme(theme);
@@ -89,28 +105,71 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds)
   );
 
-  // Update every second when running
+  // High-precision remaining for countdown phase (sub-second)
+  const [preciseRemaining, setPreciseRemaining] = useState<number | null>(null);
+
+  // Track last notified phase to avoid redundant callbacks
+  const lastPhaseRef = useRef<CriticalPhase>('normal');
+
+  // Update timer — switches to high-frequency (100ms) during countdown phase
   useEffect(() => {
     if (status !== 'RUNNING') {
       setDisplayElapsed(calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds));
+      setPreciseRemaining(null);
       return;
     }
 
     const updateTimer = () => {
-      setDisplayElapsed(calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds));
+      const elapsed = calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds);
+      setDisplayElapsed(elapsed);
+
+      const remaining = durationSeconds - elapsed;
+      const phase = getCriticalPhase(remaining, elapsed > durationSeconds);
+
+      // High-precision for countdown: calculate sub-second remaining
+      if (phase === 'countdown' && timerStartTime) {
+        const startMs = new Date(timerStartTime).getTime();
+        const nowMs = Date.now();
+        const runtimeSec = (nowMs - startMs) / 1000;
+        const preciseElapsed = (timerElapsedSeconds ?? 0) + runtimeSec;
+        setPreciseRemaining(Math.max(0, durationSeconds - preciseElapsed));
+      } else {
+        setPreciseRemaining(null);
+      }
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+
+    // Determine interval: 100ms for countdown, 1000ms otherwise
+    const currentElapsed = calculateRealTimeElapsed(status, timerStartTime, timerElapsedSeconds, propElapsedSeconds);
+    const currentRemaining = durationSeconds - currentElapsed;
+    const isCountdown = currentRemaining > 0 && currentRemaining <= criticalPhaseThresholds.countdown && currentElapsed <= durationSeconds;
+    const intervalMs = isCountdown ? 100 : 1000;
+
+    const interval = setInterval(updateTimer, intervalMs);
 
     return () => clearInterval(interval);
-  }, [status, timerStartTime, timerElapsedSeconds, propElapsedSeconds]);
+  }, [status, timerStartTime, timerElapsedSeconds, propElapsedSeconds, durationSeconds]);
 
   const remainingSeconds = durationSeconds - displayElapsed;
   const isOvertime = displayElapsed > durationSeconds;
   const isNearEnd = !isOvertime && remainingSeconds <= warningThresholdSeconds && remainingSeconds > 0;
   const isPaused = status === 'PAUSED';
   const progressPercent = Math.min(100, (displayElapsed / durationSeconds) * 100);
+
+  // Critical phase escalation
+  const criticalPhase = getCriticalPhase(remainingSeconds, isOvertime);
+
+  // Notify parent of phase changes (for pulsing border)
+  useEffect(() => {
+    if (criticalPhase !== lastPhaseRef.current) {
+      lastPhaseRef.current = criticalPhase;
+      onCriticalPhaseChange?.(criticalPhase);
+    }
+  }, [criticalPhase, onCriticalPhaseChange]);
+
+  // Determine if timer should show Signal-Gelb background (critical, final, countdown)
+  const isSignalPhase = criticalPhase === 'critical' || criticalPhase === 'final' || criticalPhase === 'countdown';
 
   // Size-based styling - optimized for TV viewing
   const sizeStyles: Record<string, { time: string; progress: string; gap: string }> = {
@@ -134,20 +193,47 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     display: 'flex',
     alignItems: 'baseline',
     gap: size === 'xl' ? '12px' : '8px',
+    ...(isSignalPhase && {
+      backgroundColor: criticalPhaseColors.critical,
+      padding: `${size === 'xl' ? '8px' : '4px'} ${size === 'xl' ? '24px' : '12px'}`,
+      borderRadius: '999px',
+      boxShadow: `0 0 20px ${criticalPhaseColors.pulseGlow}`,
+      animation: criticalPhase === 'final' || criticalPhase === 'countdown'
+        ? 'criticalPulse 0.8s ease-in-out infinite'
+        : undefined,
+    }),
   };
+
+  // Timer text color based on critical phase
+  const timerTextColor = (() => {
+    if (isOvertime) {
+      return themeColors.timerOvertime;
+    }
+    if (isPaused) {
+      return themeColors.timerPaused;
+    }
+    if (isSignalPhase) {
+      return criticalPhaseColors.criticalText;
+    }
+    if (criticalPhase === 'danger') {
+      return criticalPhaseColors.danger;
+    }
+    if (criticalPhase === 'warning') {
+      return criticalPhaseColors.warning;
+    }
+    return themeColors.timerNormal;
+  })();
 
   const timeStyle: CSSProperties = {
     fontSize: currentSize.time,
     fontWeight: cssVars.fontWeights.bold,
     fontFamily: cssVars.fontFamilies.heading,
-    color: isOvertime
-      ? themeColors.timerOvertime
-      : isPaused
-        ? themeColors.timerPaused
-        : themeColors.timerNormal,
+    color: timerTextColor,
     textShadow: isOvertime || isPaused
       ? `0 0 20px ${isOvertime ? themeColors.timerOvertime : themeColors.timerPaused}`
-      : themeColors.textShadowLight,
+      : isSignalPhase
+        ? 'none'
+        : themeColors.textShadowLight,
     animation: isPaused ? 'timerPause 1.5s ease-in-out infinite' : undefined,
     letterSpacing: '0.02em',
   };
@@ -174,18 +260,28 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     boxShadow: themeColors.progressInsetShadow,
   };
 
+  const progressBarBackground = (() => {
+    if (isSignalPhase) {
+      return `linear-gradient(90deg, ${criticalPhaseColors.critical} 0%, ${criticalPhaseColors.warning} 100%)`;
+    }
+    if (isOvertime || isNearEnd) {
+      return `linear-gradient(90deg, ${themeColors.progressBarWarning} 0%, ${themeColors.timerWarning} 100%)`;
+    }
+    return `linear-gradient(90deg, ${themeColors.progressBar} 0%, ${themeColors.liveBadgeText} 100%)`;
+  })();
+
   const progressBarStyle: CSSProperties = {
     height: '100%',
     width: `${progressPercent}%`,
-    background: isOvertime || isNearEnd
-      ? `linear-gradient(90deg, ${themeColors.progressBarWarning} 0%, ${themeColors.timerWarning} 100%)`
-      : `linear-gradient(90deg, ${themeColors.progressBar} 0%, ${themeColors.liveBadgeText} 100%)`,
+    background: progressBarBackground,
     borderRadius: currentSize.progress,
-    transition: 'width 1s linear',
-    boxShadow: isNearEnd || isOvertime
-      ? themeColors.progressShadowWarning
-      : themeColors.progressShadow,
-    animation: isNearEnd ? 'progressPulse 1s ease-in-out infinite' : undefined,
+    transition: criticalPhase === 'countdown' ? 'width 0.1s linear' : 'width 1s linear',
+    boxShadow: isSignalPhase
+      ? `0 0 12px ${criticalPhaseColors.pulseGlow}`
+      : isNearEnd || isOvertime
+        ? themeColors.progressShadowWarning
+        : themeColors.progressShadow,
+    animation: isNearEnd || isSignalPhase ? 'progressPulse 1s ease-in-out infinite' : undefined,
   };
 
   const statusBadgeStyle: CSSProperties = {
@@ -211,9 +307,16 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
     <>
       <div style={containerStyle}>
         <div style={timeContainerStyle}>
-          <span style={timeStyle}>{formatTime(displayElapsed)}</span>
-          <span style={separatorStyle}>/</span>
-          <span style={totalTimeStyle}>{formatTime(durationSeconds)}</span>
+          {criticalPhase === 'countdown' && preciseRemaining !== null ? (
+            // Countdown mode: show remaining SS:mm
+            <span style={timeStyle}>{formatCountdown(preciseRemaining)}</span>
+          ) : (
+            <>
+              <span style={timeStyle}>{formatTime(displayElapsed)}</span>
+              <span style={separatorStyle}>/</span>
+              <span style={totalTimeStyle}>{formatTime(durationSeconds)}</span>
+            </>
+          )}
         </div>
 
         {showProgress && (
@@ -247,6 +350,11 @@ export const MatchTimer: React.FC<MatchTimerProps> = ({
         @keyframes statusPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.02); }
+        }
+
+        @keyframes criticalPulse {
+          0%, 100% { box-shadow: 0 0 20px rgba(253, 224, 71, 0.6); }
+          50% { box-shadow: 0 0 40px rgba(253, 224, 71, 0.9), 0 0 60px rgba(253, 224, 71, 0.4); }
         }
 
         @media (prefers-reduced-motion: reduce) {

@@ -19,6 +19,8 @@ import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
 import { SLIDE_TYPES } from '../../types/monitor';
 import { useMonitors } from '../../hooks';
+import { useMonitorHeartbeats } from '../../hooks/useMonitorHeartbeats';
+import type { HeartbeatStatus } from '../../hooks/useMonitorHeartbeats';
 
 // =============================================================================
 // TYPES
@@ -67,6 +69,9 @@ export function MonitorsConfigTab({
     duplicateMonitor,
     getDisplayUrl,
   } = useMonitors(tournament, onTournamentUpdate);
+
+  // Heartbeat status for all monitors in this tournament
+  const heartbeats = useMonitorHeartbeats(tournament.id);
 
   // ==========================================================================
   // HANDLERS
@@ -471,6 +476,7 @@ export function MonitorsConfigTab({
               <MonitorCard
                 key={monitor.id}
                 monitor={monitor}
+                heartbeatStatus={heartbeats.get(monitor.id)?.status ?? null}
                 isDeleting={deleteConfirmId === monitor.id}
                 isCopied={copiedId === monitor.id}
                 onEdit={() => handleEdit(monitor.id)}
@@ -520,6 +526,7 @@ export function MonitorsConfigTab({
 
 interface MonitorCardProps {
   monitor: TournamentMonitor;
+  heartbeatStatus: HeartbeatStatus | null;
   isDeleting: boolean;
   isCopied: boolean;
   onEdit: () => void;
@@ -536,6 +543,7 @@ interface MonitorCardProps {
 
 function MonitorCard({
   monitor,
+  heartbeatStatus,
   isDeleting,
   isCopied,
   onEdit,
@@ -556,7 +564,34 @@ function MonitorCard({
       {/* Header */}
       <div style={styles.monitorHeaderStyle as CSSProperties}>
         <div>
-          <h3 style={styles.monitorNameStyle as CSSProperties}>{monitor.name}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+            <h3 style={{ ...(styles.monitorNameStyle as CSSProperties), margin: 0 }}>{monitor.name}</h3>
+            {heartbeatStatus && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: cssVars.spacing.xs,
+                  fontSize: cssVars.fontSizes.xs,
+                  color: heartbeatStatus === 'online'
+                    ? cssVars.colors.success
+                    : heartbeatStatus === 'stale'
+                      ? cssVars.colors.warning
+                      : cssVars.colors.error,
+                }}
+                title={heartbeatStatus === 'online' ? 'Online' : heartbeatStatus === 'stale' ? 'Verbindung instabil' : 'Offline'}
+              >
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: 'currentColor',
+                  flexShrink: 0,
+                }} />
+                {heartbeatStatus === 'online' ? 'Online' : heartbeatStatus === 'stale' ? 'Instabil' : 'Offline'}
+              </span>
+            )}
+          </div>
           <div style={styles.monitorMetaStyle as CSSProperties}>
             <span>{monitor.slides.length} Slides</span>
             <span>•</span>
