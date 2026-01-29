@@ -1,8 +1,10 @@
 import { CSSProperties, useMemo, useId } from 'react';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, COLOR_SCHEMES } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, COLOR_SCHEMES, DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
+import type { LiveColorScheme } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
+import { ColorSchemeEditor } from './ColorSchemeEditor';
 
 // =============================================================================
 // CONSTANTS
@@ -204,6 +206,13 @@ export function SlideConfigEditor({
                             <span style={styles.labelStyle}>Rotation bei laufendem Spiel pausieren</span>
                         </label>
                     </div>
+
+                    {/* Score-Farben für Live-Slides */}
+                    <ColorSchemeEditor
+                        value={config.liveColorScheme ?? DEFAULT_LIVE_COLOR_SCHEME}
+                        onChange={(scheme: LiveColorScheme) => handleConfigChange('liveColorScheme', scheme)}
+                        styles={styles}
+                    />
                 </>
             )}
 

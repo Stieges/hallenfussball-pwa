@@ -115,6 +115,8 @@ export {
   displayEffects,
   displayColorSchemes,
   monitorThemes,
+  monitorColorSchemes,
+  getScoreTextColor,
   type DisplayTokens,
   type DisplayFontSizeKey,
   type DisplayColorKey,
@@ -122,6 +124,7 @@ export {
   type DisplayColorSchemeKey,
   type MonitorThemeKey,
   type MonitorThemeColors,
+  type MonitorColorPresetKey,
 } from './display';
 
 export {

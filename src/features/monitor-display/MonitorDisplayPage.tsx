@@ -38,7 +38,8 @@ import { getAllTournaments } from '../../services/api';
 import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
-import { GoalAnimation, CardAnimation } from '../../components/monitor';
+import type { LiveMatch } from '../../hooks/useLiveMatches';
+import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -203,6 +204,51 @@ function SlideRenderer({ slide, tournament, performanceSettings, theme }: SlideR
 // LIVE SLIDE
 // =============================================================================
 
+/**
+ * Convert Tournament Match + Team[] to LiveMatch format for LiveMatchDisplay.
+ */
+function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): LiveMatch {
+  const findTeam = (id: string) =>
+    teams.find(t => t.id === id || t.name === id) ?? { id, name: id };
+
+  const statusMap: Record<string, 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED'> = {
+    running: 'RUNNING',
+    finished: 'FINISHED',
+    scheduled: 'NOT_STARTED',
+    waiting: 'NOT_STARTED',
+    skipped: 'FINISHED',
+  };
+
+  const durationMinutes = tournament.groupPhaseGameDuration ?? tournament.gameDuration ?? 8;
+
+  // Derive referee name from referee number
+  const refereeTeam = match.referee
+    ? teams.find(t => t.name === `SR${match.referee}` || t.name === `Schiedsrichter ${match.referee}`)
+    : undefined;
+
+  return {
+    id: match.id,
+    number: match.matchNumber ?? match.round,
+    phaseLabel: match.label ?? match.phase ?? 'Gruppenphase',
+    fieldId: `field-${match.field}`,
+    field: match.field,
+    scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
+    durationSeconds: durationMinutes * 60,
+    refereeName: refereeTeam?.name,
+    homeTeam: findTeam(match.teamA),
+    awayTeam: findTeam(match.teamB),
+    homeScore: match.scoreA ?? 0,
+    awayScore: match.scoreB ?? 0,
+    status: statusMap[match.matchStatus ?? 'scheduled'] ?? 'NOT_STARTED',
+    elapsedSeconds: match.timerElapsedSeconds ?? 0,
+    events: [],
+    timerStartTime: match.timerStartTime,
+    timerPausedAt: match.timerPausedAt,
+    timerElapsedSeconds: match.timerElapsedSeconds,
+    group: match.group,
+  };
+}
+
 interface LiveSlideProps {
   slide: MonitorSlide;
   tournament: Tournament;
@@ -211,7 +257,7 @@ interface LiveSlideProps {
   style: CSSProperties;
 }
 
-function LiveSlide({ slide, tournament, performanceSettings, theme, style }: LiveSlideProps) {
+function LiveSlide({ slide, tournament, theme, style }: LiveSlideProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -221,149 +267,35 @@ function LiveSlide({ slide, tournament, performanceSettings, theme, style }: Liv
   const { matches, teams } = tournament;
 
   // Find currently running match on this field
-  const liveMatch = matches.find(
+  const runningMatch = matches.find(
     m => m.field === fieldNumber && m.matchStatus === 'running'
   );
 
   // Find next scheduled match if no live match
-  const nextMatch = !liveMatch
+  const nextMatch = !runningMatch
     ? matches.find(m => m.field === fieldNumber && (!m.matchStatus || m.matchStatus === 'scheduled'))
     : null;
 
-  // Get team objects for avatars
-  const getTeamObject = (teamIdOrName: string) =>
-    teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
-
-  if (liveMatch) {
-    const homeTeam = getTeamObject(liveMatch.teamA);
-    const awayTeam = getTeamObject(liveMatch.teamB);
-
+  // Delegate to LiveMatchDisplay for running matches
+  if (runningMatch) {
+    const liveMatch = toLiveMatch(runningMatch, teams, tournament);
     return (
       <div style={style}>
-        {/* Live Badge */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: displaySpacing.inlineMD,
-          marginBottom: displaySpacing.sectionMD,
-        }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            borderRadius: '50%',
-            background: themeColors.liveDot,
-            animation: performanceSettings.enableAnimations ? 'liveDotPulse 1s ease-in-out infinite' : 'none',
-            boxShadow: performanceSettings.enableGlow ? `0 0 10px ${themeColors.liveDot}` : 'none',
-          }} />
-          <span style={{
-            fontSize: displayFontSizes.bodyLG,
-            color: themeColors.liveBadgeText,
-            fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '2px',
-          }}>
-            LIVE • {fieldName}
-          </span>
-        </div>
-
-        {/* Score Display - Matched with LiveMatchDisplay layout */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: displaySpacing.sectionLG,
-          width: '100%',
-          marginBottom: displaySpacing.sectionMD,
-        }}>
-          {/* Home Team */}
-          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.md }}>
-            {homeTeam && (
-              <TeamAvatar
-                team={homeTeam}
-                size="xxxl"
-                showColorRing
-              />
-            )}
-            <div style={{
-              fontSize: 'clamp(48px, 5vw, 72px)',
-              color: themeColors.text,
-              fontWeight: cssVars.fontWeights.bold,
-              textShadow: themeColors.textShadow,
-            }}>
-              {getTeamName(teams, liveMatch.teamA)}
-            </div>
-          </div>
-
-          {/* Score */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: cssVars.spacing.xl,
-            flexShrink: 0,
-          }}>
-            <div style={{
-              fontSize: 'clamp(120px, 14vw, 200px)',
-              fontWeight: 700,
-              color: themeColors.score,
-              textShadow: themeColors.scoreShadow,
-              minWidth: '140px',
-              textAlign: 'center',
-            }}>
-              {liveMatch.scoreA ?? 0}
-            </div>
-            <div style={{
-              fontSize: 'clamp(80px, 9vw, 120px)',
-              fontWeight: 700,
-              color: themeColors.text,
-              opacity: 0.8,
-            }}>
-              :
-            </div>
-            <div style={{
-              fontSize: 'clamp(120px, 14vw, 200px)',
-              fontWeight: 700,
-              color: themeColors.score,
-              textShadow: themeColors.scoreShadow,
-              minWidth: '140px',
-              textAlign: 'center',
-            }}>
-              {liveMatch.scoreB ?? 0}
-            </div>
-          </div>
-
-          {/* Away Team */}
-          <div style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cssVars.spacing.md }}>
-            {awayTeam && (
-              <TeamAvatar
-                team={awayTeam}
-                size="xxxl"
-                showColorRing
-              />
-            )}
-            <div style={{
-              fontSize: 'clamp(48px, 5vw, 72px)',
-              color: themeColors.text,
-              fontWeight: cssVars.fontWeights.bold,
-              textShadow: themeColors.textShadow,
-            }}>
-              {getTeamName(teams, liveMatch.teamB)}
-            </div>
-          </div>
-        </div>
-
-        {/* Match Info */}
-        <div style={{
-          fontSize: displayFontSizes.bodyXL,
-          color: themeColors.textSecondary,
-        }}>
-          {liveMatch.group ? `Gruppe ${liveMatch.group}` : liveMatch.label ?? 'Spiel'}
-        </div>
+        <LiveMatchDisplay
+          match={liveMatch}
+          group={runningMatch.group}
+          fullscreen
+          theme={theme}
+          colorScheme={slide.config.liveColorScheme}
+        />
       </div>
     );
   }
 
   // No live match - show next match or idle state based on whenIdle config
   const whenIdleType = slide.config.whenIdle?.type ?? 'next-match';
+  const getTeamObject = (teamIdOrName: string) =>
+    teams.find(t => t.id === teamIdOrName || t.name === teamIdOrName);
 
   return (
     <div style={style}>
