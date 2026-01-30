@@ -114,12 +114,12 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // Load teams if not cached
       const teamsMap = await this.ensureTeamsLoaded(tournamentId);
 
-      // Fetch active matches (have live_state or are running/paused)
+      // Fetch active matches: running/paused OR initialized with live_state
       const { data: matchRows, error: matchError } = await supabase
         .from('matches')
         .select('*')
         .eq('tournament_id', tournamentId)
-        .in('match_status', ['running', 'paused']);
+        .or('match_status.in.(running,paused),live_state.not.is.null');
 
        
       if (matchError || !matchRows) {
@@ -196,20 +196,44 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         throw matchError;
       }
 
-      // No row updated = version mismatch (another client modified the match)
+      // No row updated = version mismatch
       if (!updatedRow) {
-        // Fetch current version for informative error message
+        // Fetch current version and status to determine if this is an initialization
         const { data: currentMatch } = await supabase
           .from('matches')
-          .select('version')
+          .select('version, match_status')
           .eq('id', match.id)
           .single();
 
-        throw new OptimisticLockError(
-          match.id,
-          match.version,
-          currentMatch?.version ?? -1
-        );
+        // Initialization retry: if the match is not_started/scheduled, the version mismatch
+        // is caused by tournament saves bumping the version via the DB trigger.
+        // Safe to retry with the current version since there's no concurrent live modification.
+        const currentVersion = currentMatch?.version ?? 1;
+        if (currentMatch && (currentMatch.match_status === 'not_started' || currentMatch.match_status === 'scheduled')) {
+          const { data: retryRow, error: retryError } = await supabase
+            .from('matches')
+            .update(matchUpdate as unknown as Record<string, unknown>)
+            .eq('id', match.id)
+            .eq('version', currentVersion)
+            .select('version')
+            .maybeSingle();
+
+          if (retryError) {
+            console.error('[SupabaseLiveMatchRepository] initialization retry failed:', retryError);
+            throw retryError;
+          }
+          if (!retryRow) {
+            throw new OptimisticLockError(match.id, currentVersion, -1);
+          }
+          // Success - proceed to insert events below
+        } else {
+          // Genuine concurrent modification conflict
+          throw new OptimisticLockError(
+            match.id,
+            match.version,
+            currentMatch?.version ?? -1
+          );
+        }
       }
 
       // Insert new events
