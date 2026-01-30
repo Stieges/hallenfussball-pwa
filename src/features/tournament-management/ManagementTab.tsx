@@ -219,6 +219,9 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     setIsInitializingMatch(true);
 
     void getLiveMatchData(currentMatchData)
+      .catch((error) => {
+        console.error('[ManagementTab] Match initialization failed:', error);
+      })
       .finally(() => {
         // Only update state if this effect hasn't been cancelled
         if (!cancelled) {

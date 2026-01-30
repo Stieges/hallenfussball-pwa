@@ -20,6 +20,7 @@
  */
 export const displayFontSizes = {
   // Score Display (sehr groß, Hauptfokus)
+  scoreXXL: 'clamp(200px, 25vw, 350px)', // Stadium-Grade Score (Score-Blöcke)
   scoreXL: '120px',      // Hauptscore bei Live-Spielen
   scoreLG: '96px',       // Score in Zusammenfassungen
   scoreMD: '72px',       // Score in Listen
@@ -38,6 +39,9 @@ export const displayFontSizes = {
   bodyLG: '24px',        // Standard-Text
   bodyMD: '20px',        // Sekundär-Text
   bodySM: '16px',        // Kleine Infos, Labels
+
+  // Team Names (Stadium-Grade)
+  teamName: 'clamp(48px, 5vw, 72px)',   // Team-Name unter Score-Block
 
   // Meta/Badge
   meta: '14px',          // Gruppe, Feld-Label
@@ -181,6 +185,17 @@ export const displayLayout = {
   // Controls (versteckte Steuerungsleiste)
   controlsHeight: '56px',
   controlsTransition: '300ms ease-in-out',
+
+  // Stadium-Grade Score Layout (prozentuale Bildschirmaufteilung)
+  scoreArea: {
+    header: '8%',
+    score: '55%',
+    teamNames: '12%',
+    timer: '17%',
+    footer: '8%',
+    blockWidth: '35%',
+    blockGap: '10%',
+  },
 } as const;
 
 // =============================================================================
@@ -389,6 +404,107 @@ export const displayColorSchemes = {
 export type DisplayColorSchemeKey = keyof typeof displayColorSchemes;
 
 // =============================================================================
+// MONITOR COLOR SCHEMES (Positions-Farben für Live-Score)
+// =============================================================================
+
+/**
+ * Farb-Presets für Heim/Gast Positions-Farben auf Monitor-Scoreboards.
+ *
+ * Diese Farben werden als Hintergrund der Score-Blöcke verwendet.
+ * Text-Farbe wird automatisch per Luminance berechnet.
+ */
+export const monitorColorSchemes = {
+  presets: {
+    classic:     { home: '#1E40AF', away: '#DC2626' },
+    nature:      { home: '#059669', away: '#EA580C' },
+    contrast:    { home: '#171717', away: '#FAFAFA' },
+    modern:      { home: '#7C3AED', away: '#EAB308' },
+    alternative: { home: '#F97316', away: '#0891B2' },
+  },
+  defaults: { home: '#1E40AF', away: '#DC2626' },
+} as const;
+
+export type MonitorColorPresetKey = keyof typeof monitorColorSchemes.presets;
+
+/**
+ * Calculate relative luminance of a hex color (sRGB).
+ * Returns a value between 0 (black) and 1 (white).
+ */
+function calculateLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+  const toLinear = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+/**
+ * Auto text color for score numbers on colored backgrounds.
+ * Returns white text on dark backgrounds, dark text on light backgrounds.
+ */
+export function getScoreTextColor(backgroundHex: string): string {
+  return calculateLuminance(backgroundHex) > 0.4 ? '#171717' : '#FFFFFF';
+}
+
+// =============================================================================
+// CRITICAL PHASE (Last Minute Modus)
+// =============================================================================
+
+/**
+ * Farben für die Last-Minute-Eskalation im Timer.
+ *
+ * Stufen: warning (< 5 min) → danger (< 2 min) → critical (< 60s)
+ *       → final (< 30s, pulsierender Rahmen) → countdown (< 10s, Millisekunden)
+ */
+export const criticalPhaseColors = {
+  warning: '#F97316',      // Orange (< 5 min)
+  danger: '#EF4444',       // Rot (< 2 min)
+  critical: '#FDE047',     // Signal-Gelb (< 60s)
+  criticalText: '#171717', // Schwarz auf Signal-Gelb
+  pulseGlow: 'rgba(253, 224, 71, 0.6)',  // Gelber Glow für Rahmen-Pulse
+} as const;
+
+/**
+ * Schwellenwerte in Sekunden für Eskalationsstufen.
+ */
+export const criticalPhaseThresholds = {
+  warning: 300,   // 5 min — Progress-Bar orange
+  danger: 120,    // 2 min — Timer-Text orange
+  critical: 60,   // 1 min — Signal-Gelb Hintergrund
+  final: 30,      // 30s  — Pulsierender Rahmen
+  countdown: 10,  // 10s  — Millisekunden-Anzeige
+} as const;
+
+export type CriticalPhase = 'normal' | 'warning' | 'danger' | 'critical' | 'final' | 'countdown';
+
+/**
+ * Determine the current escalation phase based on remaining seconds.
+ */
+export function getCriticalPhase(remainingSeconds: number, isOvertime: boolean): CriticalPhase {
+  if (isOvertime || remainingSeconds <= 0) {
+    return 'normal';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.countdown) {
+    return 'countdown';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.final) {
+    return 'final';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.critical) {
+    return 'critical';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.danger) {
+    return 'danger';
+  }
+  if (remainingSeconds <= criticalPhaseThresholds.warning) {
+    return 'warning';
+  }
+  return 'normal';
+}
+
+// =============================================================================
 // COMBINED EXPORT
 // =============================================================================
 
@@ -404,6 +520,9 @@ export const displayTokens = {
   effects: displayEffects,
   colorSchemes: displayColorSchemes,
   themes: monitorThemes,
+  monitorColorSchemes,
+  criticalPhaseColors,
+  criticalPhaseThresholds,
 } as const;
 
 export type DisplayTokens = typeof displayTokens;

@@ -1,23 +1,26 @@
 /**
- * LiveMatchDisplay - TV-optimized match display for monitor view
+ * LiveMatchDisplay - Stadium-Grade scoreboard for monitor display
  *
- * Features:
- * - Large, readable team names and score
- * - Field and match number info
- * - Integrated real-time timer with progress bar
- * - Running match glow animation
- * - Pause and overtime indicators
- * - Responsive sizing for different screens
- * - Theme support (dark/light/auto)
+ * Layout optimized for 30-40m viewing distance on 55-75" TVs:
+ * - Header (8%):  LIVE badge, field, group
+ * - Score (55%):  Two colored blocks with score numbers
+ * - Teams (12%):  Team names centered below score blocks
+ * - Timer (17%):  Large centered timer with progress bar
+ * - Footer (8%):  Referee info
+ *
+ * @see MONITOR-LIVE-SCORE-REDESIGN.md
  */
 
-import { CSSProperties } from 'react';
-import { cssVars, type MonitorThemeColors } from '../../design-tokens';
-import type { MonitorTheme } from '../../types/monitor';
+import { CSSProperties, useState, useCallback } from 'react';
+import { cssVars, displayLayout, criticalPhaseColors, type MonitorThemeColors } from '../../design-tokens';
+import type { CriticalPhase } from '../../design-tokens/display';
+import type { MonitorTheme, LiveColorScheme } from '../../types/monitor';
+import { DEFAULT_LIVE_COLOR_SCHEME } from '../../types/monitor';
 import { LiveMatch, MatchStatus } from '../../hooks/useLiveMatches';
 import { useMonitorTheme } from '../../hooks';
 import { MatchTimer } from './MatchTimer';
-import { TeamAvatar } from '../ui/TeamAvatar';
+import { ScoreBlock } from './ScoreBlock';
+import { TeamNameDisplay } from './TeamNameDisplay';
 
 export interface LiveMatchDisplayProps {
   /** The live match to display */
@@ -30,43 +33,48 @@ export interface LiveMatchDisplayProps {
   fullscreen?: boolean;
   /** Theme (dark/light/auto) */
   theme?: MonitorTheme;
+  /** Color scheme for position colors (home/away blocks) */
+  colorScheme?: LiveColorScheme;
 }
 
-/**
- * Get status label and color based on theme
- */
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function getStatusInfo(
   status: MatchStatus,
   themeColors: MonitorThemeColors
 ): { label: string; color: string; bgColor: string } {
   switch (status) {
     case 'RUNNING':
-      return {
-        label: 'LIVE',
-        color: themeColors.liveBadgeText,
-        bgColor: themeColors.liveBadgeBg,
-      };
+      return { label: 'LIVE', color: themeColors.liveBadgeText, bgColor: themeColors.liveBadgeBg };
     case 'PAUSED':
-      return {
-        label: 'PAUSE',
-        color: themeColors.pauseBadgeText,
-        bgColor: themeColors.pauseBadgeBg,
-      };
+      return { label: 'PAUSE', color: themeColors.pauseBadgeText, bgColor: themeColors.pauseBadgeBg };
     case 'FINISHED':
-      return {
-        label: 'BEENDET',
-        color: themeColors.textSecondary,
-        bgColor: themeColors.border,
-      };
+      return { label: 'BEENDET', color: themeColors.textSecondary, bgColor: themeColors.border };
     case 'NOT_STARTED':
     default:
-      return {
-        label: 'WARTET',
-        color: themeColors.textSecondary,
-        bgColor: themeColors.border,
-      };
+      return { label: 'WARTET', color: themeColors.textSecondary, bgColor: themeColors.border };
   }
 }
+
+/**
+ * Resolve team color: team color (if enabled + available) → scheme color
+ */
+function resolveColor(
+  position: 'home' | 'away',
+  scheme: LiveColorScheme,
+  team?: { colors?: { primary?: string } },
+): string {
+  if (scheme.useTeamColors && team?.colors?.primary) {
+    return team.colors.primary;
+  }
+  return position === 'home' ? scheme.homeColor : scheme.awayColor;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   match,
@@ -74,316 +82,264 @@ export const LiveMatchDisplay: React.FC<LiveMatchDisplayProps> = ({
   size = 'xl',
   fullscreen = false,
   theme = 'dark',
+  colorScheme,
 }) => {
-  // Resolve auto theme based on system preference
-  const { resolvedTheme, themeColors } = useMonitorTheme(theme);
-
+  const { themeColors } = useMonitorTheme(theme);
+  const scheme = colorScheme ?? DEFAULT_LIVE_COLOR_SCHEME;
   const statusInfo = getStatusInfo(match.status, themeColors);
   const isRunning = match.status === 'RUNNING';
   const isPaused = match.status === 'PAUSED';
 
-  // Size-based styling - optimized for TV viewing from distance
-  const sizeStyles = {
-    md: {
-      teamName: '32px',
-      score: '90px',
-      separator: '48px',
-      info: '18px',
-      padding: cssVars.spacing.xl,
-      timerMaxWidth: '400px',
-    },
-    lg: {
-      teamName: '48px',
-      score: '130px',
-      separator: '64px',
-      info: '24px',
-      padding: cssVars.spacing.xxl,
-      timerMaxWidth: '550px',
-    },
-    xl: {
-      teamName: 'clamp(56px, 6vw, 80px)',
-      score: 'clamp(160px, 18vw, 240px)',
-      separator: 'clamp(80px, 9vw, 120px)',
-      info: 'clamp(24px, 2.5vw, 36px)',
-      padding: 'clamp(32px, 4vw, 64px)',
-      timerMaxWidth: '700px',
-    },
-  };
+  // Critical phase for pulsing border
+  const [criticalPhase, setCriticalPhase] = useState<CriticalPhase>('normal');
+  const handleCriticalPhaseChange = useCallback((phase: CriticalPhase) => {
+    setCriticalPhase(phase);
+  }, []);
+  const isPulsing = criticalPhase === 'final' || criticalPhase === 'countdown';
 
-  const currentSize = sizeStyles[size];
+  const homeColor = resolveColor('home', scheme, match.homeTeam);
+  const awayColor = resolveColor('away', scheme, match.awayTeam);
 
-  // Build running state gradient based on theme
-  const runningGradient = resolvedTheme === 'dark'
-    ? `linear-gradient(180deg, ${themeColors.liveBadgeBg} 0%, rgba(0, 100, 50, 0.08) 50%, ${themeColors.background} 100%)`
-    : `linear-gradient(180deg, ${themeColors.liveBadgeBg} 0%, rgba(4, 120, 87, 0.05) 50%, ${themeColors.background} 100%)`;
+  const layout = displayLayout.scoreArea;
+
+  // --- Styles ---------------------------------------------------------------
 
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: fullscreen ? 'clamp(24px, 3vw, 48px)' : currentSize.padding,
-    background: fullscreen
-      ? themeColors.backgroundGradient
-      : isRunning
-        ? runningGradient
-        : themeColors.backgroundGradient,
-    borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
-    border: fullscreen ? 'none' : `4px solid ${isRunning ? themeColors.borderActive : themeColors.border}`,
-    boxShadow: fullscreen
-      ? 'none'
-      : isRunning
-        ? themeColors.glowActive
-        : cssVars.shadows.lg,
-    animation: isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
-    minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : size === 'lg' ? '55vh' : '40vh',
-    height: fullscreen ? '100%' : 'auto',
     width: '100%',
-    maxWidth: fullscreen ? 'none' : size === 'xl' ? '1400px' : '1200px',
-    margin: '0 auto',
+    height: fullscreen ? '100%' : 'auto',
+    minHeight: fullscreen ? '100%' : size === 'xl' ? '70vh' : '50vh',
+    padding: fullscreen ? 'clamp(24px, 3vw, 48px)' : cssVars.spacing.xxl,
+    background: themeColors.backgroundGradient,
+    borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
+    border: fullscreen
+      ? isPulsing ? `4px solid ${criticalPhaseColors.critical}` : 'none'
+      : `4px solid ${isPulsing ? criticalPhaseColors.critical : isRunning ? themeColors.borderActive : themeColors.border}`,
+    boxShadow: isPulsing
+      ? `0 0 30px ${criticalPhaseColors.pulseGlow}, 0 0 60px ${criticalPhaseColors.pulseGlow}`
+      : fullscreen ? 'none' : isRunning ? themeColors.glowActive : cssVars.shadows.lg,
+    animation: isPulsing
+      ? 'borderPulse 0.8s ease-in-out infinite'
+      : isRunning && !fullscreen ? 'matchGlow 3s ease-in-out infinite' : undefined,
     position: 'relative',
+    overflow: 'hidden',
   };
 
   const headerStyle: CSSProperties = {
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    marginBottom: size === 'xl' ? cssVars.spacing.xxl : cssVars.spacing.xl,
+    justifyContent: 'space-between',
+    width: '100%',
+    height: layout.header,
+    flexShrink: 0,
   };
 
-  const fieldInfoStyle: CSSProperties = {
-    fontSize: currentSize.info,
-    fontWeight: cssVars.fontWeights.semibold,
-    color: themeColors.score,
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
+  const scoreAreaStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: layout.blockGap,
+    width: '100%',
+    flex: `0 0 ${layout.score}`,
+    minHeight: 0,
   };
 
-  const groupInfoStyle: CSSProperties = {
-    fontSize: currentSize.info,
-    fontWeight: cssVars.fontWeights.medium,
-    color: themeColors.textSecondary,
+  const separatorStyle: CSSProperties = {
+    fontSize: size === 'xl' ? 'clamp(80px, 10vw, 140px)' : '64px',
+    fontWeight: 700,
+    color: themeColors.text,
+    opacity: 0.8,
+    userSelect: 'none',
+    flexShrink: 0,
   };
 
-  const statusBadgeStyle: CSSProperties = {
+  const teamsAreaStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: layout.blockGap,
+    width: '100%',
+    height: layout.teamNames,
+    flexShrink: 0,
+    paddingTop: cssVars.spacing.md,
+  };
+
+  const teamNameContainerStyle: CSSProperties = {
+    width: layout.blockWidth,
+    display: 'flex',
+    justifyContent: 'center',
+  };
+
+  const timerAreaStyle: CSSProperties = {
+    width: '100%',
+    maxWidth: '700px',
+    height: layout.timer,
+    display: 'flex',
+    alignItems: 'center',
+    flexShrink: 0,
+  };
+
+  const footerStyle: CSSProperties = {
+    height: layout.footer,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  };
+
+  const badgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: cssVars.spacing.sm,
-    padding: size === 'xl'
-      ? `${cssVars.spacing.sm} ${cssVars.spacing.xl}`
-      : `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
+    padding: `${cssVars.spacing.sm} ${cssVars.spacing.xl}`,
     borderRadius: cssVars.borderRadius.md,
     backgroundColor: statusInfo.bgColor,
     color: statusInfo.color,
-    fontSize: size === 'xl' ? '20px' : size === 'lg' ? '16px' : '14px',
-    fontWeight: cssVars.fontWeights.bold,
+    fontSize: size === 'xl' ? '20px' : '16px',
+    fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     animation: isRunning ? 'livePulse 1.5s ease-in-out infinite' : undefined,
   };
 
-  const matchupContainerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    gap: cssVars.spacing.xl,
-    marginBottom: size === 'xl' ? cssVars.spacing.xxl : cssVars.spacing.xl,
-  };
-
-  const teamContainerStyle = (_side: 'home' | 'away'): CSSProperties => ({
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: cssVars.spacing.md,
-  });
-
-  const teamNameStyle: CSSProperties = {
-    fontSize: currentSize.teamName,
-    fontWeight: cssVars.fontWeights.bold,
-    color: themeColors.text,
-    fontFamily: cssVars.fontFamilies.heading,
-    lineHeight: 1.15,
-    wordBreak: 'break-word',
-    maxWidth: '100%',
-    textShadow: themeColors.textShadow,
-    letterSpacing: '-0.01em',
-  };
-
-  const scoreContainerStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: size === 'xl' ? cssVars.spacing.xl : cssVars.spacing.lg,
-    padding: size === 'xl' ? `0 ${cssVars.spacing.xxl}` : `0 ${cssVars.spacing.xl}`,
-    flexShrink: 0,
-  };
-
-  const scoreStyle: CSSProperties = {
-    fontSize: currentSize.score,
-    fontWeight: cssVars.fontWeights.bold,
-    color: themeColors.score,
-    fontFamily: cssVars.fontFamilies.heading,
-    minWidth: size === 'xl' ? '160px' : size === 'lg' ? '100px' : '70px',
-    textAlign: 'center',
-    textShadow: isRunning ? themeColors.scoreShadow : themeColors.textShadowScore,
-    letterSpacing: '-0.02em',
-  };
-
-  const separatorStyle: CSSProperties = {
-    fontSize: currentSize.separator,
-    fontWeight: cssVars.fontWeights.bold,
-    color: themeColors.text,
-    opacity: 0.8,
-  };
-
-  const timerContainerStyle: CSSProperties = {
-    width: '100%',
-    maxWidth: currentSize.timerMaxWidth,
-    marginTop: size === 'xl' ? cssVars.spacing.xxl : cssVars.spacing.xl,
-  };
-
   const liveDotStyle: CSSProperties = {
-    width: size === 'xl' ? '14px' : '10px',
-    height: size === 'xl' ? '14px' : '10px',
+    width: '14px',
+    height: '14px',
     borderRadius: '50%',
     backgroundColor: statusInfo.color,
     boxShadow: isRunning ? `0 0 8px ${statusInfo.color}` : undefined,
     animation: isRunning ? 'liveDotPulse 1s ease-in-out infinite' : undefined,
   };
 
+  const infoStyle: CSSProperties = {
+    fontSize: size === 'xl' ? 'clamp(24px, 2.5vw, 36px)' : '20px',
+    fontWeight: 600,
+    color: themeColors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+  };
+
+  // --- Render ---------------------------------------------------------------
+
   return (
     <>
       <div style={containerStyle}>
-        {/* Header: Field, Group, Status */}
+        {/* Header: LIVE badge | Field | Group */}
         <div style={headerStyle}>
-          <div style={fieldInfoStyle}>
-            ⚽ Feld {match.field ?? 1} - Spiel {match.number}
-          </div>
-          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either has value */}
-          {(group || match.group) && (
-            <div style={groupInfoStyle}>
-              Gruppe {group ?? match.group}
-            </div>
-          )}
-          <div style={statusBadgeStyle}>
+          <div style={badgeStyle}>
             {isRunning && <span style={liveDotStyle} />}
             {statusInfo.label}
           </div>
+          <div style={infoStyle}>
+            Feld {match.field ?? 1} — Spiel {match.number}
+          </div>
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if either has value */}
+          {(group || match.group) && (
+            <div style={{ ...infoStyle, color: themeColors.text }}>
+              Gruppe {group ?? match.group}
+            </div>
+          )}
         </div>
 
-        {/* Matchup: Team A - Score - Team B */}
-        <div style={matchupContainerStyle}>
-          <div style={teamContainerStyle('home')}>
-            {/* Logo above team name for better visibility from distance */}
-            <TeamAvatar
-              team={match.homeTeam}
-              size={size === 'xl' ? 'xxxl' : size === 'lg' ? 'xxl' : 'xl'}
-              showColorRing
-            />
-            <div style={{ ...teamNameStyle, textAlign: 'center' }}>
-              {match.homeTeam.name}
-            </div>
-          </div>
+        {/* Score Area: [Home Block] : [Away Block] */}
+        <div style={scoreAreaStyle}>
+          <ScoreBlock
+            score={match.homeScore}
+            backgroundColor={homeColor}
+            position="home"
+            size={size}
+          />
+          <span style={separatorStyle}>:</span>
+          <ScoreBlock
+            score={match.awayScore}
+            backgroundColor={awayColor}
+            position="away"
+            size={size}
+          />
+        </div>
 
-          <div style={scoreContainerStyle}>
-            <div style={scoreStyle}>{match.homeScore}</div>
-            <div style={separatorStyle}>:</div>
-            <div style={scoreStyle}>{match.awayScore}</div>
-          </div>
-
-          <div style={teamContainerStyle('away')}>
-            {/* Logo above team name for better visibility from distance */}
-            <TeamAvatar
-              team={match.awayTeam}
-              size={size === 'xl' ? 'xxxl' : size === 'lg' ? 'xxl' : 'xl'}
-              showColorRing
+        {/* Team Names */}
+        <div style={teamsAreaStyle}>
+          <div style={teamNameContainerStyle}>
+            <TeamNameDisplay
+              name={match.homeTeam.name}
+              size={size}
+              theme={theme}
+              maxWidth="100%"
             />
-            <div style={{ ...teamNameStyle, textAlign: 'center' }}>
-              {match.awayTeam.name}
-            </div>
+          </div>
+          <div style={teamNameContainerStyle}>
+            <TeamNameDisplay
+              name={match.awayTeam.name}
+              size={size}
+              theme={theme}
+              maxWidth="100%"
+            />
           </div>
         </div>
 
-        {/* Timer and Progress */}
+        {/* Timer */}
         {(isRunning || isPaused || match.status === 'FINISHED') && (
-          <div style={timerContainerStyle}>
+          <div style={timerAreaStyle}>
             <MatchTimer
               elapsedSeconds={match.elapsedSeconds}
               durationSeconds={match.durationSeconds}
               status={match.status}
               size={size}
-              showProgress={true}
+              showProgress
               timerStartTime={match.timerStartTime}
               timerElapsedSeconds={match.timerElapsedSeconds}
               theme={theme}
+              onCriticalPhaseChange={handleCriticalPhaseChange}
             />
           </div>
         )}
 
-        {/* Referee info */}
+        {/* Footer: Referee */}
         {match.refereeName && (
-          <div style={{
-            marginTop: cssVars.spacing.xl,
-            fontSize: currentSize.info,
-            color: themeColors.textSecondary,
-          }}>
-            Schiedsrichter: {match.refereeName}
+          <div style={footerStyle}>
+            <span style={{ ...infoStyle, fontWeight: 500, textTransform: 'none', letterSpacing: 'normal' }}>
+              Schiedsrichter: {match.refereeName}
+            </span>
           </div>
         )}
       </div>
 
       <style>{`
         @keyframes matchGlow {
-          0%, 100% {
-            box-shadow: ${themeColors.glow};
-          }
-          50% {
-            box-shadow: ${themeColors.glowActive};
-          }
+          0%, 100% { box-shadow: ${themeColors.glow}; }
+          50% { box-shadow: ${themeColors.glowActive}; }
         }
-
         @keyframes livePulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.7;
-          }
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
-
         @keyframes liveDotPulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.3);
-            opacity: 0.8;
-          }
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.8; }
         }
-
+        @keyframes borderPulse {
+          0%, 100% { box-shadow: 0 0 30px rgba(253, 224, 71, 0.6), 0 0 60px rgba(253, 224, 71, 0.3); }
+          50% { box-shadow: 0 0 50px rgba(253, 224, 71, 0.9), 0 0 100px rgba(253, 224, 71, 0.5); }
+        }
         @media (prefers-reduced-motion: reduce) {
           * {
             animation-duration: 0.01ms !important;
             animation-iteration-count: 1 !important;
           }
         }
-
-        @media (max-width: 768px) {
-          /* Responsive adjustments for tablets */
-        }
       `}</style>
     </>
   );
 };
 
-/**
- * Placeholder component when no match is running
- */
+// ---------------------------------------------------------------------------
+// No Match Display (unchanged)
+// ---------------------------------------------------------------------------
+
 export interface NoMatchDisplayProps {
   message?: string;
   size?: 'md' | 'lg' | 'xl';
@@ -405,45 +361,37 @@ export const NoMatchDisplay: React.FC<NoMatchDisplayProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     padding: fullscreen ? 'clamp(32px, 4vw, 64px)' : size === 'xl' ? '64px' : cssVars.spacing.xxl,
-    background: fullscreen
-      ? themeColors.backgroundGradient
-      : themeColors.backgroundGradient,
+    background: themeColors.backgroundGradient,
     borderRadius: fullscreen ? 0 : cssVars.borderRadius.xl,
     border: fullscreen ? 'none' : `3px solid ${themeColors.border}`,
-    minHeight: fullscreen ? '100%' : size === 'xl' ? '50vh' : size === 'lg' ? '35vh' : '25vh',
+    minHeight: fullscreen ? '100%' : size === 'xl' ? '50vh' : '35vh',
     height: fullscreen ? '100%' : 'auto',
     width: '100%',
-    maxWidth: fullscreen ? 'none' : size === 'xl' ? '1200px' : '1000px',
+    maxWidth: fullscreen ? 'none' : '1200px',
     margin: '0 auto',
     boxShadow: fullscreen ? 'none' : cssVars.shadows.lg,
   };
 
-  const iconStyle: CSSProperties = {
-    fontSize: size === 'xl' ? '100px' : size === 'lg' ? '72px' : '48px',
-    marginBottom: cssVars.spacing.xl,
-    opacity: 0.6,
-  };
-
-  const messageStyle: CSSProperties = {
-    fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : size === 'lg' ? '28px' : '20px',
-    fontWeight: cssVars.fontWeights.semibold,
-    color: themeColors.text,
-    textAlign: 'center',
-    textShadow: themeColors.textShadowLight,
-  };
-
-  const subMessageStyle: CSSProperties = {
-    fontSize: size === 'xl' ? 'clamp(18px, 2vw, 24px)' : size === 'lg' ? '18px' : '14px',
-    color: themeColors.textSecondary,
-    marginTop: cssVars.spacing.lg,
-    textAlign: 'center',
-  };
-
   return (
     <div style={containerStyle}>
-      <div style={iconStyle}>⏸️</div>
-      <div style={messageStyle}>{message}</div>
-      <div style={subMessageStyle}>
+      <div style={{ fontSize: size === 'xl' ? '100px' : '72px', marginBottom: cssVars.spacing.xl, opacity: 0.6 }}>
+        ⏸️
+      </div>
+      <div style={{
+        fontSize: size === 'xl' ? 'clamp(36px, 4vw, 48px)' : '28px',
+        fontWeight: 600,
+        color: themeColors.text,
+        textAlign: 'center',
+        textShadow: themeColors.textShadowLight,
+      }}>
+        {message}
+      </div>
+      <div style={{
+        fontSize: size === 'xl' ? 'clamp(18px, 2vw, 24px)' : '18px',
+        color: themeColors.textSecondary,
+        marginTop: cssVars.spacing.lg,
+        textAlign: 'center',
+      }}>
         Die Tabellen werden angezeigt, bis ein Spiel gestartet wird
       </div>
     </div>

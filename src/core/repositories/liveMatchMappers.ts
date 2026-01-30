@@ -296,11 +296,16 @@ export function mapLiveMatchToSupabase(
 }
 
 /**
- * Checks if a match is "active" (has live state)
+ * Checks if a match is "active" (has live state).
+ * Includes running, paused, AND initialized NOT_STARTED matches
+ * that have live_state set (created by initializeMatch but not yet started).
  */
 export function isMatchActive(matchRow: MatchRow): boolean {
   const status = matchRow.match_status ?? 'not_started';
-  return status === 'running' || status === 'paused';
+  if (status === 'running' || status === 'paused') { return true; }
+  // Include initialized NOT_STARTED matches (have live_state set)
+  const liveState = (matchRow as MatchRow & { live_state?: unknown }).live_state;
+  return liveState !== null && liveState !== undefined;
 }
 
 /**
