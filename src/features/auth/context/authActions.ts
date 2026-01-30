@@ -42,8 +42,10 @@ export function isInvalidRefreshTokenError(error: unknown): boolean {
 }
 
 /**
- * Clears all stale auth state from localStorage.
- * Call this when detecting an invalid refresh token to allow fresh login.
+ * Clears all stale auth state from localStorage AND the Supabase client's
+ * internal session cache. Uses signOut({ scope: 'local' }) which clears
+ * both localStorage tokens and the in-memory session, preventing the client
+ * from reusing stale tokens on subsequent getSession() calls.
  */
 export function clearStaleAuthState(): void {
   try {
@@ -51,17 +53,24 @@ export function clearStaleAuthState(): void {
     safeLocalStorage.removeItem('auth:cachedUser');
     safeLocalStorage.removeItem('auth:guestUser');
 
-    // Clear all Supabase auth tokens (pattern: sb-{project-ref}-auth-token)
-    // Use safeLocalStorage for consistent access (falls back to MemoryStorage if needed)
-    for (let i = safeLocalStorage.length - 1; i >= 0; i--) {
-      const key = safeLocalStorage.key(i);
-      if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
-        safeLocalStorage.removeItem(key);
+    // signOut({ scope: 'local' }) clears localStorage tokens AND the client's
+    // internal session cache. This is critical — without it, the client would
+    // keep trying to refresh stale tokens from its in-memory cache even after
+    // localStorage is cleared.
+    if (supabase) {
+      void supabase.auth.signOut({ scope: 'local' });
+    } else {
+      // Fallback: manually clear Supabase auth tokens if client unavailable
+      for (let i = safeLocalStorage.length - 1; i >= 0; i--) {
+        const key = safeLocalStorage.key(i);
+        if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
+          safeLocalStorage.removeItem(key);
+        }
       }
     }
 
     if (import.meta.env.DEV) {
-      console.warn('[Auth] Cleared stale auth state due to invalid refresh token');
+      console.warn('[Auth] Cleared stale auth state (localStorage + client cache)');
     }
   } catch {
     // localStorage not available
