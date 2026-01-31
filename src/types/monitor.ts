@@ -299,6 +299,9 @@ export interface TournamentMonitor {
   // Stabilität (Phase 1)
   performanceMode: PerformanceMode;       // 'auto' | 'high' | 'low'
 
+  // TV-Kalibrierung
+  overscanPx?: number;                    // 0-80, Default: 48
+
   // Slides
   slides: MonitorSlide[];
 
@@ -316,6 +319,7 @@ export const DEFAULT_MONITOR: Omit<TournamentMonitor, 'id' | 'name' | 'createdAt
   transitionDuration: 500,
   theme: 'dark',
   performanceMode: 'auto',
+  overscanPx: 48,
   slides: [],
 };
 

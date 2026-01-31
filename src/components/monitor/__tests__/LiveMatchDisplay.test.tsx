@@ -203,12 +203,14 @@ describe('LiveMatchDisplay', () => {
     });
 
     it('rendert mit langem Team-Namen', () => {
+      const fullName = 'FC Sportfreunde 1897 Düsseldorf-Oberkassel e.V.';
       const match = createMockMatch({
-        homeTeam: { id: 'team-1', name: 'FC Sportfreunde 1897 Düsseldorf-Oberkassel e.V.' },
+        homeTeam: { id: 'team-1', name: fullName },
       });
       render(<LiveMatchDisplay match={match} />);
 
-      expect(screen.getByText('FC Sportfreunde 1897 Düsseldorf-Oberkassel e.V.')).toBeInTheDocument();
+      // TeamNameDisplay abbreviates long names; full name is in title attribute
+      expect(screen.getByTitle(fullName)).toBeInTheDocument();
     });
 
     it('rendert mit Emoji im Team-Namen', () => {

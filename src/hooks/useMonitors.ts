@@ -71,6 +71,7 @@ export interface MonitorUpdate {
   transition: TransitionType;
   transitionDuration: number;
   performanceMode: PerformanceMode;
+  overscanPx?: number;
   templateId?: string;
   templateVariables?: Record<string, string>;
 }
@@ -206,6 +207,7 @@ export function useMonitors(
         transition: updates.transition ?? existingMonitor.transition,
         transitionDuration: updates.transitionDuration ?? existingMonitor.transitionDuration,
         performanceMode: updates.performanceMode ?? existingMonitor.performanceMode,
+        overscanPx: updates.overscanPx ?? existingMonitor.overscanPx,
         templateId: updates.templateId ?? existingMonitor.templateId,
         templateVariables: updates.templateVariables ?? existingMonitor.templateVariables,
         updatedAt: now,

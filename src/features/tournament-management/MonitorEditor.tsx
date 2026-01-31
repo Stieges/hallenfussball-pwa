@@ -180,6 +180,7 @@ export function MonitorEditor({
     transitionDuration?: number;
     performanceMode?: PerformanceMode;
     theme?: MonitorTheme;
+    overscanPx?: number;
   }) => {
     if (!monitor) {return;}
 
@@ -657,6 +658,31 @@ export function MonitorEditor({
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Overscan */}
+              <div style={inputGroupStyle}>
+                <label style={labelStyle}>
+                  TV-Rand ({monitor.overscanPx ?? 48}px)
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={80}
+                  step={4}
+                  value={monitor.overscanPx ?? 48}
+                  onChange={(e) => void handleUpdateSettings({ overscanPx: Number(e.target.value) })}
+                  style={{ width: '100%', accentColor: cssVars.colors.primary }}
+                />
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: cssVars.fontSizes.xs,
+                  color: cssVars.colors.textMuted,
+                }}>
+                  <span>Kein Rand</span>
+                  <span>80px</span>
+                </div>
               </div>
             </div>
           </div>

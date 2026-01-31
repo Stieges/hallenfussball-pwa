@@ -155,9 +155,10 @@ interface SlideRendererProps {
   tournament: Tournament;
   performanceSettings: PerformanceSettings;
   theme: MonitorTheme;
+  overscanPx?: number;
 }
 
-function SlideRenderer({ slide, tournament, performanceSettings, theme }: SlideRendererProps) {
+function SlideRenderer({ slide, tournament, performanceSettings, theme, overscanPx }: SlideRendererProps) {
   const resolvedTheme = resolveTheme(theme);
   const themeColors = monitorThemes[resolvedTheme];
 
@@ -168,7 +169,7 @@ function SlideRenderer({ slide, tournament, performanceSettings, theme }: SlideR
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: displaySpacing.overscan,
+    padding: `${overscanPx ?? 48}px`,
     boxSizing: 'border-box',
     background: themeColors.backgroundGradient,
     color: themeColors.text,
@@ -924,7 +925,10 @@ export function MonitorDisplayPage({
   );
 
   // Anti-burn-in pixel shift for OLED/Plasma displays
-  const pixelShift = usePixelShift(60_000, 2, performanceSettings.enableAnimations);
+  // Scale shift amount with overscan — no shift when overscan is 0 (would clip content)
+  const overscanPx = monitor?.overscanPx ?? 48;
+  const maxPixelShift = Math.min(2, Math.floor(overscanPx / 4));
+  const pixelShift = usePixelShift(60_000, maxPixelShift, performanceSettings.enableAnimations);
 
   // Current slide
   const currentSlide = useMemo(
@@ -1193,6 +1197,7 @@ export function MonitorDisplayPage({
               tournament={tournament}
               performanceSettings={performanceSettings}
               theme={monitor.theme}
+              overscanPx={monitor.overscanPx}
             />
           </TransitionWrapper>
         )}

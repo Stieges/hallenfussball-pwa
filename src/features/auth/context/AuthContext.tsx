@@ -204,23 +204,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setConnectionState('offline');
           setIsLoading(false);
 
-          // Clear stale cached user to prevent skeleton-stuck issue on next page load
-          // The cache was likely created for a session that's now expired/invalid
-          try {
-            safeLocalStorage.removeItem('auth:cachedUser');
-            // Also clear any Supabase auth tokens - they're likely stale/corrupted
-            // and causing getSession() to hang trying to refresh them
-            // Pattern: sb-{project-ref}-auth-token
-            // Use safeLocalStorage for consistent access (falls back to MemoryStorage if needed)
-            for (let i = safeLocalStorage.length - 1; i >= 0; i--) {
-              const key = safeLocalStorage.key(i);
-              if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
-                safeLocalStorage.removeItem(key);
-              }
-            }
-          } catch {
-            // localStorage not available
-          }
+          // Clear stale auth state (both localStorage AND client's internal cache)
+          // to prevent getSession() from reusing stale in-memory tokens on reconnect
+          clearStaleAuthState();
 
           // Set flag for toast notification (read by useAuthTimeoutToast hook)
           try {
@@ -249,11 +235,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
           await updateAuthState(currentSession);
         }
       } catch (error) {
-        // Invalid Refresh Token means session is permanently expired - clear and allow fresh login
+        // Invalid Refresh Token: another tab may have just consumed the single-use
+        // refresh token. Wait briefly and retry before clearing state.
         if (isInvalidRefreshTokenError(error)) {
           if (import.meta.env.DEV) {
-            console.warn('[Auth] Invalid refresh token during init - clearing stale state');
+            console.warn('[Auth] Invalid refresh token during init - retrying after brief wait');
           }
+
+          // Wait for the other tab to finish writing the new token to localStorage
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            const { data: { session: retrySession } } = await supabase!.auth.getSession();
+            if (retrySession && mounted) {
+              // Other tab refreshed the token in time
+              if (import.meta.env.DEV) {
+                console.warn('[Auth] Recovered session after invalid refresh token retry');
+              }
+              setConnectionState('connected');
+              await updateAuthState(retrySession);
+              return;
+            }
+          } catch {
+            // Retry also failed — fall through to clear state
+          }
+
+          // Genuinely invalid — clear and force re-login
           clearStaleAuthState();
           if (mounted) {
             setUser(null);
