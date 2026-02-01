@@ -84,7 +84,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (sessionError) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card}>
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Sitzung abgelaufen">
           <div style={styles.errorIcon}>!</div>
           <h1 style={styles.title}>Sitzung abgelaufen</h1>
           <p style={styles.subtitle}>
@@ -108,7 +108,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (authLoading) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card}>
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Wird geladen">
           <div style={styles.spinner} />
           <p style={styles.subtitle}>Wird geladen...</p>
         </div>
@@ -120,7 +120,7 @@ export const SetPasswordScreen: React.FC = () => {
   if (showSuccess) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card}>
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Passwort geändert">
           <div style={styles.successIcon}>✓</div>
           <h2 style={styles.successTitle}>Passwort geändert!</h2>
           <p style={styles.successText}>

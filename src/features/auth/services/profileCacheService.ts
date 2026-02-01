@@ -58,7 +58,7 @@ export async function cacheUserProfile(user: User): Promise<void> {
     await db.set(PROFILE_CACHE_KEY, cachedData);
   } catch (error) {
     // Silently fail - caching is not critical
-    console.warn('[ProfileCache] Failed to cache profile:', error);
+    if (import.meta.env.DEV) { console.warn('[ProfileCache] Failed to cache profile:', error); }
   }
 }
 
@@ -99,7 +99,7 @@ export async function getCachedProfile(ignoreExpiry = false): Promise<User | nul
     return cachedData.user;
   } catch (error) {
     // Silently fail - just return null
-    console.warn('[ProfileCache] Failed to retrieve cached profile:', error);
+    if (import.meta.env.DEV) { console.warn('[ProfileCache] Failed to retrieve cached profile:', error); }
     return null;
   }
 }
@@ -122,7 +122,7 @@ export async function clearProfileCache(): Promise<void> {
     await db.delete(PROFILE_CACHE_KEY);
   } catch (error) {
     // Silently fail - clearing is not critical
-    console.warn('[ProfileCache] Failed to clear profile cache:', error);
+    if (import.meta.env.DEV) { console.warn('[ProfileCache] Failed to clear profile cache:', error); }
   }
 }
 
@@ -152,7 +152,7 @@ export async function updateCachedProfile(updates: Partial<User>): Promise<void>
 
     await cacheUserProfile(updatedUser);
   } catch (error) {
-    console.warn('[ProfileCache] Failed to update cached profile:', error);
+    if (import.meta.env.DEV) { console.warn('[ProfileCache] Failed to update cached profile:', error); }
   }
 }
 

@@ -10,6 +10,7 @@
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import type { User } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
+import { safeLocalStorage } from '../../../core/utils/safeStorage';
 
 /**
  * Auth provider types
@@ -54,7 +55,7 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
         return { isOAuthOnly: false, provider: 'unknown', error: 'User not found' };
       }
 
-      console.error('[authHelpers] checkOAuthOnlyUser error:', error);
+      if (import.meta.env.DEV) { console.error('[authHelpers] checkOAuthOnlyUser error:', error); }
 
       // Handle network errors specifically
       if (error.message && (error.message.includes('fetch') || error.message.includes('network'))) {
@@ -71,7 +72,7 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
 
     return { isOAuthOnly, provider };
   } catch (err) {
-    console.error('[authHelpers] checkOAuthOnlyUser exception:', err);
+    if (import.meta.env.DEV) { console.error('[authHelpers] checkOAuthOnlyUser exception:', err); }
     // Determine if it's a fetch error
     const message = err instanceof Error ? err.message : 'Unexpected error';
     if (message.includes('fetch') || message.includes('Load failed')) {
@@ -140,7 +141,7 @@ export async function userHasPassword(email: string): Promise<boolean> {
  */
 const getLegacyUsers = (): User[] => {
   try {
-    const usersJson = localStorage.getItem(AUTH_STORAGE_KEYS.USERS);
+    const usersJson = safeLocalStorage.getItem(AUTH_STORAGE_KEYS.USERS);
     return usersJson ? (JSON.parse(usersJson) as User[]) : [];
   } catch {
     return [];

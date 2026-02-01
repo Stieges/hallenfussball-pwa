@@ -2,6 +2,7 @@
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { generateUniqueId } from '../../utils/idGenerator';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 /**
  * Supported mutation types
@@ -60,7 +61,7 @@ export class MutationQueue {
         if (typeof window !== 'undefined') {
             window.addEventListener('online', () => {
                 // eslint-disable-next-line no-console
-                console.log('MutationQueue: Online detected, processing queue...');
+                if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
                 void this.process();
             });
 
@@ -204,7 +205,7 @@ export class MutationQueue {
         this.failedQueue.push(failedItem);
         this.saveFailed();
         // eslint-disable-next-line no-console
-        console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`);
+        if (import.meta.env.DEV) { console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`); }
     }
 
     /**
@@ -235,7 +236,7 @@ export class MutationQueue {
         this.notifyListeners();
 
         // eslint-disable-next-line no-console
-        console.log(`MutationQueue: Retrying failed mutation ${id}`);
+        if (import.meta.env.DEV) { console.log(`MutationQueue: Retrying failed mutation ${id}`); }
 
         // Try to process immediately
         if (navigator.onLine) {
@@ -273,7 +274,7 @@ export class MutationQueue {
         this.notifyListeners();
 
         // eslint-disable-next-line no-console
-        console.log(`MutationQueue: Retrying ${count} failed mutations`);
+        if (import.meta.env.DEV) { console.log(`MutationQueue: Retrying ${count} failed mutations`); }
 
         // Try to process immediately
         if (navigator.onLine) {
@@ -311,41 +312,41 @@ export class MutationQueue {
 
     private load() {
         try {
-            const raw = localStorage.getItem(STORAGE_KEY);
+            const raw = safeLocalStorage.getItem(STORAGE_KEY);
             if (raw) {
                 this.queue = JSON.parse(raw) as MutationItem[];
             }
         } catch (e) {
-            console.error('MutationQueue: Failed to load queue', e);
+            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load queue', e); }
             this.queue = [];
         }
     }
 
     private save() {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
+            safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
         } catch (e) {
-            console.error('MutationQueue: Failed to save queue', e);
+            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save queue', e); }
         }
     }
 
     private loadFailed() {
         try {
-            const raw = localStorage.getItem(FAILED_STORAGE_KEY);
+            const raw = safeLocalStorage.getItem(FAILED_STORAGE_KEY);
             if (raw) {
                 this.failedQueue = JSON.parse(raw) as FailedMutationItem[];
             }
         } catch (e) {
-            console.error('MutationQueue: Failed to load failed queue', e);
+            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
             this.failedQueue = [];
         }
     }
 
     private saveFailed() {
         try {
-            localStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(this.failedQueue));
+            safeLocalStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(this.failedQueue));
         } catch (e) {
-            console.error('MutationQueue: Failed to save failed queue', e);
+            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save failed queue', e); }
         }
     }
 
@@ -370,13 +371,13 @@ export class MutationQueue {
                 try {
                     await this.executeMutation(item);
                 } catch (error) {
-                    console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error);
+                    if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
 
                     item.retryCount++;
 
                     if (item.retryCount >= MAX_RETRIES) {
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                        console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`);
+                        if (import.meta.env.DEV) { console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`); }
                         // Move to dead-letter queue instead of dropping
                         this.queue.shift();
                         this.moveToDeadLetter(item, errorMessage);

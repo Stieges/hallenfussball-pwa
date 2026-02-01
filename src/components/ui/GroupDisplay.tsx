@@ -56,7 +56,7 @@ export const GroupDisplay: React.FC<GroupDisplayProps> = ({
             justifyContent: 'center',
             padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
             borderRadius: cssVars.borderRadius.sm,
-            backgroundColor: cssVars.colors.primary + '20',
+            backgroundColor: cssVars.colors.primaryLight,
             color: cssVars.colors.primary,
             fontSize: cssVars.fontSizes.sm,
             fontWeight: 600,

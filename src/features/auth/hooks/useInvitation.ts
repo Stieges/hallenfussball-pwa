@@ -71,7 +71,7 @@ export const useInvitation = (): UseInvitationReturn => {
         }
         return result;
       } catch (err) {
-        console.error('Error validating token:', err);
+        if (import.meta.env.DEV) { console.error('Error validating token:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return { valid: false, error: 'not_found' };
       } finally {
@@ -100,7 +100,7 @@ export const useInvitation = (): UseInvitationReturn => {
         }
         return result;
       } catch (err) {
-        console.error('Error accepting invitation:', err);
+        if (import.meta.env.DEV) { console.error('Error accepting invitation:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
       } finally {
@@ -132,7 +132,7 @@ export const useInvitation = (): UseInvitationReturn => {
         }
         return result;
       } catch (err) {
-        console.error('Error creating invitation:', err);
+        if (import.meta.env.DEV) { console.error('Error creating invitation:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
       } finally {
@@ -156,7 +156,7 @@ export const useInvitation = (): UseInvitationReturn => {
       }
       return success;
     } catch (err) {
-      console.error('Error deactivating invitation:', err);
+      if (import.meta.env.DEV) { console.error('Error deactivating invitation:', err); }
       setError('Ein unerwarteter Fehler ist aufgetreten');
       return false;
     } finally {
@@ -171,7 +171,7 @@ export const useInvitation = (): UseInvitationReturn => {
     try {
       return await getActiveInvitationsForTournament(tournamentId);
     } catch (err) {
-      console.error('Error getting active invitations:', err);
+      if (import.meta.env.DEV) { console.error('Error getting active invitations:', err); }
       return [];
     }
   }, []);

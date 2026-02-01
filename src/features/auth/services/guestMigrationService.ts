@@ -102,7 +102,7 @@ async function migrateTournament(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Failed to migrate tournament "${tournament.title}":`, error);
+    if (import.meta.env.DEV) { console.error(`Failed to migrate tournament "${tournament.title}":`, error); }
     return { success: false, error: message };
   }
 }
@@ -140,7 +140,7 @@ export async function migrateGuestTournaments(
 
   // Check if Supabase is configured
   if (!isSupabaseConfigured) {
-    console.warn('Guest migration skipped: Supabase not configured');
+    if (import.meta.env.DEV) { console.warn('Guest migration skipped: Supabase not configured'); }
     return result;
   }
 

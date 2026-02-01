@@ -7,6 +7,7 @@
  */
 
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
+import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
 import { useTheme } from '../../../hooks/useTheme';
@@ -74,14 +75,14 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   // Check for existing cooldown on mount and handle countdown
   useEffect(() => {
     const checkCooldown = () => {
-      const lastReset = localStorage.getItem(PASSWORD_RESET_TIMESTAMP_KEY);
+      const lastReset = safeLocalStorage.getItem(PASSWORD_RESET_TIMESTAMP_KEY);
       if (lastReset) {
         const elapsed = Math.floor((Date.now() - parseInt(lastReset, 10)) / 1000);
         const remaining = PASSWORD_RESET_COOLDOWN_SECONDS - elapsed;
         if (remaining > 0) {
           setPasswordResetCooldown(remaining);
         } else {
-          localStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
+          safeLocalStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
           setPasswordResetCooldown(0);
         }
       }
@@ -94,7 +95,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     const interval = setInterval(() => {
       setPasswordResetCooldown((prev) => {
         if (prev <= 1) {
-          localStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
+          safeLocalStorage.removeItem(PASSWORD_RESET_TIMESTAMP_KEY);
           return 0;
         }
         return prev - 1;
@@ -121,7 +122,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
       const result = await resetPassword(user.email);
       if (result.success) {
         // Set cooldown timestamp
-        localStorage.setItem(PASSWORD_RESET_TIMESTAMP_KEY, Date.now().toString());
+        safeLocalStorage.setItem(PASSWORD_RESET_TIMESTAMP_KEY, Date.now().toString());
         setPasswordResetCooldown(PASSWORD_RESET_COOLDOWN_SECONDS);
         showSuccess(`E-Mail zum Zurücksetzen wurde an ${user.email} gesendet.`);
       } else {

@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Tournament, Match } from '../../../types/tournament';
 import type { TournamentMembership } from '../types/auth.types';
 import { AUTH_STORAGE_KEYS } from '../types/auth.types';
+import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from './useAuth';
 import type { TournamentDisplayStatus, TournamentCardData } from '../components/TournamentCard';
 import { useRepository } from '../../../hooks/useRepository';
@@ -191,7 +192,7 @@ export const useUserTournaments = (
 
       // Load memberships from localStorage (Legacy / Hybrid support)
       // TODO: Move memberships to Repository too
-      const membershipsRaw = localStorage.getItem(AUTH_STORAGE_KEYS.MEMBERSHIPS);
+      const membershipsRaw = safeLocalStorage.getItem(AUTH_STORAGE_KEYS.MEMBERSHIPS);
       const allMemberships: TournamentMembership[] = membershipsRaw
         ? (JSON.parse(membershipsRaw) as TournamentMembership[])
         : [];
@@ -236,7 +237,7 @@ export const useUserTournaments = (
       setTournaments(userTournaments);
 
     } catch (err) {
-      console.error('Failed to load user tournaments:', err);
+      if (import.meta.env.DEV) { console.error('Failed to load user tournaments:', err); }
       setError('Turniere konnten nicht geladen werden');
     } finally {
       setIsLoading(false);

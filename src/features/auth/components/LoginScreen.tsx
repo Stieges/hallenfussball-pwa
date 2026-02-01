@@ -141,8 +141,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     }
   };
 
-  const handleGuestContinue = () => {
-    void continueAsGuest();
+  const handleGuestContinue = async () => {
+    await continueAsGuest();
     onContinueAsGuest?.();
   };
 
@@ -412,12 +412,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 onClick={() => void handleForgotPassword()}
                 disabled={isLoading}
                 style={styles.forgotPasswordLink}
-                onFocus={(e) => {
-                  Object.assign(e.currentTarget.style, styles.forgotPasswordLinkFocused);
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = 'none';
-                }}
               >
                 Passwort vergessen?
               </button>
@@ -443,12 +437,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           type="button"
           onClick={() => setLoginMode(loginMode === 'password' ? 'magic-link' : 'password')}
           style={styles.modeToggle}
-          onFocus={(e) => {
-            Object.assign(e.currentTarget.style, styles.modeToggleFocused);
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.outline = 'none';
-          }}
         >
           {loginMode === 'password'
             ? 'Stattdessen Magic Link verwenden'
@@ -477,7 +465,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <Button
           variant="ghost"
           fullWidth
-          onClick={handleGuestContinue}
+          onClick={() => void handleGuestContinue()}
           disabled={isLoading}
           style={styles.ghostButton}
           data-testid="login-guest-button"
@@ -491,12 +479,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             type="button"
             onClick={onNavigateToRegister}
             style={styles.link}
-            onFocus={(e) => {
-              Object.assign(e.currentTarget.style, styles.linkFocused);
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.outline = 'none';
-            }}
             data-testid="login-register-link"
           >
             Registrieren

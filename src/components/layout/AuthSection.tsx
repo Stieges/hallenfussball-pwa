@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'react';
+import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
@@ -188,7 +189,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   // We use state instead of memo so we can clear it after a timeout
   const [showSkeleton, setShowSkeleton] = useState(() => {
     try {
-      return localStorage.getItem('auth:cachedUser') !== null;
+      return safeLocalStorage.getItem('auth:cachedUser') !== null;
     } catch {
       return false;
     }
@@ -202,7 +203,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
         setShowSkeleton(false);
         // Also clear the stale cache so next page load doesn't have this issue
         try {
-          localStorage.removeItem('auth:cachedUser');
+          safeLocalStorage.removeItem('auth:cachedUser');
         } catch {
           // localStorage not available
         }

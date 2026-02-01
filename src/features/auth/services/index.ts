@@ -1,4 +1,3 @@
-export * from './sessionService';
 export * from './invitationService';
 export * from './membershipService';
 export * from './profileCacheService';

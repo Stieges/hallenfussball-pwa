@@ -56,7 +56,7 @@ export const FieldDisplay: React.FC<FieldDisplayProps> = ({
             justifyContent: 'center',
             padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
             borderRadius: cssVars.borderRadius.sm,
-            backgroundColor: cssVars.colors.accent + '20',
+            backgroundColor: cssVars.colors.accentLight,
             color: cssVars.colors.accent,
             fontSize: cssVars.fontSizes.sm,
             fontWeight: 600,

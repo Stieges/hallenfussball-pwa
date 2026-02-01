@@ -15,7 +15,7 @@ import type { Session as SupabaseSession } from '@supabase/supabase-js';
 import { mapSupabaseUser, mapSupabaseSession, createLocalGuestUser, type ProfileData } from './authMapper';
 import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
-import { clearProfileCache } from '../services/profileCacheService';
+import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 
@@ -42,23 +42,38 @@ export function isInvalidRefreshTokenError(error: unknown): boolean {
 }
 
 /**
+ * Remove orphaned localStorage keys from Phase 1 auth.
+ * These are never cleaned up by the current auth system and can cause
+ * conflicts when stale data persists across sessions.
+ */
+function clearLegacyAuthKeys(): void {
+  const legacyKeys = ['auth:session', 'auth:currentUser', 'users'];
+  for (const key of legacyKeys) {
+    safeLocalStorage.removeItem(key);
+  }
+}
+
+/**
  * Clears all stale auth state from localStorage AND the Supabase client's
  * internal session cache. Uses signOut({ scope: 'local' }) which clears
  * both localStorage tokens and the in-memory session, preventing the client
  * from reusing stale tokens on subsequent getSession() calls.
  */
-export function clearStaleAuthState(): void {
+export async function clearStaleAuthState(): Promise<void> {
   try {
     // Clear cached user profile
     safeLocalStorage.removeItem('auth:cachedUser');
     safeLocalStorage.removeItem('auth:guestUser');
+
+    // Clear legacy keys from Phase 1 auth (Fix 4)
+    clearLegacyAuthKeys();
 
     // signOut({ scope: 'local' }) clears localStorage tokens AND the client's
     // internal session cache. This is critical — without it, the client would
     // keep trying to refresh stale tokens from its in-memory cache even after
     // localStorage is cleared.
     if (supabase) {
-      void supabase.auth.signOut({ scope: 'local' });
+      await supabase.auth.signOut({ scope: 'local' });
     } else {
       // Fallback: manually clear Supabase auth tokens if client unavailable
       for (let i = safeLocalStorage.length - 1; i >= 0; i--) {
@@ -73,7 +88,7 @@ export function clearStaleAuthState(): void {
       console.warn('[Auth] Cleared stale auth state (localStorage + client cache)');
     }
   } catch {
-    // localStorage not available
+    // localStorage not available or signOut failed
   }
 }
 
@@ -414,29 +429,36 @@ export async function loginWithGoogle(): Promise<{ success: boolean; error?: str
  * Logout
  */
 export async function logout(deps: AuthActionDeps): Promise<void> {
-  // Clear local state even if Supabase is not configured
-  if (!isSupabaseConfigured || !supabase) {
+  // Local cleanup that MUST run regardless of signOut success/failure
+  const cleanupLocal = () => {
     safeLocalStorage.removeItem('auth:guestUser');
-    safeLocalStorage.removeItem('auth:cachedUser'); // BUG-004: Also clear cached user
-    void clearProfileCache(); // Also clear IndexedDB cache
+    safeLocalStorage.removeItem('auth:cachedUser');
+    // Clear legacy keys (Fix 4)
+    clearLegacyAuthKeys();
+    // Clear offline mutation queue to prevent replaying with wrong user (Fix 5)
+    safeLocalStorage.removeItem('mutation_queue_v1');
+    safeLocalStorage.removeItem('mutation_queue_failed_v1');
+    void clearProfileCache();
     deps.setUser(null);
     deps.setSession(null);
     deps.setIsGuest(false);
+  };
+
+  if (!isSupabaseConfigured || !supabase) {
+    cleanupLocal();
     return;
   }
 
   try {
     await supabase.auth.signOut();
-    safeLocalStorage.removeItem('auth:guestUser');
-    safeLocalStorage.removeItem('auth:cachedUser'); // BUG-004: Also clear cached user
-    void clearProfileCache(); // Also clear IndexedDB cache
-    deps.setUser(null);
-    deps.setSession(null);
-    deps.setIsGuest(false);
   } catch (err) {
     if (import.meta.env.DEV) {
-      console.error('Logout error:', err);
+      console.error('Logout signOut error:', err);
     }
+    // Fallback: clear local tokens manually since signOut failed
+    await clearStaleAuthState();
+  } finally {
+    cleanupLocal();
   }
 }
 
@@ -575,7 +597,9 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
             if (import.meta.env.DEV) {
               console.warn('[Auth] Invalid refresh token detected, clearing stale state');
             }
-            clearStaleAuthState();
+            // Fire-and-forget here (sync callback); the catch block below
+            // will await clearStaleAuthState() for thorough cleanup
+            void clearStaleAuthState();
             return false;
           }
           return true;
@@ -604,7 +628,7 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
       if (import.meta.env.DEV) {
         console.warn('[Auth] Session expired, clearing auth state for fresh login');
       }
-      clearStaleAuthState();
+      await clearStaleAuthState();
       deps.setUser(null);
       deps.setSession(null);
       deps.setIsGuest(false);
@@ -742,12 +766,23 @@ export async function updateProfile(
     }
 
     // Update local state
-    deps.setUser({
+    const updatedUser = {
       ...user,
       name: updates.name?.trim() ?? user.name,
       avatarUrl: updates.avatarUrl ?? user.avatarUrl,
       updatedAt: new Date().toISOString(),
-    });
+    };
+    deps.setUser(updatedUser);
+
+    // Sync to offline caches (localStorage + IndexedDB)
+    try {
+      safeLocalStorage.setItem('auth:cachedUser', JSON.stringify(updatedUser));
+    } catch {
+      // localStorage not available, skip
+    }
+    if (isFeatureEnabled('OFFLINE_FIRST')) {
+      void cacheUserProfile(updatedUser);
+    }
 
     return { success: true };
   } catch (err) {
