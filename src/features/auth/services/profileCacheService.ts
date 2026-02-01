@@ -8,6 +8,8 @@
  */
 
 import { IndexedDBAdapter } from '../../../core/storage/IndexedDBAdapter';
+import { safeLocalStorage } from '../../../core/utils/safeStorage';
+import { isFeatureEnabled } from '../../../config';
 import { User } from '../types/auth.types';
 
 // Storage key for cached profile
@@ -179,4 +181,40 @@ export async function getCacheTimestamp(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Restores a cached user from localStorage (sync) or IndexedDB (async fallback).
+ *
+ * Checks localStorage first for fast sync restore, then falls back to
+ * IndexedDB via getCachedProfile if OFFLINE_FIRST feature flag is enabled.
+ *
+ * @returns The cached User or null if no cache is available
+ *
+ * @example
+ * ```typescript
+ * const cachedUser = await restoreUserFromCache();
+ * if (cachedUser) {
+ *   setUser(cachedUser);
+ *   setConnectionState('offline');
+ * }
+ * ```
+ */
+export async function restoreUserFromCache(): Promise<User | null> {
+  // Try localStorage first (sync, quick)
+  const cachedUserJson = safeLocalStorage.getItem('auth:cachedUser');
+  if (cachedUserJson) {
+    try {
+      return JSON.parse(cachedUserJson) as User;
+    } catch {
+      // Invalid cached user in localStorage
+    }
+  }
+
+  // Fall back to IndexedDB (async, more robust)
+  if (isFeatureEnabled('OFFLINE_FIRST')) {
+    return getCachedProfile(true); // ignoreExpiry for offline
+  }
+
+  return null;
 }

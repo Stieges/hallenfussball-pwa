@@ -31,11 +31,15 @@ export interface RegisterFormData {
   registrationCode: string;
 }
 
+export type RegisterFormField = keyof RegisterFormData;
+
 export interface UseRegisterFormReturn {
   /** Form field values */
   formData: RegisterFormData;
   /** Validation errors */
   errors: RegisterFormErrors;
+  /** Which fields have been blurred at least once */
+  touched: Record<RegisterFormField, boolean>;
   /** Email typo suggestion */
   emailSuggestion: string | null;
   /** Set a single field value */
@@ -46,6 +50,10 @@ export interface UseRegisterFormReturn {
   setEmailSuggestion: React.Dispatch<React.SetStateAction<string | null>>;
   /** Validate all fields, returns true if valid */
   validateForm: () => boolean;
+  /** Validate a single field (client-side only) */
+  validateField: (field: RegisterFormField) => void;
+  /** Handle blur event — marks field as touched and validates it */
+  handleBlur: (field: RegisterFormField) => void;
   /** Reset form to initial state */
   resetForm: () => void;
   /** Apply email suggestion */
@@ -60,9 +68,18 @@ const initialFormData: RegisterFormData = {
   registrationCode: '',
 };
 
+const initialTouched: Record<RegisterFormField, boolean> = {
+  name: false,
+  email: false,
+  password: false,
+  confirmPassword: false,
+  registrationCode: false,
+};
+
 export function useRegisterForm(): UseRegisterFormReturn {
   const [formData, setFormData] = useState<RegisterFormData>(initialFormData);
   const [errors, setErrors] = useState<RegisterFormErrors>({});
+  const [touched, setTouched] = useState<Record<RegisterFormField, boolean>>(initialTouched);
   const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
 
   const setField = useCallback(<K extends keyof RegisterFormData>(
@@ -122,9 +139,77 @@ export function useRegisterForm(): UseRegisterFormReturn {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
+  const validateField = useCallback((field: RegisterFormField) => {
+    setErrors(prev => {
+      const updated = { ...prev };
+
+      switch (field) {
+        case 'name': {
+          const trimmedName = formData.name.trim();
+          if (trimmedName.length < 2) {
+            updated.name = AUTH_ERRORS.NAME_TOO_SHORT;
+          } else if (trimmedName.length > 100) {
+            updated.name = AUTH_ERRORS.NAME_TOO_LONG;
+          } else {
+            delete updated.name;
+          }
+          break;
+        }
+        case 'email': {
+          const emailValidation = validateEmail(formData.email);
+          if (!emailValidation.isValid) {
+            updated.email = emailValidation.error;
+            if (emailValidation.suggestion) {
+              setEmailSuggestion(emailValidation.suggestion);
+            }
+          } else {
+            delete updated.email;
+            setEmailSuggestion(null);
+          }
+          break;
+        }
+        case 'password': {
+          if (!formData.password) {
+            updated.password = AUTH_ERRORS.PASSWORD_REQUIRED;
+          } else if (formData.password.length < 6) {
+            updated.password = AUTH_ERRORS.PASSWORD_TOO_SHORT;
+          } else {
+            delete updated.password;
+          }
+          break;
+        }
+        case 'confirmPassword': {
+          if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
+            updated.confirmPassword = AUTH_ERRORS.PASSWORD_MISMATCH;
+          } else {
+            delete updated.confirmPassword;
+          }
+          break;
+        }
+        case 'registrationCode': {
+          // Only validate presence on blur — server-side validation happens on submit
+          if (!formData.registrationCode.trim()) {
+            updated.registrationCode = AUTH_ERRORS.REGISTRATION_CODE_REQUIRED;
+          } else {
+            delete updated.registrationCode;
+          }
+          break;
+        }
+      }
+
+      return updated;
+    });
+  }, [formData]);
+
+  const handleBlur = useCallback((field: RegisterFormField) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    validateField(field);
+  }, [validateField]);
+
   const resetForm = useCallback(() => {
     setFormData(initialFormData);
     setErrors({});
+    setTouched(initialTouched);
     setEmailSuggestion(null);
   }, []);
 
@@ -143,11 +228,14 @@ export function useRegisterForm(): UseRegisterFormReturn {
   return {
     formData,
     errors,
+    touched,
     emailSuggestion,
     setField,
     setErrors,
     setEmailSuggestion,
     validateForm,
+    validateField,
+    handleBlur,
     resetForm,
     applySuggestion,
   };

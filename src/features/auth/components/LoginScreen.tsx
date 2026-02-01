@@ -15,13 +15,16 @@
  */
 
 import React, { useState } from 'react';
-import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
+import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { useAuth } from '../hooks/useAuth';
+import { useLoginForm } from '../hooks/useLoginForm';
 import { checkOAuthOnlyUser, getOAuthPasswordResetMessage } from '../utils/authHelpers';
 import { AUTH_ERRORS } from '../constants';
 import { loginStyles as styles } from './LoginScreen.styles';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
+import { OfflineBanner } from './OfflineBanner';
 
 interface LoginScreenProps {
   /** Called when login is successful */
@@ -34,8 +37,6 @@ interface LoginScreenProps {
   onBack?: () => void;
 }
 
-type LoginMode = 'password' | 'magic-link';
-
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onSuccess,
   onNavigateToRegister,
@@ -45,33 +46,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword, connectionState, reconnect } = useAuth();
   const isOffline = connectionState === 'offline';
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loginMode, setLoginMode] = useState<LoginMode>('password');
-  const [error, setError] = useState<string | null>(null);
+  const {
+    formData, errors: fieldErrors,
+    setEmail, setPassword, setLoginMode,
+    validateForm,
+  } = useLoginForm();
+
+  const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [migratedCount, setMigratedCount] = useState(0);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [resetPasswordSent, setResetPasswordSent] = useState(false);
-
-  // Focus trap for reset password dialog
-  const resetPasswordTrap = useFocusTrap({
-    isActive: resetPasswordSent,
-    onEscape: () => setResetPasswordSent(false),
-  });
-
-  // Focus trap for magic link dialog
-  const magicLinkTrap = useFocusTrap({
-    isActive: magicLinkSent,
-    onEscape: () => setMagicLinkSent(false),
-  });
-
-  // Focus trap for success dialog
-  const successTrap = useFocusTrap({
-    isActive: showSuccess,
-    onEscape: onSuccess,
-  });
 
   // Focus trap for main login form
   const formTrap = useFocusTrap({
@@ -81,62 +67,64 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setApiError(null);
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      if (loginMode === 'magic-link') {
-        // Send magic link
-        const result = await sendMagicLink(email);
+      if (formData.loginMode === 'magic-link') {
+        const result = await sendMagicLink(formData.email);
 
         if (result.success) {
           setMagicLinkSent(true);
         } else {
-          setError(result.error ?? AUTH_ERRORS.MAGIC_LINK_FAILED);
+          setApiError(result.error ?? AUTH_ERRORS.MAGIC_LINK_FAILED);
         }
       } else {
-        // Password login
-        const result = await login(email, password);
+        const result = await login(formData.email, formData.password);
 
         if (result.success) {
-          // Store migration count for success screen
           if (result.migratedCount && result.migratedCount > 0) {
             setMigratedCount(result.migratedCount);
           }
           setShowSuccess(true);
+          const delay = (result.migratedCount && result.migratedCount > 0) ? 2500 : 1500;
           setTimeout(() => {
             onSuccess?.();
-          }, 500);
+          }, delay);
         } else {
-          setError(result.error ?? AUTH_ERRORS.LOGIN_FAILED);
+          setApiError(result.error ?? AUTH_ERRORS.LOGIN_FAILED);
         }
       }
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Login error:', err);
       }
-      setError(AUTH_ERRORS.UNEXPECTED);
+      setApiError(AUTH_ERRORS.UNEXPECTED);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError(null);
+    setApiError(null);
     setIsLoading(true);
 
     try {
       const result = await loginWithGoogle();
       if (!result.success) {
-        setError(result.error ?? AUTH_ERRORS.GOOGLE_LOGIN_FAILED);
+        setApiError(result.error ?? AUTH_ERRORS.GOOGLE_LOGIN_FAILED);
         setIsLoading(false);
       }
-      // On success, the page will redirect
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Google login error:', err);
       }
-      setError(AUTH_ERRORS.UNEXPECTED);
+      setApiError(AUTH_ERRORS.UNEXPECTED);
       setIsLoading(false);
     }
   };
@@ -147,45 +135,39 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
-      setError(AUTH_ERRORS.EMAIL_REQUIRED);
+    if (!formData.email) {
+      setApiError(AUTH_ERRORS.EMAIL_REQUIRED);
       return;
     }
 
-    setError(null);
+    setApiError(null);
     setIsLoading(true);
 
     try {
-      // Ghost Password Prevention: Check if user registered via OAuth
-      // We process this safely - if the check fails (e.g. network), we assume it's safe to proceed
-      // (Supabase will handle the actual email sending logic)
-      const oauthCheck = await checkOAuthOnlyUser(email);
+      const oauthCheck = await checkOAuthOnlyUser(formData.email);
 
-      // If we positively identified as OAuth-only, block and show message
       if (oauthCheck.isOAuthOnly) {
-        setError(getOAuthPasswordResetMessage(oauthCheck.provider));
+        setApiError(getOAuthPasswordResetMessage(oauthCheck.provider));
         setIsLoading(false);
         return;
       }
 
-      // If there was an error during check (e.g. network), we log it but proceed
       if (oauthCheck.error && import.meta.env.DEV) {
         console.warn('OAuth check failed, proceeding with reset anyway:', oauthCheck.error);
       }
 
-      const result = await resetPassword(email);
+      const result = await resetPassword(formData.email);
 
       if (result.success) {
         setResetPasswordSent(true);
       } else {
-        // Handle "Failed to fetch" or other errors specifically if needed
-        setError(result.error ?? AUTH_ERRORS.PASSWORD_RESET_FAILED);
+        setApiError(result.error ?? AUTH_ERRORS.PASSWORD_RESET_FAILED);
       }
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Reset password error:', err);
       }
-      setError(AUTH_ERRORS.UNEXPECTED);
+      setApiError(AUTH_ERRORS.UNEXPECTED);
     } finally {
       setIsLoading(false);
     }
@@ -200,106 +182,32 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   // Reset Password Sent State
   if (resetPasswordSent) {
     return (
-      <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div
-          ref={resetPasswordTrap.containerRef}
-          style={styles.card}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reset-password-title"
-        >
-          <div style={styles.successIcon}>✉</div>
-          <h2 id="reset-password-title" style={styles.successTitle}>E-Mail gesendet!</h2>
-          <p style={styles.successText}>
-            Wir haben einen Link zum Zurücksetzen deines Passworts an <strong>{email}</strong> gesendet.
-            Klicke auf den Link in der E-Mail, um ein neues Passwort zu setzen.
-          </p>
-          <Button
-            variant="ghost"
-            fullWidth
-            onClick={() => setResetPasswordSent(false)}
-            style={{ marginTop: cssVars.spacing.lg }}
-          >
-            Zurück zum Login
-          </Button>
-        </div>
-      </div>
+      <LoginResetPasswordDialog
+        email={formData.email}
+        onClose={() => setResetPasswordSent(false)}
+        onBackdropClick={handleBackdropClick}
+      />
     );
   }
 
   // Magic Link Sent State
   if (magicLinkSent) {
     return (
-      <div style={styles.backdrop} onClick={handleBackdropClick}>
-        <div
-          ref={magicLinkTrap.containerRef}
-          style={styles.card}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="magic-link-title"
-        >
-          <div style={styles.successIcon}>✉</div>
-          <h2 id="magic-link-title" style={styles.successTitle}>Magic Link gesendet!</h2>
-          <p style={styles.successText}>
-            Wir haben einen Login-Link an <strong>{email}</strong> gesendet.
-            Klicke auf den Link in der E-Mail, um dich anzumelden.
-          </p>
-          <Button
-            variant="ghost"
-            fullWidth
-            onClick={() => setMagicLinkSent(false)}
-            style={{ marginTop: cssVars.spacing.lg }}
-          >
-            Andere E-Mail verwenden
-          </Button>
-        </div>
-      </div>
+      <LoginMagicLinkDialog
+        email={formData.email}
+        onClose={() => setMagicLinkSent(false)}
+        onBackdropClick={handleBackdropClick}
+      />
     );
   }
 
   // Success state
   if (showSuccess) {
-    const handleSuccessClose = () => {
-      onSuccess?.();
-    };
-
     return (
-      <div style={styles.backdrop} onClick={handleSuccessClose}>
-        <div
-          ref={successTrap.containerRef}
-          style={styles.card}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="login-success-title"
-        >
-          <button
-            type="button"
-            onClick={handleSuccessClose}
-            style={styles.successCloseButton}
-            aria-label="Schließen"
-          >
-            ✕
-          </button>
-          <div style={styles.successIcon}>✓</div>
-          <h2 id="login-success-title" style={styles.successTitle}>Angemeldet!</h2>
-          <p style={styles.successText}>
-            {migratedCount > 0
-              ? `${migratedCount} Turnier${migratedCount === 1 ? '' : 'e'} synchronisiert!`
-              : 'Du wirst weitergeleitet...'}
-          </p>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleSuccessClose}
-            style={{ marginTop: cssVars.spacing.lg }}
-          >
-            Weiter
-          </Button>
-        </div>
-      </div>
+      <LoginSuccessDialog
+        migratedCount={migratedCount}
+        onClose={() => onSuccess?.()}
+      />
     );
   }
 
@@ -340,25 +248,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         {/* Offline Banner */}
         {isOffline && (
-          <div style={styles.offlineBanner} role="alert" data-testid="offline-banner">
-            <span style={styles.offlineIcon}>📡</span>
-            <div style={styles.offlineTextContainer}>
-              <span style={styles.offlineTitle}>Cloud nicht erreichbar</span>
-              <span style={styles.offlineSubtitle}>Nur Gast-Modus verfügbar</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => void reconnect()}
-              style={styles.offlineRetryButton}
-              data-testid="offline-retry-button"
-            >
-              Erneut
-            </button>
-          </div>
+          <OfflineBanner
+            subtitle="Nur Gast-Modus verfügbar"
+            onRetry={() => void reconnect()}
+            data-testid="offline-banner"
+          />
         )}
 
         <p style={styles.subtitle}>
-          {loginMode === 'password'
+          {formData.loginMode === 'password'
             ? 'Melde dich mit E-Mail und Passwort an.'
             : 'Wir senden dir einen Magic Link per E-Mail.'}
         </p>
@@ -372,41 +270,42 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               id="email"
               name="email"
               type="email"
-              value={email}
+              value={formData.email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@mein-verein.de"
               style={{
                 ...styles.input,
-                ...(error ? styles.inputError : {}),
+                ...(fieldErrors.email ? styles.inputError : {}),
               }}
               autoComplete="email"
               autoFocus
               required
               data-testid="login-email-input"
             />
+            {fieldErrors.email && <span style={styles.errorText}>{fieldErrors.email}</span>}
           </div>
 
-          {loginMode === 'password' && (
+          {formData.loginMode === 'password' && (
             <div style={styles.inputGroup}>
               <label htmlFor="password" style={styles.label}>
                 Passwort
               </label>
-              <input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
-                value={password}
+                value={formData.password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 style={{
                   ...styles.input,
-                  ...(error ? styles.inputError : {}),
+                  ...(fieldErrors.password ? styles.inputError : {}),
                 }}
                 autoComplete="current-password"
                 required
                 minLength={6}
                 data-testid="login-password-input"
               />
+              {fieldErrors.password && <span style={styles.errorText}>{fieldErrors.password}</span>}
               <button
                 type="button"
                 onClick={() => void handleForgotPassword()}
@@ -418,7 +317,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
           )}
 
-          {error && <span style={styles.errorText} data-testid="login-error-message">{error}</span>}
+          {apiError && <span style={styles.errorText} data-testid="login-error-message">{apiError}</span>}
 
           <Button
             type="submit"
@@ -428,17 +327,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             style={styles.button}
             data-testid="login-submit-button"
           >
-            {loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
+            {formData.loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
           </Button>
         </form>
 
         {/* Login mode toggle */}
         <button
           type="button"
-          onClick={() => setLoginMode(loginMode === 'password' ? 'magic-link' : 'password')}
+          onClick={() => setLoginMode(formData.loginMode === 'password' ? 'magic-link' : 'password')}
           style={styles.modeToggle}
         >
-          {loginMode === 'password'
+          {formData.loginMode === 'password'
             ? 'Stattdessen Magic Link verwenden'
             : 'Mit Passwort anmelden'}
         </button>
