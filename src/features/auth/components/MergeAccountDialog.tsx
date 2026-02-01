@@ -279,7 +279,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: cssVars.colors.primary + '20',
+    background: cssVars.colors.primaryLight,
     borderRadius: cssVars.borderRadius.full,
   },
   successIconContainer: {
@@ -288,7 +288,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: cssVars.colors.success + '20',
+    background: cssVars.colors.successLight,
     borderRadius: cssVars.borderRadius.full,
   },
   errorIconContainer: {
@@ -297,7 +297,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: cssVars.colors.error + '20',
+    background: cssVars.colors.errorLight,
     borderRadius: cssVars.borderRadius.full,
   },
   icon: {

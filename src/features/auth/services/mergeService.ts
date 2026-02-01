@@ -54,13 +54,13 @@ export async function checkEmailExists(email: string): Promise<boolean> {
       .maybeSingle();
 
     if (error) {
-      console.error('[MergeService] Error checking email:', error);
+      if (import.meta.env.DEV) { console.error('[MergeService] Error checking email:', error); }
       return false;
     }
 
     return data !== null;
   } catch (error) {
-    console.error('[MergeService] Error checking email:', error);
+    if (import.meta.env.DEV) { console.error('[MergeService] Error checking email:', error); }
     return false;
   }
 }
@@ -127,7 +127,7 @@ export async function mergeAccounts(anonymousUserId: string): Promise<MergeResul
     });
 
     if (error) {
-      console.error('[MergeService] Edge function error:', error);
+      if (import.meta.env.DEV) { console.error('[MergeService] Edge function error:', error); }
       // Extract error message from FunctionsError
       // FunctionsError has a message property, but we use safe access pattern
       const errorMsg = (error as { message?: string }).message ?? 'Fehler beim Zusammenführen der Konten';
@@ -160,7 +160,7 @@ export async function mergeAccounts(anonymousUserId: string): Promise<MergeResul
       tournamentsMerged: response.tournamentsMerged ?? 0,
     };
   } catch (error) {
-    console.error('[MergeService] Error merging accounts:', error);
+    if (import.meta.env.DEV) { console.error('[MergeService] Error merging accounts:', error); }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unbekannter Fehler',

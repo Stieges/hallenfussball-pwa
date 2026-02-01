@@ -139,11 +139,6 @@ export const loginStyles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     textDecoration: 'underline',
     borderRadius: cssVars.borderRadius.sm,
-    outline: 'none',
-  },
-  forgotPasswordLinkFocused: {
-    outline: `2px solid ${cssVars.colors.primary}`,
-    outlineOffset: '2px',
   },
   errorText: {
     fontSize: cssVars.fontSizes.sm,
@@ -167,11 +162,6 @@ export const loginStyles: Record<string, CSSProperties> = {
     cursor: 'pointer',
     textDecoration: 'underline',
     borderRadius: cssVars.borderRadius.sm,
-    outline: 'none',
-  },
-  modeToggleFocused: {
-    outline: `2px solid ${cssVars.colors.primary}`,
-    outlineOffset: '2px',
   },
   divider: {
     display: 'flex',
@@ -215,16 +205,14 @@ export const loginStyles: Record<string, CSSProperties> = {
     background: 'none',
     border: 'none',
     padding: cssVars.spacing.xs,
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
     font: 'inherit',
     cursor: 'pointer',
     fontWeight: cssVars.fontWeights.medium,
     textDecoration: 'none',
     borderRadius: cssVars.borderRadius.sm,
-    outline: 'none',
-  },
-  linkFocused: {
-    outline: `2px solid ${cssVars.colors.primary}`,
-    outlineOffset: '2px',
   },
   successIcon: {
     width: '64px',
@@ -304,6 +292,9 @@ export const loginStyles: Record<string, CSSProperties> = {
   },
   offlineRetryButton: {
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
     background: 'transparent',
     border: `1px solid ${cssVars.colors.warning}`,
     borderRadius: cssVars.borderRadius.sm,

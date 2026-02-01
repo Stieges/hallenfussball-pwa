@@ -184,7 +184,7 @@ export const createInvitation = async (
       .single();
 
     if (error) {
-      console.error('Create invitation error:', error);
+      if (import.meta.env.DEV) { console.error('Create invitation error:', error); }
       return { success: false, error: error.message };
     }
 
@@ -198,7 +198,7 @@ export const createInvitation = async (
       inviteLink,
     };
   } catch (err) {
-    console.error('Create invitation error:', err);
+    if (import.meta.env.DEV) { console.error('Create invitation error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
 };
@@ -276,7 +276,7 @@ export const validateInvitation = async (token: string): Promise<InvitationValid
       inviter,
     };
   } catch (err) {
-    console.error('Validate invitation error:', err);
+    if (import.meta.env.DEV) { console.error('Validate invitation error:', err); }
     return { valid: false, error: 'not_found' };
   }
 };
@@ -329,7 +329,7 @@ export const acceptInvitation = async (token: string, userId: string): Promise<A
       .single();
 
     if (error) {
-      console.error('Accept invitation error:', error);
+      if (import.meta.env.DEV) { console.error('Accept invitation error:', error); }
       return { success: false, error: error.message };
     }
 
@@ -337,7 +337,7 @@ export const acceptInvitation = async (token: string, userId: string): Promise<A
 
     return { success: true, membership };
   } catch (err) {
-    console.error('Accept invitation error:', err);
+    if (import.meta.env.DEV) { console.error('Accept invitation error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
 };

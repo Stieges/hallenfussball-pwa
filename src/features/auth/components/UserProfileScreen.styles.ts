@@ -46,6 +46,9 @@ export const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.primary,
     cursor: 'pointer',
     padding: cssVars.spacing.sm,
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
   },
 
   contentGrid: {

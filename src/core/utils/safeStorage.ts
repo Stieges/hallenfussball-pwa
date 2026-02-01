@@ -19,7 +19,7 @@ class MemoryStorage implements Storage {
     }
 
     getItem(key: string): string | null {
-        return this.data[key] || null;
+        return this.data[key] ?? null;
     }
 
     key(index: number): string | null {

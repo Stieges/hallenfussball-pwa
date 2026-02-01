@@ -167,8 +167,8 @@ export const Step_GroupsAndFields: React.FC<StepGroupsAndFieldsProps> = ({
       {/* Info für roundRobin */}
       {!hasGroups && fields.length > 1 && (
         <Card style={{
-          backgroundColor: cssVars.colors.secondary + '10',
-          border: `1px solid ${cssVars.colors.secondary}30`,
+          backgroundColor: cssVars.colors.secondarySubtle,
+          border: `1px solid ${cssVars.colors.secondaryBorder}`,
         }}>
           <p style={{
             margin: 0,

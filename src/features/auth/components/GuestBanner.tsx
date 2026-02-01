@@ -193,19 +193,19 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: 'column',
     gap: cssVars.spacing.md,
     padding: cssVars.spacing.md,
-    background: cssVars.colors.warning + '15', // 15% opacity
-    border: `1px solid ${cssVars.colors.warning}30`, // 30% opacity
+    background: cssVars.colors.warningSubtle,
+    border: `1px solid ${cssVars.colors.warningBorder}`,
     borderRadius: cssVars.borderRadius.md,
     margin: cssVars.spacing.md,
   },
   // Urgency variants
   bannerWarning: {
-    background: cssVars.colors.warning + '20',
-    border: `1px solid ${cssVars.colors.warning}50`,
+    background: cssVars.colors.warningLight,
+    border: `1px solid ${cssVars.colors.warningBorder}`,
   },
   bannerCritical: {
-    background: cssVars.colors.error + '15',
-    border: `1px solid ${cssVars.colors.error}40`,
+    background: cssVars.colors.errorSubtle,
+    border: `1px solid ${cssVars.colors.errorBorder}`,
   },
   content: {
     display: 'flex',
@@ -219,14 +219,14 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: cssVars.colors.warning + '20',
+    background: cssVars.colors.warningLight,
     borderRadius: cssVars.borderRadius.full,
   },
   iconContainerWarning: {
-    background: cssVars.colors.warning + '30',
+    background: cssVars.colors.warningSelected,
   },
   iconContainerCritical: {
-    background: cssVars.colors.error + '20',
+    background: cssVars.colors.errorLight,
   },
   icon: {
     fontSize: cssVars.fontSizes.xl,
@@ -281,7 +281,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '40px',
+    minHeight: '44px',
     padding: `0 ${cssVars.spacing.md}`,
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
@@ -319,16 +319,16 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'center',
     gap: cssVars.spacing.sm,
     padding: `${cssVars.spacing.xs} ${cssVars.spacing.md}`,
-    background: cssVars.colors.warning + '15',
-    borderBottom: `1px solid ${cssVars.colors.warning}30`,
+    background: cssVars.colors.warningSubtle,
+    borderBottom: `1px solid ${cssVars.colors.warningBorder}`,
   },
   compactBannerWarning: {
-    background: cssVars.colors.warning + '25',
-    borderBottom: `1px solid ${cssVars.colors.warning}50`,
+    background: cssVars.colors.warningLight,
+    borderBottom: `1px solid ${cssVars.colors.warningBorder}`,
   },
   compactBannerCritical: {
-    background: cssVars.colors.error + '15',
-    borderBottom: `1px solid ${cssVars.colors.error}40`,
+    background: cssVars.colors.errorSubtle,
+    borderBottom: `1px solid ${cssVars.colors.errorBorder}`,
   },
   compactText: {
     fontSize: cssVars.fontSizes.sm,
@@ -340,7 +340,10 @@ const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.warning,
     background: 'none',
     border: 'none',
-    padding: 0,
+    padding: `0 ${cssVars.spacing.xs}`,
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
     cursor: 'pointer',
   },
   compactLinkUrgent: {
@@ -349,7 +352,10 @@ const styles: Record<string, CSSProperties> = {
     color: cssVars.colors.error,
     background: 'none',
     border: 'none',
-    padding: 0,
+    padding: `0 ${cssVars.spacing.xs}`,
+    minHeight: '44px',
+    display: 'inline-flex',
+    alignItems: 'center',
     cursor: 'pointer',
   },
 };

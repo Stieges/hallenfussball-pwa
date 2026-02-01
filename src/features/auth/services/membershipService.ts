@@ -91,7 +91,7 @@ export const createOwnerMembership = async (
   userId: string
 ): Promise<TournamentMembership | undefined> => {
   if (!isSupabaseConfigured || !supabase) {
-    console.error('Supabase is not configured');
+    if (import.meta.env.DEV) { console.error('Supabase is not configured'); }
     return undefined;
   }
 
@@ -112,13 +112,13 @@ export const createOwnerMembership = async (
       .single();
 
     if (error) {
-      console.error('Create owner membership error:', error);
+      if (import.meta.env.DEV) { console.error('Create owner membership error:', error); }
       return undefined;
     }
 
     return mapRowToMembership(data as CollaboratorRow);
   } catch (err) {
-    console.error('Create owner membership error:', err);
+    if (import.meta.env.DEV) { console.error('Create owner membership error:', err); }
     return undefined;
   }
 };
@@ -142,15 +142,15 @@ export const getTournamentMembers = async (tournamentId: string): Promise<Tourna
       .not('user_id', 'is', null) // Only accepted members (have user_id)
       .is('declined_at', null); // Not declined
 
-     
+
     if (error || !data) {
-      console.error('Get tournament members error:', error);
+      if (import.meta.env.DEV) { console.error('Get tournament members error:', error); }
       return [];
     }
 
     return (data as CollaboratorRow[]).map(mapRowToMembership);
   } catch (err) {
-    console.error('Get tournament members error:', err);
+    if (import.meta.env.DEV) { console.error('Get tournament members error:', err); }
     return [];
   }
 };
@@ -255,13 +255,13 @@ export const changeRole = async (
       .single();
 
     if (updateError) {
-      console.error('Change role error:', updateError);
+      if (import.meta.env.DEV) { console.error('Change role error:', updateError); }
       return { success: false, error: updateError.message };
     }
 
     return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
   } catch (err) {
-    console.error('Change role error:', err);
+    if (import.meta.env.DEV) { console.error('Change role error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
 };
@@ -322,13 +322,13 @@ export const updateTrainerTeams = async (
       .single();
 
     if (updateError) {
-      console.error('Update trainer teams error:', updateError);
+      if (import.meta.env.DEV) { console.error('Update trainer teams error:', updateError); }
       return { success: false, error: updateError.message };
     }
 
     return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
   } catch (err) {
-    console.error('Update trainer teams error:', err);
+    if (import.meta.env.DEV) { console.error('Update trainer teams error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
 };
@@ -445,7 +445,7 @@ export const transferOwnership = async (
       .single();
 
     if (oldOwnerError) {
-      console.error('Transfer ownership error (old owner):', oldOwnerError);
+      if (import.meta.env.DEV) { console.error('Transfer ownership error (old owner):', oldOwnerError); }
       return { success: false, error: oldOwnerError.message };
     }
 
@@ -464,7 +464,7 @@ export const transferOwnership = async (
         .update({ role: 'owner' })
         .eq('id', myMembership.id);
 
-      console.error('Transfer ownership error (new owner):', newOwnerError);
+      if (import.meta.env.DEV) { console.error('Transfer ownership error (new owner):', newOwnerError); }
       return { success: false, error: newOwnerError.message };
     }
 
@@ -474,7 +474,7 @@ export const transferOwnership = async (
       newOwnerMembership: mapRowToMembership(newOwnerData as CollaboratorRow),
     };
   } catch (err) {
-    console.error('Transfer ownership error:', err);
+    if (import.meta.env.DEV) { console.error('Transfer ownership error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
   }
 };

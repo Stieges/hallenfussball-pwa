@@ -109,7 +109,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                         cursor: isOnlyOne ? 'not-allowed' : 'pointer',
                         opacity: isOnlyOne ? 0.5 : 1,
                         transition: 'all 0.2s ease',
-                        boxShadow: isAllowed ? `0 2px 8px ${cssVars.colors.primary}40` : 'none',
+                        boxShadow: isAllowed ? `0 2px 8px ${cssVars.colors.primaryBorder}` : 'none',
                       }}
                       title={isOnlyOne ? 'Mindestens ein Feld muss zugewiesen sein' : undefined}
                     >
@@ -137,7 +137,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
         <div style={{
           marginTop: cssVars.spacing.md,
           padding: cssVars.spacing.md,
-          backgroundColor: cssVars.colors.warning + '20',
+          backgroundColor: cssVars.colors.warningLight,
           borderRadius: cssVars.borderRadius.md,
           border: `1px solid ${cssVars.colors.warning}`,
         }}>

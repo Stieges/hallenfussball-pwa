@@ -92,7 +92,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
       setMembers(membersWithUsers);
       setCoAdmins(coAdminList);
     } catch (err) {
-      console.error('Error loading members:', err);
+      if (import.meta.env.DEV) { console.error('Error loading members:', err); }
       setError('Mitglieder konnten nicht geladen werden');
     } finally {
       setIsLoading(false);
@@ -139,7 +139,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         await refresh();
         return true;
       } catch (err) {
-        console.error('Error changing role:', err);
+        if (import.meta.env.DEV) { console.error('Error changing role:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return false;
       } finally {
@@ -166,7 +166,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         await refresh();
         return true;
       } catch (err) {
-        console.error('Error updating trainer teams:', err);
+        if (import.meta.env.DEV) { console.error('Error updating trainer teams:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return false;
       } finally {
@@ -193,7 +193,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         await refresh();
         return true;
       } catch (err) {
-        console.error('Error removing member:', err);
+        if (import.meta.env.DEV) { console.error('Error removing member:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return false;
       } finally {
@@ -220,7 +220,7 @@ export const useTournamentMembers = (tournamentId: string): UseTournamentMembers
         await refresh();
         return true;
       } catch (err) {
-        console.error('Error transferring ownership:', err);
+        if (import.meta.env.DEV) { console.error('Error transferring ownership:', err); }
         setError('Ein unerwarteter Fehler ist aufgetreten');
         return false;
       } finally {

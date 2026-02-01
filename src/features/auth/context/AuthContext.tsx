@@ -14,7 +14,7 @@
  * @see docs/concepts/SUPABASE-SCHEMA-KONZEPT.md
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import type { Session as SupabaseSession, AuthChangeEvent } from '@supabase/supabase-js';
 import { safeLocalStorage, safeSessionStorage } from '../../../core/utils/safeStorage';
@@ -28,6 +28,7 @@ import { isInvalidRefreshTokenError, clearStaleAuthState } from './authActions';
 import {
   cacheUserProfile,
   getCachedProfile,
+  clearProfileCache,
 } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 
@@ -197,7 +198,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const initAuth = async (retryCount = 0) => {
       // Safety timeout: If auth takes too long, force loading=false to let user interact
       // Set to 15s to allow for cold starts, slow networks, and serverless function warmup
-      const safetyTimeout = setTimeout(() => {
+      const safetyTimeout = setTimeout(async () => {
         if (mounted && isLoading) {
           console.warn('Auth init timed out after 15s - releasing UI');
           // Set to 'offline' to trigger reconnect logic, NOT 'connected' which would mask issues
@@ -206,7 +207,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
           // Clear stale auth state (both localStorage AND client's internal cache)
           // to prevent getSession() from reusing stale in-memory tokens on reconnect
-          clearStaleAuthState();
+          await clearStaleAuthState();
 
           // Set flag for toast notification (read by useAuthTimeoutToast hook)
           try {
@@ -262,7 +263,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           }
 
           // Genuinely invalid — clear and force re-login
-          clearStaleAuthState();
+          await clearStaleAuthState();
           if (mounted) {
             setUser(null);
             setSession(null);
@@ -380,6 +381,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
               if (event === 'SIGNED_IN' && newSession) {
                 safeLocalStorage.removeItem('auth:guestUser');
                 setIsGuest(false);
+              }
+
+              // On sign out (including server-side token revocation),
+              // always clear local caches to prevent stale data restoration
+              if (event === 'SIGNED_OUT') {
+                safeLocalStorage.removeItem('auth:cachedUser');
+                safeLocalStorage.removeItem('auth:guestUser');
+                void clearProfileCache();
               }
 
               await updateAuthState(newSession);
@@ -546,6 +555,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // ============================================
 
   /**
+   * Ref to hold current state, avoiding stale closures in action callbacks.
+   * Without this, actionDeps would depend on user/isGuest, causing ALL
+   * action callbacks to be recreated on every state change.
+   */
+  const stateRef = useRef({ user, isGuest });
+  useEffect(() => { stateRef.current = { user, isGuest }; }, [user, isGuest]);
+
+  /**
    * Memoized dependencies for auth actions
    */
   const actionDeps: AuthActionDeps = useMemo(() => ({
@@ -556,8 +573,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setConnectionState,
     setIsLoading,
     updateAuthState,
-    getCurrentState: () => ({ user, isGuest }),
-  }), [fetchProfile, updateAuthState, user, isGuest]);
+    getCurrentState: () => stateRef.current,
+  }), [fetchProfile, updateAuthState]);
 
   // ============================================
   // AUTH ACTIONS (delegating to authActions module)

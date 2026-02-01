@@ -157,7 +157,7 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: cssVars.colors.warning + '20',
+    background: cssVars.colors.warningLight,
     borderRadius: cssVars.borderRadius.full,
   },
   icon: {

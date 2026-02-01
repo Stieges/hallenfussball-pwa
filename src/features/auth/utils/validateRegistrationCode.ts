@@ -35,7 +35,7 @@ export async function validateRegistrationCode(code: string): Promise<Validation
   try {
     // Check if Supabase is configured
     if (!supabase) {
-      console.error('Supabase not configured');
+      if (import.meta.env.DEV) { console.error('Supabase not configured'); }
       return {
         valid: false,
         error: 'Cloud-Validierung nicht verfügbar. Bitte prüfe deine Internetverbindung.',
@@ -52,7 +52,7 @@ export async function validateRegistrationCode(code: string): Promise<Validation
     );
 
     if (error) {
-      console.error('Edge Function error:', error);
+      if (import.meta.env.DEV) { console.error('Edge Function error:', error); }
       return {
         valid: false,
         error: 'Validierung fehlgeschlagen. Bitte versuche es erneut.',
@@ -68,7 +68,7 @@ export async function validateRegistrationCode(code: string): Promise<Validation
 
     return data;
   } catch (error) {
-    console.error('Unexpected error validating registration code:', error);
+    if (import.meta.env.DEV) { console.error('Unexpected error validating registration code:', error); }
     return {
       valid: false,
       error: 'Ein unerwarteter Fehler ist aufgetreten.',
