@@ -4,6 +4,7 @@ import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
 import { createStorage } from '../storage/StorageFactory';
+import { captureFeatureError } from '../../lib/sentry';
 
 export class LocalStorageRepository implements ITournamentRepository {
 
@@ -225,8 +226,13 @@ export class LocalStorageRepository implements ITournamentRepository {
                     // Hydrate: Convert date strings back to Date objects
                     return hydrateTournament(result.data as unknown);
                 }
-                // If validation fails, log but return raw item to avoid data loss during migration
+                // If validation fails, log + report to Sentry, but return raw item to avoid data loss
                 // Still hydrate to ensure date fields are proper Date objects
+                captureFeatureError(
+                    new Error(`Tournament ${String(itemData.id)} validation failed: ${result.error.message}`),
+                    'repository', 'loadList:validation',
+                    { tournamentId: String(itemData.id) }
+                );
                 if (import.meta.env.DEV) {
                     console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
                 }
