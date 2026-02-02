@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { TeamTrainerSchema, TournamentGroupSchema, TournamentFieldSchema, RuntimeMatchEventSchema } from './CommonSchemas';
 
 const TeamLogoSchema = z.object({
     type: z.enum(['url', 'base64', 'initials']),
@@ -21,7 +22,7 @@ export const TeamSchema = z.object({
     removedAt: z.string().optional(),
     logo: TeamLogoSchema.optional(),
     colors: TeamColorsSchema.optional(),
-    trainers: z.array(z.any()).optional(),
+    trainers: z.array(TeamTrainerSchema).optional(),
 });
 
 export const MatchSchema = z.object({
@@ -51,7 +52,7 @@ export const MatchSchema = z.object({
     decidedBy: z.string().optional(),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
-    events: z.array(z.any()).optional(), // Persist match events (scorers, cards, etc.)
+    events: z.array(RuntimeMatchEventSchema).optional(),
 });
 
 // Handling Date: JSON has strings. Our application assumes Date objects for some fields?
@@ -69,8 +70,8 @@ export const TournamentSchema = z.object({
     // Data
     teams: z.array(TeamSchema),
     matches: z.array(MatchSchema),
-    groups: z.array(z.any()).optional(),
-    fields: z.array(z.any()).optional(),
+    groups: z.array(TournamentGroupSchema).optional(),
+    fields: z.array(TournamentFieldSchema).optional(),
 
     // Config
     sport: z.string(),

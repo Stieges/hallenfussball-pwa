@@ -4,6 +4,7 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
+import { MutationItemSchema, FailedMutationItemSchema } from '../models/schemas/MutationItemSchema';
 
 /**
  * Supported mutation types
@@ -315,7 +316,18 @@ export class MutationQueue {
         try {
             const raw = safeLocalStorage.getItem(STORAGE_KEY);
             if (raw) {
-                this.queue = JSON.parse(raw) as MutationItem[];
+                const parsed: unknown[] = JSON.parse(raw) as unknown[];
+                this.queue = parsed.filter((item) => {
+                    const result = MutationItemSchema.safeParse(item);
+                    if (!result.success) {
+                        captureFeatureError(
+                            new Error(`Invalid mutation item in queue: ${result.error.message}`),
+                            'sync', 'loadQueue:validation'
+                        );
+                        return false;
+                    }
+                    return true;
+                }) as MutationItem[];
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load queue', e); }
@@ -337,7 +349,18 @@ export class MutationQueue {
         try {
             const raw = safeLocalStorage.getItem(FAILED_STORAGE_KEY);
             if (raw) {
-                this.failedQueue = JSON.parse(raw) as FailedMutationItem[];
+                const parsed: unknown[] = JSON.parse(raw) as unknown[];
+                this.failedQueue = parsed.filter((item) => {
+                    const result = FailedMutationItemSchema.safeParse(item);
+                    if (!result.success) {
+                        captureFeatureError(
+                            new Error(`Invalid failed mutation item: ${result.error.message}`),
+                            'sync', 'loadFailedQueue:validation'
+                        );
+                        return false;
+                    }
+                    return true;
+                }) as FailedMutationItem[];
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
