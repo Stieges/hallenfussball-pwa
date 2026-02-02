@@ -3,6 +3,7 @@ import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
+import { captureFeatureError } from '../../lib/sentry';
 
 /**
  * Supported mutation types
@@ -318,6 +319,7 @@ export class MutationQueue {
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load queue', e); }
+            if (e instanceof Error) { captureFeatureError(e, 'sync', 'loadQueue'); }
             this.queue = [];
         }
     }
@@ -327,6 +329,7 @@ export class MutationQueue {
             safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save queue', e); }
+            if (e instanceof Error) { captureFeatureError(e, 'sync', 'saveQueue'); }
         }
     }
 
@@ -338,6 +341,7 @@ export class MutationQueue {
             }
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
+            if (e instanceof Error) { captureFeatureError(e, 'sync', 'loadFailedQueue'); }
             this.failedQueue = [];
         }
     }
@@ -347,6 +351,7 @@ export class MutationQueue {
             safeLocalStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(this.failedQueue));
         } catch (e) {
             if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save failed queue', e); }
+            if (e instanceof Error) { captureFeatureError(e, 'sync', 'saveFailedQueue'); }
         }
     }
 
@@ -378,6 +383,7 @@ export class MutationQueue {
                     if (item.retryCount >= MAX_RETRIES) {
                         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
                         if (import.meta.env.DEV) { console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`); }
+                        if (error instanceof Error) { captureFeatureError(error, 'sync', 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
                         // Move to dead-letter queue instead of dropping
                         this.queue.shift();
                         this.moveToDeadLetter(item, errorMessage);

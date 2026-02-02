@@ -15,15 +15,18 @@
  */
 
 import React, { useState } from 'react';
-import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
+import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { useToast } from '../../../components/ui/Toast';
 import { useAuth } from '../hooks/useAuth';
+import { useRegisterForm } from '../hooks/useRegisterForm';
 import { validateEmail } from '../utils/emailValidation';
 import { validateRegistrationCode } from '../utils/validateRegistrationCode';
 import { registerStyles as styles } from './RegisterScreen.styles';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { AUTH_ERRORS } from '../constants';
+import { RegisterEmailConfirmationDialog, RegisterSuccessDialog } from './RegisterDialogs';
+import { OfflineBanner } from './OfflineBanner';
 
 interface RegisterScreenProps {
   /** Called when registration is successful */
@@ -43,36 +46,16 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   const isOffline = connectionState === 'offline';
   const { showMigrationSuccess } = useToast();
 
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [registrationCode, setRegistrationCode] = useState('');
-  const [errors, setErrors] = useState<{
-    name?: string;
-    email?: string;
-    password?: string;
-    confirmPassword?: string;
-    registrationCode?: string;
-    general?: string;
-  }>({});
-  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+  const {
+    formData, errors, touched, setErrors,
+    emailSuggestion, setEmailSuggestion,
+    setField, applySuggestion, handleBlur,
+  } = useRegisterForm();
+
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [migratedCount, setMigratedCount] = useState(0);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
-
-  // Focus trap for email confirmation dialog
-  const emailConfirmTrap = useFocusTrap({
-    isActive: showEmailConfirmation,
-    onEscape: onNavigateToLogin,
-  });
-
-  // Focus trap for success dialog
-  const successTrap = useFocusTrap({
-    isActive: showSuccess,
-    onEscape: onSuccess,
-  });
 
   // Focus trap for main registration form
   const formTrap = useFocusTrap({
@@ -84,7 +67,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     const newErrors: typeof errors = {};
 
     // Name validation
-    const trimmedName = name.trim();
+    const trimmedName = formData.name.trim();
     if (trimmedName.length < 2) {
       newErrors.name = AUTH_ERRORS.NAME_TOO_SHORT;
     } else if (trimmedName.length > 100) {
@@ -92,10 +75,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     }
 
     // Enhanced email validation
-    const emailValidation = validateEmail(email);
+    const emailValidation = validateEmail(formData.email);
     if (!emailValidation.isValid) {
       newErrors.email = emailValidation.error;
-      // Store suggestion for typo correction
       if (emailValidation.suggestion) {
         setEmailSuggestion(emailValidation.suggestion);
       } else {
@@ -106,21 +88,21 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     }
 
     // Password validation
-    if (!password) {
+    if (!formData.password) {
       newErrors.password = AUTH_ERRORS.PASSWORD_REQUIRED;
-    } else if (password.length < 6) {
+    } else if (formData.password.length < 6) {
       newErrors.password = AUTH_ERRORS.PASSWORD_TOO_SHORT;
     }
 
     // Confirm password validation
-    if (password !== confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = AUTH_ERRORS.PASSWORD_MISMATCH;
     }
 
     // Server-side registration code validation
     // This prevents exposure of the code in the client bundle
-    if (registrationCode.trim()) {
-      const codeValidation = await validateRegistrationCode(registrationCode.trim());
+    if (formData.registrationCode.trim()) {
+      const codeValidation = await validateRegistrationCode(formData.registrationCode.trim());
       if (!codeValidation.valid) {
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty error string should also trigger fallback
         newErrors.registrationCode = codeValidation.error || AUTH_ERRORS.REGISTRATION_CODE_INVALID;
@@ -145,7 +127,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
     setErrors({});
 
     try {
-      const result = await register(name, email, password);
+      const result = await register(formData.name, formData.email, formData.password);
 
       if (result.success) {
         // Store migration count for feedback
@@ -160,9 +142,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           setShowEmailConfirmation(true);
         } else {
           setShowSuccess(true);
+          const delay = (result.migratedCount && result.migratedCount > 0) ? 2500 : 1500;
           setTimeout(() => {
             onSuccess?.();
-          }, 2000);
+          }, delay);
         }
       } else {
         setErrors({ general: result.error });
@@ -205,92 +188,22 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
   // Email confirmation state
   if (showEmailConfirmation) {
-    const handleEmailConfirmClose = () => {
-      onNavigateToLogin?.();
-    };
-
     return (
-      <div style={styles.backdrop} onClick={handleEmailConfirmClose}>
-        <div
-          ref={emailConfirmTrap.containerRef}
-          style={styles.card}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="email-confirm-title"
-        >
-          <button
-            type="button"
-            onClick={handleEmailConfirmClose}
-            style={styles.successCloseButton}
-            aria-label="Schließen"
-          >
-            ✕
-          </button>
-          <div style={styles.successIcon}>✉</div>
-          <h2 id="email-confirm-title" style={styles.successTitle}>Bestätige deine E-Mail</h2>
-          <p style={styles.successText}>
-            Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
-            Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.
-            {migratedCount > 0 && (
-              <><br /><br />{migratedCount} Turnier{migratedCount === 1 ? ' wird' : 'e werden'} nach der Aktivierung synchronisiert.</>
-            )}
-          </p>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleEmailConfirmClose}
-            style={{ marginTop: cssVars.spacing.lg }}
-          >
-            Zum Login
-          </Button>
-        </div>
-      </div>
+      <RegisterEmailConfirmationDialog
+        email={formData.email}
+        migratedCount={migratedCount}
+        onClose={() => onNavigateToLogin?.()}
+      />
     );
   }
 
   // Success state
   if (showSuccess) {
-    const handleSuccessClose = () => {
-      onSuccess?.();
-    };
-
     return (
-      <div style={styles.backdrop} onClick={handleSuccessClose}>
-        <div
-          ref={successTrap.containerRef}
-          style={styles.card}
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="success-title"
-        >
-          <button
-            type="button"
-            onClick={handleSuccessClose}
-            style={styles.successCloseButton}
-            aria-label="Schließen"
-          >
-            ✕
-          </button>
-          <div style={styles.successIcon}>✓</div>
-          <h2 id="success-title" style={styles.successTitle}>Willkommen!</h2>
-          <p style={styles.successText}>
-            Dein Konto wurde erstellt.
-            {migratedCount > 0 && (
-              <><br />{migratedCount} Turnier{migratedCount === 1 ? '' : 'e'} synchronisiert!</>
-            )}
-          </p>
-          <Button
-            variant="primary"
-            fullWidth
-            onClick={handleSuccessClose}
-            style={{ marginTop: cssVars.spacing.lg }}
-          >
-            Weiter
-          </Button>
-        </div>
-      </div>
+      <RegisterSuccessDialog
+        migratedCount={migratedCount}
+        onClose={() => onSuccess?.()}
+      />
     );
   }
 
@@ -333,20 +246,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
         {/* Offline Banner */}
         {isOffline && (
-          <div style={styles.offlineBanner} role="alert">
-            <span style={styles.offlineIcon}>📡</span>
-            <div style={styles.offlineTextContainer}>
-              <span style={styles.offlineTitle}>Cloud nicht erreichbar</span>
-              <span style={styles.offlineSubtitle}>Registrierung nicht möglich</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => void reconnect()}
-              style={styles.offlineRetryButton}
-            >
-              Erneut
-            </button>
-          </div>
+          <OfflineBanner
+            subtitle="Registrierung nicht möglich"
+            onRetry={() => void reconnect()}
+          />
         )}
 
         <p style={styles.subtitle}>
@@ -364,18 +267,19 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               id="name"
               name="name"
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={formData.name}
+              onChange={(e) => setField('name', e.target.value)}
+              onBlur={() => handleBlur('name')}
               placeholder="Vor- und Nachname"
               style={{
                 ...styles.input,
-                ...(errors.name ? styles.inputError : {}),
+                ...(touched.name && errors.name ? styles.inputError : {}),
               }}
               autoComplete="name"
               autoFocus
               data-testid="register-name-input"
             />
-            {errors.name && <span style={styles.errorText}>{errors.name}</span>}
+            {touched.name && errors.name && <span style={styles.errorText}>{errors.name}</span>}
           </div>
 
           <div style={styles.inputGroup}>
@@ -386,29 +290,25 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               id="email"
               name="email"
               type="email"
-              value={email}
+              value={formData.email}
               onChange={(e) => {
-                setEmail(e.target.value);
-                // Clear suggestion when user types
+                setField('email', e.target.value);
                 setEmailSuggestion(null);
               }}
+              onBlur={() => handleBlur('email')}
               placeholder="name@mein-verein.de"
               style={{
                 ...styles.input,
-                ...(errors.email ? styles.inputError : {}),
+                ...(touched.email && errors.email ? styles.inputError : {}),
               }}
               autoComplete="email"
               data-testid="register-email-input"
             />
-            {errors.email && <span style={styles.errorText} data-testid="register-email-error">{errors.email}</span>}
+            {touched.email && errors.email && <span style={styles.errorText} data-testid="register-email-error">{errors.email}</span>}
             {emailSuggestion && (
               <button
                 type="button"
-                onClick={() => {
-                  setEmail(emailSuggestion);
-                  setEmailSuggestion(null);
-                  setErrors((prev) => ({ ...prev, email: undefined }));
-                }}
+                onClick={() => applySuggestion()}
                 style={styles.suggestionButton}
               >
                 ✓ {emailSuggestion} verwenden
@@ -420,51 +320,51 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             <label htmlFor="password" style={styles.label}>
               Passwort
             </label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
-              value={password}
+              value={formData.password}
               onChange={(e) => {
                 const newPassword = e.target.value;
-                setPassword(newPassword);
+                setField('password', newPassword);
                 // Auto-sync to confirmation if it was filled by password manager
                 // (detected by large change in value length, e.g. paste/autofill)
-                if (newPassword.length > 6 && confirmPassword === '') {
-                  setConfirmPassword(newPassword);
+                if (newPassword.length > 6 && formData.confirmPassword === '') {
+                  setField('confirmPassword', newPassword);
                 }
               }}
+              onBlur={() => handleBlur('password')}
               placeholder="Mindestens 6 Zeichen"
               style={{
                 ...styles.input,
-                ...(errors.password ? styles.inputError : {}),
+                ...(touched.password && errors.password ? styles.inputError : {}),
               }}
               autoComplete="new-password"
               minLength={6}
               data-testid="register-password-input"
             />
-            {errors.password && <span style={styles.errorText}>{errors.password}</span>}
+            {touched.password && errors.password && <span style={styles.errorText}>{errors.password}</span>}
           </div>
 
           <div style={styles.inputGroup}>
             <label htmlFor="confirmPassword" style={styles.label}>
               Passwort bestätigen
             </label>
-            <input
+            <PasswordInput
               id="confirmPassword"
               name="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              value={formData.confirmPassword}
+              onChange={(e) => setField('confirmPassword', e.target.value)}
+              onBlur={() => handleBlur('confirmPassword')}
               placeholder="Passwort wiederholen"
               style={{
                 ...styles.input,
-                ...(errors.confirmPassword ? styles.inputError : {}),
+                ...(touched.confirmPassword && errors.confirmPassword ? styles.inputError : {}),
               }}
               autoComplete="new-password"
               data-testid="register-confirm-password-input"
             />
-            {errors.confirmPassword && (
+            {touched.confirmPassword && errors.confirmPassword && (
               <span style={styles.errorText}>{errors.confirmPassword}</span>
             )}
           </div>
@@ -477,17 +377,18 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               id="registrationCode"
               name="registrationCode"
               type="text"
-              value={registrationCode}
-              onChange={(e) => setRegistrationCode(e.target.value)}
+              value={formData.registrationCode}
+              onChange={(e) => setField('registrationCode', e.target.value)}
+              onBlur={() => handleBlur('registrationCode')}
               placeholder="Code vom Veranstalter"
               style={{
                 ...styles.input,
-                ...(errors.registrationCode ? styles.inputError : {}),
+                ...(touched.registrationCode && errors.registrationCode ? styles.inputError : {}),
               }}
               autoComplete="off"
               data-testid="register-code-input"
             />
-            {errors.registrationCode && (
+            {touched.registrationCode && errors.registrationCode && (
               <span style={styles.errorText}>{errors.registrationCode}</span>
             )}
             <span style={styles.hint}>

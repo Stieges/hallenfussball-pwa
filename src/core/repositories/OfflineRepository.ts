@@ -3,26 +3,8 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-/**
- * Checks if an error is an AbortError (expected during navigation, StrictMode, etc.)
- */
-function isAbortError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-  const e = error as { name?: string; message?: string };
-  return (
-    e.name === 'AbortError' ||
-    (e.message?.includes('AbortError') ?? false) ||
-    (e.message?.includes('aborted') ?? false) ||
-    (e.message?.includes('Cloud fetch timeout') ?? false)
-  );
-}
+import { isAbortError } from '../errors';
+import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
 // SYNC TYPES
@@ -95,9 +77,11 @@ export class OfflineRepository implements ITournamentRepository {
                 return cloudData;
             }
         } catch (error) {
-            // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud fetch failed.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'get', { tournamentId: id });
+                }
             }
         }
 
@@ -125,8 +109,10 @@ export class OfflineRepository implements ITournamentRepository {
                     }
                 }
             }
-        } catch {
-            // Silently ignore - this is a background operation
+        } catch (error) {
+            if (!isAbortError(error) && error instanceof Error) {
+                captureFeatureError(error, 'repository', 'backgroundSync', { tournamentId: id });
+            }
         }
     }
 
@@ -138,6 +124,9 @@ export class OfflineRepository implements ITournamentRepository {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud fetch by share code failed.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'getByShareCode');
+                }
             }
             return null;
         }
@@ -209,6 +198,9 @@ export class OfflineRepository implements ITournamentRepository {
             // Only log non-AbortErrors (AbortError is expected during navigation)
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud list failed, returning local list.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'list');
+                }
             }
             // Fallback to all local tournaments
             return await this.localRepo.listForCurrentUser();
@@ -257,10 +249,16 @@ export class OfflineRepository implements ITournamentRepository {
                     }
                 } catch (err) {
                     console.error(`Failed to sync tournament ${localT.id}`, err);
+                    if (err instanceof Error) {
+                        captureFeatureError(err, 'sync', 'syncTournament', { tournamentId: localT.id });
+                    }
                 }
             }
         } catch (error) {
             console.error('Sync up failed:', error);
+            if (error instanceof Error) {
+                captureFeatureError(error, 'sync', 'syncUp');
+            }
         }
     }
 
@@ -592,6 +590,9 @@ export class OfflineRepository implements ITournamentRepository {
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud makeTournamentPublic failed, using local.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'makePublic', { tournamentId });
+                }
             }
         }
 
@@ -620,6 +621,9 @@ export class OfflineRepository implements ITournamentRepository {
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud makeTournamentPrivate failed, queued for sync.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'makePrivate', { tournamentId });
+                }
             }
             // Queue for cloud sync when back online
             this.mutationQueue.enqueue('UPDATE_TOURNAMENT_METADATA', {
@@ -652,6 +656,9 @@ export class OfflineRepository implements ITournamentRepository {
         } catch (error) {
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud regenerateShareCode failed, using local.', error);
+                if (error instanceof Error) {
+                    captureFeatureError(error, 'repository', 'regenerateShareCode', { tournamentId });
+                }
             }
         }
 

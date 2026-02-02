@@ -9,6 +9,7 @@ import React, { useState, useEffect, CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
+import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { useAuth } from '../hooks/useAuth';
 import { AUTH_ERRORS } from '../constants';
 
@@ -152,10 +153,9 @@ export const SetPasswordScreen: React.FC = () => {
             <label htmlFor="password" style={styles.label}>
               Neues Passwort
             </label>
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mindestens 6 Zeichen"
@@ -174,10 +174,9 @@ export const SetPasswordScreen: React.FC = () => {
             <label htmlFor="confirm-password" style={styles.label}>
               Passwort bestätigen
             </label>
-            <input
+            <PasswordInput
               id="confirm-password"
               name="confirm-password"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Passwort wiederholen"

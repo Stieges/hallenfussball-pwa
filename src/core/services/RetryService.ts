@@ -1,3 +1,8 @@
+import { isAbortError } from '../errors';
+
+// Re-export for backward compatibility
+export { isAbortError };
+
 /**
  * RetryService - Centralized retry logic with exponential backoff
  *
@@ -267,17 +272,6 @@ export function createNetworkRetryService(): RetryService {
     maxDelay: 60000,
     backoffFactor: 2,
   });
-}
-
-/**
- * Utility: Check if an error is an AbortError (should not trigger retry)
- */
-export function isAbortError(error: Error): boolean {
-  return (
-    error.name === 'AbortError' ||
-    error.message.includes('aborted') ||
-    error.message.includes('abort')
-  );
 }
 
 /**

@@ -27,10 +27,11 @@ import type { AuthActionDeps } from './authActions';
 import { isInvalidRefreshTokenError, clearStaleAuthState } from './authActions';
 import {
   cacheUserProfile,
-  getCachedProfile,
   clearProfileCache,
+  restoreUserFromCache,
 } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
+import { captureFeatureError } from '../../../lib/sentry';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -125,6 +126,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Profile fetch failed:', err);
+      }
+      if (err instanceof Error) {
+        captureFeatureError(err, 'auth', 'fetchProfile');
       }
       return null;
     }
@@ -291,20 +295,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // eslint-disable-next-line no-console -- intentional debug logging for transient errors
           console.debug('Auth init aborted after max retries - attempting cached user fallback:', error);
           if (mounted) {
-            // Try to restore cached authenticated user (localStorage first, then IndexedDB)
-            let cachedUser: User | null = null;
-            const cachedUserJson = safeLocalStorage.getItem('auth:cachedUser');
-            if (cachedUserJson) {
-              try {
-                cachedUser = JSON.parse(cachedUserJson) as User;
-              } catch {
-                // Invalid cached user in localStorage
-              }
-            }
-            // If localStorage didn't have it, try IndexedDB (only if OFFLINE_FIRST enabled)
-            if (!cachedUser && isFeatureEnabled('OFFLINE_FIRST')) {
-              cachedUser = await getCachedProfile(true); // ignoreExpiry for offline
-            }
+            const cachedUser = await restoreUserFromCache();
             if (cachedUser) {
               // eslint-disable-next-line no-console -- intentional debug logging
               console.debug('Restored cached user for offline mode:', cachedUser.email);
@@ -322,22 +313,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (import.meta.env.DEV) {
           console.error('Auth init error:', error);
         }
+        if (error instanceof Error) {
+          captureFeatureError(error, 'auth', 'initAuth');
+        }
         if (mounted) {
-          // Try to restore cached user on any auth error (BUG-004 fix)
-          // Check localStorage first (sync, quick), then IndexedDB (async, more robust)
-          let cachedUser: User | null = null;
-          const cachedUserJson = safeLocalStorage.getItem('auth:cachedUser');
-          if (cachedUserJson) {
-            try {
-              cachedUser = JSON.parse(cachedUserJson) as User;
-            } catch {
-              // Invalid cached user in localStorage
-            }
-          }
-          // If localStorage didn't have it, try IndexedDB (only if OFFLINE_FIRST enabled)
-          if (!cachedUser && isFeatureEnabled('OFFLINE_FIRST')) {
-            cachedUser = await getCachedProfile(true); // ignoreExpiry for offline
-          }
+          const cachedUser = await restoreUserFromCache();
           if (cachedUser) {
             // eslint-disable-next-line no-console -- intentional debug logging
             console.debug('Restored cached user after auth error:', cachedUser.email);
@@ -398,8 +378,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         subscription = data.subscription;
       } catch (error) {
         // AbortError can happen in StrictMode during subscription setup
-        if (!(error instanceof Error && error.name === 'AbortError') && import.meta.env.DEV) {
+        const isAbort = error instanceof Error && error.name === 'AbortError';
+        if (!isAbort && import.meta.env.DEV) {
           console.error('Auth subscription error:', error);
+        }
+        if (!isAbort && error instanceof Error) {
+          captureFeatureError(error, 'auth', 'subscription');
         }
       }
     }
