@@ -11,7 +11,7 @@
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { OptimisticLockError } from '../errors';
+import { OptimisticLockError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -19,22 +19,6 @@ import {
   mapTeamToSupabase,
   mapMatchToSupabase,
 } from './supabaseMappers';
-
-/**
- * Checks if an error is an AbortError (expected during navigation, StrictMode, etc.)
- */
-function isAbortError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-  const e = error as { name?: string; message?: string; code?: string };
-  return (
-    e.name === 'AbortError' ||
-    (e.message?.includes('AbortError') ?? false) ||
-    (e.message?.includes('aborted') ?? false) ||
-    e.code === '20' // DOMException abort code
-  );
-}
 
 /**
  * Gets the Supabase client or throws an error if not configured.
@@ -80,7 +64,7 @@ export class SupabaseRepository implements ITournamentRepository {
         return null;
       }
       console.error('Failed to fetch tournament:', tournamentError);
-      throw new Error(`Failed to fetch tournament: ${tournamentError.message}`);
+      throw new RepositoryError('get', tournamentError.message, tournamentError);
     }
 
     // Fetch teams
@@ -95,7 +79,7 @@ export class SupabaseRepository implements ITournamentRepository {
         return null;
       }
       console.error('Failed to fetch teams:', teamsError);
-      throw new Error(`Failed to fetch teams: ${teamsError.message}`);
+      throw new RepositoryError('get', teamsError.message, teamsError);
     }
 
     // Fetch matches
@@ -110,7 +94,7 @@ export class SupabaseRepository implements ITournamentRepository {
         return null;
       }
       console.error('Failed to fetch matches:', matchesError);
-      throw new Error(`Failed to fetch matches: ${matchesError.message}`);
+      throw new RepositoryError('get', matchesError.message, matchesError);
     }
 
     // Convert to frontend types
@@ -170,7 +154,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (updateError) {
       console.error('Failed to update tournament metadata:', updateError);
-      throw new Error(`Failed to update tournament metadata: ${updateError.message}`);
+      throw new RepositoryError('updateMetadata', updateError.message, updateError);
     }
 
      
@@ -193,7 +177,7 @@ export class SupabaseRepository implements ITournamentRepository {
       data: { user },
     } = await getSupabase().auth.getUser();
     if (!user) {
-      throw new Error('Not authenticated');
+      throw new AuthenticationError('Not authenticated', 'save');
     }
 
     // Convert to Supabase format
@@ -254,7 +238,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (saveError) {
       console.error('Failed to save tournament:', saveError);
-      throw new Error(`Failed to save tournament: ${saveError.message}`);
+      throw new RepositoryError('save', saveError.message, saveError);
     }
 
     // 2. Handle teams - delete removed, upsert existing
@@ -291,7 +275,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (teamsError) {
         console.error('Failed to save teams:', teamsError);
-        throw new Error(`Failed to save teams: ${teamsError.message}`);
+        throw new RepositoryError('saveTeams', teamsError.message, teamsError);
       }
     }
 
@@ -328,7 +312,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
       if (matchesError) {
         console.error('Failed to save matches:', matchesError);
-        throw new Error(`Failed to save matches: ${matchesError.message}`);
+        throw new RepositoryError('saveMatches', matchesError.message, matchesError);
       }
     }
   }
@@ -407,8 +391,10 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     if (errors.length > 0) {
-      throw new Error(
-        `Failed to update matches/tournament: ${errors.map((e) => e.message).join('; ')}`
+      throw new RepositoryError(
+        'updateMatches',
+        `Failed to update matches/tournament: ${errors.map((e) => e.message).join('; ')}`,
+        errors
       );
     }
   }
@@ -429,7 +415,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to delete tournament:', error);
-      throw new Error(`Failed to delete tournament: ${error.message}`);
+      throw new RepositoryError('delete', error.message, error);
     }
   }
 
@@ -457,7 +443,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to list tournaments:', error);
-      throw new Error(`Failed to list tournaments: ${error.message}`);
+      throw new RepositoryError('list', error.message, error);
     }
 
     // For listing, we don't need full team/match data
@@ -478,7 +464,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to soft delete tournament:', error);
-      throw new Error(`Failed to soft delete tournament: ${error.message}`);
+      throw new RepositoryError('softDelete', error.message, error);
     }
   }
 
@@ -493,7 +479,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to restore tournament:', error);
-      throw new Error(`Failed to restore tournament: ${error.message}`);
+      throw new RepositoryError('restore', error.message, error);
     }
   }
 
@@ -513,7 +499,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to add team:', error);
-      throw new Error(`Failed to add team: ${error.message}`);
+      throw new RepositoryError('addTeam', error.message, error);
     }
   }
 
@@ -555,7 +541,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to add match:', error);
-      throw new Error(`Failed to add match: ${error.message}`);
+      throw new RepositoryError('addMatch', error.message, error);
     }
   }
 
@@ -637,7 +623,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to make tournament public:', error);
-      throw new Error(`Failed to make tournament public: ${error.message}`);
+      throw new RepositoryError('makePublic', error.message, error);
     }
 
     if (!data || data.length === 0) {
@@ -661,7 +647,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to make tournament private:', error);
-      throw new Error(`Failed to make tournament private: ${error.message}`);
+      throw new RepositoryError('makePrivate', error.message, error);
     }
   }
 
@@ -679,7 +665,7 @@ export class SupabaseRepository implements ITournamentRepository {
 
     if (error) {
       console.error('Failed to regenerate share code:', error);
-      throw new Error(`Failed to regenerate share code: ${error.message}`);
+      throw new RepositoryError('regenerateShareCode', error.message, error);
     }
 
     if (!data || data.length === 0) {

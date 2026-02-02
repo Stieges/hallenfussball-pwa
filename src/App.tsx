@@ -31,7 +31,8 @@ import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
 import { ConflictResolutionDialog } from './features/sync/components/ConflictResolutionDialog';
 import { ConsentDialog } from './components/dialogs/ConsentDialog';
 import { hasConsent } from './lib/consent';
-import { reinitializeSentry } from './lib/sentry';
+import { reinitializeSentry, captureFeatureError } from './lib/sentry';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy load screens for better initial load performance
 const DashboardScreen = lazy(() =>
@@ -203,6 +204,7 @@ function AppContent() {
         await softDeleteTournament(id);
       } catch (error) {
         console.error('[App] Failed to soft delete tournament:', error);
+        if (error instanceof Error) { captureFeatureError(error, 'tournament', 'softDelete', { tournamentId: id }); }
         showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
       }
     }
@@ -214,6 +216,7 @@ function AppContent() {
       // Optionally show success toast
     } catch (error) {
       console.error('[App] Failed to restore tournament:', error);
+      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'restore', { tournamentId: id }); }
       showError(`Fehler beim Wiederherstellen von "${title}". Bitte versuche es erneut.`);
     }
   }, [restoreTournament, showError]);
@@ -228,6 +231,7 @@ function AppContent() {
         await permanentDeleteTournament(id);
       } catch (error) {
         console.error('[App] Failed to permanently delete tournament:', error);
+        if (error instanceof Error) { captureFeatureError(error, 'tournament', 'permanentDelete', { tournamentId: id }); }
         showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
       }
     }
@@ -365,6 +369,7 @@ function AppContent() {
       }
     } catch (error) {
       console.error('[App] Failed to import tournament:', error);
+      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'import'); }
       showError('Fehler beim Importieren des Turniers. Bitte versuche es erneut.');
     }
   };
@@ -426,6 +431,7 @@ function AppContent() {
       // Stay on dashboard - user can see the new tournament
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
+      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'copy'); }
       showError('Fehler beim Kopieren des Turniers. Bitte versuche es erneut.');
     }
   };
@@ -452,6 +458,7 @@ function AppContent() {
       void navigate(`/tournament/${tournament.id}/edit${stepParam}`);
     } catch (error) {
       console.error('[App] Failed to open tournament in wizard:', error);
+      if (error instanceof Error) { captureFeatureError(error, 'tournament', 'editInWizard'); }
       showError('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
     }
   };
@@ -577,7 +584,10 @@ function AppContent() {
                 };
                 // Fire-and-forget: Don't await, just trigger the save
                 saveTournament(restoredTournament)
-                  .catch((err) => console.error('[App] Failed to restore tournament status:', err));
+                  .catch((err: unknown) => {
+                    console.error('[App] Failed to restore tournament status:', err);
+                    if (err instanceof Error) { captureFeatureError(err, 'tournament', 'restoreStatus'); }
+                  });
               }
               originalStatusRef.current = null; // Reset ref
               setSelectedTournament(null); // Clear selection when going back
@@ -793,10 +803,12 @@ function App() {
           <InitialSyncManager />
           <PendingChangesWarning />
           <ToastProvider>
-            <StorageWarningBanner />
-            <OfflineBanner />
-            <AppContent />
-            {/* DSGVO Consent Dialog - appears on first visit */}
+            <ErrorBoundary onReset={() => { window.location.hash = '#/'; }}>
+              <StorageWarningBanner />
+              <OfflineBanner />
+              <AppContent />
+            </ErrorBoundary>
+            {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery */}
             <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
           </ToastProvider>
         </RepositoryProvider>

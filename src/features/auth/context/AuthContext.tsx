@@ -31,6 +31,7 @@ import {
   restoreUserFromCache,
 } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
+import { captureFeatureError } from '../../../lib/sentry';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -125,6 +126,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       if (import.meta.env.DEV) {
         console.error('Profile fetch failed:', err);
+      }
+      if (err instanceof Error) {
+        captureFeatureError(err, 'auth', 'fetchProfile');
       }
       return null;
     }
@@ -309,6 +313,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (import.meta.env.DEV) {
           console.error('Auth init error:', error);
         }
+        if (error instanceof Error) {
+          captureFeatureError(error, 'auth', 'initAuth');
+        }
         if (mounted) {
           const cachedUser = await restoreUserFromCache();
           if (cachedUser) {
@@ -371,8 +378,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         subscription = data.subscription;
       } catch (error) {
         // AbortError can happen in StrictMode during subscription setup
-        if (!(error instanceof Error && error.name === 'AbortError') && import.meta.env.DEV) {
+        const isAbort = error instanceof Error && error.name === 'AbortError';
+        if (!isAbort && import.meta.env.DEV) {
           console.error('Auth subscription error:', error);
+        }
+        if (!isAbort && error instanceof Error) {
+          captureFeatureError(error, 'auth', 'subscription');
         }
       }
     }

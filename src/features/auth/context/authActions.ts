@@ -18,6 +18,7 @@ import { createAuthRetryService, isAbortError } from '../../../core/services';
 import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
+import { captureFeatureError } from '../../../lib/sentry';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -215,6 +216,9 @@ export async function register(
     if (import.meta.env.DEV) {
       console.error('Register error:', err);
     }
+    if (err instanceof Error) {
+      captureFeatureError(err, 'auth', 'register');
+    }
     return {
       success: false,
       error: AUTH_ERRORS.UNEXPECTED,
@@ -308,6 +312,9 @@ export async function login(
     }
     if (import.meta.env.DEV) {
       console.error('Login error:', err);
+    }
+    if (err instanceof Error) {
+      captureFeatureError(err, 'auth', 'login');
     }
     return {
       success: false,
@@ -455,6 +462,9 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
     if (import.meta.env.DEV) {
       console.error('Logout signOut error:', err);
     }
+    if (err instanceof Error) {
+      captureFeatureError(err, 'auth', 'logout');
+    }
     // Fallback: clear local tokens manually since signOut failed
     await clearStaleAuthState();
   } finally {
@@ -542,6 +552,9 @@ export async function refreshAuth(deps: AuthActionDeps): Promise<void> {
   } catch (err) {
     if (import.meta.env.DEV) {
       console.error('Refresh auth error:', err);
+    }
+    if (err instanceof Error && !isAbortError(err)) {
+      captureFeatureError(err, 'auth', 'refreshAuth');
     }
     deps.setConnectionState('offline');
     deps.setIsLoading(false);
@@ -645,6 +658,9 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
     } else {
       if (import.meta.env.DEV) {
         console.error('Manual reconnect failed:', err);
+      }
+      if (err instanceof Error) {
+        captureFeatureError(err, 'auth', 'reconnect');
       }
     }
     deps.setConnectionState('offline');

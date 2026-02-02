@@ -66,22 +66,22 @@ interface DefaultErrorFallbackProps {
 const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onReset }) => (
   <div
     style={{
-      padding: '24px',
-      margin: '16px 0',
-      background: 'rgba(255, 61, 87, 0.1)',
-      border: '1px solid rgba(255, 61, 87, 0.3)',
+      padding: cssVars.spacing.lg,
+      margin: `${cssVars.spacing.md} 0`,
+      background: cssVars.colors.errorSubtle,
+      border: `1px solid ${cssVars.colors.errorBorder}`,
       borderRadius: cssVars.borderRadius.md,
     }}
     role="alert"
   >
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: cssVars.spacing.sm }}>
       <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">
         ⚠️
       </span>
       <div style={{ flex: 1 }}>
         <h3
           style={{
-            margin: '0 0 8px 0',
+            margin: `0 0 ${cssVars.spacing.sm} 0`,
             fontSize: cssVars.fontSizes.lg,
             fontWeight: cssVars.fontWeights.semibold,
             color: cssVars.colors.error,
@@ -91,7 +91,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
         </h3>
         <p
           style={{
-            margin: '0 0 16px 0',
+            margin: `0 0 ${cssVars.spacing.md} 0`,
             fontSize: cssVars.fontSizes.md,
             color: cssVars.colors.textSecondary,
             lineHeight: '1.5',
@@ -103,9 +103,9 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
         {error && process.env.NODE_ENV === 'development' && (
           <pre
             style={{
-              margin: '0 0 16px 0',
-              padding: '12px',
-              background: 'rgba(0, 0, 0, 0.3)',
+              margin: `0 0 ${cssVars.spacing.md} 0`,
+              padding: cssVars.spacing.sm,
+              background: cssVars.colors.surfaceElevated,
               borderRadius: cssVars.borderRadius.sm,
               fontSize: cssVars.fontSizes.sm,
               color: cssVars.colors.textSecondary,
@@ -118,11 +118,11 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
           </pre>
         )}
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
           <button
             onClick={onReset}
             style={{
-              padding: '8px 16px',
+              padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
               background: cssVars.colors.primary,
               border: 'none',
               borderRadius: cssVars.borderRadius.sm,
@@ -137,8 +137,8 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
           <button
             onClick={() => window.location.reload()}
             style={{
-              padding: '8px 16px',
-              background: 'rgba(255, 255, 255, 0.1)',
+              padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+              background: cssVars.colors.surfaceElevated,
               border: `1px solid ${cssVars.colors.border}`,
               borderRadius: cssVars.borderRadius.sm,
               color: cssVars.colors.textPrimary,
