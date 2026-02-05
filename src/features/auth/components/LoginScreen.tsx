@@ -15,6 +15,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { useAuth } from '../hooks/useAuth';
@@ -43,6 +44,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onContinueAsGuest,
   onBack,
 }) => {
+  const { t } = useTranslation('auth');
   const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword, connectionState, reconnect } = useAuth();
   const isOffline = connectionState === 'offline';
 
@@ -227,9 +229,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="button"
               onClick={onBack}
               style={styles.backButton}
-              aria-label="Zurück"
+              aria-label={t('login.back')}
             >
-              ← Zurück
+              {t('login.backWithArrow')}
             </button>
           )}
           {onBack && (
@@ -237,19 +239,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="button"
               onClick={onBack}
               style={styles.closeButton}
-              aria-label="Schließen"
+              aria-label={t('login.close')}
             >
               ✕
             </button>
           )}
         </div>
 
-        <h1 id="login-title" style={styles.title}>Anmelden</h1>
+        <h1 id="login-title" style={styles.title}>{t('login.title')}</h1>
 
         {/* Offline Banner */}
         {isOffline && (
           <OfflineBanner
-            subtitle="Nur Gast-Modus verfügbar"
+            subtitle={t('login.offlineSubtitle')}
             onRetry={() => void reconnect()}
             data-testid="offline-banner"
           />
@@ -257,14 +259,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <p style={styles.subtitle}>
           {formData.loginMode === 'password'
-            ? 'Melde dich mit E-Mail und Passwort an.'
-            : 'Wir senden dir einen Magic Link per E-Mail.'}
+            ? t('login.subtitlePassword')
+            : t('login.subtitleMagicLink')}
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} style={styles.form}>
           <div style={styles.inputGroup}>
             <label htmlFor="email" style={styles.label}>
-              E-Mail
+              {t('login.email')}
             </label>
             <input
               id="email"
@@ -272,7 +274,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@mein-verein.de"
+              placeholder={t('login.emailPlaceholder')}
               style={{
                 ...styles.input,
                 ...(fieldErrors.email ? styles.inputError : {}),
@@ -288,14 +290,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           {formData.loginMode === 'password' && (
             <div style={styles.inputGroup}>
               <label htmlFor="password" style={styles.label}>
-                Passwort
+                {t('login.password')}
               </label>
               <PasswordInput
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t('login.passwordPlaceholder')}
                 style={{
                   ...styles.input,
                   ...(fieldErrors.password ? styles.inputError : {}),
@@ -312,7 +314,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 disabled={isLoading}
                 style={styles.forgotPasswordLink}
               >
-                Passwort vergessen?
+                {t('login.forgotPassword')}
               </button>
             </div>
           )}
@@ -327,7 +329,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             style={styles.button}
             data-testid="login-submit-button"
           >
-            {formData.loginMode === 'password' ? 'Anmelden' : 'Magic Link senden'}
+            {formData.loginMode === 'password' ? t('login.submit') : t('login.submitMagicLink')}
           </Button>
         </form>
 
@@ -338,13 +340,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           style={styles.modeToggle}
         >
           {formData.loginMode === 'password'
-            ? 'Stattdessen Magic Link verwenden'
-            : 'Mit Passwort anmelden'}
+            ? t('login.toggleMagicLink')
+            : t('login.togglePassword')}
         </button>
 
         <div style={styles.divider}>
           <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>oder</span>
+          <span style={styles.dividerText}>{t('login.or')}</span>
           <span style={styles.dividerLine} />
         </div>
 
@@ -357,7 +359,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
-          Mit Google anmelden
+          {t('login.googleLogin')}
         </Button>
 
         {/* Guest option */}
@@ -369,18 +371,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           style={styles.ghostButton}
           data-testid="login-guest-button"
         >
-          Als Gast fortfahren
+          {t('login.continueAsGuest')}
         </Button>
 
         <p style={styles.footer}>
-          Noch kein Konto?{' '}
+          {t('login.noAccount')}{' '}
           <button
             type="button"
             onClick={onNavigateToRegister}
             style={styles.link}
             data-testid="login-register-link"
           >
-            Registrieren
+            {t('login.register')}
           </button>
         </p>
       </div>

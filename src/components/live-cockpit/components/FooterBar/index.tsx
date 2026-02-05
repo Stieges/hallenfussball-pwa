@@ -10,6 +10,7 @@
  */
 
 import { useState, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { SlideToConfirm } from '../SlideToConfirm';
 import type { MatchStatus } from '../../types';
@@ -47,6 +48,7 @@ export const FooterBar: React.FC<FooterBarProps> = ({
   hasLastFinished = false,
   breakpoint = 'desktop',
 }) => {
+  const { t } = useTranslation('cockpit');
   // State for showing slide-to-confirm
   const [showSlideConfirm, setShowSlideConfirm] = useState(false);
 
@@ -110,9 +112,9 @@ export const FooterBar: React.FC<FooterBarProps> = ({
             variant="primary"
             size={buttonSize}
             fullWidth
-            ariaLabel="Spiel starten"
+            ariaLabel={t('footer.startMatchAria')}
           >
-            ▶ Spiel starten
+            ▶ {t('footer.startMatch')}
           </ActionButton>
         </div>
       </footer>
@@ -127,8 +129,8 @@ export const FooterBar: React.FC<FooterBarProps> = ({
         <footer style={footerStyle} className={styles.footerBar}>
           <div style={{ ...buttonContainerStyle, flexDirection: 'column', gap: cssVars.spacing.sm }}>
             <SlideToConfirm
-              text="→ Zum Beenden schieben"
-              confirmText="Spiel beendet!"
+              text={t('footer.slideToFinish')}
+              confirmText={t('footer.matchFinished')}
               onConfirm={handleFinishConfirm}
               trackColor={cssVars.colors.error}
             />
@@ -136,9 +138,9 @@ export const FooterBar: React.FC<FooterBarProps> = ({
               onClick={() => setShowSlideConfirm(false)}
               variant="ghost"
               size="medium"
-              ariaLabel="Abbrechen"
+              ariaLabel={t('footer.cancelAria')}
             >
-              ✕ Abbrechen
+              ✕ {t('footer.cancel')}
             </ActionButton>
           </div>
         </footer>
@@ -152,18 +154,18 @@ export const FooterBar: React.FC<FooterBarProps> = ({
             onClick={onPauseResume}
             variant="secondary"
             size={buttonSize}
-            ariaLabel={isRunning ? 'Spiel pausieren' : 'Spiel fortsetzen'}
+            ariaLabel={isRunning ? t('footer.pauseMatchAria') : t('footer.resumeMatchAria')}
           >
-            {isRunning ? '⏸ Pause' : '▶ Fortsetzen'}
+            {isRunning ? `⏸ ${t('footer.pause')}` : `▶ ${t('footer.resume')}`}
           </ActionButton>
 
           <ActionButton
             onClick={() => setShowSlideConfirm(true)}
             variant="danger"
             size={buttonSize}
-            ariaLabel="Spiel beenden"
+            ariaLabel={t('footer.finishMatchAria')}
           >
-            ⏹ Beenden
+            ⏹ {t('footer.finish')}
           </ActionButton>
         </div>
       </footer>
@@ -181,9 +183,9 @@ export const FooterBar: React.FC<FooterBarProps> = ({
               variant="primary"
               size={buttonSize}
               fullWidth={!hasLastFinished}
-              ariaLabel="Nächstes Spiel laden"
+              ariaLabel={t('footer.loadNextMatchAria')}
             >
-              → Nächstes Spiel laden
+              → {t('footer.loadNextMatch')}
             </ActionButton>
           )}
 
@@ -192,9 +194,9 @@ export const FooterBar: React.FC<FooterBarProps> = ({
               onClick={onReopenLastMatch}
               variant="ghost"
               size={buttonSize}
-              ariaLabel="Letztes Spiel wiedereröffnen"
+              ariaLabel={t('footer.reopenMatchAria')}
             >
-              ↺ Wiedereröffnen
+              ↺ {t('footer.reopen')}
             </ActionButton>
           )}
         </div>

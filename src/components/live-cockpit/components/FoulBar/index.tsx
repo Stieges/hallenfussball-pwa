@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,7 @@ export const FoulBar: React.FC<FoulBarProps> = ({
   awayFouls,
   variant = 'bar',
 }) => {
+  const { t } = useTranslation('cockpit');
   const getFoulStyle = (fouls: number): CSSProperties => {
     const baseStyle: CSSProperties = {
       padding: `2px ${cssVars.spacing.sm}`,
@@ -92,7 +94,7 @@ export const FoulBar: React.FC<FoulBarProps> = ({
           <span>{homeTeamName}</span>
           <span style={getFoulStyle(homeFouls)}>{homeFouls}</span>
         </div>
-        <span style={labelStyle}>FOULS</span>
+        <span style={labelStyle}>{t('foul.display')}</span>
         <div style={teamStyle}>
           <span style={getFoulStyle(awayFouls)}>{awayFouls}</span>
           <span>{awayTeamName}</span>
@@ -115,7 +117,7 @@ export const FoulBar: React.FC<FoulBarProps> = ({
 
   return (
     <div style={inlineStyle}>
-      <span style={{ color: cssVars.colors.textSecondary }}>Fouls:</span>
+      <span style={{ color: cssVars.colors.textSecondary }}>{t('foul.label')}</span>
       <span style={getFoulStyle(homeFouls)}>{homeFouls}</span>
       <span style={{ color: cssVars.colors.textMuted }}>–</span>
       <span style={getFoulStyle(awayFouls)}>{awayFouls}</span>

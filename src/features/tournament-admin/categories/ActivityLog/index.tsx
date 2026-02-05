@@ -8,6 +8,7 @@
  */
 
 import { useState, useMemo, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament, Match, CorrectionEntry } from '../../../../types/tournament';
@@ -193,14 +194,14 @@ const styles = {
 // HELPERS
 // =============================================================================
 
-function getTeamName(tournament: Tournament, teamId: string): string {
+function getTeamName(tournament: Tournament, teamId: string, unknownLabel: string): string {
   const team = tournament.teams.find(t => t.id === teamId);
-  return team?.name ?? 'Unbekannt';
+  return team?.name ?? unknownLabel;
 }
 
-function getMatchLabel(tournament: Tournament, match: Match): string {
-  const teamA = getTeamName(tournament, match.teamA);
-  const teamB = getTeamName(tournament, match.teamB);
+function getMatchLabel(tournament: Tournament, match: Match, unknownLabel: string): string {
+  const teamA = getTeamName(tournament, match.teamA, unknownLabel);
+  const teamB = getTeamName(tournament, match.teamB, unknownLabel);
   return `${teamA} vs ${teamB}`;
 }
 
@@ -254,6 +255,7 @@ function getEntryIcon(type: ActivityEntry['type']): string {
 export function ActivityLogCategory({
   tournament,
 }: ActivityLogCategoryProps) {
+  const { t } = useTranslation('admin');
   const [filter, setFilter] = useState<'all' | 'today' | 'week'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [showCount, setShowCount] = useState(20);
@@ -261,6 +263,7 @@ export function ActivityLogCategory({
   // Build activity entries from tournament data
   const allEntries = useMemo(() => {
     const entries: ActivityEntry[] = [];
+    const unknownLabel = t('activityLog.unknown');
 
     // Add tournament creation
     if (tournament.createdAt) {
@@ -268,13 +271,13 @@ export function ActivityLogCategory({
         id: 'tournament-created',
         type: 'tournament_created',
         timestamp: tournament.createdAt,
-        description: `Turnier "${tournament.title}" wurde erstellt`,
+        description: t('activityLog.tournamentCreated', { title: tournament.title }),
       });
     }
 
     // Process matches for activity entries
     tournament.matches.forEach((match) => {
-      const matchLabel = getMatchLabel(tournament, match);
+      const matchLabel = getMatchLabel(tournament, match, unknownLabel);
 
       // Add match finished entries
       if (match.finishedAt) {
@@ -284,8 +287,8 @@ export function ActivityLogCategory({
           timestamp: match.finishedAt,
           matchId: match.id,
           matchLabel,
-          description: `Spiel beendet`,
-          details: `Endstand: ${match.scoreA ?? 0}:${match.scoreB ?? 0}`,
+          description: t('activityLog.matchFinished'),
+          details: t('activityLog.finalScore', { scoreA: match.scoreA ?? 0, scoreB: match.scoreB ?? 0 }),
         });
       }
 
@@ -298,7 +301,7 @@ export function ActivityLogCategory({
             timestamp: correction.timestamp,
             matchId: match.id,
             matchLabel,
-            description: `Ergebnis korrigiert`,
+            description: t('activityLog.resultCorrected'),
             oldValue: `${correction.previousScoreA}:${correction.previousScoreB}`,
             newValue: `${correction.newScoreA}:${correction.newScoreB}`,
             details: correction.reason ?? correction.note,
@@ -321,7 +324,7 @@ export function ActivityLogCategory({
           timestamp,
           matchId: match.id,
           matchLabel,
-          description: `Ergebnis eingetragen`,
+          description: t('activityLog.resultEntered'),
           newValue: `${match.scoreA}:${match.scoreB}`,
         });
       }
@@ -331,7 +334,7 @@ export function ActivityLogCategory({
     entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return entries;
-  }, [tournament]);
+  }, [tournament, t]);
 
   // Apply filters
   const filteredEntries = useMemo(() => {
@@ -372,8 +375,8 @@ export function ActivityLogCategory({
   return (
     <CategoryPage
       icon="📋"
-      title="Activity Log"
-      description="Änderungsprotokoll und Audit-Trail"
+      title={t('activityLog.title')}
+      description={t('activityLog.description')}
     >
       {/* Filter Bar */}
       <div style={styles.filterBar}>
@@ -382,36 +385,36 @@ export function ActivityLogCategory({
           value={filter}
           onChange={(e) => setFilter(e.target.value as 'all' | 'today' | 'week')}
         >
-          <option value="all">Alle Einträge</option>
-          <option value="today">Heute</option>
-          <option value="week">Letzte 7 Tage</option>
+          <option value="all">{t('activityLog.filterAll')}</option>
+          <option value="today">{t('activityLog.filterToday')}</option>
+          <option value="week">{t('activityLog.filterWeek')}</option>
         </select>
         <select
           style={styles.select}
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="">Alle Aktionen</option>
-          <option value="result_entered">Ergebnisse</option>
-          <option value="result_changed">Korrekturen</option>
-          <option value="match_finished">Spiele beendet</option>
+          <option value="">{t('activityLog.allActions')}</option>
+          <option value="result_entered">{t('activityLog.results')}</option>
+          <option value="result_changed">{t('activityLog.corrections')}</option>
+          <option value="match_finished">{t('activityLog.matchesFinished')}</option>
         </select>
       </div>
 
       {/* Summary Stats */}
-      <CollapsibleSection icon="📊" title="Zusammenfassung" defaultOpen>
+      <CollapsibleSection icon="📊" title={t('activityLog.summary')} defaultOpen>
         <div style={styles.statsGrid}>
           <div style={styles.statCard}>
             <div style={styles.statValue}>{stats.totalEntries}</div>
-            <div style={styles.statLabel}>Gesamt</div>
+            <div style={styles.statLabel}>{t('activityLog.total')}</div>
           </div>
           <div style={styles.statCard}>
             <div style={styles.statValue}>{stats.matchesFinished}</div>
-            <div style={styles.statLabel}>Spiele beendet</div>
+            <div style={styles.statLabel}>{t('activityLog.matchesFinished')}</div>
           </div>
           <div style={styles.statCard}>
             <div style={styles.statValue}>{stats.resultChanges}</div>
-            <div style={styles.statLabel}>Korrekturen</div>
+            <div style={styles.statLabel}>{t('activityLog.corrections')}</div>
           </div>
         </div>
       </CollapsibleSection>
@@ -419,17 +422,17 @@ export function ActivityLogCategory({
       {/* Log Entries */}
       <CollapsibleSection
         icon="📝"
-        title={`Änderungsprotokoll (${filteredEntries.length})`}
+        title={t('activityLog.changeLog', { count: filteredEntries.length })}
         defaultOpen
       >
         {visibleEntries.length === 0 ? (
           <div style={styles.emptyState}>
             <div style={styles.emptyIcon}>📋</div>
-            <p>Keine Einträge gefunden.</p>
+            <p>{t('activityLog.noEntries')}</p>
             <p style={{ fontSize: cssVars.fontSizes.labelSm, marginTop: cssVars.spacing.sm }}>
               {filter !== 'all' || typeFilter
-                ? 'Versuche andere Filtereinstellungen.'
-                : 'Das Activity Log wird gefüllt, sobald Änderungen am Turnier vorgenommen werden.'}
+                ? t('activityLog.tryDifferentFilters')
+                : t('activityLog.emptyLogHint')}
             </p>
           </div>
         ) : (
@@ -472,7 +475,7 @@ export function ActivityLogCategory({
                 style={styles.loadMore}
                 onClick={() => setShowCount(prev => prev + 20)}
               >
-                Mehr laden ({filteredEntries.length - showCount} weitere)
+                {t('activityLog.loadMore', { count: filteredEntries.length - showCount })}
               </button>
             )}
           </>

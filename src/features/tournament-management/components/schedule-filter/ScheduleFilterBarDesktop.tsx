@@ -13,6 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScheduleFilters, PHASE_OPTIONS } from '../../../../types/scheduleFilters';
 import { MatchStatus } from '../../../../types/tournament';
 import { cssVars } from '../../../../design-tokens';
@@ -48,16 +49,28 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
   filterOptions,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
+
+  // Build translated phase options
+  const translatedPhaseOptions: FilterOption[] = PHASE_OPTIONS.map((opt) => ({
+    value: opt.value,
+    label: opt.value === null
+      ? t('filter.allPhases')
+      : opt.value === 'groupStage'
+        ? t('filter.groupStage')
+        : t('filter.finals'),
+  }));
+
   // Build group options from tournament data
   const groupOptions: FilterOption[] = [
-    { value: null, label: 'Alle Gruppen' },
-    ...filterOptions.groups.map((g) => ({ value: g, label: `Gruppe ${g}` })),
+    { value: null, label: t('filter.allGroups') },
+    ...filterOptions.groups.map((g) => ({ value: g, label: t('filter.groupLabel', { group: g }) })),
   ];
 
   // Build field options from tournament data
   const fieldOptions: FilterOption[] = [
-    { value: null, label: 'Alle Felder' },
-    ...filterOptions.fields.map((f) => ({ value: f, label: `Feld ${f}` })),
+    { value: null, label: t('filter.allFields') },
+    ...filterOptions.fields.map((f) => ({ value: f, label: t('filter.fieldLabel', { field: f }) })),
   ];
 
   const containerStyle: CSSProperties = {
@@ -123,9 +136,9 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
         {/* Phase Filter */}
         {filterOptions.showPhaseFilter && (
           <FilterDropdown
-            label="Phase"
+            label={t('filter.phase')}
             value={filters.phase === 'all' ? null : filters.phase}
-            options={PHASE_OPTIONS}
+            options={translatedPhaseOptions}
             onChange={(value) => {
               const phase = value === null ? 'all' : (value as 'groupStage' | 'finals');
               onFilterChange({ phase });
@@ -137,7 +150,7 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
         {/* Group Filter */}
         {filterOptions.showGroupFilter && (
           <FilterDropdown
-            label="Gruppe"
+            label={t('filter.group')}
             value={filters.group}
             options={groupOptions}
             onChange={(value) => onFilterChange({ group: value as string | null })}
@@ -148,7 +161,7 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
         {/* Field Filter */}
         {filterOptions.showFieldFilter && (
           <FilterDropdown
-            label="Feld"
+            label={t('filter.field')}
             value={filters.field}
             options={fieldOptions}
             onChange={(value) => onFilterChange({ field: value as number | null })}
@@ -186,11 +199,11 @@ export const ScheduleFilterBarDesktop: React.FC<ScheduleFilterBarDesktopProps> =
         onClick={onReset}
         disabled={activeFilterCount === 0}
         type="button"
-        aria-label={`Filter zurücksetzen (${activeFilterCount} aktiv)`}
+        aria-label={t('filter.resetAriaLabel', { count: activeFilterCount })}
         data-testid="filter-reset"
       >
         <Icons.X size={16} />
-        <span>Zurücksetzen</span>
+        <span>{t('filter.reset')}</span>
         {activeFilterCount > 0 && (
           <span style={badgeStyle}>{activeFilterCount}</span>
         )}

@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import type { Tournament } from '../../../../types/tournament';
@@ -199,6 +200,7 @@ export function VisibilityCategory({
   tournament,
   onTournamentUpdate,
 }: VisibilityCategoryProps) {
+  const { t } = useTranslation('admin');
   // Get repository from context (respects auth state)
   const repository = useRepository();
 
@@ -303,11 +305,11 @@ export function VisibilityCategory({
       }
     } catch (err) {
       console.error('Failed to make tournament public:', err);
-      setError('Fehler beim Veröffentlichen des Turniers.');
+      setError(t('visibility.errorMakingPublic'));
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate, repository]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository, t]);
 
   // Make tournament private (remove share code)
   const handleMakePrivate = useCallback(async () => {
@@ -330,11 +332,11 @@ export function VisibilityCategory({
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error('Failed to make tournament private:', err);
-      setError('Fehler beim Privatisieren des Turniers.');
+      setError(t('visibility.errorMakingPrivate'));
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate, repository]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository, t]);
 
   // Regenerate share code
   const handleRegenerateCode = useCallback(async () => {
@@ -357,11 +359,11 @@ export function VisibilityCategory({
       }
     } catch (err) {
       console.error('Failed to regenerate share code:', err);
-      setError('Fehler beim Generieren des neuen Codes.');
+      setError(t('visibility.errorRegeneratingCode'));
     } finally {
       setIsUpdating(false);
     }
-  }, [tournamentId, tournament, onTournamentUpdate, repository]);
+  }, [tournamentId, tournament, onTournamentUpdate, repository, t]);
 
   // Handle copy to clipboard
   const handleCopy = async () => {
@@ -418,19 +420,19 @@ export function VisibilityCategory({
   return (
     <CategoryPage
       icon="👁"
-      title="Sichtbarkeit & QR-Code"
-      description="Steuern was öffentlich sichtbar ist und Sharing-Optionen"
+      title={t('visibility.title')}
+      description={t('visibility.description')}
       headerExtra={
         saved && (
           <span style={styles.saveIndicator}>
             <span>✓</span>
-            <span>Gespeichert</span>
+            <span>{t('visibility.saved')}</span>
           </span>
         )
       }
     >
       {/* QR Code & Sharing - only shown when public */}
-      <CollapsibleSection icon="📱" title="QR-Code & Sharing" defaultOpen>
+      <CollapsibleSection icon="📱" title={t('visibility.qrAndSharing')} defaultOpen>
         <div style={styles.qrContainer}>
           {/* Error Message */}
           {error && (
@@ -464,7 +466,7 @@ export function VisibilityCategory({
                   }}
                   onClick={() => { void handleCopy(); }}
                 >
-                  {copied ? '✓ Kopiert!' : '📋 Kopieren'}
+                  {copied ? t('visibility.copied') : t('visibility.copy')}
                 </button>
               </div>
 
@@ -476,7 +478,7 @@ export function VisibilityCategory({
                 textAlign: 'center',
               }}>
                 <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.bodySm }}>
-                  Share-Code:
+                  {t('visibility.shareCode')}:
                 </span>
                 <div style={{
                   fontSize: cssVars.fontSizes.headlineLg,
@@ -501,7 +503,7 @@ export function VisibilityCategory({
                     onClick={() => window.open(publicUrl, '_blank')}
                   >
                     <span>🔗</span>
-                    <span>Public View öffnen</span>
+                    <span>{t('visibility.openPublicView')}</span>
                   </button>
                   <button
                     style={styles.actionButton}
@@ -509,15 +511,15 @@ export function VisibilityCategory({
                     disabled={isUpdating}
                   >
                     <span>🔄</span>
-                    <span>{isUpdating ? 'Wird generiert...' : 'Neuen Code generieren'}</span>
+                    <span>{isUpdating ? t('visibility.generating') : t('visibility.generateNewCode')}</span>
                   </button>
                   <button style={styles.actionButton}>
                     <span>🖨️</span>
-                    <span>QR-Code drucken</span>
+                    <span>{t('visibility.printQr')}</span>
                   </button>
                   <button style={styles.actionButton}>
                     <span>📥</span>
-                    <span>QR-Code herunterladen</span>
+                    <span>{t('visibility.downloadQr')}</span>
                   </button>
                 </div>
               </div>
@@ -525,7 +527,7 @@ export function VisibilityCategory({
               <div style={styles.tip}>
                 <span>💡</span>
                 <span>
-                  Tipp: Hänge den QR-Code in der Halle aus, damit Eltern live mitverfolgen können.
+                  {t('visibility.qrTip')}
                 </span>
               </div>
             </>
@@ -540,8 +542,7 @@ export function VisibilityCategory({
                 marginBottom: cssVars.spacing.md,
               }}>
                 <p style={{ margin: 0, color: cssVars.colors.warning, fontSize: cssVars.fontSizes.bodySm }}>
-                  ⚠️ Das Turnier ist derzeit privat. Der Link unten funktioniert nur für angemeldete Benutzer.
-                  Aktiviere &quot;Mit Link teilbar&quot; unten für einen öffentlichen Share-Link.
+                  {t('visibility.privateWarning')}
                 </p>
               </div>
 
@@ -579,7 +580,7 @@ export function VisibilityCategory({
                       });
                   }}
                 >
-                  {copied ? '✓ Kopiert!' : '📋 Kopieren'}
+                  {copied ? t('visibility.copied') : t('visibility.copy')}
                 </button>
               </div>
 
@@ -593,8 +594,7 @@ export function VisibilityCategory({
                 }}>
                   <span>ℹ️</span>
                   <span>
-                    Lokaler Modus: Share-Codes werden lokal gespeichert und funktionieren nur auf diesem Gerät.
-                    Für geräteübergreifendes Teilen ist eine Cloud-Verbindung erforderlich.
+                    {t('visibility.localModeInfo')}
                   </span>
                 </div>
               )}
@@ -602,7 +602,7 @@ export function VisibilityCategory({
               <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
                 <span>💡</span>
                 <span>
-                  Aktiviere &quot;Mit Link teilbar&quot; unten, um einen öffentlichen Link mit kurzem Share-Code zu erhalten.
+                  {t('visibility.enableShareableTip')}
                 </span>
               </div>
             </>
@@ -611,14 +611,14 @@ export function VisibilityCategory({
       </CollapsibleSection>
 
       {/* Content Visibility */}
-      <CollapsibleSection icon="🖼️" title="Inhalts-Sichtbarkeit" defaultOpen>
+      <CollapsibleSection icon="🖼️" title={t('visibility.contentVisibility')} defaultOpen>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Was sehen Besucher im Public View?
+          {t('visibility.whatVisitorsSee')}
         </p>
         <div style={styles.checkboxGroup}>
           <label style={styles.checkbox}>
             <input type="checkbox" checked disabled />
-            <span>Spielplan (immer sichtbar)</span>
+            <span>{t('visibility.scheduleAlwaysVisible')}</span>
           </label>
           <label style={styles.checkbox}>
             <input
@@ -626,7 +626,7 @@ export function VisibilityCategory({
               checked={!tournament.hideScoresForPublic}
               onChange={(e) => handleScoresVisibility(e.target.checked)}
             />
-            <span>Ergebnisse</span>
+            <span>{t('visibility.results')}</span>
           </label>
           <label style={styles.checkbox}>
             <input
@@ -635,37 +635,37 @@ export function VisibilityCategory({
               onChange={(e) => handleRankingsVisibility(e.target.checked)}
               disabled={tournament.isKidsTournament}
             />
-            <span>Tabellen / Rankings {tournament.isKidsTournament && '(durch Bambini-Modus deaktiviert)'}</span>
+            <span>{t('visibility.rankings')} {tournament.isKidsTournament && t('visibility.disabledByBambini')}</span>
           </label>
         </div>
       </CollapsibleSection>
 
       {/* Bambini Mode */}
-      <CollapsibleSection icon="👶" title="Bambini-Modus" defaultOpen>
+      <CollapsibleSection icon="👶" title={t('visibility.bambiniMode')} defaultOpen>
         <label style={styles.checkbox}>
           <input
             type="checkbox"
             checked={tournament.isKidsTournament || false}
             onChange={(e) => handleBambiniMode(e.target.checked)}
           />
-          <span>Bambini-Modus aktivieren</span>
+          <span>{t('visibility.enableBambiniMode')}</span>
         </label>
         <p style={{ color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.md }}>
-          Wenn aktiviert:
+          {t('visibility.whenEnabled')}:
         </p>
         <ul style={{ color: cssVars.colors.textSecondary, paddingLeft: cssVars.spacing.lg, margin: `${cssVars.spacing.sm} 0` }}>
-          <li>Keine Tabellen anzeigen</li>
-          <li>Keine Platzierungen anzeigen</li>
-          <li>Fokus auf Spaß statt Wettbewerb</li>
+          <li>{t('visibility.noTables')}</li>
+          <li>{t('visibility.noPlacements')}</li>
+          <li>{t('visibility.focusOnFun')}</li>
         </ul>
         <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
           <span>💡</span>
-          <span>Ideal für E- und F-Jugend Turniere ohne Ergebnis-Fokus.</span>
+          <span>{t('visibility.bambiniIdeal')}</span>
         </div>
       </CollapsibleSection>
 
       {/* Visibility Level */}
-      <CollapsibleSection icon="🔒" title="Turnier-Sichtbarkeit">
+      <CollapsibleSection icon="🔒" title={t('visibility.tournamentVisibility')}>
         <div style={styles.radioGroup}>
           {/* Private Option */}
           <label
@@ -689,9 +689,9 @@ export function VisibilityCategory({
               disabled={isUpdating}
             />
             <div>
-              <div style={styles.radioLabel}>🔒 Privat</div>
+              <div style={styles.radioLabel}>{t('visibility.private')}</div>
               <div style={styles.radioDescription}>
-                Nur für eingeloggte Turnierleitung sichtbar. Kein Public View.
+                {t('visibility.privateDesc')}
               </div>
             </div>
           </label>
@@ -719,11 +719,11 @@ export function VisibilityCategory({
             />
             <div>
               <div style={styles.radioLabel}>
-                🔗 Mit Link teilbar
+                {t('visibility.shareable')}
                 {isUpdating && <span style={{ marginLeft: cssVars.spacing.sm }}>⏳</span>}
               </div>
               <div style={styles.radioDescription}>
-                Jeder mit dem Link kann zuschauen. Nicht in Suchmaschinen auffindbar.
+                {t('visibility.shareableDesc')}
               </div>
             </div>
           </label>
@@ -732,9 +732,9 @@ export function VisibilityCategory({
           <label style={{ ...styles.radioOption, opacity: 0.5, cursor: 'not-allowed' }}>
             <input type="radio" name="visibility" disabled />
             <div>
-              <div style={styles.radioLabel}>🌍 Öffentlich gelistet</div>
+              <div style={styles.radioLabel}>{t('visibility.publicListed')}</div>
               <div style={styles.radioDescription}>
-                Im Internet suchbar. (Bald verfügbar)
+                {t('visibility.publicListedDesc')}
               </div>
             </div>
           </label>
@@ -750,8 +750,7 @@ export function VisibilityCategory({
           }}>
             <span>ℹ️</span>
             <span>
-              Lokaler Modus aktiv: Share-Codes werden lokal gespeichert.
-              Für Cloud-Sync und geräteübergreifendes Teilen melde dich an.
+              {t('visibility.localModeActive')}
             </span>
           </div>
         )}
@@ -759,8 +758,7 @@ export function VisibilityCategory({
         <div style={{ ...styles.tip, marginTop: cssVars.spacing.md }}>
           <span>ℹ️</span>
           <span>
-            Bei "Mit Link teilbar" wird ein 6-stelliger Share-Code generiert (z.B. ABC123).
-            Der Code ist leicht merkbar und tippbar.
+            {t('visibility.shareCodeInfo')}
           </span>
         </div>
       </CollapsibleSection>

@@ -11,6 +11,7 @@
  */
 
 import { FinalsPreset } from '../types/tournament';
+import i18n from '../i18n';
 
 export interface FinalsOption {
   preset: FinalsPreset;
@@ -31,11 +32,11 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
   // KEINE FINALRUNDE
   options.push({
     preset: 'none',
-    label: 'Keine Finalrunde',
-    description: 'Nur Gruppenphase, Platzierung nach Tabelle',
+    label: i18n.t('wizard:finalsOptions.none.label', { defaultValue: '' }),
+    description: i18n.t('wizard:finalsOptions.none.description', { defaultValue: '' }),
     category: 'recommended',
     finalTeams: 0,
-    explanation: 'Empfohlen bei sehr wenig Zeit oder reinen Turnierspieltagen',
+    explanation: i18n.t('wizard:finalsOptions.none.explanation', { defaultValue: '' }),
   });
 
   // 2 GRUPPEN
@@ -43,30 +44,30 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
     // Empfohlen
     options.push({
       preset: 'top-4',
-      label: 'Top 4 (Halbfinale + Finale)',
-      description: 'Kreuzspiele: 1A-2B, 1B-2A → Finale + Platz 3',
+      label: i18n.t('wizard:finalsOptions.top4.label2g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top4.description2g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 4,
-      explanation: 'Standard bei 2 Gruppen - fair und übersichtlich',
+      explanation: i18n.t('wizard:finalsOptions.top4.explanation2g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'all-places',
-      label: 'Alle Plätze ausspielen',
-      description: 'Halbfinale + Platzierungen 3, 5, 7',
+      label: i18n.t('wizard:finalsOptions.allPlaces.label2g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.allPlaces.description2g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 8,
-      explanation: 'Jedes Team hat noch ein Finalspiel - hohe Beteiligung',
+      explanation: i18n.t('wizard:finalsOptions.allPlaces.explanation2g', { defaultValue: '' }),
     });
 
     // Nur möglich
     options.push({
       preset: 'final-only',
-      label: 'Nur Finale',
-      description: 'Direktes Finale: 1A vs 1B',
+      label: i18n.t('wizard:finalsOptions.finalOnly.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.finalOnly.description2g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 2,
-      explanation: 'Zu wenig Finalspiele, zweite Plätze spielen nicht um Platz 3',
+      explanation: i18n.t('wizard:finalsOptions.finalOnly.explanation2g', { defaultValue: '' }),
     });
   }
 
@@ -75,30 +76,30 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
     // Empfohlen
     options.push({
       preset: 'top-4',
-      label: 'Top 4 (Halbfinale + Finale)',
-      description: 'Beste 4 Teams → Halbfinale → Finale + Platz 3',
+      label: i18n.t('wizard:finalsOptions.top4.label3g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top4.description3g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 4,
-      explanation: 'Sinnvoll bei 3 Gruppen - bester Gruppenerster bekommt Freilos',
+      explanation: i18n.t('wizard:finalsOptions.top4.explanation3g', { defaultValue: '' }),
     });
 
     // Nur möglich
     options.push({
       preset: 'final-only',
-      label: 'Nur Finale',
-      description: 'Beste 2 Teams direkt im Finale',
+      label: i18n.t('wizard:finalsOptions.finalOnly.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.finalOnly.description3g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 2,
-      explanation: 'Zu wenig Finalspiele, unfair wegen Freilos-Problematik',
+      explanation: i18n.t('wizard:finalsOptions.finalOnly.explanation3g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'all-places',
-      label: 'Top 6 (alle Gruppenersten + -zweite)',
-      description: '6er-Endrunde mit Zwischengruppen oder KO',
+      label: i18n.t('wizard:finalsOptions.allPlaces.label3g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.allPlaces.description3g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 6,
-      explanation: 'Komplex - zwei 3er-Zwischengruppen nötig, viel Zeit erforderlich',
+      explanation: i18n.t('wizard:finalsOptions.allPlaces.explanation3g', { defaultValue: '' }),
     });
   }
 
@@ -107,40 +108,40 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
     // Empfohlen
     options.push({
       preset: 'top-8',
-      label: 'Top 8 (mit Viertelfinale)',
-      description: 'Top 2 pro Gruppe → Viertelfinale → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top8.label4g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top8.description4g', { defaultValue: '' }),
       category: 'recommended',
       minGroups: 4,
       finalTeams: 8,
-      explanation: 'Klassisch bei 4 Gruppen - perfekte Symmetrie',
+      explanation: i18n.t('wizard:finalsOptions.top8.explanation4g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'top-4',
-      label: 'Top 4 (nur Gruppenerste)',
-      description: 'Nur Gruppenerste → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top4.label4g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top4.description4g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 4,
-      explanation: 'Kürzere Variante - gut bei wenig Zeit',
+      explanation: i18n.t('wizard:finalsOptions.top4.explanation4g', { defaultValue: '' }),
     });
 
     // Nur möglich
     options.push({
       preset: 'all-places',
-      label: 'Alle Plätze (Top 16)',
-      description: 'Alle Teams in Finalrunde - komplette Platzierungen',
+      label: i18n.t('wizard:finalsOptions.allPlaces.label4g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.allPlaces.description4g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 16,
-      explanation: 'Sehr viele Spiele - nur bei ganztägigen Turnieren realistisch',
+      explanation: i18n.t('wizard:finalsOptions.allPlaces.explanation4g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'final-only',
-      label: 'Nur Finale',
-      description: 'Beste 2 Gruppenerste direkt im Finale',
+      label: i18n.t('wizard:finalsOptions.finalOnly.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.finalOnly.description4g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 2,
-      explanation: 'Zu wenig Finalspiele für 4 Gruppen',
+      explanation: i18n.t('wizard:finalsOptions.finalOnly.explanation4g', { defaultValue: '' }),
     });
   }
 
@@ -149,40 +150,40 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
     // Empfohlen
     options.push({
       preset: 'top-8',
-      label: 'Top 8 (mit Viertelfinale)',
-      description: 'Beste 8 Teams → Viertelfinale → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top8.label5to7g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top8.description5to7g', { defaultValue: '' }),
       category: 'recommended',
       minGroups: 4,
       finalTeams: 8,
-      explanation: 'Standard für große Turniere - bewährte Struktur',
+      explanation: i18n.t('wizard:finalsOptions.top8.explanation5to7g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'top-4',
-      label: 'Top 4 (Halbfinale)',
-      description: 'Beste 4 Teams → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top4.label5to7g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top4.description5to7g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 4,
-      explanation: 'Kürzere Variante bei vielen Gruppen',
+      explanation: i18n.t('wizard:finalsOptions.top4.explanation5to7g', { defaultValue: '' }),
     });
 
     // Nur möglich
     options.push({
       preset: 'all-places',
-      label: 'Alle Plätze',
-      description: 'Maximale Anzahl Teams in Finalrunde',
+      label: i18n.t('wizard:finalsOptions.allPlaces.label5to7g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.allPlaces.description5to7g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: numberOfGroups * 4,
-      explanation: 'Nur bei sehr großen, mehrtägigen Turnieren sinnvoll',
+      explanation: i18n.t('wizard:finalsOptions.allPlaces.explanation5to7g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'final-only',
-      label: 'Nur Finale',
-      description: 'Beste 2 Teams direkt im Finale',
+      label: i18n.t('wizard:finalsOptions.finalOnly.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.finalOnly.descriptionDefault', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 2,
-      explanation: 'Zu wenig Finalspiele für viele Gruppen',
+      explanation: i18n.t('wizard:finalsOptions.finalOnly.explanation5to7g', { defaultValue: '' }),
     });
   }
 
@@ -191,50 +192,50 @@ export function getFinalsOptions(numberOfGroups: number): FinalsOption[] {
     // Empfohlen
     options.push({
       preset: 'top-16',
-      label: 'Top 16 (mit Achtelfinale)',
-      description: 'Beste 16 Teams → Achtelfinale → Viertelfinale → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top16.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top16.description', { defaultValue: '' }),
       category: 'recommended',
       minGroups: 8,
       finalTeams: 16,
-      explanation: 'Klassisch bei 8+ Gruppen - perfekte Symmetrie für große Turniere',
+      explanation: i18n.t('wizard:finalsOptions.top16.explanation', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'top-8',
-      label: 'Top 8 (mit Viertelfinale)',
-      description: 'Beste 8 Teams → Viertelfinale → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top8.label8g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top8.description8g', { defaultValue: '' }),
       category: 'recommended',
       minGroups: 4,
       finalTeams: 8,
-      explanation: 'Kürzere Variante - gut bei begrenzter Zeit',
+      explanation: i18n.t('wizard:finalsOptions.top8.explanation8g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'top-4',
-      label: 'Top 4 (nur Halbfinale)',
-      description: 'Beste 4 Teams → Halbfinale → Finale',
+      label: i18n.t('wizard:finalsOptions.top4.label8g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.top4.description8g', { defaultValue: '' }),
       category: 'recommended',
       finalTeams: 4,
-      explanation: 'Sehr kurze Variante - nur die absolut besten Teams',
+      explanation: i18n.t('wizard:finalsOptions.top4.explanation8g', { defaultValue: '' }),
     });
 
     // Nur möglich
     options.push({
       preset: 'all-places',
-      label: 'Alle Plätze',
-      description: 'Maximale Anzahl Teams in Finalrunde',
+      label: i18n.t('wizard:finalsOptions.allPlaces.label8g', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.allPlaces.description8g', { defaultValue: '' }),
       category: 'possible',
       finalTeams: numberOfGroups * 4,
-      explanation: 'Nur bei mehrtägigen Großturnieren realistisch - sehr viele Spiele',
+      explanation: i18n.t('wizard:finalsOptions.allPlaces.explanation8g', { defaultValue: '' }),
     });
 
     options.push({
       preset: 'final-only',
-      label: 'Nur Finale',
-      description: 'Beste 2 Teams direkt im Finale',
+      label: i18n.t('wizard:finalsOptions.finalOnly.label', { defaultValue: '' }),
+      description: i18n.t('wizard:finalsOptions.finalOnly.descriptionDefault', { defaultValue: '' }),
       category: 'possible',
       finalTeams: 2,
-      explanation: 'Viel zu wenig Finalspiele für so viele Gruppen',
+      explanation: i18n.t('wizard:finalsOptions.finalOnly.explanation8g', { defaultValue: '' }),
     });
   }
 

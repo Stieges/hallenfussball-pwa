@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -59,6 +60,7 @@ export function TimePenaltyDialog({
   preselectedTeamSide,
   autoDismissSeconds = 10,
 }: TimePenaltyDialogProps) {
+  const { t } = useTranslation('cockpit');
   const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
@@ -166,9 +168,9 @@ export function TimePenaltyDialog({
     <>
       <div style={styles.iconHeader}>
         <span style={styles.timerIcon}>⏱️</span>
-        <h2 id="penalty-dialog-title" style={styles.title}>Zeitstrafe</h2>
+        <h2 id="penalty-dialog-title" style={styles.title}>{t('timePenalty.title')}</h2>
       </div>
-      <p style={styles.subtitle}>Strafzeit wählen</p>
+      <p style={styles.subtitle}>{t('timePenalty.chooseDuration')}</p>
 
       <div style={styles.durationGrid}>
         {PENALTY_DURATIONS.map(({ seconds, label }) => (
@@ -183,7 +185,7 @@ export function TimePenaltyDialog({
       </div>
 
       <button style={styles.cancelButton} onClick={onClose}>
-        Abbrechen
+        {t('timePenalty.cancel')}
       </button>
     </>
   );
@@ -191,19 +193,19 @@ export function TimePenaltyDialog({
   const renderStep2Team = () => (
     <>
       <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
+        <button style={styles.backButton} onClick={handleBack} aria-label={t('timePenalty.back')}>
           ←
         </button>
         <div style={styles.headerContent}>
           <span style={styles.timerIconSmall}>⏱️</span>
           <h2 style={styles.title}>
-            {formatDuration(durationSeconds ?? 0)} Zeitstrafe
+            {formatDuration(durationSeconds ?? 0)} {t('timePenalty.title')}
           </h2>
         </div>
         <div style={{ width: 44 }} />
       </div>
 
-      <p style={styles.subtitle}>Für welches Team?</p>
+      <p style={styles.subtitle}>{t('timePenalty.forWhichTeam')}</p>
 
       <div style={styles.teamGrid}>
         <button
@@ -222,7 +224,7 @@ export function TimePenaltyDialog({
       </div>
 
       <button style={styles.cancelButton} onClick={onClose}>
-        Abbrechen
+        {t('timePenalty.cancel')}
       </button>
     </>
   );
@@ -230,14 +232,14 @@ export function TimePenaltyDialog({
   const renderStep3Player = () => (
     <>
       <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
+        <button style={styles.backButton} onClick={handleBack} aria-label={t('timePenalty.back')}>
           ←
         </button>
         <div style={styles.headerContent}>
           <span style={styles.timerIconSmall}>⏱️</span>
           <div>
             <h2 style={styles.titleSmall}>
-              {formatDuration(durationSeconds ?? 0)} Zeitstrafe
+              {formatDuration(durationSeconds ?? 0)} {t('timePenalty.title')}
             </h2>
             <p style={styles.teamSubtitle}>{selectedTeam?.name}</p>
           </div>
@@ -245,7 +247,7 @@ export function TimePenaltyDialog({
         <div style={{ width: 44 }} />
       </div>
 
-      <p style={styles.subtitle}>Rückennummer (optional)</p>
+      <p style={styles.subtitle}>{t('timePenalty.jerseyNumber')}</p>
 
       <div style={styles.inputContainer}>
         <input
@@ -290,13 +292,13 @@ export function TimePenaltyDialog({
 
       <div style={styles.actions}>
         <button style={styles.skipButton} onClick={handleSkipPlayer}>
-          Ohne Nr.{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
+          {t('timePenalty.withoutNumber')}{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
         </button>
         <button
           style={styles.confirmButton}
           onClick={handleConfirm}
         >
-          Speichern
+          {t('timePenalty.save')}
         </button>
       </div>
     </>

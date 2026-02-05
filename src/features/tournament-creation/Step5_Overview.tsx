@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card, Button, Icons } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -11,20 +12,22 @@ interface Step5Props {
 }
 
 export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
+  const { t } = useTranslation('wizard');
+
   return (
     <Card>
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
-        Zusammenfassung
+        {t('step5.title')}
       </h2>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Turniername */}
         <div className={styles.infoBox}>
           <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-            Turniername
+            {t('step5.tournamentName')}
           </div>
           <div style={{ fontSize: cssVars.fontSizes.xl, fontWeight: cssVars.fontWeights.bold, color: cssVars.colors.textPrimary }}>
-            {formData.title ?? '(nicht angegeben)'}
+            {formData.title ?? t('step5.notSpecified')}
           </div>
         </div>
 
@@ -32,7 +35,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {formData.organizer && (
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Veranstalter
+              {t('step5.organizer')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
               {formData.organizer}
@@ -44,18 +47,18 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Sportart
+              {t('step5.sport')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary }}>
-              {formData.sport === 'football' ? 'Fußball' : 'Sonstiges'}
+              {formData.sport === 'football' ? t('step5.football') : t('step5.otherSport')}
             </div>
           </div>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Turniertyp
+              {t('step5.tournamentType')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: formData.tournamentType === 'bambini' ? cssVars.colors.warning : cssVars.colors.primary }}>
-              {formData.tournamentType === 'bambini' ? 'Bambini' : 'Klassisch'}
+              {formData.tournamentType === 'bambini' ? t('step5.bambiniType') : t('step5.classicType')}
             </div>
           </div>
         </div>
@@ -64,7 +67,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Altersklasse
+              {t('step5.ageClass')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.primary }}>
               {formData.ageClass}
@@ -72,10 +75,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
           </div>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Modus
+              {t('step5.mode')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.secondary }}>
-              {formData.mode === 'classic' ? 'Klassisch' : 'Mini-Fußball'}
+              {formData.mode === 'classic' ? t('step5.classicMode') : t('step5.miniFussballMode')}
             </div>
           </div>
         </div>
@@ -84,7 +87,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         <div className={styles.infoGrid}>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Datum
+              {t('step5.date')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
               {formData.date ?? '-'}
@@ -92,7 +95,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
           </div>
           <div className={styles.infoBox}>
             <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '4px' }}>
-              Ort
+              {t('step5.locationLabel')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
               {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
@@ -103,10 +106,10 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Teams */}
         <div className={styles.infoBox}>
           <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, marginBottom: '8px' }}>
-            Teams
+            {t('step5.teamsLabel')}
           </div>
           <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-            {formData.teams?.length ?? 0} Teams
+            {t('step5.teamsCount', { count: formData.teams?.length ?? 0 })}
           </div>
           {formData.teams && formData.teams.length > 0 && (
             <div className={styles.teamsContainer}>
@@ -123,7 +126,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
         {/* Preview Button */}
         <div style={{ marginTop: '24px' }}>
           <Button onClick={onSave} icon={<Icons.ChevronRight />} size="lg" fullWidth iconPosition="right" data-testid="wizard-show-preview">
-            Vorschau anzeigen
+            {t('step5.showPreview')}
           </Button>
         </div>
       </div>

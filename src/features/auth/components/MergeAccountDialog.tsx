@@ -10,6 +10,7 @@
  */
 
 import React, { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { Dialog } from '../../../components/dialogs/Dialog';
@@ -68,6 +69,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
   onMergeSuccess,
   onMergeError,
 }) => {
+  const { t } = useTranslation('auth');
   const [state, setState] = useState<DialogState>('prompt');
   const [mergeResult, setMergeResult] = useState<MergeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,9 +90,9 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
       setState('success');
       onMergeSuccess?.(result);
     } else {
-      setError(result.error ?? 'Unbekannter Fehler');
+      setError(result.error ?? t('errors.unknownError'));
       setState('error');
-      onMergeError?.(result.error ?? 'Unbekannter Fehler');
+      onMergeError?.(result.error ?? t('errors.unknownError'));
     }
   };
 
@@ -117,12 +119,10 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
             {/* Message */}
             <div style={styles.messageContainer}>
               <p style={styles.message}>
-                Die E-Mail-Adresse <strong>{conflictEmail}</strong> ist bereits
-                mit einem Konto verknüpft.
+                {t('mergeDialog.message', { email: conflictEmail })}
               </p>
               <p style={styles.submessage}>
-                Möchtest du deine aktuellen Turniere mit diesem bestehenden
-                Konto zusammenführen? Deine Daten gehen dabei nicht verloren.
+                {t('mergeDialog.submessage')}
               </p>
             </div>
 
@@ -130,15 +130,15 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
             <div style={styles.benefitsList}>
               <div style={styles.benefitItem}>
                 <span style={styles.checkIcon}>✓</span>
-                <span>Alle Turniere werden übertragen</span>
+                <span>{t('mergeDialog.benefits.transferAll')}</span>
               </div>
               <div style={styles.benefitItem}>
                 <span style={styles.checkIcon}>✓</span>
-                <span>Keine Daten gehen verloren</span>
+                <span>{t('mergeDialog.benefits.noDataLoss')}</span>
               </div>
               <div style={styles.benefitItem}>
                 <span style={styles.checkIcon}>✓</span>
-                <span>Zugriff auf alle Cloud-Features</span>
+                <span>{t('mergeDialog.benefits.cloudAccess')}</span>
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 style={styles.primaryButton}
                 data-testid="merge-login-button"
               >
-                Mit bestehendem Konto anmelden
+                {t('mergeDialog.loginWithExisting')}
               </Button>
 
               <Button
@@ -159,7 +159,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 style={styles.secondaryButton}
                 data-testid="merge-different-email-button"
               >
-                Andere E-Mail verwenden
+                {t('mergeDialog.useOtherEmail')}
               </Button>
             </div>
           </>
@@ -169,9 +169,9 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
         return (
           <div style={styles.loadingContainer}>
             <div style={styles.spinner} />
-            <p style={styles.loadingText}>Konten werden zusammengeführt...</p>
+            <p style={styles.loadingText}>{t('mergeDialog.merging.title')}</p>
             <p style={styles.loadingSubtext}>
-              Deine Turniere werden übertragen. Bitte warte einen Moment.
+              {t('mergeDialog.merging.message')}
             </p>
           </div>
         );
@@ -188,11 +188,11 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
 
             {/* Message */}
             <div style={styles.messageContainer}>
-              <p style={styles.successTitle}>Erfolgreich zusammengeführt!</p>
+              <p style={styles.successTitle}>{t('mergeDialog.success.title')}</p>
               <p style={styles.submessage}>
                 {mergeResult?.tournamentsMerged
-                  ? `${mergeResult.tournamentsMerged} Turnier${mergeResult.tournamentsMerged !== 1 ? 'e' : ''} wurde${mergeResult.tournamentsMerged !== 1 ? 'n' : ''} übertragen.`
-                  : 'Deine Konten wurden erfolgreich zusammengeführt.'}
+                  ? t('mergeDialog.success.merged', { count: mergeResult.tournamentsMerged })
+                  : t('mergeDialog.success.fallback')}
               </p>
             </div>
 
@@ -203,7 +203,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 onClick={handleClose}
                 style={styles.primaryButton}
               >
-                Fertig
+                {t('mergeDialog.done')}
               </Button>
             </div>
           </div>
@@ -221,9 +221,9 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
 
             {/* Message */}
             <div style={styles.messageContainer}>
-              <p style={styles.errorTitle}>Fehler beim Zusammenführen</p>
+              <p style={styles.errorTitle}>{t('mergeDialog.error.title')}</p>
               <p style={styles.submessage}>
-                {error ?? 'Ein unbekannter Fehler ist aufgetreten.'}
+                {error ?? t('errors.unknownError')}
               </p>
             </div>
 
@@ -235,7 +235,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 style={styles.primaryButton}
                 data-testid="merge-retry-button"
               >
-                Erneut versuchen
+                {t('mergeDialog.error.retry')}
               </Button>
 
               <Button
@@ -243,7 +243,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
                 onClick={handleClose}
                 style={styles.secondaryButton}
               >
-                Abbrechen
+                {t('mergeDialog.error.cancel')}
               </Button>
             </div>
           </div>
@@ -255,7 +255,7 @@ export const MergeAccountDialog: React.FC<MergeAccountDialogProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={state === 'merging' ? () => void 0 : handleClose}
-      title="Konto bereits vorhanden"
+      title={t('mergeDialog.title')}
       maxWidth="420px"
       closeOnBackdropClick={state !== 'merging'}
       data-testid="merge-account-dialog"

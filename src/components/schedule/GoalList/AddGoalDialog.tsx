@@ -20,6 +20,7 @@
  */
 
 import { type CSSProperties, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Dialog } from '../../dialogs/Dialog';
 import { Button } from '../../ui/Button';
@@ -92,6 +93,7 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
   onAdd,
   isLive = false,
 }) => {
+  const { t } = useTranslation('tournament');
   const [selectedTeamId, setSelectedTeamId] = useState<string>(homeTeam.id);
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [timeInput, setTimeInput] = useState<string>('');
@@ -212,13 +214,13 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Tor hinzufügen"
+      title={t('goalList.addGoalDialog.title')}
       maxWidth="400px"
     >
       <div style={formStyle}>
         {/* Team Selection */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Team</label>
+          <label style={labelStyle}>{t('goalList.addGoalDialog.team')}</label>
           <div style={teamToggleStyle}>
             <button
               type="button"
@@ -239,7 +241,7 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
 
         {/* Player Number */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Trikotnummer (optional)</label>
+          <label style={labelStyle}>{t('goalList.addGoalDialog.jerseyNumber')}</label>
           <input
             type="text"
             inputMode="numeric"
@@ -251,13 +253,13 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
             autoComplete="off"
           />
           <span style={hintStyle}>
-            Kann später nachgetragen werden
+            {t('goalList.addGoalDialog.jerseyHint')}
           </span>
         </div>
 
         {/* Time */}
         <div style={fieldStyle}>
-          <label style={labelStyle}>Spielminute</label>
+          <label style={labelStyle}>{t('goalList.addGoalDialog.matchMinute')}</label>
           <input
             type="text"
             value={timeInput}
@@ -267,7 +269,7 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
             autoComplete="off"
           />
           <span style={hintStyle}>
-            {isLive ? 'Aktuelle Zeit wird vorgeschlagen' : 'Format: MM:SS'}
+            {isLive ? t('goalList.addGoalDialog.timeHintLive') : t('goalList.addGoalDialog.timeHintFormat')}
           </span>
         </div>
 
@@ -278,14 +280,14 @@ export const AddGoalDialog: React.FC<AddGoalDialogProps> = ({
             size="md"
             onClick={onClose}
           >
-            Abbrechen
+            {t('goalList.addGoalDialog.cancel')}
           </Button>
           <Button
             variant="primary"
             size="md"
             onClick={handleAdd}
           >
-            Tor hinzufügen
+            {t('goalList.addGoalDialog.addGoal')}
           </Button>
         </div>
       </div>

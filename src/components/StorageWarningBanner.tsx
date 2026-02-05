@@ -6,10 +6,12 @@
  */
 
 import { useState, useEffect, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens'
 import { checkStorageHealth } from '../utils/storageCleanup';
 
 export const StorageWarningBanner: React.FC = () => {
+  const { t } = useTranslation('common');
   // Initialize warning from health check (runs once on mount)
   const [warning, setWarning] = useState<string | null>(() => {
     const health = checkStorageHealth();
@@ -85,7 +87,7 @@ export const StorageWarningBanner: React.FC = () => {
         onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.3)')}
         onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
       >
-        Verstanden
+        {t('actions.understood')}
       </button>
     </div>
   );

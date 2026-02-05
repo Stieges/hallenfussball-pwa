@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Select, Input, NumberStepper } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, RefereeMode, FinalsRefereeMode, RefereeConfig } from '../../../types/tournament';
@@ -12,6 +13,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
   formData,
   onUpdate,
 }) => {
+  const { t } = useTranslation('wizard');
   const refereeConfig = formData.refereeConfig;
   const mode = refereeConfig?.mode ?? 'none';
   const showFinalsOptions = mode === 'teams' && formData.groupSystem === 'groupsAndFinals';
@@ -147,22 +149,22 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
         color: cssVars.colors.textPrimary,
         marginBottom: '16px'
       }}>
-        Schiedsrichter
+        {t('referees.title')}
       </h3>
 
       <Select
-        label="Schiedsrichter-Modus"
+        label={t('referees.modeLabel')}
         value={mode}
         onChange={handleModeChange}
         options={[
-          { value: 'none', label: 'Keine Schiedsrichter' },
-          { value: 'organizer', label: 'Veranstalter stellt SR (eigene Schiedsrichter)' },
-          { value: 'teams', label: 'Teams stellen SR (nach eigenem Spiel)' },
+          { value: 'none', label: t('referees.modes.none') },
+          { value: 'organizer', label: t('referees.modes.organizer') },
+          { value: 'teams', label: t('referees.modes.teams') },
         ]}
       />
       <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
-        <strong>Veranstalter-Modus:</strong> Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).{' '}
-        <strong>Teams-Modus:</strong> Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld.
+        <strong>{t('referees.modeHint.organizerMode')}</strong> {t('referees.modeHint.organizerDescription')}{' '}
+        <strong>{t('referees.modeHint.teamsMode')}</strong> {t('referees.modeHint.teamsDescription')}
       </p>
 
       {/* Organizer Mode Settings */}
@@ -170,7 +172,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
         <div style={organizerSettingsStyle}>
           <div className="referee-grid" style={{ display: 'grid', gap: '16px', marginBottom: '16px' }}>
             <NumberStepper
-              label="Anzahl Schiedsrichter"
+              label={t('referees.organizerSettings.count')}
               value={refereeConfig?.numberOfReferees ?? 2}
               onChange={(v) => handleNumberChange('numberOfReferees', v)}
               min={1}
@@ -178,7 +180,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               mode="stepper"
             />
             <NumberStepper
-              label="Max. zusammenhängende Partien"
+              label={t('referees.organizerSettings.maxConsecutive')}
               value={refereeConfig?.maxConsecutiveMatches ?? 1}
               onChange={(v) => handleNumberChange('maxConsecutiveMatches', v)}
               min={1}
@@ -187,8 +189,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
             />
           </div>
           <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', margin: '0 0 16px 0' }}>
-            Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt.
-            "Max. zusammenhängende Partien = 1" bedeutet keine direkt aufeinanderfolgenden Einsätze.
+            {t('referees.organizerSettings.distributionHint')}
           </p>
 
           {/* Names Checkbox */}
@@ -200,7 +201,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
               style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
             />
             <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md, fontWeight: cssVars.fontWeights.medium }}>
-              Namen der Schiedsrichter angeben
+              {t('referees.organizerSettings.enableNames')}
             </span>
           </label>
 
@@ -208,7 +209,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
           {hasNames && (
             <div style={namesContainerStyle}>
               <h4 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm, margin: '0 0 12px 0', fontWeight: cssVars.fontWeights.semibold }}>
-                Schiedsrichter-Namen
+                {t('referees.organizerSettings.namesTitle')}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {Array.from({ length: refereeConfig.numberOfReferees ?? 2 }, (_, i) => i + 1).map((refNumber) => {
@@ -219,11 +220,11 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                   return (
                     <div key={refNumber}>
                       <Input
-                        label={`SR ${refNumber}`}
+                        label={t('referees.organizerSettings.nameLabel', { number: refNumber })}
                         type="text"
                         value={refName}
                         onChange={(v) => handleNameChange(refNumber, v)}
-                        placeholder={`Name von Schiedsrichter ${refNumber}`}
+                        placeholder={t('referees.organizerSettings.namePlaceholder', { number: refNumber })}
                         error={hasError}
                       />
                       {hasError && (
@@ -232,7 +233,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                           color: cssVars.colors.error,
                           fontSize: cssVars.fontSizes.xs,
                         }}>
-                          Dieser Name wird bereits verwendet
+                          {t('referees.organizerSettings.duplicateName')}
                         </p>
                       )}
                     </div>
@@ -240,7 +241,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
                 })}
               </div>
               <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '12px', marginBottom: 0 }}>
-                Die Namen erscheinen später im Spielplan statt "SR1", "SR2", etc.
+                {t('referees.organizerSettings.namesHint')}
               </p>
             </div>
           )}
@@ -251,18 +252,18 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
       {showFinalsOptions && (
         <div style={{ marginTop: '16px' }}>
           <Select
-            label="Schiedsrichter in Finalphase"
+            label={t('referees.finalsMode.label')}
             value={refereeConfig?.finalsRefereeMode ?? 'none'}
             onChange={handleFinalsRefereeMode}
             options={[
-              { value: 'none', label: 'Keine SR in Finalphase' },
-              { value: 'neutralTeams', label: 'Ausgeschiedene Teams (nicht in Finalrunde)' },
-              { value: 'nonParticipatingTeams', label: 'Unbeteiligte Teams (nicht im aktuellen Spiel)' },
+              { value: 'none', label: t('referees.finalsMode.none') },
+              { value: 'neutralTeams', label: t('referees.finalsMode.neutralTeams') },
+              { value: 'nonParticipatingTeams', label: t('referees.finalsMode.nonParticipatingTeams') },
             ]}
           />
           <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, lineHeight: '1.4', marginTop: '8px' }}>
-            <strong>Ausgeschiedene Teams:</strong> Nur Teams, die nicht in der Finalrunde spielen.{' '}
-            <strong>Unbeteiligte Teams:</strong> Teams die aktuell nicht im Finalspiel stehen (flexibler).
+            <strong>{t('referees.finalsMode.hintNeutral')}</strong> {t('referees.finalsMode.hintNeutralDescription')}{' '}
+            <strong>{t('referees.finalsMode.hintNonParticipating')}</strong> {t('referees.finalsMode.hintNonParticipatingDescription')}
           </p>
         </div>
       )}

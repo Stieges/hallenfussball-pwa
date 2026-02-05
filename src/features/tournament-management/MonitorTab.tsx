@@ -12,6 +12,7 @@
  */
 
 import { CSSProperties, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cssVars } from '../../design-tokens'
 import { Tournament, Standing } from '../../types/tournament'
 import { GeneratedSchedule } from '../../core/generators'
@@ -40,6 +41,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
   schedule,
   currentStandings,
 }) => {
+  const { t } = useTranslation('tournament')
   const { isFullscreen, toggleFullscreen } = useFullscreen()
   const [selectedField, setSelectedField] = useState(1)
 
@@ -188,7 +190,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
             {/* No active match - show placeholder or standings */}
             {showStandings && hasGroups && !isFullscreen ? (
               <section style={sectionStyle}>
-                <h2 style={sectionTitleStyle}>Tabellen</h2>
+                <h2 style={sectionTitleStyle}>{t('monitorTab.standings')}</h2>
                 <StandingsDisplay
                   standings={currentStandings}
                   teams={schedule.teams}
@@ -199,8 +201,8 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
               <NoMatchDisplay
                 message={
                   numberOfFields > 1
-                    ? `Kein Spiel auf Feld ${selectedField}`
-                    : 'Kein laufendes Spiel'
+                    ? t('monitorTab.noMatchOnField', { field: selectedField })
+                    : t('monitorTab.noRunningMatch')
                 }
                 size={isFullscreen ? 'xl' : 'lg'}
                 fullscreen={isFullscreen}
@@ -212,7 +214,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
         {/* NEXT MATCH SECTION (only if no active match and not in fullscreen) */}
         {!matchOnSelectedField && nextMatch && !isFullscreen && (
           <section style={sectionStyle}>
-            <h2 style={sectionTitleStyle}>Nächstes Spiel</h2>
+            <h2 style={sectionTitleStyle}>{t('monitorTab.nextMatch')}</h2>
             <NextMatchCard match={nextMatch} tournament={tournament} />
           </section>
         )}

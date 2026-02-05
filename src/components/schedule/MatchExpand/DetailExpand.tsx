@@ -23,6 +23,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { ScoreStepper } from '../../ui/ScoreStepper';
 import { Button } from '../../ui/Button';
@@ -100,6 +101,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
   isSaving = false,
   variant = 'mobile',
 }) => {
+  const { t } = useTranslation('tournament');
   const [homeScore, setHomeScore] = useState(initialHomeScore);
   const [awayScore, setAwayScore] = useState(initialAwayScore);
 
@@ -272,7 +274,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
       <div style={goalsSectionStyle}>
         <div style={goalsHeaderStyle}>
           <span style={goalsHeaderTextStyle}>
-            Torschützen ({goals.length})
+            {t('matchExpand.details.goalScorers', { count: goals.length })}
           </span>
           {onAddGoal && (
             <Button
@@ -280,7 +282,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
               size="sm"
               onClick={onAddGoal}
             >
-              + Tor hinzufügen
+              {t('matchExpand.details.addGoal')}
             </Button>
           )}
         </div>
@@ -311,8 +313,8 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
                       <button
                         style={iconButtonStyle}
                         onClick={() => handleEditGoal(goal.id)}
-                        aria-label="Torschütze nachtragen"
-                        title="Nummer nachtragen"
+                        aria-label={t('matchExpand.details.addScorerAria')}
+                        title={t('matchExpand.details.addNumberTitle')}
                       >
                         ✏️
                       </button>
@@ -321,8 +323,8 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
                       <button
                         style={iconButtonStyle}
                         onClick={() => handleDeleteGoal(goal.id)}
-                        aria-label="Tor löschen"
-                        title="Löschen"
+                        aria-label={t('matchExpand.details.deleteGoalAria')}
+                        title={t('matchExpand.details.deleteTitle')}
                       >
                         🗑️
                       </button>
@@ -334,7 +336,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
           </div>
         ) : (
           <div style={emptyGoalsStyle}>
-            Keine Tore erfasst
+            {t('matchExpand.details.noGoals')}
           </div>
         )}
       </div>
@@ -347,7 +349,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
           onClick={onCancel}
           disabled={isSaving}
         >
-          Abbrechen
+          {t('matchExpand.details.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -355,7 +357,7 @@ export const DetailExpand: React.FC<DetailExpandProps> = ({
           onClick={handleSave}
           disabled={isSaving || !hasChanges}
         >
-          {isSaving ? 'Speichern...' : 'Speichern'}
+          {isSaving ? t('matchExpand.details.saving') : t('matchExpand.details.save')}
         </Button>
       </div>
     </div>

@@ -12,6 +12,7 @@
  */
 
 import { useState, CSSProperties, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Input, Button, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -37,6 +38,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
   tournament,
   onTournamentUpdate,
 }) => {
+  const { t } = useTranslation('tournament');
   // State für Bearbeitung
   const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -89,7 +91,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
     // Wenn Warnung und noch nicht bestätigt
     if (warning) {
       const confirmed = window.confirm(
-        `⚠️ Warnung\n\n${warning}\n\nMöchtest du den Namen trotzdem ändern?`
+        t('teams.renameWarning', { warning })
       );
       if (!confirmed) { return; }
     }
@@ -106,7 +108,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       onTournamentUpdate(updatedTournament);
       handleCancelEdit();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Umbenennen');
+      setError(err instanceof Error ? err.message : t('teams.renameError'));
     }
   };
 
@@ -131,15 +133,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       onTournamentUpdate(updatedTournament);
       setDeleteConfirmTeam(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen');
+      setError(err instanceof Error ? err.message : t('teams.deleteError'));
       setDeleteConfirmTeam(null);
     }
   };
 
   const handleRestoreTeam = (teamId: string) => {
     const confirmed = window.confirm(
-      'Möchtest du dieses Team wiederherstellen?\n\n' +
-      'Das Team wird wieder in der Tabelle und im Spielplan angezeigt.'
+      t('teams.restoreConfirm')
     );
 
     if (!confirmed) { return; }
@@ -382,7 +383,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
   return (
     <div style={containerStyle}>
-      <h1 style={titleStyle}>Teams verwalten</h1>
+      <h1 style={titleStyle}>{t('teams.title')}</h1>
 
       {/* Error Message */}
       {error && (
@@ -406,12 +407,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
           <div>
             <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
-              Team-Bearbeitung
+              {t('teams.editInfo.title')}
             </h4>
             <ul style={{ margin: 0, paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-              <li><strong>Umbenennen:</strong> Jederzeit möglich (z.B. für Rechtschreibkorrekturen)</li>
-              <li><strong>Löschen ohne Ergebnisse:</strong> Team und alle Spiele werden entfernt</li>
-              <li><strong>Löschen mit Ergebnissen:</strong> Spiele mit Ergebnissen bleiben erhalten</li>
+              <li><strong>{t('teams.editInfo.renameLabel')}</strong> {t('teams.editInfo.renameDesc')}</li>
+              <li><strong>{t('teams.editInfo.deleteNoResultsLabel')}</strong> {t('teams.editInfo.deleteNoResultsDesc')}</li>
+              <li><strong>{t('teams.editInfo.deleteWithResultsLabel')}</strong> {t('teams.editInfo.deleteWithResultsDesc')}</li>
             </ul>
           </div>
         </div>
@@ -420,12 +421,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
       {/* Active Teams */}
       <Card>
         <h3 style={{ color: cssVars.colors.textPrimary, margin: '0 0 16px 0' }}>
-          Aktive Teams ({activeTeams.length})
+          {t('teams.activeTeams', { count: activeTeams.length })}
         </h3>
 
         {activeTeams.length === 0 ? (
           <p style={{ color: cssVars.colors.textSecondary, fontStyle: 'italic' }}>
-            Keine aktiven Teams vorhanden.
+            {t('teams.noActiveTeams')}
           </p>
         ) : (
           activeTeams.map(team => {
@@ -471,12 +472,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         )}
                       </div>
                       <div style={teamCardMetaStyle}>
-                        <span style={colorIndicatorStyle(primaryColor)} title={`Trikotfarbe: ${primaryColor}`} />
+                        <span style={colorIndicatorStyle(primaryColor)} title={t('teams.jerseyColor', { color: primaryColor })} />
                         {analysis.matchesWithResults > 0 && (
-                          <span>{analysis.matchesWithResults} Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}</span>
+                          <span>{t('teams.results', { count: analysis.matchesWithResults })}</span>
                         )}
                         {analysis.matchesWithoutResults > 0 && (
-                          <span>{analysis.matchesWithoutResults} geplant</span>
+                          <span>{t('teams.planned', { count: analysis.matchesWithoutResults })}</span>
                         )}
                       </div>
                     </div>
@@ -492,7 +493,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                       e.stopPropagation();
                       toggleExpanded(team.id);
                     }}
-                    aria-label={isExpanded ? 'Einklappen' : 'Aufklappen'}
+                    aria-label={isExpanded ? t('teams.collapse') : t('teams.expand')}
                   >
                     ▼
                   </button>
@@ -507,22 +508,22 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.md, flexWrap: 'wrap' }}>
                           <div style={editInputStyle}>
                             <Input
-                              label="Teamname"
+                              label={t('teams.teamName')}
                               value={editingName}
                               onChange={setEditingName}
-                              placeholder="Teamname"
+                              placeholder={t('teams.teamName')}
                             />
                           </div>
                           <div style={buttonGroupStyle}>
                             <Button variant="secondary" onClick={handleCancelEdit}>
-                              Abbrechen
+                              {t('common.cancel')}
                             </Button>
                             <Button
                               variant="primary"
                               onClick={handleSaveRename}
                               disabled={!editingName.trim() || editingName.trim() === team.name}
                             >
-                              Speichern
+                              {t('common.save')}
                             </Button>
                           </div>
                         </div>
@@ -531,13 +532,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                         <>
                           {/* Logo Section */}
                           <div style={expandedRowStyle}>
-                            <span style={expandedLabelStyle}>Logo:</span>
+                            <span style={expandedLabelStyle}>{t('teams.logo.label')}</span>
                             <Button
                               variant="secondary"
                               size="sm"
                               onClick={() => setLogoUploadTeamId(team.id)}
                             >
-                              {team.logo ? 'Logo ändern' : 'Logo hochladen'}
+                              {team.logo ? t('teams.logo.change') : t('teams.logo.upload')}
                             </Button>
                             {team.logo && (
                               <Button
@@ -545,14 +546,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                                 size="sm"
                                 onClick={() => handleLogoRemove(team.id)}
                               >
-                                Logo entfernen
+                                {t('teams.logo.remove')}
                               </Button>
                             )}
                           </div>
 
                           {/* Color Section */}
                           <div style={expandedRowStyle}>
-                            <span style={expandedLabelStyle}>Trikotfarbe:</span>
+                            <span style={expandedLabelStyle}>{t('teams.jerseyColorLabel')}</span>
                             <ColorPicker
                               value={primaryColor}
                               onChange={(color) => handleColorChange(team.id, color)}
@@ -565,13 +566,13 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               style={actionButtonStyle('edit')}
                               onClick={() => handleStartEdit(team)}
                             >
-                              ✏️ Umbenennen
+                              ✏️ {t('teams.rename')}
                             </button>
                             <button
                               style={actionButtonStyle('delete')}
                               onClick={() => handleDeleteClick(team)}
                             >
-                              🗑️ Löschen
+                              🗑️ {t('teams.delete')}
                             </button>
                           </div>
                         </>
@@ -590,10 +591,10 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
         removedTeams.length > 0 && (
           <Card style={{ marginTop: cssVars.spacing.lg }}>
             <h3 style={{ color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
-              Entfernte Teams ({removedTeams.length})
+              {t('teams.removedTeams', { count: removedTeams.length })}
             </h3>
             <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, marginBottom: '16px' }}>
-              Diese Teams wurden entfernt, aber ihre historischen Ergebnisse sind noch im Spielplan sichtbar.
+              {t('teams.removedTeamsInfo')}
             </p>
 
             {removedTeams.map(team => {
@@ -606,12 +607,12 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     <span style={removedTeamNameStyle}>{team.name}</span>
                     {analysis.matchesWithResults > 0 && (
                       <span style={badgeStyle(cssVars.colors.textSecondary, cssVars.colors.neutralBadgeBg)}>
-                        {analysis.matchesWithResults} historische Ergebnis{analysis.matchesWithResults !== 1 ? 'se' : ''}
+                        {t('teams.historicResults', { count: analysis.matchesWithResults })}
                       </span>
                     )}
                     {team.removedAt && (
                       <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-                        Entfernt am {new Date(team.removedAt).toLocaleDateString('de-DE')}
+                        {t('teams.removedAt', { date: new Date(team.removedAt).toLocaleDateString('de-DE') })}
                       </span>
                     )}
                   </div>
@@ -627,7 +628,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     }}
                     onClick={() => handleRestoreTeam(team.id)}
                   >
-                    ↩️ Wiederherstellen
+                    ↩️ {t('teams.restore')}
                   </button>
                 </div>
               );
@@ -642,14 +643,14 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
           <div style={overlayStyle}>
             <div style={dialogStyle}>
               <h3 style={{ margin: '0 0 16px 0', color: cssVars.colors.textPrimary }}>
-                Team löschen?
+                {t('teams.deleteDialog.title')}
               </h3>
 
               <div style={{ marginBottom: '16px' }}>
                 <p style={{ color: cssVars.colors.textSecondary, margin: '0 0 12px 0' }}>
                   {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty warning should use default question */}
                   {getTeamDeletionWarning(deleteConfirmTeam.analysis) ||
-                    `Möchtest du "${deleteConfirmTeam.team.name}" wirklich löschen?`}
+                    t('teams.deleteDialog.confirmMessage', { name: deleteConfirmTeam.team.name })}
                 </p>
 
                 {deleteConfirmTeam.analysis.matchesWithResults > 0 && (
@@ -660,7 +661,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                     marginTop: '12px',
                   }}>
                     <p style={{ margin: 0, color: cssVars.colors.warning, fontSize: cssVars.fontSizes.sm }}>
-                      ⚠️ Das Team wird als "entfernt" markiert. Die Ergebnisse bleiben für die Fairness der anderen Teams erhalten.
+                      ⚠️ {t('teams.deleteDialog.markedAsRemoved')}
                     </p>
                   </div>
                 )}
@@ -668,7 +669,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <Button variant="secondary" onClick={() => setDeleteConfirmTeam(null)}>
-                  Abbrechen
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   variant="primary"
@@ -676,8 +677,8 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                   style={{ background: cssVars.colors.error }}
                 >
                   {deleteConfirmTeam.analysis.matchesWithResults > 0
-                    ? 'Als entfernt markieren'
-                    : 'Löschen'}
+                    ? t('teams.deleteDialog.markAsRemoved')
+                    : t('teams.delete')}
                 </Button>
               </div>
             </div>

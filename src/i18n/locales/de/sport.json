@@ -1,0 +1,69 @@
+{
+  "indoorFootball": {
+    "name": "Hallenfußball",
+    "nameShort": "Futsal"
+  },
+  "positions": {
+    "home": "Heim",
+    "away": "Gast",
+    "goalkeeper": "Torwart",
+    "player": "Feldspieler"
+  },
+  "events": {
+    "goal": "Tor",
+    "ownGoal": "Eigentor",
+    "assist": "Assist",
+    "yellowCard": "Gelbe Karte",
+    "redCard": "Rote Karte",
+    "timePenalty": "Zeitstrafe",
+    "substitution": "Wechsel",
+    "foul": "Foul",
+    "penalty": "Elfmeter",
+    "penaltyShootout": "Elfmeterschießen"
+  },
+  "phases": {
+    "firstHalf": "1. Halbzeit",
+    "secondHalf": "2. Halbzeit",
+    "halftime": "Halbzeit",
+    "overtime": "Verlängerung",
+    "goldenGoal": "Golden Goal",
+    "regularTime": "Reguläre Spielzeit"
+  },
+  "roles": {
+    "referee": "Schiedsrichter",
+    "assistantReferee": "Assistent",
+    "timekeeper": "Zeitnehmer",
+    "tournamentDirector": "Turnierleitung",
+    "trainer": "Trainer",
+    "captain": "Kapitän"
+  },
+  "field": {
+    "field": "Feld",
+    "fieldWithNumber": "Feld {{number}}",
+    "pitch": "Spielfeld"
+  },
+  "tournament": {
+    "groupStage": "Gruppenphase",
+    "finals": "Finalrunde",
+    "group": "Gruppe",
+    "groupWithLetter": "Gruppe {{letter}}",
+    "match": "Spiel",
+    "matchWithNumber": "Spiel {{number}}",
+    "round": "Runde",
+    "matchday": "Spieltag"
+  },
+  "finalsTypes": {
+    "final": "Finale",
+    "semifinal": "Halbfinale",
+    "quarterfinal": "Viertelfinale",
+    "thirdPlace": "Spiel um Platz 3",
+    "placement": "Platzierungsspiel"
+  },
+  "status": {
+    "scheduled": "Geplant",
+    "running": "Läuft",
+    "finished": "Beendet",
+    "paused": "Pausiert",
+    "cancelled": "Abgesagt"
+  }
+}

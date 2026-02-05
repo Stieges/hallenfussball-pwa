@@ -8,6 +8,7 @@
  */
 
 import { type CSSProperties, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { useBreakpoint } from '../../../hooks';
 import { BottomSheet } from '../../ui/BottomSheet';
@@ -59,6 +60,8 @@ function MatchSummaryDialog({
   onEditScore,
   onEditEvent,
 }: MatchSummaryProps) {
+  const { t } = useTranslation('tournament');
+
   // Close on Escape
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -164,16 +167,16 @@ function MatchSummaryDialog({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Spielzusammenfassung"
+        aria-label={t('matchSummary.title')}
         data-testid="match-summary-dialog"
       >
         {/* Header */}
         <div style={headerStyle}>
-          <h2 style={titleStyle}>Spielzusammenfassung</h2>
+          <h2 style={titleStyle}>{t('matchSummary.title')}</h2>
           <button
             style={closeButtonStyle}
             onClick={onClose}
-            aria-label="Schließen"
+            aria-label={t('matchSummary.close')}
           >
             ✕
           </button>
@@ -192,7 +195,7 @@ function MatchSummaryDialog({
 
           {/* Events */}
           <div>
-            <h3 style={sectionTitleStyle}>Spielereignisse</h3>
+            <h3 style={sectionTitleStyle}>{t('matchSummary.events.title')}</h3>
             <div style={eventsSectionStyle}>
               <EventList
                 events={events}
@@ -227,6 +230,8 @@ function MatchSummarySheet({
   onEditScore,
   onEditEvent,
 }: MatchSummaryProps) {
+  const { t } = useTranslation('tournament');
+
   const sectionTitleStyle: CSSProperties = {
     fontSize: cssVars.fontSizes.md,
     fontWeight: cssVars.fontWeights.semibold,
@@ -250,7 +255,7 @@ function MatchSummarySheet({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Spielzusammenfassung"
+      title={t('matchSummary.title')}
     >
       <div style={contentStyle}>
         {/* Score */}
@@ -265,7 +270,7 @@ function MatchSummarySheet({
 
         {/* Events */}
         <div>
-          <h3 style={sectionTitleStyle}>Ereignisse</h3>
+          <h3 style={sectionTitleStyle}>{t('matchSummary.events.title')}</h3>
           <div style={eventsSectionStyle}>
             <EventList
               events={events}

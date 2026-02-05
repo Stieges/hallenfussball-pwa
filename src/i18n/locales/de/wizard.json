@@ -1,0 +1,534 @@
+{
+  "step1": {
+    "title": "Sportart & Turniertyp",
+    "sportLabel": "Sportart",
+    "sportAriaLabel": "Sportart auswählen",
+    "gameDuration": "Spieldauer:",
+    "breakDuration": "Pause:",
+    "points": "Punkte:",
+    "tournamentTypeLabel": "Turniertyp",
+    "tournamentTypeAriaLabel": "Turniertyp auswählen",
+    "classic": {
+      "title": "Klassisches Turnier",
+      "detail1": "Tabellenplatzierung",
+      "detail2": "Finalrunden möglich",
+      "detail3": "Normale {{goalTerm}}zählung"
+    },
+    "bambini": {
+      "title": "Bambini-Turnier",
+      "detail1": "Ergebnisneutral",
+      "detail2": "Ohne Tabellen/Platzierungen",
+      "detail3": "Nur Sieg/Unentsch./Nied.",
+      "hintTitle": "Bambini-Turnier",
+      "hintText": "Bei Bambini-Turnieren werden Ergebnisse und Tabellen für Zuschauer standardmäßig ausgeblendet. Du kannst dies im nächsten Schritt anpassen."
+    },
+    "minuteSuffix": "Min."
+  },
+
+  "step2": {
+    "title": "Modus & Spielsystem",
+    "structureLocked": {
+      "title": "Strukturänderungen gesperrt",
+      "description": "Das Turnier hat bereits Ergebnisse. Anzahl Teams, Felder und Gruppen können nicht mehr geändert werden.",
+      "resetButton": "Turnier zurücksetzen"
+    },
+    "basicSystem": "Grundsystem",
+    "teamCount": "Anzahl Teams",
+    "groupCount": "Anzahl Gruppen",
+    "fieldCount": "Anzahl Felder",
+    "fieldCountOther": "Anzahl Spielflächen",
+    "smartConfigTip": "Tipp: Lass dir die optimale Konfiguration berechnen",
+    "advancedSettings": "Erweiterte Einstellungen",
+    "timePlanning": "Zeitplanung",
+    "tableRules": "Tabellenregeln",
+    "finalsSection": "Finalrunde",
+    "refereesSection": "Schiedsrichter",
+    "specialRules": "Sonderregeln",
+    "cockpitSection": "Match Cockpit Pro",
+    "cockpitDescription": "Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und Auto-Funktionen.",
+    "miniFussball": {
+      "title": "Mini-Fußball / Funino",
+      "description": "Dieses Feature wird in einer zukünftigen Version verfügbar sein. Es wird Feldrotation und spezielle Regeln für Mini-Fußball unterstützen.",
+      "comingSoon": "Coming Soon"
+    },
+    "summaries": {
+      "activeCriteria": "{{count}} aktive Kriterien",
+      "refereeNone": "Keine",
+      "refereeCount": "{{count}} SR",
+      "refereeTeams": "Teams stellen SR",
+      "time": "{{game}}′ Spiel / {{break}}′ Pause",
+      "finalsNone": "Keine",
+      "finalsFinalOnly": "Nur Finale",
+      "finalsTop4": "HF + Finale",
+      "finalsTop8": "Mit VF",
+      "finalsTop16": "Mit AF",
+      "finalsAllPlaces": "Alle Plätze",
+      "specialNone": "Keine",
+      "specialBambini": "Bambini-Modus",
+      "specialBambiniHidden": "Bambini ({{count}} verborgen)",
+      "cockpitStandard": "Standard"
+    }
+  },
+
+  "modeSelection": {
+    "label": "Turniermodus",
+    "classic": {
+      "title": "Klassisches Hallenturnier",
+      "subtitle": "Gruppen + Finalrunde"
+    },
+    "miniFussball": {
+      "title": "Mini-Fußball / Funino",
+      "subtitle": "Feldrotation, mehrere Felder",
+      "disabledTitle": "Dieses Feature wird in einer zukünftigen Version verfügbar sein"
+    },
+    "comingSoon": "Coming Soon"
+  },
+
+  "step3": {
+    "title": "Stammdaten",
+    "tournamentName": "Turniername",
+    "tournamentNamePlaceholder": "Vereinsname Hallencup 2025",
+    "organizer": "Veranstalter (optional)",
+    "organizerPlaceholder": "Mein Verein e.V.",
+    "ageClass": "Altersklasse",
+    "ageClassPlaceholder": "Suchen oder auswählen...",
+    "startDate": "Startdatum",
+    "startTime": "Startzeit",
+    "startTimePlaceholder": "09:00"
+  },
+
+  "location": {
+    "label": "Veranstaltungsort",
+    "placeholder": "Sporthalle Musterstadt",
+    "extendedToggle": "Erweiterte Adressdaten (optional)",
+    "street": "Straße & Hausnummer",
+    "streetPlaceholder": "Musterstraße 1",
+    "postalCode": "PLZ",
+    "postalCodePlaceholder": "12345",
+    "city": "Stadt/Ort",
+    "cityPlaceholder": "Musterstadt",
+    "country": "Land",
+    "countryPlaceholder": "Deutschland",
+    "hint": "Diese Angaben sind optional und werden für PDF-Export und Detailansicht verwendet."
+  },
+
+  "contact": {
+    "toggle": "Kontaktdaten (optional)",
+    "name": "Ansprechpartner",
+    "namePlaceholder": "Vor- und Nachname",
+    "email": "E-Mail",
+    "emailPlaceholder": "kontakt@verein.de",
+    "phone": "Telefon",
+    "phonePlaceholder": "+49 123 456789",
+    "website": "Website",
+    "websitePlaceholder": "www.mein-verein.de",
+    "hint": "Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export."
+  },
+
+  "step4": {
+    "title": "Teams",
+    "addTeam": "Team hinzufügen",
+    "generateTeams": "{{count}} Teams generieren",
+    "autoAssignGroups": "Gruppen automatisch zuweisen",
+    "noTeams": "Noch keine Teams hinzugefügt",
+    "teamNamePlaceholder": "Teamname eingeben",
+    "duplicateName": "Dieser Name wird bereits verwendet",
+    "avatarExpand": "Logo und Farben für {{name}} bearbeiten",
+    "avatarCollapse": "Logo und Farben für {{name}} einklappen",
+    "collapseLabel": "Einklappen",
+    "expandLabel": "Logo & Farben",
+    "deleteTeam": "Team {{name}} löschen",
+    "logo": "Logo",
+    "changeLogo": "Logo ändern",
+    "uploadLogo": "Logo hochladen",
+    "jerseyColor": "Trikotfarbe",
+    "groupLabel": "Gruppe:",
+    "noGroup": "Keine Gruppe",
+    "groupAriaLabel": "Gruppe für {{name}}",
+    "groupWarningsAriaLabel": "Gruppenzuordnungs-Hinweise",
+    "teamsAdded_one": "{{count}} Team hinzugefügt",
+    "teamsAdded_other": "{{count}} Teams hinzugefügt",
+    "groupsCanBeAssigned": "Gruppen können jetzt zugewiesen werden",
+    "warnings": {
+      "unassigned_one": "{{count}} Team ohne Gruppenzuordnung",
+      "unassigned_other": "{{count}} Teams ohne Gruppenzuordnung",
+      "unassignedAction": "Gruppen automatisch zuweisen",
+      "emptyGroup_one": "Gruppe {{groups}} hat keine Teams",
+      "emptyGroup_other": "Gruppen {{groups}} haben keine Teams",
+      "emptyGroupAction": "Gruppen neu verteilen",
+      "singleTeamGroup_one": "Gruppe {{groups}} hat nur 1 Team – keine Spiele möglich",
+      "singleTeamGroup_other": "Gruppen {{groups}} haben nur 1 Team – keine Spiele möglich",
+      "unbalanced": "Ungleiche Gruppengrößen ({{distribution}})",
+      "unbalancedAction": "Für faireren Spielplan gleichmäßig verteilen",
+      "distribution": "Gruppenverteilung: {{distribution}}"
+    }
+  },
+
+  "step5": {
+    "title": "Zusammenfassung",
+    "tournamentName": "Turniername",
+    "organizer": "Veranstalter",
+    "sport": "Sportart",
+    "tournamentType": "Turniertyp",
+    "ageClass": "Altersklasse",
+    "mode": "Modus",
+    "date": "Datum",
+    "locationLabel": "Ort",
+    "teamsLabel": "Teams",
+    "notSpecified": "(nicht angegeben)",
+    "football": "Fußball",
+    "otherSport": "Sonstiges",
+    "bambiniType": "Bambini",
+    "classicType": "Klassisch",
+    "classicMode": "Klassisch",
+    "miniFussballMode": "Mini-Fußball",
+    "teamsCount": "{{count}} Teams",
+    "showPreview": "Vorschau anzeigen"
+  },
+
+  "groupsAndFields": {
+    "infoText": "Dieser Schritt ist optional. Du kannst direkt auf \"Weiter\" klicken – die Standard-Bezeichnungen (Gruppe A, B, C... und Feld 1, 2...) werden dann verwendet. Klappe die Sektionen unten auf, wenn du eigene Namen vergeben möchtest.",
+    "fieldSection": {
+      "title": "Felder benennen ({{count}})",
+      "description": "Gib deinen Spielfeldern eigene Namen (z.B. \"Halle Nord\", \"Platz 1\").",
+      "shortCodeHint": "Das Kürzel (max. 3 Zeichen) wird in kompakten Ansichten wie dem PDF-Export verwendet."
+    },
+    "groupSection": {
+      "title": "Gruppen benennen ({{count}})",
+      "description": "Gib deinen Gruppen eigene Namen (z.B. \"Löwen\", \"Tiger\").",
+      "shortCodeHint": "Das Kürzel (max. 3 Zeichen) wird in kompakten Ansichten wie dem PDF-Export verwendet."
+    },
+    "matrix": {
+      "title": "Gruppen-Feld-Zuordnung",
+      "description": "Optional: Lege fest, auf welchen Feldern jede Gruppe spielen darf. Standardmäßig können alle Gruppen auf allen Feldern spielen.",
+      "minOneField": "Mindestens ein Feld muss zugewiesen sein",
+      "defaultAssignment": "Alle Gruppen können auf allen Feldern spielen – optimale Spielplan-Verteilung"
+    },
+    "roundRobinInfo": "Bei Jeder-gegen-Jeden werden alle Spiele automatisch auf die verfügbaren Felder verteilt.",
+    "defaultGroupName": "Gruppe {{id}}"
+  },
+
+  "nameGrid": {
+    "defaultHeader": "Standard",
+    "customNameHeader": "Eigener Name",
+    "shortCodeHeader": "Kürzel",
+    "duplicateName": "Dieser Name wird bereits verwendet"
+  },
+
+  "gameTimeConfig": {
+    "groupPhaseTitle": "Gruppenphase - Spielzeit-Einstellungen",
+    "finalsTitle": "Finalrunde - Spielzeit-Einstellungen",
+    "gameDuration": "Spieldauer",
+    "breakBetweenGames": "Pause zwischen Spielen",
+    "gamePeriods": "Spielabschnitte",
+    "halftimeBreak": "Halbzeitpause",
+    "periodBreakdown": "Das Spiel wird in {{periods}} Abschnitte à {{duration}} Min. unterteilt",
+    "phaseBreak": "Pause bis Finalrunde",
+    "finalsHint": "Die Spielabschnitt-Einstellungen gelten auch für die Finalrunde",
+    "minuteSuffix": "Min"
+  },
+
+  "finalsConfig": {
+    "title": "Finalrunde",
+    "recommendedHint_one": "⭐ = Empfohlen für {{count}} Gruppe",
+    "recommendedHint_other": "⭐ = Empfohlen für {{count}} Gruppen",
+    "advancedOptions": "Weitere Optionen (theoretisch möglich, aber weniger empfohlen)",
+    "warnings": {
+      "top8TooFewGroups": "<strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams). Mit {{count}} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.",
+      "allPlacesInfo": "<strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.",
+      "allPlaces2Groups": "Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.",
+      "allPlaces4Groups": "Bei 4+ Gruppen: Viertelfinale + alle Platzierungen."
+    },
+    "parallelization": {
+      "title": "Parallelisierung",
+      "semifinals": "Halbfinale gleichzeitig austragen",
+      "quarterfinals": "Viertelfinale gleichzeitig austragen",
+      "roundOf16": "Achtelfinale gleichzeitig austragen",
+      "hint": "Bei mehreren Feldern können Spiele gleichzeitig stattfinden"
+    },
+    "tiebreaker": {
+      "title": "Bei Unentschieden",
+      "shootout": "Direkt Strafstoßschießen",
+      "shootoutHint": "(privates Turnier)",
+      "overtimeThenShootout": "Verlängerung, dann Strafstoßschießen",
+      "overtimeHint": "(offiziell)",
+      "goldenGoal": "Golden Goal",
+      "goldenGoalDuration": "Golden Goal-Zeit:",
+      "overtimeDuration": "Verlängerung:",
+      "minutes": "Minuten"
+    }
+  },
+
+  "finalsOptions": {
+    "none": {
+      "label": "Keine Finalrunde",
+      "description": "Nur Gruppenphase, Platzierung nach Tabelle",
+      "explanation": "Empfohlen bei sehr wenig Zeit oder reinen Turnierspieltagen"
+    },
+    "finalOnly": {
+      "label": "Nur Finale",
+      "description2g": "Direktes Finale: 1A vs 1B",
+      "description3g": "Beste 2 Teams direkt im Finale",
+      "description4g": "Beste 2 Gruppenerste direkt im Finale",
+      "descriptionDefault": "Beste 2 Teams direkt im Finale",
+      "explanation2g": "Zu wenig Finalspiele, zweite Plätze spielen nicht um Platz 3",
+      "explanation3g": "Zu wenig Finalspiele, unfair wegen Freilos-Problematik",
+      "explanation4g": "Zu wenig Finalspiele für 4 Gruppen",
+      "explanation5to7g": "Zu wenig Finalspiele für viele Gruppen",
+      "explanation8g": "Viel zu wenig Finalspiele für so viele Gruppen"
+    },
+    "top4": {
+      "label2g": "Top 4 (Halbfinale + Finale)",
+      "description2g": "Kreuzspiele: 1A-2B, 1B-2A → Finale + Platz 3",
+      "explanation2g": "Standard bei 2 Gruppen - fair und übersichtlich",
+      "label3g": "Top 4 (Halbfinale + Finale)",
+      "description3g": "Beste 4 Teams → Halbfinale → Finale + Platz 3",
+      "explanation3g": "Sinnvoll bei 3 Gruppen - bester Gruppenerster bekommt Freilos",
+      "label4g": "Top 4 (nur Gruppenerste)",
+      "description4g": "Nur Gruppenerste → Halbfinale → Finale",
+      "explanation4g": "Kürzere Variante - gut bei wenig Zeit",
+      "label5to7g": "Top 4 (Halbfinale)",
+      "description5to7g": "Beste 4 Teams → Halbfinale → Finale",
+      "explanation5to7g": "Kürzere Variante bei vielen Gruppen",
+      "label8g": "Top 4 (nur Halbfinale)",
+      "description8g": "Beste 4 Teams → Halbfinale → Finale",
+      "explanation8g": "Sehr kurze Variante - nur die absolut besten Teams"
+    },
+    "top8": {
+      "label4g": "Top 8 (mit Viertelfinale)",
+      "description4g": "Top 2 pro Gruppe → Viertelfinale → Halbfinale → Finale",
+      "explanation4g": "Klassisch bei 4 Gruppen - perfekte Symmetrie",
+      "label5to7g": "Top 8 (mit Viertelfinale)",
+      "description5to7g": "Beste 8 Teams → Viertelfinale → Halbfinale → Finale",
+      "explanation5to7g": "Standard für große Turniere - bewährte Struktur",
+      "label8g": "Top 8 (mit Viertelfinale)",
+      "description8g": "Beste 8 Teams → Viertelfinale → Halbfinale → Finale",
+      "explanation8g": "Kürzere Variante - gut bei begrenzter Zeit"
+    },
+    "top16": {
+      "label": "Top 16 (mit Achtelfinale)",
+      "description": "Beste 16 Teams → Achtelfinale → Viertelfinale → Halbfinale → Finale",
+      "explanation": "Klassisch bei 8+ Gruppen - perfekte Symmetrie für große Turniere"
+    },
+    "allPlaces": {
+      "label2g": "Alle Plätze ausspielen",
+      "description2g": "Halbfinale + Platzierungen 3, 5, 7",
+      "explanation2g": "Jedes Team hat noch ein Finalspiel - hohe Beteiligung",
+      "label3g": "Top 6 (alle Gruppenersten + -zweite)",
+      "description3g": "6er-Endrunde mit Zwischengruppen oder KO",
+      "explanation3g": "Komplex - zwei 3er-Zwischengruppen nötig, viel Zeit erforderlich",
+      "label4g": "Alle Plätze (Top 16)",
+      "description4g": "Alle Teams in Finalrunde - komplette Platzierungen",
+      "explanation4g": "Sehr viele Spiele - nur bei ganztägigen Turnieren realistisch",
+      "label5to7g": "Alle Plätze",
+      "description5to7g": "Maximale Anzahl Teams in Finalrunde",
+      "explanation5to7g": "Nur bei sehr großen, mehrtägigen Turnieren sinnvoll",
+      "label8g": "Alle Plätze",
+      "description8g": "Maximale Anzahl Teams in Finalrunde",
+      "explanation8g": "Nur bei mehrtägigen Großturnieren realistisch - sehr viele Spiele"
+    }
+  },
+
+  "referees": {
+    "title": "Schiedsrichter",
+    "modeLabel": "Schiedsrichter-Modus",
+    "modes": {
+      "none": "Keine Schiedsrichter",
+      "organizer": "Veranstalter stellt SR (eigene Schiedsrichter)",
+      "teams": "Teams stellen SR (nach eigenem Spiel)"
+    },
+    "modeHint": {
+      "organizerMode": "Veranstalter-Modus:",
+      "organizerDescription": "Sie bringen eigene Schiedsrichter mit (z.B. SR1, SR2).",
+      "teamsMode": "Teams-Modus:",
+      "teamsDescription": "Jedes Team pfeift nach seinem Spiel das nächste Spiel auf dem gleichen Feld."
+    },
+    "organizerSettings": {
+      "count": "Anzahl Schiedsrichter",
+      "maxConsecutive": "Max. zusammenhängende Partien",
+      "distributionHint": "Die Schiedsrichter werden automatisch fair auf alle Spiele verteilt. \"Max. zusammenhängende Partien = 1\" bedeutet keine direkt aufeinanderfolgenden Einsätze.",
+      "enableNames": "Namen der Schiedsrichter angeben",
+      "namesTitle": "Schiedsrichter-Namen",
+      "namePlaceholder": "Name von Schiedsrichter {{number}}",
+      "nameLabel": "SR {{number}}",
+      "duplicateName": "Dieser Name wird bereits verwendet",
+      "namesHint": "Die Namen erscheinen später im Spielplan statt \"SR1\", \"SR2\", etc."
+    },
+    "finalsMode": {
+      "label": "Schiedsrichter in Finalphase",
+      "none": "Keine SR in Finalphase",
+      "neutralTeams": "Ausgeschiedene Teams (nicht in Finalrunde)",
+      "nonParticipatingTeams": "Unbeteiligte Teams (nicht im aktuellen Spiel)",
+      "hintNeutral": "Ausgeschiedene Teams:",
+      "hintNeutralDescription": "Nur Teams, die nicht in der Finalrunde spielen.",
+      "hintNonParticipating": "Unbeteiligte Teams:",
+      "hintNonParticipatingDescription": "Teams die aktuell nicht im Finalspiel stehen (flexibler)."
+    }
+  },
+
+  "validation": {
+    "ariaLabel": "Konfigurationswarnungen",
+    "issueCount_one": "{{count}} Hinweis zur Konfiguration",
+    "issueCount_other": "{{count}} Hinweise zur Konfiguration",
+    "tooManyTeamsOneField": "{{teams}} Teams auf nur 1 Feld führt zu sehr langer Turnierdauer",
+    "tooManyTeamsOneFieldSuggestion": "Empfohlen: mindestens {{fields}} Felder",
+    "unrealisticDuration": "Geschätzte Dauer von {{hours}}h ist unrealistisch für einen Tag",
+    "unrealisticDurationSuggestion": "Erhöhe die Feldanzahl oder reduziere die Teamanzahl",
+    "longDuration": "Lange Turnierdauer von ca. {{hours}}h",
+    "longDurationSuggestion": "Mit {{fields}} Feldern oder kürzerer Spieldauer (z.B. {{duration}} Min) verkürzt sich die Dauer",
+    "unevenGroups": "Ungleiche Gruppengrößen: {{majorCount}}x {{teamsPerGroup}} Teams, 1x {{lastGroupSize}} Teams",
+    "unevenGroupsSuggestion": "Für gleichmäßige Gruppen: {{count}} Teams wählen",
+    "tooFewTeams": "Zu wenig Teams für {{groups}} Gruppen (min. {{min}} benötigt)",
+    "tooFewTeamsSuggestion": "Reduziere die Gruppenanzahl oder erhöhe die Teamanzahl",
+    "dfbMismatch": "DFB-Muster passt zu {{patternTeams}} Teams (aktuell: {{currentTeams}})",
+    "dfbMismatchSuggestion": "Teamanzahl auf {{count}} ändern oder anderes DFB-Muster wählen",
+    "shortGameDuration": "Sehr kurze Spieldauer von {{duration}} Minuten",
+    "shortGameDurationSuggestion": "Empfohlen: mindestens 8-10 Minuten pro Spiel",
+    "noBreak": "Keine Pause zwischen Spielen - Teams haben keine Erholungszeit",
+    "noBreakSuggestion": "Empfohlen: 2-3 Minuten Pause für Teamwechsel",
+    "zeroPoints": "Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig",
+    "zeroPointsSuggestion": "Standard-Punktesystem: 3 Punkte Sieg, 1 Punkt Unentschieden, 0 Punkte Niederlage"
+  },
+
+  "smartConfig": {
+    "title": "Smart-Konfiguration",
+    "ariaLabel": "Smart-Konfiguration",
+    "lastConfig": "Letzte Konfiguration: {{teams}} Teams, {{fields}} {{fieldLabel}}, {{duration}}min",
+    "fieldSingular": "Feld",
+    "fieldPlural": "Felder",
+    "restore": "Wiederherstellen",
+    "restoreAriaLabel": "Letzte Konfiguration wiederherstellen",
+    "timeQuestion": "Wie viel Zeit hast du für das Turnier?",
+    "hoursAriaLabel": "Stunden",
+    "minutesAriaLabel": "Minuten",
+    "calculate": "Berechnen",
+    "calculateAriaLabel": "Optimale Konfiguration berechnen",
+    "constraints": {
+      "title": "Fixe Einschränkungen",
+      "hint": "Aktiviere Werte, die nicht geändert werden dürfen",
+      "teamCount": "Anzahl Teams:",
+      "groupCount": "Anzahl Gruppen:",
+      "fieldCount": "Anzahl Felder:",
+      "gameDuration": "Spieldauer:",
+      "breakDuration": "Pausendauer:",
+      "minuteSuffix": " Min"
+    },
+    "result": {
+      "title": "Empfohlene Konfiguration",
+      "teams": "Teams",
+      "fields": "Felder",
+      "gameDuration": "Spieldauer",
+      "pause": "Pause",
+      "minuteSuffix": "Min",
+      "matches": "{{count}} Spiele",
+      "duration": "~{{hours}}h Turnierdauer"
+    },
+    "apply": "Konfiguration übernehmen",
+    "applyAriaLabel": "Empfohlene Konfiguration übernehmen",
+    "teamsWarning": "{{current}} Teams passen nicht in {{hours}}h. Alternative: {{suggested}} Teams oder mehr Zeit/Felder einplanen."
+  },
+
+  "bambini": {
+    "title": "Erweiterte Bambini-Einstellungen",
+    "hideScores": "Ergebnisse für Zuschauer verbergen",
+    "hideRankings": "Tabellen für Zuschauer verbergen"
+  },
+
+  "pointSystem": {
+    "title": "Punktesystem",
+    "presets": {
+      "standard": "Standard",
+      "classic": "Klassisch",
+      "winsOnly": "Nur Siege",
+      "custom": "Individuell"
+    },
+    "custom": {
+      "win": "Sieg",
+      "draw": "Unentschieden",
+      "loss": "Niederlage",
+      "hint": "Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)"
+    }
+  },
+
+  "dfb": {
+    "checkboxLabel": "DFB-Schlüsselsystem verwenden",
+    "description": "Verwendet die offiziellen DFB-Ansetzungsmuster für Round-Robin Turniere",
+    "patternLabel": "Ansetzungsmuster",
+    "patternOption": "{{code}} ({{teams}} Teams)",
+    "stats": {
+      "teams": "Teams",
+      "matches": "Spiele",
+      "rounds": "Runden",
+      "perRound": "Pro Runde"
+    },
+    "infoAriaLabel": "Musterdetails",
+    "byeWarning": "Ungerade Teamanzahl - enthält Freilose",
+    "patternCode": "Schlüssel: {{code}} = {{days}} Tag, {{teams}} Mannschaften",
+    "patternCodeSubgroups": ", {{subgroups}} Untergruppen"
+  },
+
+  "durationEstimate": {
+    "estimatedDuration": "Geschätzte Turnierdauer: ",
+    "hoursAndMinutes": "{{hours}}h {{minutes}}min",
+    "minutesOnly": "{{minutes}}min",
+    "matchInfo": "({{matches}} Spiele, {{fields}} {{fieldLabel}})",
+    "fieldSingular": "Feld",
+    "fieldPlural": "Felder",
+    "groupPhaseBreakdown": "Gruppenphase: {{matches}} Spiele (~{{hours}}h {{minutes}}min)",
+    "finalsBreakdown": "Finalrunde: {{matches}} Spiele (~{{hours}}h {{minutes}}min)",
+    "criticalWarning": "Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {{fields}} Felder oder Spieldauer auf {{duration}} Min reduzieren.",
+    "durationWarning": "Tipp: Mit {{fields}} Feldern ca. {{hours}}h oder mit {{duration}} Min Spieldauer verkürzt sich die Dauer."
+  },
+
+  "placementLogic": {
+    "title": "Platzierungslogik",
+    "helpText": "Ziehe die Kriterien per Drag & Drop oder nutze die Pfeiltasten",
+    "listAriaLabel": "Platzierungskriterien, sortierbar",
+    "itemAriaLabel": "{{label}}, Position {{position}} von {{total}}",
+    "dragHandle": "Ziehen zum Neuordnen",
+    "moveUp": "Nach oben verschieben",
+    "moveDown": "Nach unten verschieben",
+    "activate": "Kriterium aktivieren",
+    "deactivate": "Kriterium deaktivieren",
+    "active": "Aktiv",
+    "inactive": "Inaktiv"
+  },
+
+  "options": {
+    "groupSystem": {
+      "roundRobin": "Jeder gegen jeden",
+      "groupsAndFinals": "Gruppenphase + Finalrunde"
+    },
+    "groups": {
+      "one": "1 Gruppe",
+      "multiple": "{{count}} Gruppen"
+    },
+    "fields": {
+      "one": "1 Feld",
+      "multiple": "{{count}} Felder"
+    },
+    "rounds": "{{count}} Runden",
+    "gamePeriods": {
+      "one": "1 (durchgehend)",
+      "two": "2 (zwei Halbzeiten)",
+      "three": "3 Abschnitte",
+      "four": "4 Abschnitte"
+    },
+    "ageClass": {
+      "gJugend": "G-Jugend (U7)",
+      "fJugend": "F-Jugend (U9)",
+      "eJugend": "E-Jugend (U10/U11)",
+      "dJugend": "D-Jugend (U12/U13)",
+      "cJugend": "C-Jugend (U14/U15)",
+      "bJugend": "B-Jugend (U16/U17)",
+      "aJugend": "A-Jugend (U18/U19)",
+      "senioren": "Senioren",
+      "herren": "Herren",
+      "damen": "Damen",
+      "ah": "AH (Alte Herren)",
+      "jugend": "Jugend",
+      "erwachsene": "Erwachsene",
+      "mixed": "Mixed"
+    }
+  }
+}

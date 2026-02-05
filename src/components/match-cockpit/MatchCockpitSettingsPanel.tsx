@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type {
   MatchCockpitSettings,
@@ -52,32 +53,7 @@ export interface MatchCockpitSettingsPanelProps {
 // Constants
 // =============================================================================
 
-const TIMER_DIRECTION_OPTIONS: { value: TimerDirection; label: string }[] = [
-  { value: 'countdown', label: 'Countdown (5:00 → 0:00)' },
-  { value: 'elapsed', label: 'Elapsed (0:00 → 5:00)' },
-];
-
-const SOUND_PRESET_OPTIONS: { value: MatchSoundPreset | 'none'; label: string }[] = [
-  { value: 'none', label: 'Kein Sound' },
-  { value: 'horn-1', label: 'Horn 1 (Klassisch)' },
-  { value: 'horn-2', label: 'Horn 2 (Modern)' },
-  { value: 'horn-3', label: 'Horn 3 (Tief)' },
-  { value: 'custom', label: 'Eigener Sound' },
-];
-
-const NETTO_WARNING_OPTIONS = [
-  { value: '60', label: '1 Minute' },
-  { value: '90', label: '1:30 Minuten' },
-  { value: '120', label: '2 Minuten' },
-  { value: '180', label: '3 Minuten' },
-];
-
-const AUTO_ADVANCE_OPTIONS = [
-  { value: '5', label: '5 Sekunden' },
-  { value: '10', label: '10 Sekunden' },
-  { value: '15', label: '15 Sekunden' },
-  { value: '20', label: '20 Sekunden' },
-];
+// Options will be populated with translated labels inside the component
 
 // =============================================================================
 // Component
@@ -89,9 +65,38 @@ export function MatchCockpitSettingsPanel({
   tournamentId,
   onTestSound,
 }: MatchCockpitSettingsPanelProps): React.ReactNode {
+  const { t } = useTranslation('cockpit');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Translated option arrays
+  const TIMER_DIRECTION_OPTIONS: { value: TimerDirection; label: string }[] = [
+    { value: 'countdown', label: t('settings.countdown') },
+    { value: 'elapsed', label: t('settings.elapsed') },
+  ];
+
+  const SOUND_PRESET_OPTIONS: { value: MatchSoundPreset | 'none'; label: string }[] = [
+    { value: 'none', label: t('settings.noSound') },
+    { value: 'horn-1', label: t('settings.horn1') },
+    { value: 'horn-2', label: t('settings.horn2') },
+    { value: 'horn-3', label: t('settings.horn3') },
+    { value: 'custom', label: t('settings.customSound') },
+  ];
+
+  const NETTO_WARNING_OPTIONS = [
+    { value: '60', label: t('settings.oneMinute') },
+    { value: '90', label: t('settings.oneThirtyMinutes') },
+    { value: '120', label: t('settings.twoMinutes') },
+    { value: '180', label: t('settings.threeMinutes') },
+  ];
+
+  const AUTO_ADVANCE_OPTIONS = [
+    { value: '5', label: t('settings.fiveSeconds') },
+    { value: '10', label: t('settings.tenSeconds') },
+    { value: '15', label: t('settings.fifteenSeconds') },
+    { value: '20', label: t('settings.twentySeconds') },
+  ];
 
   // Update a single setting
   const updateSetting = useCallback(
@@ -133,7 +138,7 @@ export function MatchCockpitSettingsPanel({
         updateSetting('soundId', 'custom');
         updateSetting('soundEnabled', true);
       } else {
-        setUploadError(result.error ?? 'Upload fehlgeschlagen');
+        setUploadError(result.error ?? t('settings.uploadFailed'));
       }
 
       setIsUploading(false);
@@ -143,7 +148,7 @@ export function MatchCockpitSettingsPanel({
         fileInputRef.current.value = '';
       }
     },
-    [tournamentId, updateSetting]
+    [tournamentId, updateSetting, t]
   );
 
   // Handle custom sound delete
@@ -164,9 +169,9 @@ export function MatchCockpitSettingsPanel({
     <div style={styles.container}>
       {/* Timer Section */}
       <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>Timer</h3>
+        <h3 style={styles.sectionTitle}>{t('settings.timer')}</h3>
 
-        <SettingRow label="Timer-Richtung" description="Wie soll der Timer angezeigt werden?">
+        <SettingRow label={t('settings.timerDirection')} description={t('settings.timerDescription')}>
           <select
             value={settings.timerDirection}
             onChange={(e) => updateSetting('timerDirection', e.target.value as TimerDirection)}
@@ -181,18 +186,18 @@ export function MatchCockpitSettingsPanel({
         </SettingRow>
 
         <SettingRow
-          label="Netto-Zeit Warnung"
-          description="Warnung wenn Nachspielzeit erreicht wird"
+          label={t('settings.netTimeWarning')}
+          description={t('settings.netTimeWarningDesc')}
         >
           <Toggle
             checked={settings.nettoWarningEnabled}
             onChange={(v) => updateSetting('nettoWarningEnabled', v)}
-            label="Netto-Zeit Warnung aktivieren"
+            label={t('settings.enableNetTimeWarning')}
           />
         </SettingRow>
 
         {settings.nettoWarningEnabled && (
-          <SettingRow label="Warnzeit" description="Warnung bei verbleibender Zeit">
+          <SettingRow label={t('settings.warningTime')} description={t('settings.warningTimeDesc')}>
             <select
               value={String(settings.nettoWarningSeconds)}
               onChange={(e) => updateSetting('nettoWarningSeconds', Number(e.target.value))}
@@ -210,9 +215,9 @@ export function MatchCockpitSettingsPanel({
 
       {/* Sound Section */}
       <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>Sound</h3>
+        <h3 style={styles.sectionTitle}>{t('settings.sound')}</h3>
 
-        <SettingRow label="Spielende-Sound" description="Akustisches Signal bei Spielende">
+        <SettingRow label={t('settings.endSound')} description={t('settings.endSoundDesc')}>
           <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center' }}>
             <select
               value={currentSoundValue}
@@ -226,7 +231,7 @@ export function MatchCockpitSettingsPanel({
                   disabled={opt.value === 'custom' && !settings.hasCustomSound}
                 >
                   {opt.label}
-                  {opt.value === 'custom' && !settings.hasCustomSound && ' (nicht hochgeladen)'}
+                  {opt.value === 'custom' && !settings.hasCustomSound && ` (${t('settings.notUploaded')})`}
                 </option>
               ))}
             </select>
@@ -235,7 +240,7 @@ export function MatchCockpitSettingsPanel({
                 type="button"
                 onClick={onTestSound}
                 style={styles.testButton}
-                title="Sound testen"
+                title={t('settings.testSound')}
               >
                 ▶
               </button>
@@ -244,7 +249,7 @@ export function MatchCockpitSettingsPanel({
         </SettingRow>
 
         {settings.soundEnabled && (
-          <SettingRow label="Lautstärke" description={`${settings.soundVolume}%`}>
+          <SettingRow label={t('settings.volume')} description={t('settings.volumePercent', { percent: settings.soundVolume })}>
             <div style={styles.sliderContainer}>
               <input
                 type="range"
@@ -253,7 +258,7 @@ export function MatchCockpitSettingsPanel({
                 value={settings.soundVolume}
                 onChange={(e) => updateSetting('soundVolume', Number(e.target.value))}
                 style={styles.slider}
-                aria-label="Lautstärke"
+                aria-label={t('settings.volumeAria')}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={settings.soundVolume}
@@ -268,7 +273,7 @@ export function MatchCockpitSettingsPanel({
                   }
                 }}
                 style={styles.testButton}
-                title={settings.soundVolume > 0 ? "Stumm schalten" : "Ton einschalten"}
+                title={settings.soundVolume > 0 ? t('settings.mute') : t('settings.unmute')}
               >
                 {settings.soundVolume > 0 ? '🔊' : '🔇'}
               </button>
@@ -282,7 +287,7 @@ export function MatchCockpitSettingsPanel({
         )}
 
         {/* Custom Sound Upload */}
-        <SettingRow label="Eigener Sound" description={`MP3-Datei hochladen (max ${Math.round(MAX_SOUND_FILE_SIZE / 1024)}KB)`}>
+        <SettingRow label={t('settings.customSound')} description={t('settings.uploadHint', { maxKB: Math.round(MAX_SOUND_FILE_SIZE / 1024) })}>
           <div style={styles.uploadContainer}>
             <input
               ref={fileInputRef}
@@ -293,7 +298,7 @@ export function MatchCockpitSettingsPanel({
               id="custom-sound-upload"
             />
             <label htmlFor="custom-sound-upload" style={styles.uploadButton}>
-              {isUploading ? 'Wird hochgeladen...' : 'Hochladen'}
+              {isUploading ? t('settings.uploading') : t('settings.upload')}
             </label>
             {settings.hasCustomSound && (
               <button
@@ -301,7 +306,7 @@ export function MatchCockpitSettingsPanel({
                 onClick={() => void handleDeleteCustomSound()}
                 style={styles.deleteButton}
               >
-                Löschen
+                {t('settings.delete')}
               </button>
             )}
           </div>
@@ -311,39 +316,39 @@ export function MatchCockpitSettingsPanel({
 
       {/* Feedback Section */}
       <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>Feedback</h3>
+        <h3 style={styles.sectionTitle}>{t('settings.feedback')}</h3>
 
-        <SettingRow label="Vibration" description="Haptisches Feedback bei Tor und Spielende">
+        <SettingRow label={t('settings.vibration')} description={t('settings.vibrationDesc')}>
           <Toggle
             checked={settings.hapticEnabled}
             onChange={(v) => updateSetting('hapticEnabled', v)}
-            label="Vibration aktivieren"
+            label={t('settings.enableVibration')}
           />
         </SettingRow>
 
-        <SettingRow label="Bildschirm aktiv halten" description="Verhindert Dimmen während Spiel">
+        <SettingRow label={t('settings.keepScreenOn')} description={t('settings.keepScreenOnDesc')}>
           <Toggle
             checked={settings.wakeLockEnabled}
             onChange={(v) => updateSetting('wakeLockEnabled', v)}
-            label="Bildschirm aktiv halten"
+            label={t('settings.enableKeepScreenOn')}
           />
         </SettingRow>
       </section>
 
       {/* Auto-Advance Section */}
       <section style={styles.section}>
-        <h3 style={styles.sectionTitle}>Nach Spielende</h3>
+        <h3 style={styles.sectionTitle}>{t('settings.afterMatch')}</h3>
 
-        <SettingRow label="Auto-Beenden" description="Spiel automatisch bei 0:00 beenden">
+        <SettingRow label={t('settings.autoEnd')} description={t('settings.autoEndDesc')}>
           <Toggle
             checked={settings.autoFinishEnabled}
             onChange={(v) => updateSetting('autoFinishEnabled', v)}
-            label="Spiel automatisch beenden"
+            label={t('settings.enableAutoEnd')}
           />
         </SettingRow>
 
         {settings.autoFinishEnabled && (
-          <SettingRow label="Verzögerung" description="Zeit bis zum nächsten Spiel">
+          <SettingRow label={t('settings.delay')} description={t('settings.delayDesc')}>
             <select
               value={String(settings.autoAdvanceSeconds)}
               onChange={(e) => updateSetting('autoAdvanceSeconds', Number(e.target.value))}

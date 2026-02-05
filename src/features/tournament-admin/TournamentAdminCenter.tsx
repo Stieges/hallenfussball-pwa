@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, lazy, Suspense, CSSProperties, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
@@ -142,6 +143,7 @@ export function TournamentAdminCenter({
   initialCategory,
   onBackToTournament,
 }: TournamentAdminCenterProps) {
+  const { t } = useTranslation('admin');
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
 
@@ -194,7 +196,7 @@ export function TournamentAdminCenter({
     if (!tournament) {
       return (
         <div style={styles.loadingContainer}>
-          <div>Lade Turnierdaten...</div>
+          <div>{t('center.loading')}</div>
         </div>
       );
     }
@@ -202,7 +204,7 @@ export function TournamentAdminCenter({
     if (loadingError) {
       return (
         <div style={styles.errorContainer}>
-          <div>Fehler beim Laden: {loadingError}</div>
+          <div>{t('center.loadError', { error: loadingError })}</div>
         </div>
       );
     }

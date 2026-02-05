@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { TournamentMode } from '../../../types/tournament';
 
@@ -13,6 +14,7 @@ interface ModeButtonProps {
   title: string;
   subtitle: string;
   disabled?: boolean;
+  disabledTitle?: string;
   badge?: string;
   testId?: string;
 }
@@ -23,6 +25,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
   title,
   subtitle,
   disabled = false,
+  disabledTitle,
   badge,
   testId,
 }) => {
@@ -47,7 +50,7 @@ const ModeButton: React.FC<ModeButtonProps> = ({
       onClick={disabled ? undefined : onClick}
       style={buttonStyle}
       disabled={disabled}
-      title={disabled ? 'Dieses Feature wird in einer zukünftigen Version verfügbar sein' : undefined}
+      title={disabled ? disabledTitle : undefined}
       data-testid={testId}
     >
       {badge && (
@@ -82,6 +85,8 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
   selectedMode,
   onModeChange,
 }) => {
+  const { t } = useTranslation('wizard');
+
   return (
     <div style={{ marginBottom: '32px' }}>
       <label style={{
@@ -91,23 +96,24 @@ export const ModeSelection: React.FC<ModeSelectionProps> = ({
         color: cssVars.colors.textSecondary,
         fontWeight: cssVars.fontWeights.medium
       }}>
-        Turniermodus
+        {t('modeSelection.label')}
       </label>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         <ModeButton
           isSelected={selectedMode === 'classic'}
           onClick={() => onModeChange('classic')}
-          title="Klassisches Hallenturnier"
-          subtitle="Gruppen + Finalrunde"
+          title={t('modeSelection.classic.title')}
+          subtitle={t('modeSelection.classic.subtitle')}
           testId="wizard-mode-classic"
         />
         <ModeButton
           isSelected={selectedMode === 'miniFussball'}
           onClick={() => onModeChange('miniFussball')}
-          title="Mini-Fußball / Funino"
-          subtitle="Feldrotation, mehrere Felder"
+          title={t('modeSelection.miniFussball.title')}
+          subtitle={t('modeSelection.miniFussball.subtitle')}
           disabled={true}
-          badge="Coming Soon"
+          disabledTitle={t('modeSelection.miniFussball.disabledTitle')}
+          badge={t('modeSelection.comingSoon')}
           testId="wizard-mode-miniFussball"
         />
       </div>

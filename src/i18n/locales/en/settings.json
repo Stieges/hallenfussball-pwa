@@ -1,0 +1,188 @@
+{
+  "pageTitle": "Settings",
+  "back": "Back",
+  "backWithArrow": "← Back",
+  "backAriaLabel": "Back",
+
+  "categories": {
+    "appearance": "Appearance",
+    "language": "Language",
+    "behavior": "App Behavior",
+    "data": "Data",
+    "support": "Help & Support",
+    "about": "About",
+    "privacy": "Privacy",
+    "legal": "Legal"
+  },
+
+  "appearance": {
+    "theme": "Theme",
+    "fontSize": "Font Size"
+  },
+
+  "baseTheme": {
+    "selectLabel": "Select theme",
+    "currentPrefix": "current: ",
+    "system": {
+      "label": "System",
+      "description": "Automatically match device settings"
+    },
+    "light": {
+      "label": "Light",
+      "description": "Light appearance"
+    },
+    "dark": {
+      "label": "Dark",
+      "description": "Dark appearance"
+    },
+    "highContrast": {
+      "label": "High Contrast",
+      "description": "Maximum readability in bright ambient light"
+    }
+  },
+
+  "fontSize": {
+    "selectLabel": "Select font size",
+    "small": "Small",
+    "normal": "Normal",
+    "large": "Large",
+    "xLarge": "Extra Large"
+  },
+
+  "accentTheme": {
+    "default": "Default (Green)",
+    "fcBayern": "FC Bayern Munich",
+    "bvb": "Borussia Dortmund",
+    "schalke": "FC Schalke 04",
+    "werder": "Werder Bremen",
+    "hsv": "Hamburger SV",
+    "custom": "Custom Colors"
+  },
+
+  "language": {
+    "label": "Language",
+    "description": "Select app language",
+    "de": "Deutsch",
+    "en": "English"
+  },
+
+  "behavior": {
+    "confirmDelete": {
+      "label": "Confirm Delete",
+      "description": "Ask before deleting"
+    },
+    "autoSave": {
+      "label": "Auto-Save",
+      "description": "Save changes automatically"
+    },
+    "timerSound": {
+      "label": "Timer Sound",
+      "description": "Play sound at match end"
+    },
+    "hapticFeedback": {
+      "label": "Haptic Feedback",
+      "description": "Vibrate on actions"
+    }
+  },
+
+  "data": {
+    "export": {
+      "label": "Export All Data",
+      "description": "Tournaments and settings as JSON",
+      "action": "Export",
+      "todo": "Export will be implemented soon"
+    },
+    "import": {
+      "label": "Import Data",
+      "description": "Restore from a backup file",
+      "action": "Import",
+      "todo": "Import will be implemented soon"
+    },
+    "clearCache": {
+      "label": "Clear Cache",
+      "description": "Delete temporary data",
+      "action": "Clear",
+      "success": "Cache has been cleared"
+    },
+    "forceUpdate": {
+      "label": "Force App Update",
+      "description": "Reset service worker if having issues",
+      "loading": "Loading...",
+      "action": "Reset",
+      "confirmMessage": "Force app update?\n\nThis will clear the service worker cache and reload the app. Your tournament data will be preserved.\n\nUse this function if the app is not working properly.",
+      "errorMessage": "Error resetting. Please try again or clear browser data manually."
+    }
+  },
+
+  "support": {
+    "bug": {
+      "label": "Report Bug",
+      "description": "Send bug report via email",
+      "subject": "Bug Report – Spielplan App"
+    },
+    "feature": {
+      "label": "Suggest Feature",
+      "description": "Ideas for new features",
+      "subject": "Feature Suggestion – Spielplan App"
+    },
+    "feedback": {
+      "label": "Send Feedback",
+      "description": "General feedback",
+      "subject": "Feedback – Spielplan App"
+    },
+    "emailBody": "My message:"
+  },
+
+  "about": {
+    "version": "Version",
+    "changelog": {
+      "label": "Changelog",
+      "description": "What's new?",
+      "content": "Version {{version}}\n\n• Added settings screen\n• Theme selection\n• Adjustable font size"
+    }
+  },
+
+  "privacy": {
+    "errorTracking": {
+      "label": "Error Tracking",
+      "description": "Send anonymized error reports"
+    },
+    "sessionReplay": {
+      "label": "Session Replay",
+      "description": "Anonymized session recordings for debugging"
+    },
+    "revoke": {
+      "label": "Revoke Consent",
+      "description": "Reset all tracking settings",
+      "action": "Revoke",
+      "confirmMessage": "Would you like to revoke your privacy consent?\n\nThis will disable error tracking and session replay. You will be asked for consent again on the next app start.",
+      "successMessage": "Your consent has been revoked."
+    }
+  },
+
+  "legal": {
+    "imprint": "Imprint",
+    "privacy": "Privacy Policy",
+    "terms": {
+      "label": "Terms of Service",
+      "todo": "Terms of Service will be added soon"
+    }
+  },
+
+  "settingItem": {
+    "openAriaLabel": "Open {{label}}",
+    "proBadge": "Pro Feature"
+  },
+
+  "consent": {
+    "title": "Privacy Settings",
+    "description": "We use anonymized error tracking to improve the app. Optionally, you can enable session replays to help us fix issues.",
+    "necessary": "Necessary:",
+    "necessaryDescription": "Anonymized error reports (no personal data)",
+    "optional": "Optional:",
+    "optionalDescription": "Session replays for debugging (text is masked)",
+    "acceptAll": "Accept All",
+    "acceptNecessary": "Necessary Only",
+    "privacyLink": "Privacy Policy"
+  }
+}

@@ -2,6 +2,8 @@
  * Zentrale Konfiguration für alle Tournament-Dropdown-Optionen
  */
 
+import i18n from '../i18n';
+
 export interface SelectOption {
   value: string | number;
   label: string;
@@ -10,119 +12,127 @@ export interface SelectOption {
 /**
  * Altersklassen für Fußball
  */
-export const FOOTBALL_AGE_CLASS_OPTIONS: SelectOption[] = [
-  // Jugendklassen (G bis A)
-  { value: 'G-Jugend', label: 'G-Jugend (U7)' },
-  { value: 'F-Jugend', label: 'F-Jugend (U9)' },
-  { value: 'E-Jugend', label: 'E-Jugend (U10/U11)' },
-  { value: 'D-Jugend', label: 'D-Jugend (U12/U13)' },
-  { value: 'C-Jugend', label: 'C-Jugend (U14/U15)' },
-  { value: 'B-Jugend', label: 'B-Jugend (U16/U17)' },
-  { value: 'A-Jugend', label: 'A-Jugend (U18/U19)' },
+export function getFootballAgeClassOptions(): SelectOption[] {
+  return [
+    // Jugendklassen (G bis A)
+    { value: 'G-Jugend', label: i18n.t('wizard:options.ageClass.gJugend', { defaultValue: '' }) },
+    { value: 'F-Jugend', label: i18n.t('wizard:options.ageClass.fJugend', { defaultValue: '' }) },
+    { value: 'E-Jugend', label: i18n.t('wizard:options.ageClass.eJugend', { defaultValue: '' }) },
+    { value: 'D-Jugend', label: i18n.t('wizard:options.ageClass.dJugend', { defaultValue: '' }) },
+    { value: 'C-Jugend', label: i18n.t('wizard:options.ageClass.cJugend', { defaultValue: '' }) },
+    { value: 'B-Jugend', label: i18n.t('wizard:options.ageClass.bJugend', { defaultValue: '' }) },
+    { value: 'A-Jugend', label: i18n.t('wizard:options.ageClass.aJugend', { defaultValue: '' }) },
 
-  // U-Klassen (numerisch sortiert)
-  { value: 'U7', label: 'U7' },
-  { value: 'U8', label: 'U8' },
-  { value: 'U9', label: 'U9' },
-  { value: 'U10', label: 'U10' },
-  { value: 'U11', label: 'U11' },
-  { value: 'U12', label: 'U12' },
-  { value: 'U13', label: 'U13' },
-  { value: 'U14', label: 'U14' },
-  { value: 'U15', label: 'U15' },
-  { value: 'U16', label: 'U16' },
-  { value: 'U17', label: 'U17' },
-  { value: 'U18', label: 'U18' },
-  { value: 'U19', label: 'U19' },
-  { value: 'U20', label: 'U20' },
-  { value: 'U21', label: 'U21' },
-  { value: 'U23', label: 'U23' },
+    // U-Klassen (numerisch sortiert)
+    { value: 'U7', label: 'U7' },
+    { value: 'U8', label: 'U8' },
+    { value: 'U9', label: 'U9' },
+    { value: 'U10', label: 'U10' },
+    { value: 'U11', label: 'U11' },
+    { value: 'U12', label: 'U12' },
+    { value: 'U13', label: 'U13' },
+    { value: 'U14', label: 'U14' },
+    { value: 'U15', label: 'U15' },
+    { value: 'U16', label: 'U16' },
+    { value: 'U17', label: 'U17' },
+    { value: 'U18', label: 'U18' },
+    { value: 'U19', label: 'U19' },
+    { value: 'U20', label: 'U20' },
+    { value: 'U21', label: 'U21' },
+    { value: 'U23', label: 'U23' },
 
-  // Senioren
-  { value: 'Senioren', label: 'Senioren' },
-  { value: 'Herren', label: 'Herren' },
-  { value: 'Damen', label: 'Damen' },
-  { value: 'AH', label: 'AH (Alte Herren)' },
-  { value: 'Ü30', label: 'Ü30' },
-  { value: 'Ü35', label: 'Ü35' },
-  { value: 'Ü40', label: 'Ü40' },
-  { value: 'Ü45', label: 'Ü45' },
-  { value: 'Ü50', label: 'Ü50' },
-];
+    // Senioren
+    { value: 'Senioren', label: i18n.t('wizard:options.ageClass.senioren', { defaultValue: '' }) },
+    { value: 'Herren', label: i18n.t('wizard:options.ageClass.herren', { defaultValue: '' }) },
+    { value: 'Damen', label: i18n.t('wizard:options.ageClass.damen', { defaultValue: '' }) },
+    { value: 'AH', label: i18n.t('wizard:options.ageClass.ah', { defaultValue: '' }) },
+    { value: 'Ü30', label: 'Ü30' },
+    { value: 'Ü35', label: 'Ü35' },
+    { value: 'Ü40', label: 'Ü40' },
+    { value: 'Ü45', label: 'Ü45' },
+    { value: 'Ü50', label: 'Ü50' },
+  ];
+}
 
 /**
  * Altersklassen für andere Sportarten
  */
-export const OTHER_AGE_CLASS_OPTIONS: SelectOption[] = [
-  { value: 'U8', label: 'U8' },
-  { value: 'U10', label: 'U10' },
-  { value: 'U12', label: 'U12' },
-  { value: 'U14', label: 'U14' },
-  { value: 'U16', label: 'U16' },
-  { value: 'U18', label: 'U18' },
-  { value: 'Jugend', label: 'Jugend' },
-  { value: 'Erwachsene', label: 'Erwachsene' },
-  { value: 'Mixed', label: 'Mixed' },
-];
+export function getOtherAgeClassOptions(): SelectOption[] {
+  return [
+    { value: 'U8', label: 'U8' },
+    { value: 'U10', label: 'U10' },
+    { value: 'U12', label: 'U12' },
+    { value: 'U14', label: 'U14' },
+    { value: 'U16', label: 'U16' },
+    { value: 'U18', label: 'U18' },
+    { value: 'Jugend', label: i18n.t('wizard:options.ageClass.jugend', { defaultValue: '' }) },
+    { value: 'Erwachsene', label: i18n.t('wizard:options.ageClass.erwachsene', { defaultValue: '' }) },
+    { value: 'Mixed', label: i18n.t('wizard:options.ageClass.mixed', { defaultValue: '' }) },
+  ];
+}
 
 /**
  * Helper-Funktion: Gibt die passenden Altersklassen basierend auf der Sportart zurück
  */
 export const getAgeClassOptions = (sport: 'football' | 'other'): SelectOption[] => {
-  return sport === 'football' ? FOOTBALL_AGE_CLASS_OPTIONS : OTHER_AGE_CLASS_OPTIONS;
+  return sport === 'football' ? getFootballAgeClassOptions() : getOtherAgeClassOptions();
 };
 
 /**
  * Gruppensysteme
  */
-export const GROUP_SYSTEM_OPTIONS: SelectOption[] = [
-  { value: 'roundRobin', label: 'Jeder gegen jeden' },
-  { value: 'groupsAndFinals', label: 'Gruppenphase + Finalrunde' },
-];
+export function getGroupSystemOptions(): SelectOption[] {
+  return [
+    { value: 'roundRobin', label: i18n.t('wizard:options.groupSystem.roundRobin', { defaultValue: '' }) },
+    { value: 'groupsAndFinals', label: i18n.t('wizard:options.groupSystem.groupsAndFinals', { defaultValue: '' }) },
+  ];
+}
 
 /**
  * Anzahl Gruppen - Dynamisch generieren bis zu einer sinnvollen Obergrenze
  */
-export const NUMBER_OF_GROUPS_OPTIONS: SelectOption[] = Array.from({ length: 26 }, (_, i) => ({
-  value: i + 1,
-  label: i === 0 ? '1 Gruppe' : `${i + 1} Gruppen`,
-}));
+export function getNumberOfGroupsOptions(): SelectOption[] {
+  return Array.from({ length: 26 }, (_, i) => ({
+    value: i + 1,
+    label: i === 0
+      ? i18n.t('wizard:options.groups.one', { defaultValue: '' })
+      : i18n.t('wizard:options.groups.multiple', { count: i + 1, defaultValue: '' }),
+  }));
+}
 
 /**
  * Anzahl Felder (für Classic Mode)
  */
-export const NUMBER_OF_FIELDS_OPTIONS: SelectOption[] = [
-  { value: 1, label: '1 Feld' },
-  { value: 2, label: '2 Felder' },
-  { value: 3, label: '3 Felder' },
-  { value: 4, label: '4 Felder' },
-  { value: 5, label: '5 Felder' },
-  { value: 6, label: '6 Felder' },
-  { value: 8, label: '8 Felder' },
-  { value: 10, label: '10 Felder' },
-];
+export function getNumberOfFieldsOptions(): SelectOption[] {
+  return [1, 2, 3, 4, 5, 6, 8, 10].map(n => ({
+    value: n,
+    label: n === 1
+      ? i18n.t('wizard:options.fields.one', { defaultValue: '' })
+      : i18n.t('wizard:options.fields.multiple', { count: n, defaultValue: '' }),
+  }));
+}
 
 /**
  * Anzahl Runden (für Mini-Fussball Mode)
  */
-export const NUMBER_OF_ROUNDS_OPTIONS: SelectOption[] = [
-  { value: 5, label: '5 Runden' },
-  { value: 6, label: '6 Runden' },
-  { value: 7, label: '7 Runden' },
-  { value: 8, label: '8 Runden' },
-  { value: 9, label: '9 Runden' },
-  { value: 10, label: '10 Runden' },
-];
+export function getNumberOfRoundsOptions(): SelectOption[] {
+  return [5, 6, 7, 8, 9, 10].map(n => ({
+    value: n,
+    label: i18n.t('wizard:options.rounds', { count: n, defaultValue: '' }),
+  }));
+}
 
 /**
  * Anzahl Spielabschnitte
  */
-export const GAME_PERIODS_OPTIONS: SelectOption[] = [
-  { value: 1, label: '1 (durchgehend)' },
-  { value: 2, label: '2 (zwei Halbzeiten)' },
-  { value: 3, label: '3 Abschnitte' },
-  { value: 4, label: '4 Abschnitte' },
-];
+export function getGamePeriodsOptions(): SelectOption[] {
+  return [
+    { value: 1, label: i18n.t('wizard:options.gamePeriods.one', { defaultValue: '' }) },
+    { value: 2, label: i18n.t('wizard:options.gamePeriods.two', { defaultValue: '' }) },
+    { value: 3, label: i18n.t('wizard:options.gamePeriods.three', { defaultValue: '' }) },
+    { value: 4, label: i18n.t('wizard:options.gamePeriods.four', { defaultValue: '' }) },
+  ];
+}
 
 /**
  * Standard-Werte

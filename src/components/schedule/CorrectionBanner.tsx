@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
 export interface CorrectionBannerProps {
   matchId: string;
@@ -18,6 +19,7 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
   originalScoreB,
   onCancel,
 }) => {
+  const { t } = useTranslation('tournament');
   const containerStyle: CSSProperties = {
     background: cssVars.colors.correctionBg,
     border: `2px solid ${cssVars.colors.correctionBorder}`,
@@ -95,13 +97,13 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
         <div style={headerStyle}>
           <div style={titleStyle}>
             <span aria-hidden="true">⚠️</span>
-            <span>KORREKTURMODUS AKTIV</span>
+            <span>{t('correction.modeActive')}</span>
           </div>
           <button
             style={closeButtonStyle}
             onClick={onCancel}
-            title="Korrektur abbrechen"
-            aria-label="Korrektur abbrechen"
+            title={t('correction.cancel')}
+            aria-label={t('correction.cancel')}
             className="correction-banner-close"
           >
             ×
@@ -110,26 +112,26 @@ export const CorrectionBanner: React.FC<CorrectionBannerProps> = ({
 
         <div style={contentStyle}>
           <div style={matchInfoStyle}>
-            Sie korrigieren: {matchLabel} – {teamA} vs {teamB}
+            {t('correction.correcting', { matchLabel, teamA, teamB })}
           </div>
 
           <div style={warningListStyle}>
             <div style={listItemStyle}>
-              <span aria-hidden="true">⚠️</span> <strong>ACHTUNG:</strong> Änderungen beeinflussen Tabelle und ggf. Playoff-Paarungen
+              <span aria-hidden="true">⚠️</span> <strong>{t('correction.warning')}</strong> {t('correction.warningText')}
             </div>
             <div style={listItemStyle}>
-              • Gruppentabelle wird neu berechnet
+              {t('correction.recalcStandings')}
             </div>
             <div style={listItemStyle}>
-              • Playoff-Paarungen können sich ändern
+              {t('correction.playoffChange')}
             </div>
             <div style={listItemStyle}>
-              • Bereits gespielte Finalrunden bleiben unverändert
+              {t('correction.finalsUnchanged')}
             </div>
           </div>
 
           <div style={originalScoreStyle}>
-            Ursprüngliches Ergebnis: {originalScoreA}:{originalScoreB}
+            {t('correction.originalScore', { scoreA: originalScoreA, scoreB: originalScoreB })}
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, fontSizesMd3 } from '../../design-tokens'
 import { GeneratedSchedule } from '../../core/generators';
 import { getFullLocationAddress, formatDateGerman } from '../../utils/locationHelpers';
@@ -18,6 +19,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
   logoUrl,
   qrCodeUrl,
 }) => {
+  const { t } = useTranslation('tournament');
   const groupPhase = schedule.phases.find(p => p.name === 'groupStage');
   const firstMatch = groupPhase?.matches[0];
   const matchDuration = firstMatch?.duration ?? 10;
@@ -97,7 +99,7 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
           <div style={{ textAlign: 'center' }}>
             <img src={qrCodeUrl} alt="QR Code" style={qrCodeStyle} />
             <div style={{ fontSize: fontSizesMd3.statLabel, color: cssVars.colors.textSecondary, marginTop: cssVars.spacing.xs }}>
-              Live Ergebnisse
+              {t('header.liveResults')}
             </div>
           </div>
         )}
@@ -110,36 +112,36 @@ export const TournamentHeader: React.FC<TournamentHeaderProps> = ({
       <div style={metaGridStyle}>
         {schedule.tournament.organizer && (
           <div style={metaItemStyle}>
-            <span style={metaLabelStyle}>Veranstalter:</span>
+            <span style={metaLabelStyle}>{t('header.organizer')}:</span>
             {schedule.tournament.organizer}
           </div>
         )}
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Datum:</span>
+          <span style={metaLabelStyle}>{t('header.date')}:</span>
           {formatDateGerman(schedule.tournament.date)}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Beginn:</span>
-          {formatTime(schedule.startTime)} Uhr
+          <span style={metaLabelStyle}>{t('header.startTime')}:</span>
+          {t('header.timeValue', { time: formatTime(schedule.startTime) })}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Ende (ca.):</span>
-          {formatTime(schedule.endTime)} Uhr
+          <span style={metaLabelStyle}>{t('header.endTimeApprox')}:</span>
+          {t('header.timeValue', { time: formatTime(schedule.endTime) })}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Spieldauer:</span>
-          {matchDuration} Minuten
+          <span style={metaLabelStyle}>{t('header.matchDuration')}:</span>
+          {t('header.minutesValue', { count: matchDuration })}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Teilnehmer:</span>
-          {numberOfTeams} Teams
+          <span style={metaLabelStyle}>{t('header.participants')}:</span>
+          {t('header.teamsValue', { count: numberOfTeams })}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Spiele gesamt:</span>
+          <span style={metaLabelStyle}>{t('header.totalMatches')}:</span>
           {numberOfMatches}
         </div>
         <div style={metaItemStyle}>
-          <span style={metaLabelStyle}>Veranstaltungsort:</span>
+          <span style={metaLabelStyle}>{t('header.venue')}:</span>
           {getFullLocationAddress(schedule.tournament)}
         </div>
       </div>
