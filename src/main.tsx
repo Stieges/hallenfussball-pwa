@@ -2,6 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 
+// i18n must be initialized before any React component renders
+import './i18n';
+
 // Font: Inter Variable (self-hosted via @fontsource for offline capability)
 import '@fontsource-variable/inter';
 

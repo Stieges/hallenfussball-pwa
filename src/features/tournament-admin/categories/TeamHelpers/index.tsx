@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { Button } from '../../../../components/ui/Button';
@@ -37,6 +38,7 @@ export function TeamHelpersCategory({
   tournamentId,
   tournament,
 }: TeamHelpersCategoryProps) {
+  const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
   const { myMembership } = useTournamentMembers(tournamentId);
   const { getActiveInvitations } = useInvitation();
@@ -98,16 +100,16 @@ export function TeamHelpersCategory({
     return (
       <CategoryPage
         icon="👥"
-        title="Team & Helfer"
-        description="Helfer einladen und Berechtigungen verwalten"
+        title={t('teamHelpers.title')}
+        description={t('teamHelpers.description')}
       >
         <div style={styles.authPrompt}>
           <div style={styles.authIcon}>🔐</div>
-          <h3 style={styles.authTitle}>Anmeldung erforderlich</h3>
+          <h3 style={styles.authTitle}>{t('teamHelpers.authRequired')}</h3>
           <p style={styles.authText}>
-            Um Helfer einzuladen und zu verwalten, musst du angemeldet sein.
+            {t('teamHelpers.authRequiredDesc')}
           </p>
-          <span style={styles.badge}>Gehe zu Einstellungen → Konto</span>
+          <span style={styles.badge}>{t('teamHelpers.goToSettings')}</span>
         </div>
       </CategoryPage>
     );
@@ -116,15 +118,15 @@ export function TeamHelpersCategory({
   return (
     <CategoryPage
       icon="👥"
-      title="Team & Helfer"
-      description="Helfer einladen und Berechtigungen verwalten"
+      title={t('teamHelpers.title')}
+      description={t('teamHelpers.description')}
     >
       {/* Invite Section - Only for Owner/Co-Admin */}
       {canManageMembers && (
-        <CollapsibleSection icon="➕" title="Helfer einladen" defaultOpen>
+        <CollapsibleSection icon="➕" title={t('teamHelpers.inviteHelpers')} defaultOpen>
           <div style={styles.inviteSection}>
             <p style={styles.inviteDescription}>
-              Erstelle einen Einladungs-Link, um Helfer zu deinem Turnier hinzuzufügen.
+              {t('teamHelpers.inviteDescription')}
             </p>
 
             <Button
@@ -132,13 +134,13 @@ export function TeamHelpersCategory({
               onClick={() => setShowInviteDialog(true)}
               style={styles.inviteButton}
             >
-              + Einladung erstellen
+              {t('teamHelpers.createInvite')}
             </Button>
 
             {/* Show created invite link */}
             {createdInviteLink && (
               <div style={styles.linkContainer}>
-                <p style={styles.linkLabel}>Einladungs-Link erstellt:</p>
+                <p style={styles.linkLabel}>{t('teamHelpers.inviteLinkCreated')}</p>
                 <div style={styles.linkBox}>
                   <code style={styles.linkCode}>{createdInviteLink}</code>
                   <Button
@@ -146,11 +148,11 @@ export function TeamHelpersCategory({
                     size="sm"
                     onClick={() => { void handleCopyLink(); }}
                   >
-                    {copySuccess ? '✓ Kopiert' : 'Kopieren'}
+                    {copySuccess ? t('teamHelpers.copied') : t('teamHelpers.copy')}
                   </Button>
                 </div>
                 <p style={styles.linkHint}>
-                  Teile diesen Link mit der Person, die du einladen möchtest.
+                  {t('teamHelpers.shareLinkHint')}
                 </p>
               </div>
             )}
@@ -159,7 +161,7 @@ export function TeamHelpersCategory({
       )}
 
       {/* Member List */}
-      <CollapsibleSection icon="👤" title="Aktuelle Mitglieder" defaultOpen={!canManageMembers}>
+      <CollapsibleSection icon="👤" title={t('teamHelpers.currentMembers')} defaultOpen={!canManageMembers}>
         <MemberList
           tournamentId={tournamentId}
           availableTeams={availableTeams}
@@ -169,19 +171,19 @@ export function TeamHelpersCategory({
 
       {/* Active Invitations - Only for Owner/Co-Admin */}
       {canManageMembers && activeInvitations.length > 0 && (
-        <CollapsibleSection icon="🔗" title={`Aktive Einladungen (${activeInvitations.length})`}>
+        <CollapsibleSection icon="🔗" title={t('teamHelpers.activeInvitations', { count: activeInvitations.length })}>
           <div style={styles.invitationList}>
             {activeInvitations.map(invitation => (
               <div key={invitation.id} style={styles.invitationCard}>
                 <div style={styles.invitationInfo}>
                   <span style={styles.invitationRole}>
-                    {invitation.role === 'co-admin' && 'Stellvertreter'}
-                    {invitation.role === 'collaborator' && 'Helfer'}
-                    {invitation.role === 'trainer' && 'Trainer'}
-                    {invitation.role === 'viewer' && 'Zuschauer'}
+                    {invitation.role === 'co-admin' && t('teamHelpers.roleDeputy')}
+                    {invitation.role === 'collaborator' && t('teamHelpers.roleHelper')}
+                    {invitation.role === 'trainer' && t('teamHelpers.roleTrainer')}
+                    {invitation.role === 'viewer' && t('teamHelpers.roleViewer')}
                   </span>
                   <span style={styles.invitationMeta}>
-                    {invitation.useCount}/{invitation.maxUses === 0 ? '∞' : invitation.maxUses} verwendet
+                    {t('teamHelpers.usedCount', { used: invitation.useCount, max: invitation.maxUses === 0 ? '∞' : invitation.maxUses })}
                   </span>
                 </div>
                 <code style={styles.invitationToken}>
@@ -194,12 +196,12 @@ export function TeamHelpersCategory({
       )}
 
       {/* Referee Assignment - Coming Soon */}
-      <CollapsibleSection icon="👔" title="Schiedsrichter-Zuweisung">
+      <CollapsibleSection icon="👔" title={t('teamHelpers.refereeAssignment')}>
         <div style={styles.comingSoon}>
           <p>
             {tournament.refereeConfig?.mode === 'none'
-              ? 'Schiedsrichter-Modus ist deaktiviert.'
-              : 'Schiedsrichter-Übersicht wird in einer späteren Version verfügbar sein.'}
+              ? t('teamHelpers.refereeModeDisabled')
+              : t('teamHelpers.refereeComingSoon')}
           </p>
         </div>
       </CollapsibleSection>

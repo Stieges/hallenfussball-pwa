@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { ScheduledMatch } from '../../core/generators';
 import { Tournament } from '../../types/tournament';
@@ -53,6 +54,8 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
   renderExpandContent,
   hasEvents = false,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // ---------------------------------------------------------------------------
   // Styles
   // ---------------------------------------------------------------------------
@@ -72,7 +75,7 @@ export const DesktopCard: React.FC<DesktopCardProps> = ({
         matchNumber={match.matchNumber}
         scheduledTime={match.time}
         field={match.field}
-        referee={match.referee ? `SR ${match.referee}` : undefined}
+        referee={match.referee ? t('matchCard.refereeSR', { referee: match.referee }) : undefined}
         group={match.label ?? (match.group ? getGroupShortCode(match.group, tournament) : undefined)}
         showGroupLabel={showGroupLabel}
         homeTeam={getTeamForDisplay(tournament?.teams, match.originalTeamA, match.homeTeam)}

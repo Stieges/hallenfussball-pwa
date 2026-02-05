@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminMobileHubProps, AdminCategoryGroup } from '../types/admin.types';
 import {
@@ -246,6 +247,8 @@ export function AdminMobileHub({
   warnings = [],
   onBackToTournament,
 }: AdminMobileHubProps) {
+  const { t } = useTranslation('admin');
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -312,7 +315,7 @@ export function AdminMobileHub({
           <span style={styles.badge}>{category.badge}</span>
         )}
         {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>Bald</span>
+          <span style={styles.comingSoonBadge}>{t('mobileHub.comingSoon')}</span>
         )}
         {!category.isComingSoon && !category.badge && (
           <span style={styles.categoryArrow}>→</span>
@@ -344,18 +347,18 @@ export function AdminMobileHub({
         <button style={styles.backButton} onClick={onBackToTournament}>
           ←
         </button>
-        <div style={styles.headerTitle}>Admin Center</div>
+        <div style={styles.headerTitle}>{t('mobileHub.title')}</div>
       </div>
 
       {/* Search */}
       <div style={styles.searchContainer}>
         <input
           type="search"
-          placeholder="Suchen..."
+          placeholder={t('mobileHub.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           style={styles.searchInput}
-          aria-label="Kategorien durchsuchen"
+          aria-label={t('mobileHub.searchAriaLabel')}
         />
       </div>
 
@@ -364,7 +367,7 @@ export function AdminMobileHub({
         {/* No Results */}
         {!hasResults && searchQuery && (
           <div style={styles.noResults}>
-            Keine Ergebnisse für &quot;{searchQuery}&quot;
+            {t('mobileHub.noResults', { query: searchQuery })}
           </div>
         )}
 
@@ -389,7 +392,7 @@ export function AdminMobileHub({
         {/* Danger Zone - only show if there are danger items */}
         {filteredCategories.dangerItems.length > 0 && (
           <div style={styles.dangerZoneSection}>
-            <div style={styles.dangerZoneLabel}>Kritische Aktionen</div>
+            <div style={styles.dangerZoneLabel}>{t('mobileHub.criticalActions')}</div>
             {filteredCategories.dangerItems.map(renderCategoryCard)}
           </div>
         )}
@@ -405,11 +408,11 @@ export function AdminMobileHub({
             <span style={styles.warningsIcon}>⚠️</span>
             <div style={styles.warningsContent}>
               <div style={styles.warningsTitle}>
-                {warnings.length} Warnungen
+                {t('mobileHub.warnings', { count: warnings.length })}
               </div>
               <div style={styles.warningsSubtitle}>
                 {warnings[0]?.title}
-                {warnings.length > 1 && ` und ${warnings.length - 1} weitere`}
+                {warnings.length > 1 && ` ${t('mobileHub.andMore', { count: warnings.length - 1 })}`}
               </div>
             </div>
             <span style={styles.categoryArrow}>→</span>

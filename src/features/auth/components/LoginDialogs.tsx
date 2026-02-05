@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { loginStyles as styles } from './LoginScreen.styles';
@@ -30,6 +31,7 @@ export const LoginResetPasswordDialog: React.FC<LoginResetPasswordDialogProps> =
   onClose,
   onBackdropClick,
 }) => {
+  const { t } = useTranslation('auth');
   const trap = useFocusTrap({
     isActive: true,
     onEscape: onClose,
@@ -46,10 +48,9 @@ export const LoginResetPasswordDialog: React.FC<LoginResetPasswordDialogProps> =
         aria-labelledby="reset-password-title"
       >
         <div style={styles.successIcon}>✉</div>
-        <h2 id="reset-password-title" style={styles.successTitle}>E-Mail gesendet!</h2>
+        <h2 id="reset-password-title" style={styles.successTitle}>{t('loginDialogs.resetPassword.title')}</h2>
         <p style={styles.successText}>
-          Wir haben einen Link zum Zurücksetzen deines Passworts an <strong>{email}</strong> gesendet.
-          Klicke auf den Link in der E-Mail, um ein neues Passwort zu setzen.
+          {t('loginDialogs.resetPassword.message', { email })}
         </p>
         <Button
           variant="ghost"
@@ -57,7 +58,7 @@ export const LoginResetPasswordDialog: React.FC<LoginResetPasswordDialogProps> =
           onClick={onClose}
           style={{ marginTop: cssVars.spacing.lg }}
         >
-          Zurück zum Login
+          {t('loginDialogs.resetPassword.back')}
         </Button>
       </div>
     </div>
@@ -79,6 +80,7 @@ export const LoginMagicLinkDialog: React.FC<LoginMagicLinkDialogProps> = ({
   onClose,
   onBackdropClick,
 }) => {
+  const { t } = useTranslation('auth');
   const trap = useFocusTrap({
     isActive: true,
     onEscape: onClose,
@@ -95,10 +97,9 @@ export const LoginMagicLinkDialog: React.FC<LoginMagicLinkDialogProps> = ({
         aria-labelledby="magic-link-title"
       >
         <div style={styles.successIcon}>✉</div>
-        <h2 id="magic-link-title" style={styles.successTitle}>Magic Link gesendet!</h2>
+        <h2 id="magic-link-title" style={styles.successTitle}>{t('loginDialogs.magicLink.title')}</h2>
         <p style={styles.successText}>
-          Wir haben einen Login-Link an <strong>{email}</strong> gesendet.
-          Klicke auf den Link in der E-Mail, um dich anzumelden.
+          {t('loginDialogs.magicLink.message', { email })}
         </p>
         <Button
           variant="ghost"
@@ -106,7 +107,7 @@ export const LoginMagicLinkDialog: React.FC<LoginMagicLinkDialogProps> = ({
           onClick={onClose}
           style={{ marginTop: cssVars.spacing.lg }}
         >
-          Andere E-Mail verwenden
+          {t('loginDialogs.magicLink.otherEmail')}
         </Button>
       </div>
     </div>
@@ -126,6 +127,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
   migratedCount,
   onClose,
 }) => {
+  const { t } = useTranslation('auth');
   const trap = useFocusTrap({
     isActive: true,
     onEscape: onClose,
@@ -145,16 +147,16 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
           type="button"
           onClick={onClose}
           style={styles.successCloseButton}
-          aria-label="Schließen"
+          aria-label={t('login.close')}
         >
           ✕
         </button>
         <div style={styles.successIcon}>✓</div>
-        <h2 id="login-success-title" style={styles.successTitle}>Angemeldet!</h2>
+        <h2 id="login-success-title" style={styles.successTitle}>{t('loginDialogs.success.title')}</h2>
         <p style={styles.successText}>
           {migratedCount > 0
-            ? `${migratedCount} Turnier${migratedCount === 1 ? '' : 'e'} synchronisiert!`
-            : 'Du wirst weitergeleitet...'}
+            ? t('loginDialogs.success.migrated', { count: migratedCount })
+            : t('loginDialogs.success.redirecting')}
         </p>
         <Button
           variant="primary"
@@ -162,7 +164,7 @@ export const LoginSuccessDialog: React.FC<LoginSuccessDialogProps> = ({
           onClick={onClose}
           style={{ marginTop: cssVars.spacing.lg }}
         >
-          Weiter
+          {t('loginDialogs.success.continue')}
         </Button>
       </div>
     </div>

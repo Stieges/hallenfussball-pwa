@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
@@ -44,6 +45,8 @@ const calculateFinalsMatches = (preset: FinalsPreset, numberOfGroups: number): n
 };
 
 export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) => {
+  const { t } = useTranslation('wizard');
+
   const teams = formData.numberOfTeams ?? 4;
   const fields = formData.numberOfFields ?? 1;
   const numberOfGroups = formData.numberOfGroups ?? 2;
@@ -130,10 +133,10 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
             fontSize: cssVars.fontSizes.md,
             fontWeight: cssVars.fontWeights.semibold,
           }}>
-            Geschätzte Turnierdauer: {hours > 0 ? `${hours}h ` : ''}{minutes}min
+            {t('durationEstimate.estimatedDuration')}{hours > 0 ? t('durationEstimate.hoursAndMinutes', { hours, minutes }) : t('durationEstimate.minutesOnly', { minutes })}
           </span>
           <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.md, marginLeft: '8px' }}>
-            ({groupPhaseMatches + finalsMatches} Spiele, {fields} {fields === 1 ? 'Feld' : 'Felder'})
+            {t('durationEstimate.matchInfo', { matches: groupPhaseMatches + finalsMatches, fields, fieldLabel: fields === 1 ? t('durationEstimate.fieldSingular') : t('durationEstimate.fieldPlural') })}
           </span>
         </div>
       </div>
@@ -147,19 +150,19 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
           fontSize: cssVars.fontSizes.sm,
           color: cssVars.colors.textSecondary
         }}>
-          <span>Gruppenphase: {groupPhaseMatches} Spiele (~{Math.floor(groupPhaseMinutes / 60)}h {groupPhaseMinutes % 60}min)</span>
-          <span>Finalrunde: {finalsMatches} Spiele (~{Math.floor(finalsMinutes / 60)}h {finalsMinutes % 60}min)</span>
+          <span>{t('durationEstimate.groupPhaseBreakdown', { matches: groupPhaseMatches, hours: Math.floor(groupPhaseMinutes / 60), minutes: groupPhaseMinutes % 60 })}</span>
+          <span>{t('durationEstimate.finalsBreakdown', { matches: finalsMatches, hours: Math.floor(finalsMinutes / 60), minutes: finalsMinutes % 60 })}</span>
         </div>
       )}
 
       {isCritical && (
         <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.error, margin: '8px 0 0 0', lineHeight: '1.4' }}>
-          Diese Turnierdauer ist unrealistisch für einen Tag. Empfehlung: {Math.ceil(fields * (totalMinutes / 360))} Felder oder Spieldauer auf {Math.max(5, groupGameDuration - 3)} Min reduzieren.
+          {t('durationEstimate.criticalWarning', { fields: Math.ceil(fields * (totalMinutes / 360)), duration: Math.max(5, groupGameDuration - 3) })}
         </p>
       )}
       {isWarning && !isCritical && (
         <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning, margin: '8px 0 0 0', lineHeight: '1.4' }}>
-          Tipp: Mit {fields + 1} Feldern ca. {Math.round((totalMinutes / (fields + 1)) / 60 * 10) / 10}h oder mit {Math.max(5, groupGameDuration - 2)} Min Spieldauer verkürzt sich die Dauer.
+          {t('durationEstimate.durationWarning', { fields: fields + 1, hours: Math.round((totalMinutes / (fields + 1)) / 60 * 10) / 10, duration: Math.max(5, groupGameDuration - 2) })}
         </p>
       )}
     </div>

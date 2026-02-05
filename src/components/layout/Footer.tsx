@@ -10,6 +10,7 @@
 
 import { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
@@ -29,6 +30,7 @@ interface FooterProps {
 export function Footer({ onOpenCookieSettings }: FooterProps) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const currentYear = new Date().getFullYear();
 
   // ---------------------------------------------------------------------------
@@ -99,37 +101,37 @@ export function Footer({ onOpenCookieSettings }: FooterProps) {
   return (
     <footer style={footerStyle}>
       <div style={copyrightStyle}>
-        © {currentYear} Spielplan
+        {t('footer.copyright', { year: currentYear })}
       </div>
-      <nav style={linksContainerStyle} aria-label="Rechtliche Links">
+      <nav style={linksContainerStyle} aria-label={t('footer.legalLinksLabel')}>
         <button
           type="button"
           style={linkStyle}
           onClick={handleImpressumClick}
-          aria-label="Impressum öffnen"
+          aria-label={t('footer.impressumAriaLabel')}
           data-testid="footer-impressum-link"
         >
-          Impressum
+          {t('footer.impressum')}
         </button>
         {!isMobile && <span style={separatorStyle}>•</span>}
         <button
           type="button"
           style={linkStyle}
           onClick={handleDatenschutzClick}
-          aria-label="Datenschutzerklärung öffnen"
+          aria-label={t('footer.datenschutzAriaLabel')}
           data-testid="footer-datenschutz-link"
         >
-          Datenschutz
+          {t('footer.datenschutz')}
         </button>
         {!isMobile && <span style={separatorStyle}>•</span>}
         <button
           type="button"
           style={linkStyle}
           onClick={handleCookieSettingsClick}
-          aria-label="Cookie-Einstellungen öffnen"
+          aria-label={t('footer.cookieSettingsAriaLabel')}
           data-testid="footer-cookie-settings-link"
         >
-          Cookie-Einstellungen
+          {t('footer.cookieSettings')}
         </button>
       </nav>
     </footer>

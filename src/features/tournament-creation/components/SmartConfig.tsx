@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
 import { SmartConfigResult } from '../utils/smartConfigCalculator';
 import { useSmartConfig } from '../hooks/useSmartConfig';
@@ -9,6 +10,7 @@ interface SmartConfigProps {
 }
 
 export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) => {
+  const { t } = useTranslation('wizard');
   const {
     isOpen,
     togglePanel,
@@ -55,33 +57,33 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
         aria-controls="smart-config-panel"
       >
         <span aria-hidden="true">🧙</span>
-        <span>Smart-Konfiguration</span>
+        <span>{t('smartConfig.title')}</span>
         <span className={styles.toggleIcon} aria-hidden="true">
           {isOpen ? '▼' : '▶'}
         </span>
       </button>
 
       {isOpen && (
-        <div id="smart-config-panel" className={styles.panel} role="region" aria-label="Smart-Konfiguration">
+        <div id="smart-config-panel" className={styles.panel} role="region" aria-label={t('smartConfig.ariaLabel')}>
           {/* Quick Apply from last session */}
           {lastApplied && !recommendation && (
             <div className={styles.quickApply}>
               <span className={styles.quickApplyLabel}>
-                Letzte Konfiguration: {lastApplied.teams} Teams, {lastApplied.fields} {lastApplied.fields === 1 ? 'Feld' : 'Felder'}, {lastApplied.gameDuration}min
+                {t('smartConfig.lastConfig', { teams: lastApplied.teams, fields: lastApplied.fields, fieldLabel: lastApplied.fields === 1 ? t('smartConfig.fieldSingular') : t('smartConfig.fieldPlural'), duration: lastApplied.gameDuration })}
               </span>
               <button
                 onClick={handleQuickApply}
                 className={styles.quickApplyButton}
-                aria-label="Letzte Konfiguration wiederherstellen"
+                aria-label={t('smartConfig.restoreAriaLabel')}
               >
-                Wiederherstellen
+                {t('smartConfig.restore')}
               </button>
             </div>
           )}
 
           <div className={styles.inputGroup}>
             <label className={styles.inputLabel}>
-              Wie viel Zeit hast du für das Turnier?
+              {t('smartConfig.timeQuestion')}
             </label>
             <div className={styles.inputRow}>
               <div className={styles.timeInputWrapper}>
@@ -104,7 +106,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                     }
                   }}
                   className={styles.hoursInput}
-                  aria-label="Stunden"
+                  aria-label={t('smartConfig.hoursAriaLabel')}
                 />
                 <span className={styles.timeUnit}>h</span>
               </div>
@@ -129,16 +131,16 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
                     }
                   }}
                   className={styles.minutesInput}
-                  aria-label="Minuten"
+                  aria-label={t('smartConfig.minutesAriaLabel')}
                 />
                 <span className={styles.timeUnit}>min</span>
               </div>
               <button
                 onClick={handleCalculate}
                 className={styles.calculateButton}
-                aria-label="Optimale Konfiguration berechnen"
+                aria-label={t('smartConfig.calculateAriaLabel')}
               >
-                Berechnen
+                {t('smartConfig.calculate')}
               </button>
             </div>
           </div>
@@ -147,16 +149,16 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
           <div className={styles.constraintsSection}>
             <div className={styles.constraintsHeader}>
               <span aria-hidden="true">🔒</span>
-              <span>Fixe Einschränkungen</span>
+              <span>{t('smartConfig.constraints.title')}</span>
             </div>
             <p className={styles.constraintsHint}>
-              Aktiviere Werte, die nicht geändert werden dürfen
+              {t('smartConfig.constraints.hint')}
             </p>
 
             <div className={styles.constraintsList}>
               {/* Teams Constraint */}
               <ConstraintRow
-                label="Anzahl Teams:"
+                label={t('smartConfig.constraints.teamCount')}
                 checked={lockTeams}
                 onCheckedChange={setLockTeams}
                 value={constraintTeams}
@@ -167,7 +169,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
               {/* Groups Constraint - only for groupsAndFinals */}
               {usesGroups && (
                 <ConstraintRow
-                  label="Anzahl Gruppen:"
+                  label={t('smartConfig.constraints.groupCount')}
                   checked={lockGroups}
                   onCheckedChange={setLockGroups}
                   value={constraintGroups}
@@ -178,7 +180,7 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
 
               {/* Fields Constraint */}
               <ConstraintRow
-                label="Anzahl Felder:"
+                label={t('smartConfig.constraints.fieldCount')}
                 checked={lockFields}
                 onCheckedChange={setLockFields}
                 value={constraintFields}
@@ -188,62 +190,61 @@ export const SmartConfig: React.FC<SmartConfigProps> = ({ formData, onApply }) =
 
               {/* Game Duration Constraint */}
               <ConstraintRow
-                label="Spieldauer:"
+                label={t('smartConfig.constraints.gameDuration')}
                 checked={lockGameDuration}
                 onCheckedChange={setLockGameDuration}
                 value={constraintGameDuration}
                 onValueChange={setConstraintGameDuration}
                 options={[5, 6, 7, 8, 10, 12, 15]}
-                suffix=" Min"
+                suffix={t('smartConfig.constraints.minuteSuffix')}
               />
 
               {/* Break Duration Constraint */}
               <ConstraintRow
-                label="Pausendauer:"
+                label={t('smartConfig.constraints.breakDuration')}
                 checked={lockBreakDuration}
                 onCheckedChange={setLockBreakDuration}
                 value={constraintBreakDuration}
                 onValueChange={setConstraintBreakDuration}
                 options={[0, 1, 2, 3, 5]}
-                suffix=" Min"
+                suffix={t('smartConfig.constraints.minuteSuffix')}
               />
             </div>
           </div>
 
           {recommendation && (
             <>
-              <div className={styles.resultCard} role="region" aria-label="Empfohlene Konfiguration">
+              <div className={styles.resultCard} role="region" aria-label={t('smartConfig.result.title')}>
                 <div className={styles.resultTitle}>
-                  Empfohlene Konfiguration
+                  {t('smartConfig.result.title')}
                 </div>
 
                 <div className={styles.statsGrid}>
-                  <StatItem label="Teams" value={recommendation.teams} />
-                  <StatItem label="Felder" value={recommendation.fields} />
-                  <StatItem label="Spieldauer" value={`${recommendation.gameDuration} Min`} />
-                  <StatItem label="Pause" value={`${recommendation.breakDuration} Min`} />
+                  <StatItem label={t('smartConfig.result.teams')} value={recommendation.teams} />
+                  <StatItem label={t('smartConfig.result.fields')} value={recommendation.fields} />
+                  <StatItem label={t('smartConfig.result.gameDuration')} value={`${recommendation.gameDuration} ${t('smartConfig.result.minuteSuffix')}`} />
+                  <StatItem label={t('smartConfig.result.pause')} value={`${recommendation.breakDuration} ${t('smartConfig.result.minuteSuffix')}`} />
                 </div>
 
                 <div className={styles.resultFooter}>
-                  <span>{recommendation.totalMatches} Spiele</span>
-                  <span>~{recommendation.estimatedHours.toFixed(1)}h Turnierdauer</span>
+                  <span>{t('smartConfig.result.matches', { count: recommendation.totalMatches })}</span>
+                  <span>{t('smartConfig.result.duration', { hours: recommendation.estimatedHours.toFixed(1) })}</span>
                 </div>
               </div>
 
               <button
                 onClick={handleApply}
                 className={styles.applyButton}
-                aria-label="Empfohlene Konfiguration übernehmen"
+                aria-label={t('smartConfig.applyAriaLabel')}
               >
-                Konfiguration übernehmen
+                {t('smartConfig.apply')}
               </button>
             </>
           )}
 
           {showTeamsWarning && (
             <p className={styles.warningText} role="alert">
-              <span aria-hidden="true">⚠️</span> {formData.numberOfTeams} Teams passen nicht in {availableHours}h.
-              Alternative: {recommendation?.teams} Teams oder mehr Zeit/Felder einplanen.
+              <span aria-hidden="true">⚠️</span> {t('smartConfig.teamsWarning', { current: formData.numberOfTeams, hours: availableHours, suggested: recommendation?.teams })}
             </p>
           )}
         </div>

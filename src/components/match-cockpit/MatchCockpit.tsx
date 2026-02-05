@@ -9,6 +9,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { CurrentMatchPanel } from './CurrentMatchPanel';
@@ -157,6 +158,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
   onForceFinish,
   onCancelTiebreaker,
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = useIsMobile();
 
   const containerStyle: CSSProperties = {
@@ -239,7 +241,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
       <header style={headerStyle}>
         <div style={headerLeftStyle}>
           <div style={tournamentNameStyle}>{tournamentName}</div>
-          <div style={fieldNameStyle}>{fieldName} – Kampfgericht Cockpit</div>
+          <div style={fieldNameStyle}>{fieldName} – {t('matchCockpit.title')}</div>
         </div>
         <div style={{ display: 'flex', gap: cssVars.spacing.sm, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusChip
@@ -248,7 +250,7 @@ export const MatchCockpit: React.FC<MatchCockpitProps> = ({
           />
           {/* Show warning based on remaining time in current match (not scheduled time) */}
           {showRemainingTimeWarning && (
-            <WarningChip message={`Noch ${remainingMinutes} Min – Nächstes Spiel vorbereiten!`} />
+            <WarningChip message={t('matchCockpit.prepareWarning', { minutes: remainingMinutes })} />
           )}
         </div>
       </header>
@@ -300,6 +302,7 @@ interface StatusChipProps {
 }
 
 const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = useIsMobile();
 
   const chipStyle: CSSProperties = {
@@ -326,13 +329,13 @@ const StatusChip: React.FC<StatusChipProps> = ({ status, phaseLabel }) => {
   const getStatusText = () => {
     switch (status) {
       case 'RUNNING':
-        return 'Läuft';
+        return t('matchCockpit.running');
       case 'PAUSED':
-        return 'Pausiert';
+        return t('matchCockpit.paused');
       case 'FINISHED':
-        return 'Beendet';
+        return t('matchCockpit.finished');
       default:
-        return 'Bereit';
+        return t('matchCockpit.ready');
     }
   };
 

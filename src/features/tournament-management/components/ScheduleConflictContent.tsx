@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { ScheduleConflict } from '../../schedule-editor';
 
@@ -20,6 +21,7 @@ export const ScheduleConflictContent: React.FC<ScheduleConflictContentProps> = (
   criticalConflicts,
   warningConflicts,
 }) => {
+  const { t } = useTranslation('tournament');
   const criticalSectionStyle: CSSProperties = {
     marginBottom: cssVars.spacing.md,
     padding: cssVars.spacing.md,
@@ -62,7 +64,7 @@ export const ScheduleConflictContent: React.FC<ScheduleConflictContentProps> = (
       {criticalConflicts.length > 0 && (
         <div style={criticalSectionStyle}>
           <div style={criticalHeaderStyle}>
-            ⛔ Kritische Fehler ({criticalConflicts.length})
+            {t('conflict.criticalErrors', { count: criticalConflicts.length })}
           </div>
           <ul style={listStyle}>
             {criticalConflicts.map((c, i) => (
@@ -77,7 +79,7 @@ export const ScheduleConflictContent: React.FC<ScheduleConflictContentProps> = (
       {warningConflicts.length > 0 && (
         <div style={warningSectionStyle}>
           <div style={warningHeaderStyle}>
-            ⚠️ Warnungen ({warningConflicts.length})
+            {t('conflict.warnings', { count: warningConflicts.length })}
           </div>
           <ul style={listStyle}>
             {warningConflicts.map((c, i) => (

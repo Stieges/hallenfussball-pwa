@@ -1,4 +1,5 @@
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, FinalsPreset, FinalsConfig, TiebreakerMode } from '../../../types/tournament';
 import { getFinalsOptions, FinalsOption } from '../../../constants/finalsOptions';
@@ -13,6 +14,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   formData,
   onUpdate,
 }) => {
+  const { t } = useTranslation('wizard');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   const numberOfGroups = formData.numberOfGroups ?? 2;
@@ -132,10 +134,10 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
   return (
     <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: `1px solid ${cssVars.colors.border}` }}>
       <h3 style={{ color: cssVars.colors.accent, fontSize: cssVars.fontSizes.md, margin: '0 0 8px 0' }}>
-        Finalrunde
+        {t('finalsConfig.title')}
       </h3>
       <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '0 0 16px 0' }}>
-        ⭐ = Empfohlen für {numberOfGroups} Gruppe{numberOfGroups > 1 ? 'n' : ''}
+        {t('finalsConfig.recommendedHint', { count: numberOfGroups })}
       </p>
 
       {/* Recommended Options */}
@@ -162,7 +164,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               justifyContent: 'space-between',
             }}
           >
-            <span>Weitere Optionen (theoretisch möglich, aber weniger empfohlen)</span>
+            <span>{t('finalsConfig.advancedOptions')}</span>
             <span>{showAdvancedOptions ? '▼' : '▶'}</span>
           </button>
 
@@ -183,10 +185,10 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           borderRadius: cssVars.borderRadius.md,
           border: `1px solid ${cssVars.colors.warningBorder}`
         }}>
-          <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
-            <strong>Hinweis:</strong> Top-8 mit Viertelfinale benötigt mindestens 4 Gruppen (8 Teams).
-            Mit {numberOfGroups} Gruppen wird automatisch Top-4 (Halbfinale) verwendet.
-          </p>
+          <p
+            style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}
+            dangerouslySetInnerHTML={{ __html: t('finalsConfig.warnings.top8TooFewGroups', { count: numberOfGroups }) }}
+          />
         </div>
       )}
 
@@ -198,11 +200,20 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           borderRadius: cssVars.borderRadius.md,
           border: `1px solid ${cssVars.colors.secondaryBorderActive}`
         }}>
-          <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}>
-            <strong>Info:</strong> Es werden alle möglichen Platzierungen ausgespielt.
-            {numberOfGroups === 2 && ' Bei 2 Gruppen: Halbfinale + Plätze 3, 5 und 7.'}
-            {numberOfGroups >= 4 && ' Bei 4+ Gruppen: Viertelfinale + alle Platzierungen.'}
-          </p>
+          <p
+            style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: 0, lineHeight: '1.5' }}
+            dangerouslySetInnerHTML={{ __html: t('finalsConfig.warnings.allPlacesInfo') }}
+          />
+          {numberOfGroups === 2 && (
+            <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: '4px 0 0 0', lineHeight: '1.5' }}>
+              {t('finalsConfig.warnings.allPlaces2Groups')}
+            </p>
+          )}
+          {numberOfGroups >= 4 && (
+            <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary, margin: '4px 0 0 0', lineHeight: '1.5' }}>
+              {t('finalsConfig.warnings.allPlaces4Groups')}
+            </p>
+          )}
         </div>
       )}
 
@@ -221,7 +232,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             margin: '0 0 12px 0',
             fontWeight: cssVars.fontWeights.semibold
           }}>
-            Parallelisierung
+            {t('finalsConfig.parallelization.title')}
           </h4>
 
           {['top-4', 'top-8', 'top-16', 'all-places'].includes(currentPreset) && (
@@ -233,7 +244,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
               <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                Halbfinale gleichzeitig austragen
+                {t('finalsConfig.parallelization.semifinals')}
               </span>
             </label>
           )}
@@ -247,7 +258,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
               <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                Viertelfinale gleichzeitig austragen
+                {t('finalsConfig.parallelization.quarterfinals')}
               </span>
             </label>
           )}
@@ -261,13 +272,13 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.accent }}
               />
               <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                Achtelfinale gleichzeitig austragen
+                {t('finalsConfig.parallelization.roundOf16')}
               </span>
             </label>
           )}
 
           <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
-            Bei mehreren Feldern können Spiele gleichzeitig stattfinden
+            {t('finalsConfig.parallelization.hint')}
           </p>
         </div>
       )}
@@ -287,7 +298,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
             margin: '0 0 12px 0',
             fontWeight: cssVars.fontWeights.semibold
           }}>
-            ⚖️ Bei Unentschieden
+            ⚖️ {t('finalsConfig.tiebreaker.title')}
           </h4>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -301,10 +312,10 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               />
               <div>
                 <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                  Direkt Strafstoßschießen
+                  {t('finalsConfig.tiebreaker.shootout')}
                 </span>
                 <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginLeft: '8px' }}>
-                  (privates Turnier)
+                  {t('finalsConfig.tiebreaker.shootoutHint')}
                 </span>
               </div>
             </label>
@@ -319,10 +330,10 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
               />
               <div>
                 <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                  Verlängerung, dann Strafstoßschießen
+                  {t('finalsConfig.tiebreaker.overtimeThenShootout')}
                 </span>
                 <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginLeft: '8px' }}>
-                  (offiziell)
+                  {t('finalsConfig.tiebreaker.overtimeHint')}
                 </span>
               </div>
             </label>
@@ -336,7 +347,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                 style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: cssVars.colors.secondary }}
               />
               <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-                Golden Goal
+                {t('finalsConfig.tiebreaker.goldenGoal')}
               </span>
             </label>
           </div>
@@ -345,7 +356,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
           {(currentTiebreaker === 'overtime-then-shootout' || currentTiebreaker === 'goldenGoal') && (
             <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                {currentTiebreaker === 'goldenGoal' ? 'Golden Goal-Zeit:' : 'Verlängerung:'}
+                {currentTiebreaker === 'goldenGoal' ? t('finalsConfig.tiebreaker.goldenGoalDuration') : t('finalsConfig.tiebreaker.overtimeDuration')}
               </span>
               <input
                 type="number"
@@ -364,7 +375,7 @@ export const FinalsConfiguration: React.FC<FinalsConfigurationProps> = ({
                   textAlign: 'center',
                 }}
               />
-              <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>Minuten</span>
+              <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>{t('finalsConfig.tiebreaker.minutes')}</span>
             </div>
           )}
         </div>

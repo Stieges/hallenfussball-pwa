@@ -11,6 +11,7 @@
  */
 
 import React, { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { FontSize, FONT_SIZE_LABELS } from '../types/settings.types';
 
@@ -33,6 +34,7 @@ export const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({
   value,
   onChange,
 }) => {
+  const { t } = useTranslation('settings');
   const sizes: FontSize[] = ['small', 'normal', 'large', 'x-large'];
 
   // Preview text sizes match actual html font-size values
@@ -44,7 +46,7 @@ export const FontSizeSelector: React.FC<FontSizeSelectorProps> = ({
   };
 
   return (
-    <div style={styles.container} role="radiogroup" aria-label="Schriftgröße auswählen">
+    <div style={styles.container} role="radiogroup" aria-label={t('fontSize.selectLabel')}>
       {sizes.map((size) => {
         const label = FONT_SIZE_LABELS[size];
         const isSelected = value === size;

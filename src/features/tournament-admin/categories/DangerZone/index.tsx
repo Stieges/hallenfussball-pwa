@@ -7,6 +7,7 @@
  */
 
 import { CSSProperties, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
@@ -220,6 +221,7 @@ export function DangerZoneCategory({
   tournament,
   onTournamentUpdate,
 }: DangerZoneCategoryProps) {
+  const { t } = useTranslation('admin');
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
@@ -392,15 +394,14 @@ export function DangerZoneCategory({
   return (
     <CategoryPage
       icon="⚠️"
-      title="Kritische Aktionen"
-      description="Destruktive Operationen - mit Vorsicht verwenden"
+      title={t('dangerZone.title')}
+      description={t('dangerZone.description')}
     >
       {/* Warning */}
       <div style={styles.warning}>
         <span>⚠️</span>
         <div>
-          <strong>Vorsicht!</strong> Die folgenden Aktionen können nicht oder nur teilweise
-          rückgängig gemacht werden. Stelle sicher, dass du weißt, was du tust.
+          <strong>{t('dangerZone.warningTitle')}</strong> {t('dangerZone.warningText')}
         </div>
       </div>
 
@@ -423,7 +424,7 @@ export function DangerZoneCategory({
       <Dialog
         isOpen={pendingAction !== null}
         onClose={handleCloseDialog}
-        title={pendingAction?.title ?? 'Bestätigung'}
+        title={pendingAction?.title ?? t('dangerZone.confirmation')}
         maxWidth="480px"
         closeOnBackdropClick={!isExecuting}
       >
@@ -443,7 +444,7 @@ export function DangerZoneCategory({
             </div>
 
             <label style={styles.confirmLabel}>
-              Tippe <strong>{pendingAction.confirmText}</strong> um fortzufahren:
+              {t('dangerZone.typeToConfirm', { text: pendingAction.confirmText })}
             </label>
             <input
               type="text"
@@ -461,7 +462,7 @@ export function DangerZoneCategory({
                 onClick={handleCloseDialog}
                 disabled={isExecuting}
               >
-                Abbrechen
+                {t('dangerZone.cancel')}
               </button>
               <button
                 style={{
@@ -474,7 +475,7 @@ export function DangerZoneCategory({
                 onClick={() => void handleConfirm()}
                 disabled={!isConfirmEnabled || isExecuting}
               >
-                {isExecuting ? 'Wird ausgeführt...' : pendingAction.buttonLabel}
+                {isExecuting ? t('dangerZone.executing') : pendingAction.buttonLabel}
               </button>
             </div>
           </>

@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament, PlacementCriterion, GroupSystem } from '../types/tournament';
 import { Card } from './ui';
 import { cssVars } from '../design-tokens'
@@ -18,48 +19,13 @@ import { getLocationName } from '../utils/locationHelpers';
 import { formatTournamentDate } from '../utils/tournamentCategories';
 import { TournamentActionMenu } from './TournamentActionMenu';
 
-/**
- * Get display name for tournament system
- */
-function getGroupSystemLabel(groupSystem?: GroupSystem): string {
-  switch (groupSystem) {
-    case 'groupsAndFinals':
-      return 'Gruppen + Finale';
-    case 'roundRobin':
-    default:
-      return 'Jeder gegen Jeden';
-  }
-}
-
-/**
- * Get short abbreviation for placement criteria
- */
-function getPlacementAbbreviation(id: string): string {
-  const abbreviations: Record<string, string> = {
-    points: 'Pkt',
-    goalDifference: 'Diff',
-    goalsFor: 'Tore',
-    directComparison: 'DV',
-  };
-  return abbreviations[id] || id;
-}
-
-/**
- * Format placement logic for compact display
- */
-function formatPlacementLogic(placementLogic: PlacementCriterion[]): string {
-  const active = placementLogic.filter(p => p.enabled);
-  if (active.length === 0) {return 'Keine';}
-  return active.map(p => getPlacementAbbreviation(p.id)).join(' > ');
-}
-
 /** Map categoryLabel to TournamentActionMenu category */
 type TournamentCategory = 'running' | 'upcoming' | 'finished' | 'draft' | 'trashed';
 
 interface TournamentCardProps {
   tournament: Tournament;
   onClick?: () => void;
-  categoryLabel?: string; // Optional: "Läuft", "Bevorstehend", etc.
+  categoryLabel?: string; // Optional: "running", "upcoming", "draft", "archived", etc.
   /** Soft delete callback (moves to trash) */
   onSoftDelete?: () => void;
   /** Copy/duplicate callback */
@@ -79,19 +45,49 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
   onShare,
   testId,
 }) => {
+  const { t } = useTranslation('dashboard');
+
+  // Helper functions that need t()
+  const getGroupSystemLabel = (groupSystem?: GroupSystem): string => {
+    switch (groupSystem) {
+      case 'groupsAndFinals':
+        return t('card.groupSystem.groupsAndFinals');
+      case 'roundRobin':
+      default:
+        return t('card.groupSystem.roundRobin');
+    }
+  };
+
+  const getPlacementAbbreviation = (id: string): string => {
+    const key = `card.placementAbbreviations.${id}`;
+    return t(key, { defaultValue: id });
+  };
+
+  const formatPlacementLogic = (placementLogic: PlacementCriterion[]): string => {
+    const active = placementLogic.filter(p => p.enabled);
+    if (active.length === 0) { return t('card.noPlacement'); }
+    return active.map(p => getPlacementAbbreviation(p.id)).join(' > ');
+  };
+
+  const getCategoryDisplayLabel = (): string => {
+    if (tournament.status === 'draft') { return t('status.draft'); }
+    if (!categoryLabel) { return t('status.draft'); }
+    const key = `status.${categoryLabel}`;
+    return t(key, { defaultValue: categoryLabel });
+  };
+
   // Map categoryLabel to TournamentCategory
   const getCategory = (): TournamentCategory => {
     if (tournament.status === 'draft') {return 'draft';}
     switch (categoryLabel) {
-      case 'Läuft':
+      case 'running':
         return 'running';
-      case 'Bevorstehend':
+      case 'upcoming':
         return 'upcoming';
-      case 'Beendet':
+      case 'finished':
         return 'finished';
       default:
-        // Check for archived label pattern
-        if (categoryLabel?.startsWith('Archiviert')) {return 'finished';}
+        if (categoryLabel?.startsWith('archived')) {return 'finished';}
         return 'draft';
     }
   };
@@ -151,17 +147,17 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       };
     }
     switch (categoryLabel) {
-      case 'Läuft':
+      case 'running':
         return {
           background: cssVars.colors.statusLiveBg,
           color: cssVars.colors.statusLive,
         };
-      case 'Bevorstehend':
+      case 'upcoming':
         return {
           background: cssVars.colors.statusUpcomingBg,
           color: cssVars.colors.statusUpcoming,
         };
-      case 'Beendet':
+      case 'finished':
         return {
           background: cssVars.colors.statusFinishedBg,
           color: cssVars.colors.statusFinished,
@@ -233,8 +229,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
       <article
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
-        // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty categoryLabel should show 'Entwurf'
-        aria-label={`Turnier: ${tournament.title}, ${categoryLabel || 'Entwurf'}${tournament.externalSource ? `, ${tournament.externalSource}` : ''}`}
+        aria-label={tournament.externalSource
+          ? t('card.ariaLabelExternal', { title: tournament.title, status: getCategoryDisplayLabel(), source: tournament.externalSource })
+          : t('card.ariaLabel', { title: tournament.title, status: getCategoryDisplayLabel() })}
         onKeyDown={(e) => {
           if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             e.preventDefault();
@@ -253,10 +250,9 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
           {(categoryLabel || tournament.status === 'draft') && (
             <span
               style={{ ...badgeStyle, ...badgeColors }}
-              // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty categoryLabel should show 'Entwurf'
-              aria-label={`Status: ${categoryLabel || 'Entwurf'}`}
+              aria-label={t('card.statusLabel', { status: getCategoryDisplayLabel() })}
             >
-              {tournament.status === 'draft' ? 'Entwurf' : categoryLabel}
+              {tournament.status === 'draft' ? t('status.draft') : getCategoryDisplayLabel()}
             </span>
           )}
           {/* Action Menu - Only show if actions available */}
@@ -281,35 +277,35 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
 
         <dl style={infoGridStyle}>
           <div style={infoItemStyle}>
-            <dt style={labelStyle}>Datum & Uhrzeit</dt>
+            <dt style={labelStyle}>{t('card.labels.dateTime')}</dt>
             <dd style={{ ...valueStyle, margin: 0 }}>{formatTournamentDate(tournament)}</dd>
           </div>
 
           <div style={infoItemStyle}>
-            <dt style={labelStyle}>Ort</dt>
+            <dt style={labelStyle}>{t('card.labels.location')}</dt>
             <dd style={{ ...valueStyle, margin: 0 }}>{getLocationName(tournament)}</dd>
           </div>
 
           <div style={infoItemStyle}>
-            <dt style={labelStyle}>Altersklasse</dt>
+            <dt style={labelStyle}>{t('card.labels.ageClass')}</dt>
             <dd style={{ ...valueStyle, margin: 0 }}>{tournament.ageClass}</dd>
           </div>
 
           <div style={infoItemStyle}>
-            <dt style={labelStyle}>Modus</dt>
+            <dt style={labelStyle}>{t('card.labels.mode')}</dt>
             <dd style={{ ...valueStyle, margin: 0 }}>{getGroupSystemLabel(tournament.groupSystem)}</dd>
           </div>
 
           {tournament.organizer && (
             <div style={infoItemStyle}>
-              <dt style={labelStyle}>Veranstalter</dt>
+              <dt style={labelStyle}>{t('card.labels.organizer')}</dt>
               <dd style={{ ...valueStyle, margin: 0 }}>{tournament.organizer}</dd>
             </div>
           )}
 
           {tournament.placementLogic.length > 0 && (
             <div style={infoItemStyle}>
-              <dt style={labelStyle}>Platzierung</dt>
+              <dt style={labelStyle}>{t('card.labels.placement')}</dt>
               <dd style={{
                 ...valueStyle,
                 margin: 0,
@@ -333,7 +329,7 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
               }}
               role="status"
             >
-              Entwurf - Noch nicht veröffentlicht
+              {t('card.draftNotice')}
             </div>
           )}
         </dl>

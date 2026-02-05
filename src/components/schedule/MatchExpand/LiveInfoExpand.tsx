@@ -22,6 +22,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 
@@ -94,24 +95,25 @@ function getEventIcon(type: MatchEvent['type']): string {
   }
 }
 
-function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getEventLabel(event: MatchEvent, homeTeam: Team, awayTeam: Team, t: (key: any, opts?: Record<string, string>) => string): string {
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty teamName should use fallback
   const teamName = event.teamName || (event.teamId === homeTeam.id ? homeTeam.name : awayTeam.name);
   const playerInfo = event.playerNumber ? ` #${event.playerNumber}` : '';
 
   switch (event.type) {
     case 'GOAL':
-      return `Tor ${teamName}${playerInfo}`;
+      return t('matchExpand.liveInfo.eventGoal', { team: teamName, player: playerInfo });
     case 'YELLOW_CARD':
-      return `Gelbe Karte ${teamName}${playerInfo}`;
+      return t('matchExpand.liveInfo.eventYellowCard', { team: teamName, player: playerInfo });
     case 'RED_CARD':
-      return `Rote Karte ${teamName}${playerInfo}`;
+      return t('matchExpand.liveInfo.eventRedCard', { team: teamName, player: playerInfo });
     case 'TIME_PENALTY':
-      return `Zeitstrafe ${teamName}${playerInfo}`;
+      return t('matchExpand.liveInfo.eventTimePenalty', { team: teamName, player: playerInfo });
     case 'SUBSTITUTION':
-      return `Wechsel ${teamName}`;
+      return t('matchExpand.liveInfo.eventSubstitution', { team: teamName });
     case 'FOUL':
-      return `Foul ${teamName}`;
+      return t('matchExpand.liveInfo.eventFoul', { team: teamName });
     default:
       return event.type;
   }
@@ -132,6 +134,8 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
   onNavigateToCockpit,
   onClose,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // Get recent events (excluding STATUS_CHANGE and RESULT_EDIT)
   const displayableEvents = events
     .filter((e) => e.type !== 'STATUS_CHANGE' && e.type !== 'RESULT_EDIT')
@@ -307,13 +311,13 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
 
       {/* Recent Events */}
       <div style={eventsContainerStyle}>
-        <span style={eventsHeaderStyle}>Letzte Ereignisse</span>
+        <span style={eventsHeaderStyle}>{t('matchExpand.liveInfo.recentEvents')}</span>
         {displayableEvents.length > 0 ? (
           displayableEvents.map((event) => (
             <div key={event.id} style={eventItemStyle}>
               <span style={eventIconStyle}>{getEventIcon(event.type)}</span>
               <span style={eventTextStyle}>
-                {getEventLabel(event, homeTeam, awayTeam)}
+                {getEventLabel(event, homeTeam, awayTeam, t)}
               </span>
               <span style={eventTimeStyle}>
                 {formatEventTime(event.timestampSeconds)}
@@ -321,7 +325,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             </div>
           ))
         ) : (
-          <div style={noEventsStyle}>Noch keine Ereignisse</div>
+          <div style={noEventsStyle}>{t('matchExpand.liveInfo.noEvents')}</div>
         )}
       </div>
 
@@ -333,7 +337,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             size="md"
             onClick={onClose}
           >
-            Schließen
+            {t('matchExpand.liveInfo.close')}
           </Button>
         )}
         {onNavigateToCockpit && (
@@ -343,7 +347,7 @@ export const LiveInfoExpand: React.FC<LiveInfoExpandProps> = ({
             onClick={onNavigateToCockpit}
             data-testid="goto-cockpit-btn"
           >
-            → Zum Cockpit
+            {t('matchExpand.liveInfo.gotoCockpit')}
           </Button>
         )}
       </div>

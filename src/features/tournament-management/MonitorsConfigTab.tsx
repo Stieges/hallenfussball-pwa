@@ -14,6 +14,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
 import type { TournamentMonitor } from '../../types/monitor';
@@ -41,6 +42,8 @@ export function MonitorsConfigTab({
   onTournamentUpdate,
   onEditMonitor,
 }: MonitorsConfigTabProps) {
+  const { t } = useTranslation('tournament');
+
   // State
   const [isCreating, setIsCreating] = useState(false);
   const [newMonitorName, setNewMonitorName] = useState('');
@@ -93,18 +96,18 @@ export function MonitorsConfigTab({
     const trimmedName = newMonitorName.trim();
 
     if (!trimmedName) {
-      setError('Name ist erforderlich');
+      setError(t('monitors.errors.nameRequired'));
       return;
     }
 
     if (trimmedName.length > 50) {
-      setError('Name darf maximal 50 Zeichen haben');
+      setError(t('monitors.errors.nameTooLong'));
       return;
     }
 
     // Check for duplicate names
     if (monitors.some(m => m.name.toLowerCase() === trimmedName.toLowerCase())) {
-      setError('Ein Monitor mit diesem Namen existiert bereits');
+      setError(t('monitors.errors.duplicateName'));
       return;
     }
 
@@ -121,7 +124,7 @@ export function MonitorsConfigTab({
         onEditMonitor(newMonitor.id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen');
+      setError(err instanceof Error ? err.message : t('monitors.errors.createFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +149,7 @@ export function MonitorsConfigTab({
       await deleteMonitor(id);
       setDeleteConfirmId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen');
+      setError(err instanceof Error ? err.message : t('monitors.errors.deleteFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -163,7 +166,7 @@ export function MonitorsConfigTab({
     try {
       await duplicateMonitor(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Duplizieren');
+      setError(err instanceof Error ? err.message : t('monitors.errors.duplicateFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -185,9 +188,9 @@ export function MonitorsConfigTab({
       copiedTimeoutRef.current = setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
       console.error('Clipboard copy failed:', err);
-      setError('URL konnte nicht kopiert werden');
+      setError(t('monitors.errors.copyFailed'));
     }
-  }, [getDisplayUrl]);
+  }, [getDisplayUrl, t]);
 
   const handleOpenDisplay = (monitorId: string) => {
     const url = getDisplayUrl(monitorId);
@@ -409,15 +412,15 @@ export function MonitorsConfigTab({
         {/* Header */}
         <div style={headerStyle}>
           <div>
-            <h2 style={titleStyle}>Monitore konfigurieren</h2>
+            <h2 style={titleStyle}>{t('monitors.title')}</h2>
             <p style={subtitleStyle}>
-              Erstelle Display-Setups für TVs, Beamer oder andere Bildschirme
+              {t('monitors.subtitle')}
             </p>
           </div>
           {!isCreating && (
             <button style={addButtonStyle} onClick={handleStartCreate}>
               <span>+</span>
-              <span>Neuer Monitor</span>
+              <span>{t('monitors.addMonitor')}</span>
             </button>
           )}
         </div>
@@ -429,12 +432,12 @@ export function MonitorsConfigTab({
         {isCreating && (
           <div style={createFormStyle}>
             <h3 style={{ margin: `0 0 ${cssVars.spacing.md}`, color: cssVars.colors.textPrimary }}>
-              Neuen Monitor erstellen
+              {t('monitors.createTitle')}
             </h3>
             <input
               type="text"
               style={inputStyle}
-              placeholder="Monitor-Name (z.B. Haupthalle Eingang)"
+              placeholder={t('monitors.namePlaceholder')}
               value={newMonitorName}
               onChange={(e) => setNewMonitorName(e.target.value)}
               autoFocus
@@ -445,14 +448,14 @@ export function MonitorsConfigTab({
             />
             <div style={{ display: 'flex', gap: cssVars.spacing.sm, justifyContent: 'flex-end' }}>
               <button style={actionButtonStyle('secondary')} onClick={handleCancelCreate}>
-                Abbrechen
+                {t('monitors.cancel')}
               </button>
               <button
                 style={actionButtonStyle('primary')}
                 onClick={() => void handleCreate()}
                 disabled={isLoading}
               >
-                {isLoading ? 'Erstellen...' : 'Erstellen & Bearbeiten'}
+                {isLoading ? t('monitors.creating') : t('monitors.createAndEdit')}
               </button>
             </div>
           </div>
@@ -463,11 +466,10 @@ export function MonitorsConfigTab({
           <div style={emptyStateStyle}>
             <div style={{ fontSize: '48px', marginBottom: cssVars.spacing.md }}>📺</div>
             <h3 style={{ margin: 0, color: cssVars.colors.textPrimary }}>
-              Noch keine Monitore konfiguriert
+              {t('monitors.emptyState')}
             </h3>
             <p style={{ margin: `${cssVars.spacing.sm} 0 0`, maxWidth: '400px', marginInline: 'auto' }}>
-              Erstelle einen Monitor, um eine Diashow mit Live-Spielen, Tabellen,
-              Spielplänen und Sponsoren anzuzeigen.
+              {t('monitors.emptyStateHint')}
             </p>
           </div>
         ) : (
@@ -512,7 +514,7 @@ export function MonitorsConfigTab({
             color: cssVars.colors.textMuted,
             textAlign: 'center',
           }}>
-            Öffne die Display-URL auf einem TV oder Beamer für die Vollbild-Anzeige
+            {t('monitors.displayUrlHint')}
           </p>
         )}
       </div>
@@ -557,6 +559,7 @@ function MonitorCard({
   formatDuration,
   styles,
 }: MonitorCardProps) {
+  const { t } = useTranslation('tournament');
   const actionButtonStyle = styles.actionButtonStyle as (variant?: 'primary' | 'secondary' | 'danger') => CSSProperties;
 
   return (
@@ -579,7 +582,7 @@ function MonitorCard({
                       ? cssVars.colors.warning
                       : cssVars.colors.error,
                 }}
-                title={heartbeatStatus === 'online' ? 'Online' : heartbeatStatus === 'stale' ? 'Verbindung instabil' : 'Offline'}
+                title={heartbeatStatus === 'online' ? t('monitors.heartbeat.online') : heartbeatStatus === 'stale' ? t('monitors.heartbeat.stale') : t('monitors.heartbeat.offline')}
               >
                 <span style={{
                   width: '8px',
@@ -588,14 +591,14 @@ function MonitorCard({
                   backgroundColor: 'currentColor',
                   flexShrink: 0,
                 }} />
-                {heartbeatStatus === 'online' ? 'Online' : heartbeatStatus === 'stale' ? 'Instabil' : 'Offline'}
+                {heartbeatStatus === 'online' ? t('monitors.heartbeat.online') : heartbeatStatus === 'stale' ? t('monitors.heartbeat.staleShort') : t('monitors.heartbeat.offline')}
               </span>
             )}
           </div>
           <div style={styles.monitorMetaStyle as CSSProperties}>
-            <span>{monitor.slides.length} Slides</span>
+            <span>{t('monitors.slidesCount', { count: monitor.slides.length })}</span>
             <span>•</span>
-            <span>{formatDuration(monitor.defaultSlideDuration)} pro Slide</span>
+            <span>{t('monitors.perSlide', { duration: formatDuration(monitor.defaultSlideDuration) })}</span>
             <span>•</span>
             <span>{monitor.transition}</span>
           </div>
@@ -613,7 +616,7 @@ function MonitorCard({
           ))}
           {monitor.slides.length > 8 && (
             <span style={styles.slideChipStyle as CSSProperties}>
-              +{monitor.slides.length - 8} mehr
+              {t('monitors.moreSlides', { count: monitor.slides.length - 8 })}
             </span>
           )}
         </div>
@@ -624,37 +627,37 @@ function MonitorCard({
         <button
           style={actionButtonStyle('primary')}
           onClick={onEdit}
-          aria-label={`Monitor "${monitor.name}" bearbeiten`}
+          aria-label={t('monitors.editAria', { name: monitor.name })}
         >
-          ✏️ Bearbeiten
+          ✏️ {t('monitors.edit')}
         </button>
         <button
           style={actionButtonStyle()}
           onClick={onOpenDisplay}
-          aria-label={`Monitor "${monitor.name}" in neuem Tab öffnen`}
+          aria-label={t('monitors.openAria', { name: monitor.name })}
         >
-          🖥️ Öffnen
+          🖥️ {t('monitors.open')}
         </button>
         <button
           style={actionButtonStyle()}
           onClick={onCopyUrl}
-          aria-label={isCopied ? 'URL kopiert' : `URL für Monitor "${monitor.name}" kopieren`}
+          aria-label={isCopied ? t('monitors.urlCopied') : t('monitors.copyUrlAria', { name: monitor.name })}
         >
-          {isCopied ? '✓ Kopiert!' : '🔗 URL kopieren'}
+          {isCopied ? t('monitors.copied') : t('monitors.copyUrl')}
         </button>
         <button
           style={actionButtonStyle()}
           onClick={onDuplicate}
-          aria-label={`Monitor "${monitor.name}" duplizieren`}
+          aria-label={t('monitors.duplicateAria', { name: monitor.name })}
         >
-          📋 Duplizieren
+          📋 {t('monitors.duplicate')}
         </button>
         <button
           style={actionButtonStyle(isDeleting ? 'danger' : 'secondary')}
           onClick={onDelete}
-          aria-label={isDeleting ? `Löschen von "${monitor.name}" bestätigen` : `Monitor "${monitor.name}" löschen`}
+          aria-label={isDeleting ? t('monitors.confirmDeleteAria', { name: monitor.name }) : t('monitors.deleteAria', { name: monitor.name })}
         >
-          🗑️ {isDeleting ? 'Bestätigen' : 'Löschen'}
+          🗑️ {isDeleting ? t('monitors.confirm') : t('monitors.delete')}
         </button>
       </div>
 
@@ -666,21 +669,21 @@ function MonitorCard({
           style={styles.deleteConfirmStyle as CSSProperties}
         >
           <span style={{ flex: 1, color: cssVars.colors.error }}>
-            Monitor &quot;{monitor.name}&quot; wirklich löschen?
+            {t('monitors.deleteConfirmMessage', { name: monitor.name })}
           </span>
           <button
             style={actionButtonStyle('danger')}
             onClick={onDelete}
-            aria-label={`Monitor "${monitor.name}" endgültig löschen`}
+            aria-label={t('monitors.permanentDeleteAria', { name: monitor.name })}
           >
-            Ja, löschen
+            {t('monitors.confirmDelete')}
           </button>
           <button
             style={actionButtonStyle()}
             onClick={onCancelDelete}
-            aria-label="Löschen abbrechen"
+            aria-label={t('monitors.cancelDeleteAria')}
           >
-            Abbrechen
+            {t('monitors.cancel')}
           </button>
         </div>
       )}

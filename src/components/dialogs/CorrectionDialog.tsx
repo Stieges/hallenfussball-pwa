@@ -9,6 +9,7 @@
  */
 
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useFocusTrap } from '../../hooks';
 import { useToast } from '../ui/Toast';
@@ -37,6 +38,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
   originalScoreA,
   originalScoreB,
 }) => {
+  const { t } = useTranslation('tournament');
   const { showWarning } = useToast();
   const [newScoreA, setNewScoreA] = useState<string>(String(originalScoreA));
   const [newScoreB, setNewScoreB] = useState<string>(String(originalScoreB));
@@ -57,7 +59,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
     // Validate: Score must be different from original
     if (scoreA === originalScoreA && scoreB === originalScoreB) {
-      showWarning('Das neue Ergebnis muss sich vom ursprünglichen unterscheiden.');
+      showWarning(t('correctionDialog.validation.mustDiffer'));
       return;
     }
 
@@ -248,7 +250,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
       >
         <div style={headerStyle}>
           <span style={{ fontSize: cssVars.fontSizes.xxl }} aria-hidden="true">⚠️</span>
-          <h2 id="correction-dialog-title" style={titleStyle}>Ergebnis korrigieren</h2>
+          <h2 id="correction-dialog-title" style={titleStyle}>{t('correctionDialog.title')}</h2>
         </div>
 
         {/* Match Info */}
@@ -256,14 +258,14 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
           <div style={matchLabelStyle}>{matchLabel}</div>
           <div style={teamsStyle}>{teamA} vs {teamB}</div>
           <div style={originalScoreStyle}>
-            <span>Aktuelles Ergebnis:</span>
+            <span>{t('correctionDialog.currentResult')}:</span>
             <strong>{originalScoreA} : {originalScoreB}</strong>
           </div>
         </div>
 
         {/* New Score Inputs */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>Korrigiertes Ergebnis</label>
+          <label style={labelStyle}>{t('correctionDialog.correctedResult')}</label>
           <div style={scoreInputContainerStyle}>
             <input
               type="number"
@@ -271,7 +273,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
               value={newScoreA}
               onChange={(e) => setNewScoreA(e.target.value)}
               style={scoreInputStyle}
-              aria-label={`Tore ${teamA}`}
+              aria-label={t('correctionDialog.goalsFor', { team: teamA })}
             />
             <span style={separatorStyle}>:</span>
             <input
@@ -280,14 +282,14 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
               value={newScoreB}
               onChange={(e) => setNewScoreB(e.target.value)}
               style={scoreInputStyle}
-              aria-label={`Tore ${teamB}`}
+              aria-label={t('correctionDialog.goalsFor', { team: teamB })}
             />
           </div>
         </div>
 
         {/* Correction Reason Dropdown */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>Korrekturgrund *</label>
+          <label style={labelStyle}>{t('correctionDialog.reason')}</label>
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value as CorrectionReason)}
@@ -301,27 +303,27 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
 
         {/* Optional Note */}
         <div style={sectionStyle}>
-          <label style={labelStyle}>Anmerkung (optional)</label>
+          <label style={labelStyle}>{t('correctionDialog.noteLabel')}</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             style={textareaStyle}
-            placeholder="Optionale Anmerkung zur Korrektur"
+            placeholder={t('correctionDialog.notePlaceholder')}
           />
         </div>
 
         {/* Warning */}
         <div style={warningStyle}>
-          <strong>Hinweis:</strong> Die Korrektur wird protokolliert. Gruppentabellen und Playoff-Paarungen werden neu berechnet.
+          <strong>{t('correctionDialog.warningTitle')}:</strong> {t('correctionDialog.warningText')}
         </div>
 
         {/* Buttons */}
         <div style={buttonContainerStyle}>
           <button style={cancelButtonStyle} onClick={onClose}>
-            Abbrechen
+            {t('correctionDialog.cancel')}
           </button>
           <button style={confirmButtonStyle} onClick={handleConfirm}>
-            Korrektur speichern
+            {t('correctionDialog.confirm')}
           </button>
         </div>
       </div>

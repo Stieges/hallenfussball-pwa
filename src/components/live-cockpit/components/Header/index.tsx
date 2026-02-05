@@ -11,6 +11,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { MatchStatus, MatchPlayPhase, LiveCockpitMode } from '../../types';
@@ -52,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onMenuOpen,
   breakpoint = 'desktop',
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
 
   // ---------------------------------------------------------------------------
@@ -118,9 +120,9 @@ export const Header: React.FC<HeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={onBack}
-            aria-label="Zurück"
+            aria-label={t('header.back')}
           >
-            ← Zurück
+            ← {t('header.back')}
           </Button>
         )}
       </div>
@@ -128,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Center: Match info and status */}
       <div style={centerSectionStyle}>
         <div style={matchInfoStyle}>
-          <span style={matchNumberStyle}>Spiel {matchNumber}</span>
+          <span style={matchNumberStyle}>{t('header.matchNumber', { number: matchNumber })}</span>
           {fieldName && <span style={fieldNameStyle}>{fieldName}</span>}
         </div>
         <StatusBadge status={status} playPhase={playPhase} />
@@ -140,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             className={styles.undoButton}
             onClick={onUndo}
-            aria-label="Letzte Aktion rückgängig"
+            aria-label={t('header.undoLast')}
             type="button"
             style={{
               background: 'transparent',
@@ -163,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
             variant="ghost"
             size="sm"
             onClick={onMenuOpen}
-            aria-label="Menü öffnen"
+            aria-label={t('header.openMenu')}
           >
             ⋮
           </Button>
@@ -183,16 +185,17 @@ interface StatusBadgeProps {
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, playPhase }) => {
+  const { t } = useTranslation('cockpit');
   const isLive = status === 'RUNNING';
 
   const getLabel = () => {
-    if (status === 'NOT_STARTED') {return 'BEREIT';}
-    if (status === 'PAUSED') {return 'PAUSE';}
-    if (status === 'FINISHED') {return 'BEENDET';}
-    if (playPhase === 'overtime') {return 'VERLÄNGERUNG';}
-    if (playPhase === 'goldenGoal') {return 'GOLDEN GOAL';}
-    if (playPhase === 'penalty') {return 'ELFMETERSCHIESSEN';}
-    return 'LIVE';
+    if (status === 'NOT_STARTED') {return t('status.ready');}
+    if (status === 'PAUSED') {return t('status.pause');}
+    if (status === 'FINISHED') {return t('status.finished');}
+    if (playPhase === 'overtime') {return t('status.overtime');}
+    if (playPhase === 'goldenGoal') {return t('status.goldenGoal');}
+    if (playPhase === 'penalty') {return t('status.penaltyShootout');}
+    return t('status.live');
   };
 
   const badgeStyle: CSSProperties = {
@@ -238,10 +241,11 @@ interface ModeSwitchProps {
 }
 
 const ModeSwitch: React.FC<ModeSwitchProps> = ({ mode, onChange, compact = false }) => {
+  const { t } = useTranslation('cockpit');
   const modes: { value: LiveCockpitMode; label: string; icon: string }[] = [
-    { value: 'focus', label: 'Fokus', icon: '◉' },
-    { value: 'standard', label: 'Standard', icon: '◎' },
-    { value: 'extended', label: 'Erweitert', icon: '⊕' },
+    { value: 'focus', label: t('header.modeFocus'), icon: '◉' },
+    { value: 'standard', label: t('header.modeStandard'), icon: '◎' },
+    { value: 'extended', label: t('header.modeExtended'), icon: '⊕' },
   ];
 
   const containerStyle: CSSProperties = {
@@ -269,7 +273,7 @@ const ModeSwitch: React.FC<ModeSwitchProps> = ({ mode, onChange, compact = false
   });
 
   return (
-    <div style={containerStyle} role="radiogroup" aria-label="Anzeigemodus">
+    <div style={containerStyle} role="radiogroup" aria-label={t('header.displayMode')}>
       {modes.map(({ value, label, icon }) => (
         <button
           key={value}

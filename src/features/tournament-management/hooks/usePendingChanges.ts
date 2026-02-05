@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../components/ui/Toast';
 import { Tournament } from '../../../types/tournament';
 import { detectAllConflicts, ScheduleConflict, ConflictDetectionConfig } from '../../schedule-editor';
@@ -58,6 +59,7 @@ export function usePendingChanges({
   onTournamentUpdate,
   clearHistory,
 }: UsePendingChangesOptions): PendingChangesControls {
+  const { t } = useTranslation('tournament');
   const { showSuccess } = useToast();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -159,8 +161,8 @@ export function usePendingChanges({
     setPendingChanges(emptyPendingChanges);
     setShowConflictDialog(false);
     setDetectedConflicts([]);
-    showSuccess('Spielplan-Änderungen gespeichert');
-  }, [onTournamentUpdate, showSuccess]);
+    showSuccess(t('actions.changesSaved'));
+  }, [onTournamentUpdate, showSuccess, t]);
 
   // Save with conflict check - shows dialog if conflicts detected
   const handleSaveChanges = useCallback(() => {

@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
@@ -14,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { AUTH_ERRORS } from '../constants';
 
 export const SetPasswordScreen: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { updatePassword, session, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -85,12 +87,11 @@ export const SetPasswordScreen: React.FC = () => {
   if (sessionError) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Sitzung abgelaufen">
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.sessionExpired')}>
           <div style={styles.errorIcon}>!</div>
-          <h1 style={styles.title}>Sitzung abgelaufen</h1>
+          <h1 style={styles.title}>{t('setPassword.sessionExpired')}</h1>
           <p style={styles.subtitle}>
-            Deine Sitzung ist abgelaufen. Bitte fordere einen neuen
-            Link zum Zurücksetzen deines Passworts an.
+            {t('setPassword.sessionExpiredMessage')}
           </p>
           <Button
             variant="primary"
@@ -98,7 +99,7 @@ export const SetPasswordScreen: React.FC = () => {
             onClick={handleBackToLogin}
             style={styles.button}
           >
-            Zurück zum Login
+            {t('setPassword.backToLogin')}
           </Button>
         </div>
       </div>
@@ -109,9 +110,9 @@ export const SetPasswordScreen: React.FC = () => {
   if (authLoading) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Wird geladen">
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.loadingAriaLabel')}>
           <div style={styles.spinner} />
-          <p style={styles.subtitle}>Wird geladen...</p>
+          <p style={styles.subtitle}>{t('setPassword.loading')}</p>
         </div>
       </div>
     );
@@ -121,11 +122,11 @@ export const SetPasswordScreen: React.FC = () => {
   if (showSuccess) {
     return (
       <div style={styles.backdrop}>
-        <div style={styles.card} role="dialog" aria-modal="true" aria-label="Passwort geändert">
+        <div style={styles.card} role="dialog" aria-modal="true" aria-label={t('setPassword.success.title')}>
           <div style={styles.successIcon}>✓</div>
-          <h2 style={styles.successTitle}>Passwort geändert!</h2>
+          <h2 style={styles.successTitle}>{t('setPassword.success.title')}</h2>
           <p style={styles.successText}>
-            Dein neues Passwort wurde erfolgreich gespeichert.
+            {t('setPassword.success.message')}
           </p>
           <Button
             variant="primary"
@@ -133,7 +134,7 @@ export const SetPasswordScreen: React.FC = () => {
             onClick={handleContinue}
             style={{ marginTop: cssVars.spacing.lg }}
           >
-            Weiter zur App
+            {t('setPassword.success.continue')}
           </Button>
         </div>
       </div>
@@ -143,22 +144,22 @@ export const SetPasswordScreen: React.FC = () => {
   return (
     <div style={styles.backdrop}>
       <div style={styles.card} role="dialog" aria-modal="true" aria-labelledby="set-password-title">
-        <h1 id="set-password-title" style={styles.title}>Neues Passwort setzen</h1>
+        <h1 id="set-password-title" style={styles.title}>{t('setPassword.title')}</h1>
         <p style={styles.subtitle}>
-          Gib dein neues Passwort ein.
+          {t('setPassword.subtitle')}
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} style={styles.form}>
           <div style={styles.inputGroup}>
             <label htmlFor="password" style={styles.label}>
-              Neues Passwort
+              {t('setPassword.newPassword')}
             </label>
             <PasswordInput
               id="password"
               name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mindestens 6 Zeichen"
+              placeholder={t('setPassword.newPasswordPlaceholder')}
               style={{
                 ...styles.input,
                 ...(error ? styles.inputError : {}),
@@ -172,14 +173,14 @@ export const SetPasswordScreen: React.FC = () => {
 
           <div style={styles.inputGroup}>
             <label htmlFor="confirm-password" style={styles.label}>
-              Passwort bestätigen
+              {t('setPassword.confirmPassword')}
             </label>
             <PasswordInput
               id="confirm-password"
               name="confirm-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Passwort wiederholen"
+              placeholder={t('setPassword.confirmPasswordPlaceholder')}
               style={{
                 ...styles.input,
                 ...(error ? styles.inputError : {}),
@@ -199,7 +200,7 @@ export const SetPasswordScreen: React.FC = () => {
             loading={isSubmitting}
             style={styles.button}
           >
-            Passwort speichern
+            {t('setPassword.submit')}
           </Button>
         </form>
 
@@ -210,7 +211,7 @@ export const SetPasswordScreen: React.FC = () => {
           disabled={isSubmitting}
           style={styles.ghostButton}
         >
-          Überspringen
+          {t('setPassword.skip')}
         </Button>
       </div>
     </div>

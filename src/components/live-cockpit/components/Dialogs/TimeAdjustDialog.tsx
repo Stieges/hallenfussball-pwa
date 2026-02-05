@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -28,6 +29,7 @@ export function TimeAdjustDialog({
   currentTimeSeconds,
   matchDurationMinutes,
 }: TimeAdjustDialogProps) {
+  const { t } = useTranslation('cockpit');
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
 
@@ -100,11 +102,11 @@ export function TimeAdjustDialog({
         aria-labelledby="time-adjust-dialog-title"
       >
         {/* Title */}
-        <h2 id="time-adjust-dialog-title" style={styles.title}>Spielzeit anpassen</h2>
+        <h2 id="time-adjust-dialog-title" style={styles.title}>{t('timeAdjust.title')}</h2>
 
         {/* Current Time */}
         <p style={styles.currentTime}>
-          Aktuelle Zeit: <strong>{currentFormatted}</strong>
+          {t('timeAdjust.currentTime')}: <strong>{currentFormatted}</strong>
         </p>
 
         {/* Time Picker */}
@@ -114,7 +116,7 @@ export function TimeAdjustDialog({
             <button
               style={styles.pickerButton}
               onClick={() => handleMinutesChange(1)}
-              aria-label="Minute erhöhen"
+              aria-label={t('timeAdjust.increaseMinute')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -132,7 +134,7 @@ export function TimeAdjustDialog({
             <button
               style={styles.pickerButton}
               onClick={() => handleMinutesChange(-1)}
-              aria-label="Minute verringern"
+              aria-label={t('timeAdjust.decreaseMinute')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -144,7 +146,7 @@ export function TimeAdjustDialog({
                 />
               </svg>
             </button>
-            <span style={styles.pickerLabel}>Min</span>
+            <span style={styles.pickerLabel}>{t('timeAdjust.minutes')}</span>
           </div>
 
           {/* Separator */}
@@ -155,7 +157,7 @@ export function TimeAdjustDialog({
             <button
               style={styles.pickerButton}
               onClick={() => handleSecondsChange(10)}
-              aria-label="10 Sekunden erhöhen"
+              aria-label={t('timeAdjust.increaseSeconds')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -173,7 +175,7 @@ export function TimeAdjustDialog({
             <button
               style={styles.pickerButton}
               onClick={() => handleSecondsChange(-10)}
-              aria-label="10 Sekunden verringern"
+              aria-label={t('timeAdjust.decreaseSeconds')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path
@@ -185,7 +187,7 @@ export function TimeAdjustDialog({
                 />
               </svg>
             </button>
-            <span style={styles.pickerLabel}>Sek</span>
+            <span style={styles.pickerLabel}>{t('timeAdjust.seconds')}</span>
           </div>
         </div>
 
@@ -198,7 +200,7 @@ export function TimeAdjustDialog({
               setSeconds(0);
             }}
           >
-            00:00
+            {t('timeAdjust.reset')}
           </button>
           <button
             style={styles.quickButton}
@@ -208,7 +210,7 @@ export function TimeAdjustDialog({
               setSeconds(0);
             }}
           >
-            Halbzeit
+            {t('timeAdjust.halftime')}
           </button>
           <button
             style={styles.quickButton}
@@ -217,7 +219,7 @@ export function TimeAdjustDialog({
               setSeconds(0);
             }}
           >
-            Ende
+            {t('timeAdjust.end')}
           </button>
         </div>
 
@@ -231,7 +233,7 @@ export function TimeAdjustDialog({
         {/* Action Buttons */}
         <div style={styles.buttonContainer}>
           <button style={styles.cancelButton} onClick={onClose}>
-            Abbrechen
+            {t('timeAdjust.cancel')}
           </button>
           <button
             style={{
@@ -241,7 +243,7 @@ export function TimeAdjustDialog({
             onClick={handleConfirm}
             disabled={!hasChanged}
           >
-            Übernehmen
+            {t('timeAdjust.apply')}
           </button>
         </div>
       </div>

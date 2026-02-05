@@ -17,6 +17,7 @@
  */
 
 import { useCallback, CSSProperties, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import { cssVars, mediaQueries } from '../../design-tokens'
@@ -58,6 +59,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   onTournamentUpdate,
   onNavigateToCockpit,
 }) => {
+  const { t } = useTranslation('tournament');
   // App settings for result lock behavior
   const appSettings = useAppSettings();
   // Permission check for corrections and timer control
@@ -189,7 +191,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // There's a running match - need confirmation
       if (!canControlTimer) {
         // User doesn't have permission to interrupt running match
-        showWarning('Ein anderes Spiel läuft bereits. Du hast keine Berechtigung, laufende Spiele zu unterbrechen.');
+        showWarning(t('schedule.runningMatchNoPermission'));
         return;
       }
       // User has permission - show dialog
@@ -199,7 +201,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
       // No running match - navigate directly
       onNavigateToCockpit?.(matchId);
     }
-  }, [runningMatchIds, canControlTimer, showWarning, onNavigateToCockpit]);
+  }, [runningMatchIds, canControlTimer, showWarning, onNavigateToCockpit, t]);
 
   // Handler to confirm navigation (ends running match)
   const handleConfirmCockpitNavigation = useCallback(() => {
@@ -394,9 +396,9 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
         isOpen={showConflictDialog}
         onClose={() => setShowConflictDialog(false)}
         onConfirm={handleSaveWithConflicts}
-        title="Konflikte im Spielplan"
-        confirmText="Trotzdem speichern"
-        cancelText="Zurück zur Bearbeitung"
+        title={t('schedule.conflicts.title')}
+        confirmText={t('schedule.conflicts.saveAnyway')}
+        cancelText={t('schedule.conflicts.backToEdit')}
         variant={criticalConflicts.length > 0 ? 'danger' : 'warning'}
         message={
           <ScheduleConflictContent
@@ -416,7 +418,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             isOpen={showCorrectionDialog}
             onClose={handleCancelCorrection}
             onConfirm={handleConfirmCorrection}
-            matchLabel={`Spiel #${match.round}`}
+            matchLabel={t('schedule.matchLabel', { round: match.round })}
             teamA={getTeamName(match.teamA, tournament.teams)}
             teamB={getTeamName(match.teamB, tournament.teams)}
             originalScoreA={correctionState.originalScoreA}
@@ -431,10 +433,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
           isOpen={showRunningMatchDialog}
           onClose={handleCancelCockpitNavigation}
           onConfirm={handleConfirmCockpitNavigation}
-          title="Laufendes Spiel"
-          message={`Es läuft bereits ein Spiel:\n\n${runningMatchInfo.teamA} vs ${runningMatchInfo.teamB}\nAktueller Stand: ${runningMatchInfo.scoreA}:${runningMatchInfo.scoreB}\n\nWenn du zu einem anderen Spiel wechselst, wird das laufende Spiel automatisch beendet.`}
-          confirmText="Spiel beenden & wechseln"
-          cancelText="Abbrechen"
+          title={t('schedule.runningMatch.title')}
+          message={t('schedule.runningMatch.message', { teamA: runningMatchInfo.teamA, teamB: runningMatchInfo.teamB, scoreA: runningMatchInfo.scoreA, scoreB: runningMatchInfo.scoreB })}
+          confirmText={t('schedule.runningMatch.confirmSwitch')}
+          cancelText={t('common.cancel')}
           variant="warning"
         />
       )}

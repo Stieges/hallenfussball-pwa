@@ -21,6 +21,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { GoalListItem } from './GoalListItem';
 import { Button } from '../../ui/Button';
@@ -83,6 +84,8 @@ export const GoalList: React.FC<GoalListProps> = ({
   showHeader = true,
   compact = false,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // Sort goals by timestamp
   const sortedGoals = [...goals].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
 
@@ -176,11 +179,11 @@ export const GoalList: React.FC<GoalListProps> = ({
       {showHeader && (
         <div style={headerStyle}>
           <div style={headerTextStyle}>
-            <span>Torschützen</span>
+            <span>{t('goalList.title')}</span>
             <span style={countBadgeStyle}>{goals.length}</span>
             {incompleteCount > 0 && (
-              <span style={incompleteBadgeStyle} title="Fehlende Nummern">
-                {incompleteCount} offen
+              <span style={incompleteBadgeStyle} title={t('goalList.missingNumbers')}>
+                {t('goalList.openCount', { count: incompleteCount })}
               </span>
             )}
           </div>
@@ -191,7 +194,7 @@ export const GoalList: React.FC<GoalListProps> = ({
               onClick={onAdd}
               disabled={disabled}
             >
-              + Tor
+              {t('goalList.addGoal')}
             </Button>
           )}
         </div>
@@ -216,7 +219,7 @@ export const GoalList: React.FC<GoalListProps> = ({
         </div>
       ) : (
         <div style={emptyStyle}>
-          Keine Tore erfasst
+          {t('goalList.noGoals')}
         </div>
       )}
     </div>

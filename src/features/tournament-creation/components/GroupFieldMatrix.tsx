@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { TournamentGroup, TournamentField } from '../../../types/tournament';
 import { cssVars } from '../../../design-tokens'
 
@@ -21,6 +22,8 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
   capacityWarnings,
   isDefaultAssignment,
 }) => {
+  const { t } = useTranslation('wizard');
+
   return (
     <>
       {/* Matrix representation */}
@@ -79,7 +82,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                 color: cssVars.colors.textPrimary,
                 fontWeight: 500,
               }}>
-                {group.customName ?? `Gruppe ${group.id}`}
+                {group.customName ?? t('groupsAndFields.defaultGroupName', { id: group.id })}
               </div>
               {fields.map(field => {
                 const isAllowed = allowedFields.includes(field.id);
@@ -111,7 +114,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
                         transition: 'all 0.2s ease',
                         boxShadow: isAllowed ? `0 2px 8px ${cssVars.colors.primaryBorder}` : 'none',
                       }}
-                      title={isOnlyOne ? 'Mindestens ein Feld muss zugewiesen sein' : undefined}
+                      title={isOnlyOne ? t('groupsAndFields.matrix.minOneField') : undefined}
                     >
                       <input
                         type="checkbox"
@@ -160,7 +163,7 @@ export const GroupFieldMatrix: React.FC<GroupFieldMatrixProps> = ({
           color: cssVars.colors.success,
           fontSize: cssVars.fontSizes.sm,
         }}>
-          ✓ Alle Gruppen können auf allen Feldern spielen – optimale Spielplan-Verteilung
+          ✓ {t('groupsAndFields.matrix.defaultAssignment')}
         </p>
       )}
     </>

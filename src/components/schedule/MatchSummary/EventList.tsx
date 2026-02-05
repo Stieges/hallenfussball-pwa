@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { RuntimeMatchEvent } from '../../../types/tournament';
 
@@ -58,6 +59,8 @@ export function EventList({
   onEventEdit,
   compact = false,
 }: EventListProps) {
+  const { t } = useTranslation('tournament');
+
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -71,25 +74,25 @@ export function EventList({
     switch (event.type) {
       case 'GOAL': {
         if (event.payload.direction === 'DEC') {
-          return `\u22121 ${teamName}`;
+          return t('matchSummary.events.goalDecrement', { team: teamName });
         }
-        let goalText = `TOR ${teamName}${playerInfo}`;
+        let goalText = t('matchSummary.events.goal', { team: teamName, player: playerInfo });
         const assists = event.payload.assists;
         if (assists && assists.length > 0) {
           const assistText = assists.map(a => `#${a}`).join(', ');
-          goalText += ` (Assist: ${assistText})`;
+          goalText += ` (${t('matchSummary.events.assist')}: ${assistText})`;
         }
         return goalText;
       }
       case 'YELLOW_CARD':
-        return `Gelbe Karte ${teamName}${playerInfo}`;
+        return t('matchSummary.events.yellowCard', { team: teamName, player: playerInfo });
       case 'RED_CARD':
-        return `Rote Karte ${teamName}${playerInfo}`;
+        return t('matchSummary.events.redCard', { team: teamName, player: playerInfo });
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
           : 2;
-        return `${duration} Min Zeitstrafe ${teamName}${playerInfo}`;
+        return t('matchSummary.events.timePenalty', { duration, team: teamName, player: playerInfo });
       }
       case 'SUBSTITUTION': {
         const playersOut = event.payload.playersOut;
@@ -97,12 +100,12 @@ export function EventList({
         if (playersOut?.length || playersIn?.length) {
           const outInfo = playersOut?.map(n => `#${n}`).join(',') ?? '?';
           const inInfo = playersIn?.map(n => `#${n}`).join(',') ?? '?';
-          return `Wechsel ${teamName}: ${outInfo} \u2192 ${inInfo}`;
+          return t('matchSummary.events.substitutionDetail', { team: teamName, out: outInfo, in: inInfo });
         }
-        return `Wechsel ${teamName}`;
+        return t('matchSummary.events.substitution', { team: teamName });
       }
       case 'FOUL':
-        return `Foul ${teamName}`;
+        return t('matchSummary.events.foul', { team: teamName });
       default:
         return event.type;
     }
@@ -187,7 +190,7 @@ export function EventList({
   if (displayEvents.length === 0) {
     return (
       <div style={emptyStyle}>
-        Keine Ereignisse aufgezeichnet
+        {t('matchSummary.events.noEvents')}
       </div>
     );
   }
@@ -206,7 +209,7 @@ export function EventList({
             <button
               style={editButtonStyle}
               onClick={() => onEventEdit(event)}
-              aria-label={`${getEventDescription(event)} bearbeiten`}
+              aria-label={t('matchSummary.events.editAria', { description: getEventDescription(event) })}
             >
               \u270F\uFE0F Edit
             </button>

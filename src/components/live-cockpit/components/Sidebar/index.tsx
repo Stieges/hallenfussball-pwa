@@ -8,6 +8,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
 
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   awayTeamId,
   onEventEdit,
 }) => {
+  const { t } = useTranslation('cockpit');
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -162,24 +164,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return `−1 ${teamName}`;
         }
         // Build goal description with player and assists
-        let goalText = `TOR ${teamName}${playerInfo}`;
+        let goalText = t('sidebar.goalEvent', { teamName }) + playerInfo;
         // Show assists if present
         const assists = event.payload.assists;
         if (assists && assists.length > 0) {
-          const assistText = assists.map(a => `#${a}`).join(', ');
-          goalText += ` (Assist: ${assistText})`;
+          const assistsText = assists.map(a => `#${a}`).join(', ');
+          goalText += ` ${t('sidebar.assistFormat', { assists: assistsText })}`;
         }
         return goalText;
       }
       case 'YELLOW_CARD':
-        return `Gelb ${teamName}${playerInfo}`;
+        return t('sidebar.yellowEvent', { teamName }) + playerInfo;
       case 'RED_CARD':
-        return `Rot ${teamName}${playerInfo}`;
+        return t('sidebar.redEvent', { teamName }) + playerInfo;
       case 'TIME_PENALTY': {
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
           : 2;
-        return `${duration} Min ${teamName}${playerInfo}`;
+        return t('sidebar.penaltyEvent', { duration, teamName }) + playerInfo;
       }
       case 'SUBSTITUTION': {
         // Show player numbers if available
@@ -190,17 +192,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const inInfo = playersIn?.map(n => `#${n}`).join(',') ?? '?';
           return `🔄 ${teamName}: ${outInfo} → ${inInfo}`;
         }
-        return `Wechsel ${teamName}`;
+        return t('sidebar.substitutionEvent', { teamName });
       }
       case 'FOUL':
-        return `Foul ${teamName}`;
+        return t('sidebar.foulEvent', { teamName });
       case 'STATUS_CHANGE': {
         // Show descriptive label for status changes
         const toStatus = event.payload.toStatus;
         switch (toStatus) {
-          case 'RUNNING': return 'Spiel gestartet';
-          case 'PAUSED': return 'Spiel pausiert';
-          case 'FINISHED': return 'Spiel beendet';
+          case 'RUNNING': return t('sidebar.matchStarted');
+          case 'PAUSED': return t('sidebar.matchPaused');
+          case 'FINISHED': return t('sidebar.matchEnded');
           default: return `Status: ${toStatus}`;
         }
       }
@@ -220,10 +222,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div style={containerStyle}>
       {/* Active Penalties */}
       <div style={panelStyle}>
-        <div style={panelTitleStyle}>Aktive Zeitstrafen</div>
+        <div style={panelTitleStyle}>{t('sidebar.activePenalties')}</div>
         {activePenalties.length === 0 ? (
           <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-            Keine aktiven Strafen
+            {t('sidebar.noPenalties')}
           </div>
         ) : (
           activePenalties.map((penalty) => (
@@ -241,10 +243,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Event Log */}
       <div style={panelStyle}>
-        <div style={panelTitleStyle}>Ereignisse</div>
+        <div style={panelTitleStyle}>{t('sidebar.events')}</div>
         {recentEvents.length === 0 ? (
           <div style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm }}>
-            Noch keine Ereignisse
+            {t('sidebar.noEvents')}
           </div>
         ) : (
           recentEvents.map((event, index) => {
@@ -281,8 +283,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       style={editButtonStyle}
                       onClick={handleEditClick}
-                      aria-label={`${getEventDescription(event)} bearbeiten`}
-                      title="Bearbeiten"
+                      aria-label={t('sidebar.editAria', { description: getEventDescription(event) })}
+                      title={t('sidebar.edit')}
                     >
                       ✏️
                     </button>

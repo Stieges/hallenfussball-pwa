@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScheduleFilters, PHASE_OPTIONS } from '../../../../types/scheduleFilters';
 import { MatchStatus } from '../../../../types/tournament';
 import { cssVars } from '../../../../design-tokens';
@@ -59,20 +60,32 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
   totalMatches,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
+
   if (!draftFilters) {
     return null;
   }
 
+  // Build translated phase options
+  const translatedPhaseOptions: FilterOption[] = PHASE_OPTIONS.map((opt) => ({
+    value: opt.value,
+    label: opt.value === null
+      ? t('filter.allPhases')
+      : opt.value === 'groupStage'
+        ? t('filter.groupStage')
+        : t('filter.finals'),
+  }));
+
   // Build group options from tournament data
   const groupOptions: FilterOption[] = [
-    { value: null, label: 'Alle Gruppen' },
-    ...filterOptions.groups.map((g) => ({ value: g, label: `Gruppe ${g}` })),
+    { value: null, label: t('filter.allGroups') },
+    ...filterOptions.groups.map((g) => ({ value: g, label: t('filter.groupLabel', { group: g }) })),
   ];
 
   // Build field options from tournament data
   const fieldOptions: FilterOption[] = [
-    { value: null, label: 'Alle Felder' },
-    ...filterOptions.fields.map((f) => ({ value: f, label: `Feld ${f}` })),
+    { value: null, label: t('filter.allFields') },
+    ...filterOptions.fields.map((f) => ({ value: f, label: t('filter.fieldLabel', { field: f }) })),
   ];
 
   const sectionStyle: CSSProperties = {
@@ -137,14 +150,14 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
     <BottomSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="Filter"
+      title={t('filter.filter')}
     >
       <div data-testid={testId}>
         {/* Match Count Preview */}
         <div style={matchCountStyle}>
           <Icons.Filter size={14} />
           <span style={{ marginLeft: cssVars.spacing.xs }}>
-            {matchCount} von {totalMatches} Spielen
+            {t('filter.matchCount', { count: matchCount, total: totalMatches })}
           </span>
         </div>
 
@@ -152,9 +165,9 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
         {filterOptions.showPhaseFilter && (
           <div style={sectionStyle}>
             <FilterDropdown
-              label="Phase"
+              label={t('filter.phase')}
               value={draftFilters.phase === 'all' ? null : draftFilters.phase}
-              options={PHASE_OPTIONS}
+              options={translatedPhaseOptions}
               onChange={(value) => {
                 const phase = value === null ? 'all' : (value as 'groupStage' | 'finals');
                 onDraftChange({ phase });
@@ -168,7 +181,7 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
         {filterOptions.showGroupFilter && (
           <div style={sectionStyle}>
             <FilterDropdown
-              label="Gruppe"
+              label={t('filter.group')}
               value={draftFilters.group}
               options={groupOptions}
               onChange={(value) => onDraftChange({ group: value as string | null })}
@@ -181,7 +194,7 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
         {filterOptions.showFieldFilter && (
           <div style={sectionStyle}>
             <FilterDropdown
-              label="Feld"
+              label={t('filter.field')}
               value={draftFilters.field}
               options={fieldOptions}
               onChange={(value) => onDraftChange({ field: value as number | null })}
@@ -218,7 +231,7 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
             data-testid="filter-sheet-reset"
           >
             <Icons.X size={18} />
-            Zurücksetzen
+            {t('filter.reset')}
           </button>
           <button
             style={applyButtonStyle}
@@ -227,7 +240,7 @@ export const ScheduleFilterSheet: React.FC<ScheduleFilterSheetProps> = ({
             data-testid="filter-sheet-apply"
           >
             <Icons.Check size={18} />
-            Anwenden ({matchCount})
+            {t('filter.apply', { count: matchCount })}
           </button>
         </div>
       </div>

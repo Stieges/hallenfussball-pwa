@@ -8,6 +8,7 @@
  */
 
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
@@ -124,6 +125,7 @@ export function AdminHeader({
   tournamentId,
   showSyncStatus = false,
 }: AdminHeaderProps) {
+  const { t } = useTranslation('admin');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { status, isSyncing, lastSyncedAt, syncTournament } = useSyncStatus();
@@ -177,7 +179,7 @@ export function AdminHeader({
           }}
         >
           <span>←</span>
-          {!showBackToHub && <span>Zurück zum Turnier</span>}
+          {!showBackToHub && <span>{t('header.backToTournament')}</span>}
         </button>
       )}
 
@@ -188,7 +190,7 @@ export function AdminHeader({
           ...(hideBackButton || !showBackToHub ? styles.titleDesktop : {}),
         }}
       >
-        {showBackToHub ? title : 'ADMIN CENTER'}
+        {showBackToHub ? title : t('header.title')}
       </div>
 
       {/* Sync Status */}
@@ -208,7 +210,7 @@ export function AdminHeader({
           {isSearchExpanded && (
             <input
               type="text"
-              placeholder="Suchen..."
+              placeholder={t('header.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               style={{
@@ -239,7 +241,7 @@ export function AdminHeader({
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
             }}
-            aria-label={isSearchExpanded ? 'Suche schließen' : 'Suchen'}
+            aria-label={isSearchExpanded ? t('header.closeSearch') : t('header.search')}
           >
             {isSearchExpanded ? '✕' : '🔍'}
           </button>

@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import type { CardType } from '../../../../types/tournament';
@@ -61,6 +62,7 @@ export function CardDialog({
   preselectedTeamSide,
   autoDismissSeconds = 10,
 }: CardDialogProps) {
+  const { t } = useTranslation('cockpit');
   const [cardType, setCardType] = useState<CardType | null>(initialCardType ?? null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [playerNumber, setPlayerNumber] = useState<string>('');
@@ -164,8 +166,8 @@ export function CardDialog({
 
   const renderStep1CardType = () => (
     <>
-      <h2 id="card-dialog-title" style={styles.title}>Karte vergeben</h2>
-      <p style={styles.subtitle}>Welche Karte?</p>
+      <h2 id="card-dialog-title" style={styles.title}>{t('cardDialog.title')}</h2>
+      <p style={styles.subtitle}>{t('cardDialog.whichCard')}</p>
 
       <div style={styles.cardTypeGrid}>
         <button
@@ -183,7 +185,7 @@ export function CardDialog({
             }}
           />
           <span style={{ ...styles.cardTypeLabel, color: cardColors.YELLOW }}>
-            Gelb
+            {t('cardDialog.yellow')}
           </span>
         </button>
 
@@ -202,13 +204,13 @@ export function CardDialog({
             }}
           />
           <span style={{ ...styles.cardTypeLabel, color: cardColors.RED }}>
-            Rot
+            {t('cardDialog.red')}
           </span>
         </button>
       </div>
 
       <button style={styles.cancelButton} onClick={onClose}>
-        Abbrechen
+        {t('cardDialog.cancel')}
       </button>
     </>
   );
@@ -216,7 +218,7 @@ export function CardDialog({
   const renderStep2Team = () => (
     <>
       <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
+        <button style={styles.backButton} onClick={handleBack} aria-label={t('cardDialog.back')}>
           ←
         </button>
         <div style={styles.headerContent}>
@@ -227,13 +229,13 @@ export function CardDialog({
             }}
           />
           <h2 style={styles.title}>
-            {cardType === 'YELLOW' ? 'Gelbe' : 'Rote'} Karte
+            {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
           </h2>
         </div>
         <div style={{ width: 44 }} /> {/* Spacer for centering */}
       </div>
 
-      <p style={styles.subtitle}>Für welches Team?</p>
+      <p style={styles.subtitle}>{t('cardDialog.forWhichTeam')}</p>
 
       <div style={styles.teamGrid}>
         <button
@@ -252,7 +254,7 @@ export function CardDialog({
       </div>
 
       <button style={styles.cancelButton} onClick={onClose}>
-        Abbrechen
+        {t('cardDialog.cancel')}
       </button>
     </>
   );
@@ -260,7 +262,7 @@ export function CardDialog({
   const renderStep3Player = () => (
     <>
       <div style={styles.headerWithBack}>
-        <button style={styles.backButton} onClick={handleBack} aria-label="Zurück">
+        <button style={styles.backButton} onClick={handleBack} aria-label={t('cardDialog.back')}>
           ←
         </button>
         <div style={styles.headerContent}>
@@ -272,7 +274,7 @@ export function CardDialog({
           />
           <div>
             <h2 style={styles.titleSmall}>
-              {cardType === 'YELLOW' ? 'Gelbe' : 'Rote'} Karte
+              {cardType === 'YELLOW' ? t('cardDialog.yellowCard') : t('cardDialog.redCard')}
             </h2>
             <p style={styles.teamSubtitle}>{selectedTeam?.name}</p>
           </div>
@@ -280,7 +282,7 @@ export function CardDialog({
         <div style={{ width: 44 }} />
       </div>
 
-      <p style={styles.subtitle}>Rückennummer (optional)</p>
+      <p style={styles.subtitle}>{t('cardDialog.jerseyNumber')}</p>
 
       <div style={styles.inputContainer}>
         <input
@@ -325,7 +327,7 @@ export function CardDialog({
 
       <div style={styles.actions}>
         <button style={styles.skipButton} onClick={handleSkipPlayer}>
-          Ohne Details
+          {t('cardDialog.withoutDetails')}
         </button>
         <button
           style={{

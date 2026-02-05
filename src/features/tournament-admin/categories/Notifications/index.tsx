@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 
@@ -86,68 +87,65 @@ const styles = {
 // =============================================================================
 
 export function NotificationsCategory(_props: NotificationsCategoryProps) {
+  const { t } = useTranslation('admin');
   return (
     <CategoryPage
       icon="🔔"
-      title="Benachrichtigungen"
-      description="Push- und Sound-Einstellungen"
+      title={t('notifications.title')}
+      description={t('notifications.description')}
     >
       {/* Main Coming Soon notice */}
-      <CollapsibleSection icon="📲" title="Benachrichtigungs-System" defaultOpen>
+      <CollapsibleSection icon="📲" title={t('notifications.system')} defaultOpen>
         <div style={styles.comingSoon}>
           <div style={styles.comingSoonIcon}>🔔</div>
-          <div style={styles.comingSoonTitle}>Benachrichtigungen kommen bald</div>
+          <div style={styles.comingSoonTitle}>{t('notifications.comingSoonTitle')}</div>
           <p>
-            Ein umfassendes Benachrichtigungssystem für Turnierleitungen und Trainer ist in
-            Entwicklung.
+            {t('notifications.comingSoonDesc')}
           </p>
 
           <div style={styles.featureList}>
             <div style={styles.featureItem}>
               <span>📲</span>
-              <span>Push-Benachrichtigungen an Trainer vor Spielbeginn</span>
+              <span>{t('notifications.featurePushTrainer')}</span>
             </div>
             <div style={styles.featureItem}>
               <span>🔔</span>
-              <span>Echtzeit-Alerts bei Spielende, Karten und Korrekturen</span>
+              <span>{t('notifications.featureRealtimeAlerts')}</span>
             </div>
             <div style={styles.featureItem}>
               <span>🔊</span>
-              <span>Anpassbare Sound-Signale für verschiedene Ereignisse</span>
+              <span>{t('notifications.featureSoundSignals')}</span>
             </div>
             <div style={styles.featureItem}>
               <span>📱</span>
-              <span>Browser-Push und In-App-Benachrichtigungen</span>
+              <span>{t('notifications.featureBrowserPush')}</span>
             </div>
           </div>
 
-          <span style={styles.badge}>In Entwicklung</span>
+          <span style={styles.badge}>{t('notifications.inDevelopment')}</span>
           <p style={styles.note}>
-            Sound-Einstellungen für das Match Cockpit Pro findest du unter Einstellungen → Match
-            Cockpit Pro.
+            {t('notifications.soundSettingsNote')}
           </p>
         </div>
       </CollapsibleSection>
 
       {/* Trainer Notifications - Placeholder */}
-      <CollapsibleSection icon="👥" title="Trainer-Benachrichtigungen">
+      <CollapsibleSection icon="👥" title={t('notifications.trainerNotifications')}>
         <div style={styles.comingSoon}>
           <p>
-            Trainer können benachrichtigt werden, wenn ihr Team als nächstes spielt. Benötigt das
-            Trainer-Cockpit.
+            {t('notifications.trainerNotificationsDesc')}
           </p>
-          <span style={styles.badge}>Benötigt Trainer-Cockpit</span>
+          <span style={styles.badge}>{t('notifications.requiresTrainerCockpit')}</span>
         </div>
       </CollapsibleSection>
 
       {/* Tournament Director Notifications - Placeholder */}
-      <CollapsibleSection icon="🏆" title="TL-Benachrichtigungen">
+      <CollapsibleSection icon="🏆" title={t('notifications.tlNotifications')}>
         <div style={styles.comingSoon}>
           <p>
-            Turnierleitungs-spezifische Alerts bei Spielende, Roten Karten und
-            Ergebnis-Korrekturen.
+            {t('notifications.tlNotificationsDesc')}
           </p>
-          <span style={styles.badge}>Benötigt Push-System</span>
+          <span style={styles.badge}>{t('notifications.requiresPushSystem')}</span>
         </div>
       </CollapsibleSection>
     </CategoryPage>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Card, Combobox, Input } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -11,35 +12,37 @@ interface Step3Props {
 }
 
 export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => {
+  const { t } = useTranslation('wizard');
+
   return (
     <Card>
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
-        Stammdaten
+        {t('step3.title')}
       </h2>
 
       <Input
-        label="Turniername"
+        label={t('step3.tournamentName')}
         value={formData.title ?? ''}
         onChange={(v) => onUpdate('title', v)}
-        placeholder="Vereinsname Hallencup 2025"
+        placeholder={t('step3.tournamentNamePlaceholder')}
         required
       />
 
       <Input
-        label="Veranstalter (optional)"
+        label={t('step3.organizer')}
         value={formData.organizer ?? ''}
         onChange={(v) => onUpdate('organizer', v)}
-        placeholder="Mein Verein e.V."
+        placeholder={t('step3.organizerPlaceholder')}
         style={{ marginTop: '16px' }}
       />
 
       <Combobox
-        label="Altersklasse"
+        label={t('step3.ageClass')}
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty ageClass should use default
         value={formData.ageClass || DEFAULT_VALUES.ageClass}
         onChange={(v) => onUpdate('ageClass', v)}
         options={getAgeClassOptions(formData.sport ?? 'football')}
-        placeholder="Suchen oder auswählen..."
+        placeholder={t('step3.ageClassPlaceholder')}
         style={{ marginTop: '16px' }}
         data-testid="wizard-age-class"
       />
@@ -57,7 +60,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
 
       <div className="date-time-grid" style={{ display: 'grid', gap: '16px', marginTop: '16px' }}>
         <Input
-          label="Startdatum"
+          label={t('step3.startDate')}
           type="date"
           value={(formData.startDate ?? formData.date) ?? ''}
           onChange={(v) => {
@@ -68,7 +71,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
           required
         />
         <Input
-          label="Startzeit"
+          label={t('step3.startTime')}
           type="time"
           value={formData.startTime ?? ''}
           onChange={(v) => {
@@ -76,7 +79,7 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
             // Keep legacy field in sync (simple format)
             onUpdate('timeSlot', v);
           }}
-          placeholder="09:00"
+          placeholder={t('step3.startTimePlaceholder')}
           required
         />
       </div>

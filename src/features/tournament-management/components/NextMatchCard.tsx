@@ -2,6 +2,7 @@
  * NextMatchCard - Zeigt das nächste anstehende Spiel
  */
 import { CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cssVars } from '../../../design-tokens'
 import { Tournament } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
@@ -22,6 +23,7 @@ interface NextMatchCardProps {
 }
 
 export const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, tournament }) => {
+  const { t } = useTranslation('tournament');
   const cardStyle: CSSProperties = {
     background: cssVars.colors.gradientNextMatch,
     borderRadius: cssVars.borderRadius.lg,
@@ -56,8 +58,8 @@ export const NextMatchCard: React.FC<NextMatchCardProps> = ({ match, tournament 
         {match.homeTeam} vs. {match.awayTeam}
       </div>
       <div style={metaStyle}>
-        Spiel {match.number}
-        {match.field && ` · Feld ${match.field}`}
+        {t('nextMatch.matchNumber', { number: match.number })}
+        {match.field && ` · ${t('nextMatch.field', { field: match.field })}`}
         {match.group && ` · ${getGroupDisplayName(match.group, tournament)}`}
       </div>
     </div>

@@ -12,6 +12,7 @@
  */
 
 import React, { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 
 // =============================================================================
@@ -74,6 +75,7 @@ export type SettingItemProps =
 // =============================================================================
 
 export const SettingItem: React.FC<SettingItemProps> = (props) => {
+  const { t } = useTranslation('settings');
   const { label, description, icon, disabled, isPro, style, variant } = props;
 
   const renderControl = () => {
@@ -153,7 +155,7 @@ export const SettingItem: React.FC<SettingItemProps> = (props) => {
             onClick={() => !disabled && onClick()}
             style={styles.linkButton}
             disabled={disabled}
-            aria-label={`${label} öffnen`}
+            aria-label={t('settingItem.openAriaLabel', { label })}
           >
             →
           </button>
@@ -185,7 +187,7 @@ export const SettingItem: React.FC<SettingItemProps> = (props) => {
           <div style={styles.labelRow}>
             <span style={styles.label}>{label}</span>
             {isPro && (
-              <span style={styles.proBadge} aria-label="Pro-Feature">
+              <span style={styles.proBadge} aria-label={t('settingItem.proBadge')}>
                 Pro
               </span>
             )}

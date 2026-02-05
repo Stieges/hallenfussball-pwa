@@ -5,6 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
 
@@ -19,6 +20,7 @@ export const EmptyFilterState: React.FC<EmptyFilterStateProps> = ({
   onReset,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -78,10 +80,9 @@ export const EmptyFilterState: React.FC<EmptyFilterStateProps> = ({
       <div style={iconContainerStyle}>
         <Icons.Search size={32} />
       </div>
-      <h3 style={titleStyle}>Keine Spiele gefunden</h3>
+      <h3 style={titleStyle}>{t('filter.noResults')}</h3>
       <p style={descriptionStyle}>
-        Mit den aktuellen Filtereinstellungen wurden keine Spiele gefunden.
-        Versuche andere Filter oder setze alle Filter zurück.
+        {t('filter.noResultsDescription')}
       </p>
       <button
         style={buttonStyle}
@@ -90,7 +91,7 @@ export const EmptyFilterState: React.FC<EmptyFilterStateProps> = ({
         data-testid={testId ? `${testId}-reset` : 'empty-filter-reset'}
       >
         <Icons.X size={18} />
-        Filter zurücksetzen
+        {t('filter.resetAll')}
       </button>
     </div>
   );

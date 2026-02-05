@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { SportId, SportConfig, getAvailableSports } from '../../../config/sports';
 
@@ -101,6 +102,7 @@ export const SportSelector: React.FC<SportSelectorProps> = ({
   onSportChange,
   disabled = false,
 }) => {
+  const { t } = useTranslation('wizard');
   const availableSports = getAvailableSports();
 
   return (
@@ -108,7 +110,7 @@ export const SportSelector: React.FC<SportSelectorProps> = ({
       className="sport-selector-grid"
       style={{ display: 'grid', gap: '12px' }}
       role="radiogroup"
-      aria-label="Sportart auswählen"
+      aria-label={t('step1.sportAriaLabel')}
     >
       {availableSports.map((sport) => (
         <SportCard

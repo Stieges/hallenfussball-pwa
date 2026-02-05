@@ -11,6 +11,7 @@
  */
 
 import { type CSSProperties, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { DraggableAttributes } from '@dnd-kit/core';
 import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
 import { cssVars } from '../../../design-tokens'
@@ -95,6 +96,7 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
   matchId,
   ...matchCardProps
 }) => {
+  const { t } = useTranslation('tournament');
   const [showSRPopover, setShowSRPopover] = useState(false);
   const srBadgeRef = useRef<HTMLButtonElement>(null);
 
@@ -220,7 +222,7 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
           style={dragHandleStyle}
           {...(isLocked ? {} : dragHandleAttributes)}
           {...(isLocked ? {} : dragHandleListeners)}
-          aria-label={isLocked ? 'Spiel kann nicht verschoben werden' : 'Ziehen zum Verschieben'}
+          aria-label={isLocked ? t('matchCard.cannotMove') : t('matchCard.dragToMove')}
         >
           {isLocked ? '🔒' : '⋮⋮'}
         </div>
@@ -251,12 +253,12 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
                 ? cssVars.colors.surfaceSolid
                 : cssVars.colors.surfaceDark;
             }}
-            aria-label="Schiedsrichter ändern"
+            aria-label={t('matchCard.changeReferee')}
             aria-haspopup="listbox"
             aria-expanded={showSRPopover}
           >
             <span>🎯</span>
-            <span>{formatReferee(typeof referee === 'number' ? referee : undefined, refereeName) ?? 'Kein SR'}</span>
+            <span>{formatReferee(typeof referee === 'number' ? referee : undefined, refereeName) ?? t('matchCard.noReferee')}</span>
           </button>
         )}
 
@@ -272,7 +274,7 @@ export const EditableMatchCard: React.FC<EditableMatchCardProps> = ({
         {/* Locked Overlay */}
         {isLocked && (
           <div style={lockedBadgeStyle}>
-            Gesperrt (läuft/beendet)
+            {t('matchCard.locked')}
           </div>
         )}
       </div>

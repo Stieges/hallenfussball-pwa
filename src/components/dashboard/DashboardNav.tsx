@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars } from '../../design-tokens'
 import { Icons } from '../ui/Icons';
@@ -45,6 +46,7 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
   expiringSoonCount = 0,
   useUrlNavigation = true,
 }) => {
+  const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -63,17 +65,17 @@ export const DashboardNav: React.FC<DashboardNavProps> = ({
   const navItems: DashboardNavItem[] = [
     {
       id: 'turniere',
-      label: 'Turniere',
+      label: t('nav.tournaments'),
       icon: 'Trophy',
     },
     {
       id: 'archiv',
-      label: 'Archiv',
+      label: t('nav.archive'),
       icon: 'Archive',
     },
     {
       id: 'papierkorb',
-      label: 'Papierkorb',
+      label: t('nav.trash'),
       icon: 'Trash',
       badge: trashedCount > 0 ? trashedCount : undefined,
       badgeType: expiringSoonCount > 0 ? 'warning' : 'count',

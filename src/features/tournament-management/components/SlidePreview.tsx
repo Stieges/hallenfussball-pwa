@@ -8,6 +8,8 @@
  */
 /* eslint-disable local-rules/no-hardcoded-font-styles */
 import { CSSProperties, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { cssVars } from '../../../design-tokens';
 import type { MonitorSlide, SlideConfig, ColorScheme } from '../../../types/monitor';
 import { COLOR_SCHEMES } from '../../../types/monitor';
@@ -75,19 +77,19 @@ const typeBadgeStyle: CSSProperties = {
 
 function getFieldDisplayName(fieldId: string | undefined): string {
     if (!fieldId) {
-        return 'Kein Feld';
+        return i18n.t('tournament:slidePreview.noField', { defaultValue: 'Kein Feld' });
     }
     const num = parseInt(fieldId.replace('field-', ''), 10);
-    return isNaN(num) ? fieldId : `Feld ${num}`;
+    return isNaN(num) ? fieldId : i18n.t('tournament:slidePreview.fieldLabel', { defaultValue: 'Feld {{num}}', num });
 }
 
 function getGroupName(tournament: Tournament, groupId: string | undefined): string {
     if (!groupId) {
-        return 'Alle Gruppen';
+        return i18n.t('tournament:slidePreview.allGroups', { defaultValue: 'Alle Gruppen' });
     }
     const group = tournament.groups?.find(g => g.id === groupId);
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
-    return group?.customName || `Gruppe ${groupId}`;
+    return group?.customName || i18n.t('tournament:slidePreview.groupLabel', { defaultValue: 'Gruppe {{id}}', id: groupId });
 }
 
 function getTeamName(teams: Team[], teamIdOrName: string): string {
@@ -154,12 +156,12 @@ function StandingsPreview({ config, tournament }: { config: SlideConfig; tournam
                     ))}
                     {standings.length > 3 && (
                         <div style={{ fontSize: '6px', opacity: 0.4, marginTop: '2px' }}>
-                            +{standings.length - 3} weitere
+                            {i18n.t('tournament:slidePreview.moreItems', { defaultValue: '+{{count}} weitere', count: standings.length - 3 })}
                         </div>
                     )}
                 </div>
             ) : (
-                <div style={{ fontSize: '7px', opacity: 0.5 }}>Keine Daten</div>
+                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noData', { defaultValue: 'Keine Daten' })}</div>
             )}
         </div>
     );
@@ -190,7 +192,7 @@ function ScheduleFieldPreview({ config, tournament }: { config: SlideConfig; tou
                     ))}
                 </div>
             ) : (
-                <div style={{ fontSize: '7px', opacity: 0.5 }}>Keine Spiele</div>
+                <div style={{ fontSize: '7px', opacity: 0.5 }}>{i18n.t('tournament:slidePreview.noMatches', { defaultValue: 'Keine Spiele' })}</div>
             )}
         </div>
     );
@@ -237,7 +239,7 @@ function CustomTextPreview({ config }: { config: SlideConfig }) {
             color: colors.text,
         }}>
             <div style={{ fontSize: '9px', fontWeight: 700 }}>
-                {config.headline?.slice(0, 20) ?? 'Überschrift'}
+                {config.headline?.slice(0, 20) ?? i18n.t('tournament:slidePreview.headlineDefault', { defaultValue: 'Überschrift' })}
             </div>
             {config.body && (
                 <div style={{ fontSize: '7px', opacity: 0.8, marginTop: '2px' }}>
@@ -262,6 +264,7 @@ function Phase2Preview({ type }: { type: string }) {
 // =============================================================================
 
 export function SlidePreview({ slide, tournament, scale = 0.15 }: SlidePreviewProps) {
+    const { t } = useTranslation('tournament');
     const width = PREVIEW_WIDTH * scale;
     const height = width / ASPECT_RATIO;
 
@@ -274,7 +277,7 @@ export function SlidePreview({ slide, tournament, scale = 0.15 }: SlidePreviewPr
     const typeLabel = getTypeLabel(slide.type);
 
     return (
-        <div style={previewContainerStyle} aria-label={`Vorschau: ${typeLabel}`}>
+        <div style={previewContainerStyle} aria-label={t('slidePreview.previewAria', { type: typeLabel })}>
             <span style={typeBadgeStyle}>{typeLabel}</span>
             {renderPreview(slide, tournament)}
         </div>
@@ -282,18 +285,19 @@ export function SlidePreview({ slide, tournament, scale = 0.15 }: SlidePreviewPr
 }
 
 function getTypeLabel(type: string): string {
-    const labels: Record<string, string> = {
-        'live': 'Live',
-        'standings': 'Tabelle',
-        'schedule-field': 'Spielplan',
-        'sponsor': 'Sponsor',
-        'custom-text': 'Text',
-        'all-standings': 'Alle Tabellen',
-        'schedule-group': 'Gruppen-Spielplan',
-        'next-matches': 'Nächste Spiele',
-        'top-scorers': 'Torschützen',
+    const keyMap: Record<string, string> = {
+        'live': 'slidePreview.types.live',
+        'standings': 'slidePreview.types.standings',
+        'schedule-field': 'slidePreview.types.scheduleField',
+        'sponsor': 'slidePreview.types.sponsor',
+        'custom-text': 'slidePreview.types.customText',
+        'all-standings': 'slidePreview.types.allStandings',
+        'schedule-group': 'slidePreview.types.scheduleGroup',
+        'next-matches': 'slidePreview.types.nextMatches',
+        'top-scorers': 'slidePreview.types.topScorers',
     };
-    return labels[type] ?? type;
+    const key = keyMap[type];
+    return key ? i18n.t(`tournament:${key}`, { defaultValue: type }) : type;
 }
 
 function renderPreview(slide: MonitorSlide, tournament: Tournament) {

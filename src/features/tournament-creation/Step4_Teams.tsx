@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import { Card, Button, Input, Icons, TeamAvatar, ColorPicker, LogoUploadDialog } from '../../components/ui';
 import { Tournament, Team, TeamLogo } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -51,8 +53,8 @@ function analyzeGroupDistribution(
   if (unassignedCount > 0) {
     warnings.push({
       type: 'warning',
-      message: `${unassignedCount} Team${unassignedCount > 1 ? 's' : ''} ohne Gruppenzuordnung`,
-      action: 'Gruppen automatisch zuweisen',
+      message: i18n.t(unassignedCount > 1 ? 'wizard:step4.warnings.unassigned_other' : 'wizard:step4.warnings.unassigned_one', { count: unassignedCount, defaultValue: '' }),
+      action: i18n.t('wizard:step4.warnings.unassignedAction', { defaultValue: '' }),
     });
   }
 
@@ -61,8 +63,8 @@ function analyzeGroupDistribution(
   if (emptyGroups.length > 0 && teams.length > 0) {
     warnings.push({
       type: 'error',
-      message: `Gruppe${emptyGroups.length > 1 ? 'n' : ''} ${emptyGroups.join(', ')} ${emptyGroups.length > 1 ? 'haben' : 'hat'} keine Teams`,
-      action: 'Gruppen neu verteilen',
+      message: i18n.t(emptyGroups.length > 1 ? 'wizard:step4.warnings.emptyGroup_other' : 'wizard:step4.warnings.emptyGroup_one', { groups: emptyGroups.join(', '), defaultValue: '' }),
+      action: i18n.t('wizard:step4.warnings.emptyGroupAction', { defaultValue: '' }),
     });
   }
 
@@ -71,7 +73,7 @@ function analyzeGroupDistribution(
   if (singleTeamGroups.length > 0) {
     warnings.push({
       type: 'error',
-      message: `Gruppe${singleTeamGroups.length > 1 ? 'n' : ''} ${singleTeamGroups.join(', ')} ${singleTeamGroups.length > 1 ? 'haben' : 'hat'} nur 1 Team – keine Spiele möglich`,
+      message: i18n.t(singleTeamGroups.length > 1 ? 'wizard:step4.warnings.singleTeamGroup_other' : 'wizard:step4.warnings.singleTeamGroup_one', { groups: singleTeamGroups.join(', '), defaultValue: '' }),
     });
   }
 
@@ -80,15 +82,15 @@ function analyzeGroupDistribution(
     const distribution = groupLabels.map(label => `${label}: ${groupCounts[label]}`).join(', ');
     warnings.push({
       type: 'warning',
-      message: `Ungleiche Gruppengrößen (${distribution})`,
-      action: 'Für faireren Spielplan gleichmäßig verteilen',
+      message: i18n.t('wizard:step4.warnings.unbalanced', { distribution, defaultValue: '' }),
+      action: i18n.t('wizard:step4.warnings.unbalancedAction', { defaultValue: '' }),
     });
   } else if (minCount > 0 && maxCount - minCount === 1) {
     // Info: slight imbalance is okay but worth noting
     const distribution = groupLabels.map(label => `${label}: ${groupCounts[label]}`).join(', ');
     warnings.push({
       type: 'info',
-      message: `Gruppenverteilung: ${distribution}`,
+      message: i18n.t('wizard:step4.warnings.distribution', { distribution, defaultValue: '' }),
     });
   }
 
@@ -102,6 +104,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   onRemoveTeam,
   onUpdateTeam,
 }) => {
+  const { t } = useTranslation('wizard');
   const [logoUploadTeamId, setLogoUploadTeamId] = useState<string | null>(null);
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null);
 
@@ -196,12 +199,12 @@ export const Step4_Teams: React.FC<Step4Props> = ({
   return (
     <Card>
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
-        Teams
+        {t('step4.title')}
       </h2>
 
       <div className={styles.buttonRow}>
         <Button onClick={onAddTeam} icon={<Icons.Plus />} variant="secondary" data-testid="wizard-add-team">
-          Team hinzufügen
+          {t('step4.addTeam')}
         </Button>
 
         {needsMoreTeams && (
@@ -211,7 +214,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             variant="primary"
             data-testid="wizard-generate-teams"
           >
-            {numberOfTeams} Teams generieren
+            {t('step4.generateTeams', { count: numberOfTeams })}
           </Button>
         )}
 
@@ -221,7 +224,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             variant="secondary"
             data-testid="wizard-auto-assign-groups"
           >
-            Gruppen automatisch zuweisen
+            {t('step4.autoAssignGroups')}
           </Button>
         )}
       </div>
@@ -237,7 +240,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           }}
         >
           <p style={{ color: cssVars.colors.textSecondary, margin: 0 }}>
-            Noch keine Teams hinzugefügt
+            {t('step4.noTeams')}
           </p>
         </div>
       ) : (
@@ -263,7 +266,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       cursor: 'pointer',
                       flexShrink: 0,
                     }}
-                    aria-label={`Logo und Farben für ${team.name} ${isExpanded ? 'einklappen' : 'bearbeiten'}`}
+                    aria-label={t(isExpanded ? 'step4.avatarCollapse' : 'step4.avatarExpand', { name: team.name })}
                   >
                     <TeamAvatar
                       team={team}
@@ -276,7 +279,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                     <Input
                       value={team.name}
                       onChange={(v) => onUpdateTeam(team.id, { name: v })}
-                      placeholder="Teamname eingeben"
+                      placeholder={t('step4.teamNamePlaceholder')}
                       error={hasError}
                     />
                     {hasError && (
@@ -285,7 +288,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                         color: cssVars.colors.error,
                         fontSize: cssVars.fontSizes.xs,
                       }}>
-                        Dieser Name wird bereits verwendet
+                        {t('step4.duplicateName')}
                       </p>
                     )}
                   </div>
@@ -312,7 +315,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                       transition: 'all 0.2s',
                     }}
                     aria-expanded={isExpanded}
-                    aria-label={isExpanded ? 'Einklappen' : 'Logo & Farben'}
+                    aria-label={isExpanded ? t('step4.collapseLabel') : t('step4.expandLabel')}
                   >
                     {isExpanded ? '▲' : '▼'}
                   </button>
@@ -320,7 +323,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   <button
                     onClick={() => onRemoveTeam(team.id)}
                     className={styles.deleteButton}
-                    aria-label={`Team ${team.name} löschen`}
+                    aria-label={t('step4.deleteTeam', { name: team.name })}
                     data-testid={`wizard-remove-team-${team.id}`}
                   >
                     <Icons.Trash size={18} />
@@ -351,20 +354,20 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                           color: cssVars.colors.textSecondary,
                           marginBottom: cssVars.spacing.sm,
                         }}>
-                          Logo
+                          {t('step4.logo')}
                         </span>
                         <Button
                           variant="secondary"
                           size="sm"
                           onClick={() => setLogoUploadTeamId(team.id)}
                         >
-                          {team.logo ? 'Logo ändern' : 'Logo hochladen'}
+                          {team.logo ? t('step4.changeLogo') : t('step4.uploadLogo')}
                         </Button>
                       </div>
 
                       {/* Color Section */}
                       <ColorPicker
-                        label="Trikotfarbe"
+                        label={t('step4.jerseyColor')}
                         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty color should use fallback
                         value={team.colors?.primary || '#666666'}
                         onChange={(color) => handleColorChange(team.id, color)}
@@ -377,15 +380,15 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                 {/* Secondary row: Group selector (only on mobile, inline on desktop via CSS) */}
                 {canAssignGroups && (
                   <div className={styles.teamRowSecondary}>
-                    <span className={styles.groupLabel}>Gruppe:</span>
+                    <span className={styles.groupLabel}>{t('step4.groupLabel')}</span>
                     <div className={styles.groupSelectWrapper}>
                       <select
                         value={team.group ?? ''}
                         onChange={(e) => onUpdateTeam(team.id, { group: e.target.value || undefined })}
                         className={styles.groupSelect}
-                        aria-label={`Gruppe für ${team.name}`}
+                        aria-label={t('step4.groupAriaLabel', { name: team.name })}
                       >
-                        <option value="">Keine Gruppe</option>
+                        <option value="">{t('step4.noGroup')}</option>
                         {(formData.groups ?? groupLabels.map(id => ({ id }))).map(group => (
                           <option key={group.id} value={group.id}>
                             {getGroupDisplayName(group)}
@@ -411,7 +414,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             gap: '8px',
           }}
           role="region"
-          aria-label="Gruppenzuordnungs-Hinweise"
+          aria-label={t('step4.groupWarningsAriaLabel')}
         >
           {groupWarnings.map((warning, index) => (
             <div
@@ -478,8 +481,8 @@ export const Step4_Teams: React.FC<Step4Props> = ({
           }}
         >
           <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
-            {teams.length} Team{teams.length !== 1 ? 's' : ''} hinzugefügt
-            {canAssignGroups && ` • Gruppen können jetzt zugewiesen werden`}
+            {t('step4.teamsAdded', { count: teams.length })}
+            {canAssignGroups && ` • ${t('step4.groupsCanBeAssigned')}`}
           </div>
         </div>
       )}

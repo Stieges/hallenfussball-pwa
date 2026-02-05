@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+import i18n from '../../../i18n';
 import { Tournament } from '../../../types/tournament';
 import { DEFAULT_VALUES } from '../../../constants/tournamentOptions';
 import { cssVars } from '../../../design-tokens';
@@ -45,8 +47,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (teams > 8 && fields === 1) {
     issues.push({
       type: 'warning',
-      message: `${teams} Teams auf nur 1 Feld führt zu sehr langer Turnierdauer`,
-      suggestion: `Empfohlen: mindestens ${Math.ceil(teams / 8)} Felder`,
+      message: i18n.t('wizard:validation.tooManyTeamsOneField', { teams, defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.tooManyTeamsOneFieldSuggestion', { fields: Math.ceil(teams / 8), defaultValue: '' }),
     });
   }
 
@@ -54,8 +56,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (hours > 10) {
     issues.push({
       type: 'error',
-      message: `Geschätzte Dauer von ${Math.round(hours)}h ist unrealistisch für einen Tag`,
-      suggestion: 'Erhöhe die Feldanzahl oder reduziere die Teamanzahl',
+      message: i18n.t('wizard:validation.unrealisticDuration', { hours: Math.round(hours), defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.unrealisticDurationSuggestion', { defaultValue: '' }),
     });
   }
 
@@ -64,8 +66,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     const recommendedFields = Math.ceil(fields * (hours / 6));
     issues.push({
       type: 'warning',
-      message: `Lange Turnierdauer von ca. ${Math.round(hours)}h`,
-      suggestion: `Mit ${recommendedFields} Feldern oder kürzerer Spieldauer (z.B. ${Math.max(5, gameDuration - 2)} Min) verkürzt sich die Dauer`,
+      message: i18n.t('wizard:validation.longDuration', { hours: Math.round(hours), defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.longDurationSuggestion', { fields: recommendedFields, duration: Math.max(5, gameDuration - 2), defaultValue: '' }),
     });
   }
 
@@ -77,8 +79,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     const nearestEven = Math.round(teams / groups) * groups;
     issues.push({
       type: 'info',
-      message: `Ungleiche Gruppengrößen: ${groups - 1}x ${teamsPerGroup} Teams, 1x ${lastGroupSize} Teams`,
-      suggestion: nearestEven !== teams ? `Für gleichmäßige Gruppen: ${nearestEven} Teams wählen` : undefined,
+      message: i18n.t('wizard:validation.unevenGroups', { majorCount: groups - 1, teamsPerGroup, lastGroupSize, defaultValue: '' }),
+      suggestion: nearestEven !== teams ? i18n.t('wizard:validation.unevenGroupsSuggestion', { count: nearestEven, defaultValue: '' }) : undefined,
     });
   }
 
@@ -86,8 +88,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (groupSystem === 'groupsAndFinals' && teams < groups * 2) {
     issues.push({
       type: 'error',
-      message: `Zu wenig Teams für ${groups} Gruppen (min. ${groups * 2} benötigt)`,
-      suggestion: 'Reduziere die Gruppenanzahl oder erhöhe die Teamanzahl',
+      message: i18n.t('wizard:validation.tooFewTeams', { groups, min: groups * 2, defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.tooFewTeamsSuggestion', { defaultValue: '' }),
     });
   }
 
@@ -97,8 +99,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
     if (patternTeams > 0 && patternTeams !== teams) {
       issues.push({
         type: 'info',
-        message: `DFB-Muster passt zu ${patternTeams} Teams (aktuell: ${teams})`,
-        suggestion: `Teamanzahl auf ${patternTeams} ändern oder anderes DFB-Muster wählen`,
+        message: i18n.t('wizard:validation.dfbMismatch', { patternTeams, currentTeams: teams, defaultValue: '' }),
+        suggestion: i18n.t('wizard:validation.dfbMismatchSuggestion', { count: patternTeams, defaultValue: '' }),
       });
     }
   }
@@ -107,8 +109,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (gameDuration < 5) {
     issues.push({
       type: 'info',
-      message: `Sehr kurze Spieldauer von ${gameDuration} Minuten`,
-      suggestion: 'Empfohlen: mindestens 8-10 Minuten pro Spiel',
+      message: i18n.t('wizard:validation.shortGameDuration', { duration: gameDuration, defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.shortGameDurationSuggestion', { defaultValue: '' }),
     });
   }
 
@@ -116,8 +118,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (breakDuration === 0 && totalMatches > 10) {
     issues.push({
       type: 'warning',
-      message: 'Keine Pause zwischen Spielen - Teams haben keine Erholungszeit',
-      suggestion: 'Empfohlen: 2-3 Minuten Pause für Teamwechsel',
+      message: i18n.t('wizard:validation.noBreak', { defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.noBreakSuggestion', { defaultValue: '' }),
     });
   }
 
@@ -126,8 +128,8 @@ function validateConfiguration(formData: Partial<Tournament>): ValidationIssue[]
   if (points?.win === 0 && points.draw === 0 && points.loss === 0) {
     issues.push({
       type: 'warning',
-      message: 'Punktesystem hat überall 0 Punkte - Tabelle wird nicht aussagekräftig',
-      suggestion: 'Standard-Punktesystem: 3 Punkte Sieg, 1 Punkt Unentschieden, 0 Punkte Niederlage',
+      message: i18n.t('wizard:validation.zeroPoints', { defaultValue: '' }),
+      suggestion: i18n.t('wizard:validation.zeroPointsSuggestion', { defaultValue: '' }),
     });
   }
 
@@ -141,6 +143,7 @@ const ICONS = {
 };
 
 export const ValidationWarnings: React.FC<ValidationWarningsProps> = ({ formData }) => {
+  const { t } = useTranslation('wizard');
   const issues = validateConfiguration(formData);
 
   if (issues.length === 0) {
@@ -148,9 +151,9 @@ export const ValidationWarnings: React.FC<ValidationWarningsProps> = ({ formData
   }
 
   return (
-    <div className={styles.container} role="region" aria-label="Konfigurationswarnungen">
+    <div className={styles.container} role="region" aria-label={t('validation.ariaLabel')}>
       <span className={styles.srOnly}>
-        {issues.length} {issues.length === 1 ? 'Hinweis' : 'Hinweise'} zur Konfiguration
+        {t('validation.issueCount', { count: issues.length })}
       </span>
       {issues.map((issue, index) => (
         <div

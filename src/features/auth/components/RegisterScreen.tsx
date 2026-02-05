@@ -15,6 +15,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { PasswordInput } from '../../../components/ui/PasswordInput';
 import { useToast } from '../../../components/ui/Toast';
@@ -42,6 +43,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
   onNavigateToLogin,
   onBack,
 }) => {
+  const { t } = useTranslation('auth');
   const { register, loginWithGoogle, isGuest, connectionState, reconnect } = useAuth();
   const isOffline = connectionState === 'offline';
   const { showMigrationSuccess } = useToast();
@@ -223,9 +225,9 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               type="button"
               onClick={onBack}
               style={styles.backButton}
-              aria-label="Zurück"
+              aria-label={t('login.back')}
             >
-              ← Zurück
+              {t('login.backWithArrow')}
             </button>
           )}
           {onBack && (
@@ -233,7 +235,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               type="button"
               onClick={onBack}
               style={styles.closeButton}
-              aria-label="Schließen"
+              aria-label={t('login.close')}
             >
               ✕
             </button>
@@ -241,27 +243,27 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
         </div>
 
         <h1 id="register-title" style={styles.title}>
-          {isGuest ? 'Konto erstellen' : 'Registrieren'}
+          {isGuest ? t('register.titleGuest') : t('register.title')}
         </h1>
 
         {/* Offline Banner */}
         {isOffline && (
           <OfflineBanner
-            subtitle="Registrierung nicht möglich"
+            subtitle={t('register.offlineSubtitle')}
             onRetry={() => void reconnect()}
           />
         )}
 
         <p style={styles.subtitle}>
           {isGuest
-            ? 'Erstelle ein Konto, um deine Turniere zu synchronisieren.'
-            : 'Erstelle ein Konto, um Turniere zu verwalten.'}
+            ? t('register.subtitleGuest')
+            : t('register.subtitle')}
         </p>
 
         <form onSubmit={(e) => void handleSubmit(e)} style={styles.form}>
           <div style={styles.inputGroup}>
             <label htmlFor="name" style={styles.label}>
-              Name
+              {t('register.name')}
             </label>
             <input
               id="name"
@@ -270,7 +272,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               value={formData.name}
               onChange={(e) => setField('name', e.target.value)}
               onBlur={() => handleBlur('name')}
-              placeholder="Vor- und Nachname"
+              placeholder={t('register.namePlaceholder')}
               style={{
                 ...styles.input,
                 ...(touched.name && errors.name ? styles.inputError : {}),
@@ -284,7 +286,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
           <div style={styles.inputGroup}>
             <label htmlFor="email" style={styles.label}>
-              E-Mail
+              {t('register.email')}
             </label>
             <input
               id="email"
@@ -296,7 +298,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 setEmailSuggestion(null);
               }}
               onBlur={() => handleBlur('email')}
-              placeholder="name@mein-verein.de"
+              placeholder={t('register.emailPlaceholder')}
               style={{
                 ...styles.input,
                 ...(touched.email && errors.email ? styles.inputError : {}),
@@ -311,14 +313,14 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 onClick={() => applySuggestion()}
                 style={styles.suggestionButton}
               >
-                ✓ {emailSuggestion} verwenden
+                {'✓ '}{t('register.useSuggestion', { suggestion: emailSuggestion })}
               </button>
             )}
           </div>
 
           <div style={styles.inputGroup}>
             <label htmlFor="password" style={styles.label}>
-              Passwort
+              {t('register.password')}
             </label>
             <PasswordInput
               id="password"
@@ -334,7 +336,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
                 }
               }}
               onBlur={() => handleBlur('password')}
-              placeholder="Mindestens 6 Zeichen"
+              placeholder={t('register.passwordPlaceholder')}
               style={{
                 ...styles.input,
                 ...(touched.password && errors.password ? styles.inputError : {}),
@@ -348,7 +350,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
           <div style={styles.inputGroup}>
             <label htmlFor="confirmPassword" style={styles.label}>
-              Passwort bestätigen
+              {t('register.confirmPassword')}
             </label>
             <PasswordInput
               id="confirmPassword"
@@ -356,7 +358,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               value={formData.confirmPassword}
               onChange={(e) => setField('confirmPassword', e.target.value)}
               onBlur={() => handleBlur('confirmPassword')}
-              placeholder="Passwort wiederholen"
+              placeholder={t('register.confirmPasswordPlaceholder')}
               style={{
                 ...styles.input,
                 ...(touched.confirmPassword && errors.confirmPassword ? styles.inputError : {}),
@@ -371,7 +373,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
 
           <div style={styles.inputGroup}>
             <label htmlFor="registrationCode" style={styles.label}>
-              Einladungscode
+              {t('register.registrationCode')}
             </label>
             <input
               id="registrationCode"
@@ -380,7 +382,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               value={formData.registrationCode}
               onChange={(e) => setField('registrationCode', e.target.value)}
               onBlur={() => handleBlur('registrationCode')}
-              placeholder="Code vom Veranstalter"
+              placeholder={t('register.registrationCodePlaceholder')}
               style={{
                 ...styles.input,
                 ...(touched.registrationCode && errors.registrationCode ? styles.inputError : {}),
@@ -392,7 +394,7 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
               <span style={styles.errorText}>{errors.registrationCode}</span>
             )}
             <span style={styles.hint}>
-              Den Code bekommst du vom Turnierveranstalter.
+              {t('register.registrationCodeHint')}
             </span>
           </div>
 
@@ -408,13 +410,13 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
             style={styles.button}
             data-testid="register-submit-button"
           >
-            Konto erstellen
+            {t('register.submit')}
           </Button>
         </form>
 
         <div style={styles.divider}>
           <span style={styles.dividerLine} />
-          <span style={styles.dividerText}>oder</span>
+          <span style={styles.dividerText}>{t('register.or')}</span>
           <span style={styles.dividerLine} />
         </div>
 
@@ -427,24 +429,23 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({
           style={styles.googleButton}
         >
           <span style={styles.googleIcon}>G</span>
-          Mit Google registrieren
+          {t('register.googleRegister')}
         </Button>
 
         <p style={styles.footer}>
-          Bereits registriert?{' '}
+          {t('register.alreadyRegistered')}{' '}
           <button
             type="button"
             onClick={onNavigateToLogin}
             style={styles.link}
             data-testid="register-login-link"
           >
-            Anmelden
+            {t('register.login')}
           </button>
         </p>
 
         <p style={styles.legal}>
-          Mit der Registrierung stimmst du unseren Nutzungsbedingungen und der
-          Datenschutzerklärung zu.
+          {t('register.legal')}
         </p>
       </div>
     </div>

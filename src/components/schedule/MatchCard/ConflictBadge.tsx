@@ -10,6 +10,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import type { ScheduleConflict, ConflictType } from '../../../features/schedule-editor/types';
 
@@ -53,22 +54,23 @@ function getConflictIcon(type: ConflictType): string {
 }
 
 /**
- * Get German label for conflict type
+ * Get label for conflict type using i18n
  */
-function getConflictLabel(type: ConflictType): string {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getConflictLabel(type: ConflictType, t: (key: any) => string): string {
   switch (type) {
     case 'team_double_booking':
-      return 'Team-Doppelbelegung';
+      return t('conflict.teamDoubleBooking');
     case 'referee_double_booking':
-      return 'SR-Doppelbelegung';
+      return t('conflict.refereeDoubleBooking');
     case 'field_overlap':
-      return 'Feld-Überlappung';
+      return t('conflict.fieldOverlap');
     case 'break_violation':
-      return 'Pausenzeit unterschritten';
+      return t('conflict.breakViolation');
     case 'dependency_violation':
-      return 'Abhängigkeitskonflikt';
+      return t('conflict.dependencyViolation');
     default:
-      return 'Konflikt';
+      return t('conflict.generic');
   }
 }
 
@@ -89,6 +91,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
   showTooltip = true,
   position = 'top-right',
 }) => {
+  const { t } = useTranslation('tournament');
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
 
   if (conflicts.length === 0) {
@@ -239,7 +242,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
       <div
         style={badgeStyle}
         role="img"
-        aria-label={`${conflicts.length} Konflikt${conflicts.length > 1 ? 'e' : ''}`}
+        aria-label={t('conflict.count', { count: conflicts.length })}
       >
         {badgeContent}
       </div>
@@ -249,7 +252,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
           <div style={tooltipHeaderStyle}>
             <span>{severity === 'error' ? '⛔' : '⚠️'}</span>
             <span>
-              {conflicts.length} Konflikt{conflicts.length > 1 ? 'e' : ''}
+              {t('conflict.count', { count: conflicts.length })}
             </span>
           </div>
 
@@ -261,7 +264,7 @@ export const ConflictBadge: React.FC<ConflictBadgeProps> = ({
                 </span>
                 <div style={conflictTextStyle}>
                   <span style={conflictTypeStyle}>
-                    {getConflictLabel(conflict.type)}
+                    {getConflictLabel(conflict.type, t)}
                   </span>
                   {conflict.message}
                 </div>

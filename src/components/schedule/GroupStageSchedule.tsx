@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties, useState, useMemo, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   DragOverlay,
@@ -94,6 +95,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
   onNavigateToCockpit,
   showTitle = true,
 }) => {
+  const { t } = useTranslation('tournament');
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -505,7 +507,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         color: cssVars.colors.textSecondary,
         fontSize: cssVars.fontSizes.lg
       }}>
-        Keine Spiele vorhanden
+        {t('groupStage.noMatches')}
       </div>
     );
   }
@@ -546,10 +548,10 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
 
   // Transform referee options for EditableMatchCard (includes "Kein SR" option)
   const editableRefereeOptions: RefereeOption[] = [
-    { value: null, label: 'Kein SR' },
+    { value: null, label: t('groupStage.noReferee') },
     ...refereeOptions.map(opt => ({
       value: opt.value,
-      label: `SR ${opt.label}`,
+      label: t('groupStage.refereeLabel', { number: opt.label }),
     })),
   ];
 
@@ -645,7 +647,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
     <div style={containerStyle} className="group-stage-schedule">
       {showTitle && (
         <h2 style={titleStyle}>
-          {hasGroups ? 'Vorrunde' : 'Spielplan'}
+          {hasGroups ? t('groupStage.title') : t('groupStage.scheduleTitle')}
         </h2>
       )}
 
@@ -841,7 +843,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
                   onCircleClick={() => handleCircleClick(match.id)}
                   isExpanded={isExpanded}
                   expandContent={renderExpandContent(match)}
-                  referee={match.referee ? `SR ${match.referee}` : undefined}
+                  referee={match.referee ? t('groupStage.refereeLabel', { number: match.referee }) : undefined}
                   hasEvents={hasEvents}
                 />
               </div>

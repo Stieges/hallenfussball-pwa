@@ -13,6 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import { Button } from './ui/Button';
 import { cssVars } from '../design-tokens';
@@ -26,6 +27,7 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
   compact = false,
 }) => {
   const { connectionState, reconnect } = useAuth();
+  const { t } = useTranslation('common');
 
   // Only show when offline
   if (connectionState !== 'offline') {
@@ -88,10 +90,10 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
           📡
         </span>
         <div style={textContainerStyle}>
-          <p style={titleStyle}>Offline-Modus</p>
+          <p style={titleStyle}>{t('offlineIndicator.title')}</p>
           {!compact && (
             <p style={subtitleStyle}>
-              Daten werden lokal gespeichert und später synchronisiert
+              {t('offlineIndicator.subtitle')}
             </p>
           )}
         </div>
@@ -100,9 +102,9 @@ export const OfflineModeIndicator: React.FC<OfflineModeIndicatorProps> = ({
         variant="secondary"
         size={compact ? 'sm' : 'md'}
         onClick={handleReconnect}
-        aria-label="Erneut verbinden"
+        aria-label={t('offlineIndicator.reconnectAriaLabel')}
       >
-        Verbinden
+        {t('actions.connect')}
       </Button>
     </div>
   );

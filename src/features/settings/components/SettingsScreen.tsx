@@ -15,6 +15,8 @@
 
 import React, { CSSProperties, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 import { cssVars } from '../../../design-tokens';
 import { useTheme } from '../../../hooks/useTheme';
 import { useSettings } from '../hooks/useSettings';
@@ -54,6 +56,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onBack,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation('settings');
   const { theme, setTheme, resolvedTheme } = useTheme();
   const {
     fontSize,
@@ -111,12 +114,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isClearing, setIsClearing] = useState(false);
 
   const handleForceUpdate = useCallback(async () => {
-    const confirmed = window.confirm(
-      'App-Update erzwingen?\n\n' +
-      'Dies löscht den Service Worker Cache und lädt die App neu. ' +
-      'Deine Turnierdaten bleiben erhalten.\n\n' +
-      'Nutze diese Funktion, wenn die App nicht richtig funktioniert.'
-    );
+    const confirmed = window.confirm(t('data.forceUpdate.confirmMessage'));
 
     if (!confirmed) {
       return;
@@ -155,24 +153,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         console.error('[ForceUpdate] Error:', err);
       }
       setIsClearing(false);
-      alert('Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell.');
+      alert(t('data.forceUpdate.errorMessage'));
     }
-  }, []);
+  }, [t]);
 
   // Handle consent revocation
   const handleRevokeConsent = useCallback(() => {
-    const confirmed = window.confirm(
-      'Möchten Sie Ihre Datenschutz-Einwilligung widerrufen?\n\n' +
-      'Dies deaktiviert Error-Tracking und Session-Replay. ' +
-      'Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.'
-    );
+    const confirmed = window.confirm(t('privacy.revoke.confirmMessage'));
     if (confirmed) {
       revokeConsent();
       setConsent(null);
       void reinitializeSentry();
-      alert('Ihre Einwilligung wurde widerrufen.');
+      alert(t('privacy.revoke.successMessage'));
     }
-  }, []);
+  }, [t]);
 
   // Map current theme to BaseTheme
   const currentBaseTheme: BaseTheme = theme as BaseTheme;
@@ -184,9 +178,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   // Support email helpers
   const createSupportEmail = (type: 'bug' | 'feature' | 'feedback') => {
     const subjects = {
-      bug: 'Fehler melden – Spielplan App',
-      feature: 'Feature-Vorschlag – Spielplan App',
-      feedback: 'Feedback – Spielplan App',
+      bug: t('support.bug.subject'),
+      feature: t('support.feature.subject'),
+      feedback: t('support.feedback.subject'),
     };
 
     /* eslint-disable @typescript-eslint/no-deprecated -- navigator.platform still useful for support emails */
@@ -200,7 +194,7 @@ Datum: ${new Date().toISOString()}
 Theme: ${resolvedTheme}
 ───────────────────────────────
 
-Meine Nachricht:
+${t('support.emailBody')}
 
 `;
 
@@ -217,20 +211,20 @@ Meine Nachricht:
           type="button"
           onClick={onBack}
           style={styles.backButton}
-          aria-label="Zurück"
+          aria-label={t('backAriaLabel')}
         >
-          ← Zurück
+          {t('backWithArrow')}
         </button>
-        <h1 style={styles.title}>Einstellungen</h1>
+        <h1 style={styles.title}>{t('pageTitle')}</h1>
         <div style={styles.headerSpacer} />
       </header>
 
       {/* Content */}
       <div style={styles.content}>
         {/* Erscheinungsbild */}
-        <SettingsCategory title="Erscheinungsbild" icon="🎨">
+        <SettingsCategory title={t('categories.appearance')} icon="🎨">
           <div style={styles.selectorContainer}>
-            <span style={styles.selectorLabel}>Theme</span>
+            <span style={styles.selectorLabel}>{t('appearance.theme')}</span>
             <BaseThemeSelector
               value={currentBaseTheme}
               onChange={handleBaseThemeChange}
@@ -241,96 +235,96 @@ Meine Nachricht:
           <div style={styles.divider} />
 
           <div style={styles.selectorContainer}>
-            <span style={styles.selectorLabel}>Schriftgröße</span>
+            <span style={styles.selectorLabel}>{t('appearance.fontSize')}</span>
             <FontSizeSelector value={fontSize} onChange={setFontSize} />
           </div>
         </SettingsCategory>
 
         {/* Sprache */}
-        <SettingsCategory title="Sprache" icon="🌍">
+        <SettingsCategory title={t('categories.language')} icon="🌍">
           <SettingItem
             variant="select"
             icon="🗣️"
-            label="Sprache"
-            description="App-Sprache auswählen"
-            value="de"
+            label={t('language.label')}
+            description={t('language.description')}
+            value={i18n.language}
             options={[
-              { value: 'de', label: 'Deutsch' },
-              { value: 'en', label: 'English (coming soon)' },
+              { value: 'de', label: t('language.de') },
+              { value: 'en', label: t('language.en') },
             ]}
-            onChange={() => {
-              // TODO: i18n in Phase 2
+            onChange={(value) => {
+              void i18n.changeLanguage(value);
+              document.documentElement.lang = value;
             }}
-            disabled
           />
         </SettingsCategory>
 
         {/* App-Verhalten */}
-        <SettingsCategory title="App-Verhalten" icon="⚡">
+        <SettingsCategory title={t('categories.behavior')} icon="⚡">
           <SettingItem
             variant="toggle"
             icon="⚠️"
-            label="Löschen bestätigen"
-            description="Vor dem Löschen nachfragen"
+            label={t('behavior.confirmDelete.label')}
+            description={t('behavior.confirmDelete.description')}
             value={confirmDelete}
             onChange={toggleConfirmDelete}
           />
           <SettingItem
             variant="toggle"
             icon="💾"
-            label="Auto-Speichern"
-            description="Änderungen automatisch speichern"
+            label={t('behavior.autoSave.label')}
+            description={t('behavior.autoSave.description')}
             value={autoSave}
             onChange={toggleAutoSave}
           />
           <SettingItem
             variant="toggle"
             icon="🔔"
-            label="Timer-Sound"
-            description="Ton bei Spielende abspielen"
+            label={t('behavior.timerSound.label')}
+            description={t('behavior.timerSound.description')}
             value={timerSound}
             onChange={toggleTimerSound}
           />
           <SettingItem
             variant="toggle"
             icon="📳"
-            label="Haptisches Feedback"
-            description="Vibration bei Aktionen"
+            label={t('behavior.hapticFeedback.label')}
+            description={t('behavior.hapticFeedback.description')}
             value={hapticFeedback}
             onChange={toggleHapticFeedback}
           />
         </SettingsCategory>
 
         {/* Daten */}
-        <SettingsCategory title="Daten" icon="💾">
+        <SettingsCategory title={t('categories.data')} icon="💾">
           <SettingItem
             variant="action"
             icon="📤"
-            label="Alle Daten exportieren"
-            description="Turniere und Einstellungen als JSON"
-            actionLabel="Exportieren"
+            label={t('data.export.label')}
+            description={t('data.export.description')}
+            actionLabel={t('data.export.action')}
             onClick={() => {
               // TODO: Implement export
-              alert('Export wird in Kürze implementiert');
+              alert(t('data.export.todo'));
             }}
           />
           <SettingItem
             variant="action"
             icon="📥"
-            label="Daten importieren"
-            description="Aus einer Backup-Datei wiederherstellen"
-            actionLabel="Importieren"
+            label={t('data.import.label')}
+            description={t('data.import.description')}
+            actionLabel={t('data.import.action')}
             onClick={() => {
               // TODO: Implement import
-              alert('Import wird in Kürze implementiert');
+              alert(t('data.import.todo'));
             }}
           />
           <SettingItem
             variant="action"
             icon="🗑️"
-            label="Cache leeren"
-            description="Temporäre Daten löschen"
-            actionLabel="Leeren"
+            label={t('data.clearCache.label')}
+            description={t('data.clearCache.description')}
+            actionLabel={t('data.clearCache.action')}
             onClick={() => {
               // Clear caches
               if ('caches' in window) {
@@ -338,27 +332,27 @@ Meine Nachricht:
                   names.forEach((name) => void caches.delete(name));
                 });
               }
-              alert('Cache wurde geleert');
+              alert(t('data.clearCache.success'));
             }}
           />
           <SettingItem
             variant="action"
             icon="🔄"
-            label="App-Update erzwingen"
-            description="Service Worker zurücksetzen bei Problemen"
-            actionLabel={isClearing ? 'Lädt...' : 'Zurücksetzen'}
+            label={t('data.forceUpdate.label')}
+            description={t('data.forceUpdate.description')}
+            actionLabel={isClearing ? t('data.forceUpdate.loading') : t('data.forceUpdate.action')}
             onClick={() => void handleForceUpdate()}
             disabled={isClearing}
           />
         </SettingsCategory>
 
         {/* Hilfe & Support */}
-        <SettingsCategory title="Hilfe & Support" icon="❓">
+        <SettingsCategory title={t('categories.support')} icon="❓">
           <SettingItem
             variant="link"
             icon="🐛"
-            label="Fehler melden"
-            description="Bug Report per E-Mail senden"
+            label={t('support.bug.label')}
+            description={t('support.bug.description')}
             onClick={() => {
               window.location.href = createSupportEmail('bug');
             }}
@@ -366,8 +360,8 @@ Meine Nachricht:
           <SettingItem
             variant="link"
             icon="💡"
-            label="Feature vorschlagen"
-            description="Ideen für neue Funktionen"
+            label={t('support.feature.label')}
+            description={t('support.feature.description')}
             onClick={() => {
               window.location.href = createSupportEmail('feature');
             }}
@@ -375,8 +369,8 @@ Meine Nachricht:
           <SettingItem
             variant="link"
             icon="💬"
-            label="Feedback senden"
-            description="Allgemeines Feedback"
+            label={t('support.feedback.label')}
+            description={t('support.feedback.description')}
             onClick={() => {
               window.location.href = createSupportEmail('feedback');
             }}
@@ -384,40 +378,40 @@ Meine Nachricht:
         </SettingsCategory>
 
         {/* Über */}
-        <SettingsCategory title="Über" icon="ℹ️">
+        <SettingsCategory title={t('categories.about')} icon="ℹ️">
           <SettingItem
             variant="info"
             icon="📱"
-            label="Version"
+            label={t('about.version')}
             value={APP_VERSION}
           />
           <SettingItem
             variant="link"
             icon="📋"
-            label="Changelog"
-            description="Was ist neu?"
+            label={t('about.changelog.label')}
+            description={t('about.changelog.description')}
             onClick={() => {
               // TODO: Show changelog modal
-              alert(`Version ${APP_VERSION}\n\n• Settings-Screen hinzugefügt\n• Theme-Auswahl\n• Schriftgröße anpassbar`);
+              alert(t('about.changelog.content', { version: APP_VERSION }));
             }}
           />
         </SettingsCategory>
 
         {/* Datenschutz */}
-        <SettingsCategory title="Datenschutz" icon="🛡️">
+        <SettingsCategory title={t('categories.privacy')} icon="🛡️">
           <SettingItem
             variant="toggle"
             icon="📊"
-            label="Error-Tracking"
-            description="Anonymisierte Fehlerberichte senden"
+            label={t('privacy.errorTracking.label')}
+            description={t('privacy.errorTracking.description')}
             value={consent?.errorTracking ?? false}
             onChange={(value) => handleConsentChange('errorTracking', value)}
           />
           <SettingItem
             variant="toggle"
             icon="🎬"
-            label="Session Replay"
-            description="Anonymisierte Sitzungsaufzeichnungen zur Fehlerbehebung"
+            label={t('privacy.sessionReplay.label')}
+            description={t('privacy.sessionReplay.description')}
             value={consent?.sessionReplay ?? false}
             onChange={(value) => handleConsentChange('sessionReplay', value)}
           />
@@ -425,35 +419,35 @@ Meine Nachricht:
             <SettingItem
               variant="action"
               icon="🗑️"
-              label="Einwilligung widerrufen"
-              description="Alle Tracking-Einstellungen zurücksetzen"
-              actionLabel="Widerrufen"
+              label={t('privacy.revoke.label')}
+              description={t('privacy.revoke.description')}
+              actionLabel={t('privacy.revoke.action')}
               onClick={handleRevokeConsent}
             />
           )}
         </SettingsCategory>
 
         {/* Rechtliches */}
-        <SettingsCategory title="Rechtliches" icon="⚖️">
+        <SettingsCategory title={t('categories.legal')} icon="⚖️">
           <SettingItem
             variant="link"
             icon="📄"
-            label="Impressum"
+            label={t('legal.imprint')}
             onClick={() => void navigate('/impressum')}
           />
           <SettingItem
             variant="link"
             icon="🔒"
-            label="Datenschutz"
+            label={t('legal.privacy')}
             onClick={() => void navigate('/datenschutz')}
           />
           <SettingItem
             variant="link"
             icon="📜"
-            label="Nutzungsbedingungen"
+            label={t('legal.terms.label')}
             onClick={() => {
               // TODO: Add Terms of Service page
-              alert('Nutzungsbedingungen werden in Kürze hinzugefügt');
+              alert(t('legal.terms.todo'));
             }}
           />
         </SettingsCategory>

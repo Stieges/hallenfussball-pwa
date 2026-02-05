@@ -9,6 +9,7 @@
  */
 
 import { CSSProperties, DragEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
 import { cssVars } from '../../design-tokens'
@@ -43,6 +44,7 @@ export const SelectStep = ({
   onFileSelect,
   onButtonClick,
 }: SelectStepProps) => {
+  const { t } = useTranslation('dashboard');
   const dropZoneStyle: CSSProperties = {
     border: `2px dashed ${isDragging ? cssVars.colors.primary : cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
@@ -86,10 +88,10 @@ export const SelectStep = ({
           {isDragging ? '📂' : '📁'}
         </div>
         <p style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md, margin: 0 }}>
-          {isDragging ? 'Datei hier ablegen' : 'Datei hierher ziehen oder klicken'}
+          {isDragging ? t('import.select.dropHere') : t('import.select.dragOrClick')}
         </p>
         <p style={hintStyle}>
-          Unterstützte Formate: JSON, CSV
+          {t('import.select.supportedFormats')}
         </p>
       </div>
 
@@ -103,7 +105,7 @@ export const SelectStep = ({
 
       {selectedFile && !error && (
         <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
-          Ausgewählt: {selectedFile.name}
+          {t('import.select.selected', { fileName: selectedFile.name })}
         </div>
       )}
 
@@ -120,7 +122,7 @@ export const SelectStep = ({
         onClick={onButtonClick}
         fullWidth
       >
-        Datei auswählen
+        {t('import.select.chooseFile')}
       </Button>
 
       {/* Template Downloads */}
@@ -135,7 +137,7 @@ export const SelectStep = ({
           margin: `0 0 ${cssVars.spacing.md} 0`,
           textAlign: 'center',
         }}>
-          Vorlage herunterladen:
+          {t('import.select.downloadTemplate')}
         </p>
         <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
           <Button
@@ -145,7 +147,7 @@ export const SelectStep = ({
             onClick={() => downloadTemplate('json')}
             fullWidth
           >
-            JSON-Vorlage
+            {t('import.select.jsonTemplate')}
           </Button>
           <Button
             variant="secondary"
@@ -154,7 +156,7 @@ export const SelectStep = ({
             onClick={() => downloadTemplate('csv')}
             fullWidth
           >
-            CSV-Vorlage
+            {t('import.select.csvTemplate')}
           </Button>
         </div>
         <p style={{
@@ -164,8 +166,8 @@ export const SelectStep = ({
           textAlign: 'center',
           lineHeight: '1.4',
         }}>
-          JSON: Komplettes Turnier mit Teams & Spielen<br />
-          CSV: Einfache Team-Liste (Spielplan wird generiert)
+          {t('import.select.jsonDescription')}<br />
+          {t('import.select.csvDescription')}
         </p>
       </div>
     </>
@@ -183,6 +185,7 @@ export interface WarningsStepProps {
 }
 
 export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps) => {
+  const { t } = useTranslation('dashboard');
   const warningsContainerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -215,7 +218,7 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
   return (
     <>
       <p style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm, margin: 0 }}>
-        Beim Import wurden folgende Hinweise festgestellt:
+        {t('import.warnings.intro')}
       </p>
 
       <div style={warningsContainerStyle}>
@@ -235,10 +238,10 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
 
       <div style={buttonGroupStyle}>
         <Button variant="secondary" size="md" onClick={onBack} fullWidth>
-          Zurück
+          {t('import.warnings.back')}
         </Button>
         <Button variant="primary" size="md" onClick={onContinue} fullWidth>
-          Trotzdem importieren
+          {t('import.warnings.continueAnyway')}
         </Button>
       </div>
     </>
@@ -256,6 +259,7 @@ export interface PreviewStepProps {
 }
 
 export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) => {
+  const { t } = useTranslation('dashboard');
   const previewContainerStyle: CSSProperties = {
     background: cssVars.colors.surface,
     borderRadius: cssVars.borderRadius.md,
@@ -301,27 +305,27 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
 
         <div style={previewGridStyle}>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Datum</span>
+            <span style={labelStyle}>{t('import.preview.labels.date')}</span>
             <span style={valueStyle}>{formatTournamentDate(tournament)}</span>
           </div>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Ort</span>
+            <span style={labelStyle}>{t('import.preview.labels.location')}</span>
             <span style={valueStyle}>{tournament.location.name || '-'}</span>
           </div>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Teams</span>
+            <span style={labelStyle}>{t('import.preview.labels.teams')}</span>
             <span style={valueStyle}>{tournament.teams.length}</span>
           </div>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Spiele</span>
+            <span style={labelStyle}>{t('import.preview.labels.matches')}</span>
             <span style={valueStyle}>{tournament.matches.length}</span>
           </div>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Altersklasse</span>
+            <span style={labelStyle}>{t('import.preview.labels.ageClass')}</span>
             <span style={valueStyle}>{tournament.ageClass}</span>
           </div>
           <div style={previewItemStyle}>
-            <span style={labelStyle}>Quelle</span>
+            <span style={labelStyle}>{t('import.preview.labels.source')}</span>
             <span style={{ ...valueStyle, color: cssVars.colors.statusExternal }}>
               {tournament.externalSource}
             </span>
@@ -331,10 +335,10 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
 
       <div style={buttonGroupStyle}>
         <Button variant="secondary" size="md" onClick={onBack} fullWidth>
-          Zurück
+          {t('import.preview.back')}
         </Button>
         <Button variant="primary" size="md" onClick={onImport} fullWidth>
-          Importieren
+          {t('import.preview.import')}
         </Button>
       </div>
     </>
@@ -351,6 +355,7 @@ export interface SuccessStepProps {
 }
 
 export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
+  const { t } = useTranslation('dashboard');
   const successContainerStyle: CSSProperties = {
     textAlign: 'center',
     padding: cssVars.spacing.xl,
@@ -377,15 +382,15 @@ export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
       <div style={successContainerStyle}>
         <div style={iconStyle}>✅</div>
         <p style={messageStyle}>
-          "{tournament.title}" wurde erfolgreich importiert!
+          {t('import.success.message', { title: tournament.title })}
         </p>
         <p style={subMessageStyle}>
-          Das Turnier wurde als Entwurf gespeichert und kann jetzt bearbeitet werden.
+          {t('import.success.hint')}
         </p>
       </div>
 
       <Button variant="primary" size="md" onClick={onComplete} fullWidth>
-        Zum Turnier
+        {t('import.success.goToTournament')}
       </Button>
     </>
   );

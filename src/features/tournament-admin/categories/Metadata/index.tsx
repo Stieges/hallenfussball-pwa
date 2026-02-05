@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useMemo, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { Input, Combobox } from '../../../../components/ui';
@@ -159,6 +160,7 @@ export function MetadataCategory({
   tournament,
   onTournamentUpdate,
 }: MetadataCategoryProps) {
+  const { t } = useTranslation('admin');
   // Local form state (copy of tournament data)
   const [formData, setFormData] = useState<Partial<Tournament>>({
     title: tournament.title,
@@ -228,7 +230,7 @@ export function MetadataCategory({
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        const message = 'Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?';
+        const message = t('metadata.unsavedChangesWarning');
         // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = message;
         return message;
@@ -237,7 +239,7 @@ export function MetadataCategory({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, t]);
 
   // Update handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
@@ -270,9 +272,7 @@ export function MetadataCategory({
   // Reset handler
   const handleReset = () => {
     if (isDirty) {
-      const confirmReset = window.confirm(
-        'Möchtest du alle Änderungen verwerfen und die ursprünglichen Werte wiederherstellen?'
-      );
+      const confirmReset = window.confirm(t('metadata.confirmReset'));
       if (!confirmReset) {return;}
     }
 
@@ -291,10 +291,10 @@ export function MetadataCategory({
   // Get mode display name
   const getModeDisplayName = () => {
     if (tournament.groupSystem === 'roundRobin') {
-      return 'Jeder gegen Jeden';
+      return t('metadata.modeRoundRobin');
     }
     if (tournament.groupSystem === 'groupsAndFinals') {
-      return 'Gruppen + Finale';
+      return t('metadata.modeGroupsAndFinals');
     }
     // Fallback: show mode name directly
     return tournament.mode;
@@ -303,8 +303,8 @@ export function MetadataCategory({
   return (
     <CategoryPage
       icon="📝"
-      title="Meta-Daten & Notizen"
-      description="Turnier-Grunddaten bearbeiten"
+      title={t('metadata.title')}
+      description={t('metadata.description')}
       headerExtra={
         <span
           style={{
@@ -312,40 +312,40 @@ export function MetadataCategory({
             ...(isDirty ? styles.dirtyBadgeUnsaved : styles.dirtyBadgeSaved),
           }}
         >
-          {isDirty ? '● Ungespeichert' : '✓ Gespeichert'}
+          {isDirty ? t('metadata.unsaved') : t('metadata.saved')}
         </span>
       }
     >
       {/* Basic Data */}
-      <CollapsibleSection icon="📋" title="Stammdaten" defaultOpen>
+      <CollapsibleSection icon="📋" title={t('metadata.masterData')} defaultOpen>
         <div style={styles.formSection}>
           <Input
-            label="Turniername"
+            label={t('metadata.tournamentName')}
             value={formData.title ?? ''}
             onChange={(v) => handleUpdate('title', v)}
-            placeholder="Vereinsname Hallencup 2025"
+            placeholder={t('metadata.tournamentNamePlaceholder')}
             required
           />
 
           <Input
-            label="Veranstalter (optional)"
+            label={t('metadata.organizerOptional')}
             value={formData.organizer ?? ''}
             onChange={(v) => handleUpdate('organizer', v)}
-            placeholder="Mein Verein e.V."
+            placeholder={t('metadata.organizerPlaceholder')}
           />
 
           <Combobox
-            label="Altersklasse"
+            label={t('metadata.ageClass')}
             value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
             onChange={(v) => handleUpdate('ageClass', v)}
             options={getAgeClassOptions(tournament.sport)}
-            placeholder="Suchen oder auswählen..."
+            placeholder={t('metadata.searchOrSelect')}
           />
         </div>
       </CollapsibleSection>
 
       {/* Location & Contact */}
-      <CollapsibleSection icon="📍" title="Ort & Kontakt">
+      <CollapsibleSection icon="📍" title={t('metadata.locationAndContact')}>
         <div style={styles.formSection}>
           <LocationForm
             value={formData.location ?? { name: '' }}
@@ -363,17 +363,17 @@ export function MetadataCategory({
       </CollapsibleSection>
 
       {/* Date & Time */}
-      <CollapsibleSection icon="📅" title="Datum & Zeit">
+      <CollapsibleSection icon="📅" title={t('metadata.dateAndTime')}>
         <div style={styles.formSection}>
           <Input
-            label="Startdatum"
+            label={t('metadata.startDate')}
             type="date"
             value={formData.startDate ?? ''}
             onChange={(v) => handleUpdate('startDate', v)}
             required
           />
           <Input
-            label="Startzeit"
+            label={t('metadata.startTime')}
             type="time"
             value={formData.startTime ?? ''}
             onChange={(v) => handleUpdate('startTime', v)}
@@ -384,14 +384,14 @@ export function MetadataCategory({
       </CollapsibleSection>
 
       {/* Locked Structure Info */}
-      <CollapsibleSection icon="🔒" title="Struktur-Info (gesperrt)">
+      <CollapsibleSection icon="🔒" title={t('metadata.structureInfo')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Diese Einstellungen wurden bei der Turniererstellung festgelegt und können nicht mehr geändert werden.
+          {t('metadata.structureInfoDesc')}
         </p>
 
         <div style={styles.lockedField}>
           <div>
-            <div style={styles.lockedFieldLabel}>Anzahl Teams</div>
+            <div style={styles.lockedFieldLabel}>{t('metadata.numberOfTeams')}</div>
             <div style={styles.lockedFieldValue}>{tournament.numberOfTeams}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
@@ -399,7 +399,7 @@ export function MetadataCategory({
 
         <div style={styles.lockedField}>
           <div>
-            <div style={styles.lockedFieldLabel}>Anzahl Gruppen</div>
+            <div style={styles.lockedFieldLabel}>{t('metadata.numberOfGroups')}</div>
             <div style={styles.lockedFieldValue}>{tournament.numberOfGroups ?? 1}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
@@ -407,7 +407,7 @@ export function MetadataCategory({
 
         <div style={styles.lockedField}>
           <div>
-            <div style={styles.lockedFieldLabel}>Anzahl Felder</div>
+            <div style={styles.lockedFieldLabel}>{t('metadata.numberOfFields')}</div>
             <div style={styles.lockedFieldValue}>{tournament.numberOfFields}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
@@ -415,25 +415,25 @@ export function MetadataCategory({
 
         <div style={styles.lockedField}>
           <div>
-            <div style={styles.lockedFieldLabel}>Spielmodus</div>
+            <div style={styles.lockedFieldLabel}>{t('metadata.gameMode')}</div>
             <div style={styles.lockedFieldValue}>{getModeDisplayName()}</div>
           </div>
           <span style={styles.lockedIcon}>🔒</span>
         </div>
 
         <p style={styles.hint}>
-          Um diese Einstellungen zu ändern, nutze "Spielplan zurücksetzen" in der Danger Zone.
+          {t('metadata.changeHint')}
         </p>
       </CollapsibleSection>
 
       {/* Private Notes */}
-      <CollapsibleSection icon="📝" title="Private Notizen">
+      <CollapsibleSection icon="📝" title={t('metadata.privateNotes')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Diese Notizen sind nur für dich sichtbar und werden nicht öffentlich angezeigt.
+          {t('metadata.privateNotesDesc')}
         </p>
         <textarea
           style={styles.textarea}
-          placeholder="Notizen für dich selbst eingeben..."
+          placeholder={t('metadata.notesPlaceholder')}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
         />
@@ -449,21 +449,21 @@ export function MetadataCategory({
           onClick={handleSave}
           disabled={!isDirty}
         >
-          Änderungen speichern
+          {t('metadata.saveChanges')}
         </button>
         <button
           style={styles.resetButton}
           onClick={handleReset}
           disabled={!isDirty}
         >
-          Zurücksetzen
+          {t('metadata.reset')}
         </button>
       </div>
 
       {showSaveSuccess && (
         <div style={styles.successMessage}>
           <span>✓</span>
-          <span>Änderungen wurden gespeichert</span>
+          <span>{t('metadata.changesSaved')}</span>
         </div>
       )}
     </CategoryPage>
