@@ -72,8 +72,8 @@ export const RuntimeMatchEventSchema = z.object({
   type: z.enum(['GOAL', 'RESULT_EDIT', 'STATUS_CHANGE', 'YELLOW_CARD', 'RED_CARD', 'TIME_PENALTY', 'SUBSTITUTION', 'FOUL']),
   payload: RuntimeMatchEventPayloadSchema,
   scoreAfter: z.object({
-    home: z.number(),
-    away: z.number(),
+    home: z.number().min(0),
+    away: z.number().min(0),
   }),
   incomplete: z.boolean().optional(),
 })
