@@ -115,7 +115,7 @@ const ScreenLoader = () => {
   );
 };
 
-type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test';
+type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test' | 'not-found';
 
 function AppContent() {
   const { t } = useTranslation('common');
@@ -308,6 +308,11 @@ function AppContent() {
       setScreen('datenschutz');
     } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
       setScreen('dashboard');
+    } else if (path.startsWith('/tournament/')) {
+      // Tournament sub-routes handled by TournamentManagementScreen/Wizard
+      // Don't override screen here
+    } else {
+      setScreen('not-found');
     }
   }, [location.pathname, location.search]); // Depend on location to react to URL changes
 
@@ -693,6 +698,39 @@ function AppContent() {
               // Cookie banner will be added in a future commit
             }}
           />
+        )}
+
+        {/* 404 Not Found */}
+        {screen === 'not-found' && (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '60vh',
+            padding: cssVars.spacing.xl,
+            textAlign: 'center',
+          }}>
+            <h1 style={{ fontSize: cssVars.fontSizes.xxl, marginBottom: cssVars.spacing.md, color: cssVars.colors.textPrimary }}>404</h1>
+            <p style={{ fontSize: cssVars.fontSizes.md, color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.lg }}>
+              {t('notFound', 'Diese Seite wurde nicht gefunden.')}
+            </p>
+            <button
+              type="button"
+              onClick={() => void navigate('/')}
+              style={{
+                padding: `${cssVars.spacing.sm} ${cssVars.spacing.lg}`,
+                fontSize: cssVars.fontSizes.md,
+                backgroundColor: cssVars.colors.primary,
+                color: cssVars.colors.onPrimary,
+                border: 'none',
+                borderRadius: cssVars.borderRadius.md,
+                cursor: 'pointer',
+              }}
+            >
+              {t('backToDashboard', 'Zurück zum Dashboard')}
+            </button>
+          </div>
         )}
       </Suspense>
 
