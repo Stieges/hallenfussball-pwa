@@ -47,7 +47,7 @@ export const PublicBottomNav: React.FC<PublicBottomNavProps> = ({
     background: cssVars.colors.surface,
     borderTop: `1px solid ${cssVars.colors.border}`,
     paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-    zIndex: 1000,
+    zIndex: cssVars.zIndex.navigation,
     height: layoutHeights.bottomNav,
   };
 

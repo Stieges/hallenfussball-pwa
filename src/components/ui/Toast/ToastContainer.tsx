@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { zIndex } from '../../../design-tokens';
 import { Toast, ToastProps } from './Toast';
 
 interface ToastContainerProps {
@@ -17,7 +18,7 @@ const containerStyle: CSSProperties = {
   position: 'fixed',
   bottom: 24,
   right: 24,
-  zIndex: 9999,
+  zIndex: zIndex.banner,
   display: 'flex',
   flexDirection: 'column',
   gap: 12,

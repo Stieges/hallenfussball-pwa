@@ -165,7 +165,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
-    zIndex: 1100, // Higher than BottomNavigation (1000)
+    zIndex: cssVars.zIndex.floating,
     listStyle: 'none',
     padding: cssVars.spacing.xs,
     margin: 0,
@@ -231,6 +231,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
           aria-haspopup="listbox"
           aria-invalid={error || undefined}
           aria-autocomplete="list"
+          aria-activedescendant={isOpen && highlightedIndex >= 0 ? `combobox-option-${highlightedIndex}` : undefined}
           autoComplete="off"
         />
         <span style={chevronStyles}>▼</span>
@@ -246,6 +247,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
           {filteredOptions.map((option, index) => (
             <li
               key={option.value}
+              id={`combobox-option-${index}`}
               role="option"
               aria-selected={String(option.value) === String(value)}
               style={optionStyles(

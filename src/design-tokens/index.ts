@@ -101,6 +101,8 @@ export {
 
 export { gradients, type GradientToken } from './gradients';
 
+export { zIndex, type ZIndexKey } from './elevation';
+
 // =============================================================================
 // Display Tokens (TV-optimierte Darstellung für Monitor-Konfigurator)
 // =============================================================================
@@ -160,6 +162,7 @@ import { radii, radiiSemantics } from './radii';
 import { durations, easings, transitions, animations } from './motion';
 import { breakpoints, mediaQueries, containerWidths } from './breakpoints';
 import { gradients } from './gradients';
+import { zIndex } from './elevation';
 import { displayTokens as displayTokensImport } from './display';
 
 /**
@@ -195,6 +198,7 @@ export const tokens = {
   inputHeights,
   buttonHeights,
   layoutHeights,
+  zIndex,
   // Display tokens for TV/Monitor display
   display: displayTokensImport,
 } as const;

@@ -52,7 +52,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     position: 'fixed',
     inset: 0,
     background: cssVars.colors.overlay,
-    zIndex: 1100,
+    zIndex: cssVars.zIndex.floating,
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-end',
