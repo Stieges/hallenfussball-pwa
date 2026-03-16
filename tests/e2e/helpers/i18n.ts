@@ -18,8 +18,12 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 // Load all German translation namespaces
+// Use import.meta.url for ESM compatibility (CI runs Playwright in ESM mode)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const LOCALES_DIR = path.resolve(__dirname, '../../../src/i18n/locales/de');
 
 type TranslationMap = Record<string, unknown>;
