@@ -38,7 +38,18 @@ export const MatchSchema = z.object({
     isFinal: z.boolean().optional(),
     finalType: z.string().optional(),
     label: z.string().optional(),
-    scheduledTime: z.union([z.string(), z.date()]).optional(), // Date or string in JSON? JSON makes it string. Zod should handle transform?
+    scheduledTime: z.preprocess(
+      (arg) => {
+        if (arg instanceof Date) {
+          return arg;
+        }
+        if (typeof arg === 'string' && arg.length > 0) {
+          return new Date(arg);
+        }
+        return arg;
+      },
+      z.date().optional()
+    ),
     referee: z.number().optional(),
     matchStatus: z.string().optional(), // 'scheduled' | ...
     finishedAt: z.string().optional(),
@@ -55,12 +66,7 @@ export const MatchSchema = z.object({
     events: z.array(RuntimeMatchEventSchema).optional(),
 });
 
-// Handling Date: JSON has strings. Our application assumes Date objects for some fields?
-// `scheduledTime?: Date`.
-// When loading from localStorage, it is a STRING.
-// We should probably transform it to Date in the Repository if the app expects Date.
-// Or schema handles string and we transform it.
-// `z.preprocess((arg) => typeof arg === 'string' ? new Date(arg) : arg, z.date())`
+// scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
 
 export const TournamentSchema = z.object({
     id: z.string(),
