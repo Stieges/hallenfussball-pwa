@@ -10,6 +10,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 /**
  * Helper: Get a date 7 days in the future
@@ -144,7 +145,7 @@ test.describe('Tournament Management Tabs', () => {
       await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/standings/);
 
       // Tabellen-Content ist sichtbar
-      await expect(page.getByRole('heading', { name: /Tabelle|Gruppe/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: new RegExp(`${t('tournament:standings.table')}|Gruppe`, 'i') })).toBeVisible();
     }
   });
 
@@ -197,7 +198,7 @@ test.describe('Tournament Management Tabs', () => {
       await expect(page).toHaveURL(/.*\/tournament\/tab-test-tournament\/settings/);
 
       // Settings-Content ist sichtbar
-      await expect(page.getByRole('heading', { name: /Einstellungen|Turnier-Einstellungen/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: new RegExp(`${t('tournament:settings.title')}|Turnier-Einstellungen`, 'i') })).toBeVisible();
     }
   });
 
