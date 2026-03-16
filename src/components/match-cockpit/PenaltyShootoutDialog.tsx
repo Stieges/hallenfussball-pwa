@@ -5,6 +5,7 @@
  */
 
 import { CSSProperties, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -22,6 +23,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation('cockpit');
   const [homeScore, setHomeScore] = useState(match.penaltyScoreA ?? 0);
   const [awayScore, setAwayScore] = useState(match.penaltyScoreB ?? 0);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
 
   const handleSubmit = () => {
     if (homeScore === awayScore) {
-      setError('Das Elfmeterschießen muss einen Sieger haben!');
+      setError(t('penaltyShootout.needWinner'));
       return;
     }
     setError(null);
@@ -160,12 +162,15 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
       aria-labelledby="penalty-shootout-title"
     >
       <div style={titleStyle}>
-        <span id="penalty-shootout-title">Strafstoßschießen</span>
+        <span id="penalty-shootout-title">{t('penaltyShootout.title')}</span>
       </div>
 
       <div style={regularScoreStyle}>
-        Spielstand nach {match.playPhase === 'overtime' || match.playPhase === 'goldenGoal' ? 'Verlängerung' : 'regulärer Spielzeit'}:{' '}
-        <strong>{totalHomeScore} : {totalAwayScore}</strong>
+        {t('penaltyShootout.scoreAfter', {
+          phase: match.playPhase === 'overtime' || match.playPhase === 'goldenGoal' ? t('penaltyShootout.phaseOvertime') : t('penaltyShootout.phaseRegular'),
+          home: totalHomeScore,
+          away: totalAwayScore
+        })}
       </div>
 
       <div style={scoreInputContainerStyle}>
@@ -221,7 +226,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
           onClick={handleSubmit}
           style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
         >
-          Ergebnis bestätigen
+          {t('penaltyShootout.confirm')}
         </Button>
         <Button
           variant="secondary"
@@ -229,7 +234,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
           onClick={() => onCancel(match.id)}
           style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
         >
-          Zurück
+          {t('penaltyShootout.back')}
         </Button>
       </div>
     </div>

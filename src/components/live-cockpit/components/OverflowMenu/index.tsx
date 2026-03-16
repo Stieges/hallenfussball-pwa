@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useRef, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 
 // =============================================================================
@@ -118,6 +119,7 @@ export function OverflowMenu({
   onAdjustTimeClick,
 
 }: OverflowMenuProps) {
+  const { t } = useTranslation('cockpit');
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on click outside
@@ -198,15 +200,15 @@ export function OverflowMenu({
         ref={menuRef}
         style={menuStyle}
         role="menu"
-        aria-label="Weitere Aktionen"
+        aria-label={t('menu.moreActionsAria')}
       >
         {/* Event Tracking Section */}
-        <div style={sectionLabelStyle}>Ereignisse</div>
+        <div style={sectionLabelStyle}>{t('menu.eventsSection')}</div>
 
         {onCardClick && (
           <MenuItem
             icon="🟨"
-            label="Karte"
+            label={t('menu.card')}
             onClick={() => handleAction(onCardClick)}
           />
         )}
@@ -214,7 +216,7 @@ export function OverflowMenu({
         {onTimePenaltyClick && (
           <MenuItem
             icon="⏱️"
-            label="Zeitstrafe"
+            label={t('menu.timePenalty')}
             onClick={() => handleAction(onTimePenaltyClick)}
           />
         )}
@@ -222,7 +224,7 @@ export function OverflowMenu({
         {onSubstitutionClick && (
           <MenuItem
             icon="🔄"
-            label="Wechsel"
+            label={t('menu.substitution')}
             onClick={() => handleAction(onSubstitutionClick)}
           />
         )}
@@ -230,12 +232,12 @@ export function OverflowMenu({
         <Divider />
 
         {/* Match Control Section */}
-        <div style={sectionLabelStyle}>Spiel</div>
+        <div style={sectionLabelStyle}>{t('menu.matchSection')}</div>
 
         {onEditResultClick && (
           <MenuItem
             icon="✏️"
-            label="Ergebnis bearbeiten"
+            label={t('menu.editResult')}
             onClick={() => handleAction(onEditResultClick)}
           />
         )}
@@ -243,7 +245,7 @@ export function OverflowMenu({
         {onAdjustTimeClick && (
           <MenuItem
             icon="⏰"
-            label="Zeit anpassen"
+            label={t('menu.adjustTime')}
             onClick={() => handleAction(onAdjustTimeClick)}
           />
         )}

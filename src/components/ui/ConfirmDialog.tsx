@@ -7,6 +7,7 @@
  */
 
 import { CSSProperties, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, fontSizesMd3, shadowSemantics } from '../../design-tokens'
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 export type ConfirmDialogVariant = 'warning' | 'danger' | 'info';
@@ -63,9 +64,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   cancelLabel,
   onClose,
 }) => {
+  const { t } = useTranslation('common');
   // Handle backwards compatibility
-  const effectiveConfirmText = confirmText ?? confirmLabel ?? 'Bestätigen';
-  const effectiveCancelText = cancelText ?? cancelLabel ?? 'Abbrechen';
+  const effectiveConfirmText = confirmText ?? confirmLabel ?? t('actions.confirm');
+  const effectiveCancelText = cancelText ?? cancelLabel ?? t('actions.cancel');
 
   // Memoize the cancel handler to prevent unnecessary re-renders
   const effectiveOnCancel = useCallback(() => {

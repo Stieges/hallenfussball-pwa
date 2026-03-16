@@ -7,6 +7,7 @@
  */
 
 import { useMemo, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
@@ -241,9 +242,9 @@ const styles = {
 // HELPERS
 // =============================================================================
 
-function getTeamName(tournament: Tournament, teamId: string): string {
+function getTeamName(tournament: Tournament, teamId: string, unknownLabel: string): string {
   const team = tournament.teams.find(t => t.id === teamId);
-  return team?.name ?? 'Unbekannt';
+  return team?.name ?? unknownLabel;
 }
 
 function getFieldName(tournament: Tournament, fieldNumber: number): string {
@@ -270,6 +271,7 @@ export function DashboardCategory({
   tournamentId,
   tournament,
 }: DashboardCategoryProps) {
+  const { t } = useTranslation('admin');
   const navigate = useNavigate();
 
   // Calculate stats
@@ -331,10 +333,10 @@ export function DashboardCategory({
 
   // Get status text
   const getStatusText = () => {
-    if (stats.isLive) {return '● LIVE';}
-    if (stats.isCompleted) {return '✓ Abgeschlossen';}
-    if (stats.isDraft) {return 'Entwurf';}
-    return 'Aktiv';
+    if (stats.isLive) {return t('dashboard.statusLive');}
+    if (stats.isCompleted) {return t('dashboard.statusCompleted');}
+    if (stats.isDraft) {return t('dashboard.statusDraft');}
+    return t('dashboard.statusActive');
   };
 
   // Get status color
@@ -348,8 +350,8 @@ export function DashboardCategory({
   return (
     <CategoryPage
       icon="📊"
-      title="Dashboard"
-      description="Schneller Überblick über den Turnierstatus"
+      title={t('dashboard.title')}
+      description={t('dashboard.description')}
     >
       {/* Status Banner */}
       <div style={{ ...styles.statusBanner, ...getStatusBannerStyle() }}>
@@ -368,10 +370,10 @@ export function DashboardCategory({
             </div>
             <div style={styles.statusSubtext}>
               {stats.isLive
-                ? `${stats.runningMatches.length} Spiel${stats.runningMatches.length > 1 ? 'e' : ''} laufen`
+                ? t('dashboard.gamesRunning', { count: stats.runningMatches.length })
                 : stats.isCompleted
-                  ? 'Alle Spiele beendet'
-                  : `${stats.completedMatches} von ${stats.totalMatches} Spielen gespielt`}
+                  ? t('dashboard.allGamesFinished')
+                  : t('dashboard.gamesPlayed', { completed: stats.completedMatches, total: stats.totalMatches })}
             </div>
           </div>
         </div>
@@ -388,7 +390,7 @@ export function DashboardCategory({
       {/* Stats Cards */}
       <div style={styles.statsGrid}>
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Fortschritt</div>
+          <div style={styles.statLabel}>{t('dashboard.progress')}</div>
           <div style={styles.statValue}>{Math.round(stats.progress)}%</div>
           <div style={styles.progressBar}>
             <div
@@ -401,41 +403,41 @@ export function DashboardCategory({
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Spiele</div>
+          <div style={styles.statLabel}>{t('dashboard.matches')}</div>
           <div style={styles.statValue}>
             {stats.completedMatches}/{stats.totalMatches}
           </div>
           <div style={styles.statSubvalue}>
-            {stats.scheduledMatches.length} ausstehend
+            {t('dashboard.matchesPending', { count: stats.scheduledMatches.length })}
           </div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Teams</div>
+          <div style={styles.statLabel}>{t('dashboard.teams')}</div>
           <div style={styles.statValue}>{tournament.teams.length}</div>
           <div style={styles.statSubvalue}>
-            {tournament.numberOfGroups ?? 1} Gruppe{(tournament.numberOfGroups ?? 1) > 1 ? 'n' : ''}
+            {t('dashboard.groups', { count: tournament.numberOfGroups ?? 1 })}
           </div>
         </div>
 
         <div style={styles.statCard}>
-          <div style={styles.statLabel}>Tore</div>
+          <div style={styles.statLabel}>{t('dashboard.goals')}</div>
           <div style={styles.statValue}>{stats.totalGoals}</div>
           <div style={styles.statSubvalue}>
-            Ø {stats.completedMatches > 0 ? (stats.totalGoals / stats.completedMatches).toFixed(1) : '0'} pro Spiel
+            {t('dashboard.goalsPerMatch', { avg: stats.completedMatches > 0 ? (stats.totalGoals / stats.completedMatches).toFixed(1) : '0' })}
           </div>
         </div>
       </div>
 
       {/* Running Matches */}
       {stats.runningMatches.length > 0 && (
-        <CollapsibleSection icon="🏃" title={`Laufende Spiele (${stats.runningMatches.length})`} defaultOpen>
+        <CollapsibleSection icon="🏃" title={t('dashboard.runningMatches', { count: stats.runningMatches.length })} defaultOpen>
           <div style={styles.runningMatchesList}>
             {stats.runningMatches.map((match: Match) => (
               <div key={match.id} style={styles.runningMatchItem}>
                 <div>
                   <div style={styles.runningMatchTeams}>
-                    {getTeamName(tournament, match.teamA)} vs {getTeamName(tournament, match.teamB)}
+                    {getTeamName(tournament, match.teamA, t('dashboard.unknownTeam'))} vs {getTeamName(tournament, match.teamB, t('dashboard.unknownTeam'))}
                   </div>
                   <div style={styles.runningMatchField}>
                     {getFieldName(tournament, match.field)}
@@ -452,10 +454,10 @@ export function DashboardCategory({
 
       {/* Next Match */}
       {stats.nextMatch && (
-        <CollapsibleSection icon="⏭️" title="Nächstes Spiel" defaultOpen>
+        <CollapsibleSection icon="⏭️" title={t('dashboard.nextMatch')} defaultOpen>
           <div style={styles.nextMatchCard}>
             <div style={styles.nextMatchHeader}>
-              <span style={styles.nextMatchLabel}>Anstehend</span>
+              <span style={styles.nextMatchLabel}>{t('dashboard.upcoming')}</span>
               {stats.nextMatch.scheduledTime && (
                 <span style={styles.nextMatchTime}>
                   {formatTime(stats.nextMatch.scheduledTime)}
@@ -463,9 +465,9 @@ export function DashboardCategory({
               )}
             </div>
             <div style={styles.nextMatchTeams}>
-              <span>{getTeamName(tournament, stats.nextMatch.teamA)}</span>
+              <span>{getTeamName(tournament, stats.nextMatch.teamA, t('dashboard.unknownTeam'))}</span>
               <span style={styles.nextMatchVs}>vs</span>
-              <span>{getTeamName(tournament, stats.nextMatch.teamB)}</span>
+              <span>{getTeamName(tournament, stats.nextMatch.teamB, t('dashboard.unknownTeam'))}</span>
             </div>
             <div style={styles.nextMatchField}>
               {getFieldName(tournament, stats.nextMatch.field)}
@@ -475,72 +477,72 @@ export function DashboardCategory({
       )}
 
       {/* Quick Actions */}
-      <CollapsibleSection icon="⚡" title="Quick Actions" defaultOpen>
+      <CollapsibleSection icon="⚡" title={t('dashboard.quickActions')} defaultOpen>
         <div style={styles.quickActions}>
           <button
             style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}`); }}
           >
             <span style={styles.actionIcon}>📋</span>
-            <span>Spielplan öffnen</span>
+            <span>{t('dashboard.openSchedule')}</span>
           </button>
           <button
             style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/settings`); }}
           >
             <span style={styles.actionIcon}>⏸️</span>
-            <span>Pause-Einstellungen</span>
+            <span>{t('dashboard.pauseSettings')}</span>
           </button>
           <button
             style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/visibility`); }}
           >
             <span style={styles.actionIcon}>👁️</span>
-            <span>Sichtbarkeit</span>
+            <span>{t('dashboard.visibility')}</span>
           </button>
           <button
             style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/exports`); }}
           >
             <span style={styles.actionIcon}>📥</span>
-            <span>Exportieren</span>
+            <span>{t('dashboard.export')}</span>
           </button>
           <button
             style={styles.actionButton}
             onClick={() => { void navigate(`/tournament/${tournamentId}/admin/activity-log`); }}
           >
             <span style={styles.actionIcon}>📋</span>
-            <span>Activity Log</span>
+            <span>{t('dashboard.activityLog')}</span>
           </button>
         </div>
       </CollapsibleSection>
 
       {/* Tournament Info */}
-      <CollapsibleSection icon="ℹ️" title="Turnier-Info">
+      <CollapsibleSection icon="ℹ️" title={t('dashboard.tournamentInfo')}>
         <div style={{ display: 'grid', gap: cssVars.spacing.sm }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: cssVars.colors.textSecondary }}>Datum</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoDate')}</span>
             <span>{tournament.startDate ?? tournament.date}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: cssVars.colors.textSecondary }}>Startzeit</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoStartTime')}</span>
             {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty time should use fallback */}
             <span>{tournament.startTime || tournament.timeSlot || '-'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: cssVars.colors.textSecondary }}>Ort</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoLocation')}</span>
             <span>{tournament.location.name || '-'}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: cssVars.colors.textSecondary }}>Felder</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoFields')}</span>
             <span>{tournament.numberOfFields}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: cssVars.colors.textSecondary }}>Modus</span>
+            <span style={{ color: cssVars.colors.textSecondary }}>{t('dashboard.infoMode')}</span>
             <span>
               {tournament.groupSystem === 'roundRobin'
-                ? 'Jeder gegen Jeden'
-                : 'Gruppen + Finale'}
+                ? t('dashboard.modeRoundRobin')
+                : t('dashboard.modeGroupsFinals')}
             </span>
           </div>
         </div>

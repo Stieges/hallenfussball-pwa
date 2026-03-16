@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -45,6 +46,7 @@ export function SubstitutionDialog({
   preselectedTeamSide,
   autoDismissSeconds = 10,
 }: SubstitutionDialogProps) {
+  const { t } = useTranslation('cockpit');
   // BUG-009: Arrays for multi-player substitutions
   const [playersOut, setPlayersOut] = useState<string[]>(['']);
   const [playersIn, setPlayersIn] = useState<string[]>(['']);
@@ -171,9 +173,9 @@ export function SubstitutionDialog({
         >
           <div style={styles.iconHeader}>
             <span style={styles.swapIcon}>🔄</span>
-            <h2 id="substitution-dialog-title" style={styles.title}>Wechsel</h2>
+            <h2 id="substitution-dialog-title" style={styles.title}>{t('substitution.title')}</h2>
           </div>
-          <p style={styles.subtitle}>Welches Team?</p>
+          <p style={styles.subtitle}>{t('substitution.whichTeam')}</p>
           <div style={styles.teamGrid}>
             <button style={styles.teamButton} onClick={onClose}>
               <span style={styles.teamLabel}>{homeTeam.name}</span>
@@ -183,7 +185,7 @@ export function SubstitutionDialog({
             </button>
           </div>
           <button style={styles.cancelButton} onClick={onClose}>
-            Abbrechen
+            {t('substitution.cancel')}
           </button>
         </div>
       </div>
@@ -217,7 +219,7 @@ export function SubstitutionDialog({
         <div style={styles.iconHeader}>
           <span style={styles.swapIcon}>🔄</span>
           <div>
-            <h2 id="substitution-dialog-title" style={styles.title}>Wechsel</h2>
+            <h2 id="substitution-dialog-title" style={styles.title}>{t('substitution.title')}</h2>
             <p style={styles.teamSubtitle}>{selectedTeam.name}</p>
           </div>
         </div>
@@ -225,8 +227,8 @@ export function SubstitutionDialog({
         {/* RAUS Section */}
         <div style={styles.section}>
           <div style={styles.sectionHeader}>
-            <span style={styles.outLabel}>🔴 RAUS</span>
-            <button style={styles.addButton} onClick={handleAddPlayerOut} aria-label="Spieler hinzufügen">
+            <span style={styles.outLabel}>{t('substitution.out')}</span>
+            <button style={styles.addButton} onClick={handleAddPlayerOut} aria-label={t('substitution.addPlayerAria')}>
               +
             </button>
           </div>
@@ -258,8 +260,8 @@ export function SubstitutionDialog({
         {/* REIN Section */}
         <div style={styles.section}>
           <div style={styles.sectionHeader}>
-            <span style={styles.inLabel}>🟢 REIN</span>
-            <button style={styles.addButton} onClick={handleAddPlayerIn} aria-label="Spieler hinzufügen">
+            <span style={styles.inLabel}>{t('substitution.in')}</span>
+            <button style={styles.addButton} onClick={handleAddPlayerIn} aria-label={t('substitution.addPlayerAria')}>
               +
             </button>
           </div>
@@ -290,7 +292,7 @@ export function SubstitutionDialog({
         {/* Mismatch Warning */}
         {hasMismatch && (
           <div style={styles.warningBanner}>
-            ⚠️ Anzahl RAUS ({outCount}) ≠ REIN ({inCount})
+            ⚠️ {t('substitution.mismatchWarning', { outCount, inCount })}
           </div>
         )}
 
@@ -326,14 +328,14 @@ export function SubstitutionDialog({
         {/* Actions */}
         <div style={styles.actions}>
           <button style={styles.cancelButton} onClick={onClose}>
-            Abbrechen
+            {t('substitution.cancel')}
           </button>
           <button
             style={styles.confirmButton}
             onClick={handleConfirm}
             disabled={!hasValidData}
           >
-            Bestätigen
+            {t('substitution.confirm')}
           </button>
         </div>
       </div>

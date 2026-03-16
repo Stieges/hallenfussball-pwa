@@ -1,5 +1,6 @@
- 
+
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../../components/ui';
 import { TournamentType, Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -89,6 +90,8 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
   onTournamentTypeChange,
   onSportChange,
 }) => {
+  const { t } = useTranslation('wizard');
+
   // Determine current sportId (from new field or legacy conversion)
   const currentSportId: SportId = formData.sportId ??
     (formData.sport === 'football' ? 'football-indoor' : 'football-indoor');
@@ -131,12 +134,12 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
   return (
     <Card>
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
-        Sportart & Turniertyp
+        {t('step1.title')}
       </h2>
 
       {/* Sportart wählen */}
       <div style={{ marginBottom: '32px' }}>
-        <label style={labelStyle}>Sportart</label>
+        <label style={labelStyle}>{t('step1.sportLabel')}</label>
         <SportSelector
           selectedSportId={currentSportId}
           onSportChange={handleSportChange}
@@ -160,12 +163,12 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
             gap: '16px',
           }}>
             <span>
-              <strong style={{ color: cssVars.colors.textPrimary }}>Spieldauer:</strong>{' '}
-              {currentConfig.defaults.gameDuration} Min.
+              <strong style={{ color: cssVars.colors.textPrimary }}>{t('step1.gameDuration')}</strong>{' '}
+              {currentConfig.defaults.gameDuration} {t('step1.minuteSuffix')}
             </span>
             <span>
-              <strong style={{ color: cssVars.colors.textPrimary }}>Pause:</strong>{' '}
-              {currentConfig.defaults.breakDuration} Min.
+              <strong style={{ color: cssVars.colors.textPrimary }}>{t('step1.breakDuration')}</strong>{' '}
+              {currentConfig.defaults.breakDuration} {t('step1.minuteSuffix')}
             </span>
             {currentConfig.defaults.periods > 1 && (
               <span>
@@ -174,7 +177,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
               </span>
             )}
             <span>
-              <strong style={{ color: cssVars.colors.textPrimary }}>Punkte:</strong>{' '}
+              <strong style={{ color: cssVars.colors.textPrimary }}>{t('step1.points')}</strong>{' '}
               {currentConfig.defaults.pointSystem.win}-{currentConfig.defaults.pointSystem.draw}-{currentConfig.defaults.pointSystem.loss}
             </span>
           </div>
@@ -183,17 +186,17 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
 
       {/* Turniertyp wählen */}
       <div>
-        <label style={labelStyle}>Turniertyp</label>
-        <div className="sport-type-grid" style={{ display: 'grid', gap: '12px' }} role="radiogroup" aria-label="Turniertyp auswählen">
+        <label style={labelStyle}>{t('step1.tournamentTypeLabel')}</label>
+        <div className="sport-type-grid" style={{ display: 'grid', gap: '12px' }} role="radiogroup" aria-label={t('step1.tournamentTypeAriaLabel')}>
           <SelectionButton
             isSelected={formData.tournamentType === 'classic'}
             onClick={() => onTournamentTypeChange('classic')}
-            title="Klassisches Turnier"
+            title={t('step1.classic.title')}
             subtitle=""
             details={[
-              '• Tabellenplatzierung',
-              '• Finalrunden möglich',
-              `• Normale ${currentConfig.terminology.goal}zählung`,
+              `\u2022 ${t('step1.classic.detail1')}`,
+              `\u2022 ${t('step1.classic.detail2')}`,
+              `\u2022 ${t('step1.classic.detail3', { goalTerm: currentConfig.terminology.goal })}`,
             ]}
             layout="left"
             testId="wizard-type-classic"
@@ -201,9 +204,9 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
           <SelectionButton
             isSelected={formData.tournamentType === 'bambini'}
             onClick={() => onTournamentTypeChange('bambini')}
-            title="Bambini-Turnier"
+            title={t('step1.bambini.title')}
             subtitle=""
-            details={['• Ergebnisneutral', '• Ohne Tabellen/Platzierungen', '• Nur Sieg/Unentsch./Nied.']}
+            details={[`\u2022 ${t('step1.bambini.detail1')}`, `\u2022 ${t('step1.bambini.detail2')}`, `\u2022 ${t('step1.bambini.detail3')}`]}
             variant="warning"
             layout="left"
             testId="wizard-type-bambini"
@@ -230,11 +233,10 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
               marginBottom: '4px',
             }}
           >
-            Bambini-Turnier
+            {t('step1.bambini.hintTitle')}
           </div>
           <div style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
-            Bei Bambini-Turnieren werden Ergebnisse und Tabellen für Zuschauer standardmäßig
-            ausgeblendet. Du kannst dies im nächsten Schritt anpassen.
+            {t('step1.bambini.hintText')}
           </div>
         </div>
       )}
