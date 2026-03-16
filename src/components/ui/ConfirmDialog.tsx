@@ -135,7 +135,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 10000,
+    zIndex: cssVars.zIndex.critical,
     padding: cssVars.spacing.lg,
     animation: 'fadeIn 0.15s ease-out',
   };

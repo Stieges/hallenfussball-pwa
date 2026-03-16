@@ -70,7 +70,6 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         onClick={() => setShowPassword((prev) => !prev)}
         style={styles.toggleButton}
         aria-label={showPassword ? 'Passwort verbergen' : 'Passwort anzeigen'}
-        tabIndex={-1}
       >
         {showPassword ? '◉' : '○'}
       </button>
