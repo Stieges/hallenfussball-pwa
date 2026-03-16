@@ -791,6 +791,15 @@ function PendingChangesWarning(): null {
   return null;
 }
 
+/**
+ * Bridge between AuthProvider and RepositoryProvider.
+ * Passes auth user as prop to avoid core→feature dependency.
+ */
+function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return <RepositoryProvider user={user}>{children}</RepositoryProvider>;
+}
+
 function App() {
   // DSGVO Consent Dialog - shows on first visit
   const [showConsentDialog, setShowConsentDialog] = useState(() => !hasConsent());
@@ -804,7 +813,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="system">
       <AuthProvider>
-        <RepositoryProvider>
+        <AuthRepositoryBridge>
           <SyncManager />
           <InitialSyncManager />
           <PendingChangesWarning />
@@ -817,7 +826,7 @@ function App() {
             {/* DSGVO Consent Dialog - OUTSIDE ErrorBoundary for crash recovery */}
             <ConsentDialog isOpen={showConsentDialog} onConsent={handleConsent} />
           </ToastProvider>
-        </RepositoryProvider>
+        </AuthRepositoryBridge>
       </AuthProvider>
     </ThemeProvider>
   );

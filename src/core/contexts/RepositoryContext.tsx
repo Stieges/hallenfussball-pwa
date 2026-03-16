@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react';
-import { useAuth } from '../../features/auth/hooks/useAuth';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';
 import { LocalStorageRepository } from '../repositories/LocalStorageRepository';
@@ -12,6 +11,14 @@ import { isSupabaseConfigured } from '../../lib/supabase';
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/**
+ * Minimal user info needed by RepositoryProvider to decide which repos to use.
+ * Defined here to avoid importing from features/auth (dependency inversion).
+ */
+interface RepositoryUser {
+    globalRole: string;
+}
 
 interface RepositoryContextValue {
     tournamentRepository: ITournamentRepository;
@@ -28,8 +35,7 @@ interface RepositoryContextValue {
 
 const RepositoryContext = createContext<RepositoryContextValue | null>(null);
 
-export const RepositoryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useAuth(); // Wait for auth to settle
+export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: RepositoryUser | null }> = ({ children, user }) => {
     const supabaseLiveMatchRepoRef = useRef<SupabaseLiveMatchRepository | null>(null);
 
     const value = useMemo(() => {
