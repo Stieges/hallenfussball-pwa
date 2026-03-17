@@ -3,6 +3,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Standing, Tournament } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
@@ -19,6 +20,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
   standings,
   tournament,
 }) => {
+  const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
 
   if (groupStandings.length === 0) {
@@ -113,7 +115,7 @@ export const ParticipantsAndGroups: React.FC<ParticipantsAndGroupsProps> = ({
 
   return (
     <div style={containerStyle} className="participants-and-groups">
-      <h2 style={titleStyle}>Teilnehmer</h2>
+      <h2 style={titleStyle}>{t('participants.title')}</h2>
       <div style={groupsGridStyle}>
         {groupStandings.map(({ group, groupStandings: groupTeams }) => (
           <div key={group || 'default'} style={groupBoxStyle}>

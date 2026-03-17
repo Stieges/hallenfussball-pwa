@@ -1,4 +1,5 @@
 import { CSSProperties, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 import { Tournament, PointSystem } from '../../../types/tournament';
@@ -16,21 +17,28 @@ interface Preset {
   sublabel: string;
 }
 
-const PRESETS: Preset[] = [
-  { win: 3, draw: 1, loss: 0, label: '3-1-0', sublabel: 'Standard' },
-  { win: 2, draw: 1, loss: 0, label: '2-1-0', sublabel: 'Klassisch' },
-  { win: 3, draw: 0, loss: 0, label: '3-0-0', sublabel: 'Nur Siege' },
-];
-
 export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   formData,
   onUpdate,
 }) => {
+  const { t } = useTranslation('wizard');
+
+  const PRESETS: Preset[] = [
+    { win: 3, draw: 1, loss: 0, label: '3-1-0', sublabel: t('pointSystem.presets.standard') },
+    { win: 2, draw: 1, loss: 0, label: '2-1-0', sublabel: t('pointSystem.presets.classic') },
+    { win: 3, draw: 0, loss: 0, label: '3-0-0', sublabel: t('pointSystem.presets.winsOnly') },
+  ];
+
   const currentPoints = formData.pointSystem ?? { win: 3, draw: 1, loss: 0 };
 
   // Determine if current values match a preset or are custom
   const isCustom = useMemo(() => {
-    return !PRESETS.some(
+    const presetValues = [
+      { win: 3, draw: 1, loss: 0 },
+      { win: 2, draw: 1, loss: 0 },
+      { win: 3, draw: 0, loss: 0 },
+    ];
+    return !presetValues.some(
       preset =>
         preset.win === currentPoints.win &&
         preset.draw === currentPoints.draw &&
@@ -82,7 +90,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
   return (
     <div style={containerStyle}>
       <h3 style={{ color: cssVars.colors.secondary, fontSize: cssVars.fontSizes.md, margin: '0 0 16px 0' }}>
-        Punktesystem
+        {t('pointSystem.title')}
       </h3>
       <div className="point-system-presets" style={{ display: 'grid', gap: '12px', marginBottom: '16px' }}>
         {PRESETS.map((preset) => {
@@ -120,7 +128,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
             ⚙️
           </div>
           <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
-            Individuell
+            {t('pointSystem.presets.custom')}
           </div>
         </button>
       </div>
@@ -137,7 +145,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
                 color: cssVars.colors.textSecondary,
                 fontWeight: cssVars.fontWeights.medium
               }}>
-                Sieg
+                {t('pointSystem.custom.win')}
               </label>
               <Input
                 type="number"
@@ -154,7 +162,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
                 color: cssVars.colors.textSecondary,
                 fontWeight: cssVars.fontWeights.medium
               }}>
-                Unentschieden
+                {t('pointSystem.custom.draw')}
               </label>
               <Input
                 type="number"
@@ -171,7 +179,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
                 color: cssVars.colors.textSecondary,
                 fontWeight: cssVars.fontWeights.medium
               }}>
-                Niederlage
+                {t('pointSystem.custom.loss')}
               </label>
               <Input
                 type="number"
@@ -182,7 +190,7 @@ export const PointSystemPicker: React.FC<PointSystemPickerProps> = ({
             </div>
           </div>
           <p style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '12px', lineHeight: '1.4' }}>
-            Erlaubt sind positive, negative Zahlen und Null. Auch Kommazahlen sind möglich (z.B. 2.5)
+            {t('pointSystem.custom.hint')}
           </p>
         </div>
       )}

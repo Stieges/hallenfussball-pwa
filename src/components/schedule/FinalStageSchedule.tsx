@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties, useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   DragOverlay,
@@ -76,6 +77,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
   onMatchSwap,
   showTitle = true,
 }) => {
+  const { t } = useTranslation('tournament');
   // DnD State
   const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -215,7 +217,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
         color: cssVars.colors.textSecondary,
         fontSize: cssVars.fontSizes.md
       }}>
-        Keine Spiele vorhanden
+        {t('finals.noMatches')}
       </div>
     );
   }
@@ -415,14 +417,14 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
       <thead>
         <tr>
           {editingSchedule && <th style={{ ...thStyle, width: '30px' }}></th>}
-          <th style={{ ...thStyle, width: '40px' }}>Nr.</th>
-          {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>SR</th>}
-          <th style={{ ...thStyle, width: '60px' }}>Zeit</th>
-          <th style={{ ...thStyle, width: '100px' }}>Runde</th>
-          <th style={thStyle}>Heim</th>
-          <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Ergebnis</th>
-          <th style={thStyle}>Gast</th>
-          {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Feld</th>}
+          <th style={{ ...thStyle, width: '40px' }}>{t('finals.columns.number')}</th>
+          {showReferees && <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('finals.columns.referee')}</th>}
+          <th style={{ ...thStyle, width: '60px' }}>{t('finals.columns.time')}</th>
+          <th style={{ ...thStyle, width: '100px' }}>{t('finals.columns.round')}</th>
+          <th style={thStyle}>{t('finals.columns.home')}</th>
+          <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('finals.columns.result')}</th>
+          <th style={thStyle}>{t('finals.columns.away')}</th>
+          {showFields && <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('finals.columns.field')}</th>}
         </tr>
       </thead>
       <tbody>
@@ -476,7 +478,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   }}>
                     {isDragging ? '↕️' : match.time}
                   </td>
-                  <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match)}</td>
+                  <td style={{ ...tdStyle, ...matchLabelCellStyle }}>{getFinalMatchLabel(match, t)}</td>
                   <td style={{
                     ...teamCellStyle,
                     ...(isPlaceholderTeam(match.homeTeam) ? { color: cssVars.colors.textPlaceholder, fontStyle: 'italic' } : {})
@@ -526,7 +528,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
 
   return (
     <div style={containerStyle} className="final-stage-schedule">
-      {showTitle && <h2 style={titleStyle}>Finalrunde</h2>}
+      {showTitle && <h2 style={titleStyle}>{t('finals.title')}</h2>}
 
       <style>{`
         /* Hide mobile view by default */
@@ -604,7 +606,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                     fontSize: cssVars.fontSizes.xs,
                     fontWeight: cssVars.fontWeights.semibold,
                   }}>
-                    {getFinalMatchLabel(activeMatch)}
+                    {getFinalMatchLabel(activeMatch, t)}
                   </span>
                   <span style={{ color: cssVars.colors.textSecondary }}>{activeMatch.time}</span>
                   <span style={{ fontWeight: cssVars.fontWeights.semibold, flex: 1 }}>
@@ -681,7 +683,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
               </div>
 
               {/* Final Match Label */}
-              <div style={mobileLabelStyle}>{getFinalMatchLabel(match)}</div>
+              <div style={mobileLabelStyle}>{getFinalMatchLabel(match, t)}</div>
 
               {/* Team Row: Home Team with Score */}
               <div style={getMobileTeamRowStyle(homeWins, awayWins && !isDraw, hasResult, homeIsPlaceholder)}>
@@ -780,7 +782,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   }}
                   className="correction-btn-mobile"
                 >
-                  Korrigieren
+                  {t('finals.correct')}
                 </button>
               )}
 
@@ -818,7 +820,7 @@ export const FinalStageSchedule: React.FC<FinalStageScheduleProps> = ({
                   )}
                   {showFields && onFieldChange && (
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>Feld</label>
+                      <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('finals.field')}</label>
                       <select
                         value={displayedField || 1}
                         onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
@@ -887,13 +889,14 @@ function isPlaceholderTeam(teamName: string): boolean {
   return placeholderPatterns.some(pattern => pattern.test(teamName));
 }
 
-function getFinalMatchLabel(match: ScheduledMatch): string {
-  if (match.finalType === 'final') { return 'Finale'; }
-  if (match.finalType === 'thirdPlace') { return 'Spiel um Platz 3'; }
-  if (match.finalType === 'fifthSixth') { return 'Spiel um Platz 5'; }
-  if (match.finalType === 'seventhEighth') { return 'Spiel um Platz 7'; }
-  if (match.phase === 'semifinal') { return 'Halbfinale'; }
-  if (match.phase === 'quarterfinal') { return 'Viertelfinale'; }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Translation function type simplified for standalone helper
+function getFinalMatchLabel(match: ScheduledMatch, t: (key: any) => string): string {
+  if (match.finalType === 'final') { return t('finals.labels.final'); }
+  if (match.finalType === 'thirdPlace') { return t('finals.labels.thirdPlace'); }
+  if (match.finalType === 'fifthSixth') { return t('finals.labels.fifthSixth'); }
+  if (match.finalType === 'seventhEighth') { return t('finals.labels.seventhEighth'); }
+  if (match.phase === 'semifinal') { return t('finals.labels.semifinal'); }
+  if (match.phase === 'quarterfinal') { return t('finals.labels.quarterfinal'); }
   if (match.label?.includes('Halbfinale')) { return match.label; }
-  return 'Finalspiel';
+  return t('finals.labels.finalMatch');
 }

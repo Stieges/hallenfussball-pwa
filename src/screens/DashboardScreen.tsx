@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { TournamentCard } from '../components/TournamentCard';
@@ -67,6 +68,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
   onNavigateToProfile,
   onNavigateToSettings,
 }) => {
+  const { t } = useTranslation('dashboard');
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,11 +93,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
   // Empty Trash Confirmation Dialog
   const emptyTrashDialog = useConfirmDialog({
-    title: 'Papierkorb leeren?',
-    message: 'Alle Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+    title: t('trash.emptyTrashTitle'),
+    message: t('trash.emptyTrashMessage'),
     variant: 'danger',
-    confirmText: 'Papierkorb leeren',
-    cancelText: 'Abbrechen',
+    confirmText: t('trash.emptyTrashConfirm'),
   });
 
   // Filter tournaments based on active tab
@@ -263,7 +264,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               flex: isMobile ? 1 : undefined,
             }}
           >
-            Importieren
+            {t('buttons.import')}
           </Button>
 
           <Button
@@ -279,7 +280,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               ...(isAtLimit ? { opacity: 0.6 } : {}),
             }}
           >
-            {isAtLimit ? 'Limit erreicht' : 'Neues Turnier'}
+            {isAtLimit ? t('buttons.limitReached') : t('buttons.newTournament')}
           </Button>
         </div>
       </div>
@@ -331,10 +332,10 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 <Icons.Trophy size={isMobile ? 40 : 48} color={cssVars.colors.textSecondary} />
               </div>
               <h2 style={{ fontSize: isMobile ? cssVars.fontSizes.lg : cssVars.fontSizes.xl, marginBottom: '8px' }}>
-                Noch keine Turniere
+                {t('emptyState.noTournaments')}
               </h2>
               <p style={{ color: cssVars.colors.textSecondary, marginBottom: '24px', fontSize: isMobile ? cssVars.fontSizes.sm : cssVars.fontSizes.md }}>
-                Erstelle dein erstes Turnier mit dem Button oben
+                {t('emptyState.noTournamentsHint')}
               </p>
             </div>
           )}
@@ -358,11 +359,11 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <Icons.Search size={40} color={cssVars.colors.textSecondary} />
                     </div>
                     <p style={{ margin: 0, color: cssVars.colors.textSecondary }}>
-                      Keine Turniere gefunden
+                      {t('emptyState.noSearchResults')}
                     </p>
                     {searchQuery && (
                       <p style={{ margin: `${cssVars.spacing.xs} 0 0`, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textMuted }}>
-                        Keine Ergebnisse für "{searchQuery}"
+                        {t('emptyState.noSearchResultsFor', { query: searchQuery })}
                       </p>
                     )}
                   </div>
@@ -371,7 +372,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* 1. Aktuell laufende Turniere - Always open, highlighted */}
               {filteredCategorized.running.length > 0 && (
                 <CollapsibleSection
-                  title="Aktuell laufende Turniere"
+                  title={t('sections.runningTournaments')}
                   icon={<Icons.Play size={20} color={cssVars.colors.statusLive} />}
                   badge={filteredCategorized.running.length}
                   defaultOpen={true}
@@ -383,7 +384,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
-                        categoryLabel="Läuft"
+                        categoryLabel="running"
                         onClick={() => onTournamentClick(tournament)}
                         onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
                       // No delete for running tournaments
@@ -396,7 +397,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* 2. Bevorstehende Turniere - Open if no running */}
               {filteredCategorized.upcoming.length > 0 && (
                 <CollapsibleSection
-                  title="Bevorstehende Turniere"
+                  title={t('sections.upcomingTournaments')}
                   icon={<Icons.Calendar size={20} color={cssVars.colors.statusUpcoming} />}
                   badge={filteredCategorized.upcoming.length}
                   defaultOpen={filteredCategorized.running.length === 0}
@@ -407,7 +408,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
-                        categoryLabel="Bevorstehend"
+                        categoryLabel="upcoming"
                         onClick={() => onTournamentClick(tournament)}
                         onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
                         onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
@@ -420,7 +421,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* 3. Gespeicherte Turniere (Entwürfe) - Collapsed by default */}
               {filteredCategorized.draft.length > 0 && (
                 <CollapsibleSection
-                  title="Gespeicherte Entwürfe"
+                  title={t('sections.savedDrafts')}
                   icon={<Icons.Save size={20} color={cssVars.colors.statusDraft} />}
                   badge={filteredCategorized.draft.length}
                   defaultOpen={false}
@@ -431,7 +432,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       <TournamentCard
                         key={tournament.id}
                         tournament={tournament}
-                        categoryLabel="Entwurf"
+                        categoryLabel="draft"
                         onClick={() => onTournamentClick(tournament)}
                         onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
                         onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : () => onDeleteTournament(tournament.id, tournament.title)}
@@ -444,7 +445,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               {/* Empty state when no filters/search active and all sections are empty */}
               {!searchQuery && activeFilters.length === 0 &&
                 categorized.running.length === 0 && categorized.upcoming.length === 0 && categorized.draft.length === 0 && (
-                  <div style={emptyStateStyle}>Keine aktiven Turniere vorhanden</div>
+                  <div style={emptyStateStyle}>{t('emptyState.noActiveTournaments')}</div>
                 )}
             </>
           )}
@@ -467,13 +468,13 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               color: cssVars.colors.textPrimary,
               margin: 0,
             }}>
-              Archiv
+              {t('sections.archive')}
             </h2>
             <span style={{
               fontSize: cssVars.fontSizes.sm,
               color: cssVars.colors.textSecondary,
             }}>
-              ({categorized.finished.length} Turniere)
+              {t('sections.tournamentCount', { count: categorized.finished.length })}
             </span>
           </div>
 
@@ -482,9 +483,9 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               <div style={{ marginBottom: cssVars.spacing.sm, opacity: 0.5 }}>
                 <Icons.Archive size={40} color={cssVars.colors.textSecondary} />
               </div>
-              <p>Keine archivierten Turniere</p>
+              <p>{t('emptyState.noArchivedTournaments')}</p>
               <p style={{ fontSize: cssVars.fontSizes.sm, marginTop: cssVars.spacing.xs }}>
-                Abgeschlossene Turniere erscheinen hier automatisch.
+                {t('emptyState.archivedHint')}
               </p>
             </div>
           ) : (
@@ -505,7 +506,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         <TournamentCard
                           key={tournament.id}
                           tournament={tournament}
-                          categoryLabel={`Archiviert ${year}`}
+                          categoryLabel="archived"
                           onClick={() => onTournamentClick(tournament)}
                           onCopy={onCopyTournament ? () => onCopyTournament(tournament) : undefined}
                           onSoftDelete={onSoftDelete ? () => onSoftDelete(tournament.id, tournament.title) : undefined}
@@ -526,7 +527,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             <span style={{ display: 'flex', alignItems: 'center' }}>
               <Icons.Trash size={22} color={cssVars.colors.statusWarning} />
             </span>
-            Papierkorb
+            {t('sections.trash')}
             <span style={{ fontSize: isMobile ? '12px' : '14px', fontWeight: 'normal', color: cssVars.colors.textSecondary }}>
               ({trashedTournaments.length})
             </span>
@@ -536,16 +537,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
             fontSize: cssVars.fontSizes.sm,
             marginBottom: cssVars.spacing.md,
           }}>
-            Turniere werden nach {TRASH_RETENTION_DAYS} Tagen automatisch gelöscht.
+            {t('trash.retentionInfo', { days: TRASH_RETENTION_DAYS })}
           </p>
           {trashedTournaments.length === 0 ? (
             <div style={emptyStateStyle}>
               <div style={{ marginBottom: cssVars.spacing.sm, opacity: 0.5 }}>
                 <Icons.Trash size={40} color={cssVars.colors.textSecondary} />
               </div>
-              <p style={{ margin: 0, marginBottom: cssVars.spacing.xs }}>Der Papierkorb ist leer</p>
+              <p style={{ margin: 0, marginBottom: cssVars.spacing.xs }}>{t('emptyState.trashEmpty')}</p>
               <p style={{ fontSize: cssVars.fontSizes.sm, margin: 0, color: cssVars.colors.textMuted }}>
-                Gelöschte Turniere können hier wiederhergestellt werden.
+                {t('emptyState.trashHint')}
               </p>
             </div>
           ) : (
@@ -583,7 +584,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     onClick={() => {
                       void (async () => {
                         const confirmed = await emptyTrashDialog.confirm({
-                          message: `Alle ${trashedTournaments.length} Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+                          message: t('trash.emptyTrashMessageCount', { count: trashedTournaments.length }),
                         });
                         if (confirmed) {
                           trashedTournaments.forEach(t => onPermanentDelete(t.id, t.title));
@@ -596,7 +597,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
                       borderColor: cssVars.colors.errorBorder,
                     }}
                   >
-                    Papierkorb leeren ({trashedTournaments.length})
+                    {t('trash.emptyTrashButton', { count: trashedTournaments.length })}
                   </Button>
                 </div>
               )}

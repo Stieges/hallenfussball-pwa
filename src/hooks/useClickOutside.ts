@@ -1,4 +1,4 @@
-import { useEffect, RefObject } from 'react'
+import { useEffect, useRef, RefObject } from 'react'
 
 /**
  * useClickOutside - Detects clicks outside of a referenced element
@@ -26,6 +26,10 @@ export function useClickOutside<T extends HTMLElement>(
   handler: (event: MouseEvent | TouchEvent) => void,
   enabled = true
 ): void {
+  // Store handler in ref to avoid re-attaching listeners on every render
+  const handlerRef = useRef(handler)
+  handlerRef.current = handler
+
   useEffect(() => {
     if (!enabled) {return}
 
@@ -37,7 +41,7 @@ export function useClickOutside<T extends HTMLElement>(
         return
       }
 
-      handler(event)
+      handlerRef.current(event)
     }
 
     // Use mousedown and touchstart for better UX (detects before click completes)
@@ -48,7 +52,7 @@ export function useClickOutside<T extends HTMLElement>(
       document.removeEventListener('mousedown', listener)
       document.removeEventListener('touchstart', listener)
     }
-  }, [ref, handler, enabled])
+  }, [ref, enabled])
 }
 
 /**
@@ -71,6 +75,10 @@ export function useClickOutsideMultiple<T extends HTMLElement>(
   handler: (event: MouseEvent | TouchEvent) => void,
   enabled = true
 ): void {
+  // Store handler in ref to avoid re-attaching listeners on every render
+  const handlerRef = useRef(handler)
+  handlerRef.current = handler
+
   useEffect(() => {
     if (!enabled) {return}
 
@@ -82,7 +90,7 @@ export function useClickOutsideMultiple<T extends HTMLElement>(
       })
 
       if (!isInsideAny) {
-        handler(event)
+        handlerRef.current(event)
       }
     }
 
@@ -93,5 +101,5 @@ export function useClickOutsideMultiple<T extends HTMLElement>(
       document.removeEventListener('mousedown', listener)
       document.removeEventListener('touchstart', listener)
     }
-  }, [refs, handler, enabled])
+  }, [refs, enabled])
 }
