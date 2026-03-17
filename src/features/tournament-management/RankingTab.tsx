@@ -8,6 +8,7 @@
  */
 
 import React, { CSSProperties, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, fontSizesMd3 } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { HighlightedCell } from './components';
@@ -31,6 +32,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
   schedule: _schedule,
   currentStandings,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = useIsMobile();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -249,21 +251,21 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     if (playoffStatus === 'not-started') {
       return {
         icon: '⏳',
-        text: 'Playoffs noch nicht gestartet',
+        text: t('ranking.playoffNotStarted'),
         color: cssVars.colors.textSecondary,
         bgColor: cssVars.colors.neutralStatusBg,
       };
     } else if (playoffStatus === 'in-progress') {
       return {
         icon: '▶',
-        text: `Playoffs laufen (${completedFinalsCount}/${totalFinalsCount} Spiele)`,
+        text: t('ranking.playoffInProgress', { completed: completedFinalsCount, total: totalFinalsCount }),
         color: cssVars.colors.warning,
         bgColor: cssVars.colors.warningBannerBgStrong,
       };
     } else {
       return {
         icon: '✅',
-        text: 'Turnier abgeschlossen',
+        text: t('ranking.tournamentCompleted'),
         color: cssVars.colors.primary,
         bgColor: cssVars.colors.editorEditModeBg,
       };
@@ -276,12 +278,12 @@ export const RankingTab: React.FC<RankingTabProps> = ({
     <div style={containerStyle}>
       {/* Fullscreen Button */}
       <button onClick={toggleFullscreen} style={fullscreenButtonStyle}>
-        {isFullscreen ? '✕ Vollbild beenden' : '⛶ Vollbild'}
+        {isFullscreen ? t('ranking.exitFullscreen') : t('ranking.fullscreen')}
       </button>
 
       <Card>
         <div style={{ padding: isMobile ? cssVars.spacing.md : cssVars.spacing.lg }}>
-          <h2 style={titleStyle}>Gesamtplatzierung</h2>
+          <h2 style={titleStyle}>{t('ranking.title')}</h2>
 
           {/* Platzierungslogik Anzeige */}
           <div style={{
@@ -297,7 +299,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
               color: cssVars.colors.primary,
               marginBottom: '6px',
             }}>
-              Platzierungslogik:
+              {t('ranking.placementLogic')}
             </div>
             <div style={{
               fontSize: isMobile ? '12px' : cssVars.fontSizes.sm,
@@ -351,17 +353,17 @@ export const RankingTab: React.FC<RankingTabProps> = ({
             <table style={rankingTableStyle}>
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Platz</th>
-                  <th style={thStyle}>Team</th>
-                  {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>Entschieden durch</th>}
-                  {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Gruppe</th>}
-                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>Sp</th>
-                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>S</th>
-                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>U</th>
-                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>N</th>
-                  <th style={{ ...thStyle, width: '100px', textAlign: 'center' }}>Tore</th>
-                  <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Diff</th>
-                  <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>Pkt</th>
+                  <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('ranking.headers.rank')}</th>
+                  <th style={thStyle}>{t('ranking.headers.team')}</th>
+                  {hasPlayoffs && <th style={{ ...thStyle, width: '120px', textAlign: 'center' }}>{t('ranking.headers.decidedBy')}</th>}
+                  {hasGroups && <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.group')}</th>}
+                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.played')}</th>
+                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.won')}</th>
+                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.drawn')}</th>
+                  <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>{t('ranking.headers.lost')}</th>
+                  <th style={{ ...thStyle, width: '100px', textAlign: 'center' }}>{t('ranking.headers.goals')}</th>
+                  <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.diff')}</th>
+                  <th style={{ ...thStyle, width: '80px', textAlign: 'center' }}>{t('ranking.headers.points')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -399,14 +401,14 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               color: cssVars.colors.primary,
                               fontWeight: cssVars.fontWeights.semibold,
                             }}>
-                              {placement.matchLabel ?? 'Playoff'}
+                              {placement.matchLabel ?? t('ranking.playoff')}
                             </span>
                           ) : (
                             <span style={{
                               fontSize: cssVars.fontSizes.xs,
                               color: cssVars.colors.textSecondary,
                             }}>
-                              Gruppenphase
+                              {t('ranking.groupStage')}
                             </span>
                           )}
                         </td>
@@ -461,10 +463,10 @@ export const RankingTab: React.FC<RankingTabProps> = ({
             <table style={rankingTableStyle}>
               <thead>
                 <tr>
-                  <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>Pl.</th>
-                  <th style={thStyle}>Team</th>
-                  <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>Pkt</th>
-                  <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>Diff</th>
+                  <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('ranking.headers.rankShort')}</th>
+                  <th style={thStyle}>{t('ranking.headers.team')}</th>
+                  <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('ranking.headers.points')}</th>
+                  <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('ranking.headers.diff')}</th>
                   <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
                 </tr>
               </thead>
@@ -501,7 +503,7 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               alignItems: 'center',
                               gap: '2px',
                             }}>
-                              {placement.matchLabel ?? 'Playoff'}
+                              {placement.matchLabel ?? t('ranking.playoff')}
                             </div>
                           ) : hasGroups && placement.team.group ? (
                             <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary, marginTop: '2px' }}>
@@ -543,37 +545,37 @@ export const RankingTab: React.FC<RankingTabProps> = ({
                               fontSize: cssVars.fontSizes.sm,
                             }}>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Spiele</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.matches')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.played}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Siege</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.wins')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.won}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Unent.</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.draws')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.drawn}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Niederl.</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.losses')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.lost}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Tore geschossen</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.goalsScored')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.goalsFor}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Tore kassiert</div>
+                                <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('ranking.details.goalsConceded')}</div>
                                 <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                                   {standing.goalsAgainst}
                                 </div>
@@ -597,9 +599,9 @@ export const RankingTab: React.FC<RankingTabProps> = ({
               color: cssVars.colors.textSecondary,
               fontSize: isMobile ? cssVars.fontSizes.md : cssVars.fontSizes.lg,
             }}>
-              Noch keine Ergebnisse vorhanden.
+              {t('ranking.noResults')}
               <br />
-              Die Platzierung wird nach den ersten Spielen angezeigt.
+              {t('ranking.noResultsInfo')}
             </div>
           )}
         </div>

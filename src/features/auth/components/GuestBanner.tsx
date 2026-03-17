@@ -10,6 +10,7 @@
  */
 
 import React, { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { useAuth } from '../hooks/useAuth';
 import { useTournamentLimit, ANONYMOUS_TOURNAMENT_LIMIT } from '../hooks/useTournamentLimit';
@@ -31,6 +32,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
   compact = false,
   onRegisterClick,
 }) => {
+  const { t } = useTranslation('auth');
   const { isGuest } = useAuth();
   const { isLimited, used, remaining, isNearLimit, isAtLimit, isLoading } = useTournamentLimit();
   const [isDismissed, setIsDismissed] = useState(false);
@@ -60,10 +62,10 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
       <div style={compactBannerStyle} data-testid="guest-banner-compact">
         <span style={styles.compactText}>
           {isAtLimit
-            ? `Turnier-Limit erreicht (${used}/${ANONYMOUS_TOURNAMENT_LIMIT})`
+            ? t('guestBanner.compact.limitReached', { used, limit: ANONYMOUS_TOURNAMENT_LIMIT })
             : isNearLimit
-              ? `Noch ${remaining} Turnier${remaining !== 1 ? 'e' : ''} verfügbar`
-              : 'Als Gast angemeldet'}
+              ? t('guestBanner.compact.remaining', { count: remaining })
+              : t('guestBanner.compact.loggedInAsGuest')}
         </span>
         <button
           type="button"
@@ -71,7 +73,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
           style={urgencyLevel !== 'normal' ? styles.compactLinkUrgent : styles.compactLink}
           data-testid="guest-banner-register-button"
         >
-          {isAtLimit ? 'Jetzt upgraden' : 'Registrieren'}
+          {isAtLimit ? t('guestBanner.upgradeNow') : t('guestBanner.register')}
         </button>
       </div>
     );
@@ -93,22 +95,22 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
   // Determine title and description based on limit state
   const getTitle = () => {
     if (isAtLimit) {
-      return 'Turnier-Limit erreicht';
+      return t('guestBanner.title.limitReached');
     }
     if (isNearLimit) {
-      return `Noch ${remaining} Turnier${remaining !== 1 ? 'e' : ''} verfügbar`;
+      return t('guestBanner.title.remaining', { count: remaining });
     }
-    return 'Du bist als Gast angemeldet';
+    return t('guestBanner.title.default');
   };
 
   const getDescription = () => {
     if (isAtLimit) {
-      return `Du hast das Limit von ${ANONYMOUS_TOURNAMENT_LIMIT} Turnieren erreicht. Registriere dich kostenlos für unbegrenzte Turniere.`;
+      return t('guestBanner.description.limitReached', { limit: ANONYMOUS_TOURNAMENT_LIMIT });
     }
     if (isNearLimit) {
-      return `Als Gast kannst du maximal ${ANONYMOUS_TOURNAMENT_LIMIT} Turniere erstellen (${used}/${ANONYMOUS_TOURNAMENT_LIMIT} verwendet). Registriere dich für unbegrenzte Turniere.`;
+      return t('guestBanner.description.nearLimit', { limit: ANONYMOUS_TOURNAMENT_LIMIT, used });
     }
-    return 'Erstelle ein Konto, um deine Turniere zu speichern und zu synchronisieren.';
+    return t('guestBanner.description.default');
   };
 
   const getIcon = () => {
@@ -155,7 +157,7 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
                 />
               </div>
               <span style={styles.progressText}>
-                {used}/{ANONYMOUS_TOURNAMENT_LIMIT} Turniere
+                {t('guestBanner.tournamentsProgress', { used, limit: ANONYMOUS_TOURNAMENT_LIMIT })}
               </span>
             </div>
           )}
@@ -169,14 +171,14 @@ export const GuestBanner: React.FC<GuestBannerProps> = ({
           style={registerButtonStyle}
           data-testid="guest-banner-register-button"
         >
-          {isAtLimit ? 'Jetzt upgraden' : 'Jetzt registrieren'}
+          {isAtLimit ? t('guestBanner.upgradeNow') : t('guestBanner.registerNow')}
         </button>
         {dismissible && !isAtLimit && (
           <button
             type="button"
             onClick={handleDismiss}
             style={styles.dismissButton}
-            aria-label="Banner schließen"
+            aria-label={t('guestBanner.dismissAriaLabel')}
           >
             ✕
           </button>

@@ -1,4 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens'
 interface MatchScoreCellProps {
   matchId: string;
@@ -22,6 +23,8 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
   onScoreChange,
   onStartCorrection,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // Local state for partial score entry - allows user to fill one field at a time
   const [localScoreA, setLocalScoreA] = useState<string>(scoreA !== undefined ? String(scoreA) : '');
   const [localScoreB, setLocalScoreB] = useState<string>(scoreB !== undefined ? String(scoreB) : '');
@@ -94,7 +97,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
             }}
             className="correction-button"
           >
-            Ergebnis korrigieren
+            {t('scoreCell.correctResult')}
           </button>
         </div>
 

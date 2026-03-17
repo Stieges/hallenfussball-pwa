@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
@@ -97,6 +98,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
   onCircleClick,
   renderExpandContent,
 }) => {
+  const { t } = useTranslation('tournament');
   const isLocked = status === 'running' || status === 'finished';
   const canDrag = editingSchedule && canSwap && !isLocked;
 
@@ -207,7 +209,7 @@ export const SortableMobileCard: React.FC<SortableMobileCardProps> = ({
           }}
         >
           <div style={{ flex: 1 }}>
-            <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>Feld</label>
+            <label style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('sortable.fieldLabel')}</label>
             <select
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}

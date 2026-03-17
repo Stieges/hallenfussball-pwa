@@ -107,7 +107,7 @@ describe('authActions', () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('bereits registriert');
+      expect(result.error).toContain('emailAlreadyRegistered');
     });
 
     it('returns error for weak password', async () => {
@@ -207,7 +207,7 @@ describe('authActions', () => {
       );
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('falsch');
+      expect(result.error).toContain('invalidCredentials');
     });
 
     it('returns error for user not found', async () => {

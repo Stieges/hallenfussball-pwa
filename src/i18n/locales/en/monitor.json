@@ -1,0 +1,45 @@
+{
+  "fieldSelector": {
+    "field": "Field {{field}}",
+    "matchRunning": "Match running",
+    "fieldAria": "Field {{field}}{{running}}"
+  },
+  "nextMatch": {
+    "title": "Next match in ~{{minutes}} min",
+    "vs": "vs",
+    "field": "Field {{field}}",
+    "match": "Match {{number}}",
+    "group": "Group {{group}}"
+  },
+  "fullscreen": {
+    "exitFullscreen": "Exit fullscreen",
+    "enterFullscreen": "Enter fullscreen",
+    "exit": "Exit",
+    "fullscreen": "Fullscreen"
+  },
+  "liveMatch": {
+    "finished": "FINISHED",
+    "waiting": "WAITING",
+    "fieldAndMatch": "Field {{field}} — Match {{number}}",
+    "group": "Group {{group}}",
+    "referee": "Referee: {{name}}",
+    "noRunningMatch": "No running match",
+    "tablesShownMessage": "Tables will be shown until a match starts"
+  },
+  "timer": {
+    "pause": "Pause",
+    "overtime": "Overtime"
+  },
+  "scoreBlock": {
+    "home": "Home",
+    "away": "Away",
+    "scoreAria": "{{position}}: {{score}}"
+  },
+  "cardAnimation": {
+    "redCard": "RED CARD",
+    "yellowCard": "YELLOW CARD"
+  },
+  "goalAnimation": {
+    "goal": "GOAL!"
+  }
+}

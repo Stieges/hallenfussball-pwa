@@ -520,6 +520,14 @@ export const cssTheme = {
 } as const;
 
 // =============================================================================
+// Elevation / zIndex (not CSS vars, just numeric tokens for direct use)
+// =============================================================================
+
+import { zIndex as zIndexTokens } from './elevation';
+
+const cssZIndex = zIndexTokens;
+
+// =============================================================================
 // Combined Export (recommended for most use cases)
 // =============================================================================
 
@@ -541,6 +549,7 @@ export const cssVars = {
   inputHeights: cssInputHeights,
   layoutHeights: cssLayoutHeights,
   theme: cssTheme,
+  zIndex: cssZIndex,
 } as const;
 
 // =============================================================================

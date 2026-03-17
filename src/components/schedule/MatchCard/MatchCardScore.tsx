@@ -20,6 +20,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { ProgressRing } from '../../ui/ProgressRing';
 
@@ -65,6 +66,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
   disabled = false,
   matchId,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
 
   const isLive = status === 'running';
@@ -154,7 +156,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         role={onClick ? 'button' : undefined}
         tabIndex={onClick && !disabled ? 0 : undefined}
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty elapsedFormatted should show 'Live'
-        aria-label={`Spielstand ${homeScore}:${awayScore}, ${elapsedFormatted || 'Live'}`}
+        aria-label={t('matchCard.scoreAriaLive', { homeScore, awayScore, elapsed: elapsedFormatted || t('matchCard.live') })}
         data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
         data-match-status="running"
       >
@@ -188,7 +190,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick && !disabled ? 0 : undefined}
-        aria-label="Spiel starten"
+        aria-label={t('matchCard.startMatch')}
         data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
         data-match-status="scheduled"
       >
@@ -209,7 +211,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick && !disabled ? 0 : undefined}
-      aria-label={`Endstand ${homeScore}:${awayScore}`}
+      aria-label={t('matchCard.scoreAriaFinal', { homeScore, awayScore })}
       data-testid={matchId ? `match-circle-${matchId}` : 'match-circle'}
       data-match-status="finished"
     >
@@ -219,7 +221,7 @@ export const MatchCardScore: React.FC<MatchCardScoreProps> = ({
         </span>
         {isFinished && (
           <span style={{ ...timerStyle, color: cssVars.colors.textSecondary }}>
-            Ende
+            {t('matchCard.finished')}
           </span>
         )}
       </div>

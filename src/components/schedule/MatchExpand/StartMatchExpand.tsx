@@ -21,6 +21,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui/Button';
 
@@ -82,6 +83,8 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
   onCancel,
   isLoading = false,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // ---------------------------------------------------------------------------
   // Styles
   // ---------------------------------------------------------------------------
@@ -188,18 +191,18 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
       {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR: show if any meta exists */}
       {(matchNumber || scheduledTime || field) && (
         <div style={metaStyle}>
-          {matchNumber && <span>Spiel {matchNumber}</span>}
-          {scheduledTime && <span>{scheduledTime} Uhr</span>}
-          {field !== undefined && <span>Feld {field}</span>}
+          {matchNumber && <span>{t('matchExpand.start.matchNumber', { number: matchNumber })}</span>}
+          {scheduledTime && <span>{t('matchExpand.start.timeLabel', { time: scheduledTime })}</span>}
+          {field !== undefined && <span>{t('matchCard.field', { field })}</span>}
         </div>
       )}
 
       {/* Confirmation Question */}
       <div style={questionStyle}>
-        Dieses Spiel jetzt starten?
+        {t('matchExpand.start.confirmQuestion')}
       </div>
       <div style={hintStyle}>
-        Das Spiel wird im Live-Cockpit geöffnet
+        {t('matchExpand.start.confirmHint')}
       </div>
 
       {/* Action Buttons */}
@@ -211,7 +214,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
           disabled={isLoading}
           data-testid="start-match-cancel-btn"
         >
-          Abbrechen
+          {t('matchExpand.start.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -220,7 +223,7 @@ export const StartMatchExpand: React.FC<StartMatchExpandProps> = ({
           disabled={isLoading}
           data-testid="start-match-confirm-btn"
         >
-          {isLoading ? 'Wird gestartet...' : '→ Zum Cockpit'}
+          {isLoading ? t('matchExpand.start.starting') : t('matchExpand.start.gotoCockpit')}
         </Button>
       </div>
     </div>

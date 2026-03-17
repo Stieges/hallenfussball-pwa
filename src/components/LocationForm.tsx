@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LocationDetails } from '../types/tournament';
 import { Input } from './ui';
 import { cssVars } from '../design-tokens'
@@ -16,6 +17,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
   onChange,
   required = false,
 }) => {
+  const { t } = useTranslation('wizard');
   const { tournaments } = useTournaments();
 
   // Initialize showExtended based on whether extended data exists
@@ -60,10 +62,10 @@ export const LocationForm: React.FC<LocationFormProps> = ({
       {/* Hauptfeld: Name/Bezeichnung */}
       <div style={{ position: 'relative' }}>
         <Input
-          label="Veranstaltungsort"
+          label={t('location.label')}
           value={locationDetails.name}
           onChange={handleNameChange}
-          placeholder="Sporthalle Musterstadt"
+          placeholder={t('location.placeholder')}
           required={required}
           list="location-suggestions"
         />
@@ -96,7 +98,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
         }}
       >
         <span>{showExtended ? '▼' : '▶'}</span>
-        <span>Erweiterte Adressdaten (optional)</span>
+        <span>{t('location.extendedToggle')}</span>
       </button>
 
       {/* Erweiterte Felder (collapsible) */}
@@ -111,10 +113,10 @@ export const LocationForm: React.FC<LocationFormProps> = ({
           }}
         >
           <Input
-            label="Straße & Hausnummer"
+            label={t('location.street')}
             value={locationDetails.street ?? ''}
             onChange={(v) => handleFieldChange('street', v)}
-            placeholder="Musterstraße 1"
+            placeholder={t('location.streetPlaceholder')}
           />
 
           <div
@@ -126,24 +128,24 @@ export const LocationForm: React.FC<LocationFormProps> = ({
             }}
           >
             <Input
-              label="PLZ"
+              label={t('location.postalCode')}
               value={locationDetails.postalCode ?? ''}
               onChange={(v) => handleFieldChange('postalCode', v)}
-              placeholder="12345"
+              placeholder={t('location.postalCodePlaceholder')}
             />
             <Input
-              label="Stadt/Ort"
+              label={t('location.city')}
               value={locationDetails.city ?? ''}
               onChange={(v) => handleFieldChange('city', v)}
-              placeholder="Musterstadt"
+              placeholder={t('location.cityPlaceholder')}
             />
           </div>
 
           <Input
-            label="Land"
+            label={t('location.country')}
             value={locationDetails.country ?? ''}
             onChange={(v) => handleFieldChange('country', v)}
-            placeholder="Deutschland"
+            placeholder={t('location.countryPlaceholder')}
             style={{ marginTop: '16px' }}
           />
 
@@ -155,7 +157,7 @@ export const LocationForm: React.FC<LocationFormProps> = ({
               marginBottom: 0,
             }}
           >
-            Diese Angaben sind optional und werden für PDF-Export und Detailansicht verwendet.
+            {t('location.hint')}
           </p>
         </div>
       )}

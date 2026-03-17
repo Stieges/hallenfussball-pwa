@@ -13,6 +13,7 @@
  */
 
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Input } from '../../components/ui';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentField } from '../../types/tournament';
@@ -41,6 +42,7 @@ export function FieldManagement({
   tournament,
   onTournamentUpdate,
 }: FieldManagementProps) {
+  const { t } = useTranslation('tournament');
   // State
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +89,7 @@ export function FieldManagement({
 
       setEditing(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern');
+      setError(err instanceof Error ? err.message : t('field.saveError'));
     } finally {
       setIsLoading(false);
     }
@@ -268,9 +270,9 @@ export function FieldManagement({
       <div style={containerStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h3 style={titleStyle}>Spielfelder</h3>
+          <h3 style={titleStyle}>{t('field.title')}</h3>
           <span style={countBadgeStyle}>
-            {fields.length} {fields.length === 1 ? 'Feld' : 'Felder'}
+            {t('field.count', { count: fields.length })}
           </span>
         </div>
 
@@ -280,9 +282,9 @@ export function FieldManagement({
         {/* List */}
         {fields.length === 0 ? (
           <div style={emptyStateStyle}>
-            <p style={{ margin: 0, fontSize: cssVars.fontSizes.md }}>Keine Felder vorhanden</p>
+            <p style={{ margin: 0, fontSize: cssVars.fontSizes.md }}>{t('field.noFields')}</p>
             <p style={{ margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.sm }}>
-              Felder werden im Wizard beim Erstellen des Turniers konfiguriert.
+              {t('field.noFieldsInfo')}
             </p>
           </div>
         ) : (
@@ -305,11 +307,11 @@ export function FieldManagement({
                     <div style={fieldInfoStyle}>
                       <h4 style={fieldNameStyle}>
                         {displayName}
-                        {isUsed && <span style={usedBadgeStyle}>In Slides</span>}
+                        {isUsed && <span style={usedBadgeStyle}>{t('field.inSlides')}</span>}
                       </h4>
                       {field.customName && (
                         <p style={fieldDefaultStyle}>
-                          Standard: {field.defaultName}
+                          {t('field.default')}: {field.defaultName}
                         </p>
                       )}
                     </div>
@@ -319,7 +321,7 @@ export function FieldManagement({
                       <button
                         style={actionButtonStyle}
                         onClick={() => handleStartEdit(field)}
-                        title="Bezeichnung bearbeiten"
+                        title={t('field.editLabel')}
                       >
                         ✏️
                       </button>
@@ -332,7 +334,7 @@ export function FieldManagement({
                       <div style={formRowStyle}>
                         <div style={{ flex: 2, minWidth: '150px' }}>
                           <Input
-                            label="Eigene Bezeichnung"
+                            label={t('field.customName')}
                             value={editing.customName}
                             onChange={(v) => setEditing({ ...editing, customName: v })}
                             placeholder={field.defaultName}
@@ -340,7 +342,7 @@ export function FieldManagement({
                         </div>
                         <div style={{ flex: 1, minWidth: '80px', maxWidth: '120px' }}>
                           <Input
-                            label="Kurzcode (max 3)"
+                            label={t('field.shortCode')}
                             value={editing.shortCode}
                             onChange={(v) => setEditing({ ...editing, shortCode: v.toUpperCase().substring(0, 3) })}
                             placeholder="z.B. HN"
@@ -349,10 +351,10 @@ export function FieldManagement({
                       </div>
                       <div style={buttonRowStyle}>
                         <button style={cancelButtonStyle} onClick={handleCancel}>
-                          Abbrechen
+                          {t('common.cancel')}
                         </button>
                         <button style={saveButtonStyle} onClick={() => void handleSave()} disabled={isLoading}>
-                          {isLoading ? 'Speichern...' : 'Speichern'}
+                          {isLoading ? t('common.saving') : t('common.save')}
                         </button>
                       </div>
                     </div>
@@ -370,8 +372,7 @@ export function FieldManagement({
             fontSize: cssVars.fontSizes.sm,
             color: cssVars.colors.textMuted,
           }}>
-            Eigene Bezeichnungen werden in Monitor-Slides und im Spielplan angezeigt.
-            Die Anzahl der Felder kann nur im Wizard geändert werden.
+            {t('field.customNameInfo')}
           </p>
         )}
       </div>

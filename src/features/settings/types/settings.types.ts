@@ -8,18 +8,20 @@
  * @see docs/concepts/SETTINGS-KONZEPT.md
  */
 
+import i18n from 'i18next';
+
 // =============================================================================
 // Schriftgröße
 // =============================================================================
 
 export type FontSize = 'small' | 'normal' | 'large' | 'x-large';
 
-export const FONT_SIZE_LABELS: Record<FontSize, string> = {
-  small: 'Klein',
-  normal: 'Normal',
-  large: 'Groß',
-  'x-large': 'Sehr groß',
-};
+export const FONT_SIZE_LABELS: Record<FontSize, string> = Object.create(null as unknown as object, {
+  small: { get: () => i18n.t('settings:fontSize.small', { defaultValue: '' }), enumerable: true },
+  normal: { get: () => i18n.t('settings:fontSize.normal', { defaultValue: '' }), enumerable: true },
+  large: { get: () => i18n.t('settings:fontSize.large', { defaultValue: '' }), enumerable: true },
+  'x-large': { get: () => i18n.t('settings:fontSize.xLarge', { defaultValue: '' }), enumerable: true },
+}) as Record<FontSize, string>;
 
 export const FONT_SCALE_VALUES: Record<FontSize, number> = {
   small: 0.875,
@@ -34,28 +36,41 @@ export const FONT_SCALE_VALUES: Record<FontSize, number> = {
 
 export type BaseTheme = 'system' | 'light' | 'dark' | 'high-contrast';
 
-export const BASE_THEME_LABELS: Record<BaseTheme, { label: string; description: string; icon: string }> = {
+type BaseThemeLabelRecord = Record<BaseTheme, { label: string; description: string; icon: string }>;
+export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null as unknown as object, {
   system: {
-    label: 'System',
-    description: 'Automatisch nach Geräteeinstellung',
-    icon: '🔄',
+    get: () => ({
+      label: i18n.t('settings:baseTheme.system.label', { defaultValue: '' }),
+      description: i18n.t('settings:baseTheme.system.description', { defaultValue: '' }),
+      icon: '🔄',
+    }),
+    enumerable: true,
   },
   light: {
-    label: 'Hell',
-    description: 'Helles Erscheinungsbild',
-    icon: '☀️',
+    get: () => ({
+      label: i18n.t('settings:baseTheme.light.label', { defaultValue: '' }),
+      description: i18n.t('settings:baseTheme.light.description', { defaultValue: '' }),
+      icon: '☀️',
+    }),
+    enumerable: true,
   },
   dark: {
-    label: 'Dunkel',
-    description: 'Dunkles Erscheinungsbild',
-    icon: '🌙',
+    get: () => ({
+      label: i18n.t('settings:baseTheme.dark.label', { defaultValue: '' }),
+      description: i18n.t('settings:baseTheme.dark.description', { defaultValue: '' }),
+      icon: '🌙',
+    }),
+    enumerable: true,
   },
   'high-contrast': {
-    label: 'Hoher Kontrast',
-    description: 'Maximale Lesbarkeit bei hellem Umgebungslicht',
-    icon: '◐',
+    get: () => ({
+      label: i18n.t('settings:baseTheme.highContrast.label', { defaultValue: '' }),
+      description: i18n.t('settings:baseTheme.highContrast.description', { defaultValue: '' }),
+      icon: '◐',
+    }),
+    enumerable: true,
   },
-};
+}) as BaseThemeLabelRecord;
 
 // =============================================================================
 // Accent Theme (Ebene 2 - Identität) - Pro Feature
@@ -80,10 +95,11 @@ export interface AccentTheme {
   isPro: boolean;
 }
 
-export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
+// Note: Club names (FC Bayern, BVB, etc.) are proper nouns and don't need translation.
+// Only "Standard (Grün)" and "Eigene Farben" are translated.
+const _accentThemeBase = {
   default: {
-    id: 'default',
-    name: 'Standard (Grün)',
+    id: 'default' as const,
     primary: '#00E676',
     primaryText: '#000000',
     secondary: '#00B0FF',
@@ -91,7 +107,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: false,
   },
   'fc-bayern': {
-    id: 'fc-bayern',
+    id: 'fc-bayern' as const,
     name: 'FC Bayern München',
     primary: '#DC052D',
     primaryText: '#FFFFFF',
@@ -100,7 +116,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
   bvb: {
-    id: 'bvb',
+    id: 'bvb' as const,
     name: 'Borussia Dortmund',
     primary: '#FDE100',
     primaryText: '#000000',
@@ -109,7 +125,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
   schalke: {
-    id: 'schalke',
+    id: 'schalke' as const,
     name: 'FC Schalke 04',
     primary: '#004D9D',
     primaryText: '#FFFFFF',
@@ -118,7 +134,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
   werder: {
-    id: 'werder',
+    id: 'werder' as const,
     name: 'Werder Bremen',
     primary: '#1D9053',
     primaryText: '#FFFFFF',
@@ -127,7 +143,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
   hsv: {
-    id: 'hsv',
+    id: 'hsv' as const,
     name: 'Hamburger SV',
     primary: '#0A3D91',
     primaryText: '#FFFFFF',
@@ -136,8 +152,7 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
   custom: {
-    id: 'custom',
-    name: 'Eigene Farben',
+    id: 'custom' as const,
     primary: '#00E676',
     primaryText: '#000000',
     secondary: '#00B0FF',
@@ -145,6 +160,22 @@ export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = {
     isPro: true,
   },
 };
+
+export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = Object.create(null as unknown as object, {
+  default: {
+    get: () => ({ ..._accentThemeBase.default, name: i18n.t('settings:accentTheme.default', { defaultValue: '' }) }),
+    enumerable: true,
+  },
+  'fc-bayern': { value: _accentThemeBase['fc-bayern'], enumerable: true },
+  bvb: { value: _accentThemeBase.bvb, enumerable: true },
+  schalke: { value: _accentThemeBase.schalke, enumerable: true },
+  werder: { value: _accentThemeBase.werder, enumerable: true },
+  hsv: { value: _accentThemeBase.hsv, enumerable: true },
+  custom: {
+    get: () => ({ ..._accentThemeBase.custom, name: i18n.t('settings:accentTheme.custom', { defaultValue: '' }) }),
+    enumerable: true,
+  },
+}) as Record<AccentThemeId, AccentTheme>;
 
 // =============================================================================
 // Custom Colors (Pro Feature)
@@ -244,15 +275,13 @@ export type SettingsCategory =
   | 'about'
   | 'legal';
 
-export const SETTINGS_CATEGORIES: Record<
-  SettingsCategory,
-  { label: string; icon: string }
-> = {
-  appearance: { label: 'Erscheinungsbild', icon: '🎨' },
-  language: { label: 'Sprache', icon: '🌍' },
-  behavior: { label: 'App-Verhalten', icon: '⚡' },
-  data: { label: 'Daten', icon: '💾' },
-  support: { label: 'Hilfe & Support', icon: '❓' },
-  about: { label: 'Über', icon: 'ℹ️' },
-  legal: { label: 'Rechtliches', icon: '⚖️' },
-};
+type SettingsCategoryRecord = Record<SettingsCategory, { label: string; icon: string }>;
+export const SETTINGS_CATEGORIES: SettingsCategoryRecord = Object.create(null as unknown as object, {
+  appearance: { get: () => ({ label: i18n.t('settings:categories.appearance', { defaultValue: '' }), icon: '🎨' }), enumerable: true },
+  language: { get: () => ({ label: i18n.t('settings:categories.language', { defaultValue: '' }), icon: '🌍' }), enumerable: true },
+  behavior: { get: () => ({ label: i18n.t('settings:categories.behavior', { defaultValue: '' }), icon: '⚡' }), enumerable: true },
+  data: { get: () => ({ label: i18n.t('settings:categories.data', { defaultValue: '' }), icon: '💾' }), enumerable: true },
+  support: { get: () => ({ label: i18n.t('settings:categories.support', { defaultValue: '' }), icon: '❓' }), enumerable: true },
+  about: { get: () => ({ label: i18n.t('settings:categories.about', { defaultValue: '' }), icon: 'ℹ️' }), enumerable: true },
+  legal: { get: () => ({ label: i18n.t('settings:categories.legal', { defaultValue: '' }), icon: '⚖️' }), enumerable: true },
+}) as SettingsCategoryRecord;

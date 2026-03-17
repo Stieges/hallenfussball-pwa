@@ -10,6 +10,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useAuth } from '../features/auth/hooks/useAuth';
 import { cssVars } from '../design-tokens'
@@ -23,6 +24,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
 }) => {
   const { isOnline, wasOffline } = useOnlineStatus();
   const { reconnect } = useAuth();
+  const { t } = useTranslation('common');
 
   // Don't render if online and not recently reconnected and no pending syncs
   if (isOnline && !wasOffline && pendingSyncCount === 0) {
@@ -70,7 +72,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     return (
       <div style={bannerStyle} role="status" aria-live="polite">
         <span role="img" aria-label="Offline">📡</span>
-        <span>Offline-Modus - Änderungen werden lokal gespeichert</span>
+        <span>{t('offlineBanner.message')}</span>
         <button
           onClick={() => void reconnect()}
           style={{
@@ -84,11 +86,11 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
             marginLeft: '8px'
           }}
         >
-          Verbinden
+          {t('actions.connect')}
         </button>
         {pendingSyncCount > 0 && (
           <span style={badgeStyle}>
-            {pendingSyncCount} ausstehend
+            {t('offlineBanner.pending', { count: pendingSyncCount })}
           </span>
         )}
       </div>
@@ -100,10 +102,10 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     return (
       <div style={bannerStyle} role="status" aria-live="polite">
         <span role="img" aria-label="Connected">✓</span>
-        <span>Verbindung wiederhergestellt</span>
+        <span>{t('offlineBanner.reconnected')}</span>
         {pendingSyncCount > 0 && (
           <span style={badgeStyle}>
-            Synchronisiere {pendingSyncCount} Änderung{pendingSyncCount > 1 ? 'en' : ''}...
+            {t('offlineBanner.syncing', { count: pendingSyncCount })}
           </span>
         )}
       </div>
@@ -118,7 +120,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
       <div style={bannerStyle} role="status" aria-live="polite">
         <span role="img" aria-label="Syncing">🔄</span>
         <span>
-          Synchronisiere {pendingSyncCount} Änderung{pendingSyncCount > 1 ? 'en' : ''}...
+          {t('offlineBanner.syncing', { count: pendingSyncCount })}
         </span>
       </div>
     );

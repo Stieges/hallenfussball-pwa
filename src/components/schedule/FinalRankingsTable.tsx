@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { TeamAvatar } from '../ui/TeamAvatar';
 import { FinalPlacement } from '../../utils/calculations';
@@ -8,6 +9,7 @@ interface FinalRankingsTableProps {
 }
 
 export const FinalRankingsTable: React.FC<FinalRankingsTableProps> = ({ rankings }) => {
+    const { t } = useTranslation('tournament');
     if (rankings.length === 0) {
         return null;
     }
@@ -53,15 +55,15 @@ export const FinalRankingsTable: React.FC<FinalRankingsTableProps> = ({ rankings
 
     return (
         <div style={containerStyle} className="final-rankings-table">
-            <h3 style={titleStyle}>Gesamtplatzierung</h3>
+            <h3 style={titleStyle}>{t('finalRankings.title')}</h3>
 
             <div style={{ overflowX: 'auto' }}>
                 <table style={tableStyle}>
                     <thead>
                         <tr>
-                            <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>Pl.</th>
-                            <th style={thStyle}>Team</th>
-                            <th style={{ ...thStyle, textAlign: 'right' }}>Entscheidung</th>
+                            <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('finalRankings.columns.rank')}</th>
+                            <th style={thStyle}>{t('finalRankings.columns.team')}</th>
+                            <th style={{ ...thStyle, textAlign: 'right' }}>{t('finalRankings.columns.decision')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -93,7 +95,7 @@ export const FinalRankingsTable: React.FC<FinalRankingsTableProps> = ({ rankings
                                             {placement.matchLabel}
                                         </span>
                                     ) : (
-                                        <span>Gruppenphase</span>
+                                        <span>{t('finalRankings.groupStage')}</span>
                                     )}
                                 </td>
                             </tr>
