@@ -13,6 +13,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 test.describe('Tournament Creation Wizard', () => {
 
@@ -28,7 +29,7 @@ test.describe('Tournament Creation Wizard', () => {
 
   test('Step 1: Stammdaten ausfüllen', async ({ page }) => {
     // GIVEN - Wizard Step 1 (Stammdaten)
-    await expect(page.getByRole('heading', { name: /Stammdaten/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: t('wizard:step3.title') })).toBeVisible();
 
     // WHEN - Turnier-Stammdaten eingeben
     // The Input component has label text but no htmlFor, so we find by placeholder or label text
@@ -305,7 +306,7 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/');
 
     // THEN - Either confirmation dialog or navigated successfully
-    const confirmDialog = page.getByRole('dialog').or(page.getByText(/Änderungen verwerfen/i));
+    const confirmDialog = page.getByRole('dialog').or(page.getByText(t('tournament:settings.discardChanges')));
 
     if (await confirmDialog.count() > 0) {
       await expect(confirmDialog.first()).toBeVisible();
@@ -346,7 +347,7 @@ test.describe('Tournament Creation Wizard', () => {
       await page.waitForLoadState('networkidle');
 
       // THEN - Wizard is visible and usable
-      await expect(page.getByRole('heading', { name: /Stammdaten/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: t('wizard:step3.title') })).toBeVisible();
 
       // Input fields have min. 16px (iOS Auto-Zoom Prevention)
       const inputs = await page.locator('input[type="text"], input[type="date"]').all();

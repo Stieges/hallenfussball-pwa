@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, CSSProperties, DragEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { cssVars } from '../../design-tokens'
 import { Tournament, ImportValidationResult } from '../../types/tournament';
@@ -25,6 +26,7 @@ export const ImportDialog = ({
   onClose,
   onImportComplete,
 }: ImportDialogProps) => {
+  const { t } = useTranslation('dashboard');
   const [step, setStep] = useState<ImportStep>('select');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string>('');
@@ -54,7 +56,7 @@ export const ImportDialog = ({
       const format = detectImportFormat(file.name, content);
 
       if (!format) {
-        setError('Unbekanntes Dateiformat. Bitte eine JSON- oder CSV-Datei auswählen.');
+        setError(t('import.errors.unknownFormat'));
         return;
       }
 
@@ -74,7 +76,7 @@ export const ImportDialog = ({
         setStep('preview');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Lesen der Datei');
+      setError(err instanceof Error ? err.message : t('import.errors.readError'));
     }
   };
 
@@ -126,11 +128,11 @@ export const ImportDialog = ({
 
   const getStepTitle = (): string => {
     switch (step) {
-      case 'select': return 'Turnier importieren';
-      case 'warnings': return 'Hinweise zum Import';
-      case 'preview': return 'Import-Vorschau';
-      case 'success': return 'Import erfolgreich';
-      default: return 'Import';
+      case 'select': return t('import.stepTitles.select');
+      case 'warnings': return t('import.stepTitles.warnings');
+      case 'preview': return t('import.stepTitles.preview');
+      case 'success': return t('import.stepTitles.success');
+      default: return t('import.stepTitles.default');
     }
   };
 

@@ -1,0 +1,168 @@
+{
+  "status": {
+    "running": "Läuft",
+    "upcoming": "Bevorstehend",
+    "finished": "Beendet",
+    "draft": "Entwurf",
+    "archived": "Archiviert"
+  },
+
+  "nav": {
+    "tournaments": "Turniere",
+    "archive": "Archiv",
+    "trash": "Papierkorb"
+  },
+
+  "buttons": {
+    "import": "Importieren",
+    "newTournament": "Neues Turnier",
+    "limitReached": "Limit erreicht"
+  },
+
+  "emptyState": {
+    "noTournaments": "Noch keine Turniere",
+    "noTournamentsHint": "Erstelle dein erstes Turnier mit dem Button oben",
+    "noSearchResults": "Keine Turniere gefunden",
+    "noSearchResultsFor": "Keine Ergebnisse für \"{{query}}\"",
+    "noActiveTournaments": "Keine aktiven Turniere vorhanden",
+    "noArchivedTournaments": "Keine archivierten Turniere",
+    "archivedHint": "Abgeschlossene Turniere erscheinen hier automatisch.",
+    "trashEmpty": "Der Papierkorb ist leer",
+    "trashHint": "Gelöschte Turniere können hier wiederhergestellt werden."
+  },
+
+  "sections": {
+    "runningTournaments": "Aktuell laufende Turniere",
+    "upcomingTournaments": "Bevorstehende Turniere",
+    "savedDrafts": "Gespeicherte Entwürfe",
+    "archive": "Archiv",
+    "tournamentCount": "({{count}} Turniere)",
+    "trash": "Papierkorb"
+  },
+
+  "trash": {
+    "retentionInfo": "Turniere werden nach {{days}} Tagen automatisch gelöscht.",
+    "emptyTrashTitle": "Papierkorb leeren?",
+    "emptyTrashMessage": "Alle Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "emptyTrashMessageCount": "Alle {{count}} Turniere im Papierkorb werden unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "emptyTrashConfirm": "Papierkorb leeren",
+    "emptyTrashButton": "Papierkorb leeren ({{count}})",
+    "deletingToday": "Wird heute gelöscht",
+    "daysRemaining_one": "Noch {{count}} Tag",
+    "daysRemaining_other": "Noch {{count}} Tage",
+    "deletedAt": "Gelöscht am {{date}}",
+    "restore": "Wiederherstellen",
+    "permanentDelete": "Endgültig löschen"
+  },
+
+  "card": {
+    "ariaLabel": "Turnier: {{title}}, {{status}}",
+    "ariaLabelExternal": "Turnier: {{title}}, {{status}}, {{source}}",
+    "statusLabel": "Status: {{status}}",
+    "draftNotice": "Entwurf - Noch nicht veröffentlicht",
+    "labels": {
+      "dateTime": "Datum & Uhrzeit",
+      "location": "Ort",
+      "ageClass": "Altersklasse",
+      "mode": "Modus",
+      "organizer": "Veranstalter",
+      "placement": "Platzierung"
+    },
+    "groupSystem": {
+      "groupsAndFinals": "Gruppen + Finale",
+      "roundRobin": "Jeder gegen Jeden"
+    },
+    "placementAbbreviations": {
+      "points": "Pkt",
+      "goalDifference": "Diff",
+      "goalsFor": "Tore",
+      "directComparison": "DV"
+    },
+    "noPlacement": "Keine"
+  },
+
+  "actions": {
+    "open": "Öffnen",
+    "copy": "Kopieren",
+    "share": "Teilen",
+    "delete": "Löschen",
+    "restore": "Wiederherstellen",
+    "permanentDelete": "Endgültig löschen",
+    "actionsLabel": "Aktionen"
+  },
+
+  "search": {
+    "placeholder": "Turniere suchen...",
+    "clearLabel": "Suche leeren",
+    "filterLabel": "Filter:",
+    "filterAriaLabel": "Filter: {{label}} {{activeState}}",
+    "filterActive": "(aktiv)"
+  },
+
+  "import": {
+    "stepTitles": {
+      "select": "Turnier importieren",
+      "warnings": "Hinweise zum Import",
+      "preview": "Import-Vorschau",
+      "success": "Import erfolgreich",
+      "default": "Import"
+    },
+    "errors": {
+      "unknownFormat": "Unbekanntes Dateiformat. Bitte eine JSON- oder CSV-Datei auswählen.",
+      "readError": "Fehler beim Lesen der Datei"
+    },
+    "select": {
+      "dropHere": "Datei hier ablegen",
+      "dragOrClick": "Datei hierher ziehen oder klicken",
+      "supportedFormats": "Unterstützte Formate: JSON, CSV",
+      "selected": "Ausgewählt: {{fileName}}",
+      "chooseFile": "Datei auswählen",
+      "downloadTemplate": "Vorlage herunterladen:",
+      "jsonTemplate": "JSON-Vorlage",
+      "csvTemplate": "CSV-Vorlage",
+      "jsonDescription": "JSON: Komplettes Turnier mit Teams & Spielen",
+      "csvDescription": "CSV: Einfache Team-Liste (Spielplan wird generiert)"
+    },
+    "warnings": {
+      "intro": "Beim Import wurden folgende Hinweise festgestellt:",
+      "back": "Zurück",
+      "continueAnyway": "Trotzdem importieren"
+    },
+    "preview": {
+      "labels": {
+        "date": "Datum",
+        "location": "Ort",
+        "teams": "Teams",
+        "matches": "Spiele",
+        "ageClass": "Altersklasse",
+        "source": "Quelle"
+      },
+      "back": "Zurück",
+      "import": "Importieren"
+    },
+    "success": {
+      "message": "\"{{title}}\" wurde erfolgreich importiert!",
+      "hint": "Das Turnier wurde als Entwurf gespeichert und kann jetzt bearbeitet werden.",
+      "goToTournament": "Zum Turnier"
+    }
+  },
+
+  "share": {
+    "title": "Spielplan teilen",
+    "shareCode": "Share-Code:",
+    "notPublicHint": "Turnier ist nicht öffentlich. Aktiviere \"Öffentlich freigeben\" in den Sichtbarkeits-Einstellungen für einen kurzen Share-Link.",
+    "qrGenerating": "QR-Code wird generiert...",
+    "qrNotAvailable": "QR-Code nicht verfügbar",
+    "qrCaptionPublic": "QR-Code scannen für öffentliche Live-Ansicht",
+    "qrCaptionPrivate": "QR-Code scannen (nur mit Anmeldung)",
+    "publicLink": "Öffentlicher Link:",
+    "internalLink": "Interner Link:",
+    "deepLinkOption": "Aktuelle Ansicht inkl. Filter teilen",
+    "copyLink": "Link kopieren",
+    "shareButton": "Teilen",
+    "copySuccess": "Link in Zwischenablage kopiert!",
+    "copyError": "Fehler beim Kopieren",
+    "nativeShareTitle": "{{title}} - Spielplan",
+    "nativeShareText": "Sieh dir den Spielplan für {{title}} an"
+  }
+}

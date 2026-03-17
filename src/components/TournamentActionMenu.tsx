@@ -13,6 +13,7 @@
  */
 
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament } from '../types/tournament';
 import { ActionMenu, ActionMenuItem } from './ui/ActionMenu';
 import { BottomSheet, BottomSheetItem } from './ui/BottomSheet';
@@ -48,6 +49,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
   onPermanentDelete,
   testId,
 }) => {
+  const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
 
@@ -59,7 +61,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category !== 'trashed' && onOpen) {
       items.push({
         id: 'open',
-        label: 'Öffnen',
+        label: t('actions.open'),
         icon: <Icons.ExternalLink size={18} />,
         onClick: onOpen,
       });
@@ -69,7 +71,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category !== 'trashed' && onCopy) {
       items.push({
         id: 'copy',
-        label: 'Kopieren',
+        label: t('actions.copy'),
         icon: <Icons.Copy size={18} />,
         onClick: onCopy,
       });
@@ -79,7 +81,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category !== 'trashed' && onShare) {
       items.push({
         id: 'share',
-        label: 'Teilen',
+        label: t('actions.share'),
         icon: <Icons.Share size={18} />,
         onClick: onShare,
       });
@@ -89,7 +91,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category !== 'running' && category !== 'trashed' && onDelete) {
       items.push({
         id: 'delete',
-        label: 'Löschen',
+        label: t('actions.delete'),
         icon: <Icons.Trash size={18} />,
         onClick: onDelete,
         variant: 'danger',
@@ -100,7 +102,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category === 'trashed' && onRestore) {
       items.push({
         id: 'restore',
-        label: 'Wiederherstellen',
+        label: t('actions.restore'),
         icon: <Icons.Restore size={18} />,
         onClick: onRestore,
       });
@@ -110,7 +112,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
     if (category === 'trashed' && onPermanentDelete) {
       items.push({
         id: 'permanentDelete',
-        label: 'Endgültig löschen',
+        label: t('actions.permanentDelete'),
         icon: <Icons.Trash size={18} />,
         onClick: onPermanentDelete,
         variant: 'danger',
@@ -158,7 +160,7 @@ export const TournamentActionMenu: React.FC<TournamentActionMenuProps> = ({
         <button
           style={triggerStyle}
           onClick={handleTriggerClick}
-          aria-label="Aktionen"
+          aria-label={t('actions.actionsLabel')}
           data-testid={testId ? `${testId}-trigger` : undefined}
         >
           <Icons.MoreVertical size={20} />

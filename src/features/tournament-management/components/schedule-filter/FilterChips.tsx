@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScheduleFilters } from '../../../../types/scheduleFilters';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
@@ -30,13 +31,15 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
   onFilterChange,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
+
   // Build list of active filter chips
   const chips: FilterChip[] = [];
 
   if (filters.phase !== 'all') {
     chips.push({
       key: 'phase',
-      label: filters.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde',
+      label: filters.phase === 'groupStage' ? t('filter.groupStage') : t('filter.finals'),
       onRemove: () => onFilterChange({ phase: 'all' }),
     });
   }
@@ -44,7 +47,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
   if (filters.group) {
     chips.push({
       key: 'group',
-      label: `Gruppe ${filters.group}`,
+      label: t('filter.groupLabel', { group: filters.group }),
       onRemove: () => onFilterChange({ group: null }),
     });
   }
@@ -52,20 +55,20 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
   if (filters.field) {
     chips.push({
       key: 'field',
-      label: `Feld ${filters.field}`,
+      label: t('filter.fieldLabel', { field: filters.field }),
       onRemove: () => onFilterChange({ field: null }),
     });
   }
 
   if (filters.status.length > 0) {
-    const statusLabels = {
-      scheduled: 'Geplant',
-      waiting: 'Wartend',
-      running: 'Laufend',
-      finished: 'Beendet',
-      skipped: 'Übersprungen',
+    const statusLabelKeys: Record<string, string> = {
+      scheduled: 'filter.status.scheduled',
+      waiting: 'filter.status.waiting',
+      running: 'filter.status.running',
+      finished: 'filter.status.finished',
+      skipped: 'filter.status.skipped',
     };
-    const labels = filters.status.map((s) => statusLabels[s] || s).join(', ');
+    const labels = filters.status.map((s) => t((statusLabelKeys[s] || s) as never)).join(', ');
     chips.push({
       key: 'status',
       label: labels,
@@ -134,7 +137,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
               chip.onRemove();
             }}
             type="button"
-            aria-label={`Filter entfernen: ${chip.label}`}
+            aria-label={t('filter.removeAriaLabel', { label: chip.label })}
             data-testid={testId ? `${testId}-remove-${chip.key}` : undefined}
           >
             <Icons.X size={12} />

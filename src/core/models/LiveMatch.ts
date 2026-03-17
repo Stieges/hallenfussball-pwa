@@ -11,7 +11,15 @@ import { TeamLogo, TeamColors } from '../../types/tournament';
 // STATUS TYPES
 // ============================================================================
 
+/**
+ * Live execution status of a match (NOT_STARTED → RUNNING → PAUSED → FINISHED).
+ * Note: This is different from tournament.ts MatchStatus ('scheduled'|'waiting'|'running'|'finished'|'skipped')
+ * which tracks the scheduling/persistence status.
+ */
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
+
+/** Alias for clarity when both MatchStatus types are in scope */
+export type LiveExecutionStatus = MatchStatus;
 
 export type PlayPhase = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
 

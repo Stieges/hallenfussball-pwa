@@ -1,4 +1,5 @@
 import { useState, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
 import { cssVars } from '../../design-tokens'
@@ -22,6 +23,7 @@ export const PDFExportDialog = ({
   schedule,
   standings,
 }: PDFExportDialogProps) => {
+  const { t } = useTranslation('tournament');
   // Default: Include scores if any match has scores
   const hasScores = schedule.allMatches.some(m => m.scoreA !== undefined || m.scoreB !== undefined);
   const [includeScores, setIncludeScores] = useState(hasScores);
@@ -80,7 +82,7 @@ export const PDFExportDialog = ({
       }, 500);
     } catch (err) {
       console.error('PDF generation failed:', err);
-      setError('Fehler beim Exportieren des PDFs. Bitte versuchen Sie es erneut.');
+      setError(t('pdfExport.error'));
       setIsGenerating(false);
     }
   };
@@ -170,13 +172,13 @@ export const PDFExportDialog = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Als PDF exportieren" maxWidth="500px">
+    <Dialog isOpen={isOpen} onClose={onClose} title={t('pdfExport.title')} maxWidth="500px">
       <div style={containerStyle}>
         {/* Options Section */}
         <div style={optionsSectionStyle}>
           {/* Score Options */}
           <div>
-            <div style={labelStyle}>Spielstände:</div>
+            <div style={labelStyle}>{t('pdfExport.options.scoresLabel')}:</div>
             <div style={radioGroupStyle}>
               <label
                 style={{
@@ -193,8 +195,8 @@ export const PDFExportDialog = ({
                   style={radioInputStyle}
                 />
                 <div style={radioLabelTextStyle}>
-                  <div>Mit Spielstand</div>
-                  <div style={radioDescStyle}>Zeigt aktuelle Ergebnisse im PDF</div>
+                  <div>{t('pdfExport.options.withScores')}</div>
+                  <div style={radioDescStyle}>{t('pdfExport.options.withScoresDesc')}</div>
                 </div>
               </label>
 
@@ -213,8 +215,8 @@ export const PDFExportDialog = ({
                   style={radioInputStyle}
                 />
                 <div style={radioLabelTextStyle}>
-                  <div>Ohne Spielstand</div>
-                  <div style={radioDescStyle}>Leere Felder zum manuellen Ausfüllen</div>
+                  <div>{t('pdfExport.options.withoutScores')}</div>
+                  <div style={radioDescStyle}>{t('pdfExport.options.withoutScoresDesc')}</div>
                 </div>
               </label>
             </div>
@@ -235,8 +237,8 @@ export const PDFExportDialog = ({
               style={radioInputStyle}
             />
             <div style={radioLabelTextStyle}>
-              <div>Tabellen einschließen</div>
-              <div style={radioDescStyle}>Zeigt Gruppen-Tabellen im PDF</div>
+              <div>{t('pdfExport.options.includeStandings')}</div>
+              <div style={radioDescStyle}>{t('pdfExport.options.includeStandingsDesc')}</div>
             </div>
           </label>
         </div>
@@ -253,7 +255,7 @@ export const PDFExportDialog = ({
             disabled={isGenerating}
             fullWidth
           >
-            Abbrechen
+            {t('pdfExport.cancel')}
           </Button>
           <Button
             variant="primary"
@@ -262,7 +264,7 @@ export const PDFExportDialog = ({
             disabled={isGenerating}
             fullWidth
           >
-            {isGenerating ? 'Wird exportiert...' : 'Exportieren'}
+            {isGenerating ? t('pdfExport.exporting') : t('pdfExport.export')}
           </Button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { CSSProperties, useMemo, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
-import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, COLOR_SCHEMES, DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
+import { MonitorSlide, SlideConfig, WhenIdleType, QrTargetType, ColorScheme, DEFAULT_LIVE_COLOR_SCHEME } from '../../../types/monitor';
 import type { LiveColorScheme } from '../../../types/monitor';
 import { TournamentField, TournamentGroup } from '../../../types/tournament';
 import { validateSlideConfig } from '../../../core/models/schemas/SlideConfigSchema';
@@ -10,30 +11,30 @@ import { ColorSchemeEditor } from './ColorSchemeEditor';
 // CONSTANTS
 // =============================================================================
 
-const WHEN_IDLE_OPTIONS: { value: WhenIdleType; label: string; description: string }[] = [
-    { value: 'next-match', label: 'Nächstes Spiel', description: 'Zeigt das nächste Spiel mit Countdown' },
-    { value: 'last-result', label: 'Letztes Ergebnis', description: 'Zeigt das letzte Spielergebnis' },
-    { value: 'sponsor', label: 'Sponsor', description: 'Zeigt einen Sponsor-Screen' },
-    { value: 'skip', label: 'Überspringen', description: 'Springt zum nächsten Slide' },
+const WHEN_IDLE_OPTIONS: { value: WhenIdleType; labelKey: string; descriptionKey: string }[] = [
+    { value: 'next-match', labelKey: 'slideEditor.whenIdle.nextMatch', descriptionKey: 'slideEditor.whenIdle.nextMatchDesc' },
+    { value: 'last-result', labelKey: 'slideEditor.whenIdle.lastResult', descriptionKey: 'slideEditor.whenIdle.lastResultDesc' },
+    { value: 'sponsor', labelKey: 'slideEditor.whenIdle.sponsor', descriptionKey: 'slideEditor.whenIdle.sponsorDesc' },
+    { value: 'skip', labelKey: 'slideEditor.whenIdle.skip', descriptionKey: 'slideEditor.whenIdle.skipDesc' },
 ];
 
-const QR_TARGET_OPTIONS: { value: QrTargetType; label: string; description: string }[] = [
-    { value: 'tournament', label: 'Public View (Turnier)', description: 'Link zur öffentlichen Turnier-Ansicht' },
-    { value: 'sponsor-website', label: 'Sponsor-Website', description: 'Link zur Website des Sponsors' },
-    { value: 'custom', label: 'Eigene URL', description: 'Beliebige URL eingeben' },
+const QR_TARGET_OPTIONS: { value: QrTargetType; labelKey: string; descriptionKey: string }[] = [
+    { value: 'tournament', labelKey: 'slideEditor.qrTarget.tournament', descriptionKey: 'slideEditor.qrTarget.tournamentDesc' },
+    { value: 'sponsor-website', labelKey: 'slideEditor.qrTarget.sponsorWebsite', descriptionKey: 'slideEditor.qrTarget.sponsorWebsiteDesc' },
+    { value: 'custom', labelKey: 'slideEditor.qrTarget.custom', descriptionKey: 'slideEditor.qrTarget.customDesc' },
 ];
 
-const TEXT_ALIGN_OPTIONS: { value: 'left' | 'center' | 'right'; label: string }[] = [
-    { value: 'left', label: 'Linksbündig' },
-    { value: 'center', label: 'Zentriert' },
-    { value: 'right', label: 'Rechtsbündig' },
+const TEXT_ALIGN_OPTIONS: { value: 'left' | 'center' | 'right'; labelKey: string }[] = [
+    { value: 'left', labelKey: 'slideEditor.textAlign.left' },
+    { value: 'center', labelKey: 'slideEditor.textAlign.center' },
+    { value: 'right', labelKey: 'slideEditor.textAlign.right' },
 ];
 
-const COLOR_SCHEME_OPTIONS: { value: ColorScheme; label: string; description: string }[] = [
-    { value: 'default', label: 'Standard', description: COLOR_SCHEMES.default.description },
-    { value: 'highlight', label: 'Hervorgehoben', description: COLOR_SCHEMES.highlight.description },
-    { value: 'urgent', label: 'Dringend', description: COLOR_SCHEMES.urgent.description },
-    { value: 'celebration', label: 'Feier', description: COLOR_SCHEMES.celebration.description },
+const COLOR_SCHEME_OPTIONS: { value: ColorScheme; labelKey: string; descriptionKey: string }[] = [
+    { value: 'default', labelKey: 'slideEditor.colorSchemes.default', descriptionKey: 'slideEditor.colorSchemes.defaultDesc' },
+    { value: 'highlight', labelKey: 'slideEditor.colorSchemes.highlight', descriptionKey: 'slideEditor.colorSchemes.highlightDesc' },
+    { value: 'urgent', labelKey: 'slideEditor.colorSchemes.urgent', descriptionKey: 'slideEditor.colorSchemes.urgentDesc' },
+    { value: 'celebration', labelKey: 'slideEditor.colorSchemes.celebration', descriptionKey: 'slideEditor.colorSchemes.celebrationDesc' },
 ];
 
 // =============================================================================
@@ -100,6 +101,7 @@ export function SlideConfigEditor({
     styles,
     showErrors = false,
 }: SlideConfigEditorProps) {
+    const { t } = useTranslation('tournament');
     const { type, config, duration } = slide;
     const idPrefix = useId();
 
@@ -138,13 +140,13 @@ export function SlideConfigEditor({
         <div
             style={styles.slideConfigStyle}
             role="group"
-            aria-label={`Konfiguration für ${type}-Slide`}
+            aria-label={t('slideEditor.configAria', { type })}
         >
             {/* === Feld-Auswahl für live, schedule-field === */}
             {(type === 'live' || type === 'schedule-field') && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-fieldId`}>
-                        Spielfeld <span style={requiredMarkerStyle}>*</span>
+                        {t('slideEditor.field')} <span style={requiredMarkerStyle}>*</span>
                     </label>
                     <select
                         id={`${idPrefix}-fieldId`}
@@ -158,7 +160,7 @@ export function SlideConfigEditor({
                         aria-describedby={hasError('fieldId') ? getErrorId('fieldId') : undefined}
                         aria-required="true"
                     >
-                        <option value="">Bitte wählen...</option>
+                        <option value="">{t('slideEditor.pleaseSelect')}</option>
                         {fields.map(f => (
                             <option key={f.id} value={f.id}>{getFieldDisplayName(f.id)}</option>
                         ))}
@@ -176,7 +178,7 @@ export function SlideConfigEditor({
                 <>
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-whenIdle`}>
-                            Wenn kein Spiel läuft
+                            {t('slideEditor.whenIdleLabel')}
                         </label>
                         <select
                             id={`${idPrefix}-whenIdle`}
@@ -188,11 +190,11 @@ export function SlideConfigEditor({
                             })}
                         >
                             {WHEN_IDLE_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                             ))}
                         </select>
                         <span style={descriptionStyle}>
-                            {WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.description}
+                            {t((WHEN_IDLE_OPTIONS.find(o => o.value === (config.whenIdle?.type ?? 'next-match'))?.descriptionKey ?? '') as never)}
                         </span>
                     </div>
 
@@ -203,7 +205,7 @@ export function SlideConfigEditor({
                                 checked={config.pauseRotationDuringMatch !== false}
                                 onChange={(e) => handleConfigChange('pauseRotationDuringMatch', e.target.checked)}
                             />
-                            <span style={styles.labelStyle}>Rotation bei laufendem Spiel pausieren</span>
+                            <span style={styles.labelStyle}>{t('slideEditor.pauseRotation')}</span>
                         </label>
                     </div>
 
@@ -220,7 +222,7 @@ export function SlideConfigEditor({
             {(type === 'standings' || type === 'schedule-group') && groups.length > 1 && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-groupId`}>
-                        Gruppe
+                        {t('slideEditor.group')}
                     </label>
                     <select
                         id={`${idPrefix}-groupId`}
@@ -228,11 +230,11 @@ export function SlideConfigEditor({
                         value={config.groupId ?? ''}
                         onChange={(e) => handleConfigChange('groupId', e.target.value || undefined)}
                     >
-                        <option value="">Alle Gruppen</option>
+                        <option value="">{t('slideEditor.allGroups')}</option>
                         {groups.map(g => (
                             <option key={g.id} value={g.id}>
                                 {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback */}
-                                {g.customName || `Gruppe ${g.id}`}
+                                {g.customName || t('slideEditor.groupLabel', { letter: g.id })}
                             </option>
                         ))}
                     </select>
@@ -242,7 +244,7 @@ export function SlideConfigEditor({
             {/* === All Standings - Info-Hinweis === */}
             {type === 'all-standings' && (
                 <div style={{ ...styles.inputGroupStyle, ...infoBoxStyle }}>
-                    <span style={styles.labelStyle}>Zeigt Tabellen aller Gruppen in einer Übersicht an.</span>
+                    <span style={styles.labelStyle}>{t('slideEditor.allStandingsInfo')}</span>
                 </div>
             )}
 
@@ -250,7 +252,7 @@ export function SlideConfigEditor({
             {type === 'next-matches' && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-matchCount`}>
-                        Anzahl Spiele
+                        {t('slideEditor.matchCount')}
                     </label>
                     <select
                         id={`${idPrefix}-matchCount`}
@@ -259,7 +261,7 @@ export function SlideConfigEditor({
                         onChange={(e) => handleConfigChange('matchCount', Number(e.target.value))}
                     >
                         {[3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                            <option key={n} value={n}>{n} Spiele</option>
+                            <option key={n} value={n}>{t('slideEditor.nMatches', { count: n })}</option>
                         ))}
                     </select>
                 </div>
@@ -269,7 +271,7 @@ export function SlideConfigEditor({
             {type === 'top-scorers' && (
                 <div style={styles.inputGroupStyle}>
                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-numberOfPlayers`}>
-                        Anzahl Spieler
+                        {t('slideEditor.numberOfPlayers')}
                     </label>
                     <select
                         id={`${idPrefix}-numberOfPlayers`}
@@ -289,7 +291,7 @@ export function SlideConfigEditor({
                 <>
                     <div style={styles.inputGroupStyle}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-sponsorId`}>
-                            Sponsor <span style={requiredMarkerStyle}>*</span>
+                            {t('slideEditor.sponsor')} <span style={requiredMarkerStyle}>*</span>
                         </label>
                         <select
                             id={`${idPrefix}-sponsorId`}
@@ -303,7 +305,7 @@ export function SlideConfigEditor({
                             aria-describedby={hasError('sponsorId') ? getErrorId('sponsorId') : undefined}
                             aria-required="true"
                         >
-                            <option value="">Bitte wählen...</option>
+                            <option value="">{t('slideEditor.pleaseSelect')}</option>
                             {sponsors.map(s => (
                                 <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
@@ -322,7 +324,7 @@ export function SlideConfigEditor({
                                 checked={config.showQrCode !== false}
                                 onChange={(e) => handleConfigChange('showQrCode', e.target.checked)}
                             />
-                            <span style={styles.labelStyle}>QR-Code anzeigen</span>
+                            <span style={styles.labelStyle}>{t('slideEditor.showQrCode')}</span>
                         </label>
                     </div>
 
@@ -331,7 +333,7 @@ export function SlideConfigEditor({
                         <>
                             <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                                 <label style={styles.labelStyle} htmlFor={`${idPrefix}-qrTarget`}>
-                                    QR-Code Ziel
+                                    {t('slideEditor.qrTargetLabel')}
                                 </label>
                                 <select
                                     id={`${idPrefix}-qrTarget`}
@@ -340,11 +342,11 @@ export function SlideConfigEditor({
                                     onChange={(e) => handleConfigChange('qrTarget', e.target.value as QrTargetType)}
                                 >
                                     {QR_TARGET_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                                     ))}
                                 </select>
                                 <span style={descriptionStyle}>
-                                    {QR_TARGET_OPTIONS.find(o => o.value === (config.qrTarget ?? 'tournament'))?.description}
+                                    {t((QR_TARGET_OPTIONS.find(o => o.value === (config.qrTarget ?? 'tournament'))?.descriptionKey ?? '') as never)}
                                 </span>
                             </div>
 
@@ -352,7 +354,7 @@ export function SlideConfigEditor({
                             {config.qrTarget === 'custom' && (
                                 <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                                     <label style={styles.labelStyle} htmlFor={`${idPrefix}-customQrUrl`}>
-                                        Eigene URL
+                                        {t('slideEditor.customUrl')}
                                     </label>
                                     <input
                                         id={`${idPrefix}-customQrUrl`}
@@ -384,7 +386,7 @@ export function SlideConfigEditor({
                 <>
                     <div style={styles.inputGroupStyle}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-headline`}>
-                            Überschrift <span style={requiredMarkerStyle}>*</span>
+                            {t('slideEditor.headline')} <span style={requiredMarkerStyle}>*</span>
                         </label>
                         <input
                             id={`${idPrefix}-headline`}
@@ -395,7 +397,7 @@ export function SlideConfigEditor({
                             }}
                             value={config.headline ?? ''}
                             onChange={(e) => handleConfigChange('headline', e.target.value)}
-                            placeholder="z.B. Wichtige Ankündigung"
+                            placeholder={t('slideEditor.headlinePlaceholder')}
                             maxLength={100}
                             aria-invalid={hasError('headline') || undefined}
                             aria-describedby={hasError('headline') ? getErrorId('headline') : undefined}
@@ -409,7 +411,7 @@ export function SlideConfigEditor({
                     </div>
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-body`}>
-                            Text
+                            {t('slideEditor.text')}
                         </label>
                         <textarea
                             id={`${idPrefix}-body`}
@@ -421,7 +423,7 @@ export function SlideConfigEditor({
                             }}
                             value={config.body ?? ''}
                             onChange={(e) => handleConfigChange('body', e.target.value)}
-                            placeholder="Dein Text hier..."
+                            placeholder={t('slideEditor.textPlaceholder')}
                             maxLength={500}
                             aria-invalid={hasError('body') || undefined}
                             aria-describedby={hasError('body') ? getErrorId('body') : undefined}
@@ -436,7 +438,7 @@ export function SlideConfigEditor({
                     {/* Textausrichtung */}
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-textAlign`}>
-                            Textausrichtung
+                            {t('slideEditor.textAlignment')}
                         </label>
                         <select
                             id={`${idPrefix}-textAlign`}
@@ -445,7 +447,7 @@ export function SlideConfigEditor({
                             onChange={(e) => handleConfigChange('textAlign', e.target.value as SlideConfig['textAlign'])}
                         >
                             {TEXT_ALIGN_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                             ))}
                         </select>
                     </div>
@@ -453,7 +455,7 @@ export function SlideConfigEditor({
                     {/* Farbschema */}
                     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                         <label style={styles.labelStyle} htmlFor={`${idPrefix}-colorScheme`}>
-                            Farbschema
+                            {t('slideEditor.colorSchemeLabel')}
                         </label>
                         <select
                             id={`${idPrefix}-colorScheme`}
@@ -462,11 +464,11 @@ export function SlideConfigEditor({
                             onChange={(e) => handleConfigChange('colorScheme', e.target.value as ColorScheme)}
                         >
                             {COLOR_SCHEME_OPTIONS.map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                             ))}
                         </select>
                         <span style={descriptionStyle}>
-                            {COLOR_SCHEME_OPTIONS.find(o => o.value === (config.colorScheme ?? 'default'))?.description}
+                            {t((COLOR_SCHEME_OPTIONS.find(o => o.value === (config.colorScheme ?? 'default'))?.descriptionKey ?? '') as never)}
                         </span>
                     </div>
                 </>
@@ -475,7 +477,7 @@ export function SlideConfigEditor({
             {/* === Custom Duration === */}
             <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
                 <label style={styles.labelStyle} htmlFor={`${idPrefix}-duration`}>
-                    Eigene Dauer (Sek.) - leer = Monitor-Standard
+                    {t('slideEditor.customDuration')}
                 </label>
                 <input
                     id={`${idPrefix}-duration`}
@@ -483,7 +485,7 @@ export function SlideConfigEditor({
                     style={{ ...accessibleInputStyle, maxWidth: '100px' }}
                     value={duration ?? ''}
                     onChange={(e) => handleDurationChange(e.target.value)}
-                    placeholder="Standard"
+                    placeholder={t('slideEditor.defaultPlaceholder')}
                     min="1"
                     max="300"
                 />
