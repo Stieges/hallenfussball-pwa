@@ -22,6 +22,7 @@
  */
 
 import { type CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { ScoreStepper } from '../../ui/ScoreStepper';
 import { Button } from '../../ui/Button';
@@ -74,6 +75,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
   onShowGoals,
   isSaving = false,
 }) => {
+  const { t } = useTranslation('tournament');
   const [homeScore, setHomeScore] = useState(initialHomeScore);
   const [awayScore, setAwayScore] = useState(initialAwayScore);
 
@@ -190,7 +192,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           tabIndex={0}
           aria-expanded={false}
         >
-          <span>▼ Torschützen</span>
+          <span>{t('matchExpand.quickScore.goalScorers')}</span>
           {goalCount > 0 && (
             <span style={badgeStyle}>{goalCount}</span>
           )}
@@ -206,7 +208,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           disabled={isSaving}
           data-testid="quick-score-cancel-btn"
         >
-          Abbrechen
+          {t('matchExpand.quickScore.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -215,7 +217,7 @@ export const QuickScoreExpand: React.FC<QuickScoreExpandProps> = ({
           disabled={isSaving || !hasChanges}
           data-testid="quick-score-save-btn"
         >
-          {isSaving ? 'Speichern...' : 'Speichern'}
+          {isSaving ? t('matchExpand.quickScore.saving') : t('matchExpand.quickScore.save')}
         </Button>
       </div>
     </div>

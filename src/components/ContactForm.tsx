@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContactInfo } from '../types/tournament';
 import { Input } from './ui';
 import { cssVars } from '../design-tokens'
@@ -11,6 +12,8 @@ export const ContactForm: React.FC<ContactFormProps> = ({
   value,
   onChange,
 }) => {
+  const { t } = useTranslation('wizard');
+
   // Initialize showExtended based on whether contact info exists
   /* eslint-disable @typescript-eslint/prefer-nullish-coalescing -- Intentional: empty strings should be treated as "no contact info" */
   const [showExtended, setShowExtended] = useState(
@@ -51,7 +54,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       >
         <span>{showExtended ? '▼' : '▶'}</span>
         <span>
-          Kontaktdaten (optional)
+          {t('contact.toggle')}
           {hasContactInfo && !showExtended && (
             <span style={{ color: cssVars.colors.success, marginLeft: '8px' }}>✓</span>
           )}
@@ -70,35 +73,35 @@ export const ContactForm: React.FC<ContactFormProps> = ({
           }}
         >
           <Input
-            label="Ansprechpartner"
+            label={t('contact.name')}
             value={contactInfo.name ?? ''}
             onChange={(v) => handleFieldChange('name', v)}
-            placeholder="Vor- und Nachname"
+            placeholder={t('contact.namePlaceholder')}
           />
 
           <Input
-            label="E-Mail"
+            label={t('contact.email')}
             type="email"
             value={contactInfo.email ?? ''}
             onChange={(v) => handleFieldChange('email', v)}
-            placeholder="kontakt@verein.de"
+            placeholder={t('contact.emailPlaceholder')}
             style={{ marginTop: '16px' }}
           />
 
           <Input
-            label="Telefon"
+            label={t('contact.phone')}
             type="tel"
             value={contactInfo.phone ?? ''}
             onChange={(v) => handleFieldChange('phone', v)}
-            placeholder="+49 123 456789"
+            placeholder={t('contact.phonePlaceholder')}
             style={{ marginTop: '16px' }}
           />
 
           <Input
-            label="Website"
+            label={t('contact.website')}
             value={contactInfo.website ?? ''}
             onChange={(v) => handleFieldChange('website', v)}
-            placeholder="www.mein-verein.de"
+            placeholder={t('contact.websitePlaceholder')}
             style={{ marginTop: '16px' }}
           />
 
@@ -110,7 +113,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({
               marginBottom: 0,
             }}
           >
-            Diese Angaben erscheinen in der Fußzeile des Spielplans und im PDF-Export.
+            {t('contact.hint')}
           </p>
         </div>
       )}

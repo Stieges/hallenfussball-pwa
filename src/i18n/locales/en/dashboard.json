@@ -1,0 +1,168 @@
+{
+  "status": {
+    "running": "Running",
+    "upcoming": "Upcoming",
+    "finished": "Finished",
+    "draft": "Draft",
+    "archived": "Archived"
+  },
+
+  "nav": {
+    "tournaments": "Tournaments",
+    "archive": "Archive",
+    "trash": "Trash"
+  },
+
+  "buttons": {
+    "import": "Import",
+    "newTournament": "New Tournament",
+    "limitReached": "Limit Reached"
+  },
+
+  "emptyState": {
+    "noTournaments": "No tournaments yet",
+    "noTournamentsHint": "Create your first tournament with the button above",
+    "noSearchResults": "No tournaments found",
+    "noSearchResultsFor": "No results for \"{{query}}\"",
+    "noActiveTournaments": "No active tournaments",
+    "noArchivedTournaments": "No archived tournaments",
+    "archivedHint": "Completed tournaments appear here automatically.",
+    "trashEmpty": "Trash is empty",
+    "trashHint": "Deleted tournaments can be restored here."
+  },
+
+  "sections": {
+    "runningTournaments": "Currently running tournaments",
+    "upcomingTournaments": "Upcoming tournaments",
+    "savedDrafts": "Saved drafts",
+    "archive": "Archive",
+    "tournamentCount": "({{count}} tournaments)",
+    "trash": "Trash"
+  },
+
+  "trash": {
+    "retentionInfo": "Tournaments are automatically deleted after {{days}} days.",
+    "emptyTrashTitle": "Empty trash?",
+    "emptyTrashMessage": "All tournaments in the trash will be permanently deleted. This action cannot be undone.",
+    "emptyTrashMessageCount": "All {{count}} tournaments in the trash will be permanently deleted. This action cannot be undone.",
+    "emptyTrashConfirm": "Empty Trash",
+    "emptyTrashButton": "Empty Trash ({{count}})",
+    "deletingToday": "Will be deleted today",
+    "daysRemaining_one": "{{count}} day remaining",
+    "daysRemaining_other": "{{count}} days remaining",
+    "deletedAt": "Deleted on {{date}}",
+    "restore": "Restore",
+    "permanentDelete": "Delete Permanently"
+  },
+
+  "card": {
+    "ariaLabel": "Tournament: {{title}}, {{status}}",
+    "ariaLabelExternal": "Tournament: {{title}}, {{status}}, {{source}}",
+    "statusLabel": "Status: {{status}}",
+    "draftNotice": "Draft - Not yet published",
+    "labels": {
+      "dateTime": "Date & Time",
+      "location": "Location",
+      "ageClass": "Age Group",
+      "mode": "Mode",
+      "organizer": "Organizer",
+      "placement": "Placement"
+    },
+    "groupSystem": {
+      "groupsAndFinals": "Groups + Finals",
+      "roundRobin": "Round Robin"
+    },
+    "placementAbbreviations": {
+      "points": "Pts",
+      "goalDifference": "GD",
+      "goalsFor": "GF",
+      "directComparison": "H2H"
+    },
+    "noPlacement": "None"
+  },
+
+  "actions": {
+    "open": "Open",
+    "copy": "Copy",
+    "share": "Share",
+    "delete": "Delete",
+    "restore": "Restore",
+    "permanentDelete": "Delete Permanently",
+    "actionsLabel": "Actions"
+  },
+
+  "search": {
+    "placeholder": "Search tournaments...",
+    "clearLabel": "Clear search",
+    "filterLabel": "Filter:",
+    "filterAriaLabel": "Filter: {{label}} {{activeState}}",
+    "filterActive": "(active)"
+  },
+
+  "import": {
+    "stepTitles": {
+      "select": "Import Tournament",
+      "warnings": "Import Notes",
+      "preview": "Import Preview",
+      "success": "Import Successful",
+      "default": "Import"
+    },
+    "errors": {
+      "unknownFormat": "Unknown file format. Please select a JSON or CSV file.",
+      "readError": "Error reading file"
+    },
+    "select": {
+      "dropHere": "Drop file here",
+      "dragOrClick": "Drag file here or click",
+      "supportedFormats": "Supported formats: JSON, CSV",
+      "selected": "Selected: {{fileName}}",
+      "chooseFile": "Choose File",
+      "downloadTemplate": "Download template:",
+      "jsonTemplate": "JSON Template",
+      "csvTemplate": "CSV Template",
+      "jsonDescription": "JSON: Complete tournament with teams & matches",
+      "csvDescription": "CSV: Simple team list (schedule will be generated)"
+    },
+    "warnings": {
+      "intro": "The following notes were found during import:",
+      "back": "Back",
+      "continueAnyway": "Import Anyway"
+    },
+    "preview": {
+      "labels": {
+        "date": "Date",
+        "location": "Location",
+        "teams": "Teams",
+        "matches": "Matches",
+        "ageClass": "Age Group",
+        "source": "Source"
+      },
+      "back": "Back",
+      "import": "Import"
+    },
+    "success": {
+      "message": "\"{{title}}\" was successfully imported!",
+      "hint": "The tournament was saved as a draft and can now be edited.",
+      "goToTournament": "Go to Tournament"
+    }
+  },
+
+  "share": {
+    "title": "Share Schedule",
+    "shareCode": "Share Code:",
+    "notPublicHint": "Tournament is not public. Enable \"Share publicly\" in visibility settings for a short share link.",
+    "qrGenerating": "Generating QR code...",
+    "qrNotAvailable": "QR code not available",
+    "qrCaptionPublic": "Scan QR code for public live view",
+    "qrCaptionPrivate": "Scan QR code (login required)",
+    "publicLink": "Public link:",
+    "internalLink": "Internal link:",
+    "deepLinkOption": "Share current view including filters",
+    "copyLink": "Copy Link",
+    "shareButton": "Share",
+    "copySuccess": "Link copied to clipboard!",
+    "copyError": "Error copying",
+    "nativeShareTitle": "{{title}} - Schedule",
+    "nativeShareText": "Check out the schedule for {{title}}"
+  }
+}

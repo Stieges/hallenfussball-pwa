@@ -14,6 +14,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Input, Combobox } from '../../components/ui';
 import { Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
@@ -36,6 +37,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   onDirtyChange,
   onEditInWizard,
 }) => {
+  const { t } = useTranslation('tournament');
   // Collapse-State für Formular-Bereich
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
@@ -106,7 +108,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        const message = 'Du hast ungespeicherte Änderungen. Möchtest du wirklich die Seite verlassen?';
+        const message = t('settings.unsavedChangesWarning');
         // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = message;
         return message;
@@ -115,7 +117,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isDirty]);
+  }, [isDirty, t]);
 
   // Update Handler
   const handleUpdate = <K extends keyof Tournament>(field: K, value: Tournament[K]) => {
@@ -146,7 +148,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const handleReset = () => {
     if (isDirty) {
       const confirmReset = window.confirm(
-        'Möchtest du alle Änderungen verwerfen und die ursprünglichen Werte wiederherstellen?'
+        t('settings.confirmReset')
       );
       if (!confirmReset) {return;}
     }
@@ -166,25 +168,23 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
   const handleEditInWizard = (targetStep: number) => {
     if (isDirty) {
       const confirmLeave = window.confirm(
-        'Du hast ungespeicherte Änderungen. Möchtest du wirklich zum Wizard wechseln?\n\n' +
-        'Die Änderungen in diesem Tab gehen verloren.'
+        t('settings.confirmLeaveToWizard')
       );
       if (!confirmLeave) {return;}
     }
 
     // Wizard-Step-Namen (US-GROUPS-AND-FIELDS: 6 Steps statt 5)
     const stepNames: Record<number, string> = {
-      1: 'Stammdaten',
-      2: 'Sportart',
-      3: 'Spielmodus',
-      4: 'Gruppen & Felder',
-      5: 'Teams',
-      6: 'Übersicht',
+      1: t('settings.wizardSteps.masterData'),
+      2: t('settings.wizardSteps.sport'),
+      3: t('settings.wizardSteps.gameMode'),
+      4: t('settings.wizardSteps.groupsAndFields'),
+      5: t('settings.wizardSteps.teams'),
+      6: t('settings.wizardSteps.overview'),
     };
 
     const confirmWizard = window.confirm(
-      `Möchtest du "${stepNames[targetStep] ?? 'Wizard'}" bearbeiten?\n\n` +
-      'Der Spielplan wird dabei neu generiert und alle bisherigen Ergebnisse gehen verloren!'
+      t('settings.confirmWizardEdit', { step: stepNames[targetStep] ?? t('settings.wizard') })
     );
 
     if (confirmWizard && onEditInWizard) {
@@ -299,16 +299,16 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
           <div>
             <h2 style={{ ...titleStyle, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={toggleIconStyle}>▼</span>
-              Metadaten bearbeiten
+              {t('settings.editMetadata')}
             </h2>
             {isFormCollapsed && (
               <p style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary, margin: '4px 0 0 24px' }}>
-                Turniername, Ort, Datum & Zeit anpassen • Klicken zum Aufklappen
+                {t('settings.editMetadataHint')}
               </p>
             )}
           </div>
           <span style={dirtyIndicatorStyle}>
-            {isDirty ? '● Ungespeicherte Änderungen' : '✓ Gespeichert'}
+            {isDirty ? t('settings.unsavedChanges') : t('settings.saved')}
           </span>
         </div>
 
@@ -318,24 +318,24 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             {/* Header mit Buttons */}
             <div style={headerStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.md }}>
-                <h3 style={{ ...titleStyle, fontSize: cssVars.fontSizes.lg }}>Einstellungen</h3>
+                <h3 style={{ ...titleStyle, fontSize: cssVars.fontSizes.lg }}>{t('settings.title')}</h3>
               </div>
               <div style={buttonGroupStyle}>
                 <button
                   style={buttonStyle('secondary')}
                   onClick={handleReset}
                   disabled={!isDirty}
-                  title="Änderungen verwerfen"
+                  title={t('settings.discardChanges')}
                 >
-                  Zurücksetzen
+                  {t('settings.reset')}
                 </button>
                 <button
                   style={buttonStyle('primary')}
                   onClick={handleSave}
                   disabled={!isDirty}
-                  title={isDirty ? 'Änderungen speichern' : 'Keine Änderungen vorhanden'}
+                  title={isDirty ? t('settings.saveChanges') : t('settings.noChanges')}
                 >
-                  Speichern
+                  {t('common.save')}
                 </button>
               </div>
             </div>
@@ -343,38 +343,38 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             {/* Formular */}
             <Card>
               <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: '0 0 24px 0' }}>
-                Stammdaten
+                {t('settings.masterData')}
               </h3>
 
               <Input
-                label="Turniername"
+                label={t('settings.tournamentName')}
                 value={formData.title ?? ''}
                 onChange={(v) => handleUpdate('title', v)}
-                placeholder="Vereinsname Hallencup 2025"
+                placeholder={t('settings.tournamentNamePlaceholder')}
                 required
               />
 
               <Input
-                label="Veranstalter (optional)"
+                label={t('settings.organizer')}
                 value={formData.organizer ?? ''}
                 onChange={(v) => handleUpdate('organizer', v)}
-                placeholder="Mein Verein e.V."
+                placeholder={t('settings.organizerPlaceholder')}
                 style={{ marginTop: '16px' }}
               />
 
               <Combobox
-                label="Altersklasse"
+                label={t('settings.ageClass')}
                 value={formData.ageClass ?? DEFAULT_VALUES.ageClass}
                 onChange={(v) => handleUpdate('ageClass', v)}
                 options={getAgeClassOptions(tournament.sport)}
-                placeholder="Suchen oder auswählen..."
+                placeholder={t('settings.ageClassPlaceholder')}
                 style={{ marginTop: '16px' }}
               />
             </Card>
 
             <Card style={{ marginTop: cssVars.spacing.lg }}>
               <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: '0 0 24px 0' }}>
-                Ort & Kontakt
+                {t('settings.locationAndContact')}
               </h3>
 
               <LocationForm
@@ -393,19 +393,19 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
             <Card style={{ marginTop: cssVars.spacing.lg }}>
               <h3 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.lg, margin: '0 0 24px 0' }}>
-                Datum & Zeit
+                {t('settings.dateAndTime')}
               </h3>
 
               <div className="date-time-grid" style={{ display: 'grid', gap: '16px' }}>
                 <Input
-                  label="Startdatum"
+                  label={t('settings.startDate')}
                   type="date"
                   value={formData.startDate ?? ''}
                   onChange={(v) => handleUpdate('startDate', v)}
                   required
                 />
                 <Input
-                  label="Startzeit"
+                  label={t('settings.startTime')}
                   type="time"
                   value={formData.startTime ?? ''}
                   onChange={(v) => handleUpdate('startTime', v)}
@@ -434,18 +434,17 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 <span style={{ fontSize: cssVars.fontSizes.xxl }}>ℹ️</span>
                 <div>
                   <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
-                    Nicht änderbare Einstellungen
+                    {t('settings.immutableSettings.title')}
                   </h4>
                   <p style={{ margin: 0, color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    Die folgenden Einstellungen können nach Veröffentlichung nicht mehr geändert werden,
-                    da sie den Spielplan beeinflussen würden:
+                    {t('settings.immutableSettings.description')}
                   </p>
                   <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                    <li>Anzahl Teams ({tournament.numberOfTeams})</li>
-                    <li>Anzahl Gruppen ({tournament.numberOfGroups})</li>
-                    <li>Anzahl Felder ({tournament.numberOfFields})</li>
-                    <li>Spielmodus ({tournament.mode})</li>
-                    <li>Turniertyp ({tournament.tournamentType})</li>
+                    <li>{t('settings.immutableSettings.numberOfTeams', { count: tournament.numberOfTeams })}</li>
+                    <li>{t('settings.immutableSettings.numberOfGroups', { count: tournament.numberOfGroups })}</li>
+                    <li>{t('settings.immutableSettings.numberOfFields', { count: tournament.numberOfFields })}</li>
+                    <li>{t('settings.immutableSettings.gameMode', { mode: tournament.mode })}</li>
+                    <li>{t('settings.immutableSettings.tournamentType', { type: tournament.tournamentType })}</li>
                   </ul>
                 </div>
               </div>
@@ -476,13 +475,13 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <span style={{ fontSize: cssVars.fontSizes.xxl }}>⚠️</span>
               <div style={{ flex: 1 }}>
                 <h4 style={{ margin: '0 0 8px 0', color: cssVars.colors.textPrimary }}>
-                  Erweiterte Bearbeitung
+                  {t('settings.advancedEditing.title')}
                 </h4>
                 <p style={{ margin: '0 0 12px 0', color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-                  Wähle den Bereich, den du bearbeiten möchtest. Nach dem Speichern kommst du direkt zurück.
+                  {t('settings.advancedEditing.description')}
                 </p>
                 <p style={{ margin: '0 0 16px 0', color: cssVars.colors.warning, fontSize: cssVars.fontSizes.xs, fontWeight: cssVars.fontWeights.medium }}>
-                  Achtung: Der Spielplan wird neu generiert und alle Ergebnisse gehen verloren!
+                  {t('settings.advancedEditing.warning')}
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   <button
@@ -499,7 +498,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       border: 'none',
                     }}
                   >
-                    Teams bearbeiten
+                    {t('settings.advancedEditing.editTeams')}
                   </button>
                   <button
                     onClick={() => handleEditInWizard(3)}
@@ -515,7 +514,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       border: 'none',
                     }}
                   >
-                    Spielmodus ändern
+                    {t('settings.advancedEditing.changeGameMode')}
                   </button>
                   <button
                     onClick={() => handleEditInWizard(4)}
@@ -531,7 +530,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                       border: 'none',
                     }}
                   >
-                    Gruppen & Felder
+                    {t('settings.advancedEditing.groupsAndFields')}
                   </button>
                 </div>
               </div>
