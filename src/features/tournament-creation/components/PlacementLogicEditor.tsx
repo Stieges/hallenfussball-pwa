@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DndContext,
   closestCenter,
@@ -42,6 +43,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
   onMove,
   onToggle,
 }) => {
+  const { t } = useTranslation('wizard');
   const {
     attributes,
     listeners,
@@ -113,13 +115,13 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div style={itemStyle} role="listitem" aria-label={`${criterion.label}, Position ${index + 1} von ${totalItems}`}>
+      <div style={itemStyle} role="listitem" aria-label={t('placementLogic.itemAriaLabel', { label: criterion.label, position: index + 1, total: totalItems })}>
         {/* Drag Handle */}
         <div
           {...attributes}
           {...listeners}
           style={dragHandleStyle}
-          aria-label="Ziehen zum Neuordnen"
+          aria-label={t('placementLogic.dragHandle')}
           role="button"
           tabIndex={0}
         >
@@ -142,7 +144,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             }}
             disabled={index === 0}
             style={arrowButtonStyle(index === 0)}
-            aria-label="Nach oben verschieben"
+            aria-label={t('placementLogic.moveUp')}
             tabIndex={0}
           >
             <Icons.ArrowUp />
@@ -154,7 +156,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
             }}
             disabled={index === totalItems - 1}
             style={arrowButtonStyle(index === totalItems - 1)}
-            aria-label="Nach unten verschieben"
+            aria-label={t('placementLogic.moveDown')}
             tabIndex={0}
           >
             <Icons.ArrowDown />
@@ -187,10 +189,10 @@ const SortableItem: React.FC<SortableItemProps> = ({
             onToggle(index);
           }}
           style={toggleButtonStyle}
-          aria-label={criterion.enabled ? 'Kriterium deaktivieren' : 'Kriterium aktivieren'}
+          aria-label={criterion.enabled ? t('placementLogic.deactivate') : t('placementLogic.activate')}
           aria-pressed={criterion.enabled}
         >
-          {criterion.enabled ? 'Aktiv' : 'Inaktiv'}
+          {criterion.enabled ? t('placementLogic.active') : t('placementLogic.inactive')}
         </button>
       </div>
     </div>
@@ -203,6 +205,8 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
   onToggle,
   onReorder,
 }) => {
+  const { t } = useTranslation('wizard');
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -256,9 +260,9 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
 
   return (
     <div style={containerStyle}>
-      <h3 style={headerStyle}>Platzierungslogik</h3>
+      <h3 style={headerStyle}>{t('placementLogic.title')}</h3>
       <p style={helpTextStyle}>
-        <span>Ziehe die Kriterien per Drag & Drop oder nutze die Pfeiltasten</span>
+        <span>{t('placementLogic.helpText')}</span>
       </p>
       <DndContext
         sensors={sensors}
@@ -272,7 +276,7 @@ export const PlacementLogicEditor: React.FC<PlacementLogicEditorProps> = ({
           <div
             style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
             role="list"
-            aria-label="Platzierungskriterien, sortierbar"
+            aria-label={t('placementLogic.listAriaLabel')}
           >
             {placementLogic.map((criterion, index) => (
               <SortableItem

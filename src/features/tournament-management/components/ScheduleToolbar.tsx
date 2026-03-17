@@ -11,6 +11,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui';
 import { ScheduleActionButtons } from '../../../components/ScheduleActionButtons';
 import { cssVars } from '../../../design-tokens'
@@ -69,6 +70,8 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
   schedule,
   standings,
 }) => {
+  const { t } = useTranslation('tournament');
+
   const containerStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
@@ -132,12 +135,12 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             size="sm"
             onClick={onStartEditing}
           >
-            ✏️ Spielplan bearbeiten
+            {t('toolbar.editSchedule')}
           </Button>
         ) : (
           <>
             <span style={editModeBadgeStyle}>
-              Bearbeitungsmodus
+              {t('toolbar.editMode')}
             </span>
 
             {/* Undo/Redo buttons */}
@@ -147,7 +150,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               onClick={onUndo}
               disabled={!canUndo}
             >
-              ↩️ Undo
+              {t('toolbar.undo')}
             </Button>
             <Button
               variant="ghost"
@@ -155,7 +158,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               onClick={onRedo}
               disabled={!canRedo}
             >
-              ↪️ Redo
+              {t('toolbar.redo')}
             </Button>
 
             {/* Redistribution buttons */}
@@ -165,7 +168,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 size="sm"
                 onClick={onRedistributeSR}
               >
-                🔄 SR verteilen
+                {t('toolbar.redistributeSR')}
               </Button>
             )}
             {showFieldsButton && (
@@ -174,7 +177,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
                 size="sm"
                 onClick={onRedistributeFields}
               >
-                🔄 Felder verteilen
+                {t('toolbar.redistributeFields')}
               </Button>
             )}
 
@@ -184,27 +187,27 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
               onClick={onSave}
               disabled={!hasUnsavedChanges && !canUndo}
             >
-              💾 Speichern
+              {t('toolbar.save')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={onCancel}
             >
-              Abbrechen
+              {t('toolbar.cancel')}
             </Button>
           </>
         )}
 
         {/* View Mode Toggle */}
-        <div style={viewToggleContainerStyle} role="tablist" aria-label="Ansicht wechseln">
+        <div style={viewToggleContainerStyle} role="tablist" aria-label={t('toolbar.switchView')}>
           <button
             onClick={() => onViewModeChange('table')}
             style={getViewToggleButtonStyle('table')}
             aria-pressed={viewMode === 'table'}
             data-testid="schedule-view-table"
           >
-            Tabelle
+            {t('toolbar.viewTable')}
           </button>
           <button
             onClick={() => onViewModeChange('grid')}
@@ -212,7 +215,7 @@ export const ScheduleToolbar: React.FC<ScheduleToolbarProps> = ({
             aria-pressed={viewMode === 'grid'}
             data-testid="schedule-view-grid"
           >
-            Grid
+            {t('toolbar.viewGrid')}
           </button>
         </div>
       </div>

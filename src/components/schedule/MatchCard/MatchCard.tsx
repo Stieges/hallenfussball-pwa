@@ -17,6 +17,7 @@
  */
 
 import { type CSSProperties, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
@@ -103,6 +104,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   disabled = false,
   hasEvents = false,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
 
   const isLive = status === 'running';
@@ -227,7 +229,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       role="article"
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty matchNumber should display as empty
-      aria-label={`Spiel ${matchNumber || ''}: ${homeTeam.name} gegen ${awayTeam.name}`}
+      aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       data-match-card
     >
       {/* Header: Time, Field, Group, Live Badge */}
@@ -236,9 +238,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           {formatTime(scheduledTime)}
         </span>
         <div style={metaStyle}>
-          {field !== undefined && <span>Feld {field}</span>}
-          {showGroupLabel && group && group !== 'all' && <span>• Gr. {group}</span>}
-          {referee && <span>• SR: {referee}</span>}
+          {field !== undefined && <span>{t('matchCard.field', { field })}</span>}
+          {showGroupLabel && group && group !== 'all' && <span>{t('matchCard.groupPrefix', { group })}</span>}
+          {referee && <span>{t('matchCard.refereePrefix', { referee })}</span>}
           {isLive && (
             <>
               <span style={{

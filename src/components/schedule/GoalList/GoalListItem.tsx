@@ -18,6 +18,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
   onDelete,
   disabled = false,
 }) => {
+  const { t } = useTranslation('tournament');
   const hasNumber = playerNumber !== undefined && playerNumber > 0;
   const needsEdit = !hasNumber || isIncomplete;
 
@@ -184,7 +186,7 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
         </span>
         {assists && assists.length > 0 && (
           <span style={assistsStyle}>
-            (Vorlage: {assists.map(n => `#${n}`).join(', ')})
+            ({t('goalList.assist')}: {assists.map(n => `#${n}`).join(', ')})
           </span>
         )}
         <span style={timeStyle}>{formatTime(timestampSeconds)}</span>
@@ -196,8 +198,8 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
             style={iconButtonStyle}
             onClick={handleEdit}
             disabled={disabled}
-            aria-label="Torschütze nachtragen"
-            title="Nummer nachtragen"
+            aria-label={t('goalList.addScorerAria')}
+            title={t('goalList.addNumberTitle')}
           >
             ✏️
           </button>
@@ -207,8 +209,8 @@ export const GoalListItem: React.FC<GoalListItemProps> = ({
             style={iconButtonStyle}
             onClick={handleDelete}
             disabled={disabled}
-            aria-label="Tor löschen"
-            title="Löschen"
+            aria-label={t('goalList.deleteGoalAria')}
+            title={t('goalList.deleteTitle')}
           >
             🗑️
           </button>

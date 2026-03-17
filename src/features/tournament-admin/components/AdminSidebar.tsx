@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState, useRef, useCallback, useMemo, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminSidebarProps, AdminCategoryGroup } from '../types/admin.types';
 import {
@@ -206,6 +207,8 @@ export function AdminSidebar({
   onBackToTournament,
   onWarningClick,
 }: AdminSidebarProps) {
+  const { t } = useTranslation('admin');
+
   // Build flat list of all navigable category IDs for keyboard navigation
   const allCategoryIds = useMemo(() => {
     const ids: string[] = [];
@@ -317,7 +320,7 @@ export function AdminSidebar({
           <span style={styles.badge}>{category.badge}</span>
         )}
         {category.isComingSoon && (
-          <span style={styles.comingSoonBadge}>Bald</span>
+          <span style={styles.comingSoonBadge}>{t('sidebar.comingSoon')}</span>
         )}
       </button>
     );
@@ -356,7 +359,7 @@ export function AdminSidebar({
           }}
         >
           <span>←</span>
-          <span>Zurück zum Turnier</span>
+          <span>{t('sidebar.backToTournament')}</span>
         </button>
 
         {/* Overview (Dashboard) */}
@@ -375,7 +378,7 @@ export function AdminSidebar({
 
         {/* Danger Zone */}
         <div style={styles.dangerZone}>
-          <div style={styles.dangerZoneLabel}>Kritische Aktionen</div>
+          <div style={styles.dangerZoneLabel}>{t('sidebar.criticalActions')}</div>
           {DANGER_ZONE_ITEMS.map((item) =>
             renderCategoryItem(item, activeCategory === item.id)
           )}
@@ -387,7 +390,7 @@ export function AdminSidebar({
         <div style={styles.warningsWidget}>
           <div style={styles.warningsHeader}>
             <span>⚠️</span>
-            <span>{warnings.length} Warnungen</span>
+            <span>{t('sidebar.warnings', { count: warnings.length })}</span>
           </div>
           {warnings.slice(0, 2).map((warning) => (
             <button
@@ -401,14 +404,14 @@ export function AdminSidebar({
                 textAlign: 'left',
               }}
               onClick={() => onWarningClick?.(warning)}
-              aria-label={`Warnung: ${warning.title}. Klicken um zur Behebung zu navigieren.`}
+              aria-label={t('sidebar.warningClickAria', { title: warning.title })}
             >
               <span>►</span>
               <span>{warning.title}</span>
             </button>
           ))}
           {warnings.length > 2 && (
-            <span style={styles.warningsLink}>Alle anzeigen →</span>
+            <span style={styles.warningsLink}>{t('sidebar.showAll')}</span>
           )}
         </div>
       )}

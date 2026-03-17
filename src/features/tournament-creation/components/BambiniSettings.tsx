@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { Tournament } from '../../../types/tournament';
 
@@ -11,6 +12,8 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
   formData,
   onUpdate,
 }) => {
+  const { t } = useTranslation('wizard');
+
   if (formData.tournamentType !== 'bambini') {
     return null;
   }
@@ -50,7 +53,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
   return (
     <details style={{ marginTop: '24px' }}>
       <summary style={summaryStyle}>
-        Erweiterte Bambini-Einstellungen
+        {t('bambini.title')}
       </summary>
       <div style={contentStyle}>
         <label style={{ ...checkboxLabelStyle, marginBottom: '12px' }}>
@@ -61,7 +64,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             style={checkboxStyle}
           />
           <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-            Ergebnisse für Zuschauer verbergen
+            {t('bambini.hideScores')}
           </span>
         </label>
         <label style={checkboxLabelStyle}>
@@ -72,7 +75,7 @@ export const BambiniSettings: React.FC<BambiniSettingsProps> = ({
             style={checkboxStyle}
           />
           <span style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm }}>
-            Tabellen für Zuschauer verbergen
+            {t('bambini.hideRankings')}
           </span>
         </label>
       </div>

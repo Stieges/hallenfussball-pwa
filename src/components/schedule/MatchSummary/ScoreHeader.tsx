@@ -5,6 +5,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +33,8 @@ export function ScoreHeader({
   onEditScore,
   compact = false,
 }: ScoreHeaderProps) {
+  const { t } = useTranslation('tournament');
+
   const containerStyle: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -127,9 +130,9 @@ export function ScoreHeader({
         <button
           style={editButtonStyle}
           onClick={onEditScore}
-          aria-label="Ergebnis bearbeiten"
+          aria-label={t('matchSummary.editScore')}
         >
-          ✏️ Ergebnis bearbeiten
+          ✏️ {t('matchSummary.editScore')}
         </button>
       )}
     </div>

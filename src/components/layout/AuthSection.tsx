@@ -16,6 +16,7 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -79,26 +80,29 @@ const VisuallyHidden: React.FC<{ children: React.ReactNode }> = ({ children }) =
  */
 const HeaderOfflineBadge: React.FC<{
   onReconnect: () => void;
-}> = ({ onReconnect }) => (
-  <Button
-    variant="secondary"
-    size="sm"
-    onClick={onReconnect}
-    aria-label="Offline - Klicken zum erneut verbinden"
-    data-testid="auth-offline-badge"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: cssVars.spacing.xs,
-      backgroundColor: cssVars.colors.correctionBg,
-      borderColor: cssVars.colors.correctionBorder,
-      color: cssVars.colors.correctionText,
-    }}
-  >
-    <span role="img" aria-hidden="true">📡</span>
-    <span>Offline</span>
-  </Button>
-);
+}> = ({ onReconnect }) => {
+  const { t } = useTranslation('common');
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      onClick={onReconnect}
+      aria-label={t('authSection.offlineAriaLabel')}
+      data-testid="auth-offline-badge"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: cssVars.spacing.xs,
+        backgroundColor: cssVars.colors.correctionBg,
+        borderColor: cssVars.colors.correctionBorder,
+        color: cssVars.colors.correctionText,
+      }}
+    >
+      <span role="img" aria-hidden="true">📡</span>
+      <span>{t('authSection.offline')}</span>
+    </Button>
+  );
+};
 
 export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToLogin,
@@ -108,6 +112,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation('common');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -216,16 +221,16 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   // Wird bei Auth-Zustandsänderungen angekündigt
   const statusText = useMemo(() => {
     if (isLoading) {
-      return 'Anmeldestatus wird geladen';
+      return t('authSection.statusLoading');
     }
     if (isAuthenticated && user) {
-      return `Angemeldet als ${user.name}`;
+      return t('authSection.statusAuthenticated', { name: user.name });
     }
     if (isGuest) {
-      return 'Als Gast angemeldet. Registrierung empfohlen für volle Funktionen.';
+      return t('authSection.statusGuest');
     }
-    return 'Nicht angemeldet. Anmelden oder Registrieren möglich.';
-  }, [isLoading, isAuthenticated, isGuest, user]);
+    return t('authSection.statusUnauthenticated');
+  }, [isLoading, isAuthenticated, isGuest, user, t]);
 
   // Loading State - Optimistic UI:
   // Only show skeleton if we expect a logged-in user (cached user exists).
@@ -266,7 +271,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
           type="button"
           onClick={() => setDropdownOpen(!dropdownOpen)}
           style={styles.avatarButton}
-          aria-label={`Profil von ${user.name} öffnen`}
+          aria-label={t('authSection.profileAriaLabel', { name: user.name })}
           aria-expanded={dropdownOpen}
           aria-haspopup="menu"
           data-testid="auth-avatar-button"
@@ -303,7 +308,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               data-testid="auth-profile-button"
             >
               <span style={styles.dropdownIcon}><Icons.User size={18} color="currentColor" /></span>
-              Mein Profil
+              {t('authSection.myProfile')}
             </button>
 
             <button
@@ -318,7 +323,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               data-testid="auth-settings-button"
             >
               <span style={styles.dropdownIcon}><Icons.Settings size={18} color="currentColor" /></span>
-              Einstellungen
+              {t('authSection.settings')}
             </button>
 
             <div style={styles.dropdownDivider} />
@@ -335,7 +340,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               data-testid="auth-logout-button"
             >
               <span style={styles.dropdownIcon}><Icons.LogOut size={18} color="currentColor" /></span>
-              Abmelden
+              {t('actions.logout')}
             </button>
           </div>
         )}
@@ -357,7 +362,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
           {!isMobile && (
             <div style={styles.guestBadge} data-testid="auth-guest-badge">
               <Icons.User size={16} color={cssVars.colors.textTertiary} />
-              Gast
+              {t('authSection.guest')}
               <span style={styles.guestInfoIcon}>ℹ</span>
             </div>
           )}
@@ -368,7 +373,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               type="button"
               onClick={() => setBottomSheetOpen(true)}
               style={styles.mobileIconButton}
-              aria-label="Konto-Optionen öffnen (aktuell als Gast)"
+              aria-label={t('authSection.guestOptionsAriaLabel')}
               data-testid="auth-mobile-guest-button"
             >
               <Icons.User size={24} color={cssVars.colors.textSecondary} />
@@ -384,7 +389,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={styles.primaryButton}
               data-testid="auth-guest-register-button"
             >
-              Registrieren
+              {t('actions.register')}
             </button>
           )}
         </div>
@@ -417,7 +422,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
             type="button"
             onClick={() => setBottomSheetOpen(true)}
             style={styles.mobileIconButton}
-            aria-label="Konto-Optionen öffnen"
+            aria-label={t('authSection.accountOptionsAriaLabel')}
             data-testid="auth-mobile-button"
           >
             <Icons.User size={24} color={cssVars.colors.textSecondary} />
@@ -431,7 +436,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={styles.ghostButton}
               data-testid="auth-login-button"
             >
-              Anmelden
+              {t('actions.login')}
             </button>
 
             {/* Registrieren (Primary) */}
@@ -441,7 +446,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               style={styles.primaryButton}
               data-testid="auth-register-button"
             >
-              Registrieren
+              {t('actions.register')}
             </button>
           </>
         )}

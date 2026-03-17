@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import type { LiveCockpitProps } from './types';
@@ -85,6 +86,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onUpdateEvent,
   onUpdateSettings,
 }) => {
+  const { t } = useTranslation('cockpit');
+
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
     () => getCockpitSettings(cockpitSettingsProp),
@@ -278,34 +281,34 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
       // Build toast message with jersey number and assists
       if (incomplete) {
-        showInfo(`⚽ Tor für ${teamName} (ohne Nr.)`);
+        showInfo(`⚽ ${t('toast.goalScored', { teamName })} (ohne Nr.)`);
       } else if (jerseyNumber !== null) {
         const assistText = validAssists.length > 0
-          ? ` (Assist: ${validAssists.map(a => `#${a}`).join(', ')})`
+          ? ` (${t('sidebar.assistFormat', { assists: validAssists.map(a => `#${a}`).join(', ') })})`
           : '';
-        showSuccess(`⚽ Tor für ${teamName} (#${jerseyNumber})${assistText}`);
+        showSuccess(`⚽ ${t('toast.goalScored', { teamName })} (#${jerseyNumber})${assistText}`);
       } else {
-        showSuccess(`⚽ Tor für ${teamName}!`);
+        showSuccess(`⚽ ${t('toast.goalScored', { teamName })}!`);
       }
 
       // Reset state
       setPendingGoalSide(null);
       setShowGoalDialog(false);
     },
-    [currentMatch, pendingGoalSide, onGoal, showSuccess, showInfo]
+    [currentMatch, pendingGoalSide, onGoal, showSuccess, showInfo, t]
   );
 
   const handleMinusHome = useCallback(() => {
     if (!currentMatch || currentMatch.homeScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
-    showInfo(`Tor für ${currentMatch.homeTeam.name} entfernt`);
-  }, [currentMatch, onGoal, showInfo]);
+    showInfo(t('toast.goalRemoved', { teamName: currentMatch.homeTeam.name }));
+  }, [currentMatch, onGoal, showInfo, t]);
 
   const handleMinusAway = useCallback(() => {
     if (!currentMatch || currentMatch.awayScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
-    showInfo(`Tor für ${currentMatch.awayTeam.name} entfernt`);
-  }, [currentMatch, onGoal, showInfo]);
+    showInfo(t('toast.goalRemoved', { teamName: currentMatch.awayTeam.name }));
+  }, [currentMatch, onGoal, showInfo, t]);
 
   const handleStart = useCallback(() => {
     if (!currentMatch) { return; }
