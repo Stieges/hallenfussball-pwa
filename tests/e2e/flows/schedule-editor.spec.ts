@@ -17,6 +17,7 @@
 
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 // CI skip removed - using reliable seeding fixture
 
@@ -184,18 +185,18 @@ async function navigateToSpielplan(page: Page, tournamentTitle: string = 'Editor
 
 async function enterEditMode(page: Page) {
   // Click on "Spielplan bearbeiten" button (desktop) or "Bearbeiten" (mobile compact)
-  const editButton = page.getByRole('button', { name: /Spielplan bearbeiten|Bearbeiten/i }).first();
+  const editButton = page.getByRole('button', { name: new RegExp(`${t('tournament:toolbar.editSchedule')}|Bearbeiten`, 'i') }).first();
   await editButton.waitFor({ state: 'visible', timeout: 5000 });
   await editButton.click();
   await page.waitForTimeout(300);
 
   // Verify we're in edit mode by looking for "Bearbeitungsmodus" badge
-  await expect(page.getByText('Bearbeitungsmodus')).toBeVisible({ timeout: 3000 });
+  await expect(page.getByText(t('tournament:toolbar.editMode'))).toBeVisible({ timeout: 3000 });
 }
 
 // Helper for exiting edit mode
 async function exitEditModeWithSave(page: Page) {
-  const saveButton = page.getByRole('button', { name: /Speichern/i }).first();
+  const saveButton = page.getByRole('button', { name: t('tournament:toolbar.save') }).first();
   await saveButton.click();
   await page.waitForTimeout(500);
 }
@@ -204,7 +205,7 @@ async function exitEditModeWithSave(page: Page) {
 export { exitEditModeWithSave };
 
 async function exitEditModeWithCancel(page: Page) {
-  const cancelButton = page.getByRole('button', { name: /Abbrechen/i }).first();
+  const cancelButton = page.getByRole('button', { name: t('tournament:toolbar.cancel') }).first();
   await cancelButton.click();
   await page.waitForTimeout(300);
 }
@@ -240,17 +241,17 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await navigateToSpielplan(page);
 
     // WHEN - Click "Spielplan bearbeiten" button
-    const editButton = page.getByRole('button', { name: /Spielplan bearbeiten/i }).first();
+    const editButton = page.getByRole('button', { name: t('tournament:toolbar.editSchedule') }).first();
     await expect(editButton).toBeVisible({ timeout: 5000 });
     await editButton.click();
 
     // THEN - "Bearbeitungsmodus" badge should be visible
-    await expect(page.getByText('Bearbeitungsmodus')).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(t('tournament:toolbar.editMode'))).toBeVisible({ timeout: 3000 });
 
     // And edit controls should be visible (Undo, Save, Cancel buttons)
-    await expect(page.getByRole('button', { name: /Undo/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Speichern/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Abbrechen/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.undo') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.save') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.cancel') })).toBeVisible();
   });
 
   test('AC-3: Abbrechen-Button beendet Bearbeitungsmodus', async ({ page }) => {
@@ -262,7 +263,7 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await exitEditModeWithCancel(page);
 
     // THEN - Should exit edit mode ("Spielplan bearbeiten" button visible again)
-    await expect(page.getByRole('button', { name: /Spielplan bearbeiten/i })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.editSchedule') })).toBeVisible({ timeout: 3000 });
   });
 
   test('AC-5: Undo/Redo Buttons sind sichtbar im Editiermodus', async ({ page }) => {
@@ -271,8 +272,8 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await enterEditMode(page);
 
     // THEN - Undo and Redo buttons should be visible
-    await expect(page.getByRole('button', { name: /Undo/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Redo/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.undo') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.redo') })).toBeVisible();
   });
 
   test('AC-5: SR-Redistribution Button ist sichtbar', async ({ page }) => {
@@ -281,7 +282,7 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await enterEditMode(page);
 
     // THEN - SR distribute button should be visible (when referee config is set)
-    const srDistributeButton = page.getByRole('button', { name: /SR verteilen/i });
+    const srDistributeButton = page.getByRole('button', { name: t('tournament:toolbar.redistributeSR') });
     await expect(srDistributeButton).toBeVisible({ timeout: 3000 });
   });
 
@@ -291,7 +292,7 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await enterEditMode(page);
 
     // THEN - Fields distribute button should be visible (when numberOfFields > 1)
-    const fieldsDistributeButton = page.getByRole('button', { name: /Felder verteilen/i });
+    const fieldsDistributeButton = page.getByRole('button', { name: t('tournament:toolbar.redistributeFields') });
     await expect(fieldsDistributeButton).toBeVisible({ timeout: 3000 });
   });
 
@@ -300,8 +301,8 @@ test.describe('Editiermodus 2.0 - Positiv-Tests', () => {
     await navigateToSpielplan(page);
 
     // THEN - View mode toggle buttons should be visible
-    const tabelleButton = page.getByRole('button', { name: /Tabelle/i }).first();
-    const gridButton = page.getByRole('button', { name: /Grid/i }).first();
+    const tabelleButton = page.getByRole('button', { name: t('tournament:toolbar.viewTable') }).first();
+    const gridButton = page.getByRole('button', { name: t('tournament:toolbar.viewGrid') }).first();
 
     const hasTabelle = await tabelleButton.isVisible().catch(() => false);
     const hasGrid = await gridButton.isVisible().catch(() => false);
@@ -351,7 +352,7 @@ test.describe('Editiermodus 2.0 - Mit Spielen', () => {
     await enterEditMode(page);
 
     // THEN - Should be in edit mode with schedule visible
-    await expect(page.getByText('Bearbeitungsmodus')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(t('tournament:toolbar.editMode'))).toBeVisible({ timeout: 5000 });
     // Schedule should show teams
     await expect(page.getByText('FC Bayern').first()).toBeVisible();
   });
@@ -411,7 +412,7 @@ test.describe('Editiermodus 2.0 - Grenzfälle', () => {
     await navigateToSpielplan(page);
 
     // THEN - Edit button should be visible
-    const editButton = page.getByRole('button', { name: /Spielplan bearbeiten/i });
+    const editButton = page.getByRole('button', { name: t('tournament:toolbar.editSchedule') });
     await expect(editButton).toBeVisible({ timeout: 5000 });
   });
 });
@@ -445,7 +446,7 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     await enterEditMode(page);
 
     // THEN - Save button should be visible (may be disabled)
-    const saveButton = page.getByRole('button', { name: /Speichern/i }).first();
+    const saveButton = page.getByRole('button', { name: t('tournament:toolbar.save') }).first();
     await expect(saveButton).toBeVisible();
   });
 
@@ -464,11 +465,11 @@ test.describe('Editiermodus 2.0 - Negativ-Tests', () => {
     await exitEditModeWithCancel(page);
 
     // THEN - Should be back in view mode
-    await expect(page.getByRole('button', { name: /Spielplan bearbeiten/i })).toBeVisible({ timeout: 3000 });
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.editSchedule') })).toBeVisible({ timeout: 3000 });
 
     // And we should be able to re-enter edit mode
     await enterEditMode(page);
-    await expect(page.getByText('Bearbeitungsmodus')).toBeVisible();
+    await expect(page.getByText(t('tournament:toolbar.editMode'))).toBeVisible();
   });
 });
 
@@ -503,10 +504,10 @@ test.describe('Editiermodus 2.0 - Accessibility', () => {
     await enterEditMode(page);
 
     // THEN - Buttons should have visible text
-    await expect(page.getByRole('button', { name: /Undo/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Redo/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Speichern/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Abbrechen/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.undo') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.redo') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.save') })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('tournament:toolbar.cancel') })).toBeVisible();
   });
 
   test('Keyboard-Navigation: Tab wechselt Fokus', async ({ page }) => {
@@ -562,11 +563,11 @@ test.describe('Editiermodus 2.0 - Performance', () => {
     // WHEN - Measure time to enter edit mode
     const startTime = Date.now();
 
-    const editButton = page.getByRole('button', { name: /Spielplan bearbeiten/i }).first();
+    const editButton = page.getByRole('button', { name: t('tournament:toolbar.editSchedule') }).first();
     await editButton.click();
 
     // Wait for edit mode indicators
-    await page.getByText('Bearbeitungsmodus').waitFor({ state: 'visible', timeout: 5000 });
+    await page.getByText(t('tournament:toolbar.editMode')).waitFor({ state: 'visible', timeout: 5000 });
 
     const endTime = Date.now();
     const duration = endTime - startTime;

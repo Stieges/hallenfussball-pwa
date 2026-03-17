@@ -138,7 +138,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     border: `1px solid ${cssVars.colors.border}`,
     borderRadius: cssVars.borderRadius.md,
     boxShadow: `0 4px 12px ${cssVars.colors.shadowMedium}`,
-    zIndex: 1100, // Higher than BottomNavigation (1000)
+    zIndex: cssVars.zIndex.floating,
     minWidth: 200,
   };
 

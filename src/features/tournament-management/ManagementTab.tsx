@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../types/tournament';
 import { GeneratedSchedule, ScheduledMatch } from '../../core/generators';
 import { LiveCockpit } from '../../components/live-cockpit';
@@ -38,6 +39,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   initialMatchId,
   onInitialMatchConsumed,
 }) => {
+  const { t } = useTranslation('tournament');
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
@@ -84,19 +86,19 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
   // Confirm dialogs
   const startWithResultDialog = useConfirmDialog({
-    title: 'Vorhandene Ergebnisse',
+    title: t('management.existingResults'),
     message: '',
     variant: 'warning',
-    confirmText: 'Trotzdem starten',
-    cancelText: 'Abbrechen',
+    confirmText: t('management.startAnyway'),
+    cancelText: t('common.cancel'),
   });
 
   const switchMatchDialog = useConfirmDialog({
-    title: 'Laufendes Spiel',
+    title: t('management.runningMatch'),
     message: '',
     variant: 'warning',
-    confirmText: 'Wechseln',
-    cancelText: 'Abbrechen',
+    confirmText: t('management.switch'),
+    cancelText: t('common.cancel'),
   });
 
   // Handle initial match ID from navigation (e.g., from ScheduleTab "Zum Cockpit")
@@ -167,14 +169,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       id: sm.id,
       number: sm.matchNumber,
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use phase-based default
-      phaseLabel: sm.label || (sm.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
+      phaseLabel: sm.label || (sm.phase === 'groupStage' ? t('management.groupStage') : t('management.finalRound')),
       scheduledKickoff: sm.time,
       fieldId: `field-${sm.field}`,
       homeTeam: { id: homeId, name: homeName },
       awayTeam: { id: awayId, name: awayName },
       tournamentPhase: sm.phase, // For detecting phase changes
     };
-  }, [isPlaceholder, getTeamName]);
+  }, [isPlaceholder, getTeamName, t]);
 
   // Get matches for selected field
   const fieldMatches = useMemo(() =>
@@ -277,15 +279,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
     if (hasExistingResult && match.status === 'NOT_STARTED') {
       const confirmed = await startWithResultDialog.confirm({
-        message: `Für dieses Spiel liegen bereits Ergebnisse vor!\n\nAktueller Stand: ${match.homeScore}:${match.awayScore}\n\nWenn Sie das Spiel jetzt starten, werden die vorhandenen Ergebnisse gelöscht und durch die Live-Erfassung ersetzt (Start bei 0:0).`,
-        details: `Spiel #${match.number}: ${match.homeTeam.name} vs ${match.awayTeam.name}`,
+        message: t('management.existingResultsMessage', { homeScore: match.homeScore, awayScore: match.awayScore }),
+        details: t('management.matchDetails', { number: match.number, home: match.homeTeam.name, away: match.awayTeam.name }),
       });
 
       if (!confirmed) { return; }
     }
 
     void hookHandleStart(matchId);
-  }, [liveMatches, hookHandleStart, startWithResultDialog]);
+  }, [liveMatches, hookHandleStart, startWithResultDialog, t]);
 
   // Handler: Match selection change with warning for running match
   const handleMatchSelectionChange = useCallback(async (newMatchId: string | null) => {
@@ -293,8 +295,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
 
     if (runningMatch && runningMatch.id !== newMatchId) {
       const confirmed = await switchMatchDialog.confirm({
-        message: `Spiel #${runningMatch.number} läuft noch!\n\n${runningMatch.homeTeam.name} vs ${runningMatch.awayTeam.name}\nAktueller Stand: ${runningMatch.homeScore}:${runningMatch.awayScore}\n\nWenn Sie zu einem anderen Spiel wechseln, wird das laufende Spiel automatisch beendet.`,
-        confirmText: 'Spiel beenden & wechseln',
+        message: t('management.switchMatchMessage', { number: runningMatch.number, home: runningMatch.homeTeam.name, away: runningMatch.awayTeam.name, homeScore: runningMatch.homeScore, awayScore: runningMatch.awayScore }),
+        confirmText: t('management.endAndSwitch'),
       });
 
       if (!confirmed) { return; }
@@ -303,7 +305,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     }
 
     setSelectedMatchId(newMatchId);
-  }, [hasRunningMatch, handleFinish, switchMatchDialog]);
+  }, [hasRunningMatch, handleFinish, switchMatchDialog, t]);
 
   // Handler: Load next match on current field
   // BUG-FIX: Improved logic - find next unplayed match on current field
@@ -369,7 +371,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
                 setSelectedMatchId(null);
               }}
             >
-              Feld {fieldNum}
+              {t('management.field', { number: fieldNum })}
             </button>
           ))}
         </div>
@@ -378,14 +380,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       {/* MATCH SELECTOR */}
       <div className={styles.matchSelector}>
         <label className={styles.matchSelectorLabel}>
-          Spiel auswählen (optional - automatisch wird das nächste ausgewählt):
+          {t('management.selectMatch')}
         </label>
         <select
           className={styles.matchSelect}
           value={selectedMatchId ?? ''}
           onChange={(e) => { void handleMatchSelectionChange(e.target.value || null); }}
         >
-          <option value="">Automatisch (nächstes Spiel)</option>
+          <option value="">{t('management.autoNextMatch')}</option>
           {fieldMatches.map(match => (
             <option key={match.id} value={match.id}>
               #{match.matchNumber} - {match.homeTeam} vs {match.awayTeam} ({match.time})
@@ -398,7 +400,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       {/* LIVE COCKPIT */}
       {currentMatch ? (
         <LiveCockpit
-          fieldName={`Feld ${selectedFieldNumber}`}
+          fieldName={t('management.field', { number: selectedFieldNumber })}
           tournamentName={tournament.title}
           tournamentId={tournament.id}
           cockpitSettings={tournament.matchCockpitSettings}
@@ -434,11 +436,11 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
         />
       ) : isInitializingMatch ? (
         <div className={styles.noMatches}>
-          Spiel wird geladen...
+          {t('management.matchLoading')}
         </div>
       ) : (
         <div className={styles.noMatches}>
-          Keine Spiele auf diesem Feld vorhanden
+          {t('management.noMatchesOnField')}
         </div>
       )}
 

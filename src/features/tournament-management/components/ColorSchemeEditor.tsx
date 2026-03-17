@@ -9,6 +9,7 @@
  */
 
 import { CSSProperties, useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HexColorPicker, HexColorInput } from 'react-colorful';
 import { cssVars } from '../../../design-tokens';
 import { monitorColorSchemes, getScoreTextColor } from '../../../design-tokens/display';
@@ -29,12 +30,12 @@ export interface ColorSchemeEditorProps {
 // CONSTANTS
 // =============================================================================
 
-const PRESET_META: Record<Exclude<LiveColorPreset, 'custom'>, { label: string }> = {
-  classic: { label: 'Klassisch' },
-  nature: { label: 'Natur' },
-  contrast: { label: 'Kontrast' },
-  modern: { label: 'Modern' },
-  alternative: { label: 'Alternativ' },
+const PRESET_META: Record<Exclude<LiveColorPreset, 'custom'>, { labelKey: string }> = {
+  classic: { labelKey: 'colorScheme.presets.classic' },
+  nature: { labelKey: 'colorScheme.presets.nature' },
+  contrast: { labelKey: 'colorScheme.presets.contrast' },
+  modern: { labelKey: 'colorScheme.presets.modern' },
+  alternative: { labelKey: 'colorScheme.presets.alternative' },
 };
 
 const RECENT_COLORS_KEY = 'hallenfussball_recent_colors';
@@ -188,14 +189,16 @@ function ColorPresetButton({
   isActive: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation('tournament');
   const meta = PRESET_META[presetKey];
+  const label = t(meta.labelKey as never);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      title={meta.label}
-      aria-label={`Farbschema: ${meta.label}`}
+      title={label}
+      aria-label={t('colorScheme.schemaAria', { name: label })}
       aria-pressed={isActive}
       style={{
         display: 'flex',
@@ -216,7 +219,7 @@ function ColorPresetButton({
         <div style={{ width: '24px', height: '24px', borderRadius: '4px', backgroundColor: away }} />
       </div>
       <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textSecondary }}>
-        {meta.label}
+        {label}
       </span>
     </button>
   );
@@ -231,6 +234,7 @@ function ColorPickerField({
   color: string;
   onChange: (color: string) => void;
 }) {
+  const { t } = useTranslation('tournament');
   const [isOpen, setIsOpen] = useState(false);
   const [recentColors] = useState(loadRecentColors);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -270,7 +274,7 @@ function ColorPickerField({
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          aria-label={`${label} Farbe wählen: ${color}`}
+          aria-label={t('colorScheme.pickColorAria', { label, color })}
           style={{
             ...swatchBtnBase,
             backgroundColor: color,
@@ -287,12 +291,12 @@ function ColorPickerField({
               onChange={handleChange}
               prefixed
               style={hexInputStyle}
-              aria-label={`${label} Hex-Wert`}
+              aria-label={t('colorScheme.hexValueAria', { label })}
             />
             {recentColors.length > 0 && (
               <>
                 <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>
-                  Zuletzt verwendet
+                  {t('colorScheme.recentlyUsed')}
                 </span>
                 <div style={recentRowStyle}>
                   {recentColors.map((c) => (
@@ -301,7 +305,7 @@ function ColorPickerField({
                       type="button"
                       style={{ ...recentSwatchStyle, backgroundColor: c }}
                       onClick={() => handleChange(c)}
-                      aria-label={`Farbe ${c} verwenden`}
+                      aria-label={t('colorScheme.useColorAria', { color: c })}
                     />
                   ))}
                 </div>
@@ -320,7 +324,7 @@ function ColorPickerField({
                 minHeight: cssVars.touchTargets.minimum,
               }}
             >
-              Fertig
+              {t('colorScheme.done')}
             </button>
           </div>
         )}
@@ -356,6 +360,7 @@ function ColorSchemePreview({
 // =============================================================================
 
 export function ColorSchemeEditor({ value, onChange, styles }: ColorSchemeEditorProps) {
+  const { t } = useTranslation('tournament');
   const scheme = value ?? DEFAULT_LIVE_COLOR_SCHEME;
 
   const handlePresetSelect = useCallback(
@@ -394,7 +399,7 @@ export function ColorSchemeEditor({ value, onChange, styles }: ColorSchemeEditor
 
   return (
     <div style={{ ...styles.inputGroupStyle, marginTop: cssVars.spacing.sm }}>
-      <span style={styles.labelStyle}>Score-Farben</span>
+      <span style={styles.labelStyle}>{t('colorScheme.scoreColors')}</span>
 
       <div style={sectionStyle}>
         {/* Presets */}
@@ -416,12 +421,12 @@ export function ColorSchemeEditor({ value, onChange, styles }: ColorSchemeEditor
         {/* Custom color pickers */}
         <div style={customRowStyle}>
           <ColorPickerField
-            label="Heim-Farbe"
+            label={t('colorScheme.homeColor')}
             color={scheme.homeColor}
             onChange={handleHomeColorChange}
           />
           <ColorPickerField
-            label="Gast-Farbe"
+            label={t('colorScheme.awayColor')}
             color={scheme.awayColor}
             onChange={handleAwayColorChange}
           />
@@ -434,7 +439,7 @@ export function ColorSchemeEditor({ value, onChange, styles }: ColorSchemeEditor
             checked={scheme.useTeamColors}
             onChange={(e) => handleUseTeamColorsToggle(e.target.checked)}
           />
-          <span style={styles.labelStyle}>Team-Farben verwenden (falls vorhanden)</span>
+          <span style={styles.labelStyle}>{t('colorScheme.useTeamColors')}</span>
         </label>
 
         {/* Mini Preview */}

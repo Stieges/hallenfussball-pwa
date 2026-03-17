@@ -8,6 +8,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
 import { cssVars } from '../../../design-tokens';
@@ -25,6 +26,7 @@ import { authCallbackStyles as styles } from './AuthCallback.styles';
 // ============================================================================
 
 export const AuthCallback: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();
   const [error, setError] = useState<string | null>(null);
@@ -178,16 +180,16 @@ export const AuthCallback: React.FC = () => {
       <div style={styles.container}>
         <div style={styles.card}>
           <div style={styles.errorIcon}>!</div>
-          <h2 style={styles.title}>Authentifizierung fehlgeschlagen</h2>
+          <h2 style={styles.title}>{t('errors.authFailed')}</h2>
           <p style={styles.text}>{error}</p>
           <p style={{ ...styles.text, fontSize: cssVars.fontSizes.sm }}>
-            Du wirst in 5 Sekunden zum Login weitergeleitet...
+            {t('callback.redirecting')}
           </p>
           <button
             onClick={() => void navigate('/login', { replace: true })}
             style={styles.button}
           >
-            Zum Login
+            {t('callback.toLogin')}
           </button>
         </div>
       </div>
@@ -200,16 +202,15 @@ export const AuthCallback: React.FC = () => {
       <div style={styles.container}>
         <div style={styles.card}>
           <div style={styles.errorIcon}>!</div>
-          <h2 style={styles.title}>Anmeldung dauert zu lange</h2>
+          <h2 style={styles.title}>{t('errors.authTimeout')}</h2>
           <p style={styles.text}>
-            Die Authentifizierung konnte nicht abgeschlossen werden.
-            Bitte versuche es erneut.
+            {t('errors.authTimeoutMessage')}
           </p>
           <button
             onClick={() => void navigate('/login', { replace: true })}
             style={styles.button}
           >
-            Zurück zum Login
+            {t('callback.backToLogin')}
           </button>
         </div>
       </div>
@@ -220,8 +221,8 @@ export const AuthCallback: React.FC = () => {
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.spinner} />
-        <h2 style={styles.title}>Anmeldung wird verarbeitet...</h2>
-        <p style={styles.text}>Bitte warte einen Moment.</p>
+        <h2 style={styles.title}>{t('callback.processing')}</h2>
+        <p style={styles.text}>{t('callback.pleaseWait')}</p>
       </div>
     </div>
   );

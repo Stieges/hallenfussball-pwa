@@ -14,6 +14,7 @@
  */
 
 import { type CSSProperties, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { MatchCardScore, type MatchCardStatus } from './MatchCardScore';
 import { formatTime } from './utils';
@@ -100,6 +101,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
   disabled = false,
   hasEvents = false,
 }) => {
+  const { t } = useTranslation('tournament');
   const [isHovered, setIsHovered] = useState(false);
 
   const isLive = status === 'running';
@@ -215,7 +217,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
         onMouseLeave={() => setIsHovered(false)}
         role="row"
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty matchNumber should display as empty
-        aria-label={`Spiel ${matchNumber || ''}: ${homeTeam.name} gegen ${awayTeam.name}`}
+        aria-label={t('matchCard.ariaLabel', { matchNumber: matchNumber || '', homeTeam: homeTeam.name, awayTeam: awayTeam.name })}
       >
         {/* Time */}
         <div style={timeStyle}>
@@ -256,9 +258,9 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
         {/* Field */}
         <div style={fieldStyle}>
-          {field !== undefined ? `Feld ${field}` : ''}
+          {field !== undefined ? t('matchCard.field', { field }) : ''}
           {matchNumber && matchNumber > 0 && referee && (
-            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>SR: {referee}</div>
+            <div style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>{t('matchCard.refereeSR', { referee })}</div>
           )}
         </div>
 
@@ -304,7 +306,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
 
         {/* Group */}
         <div style={groupStyle}>
-          {showGroupLabel && group && group !== 'all' ? `Gr. ${group}` : ''}
+          {showGroupLabel && group && group !== 'all' ? t('matchCard.groupShort', { group }) : ''}
         </div>
       </div>
 

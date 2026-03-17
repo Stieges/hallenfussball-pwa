@@ -91,8 +91,8 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      expect(screen.getByText('Noch keine Monitore konfiguriert')).toBeInTheDocument();
-      expect(screen.getByText(/Erstelle einen Monitor/)).toBeInTheDocument();
+      expect(screen.getByText('tournament:monitors.emptyState')).toBeInTheDocument();
+      expect(screen.getByText(/monitors\.emptyStateHint/)).toBeInTheDocument();
     });
 
     it('zeigt TV-Emoji im Empty-State', () => {
@@ -124,10 +124,10 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
 
-      expect(screen.getByText('Neuen Monitor erstellen')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText(/Monitor-Name/)).toBeInTheDocument();
+      expect(screen.getByText('tournament:monitors.createTitle')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/monitors\.namePlaceholder/)).toBeInTheDocument();
     });
 
     it('versteckt "Neuer Monitor" Button im Create-Modus', async () => {
@@ -141,9 +141,9 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
 
-      expect(screen.queryByRole('button', { name: /Neuer Monitor/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /monitors\.addMonitor/ })).not.toBeInTheDocument();
     });
 
     it('ruft createMonitor mit Name auf', async () => {
@@ -160,9 +160,9 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
-      await user.type(screen.getByPlaceholderText(/Monitor-Name/), 'Neuer Test Monitor');
-      await user.click(screen.getByText(/Erstellen & Bearbeiten/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Neuer Test Monitor');
+      await user.click(screen.getByText(/monitors\.createAndEdit/));
 
       expect(mockCreateMonitor).toHaveBeenCalledWith('Neuer Test Monitor');
     });
@@ -181,9 +181,9 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
-      await user.type(screen.getByPlaceholderText(/Monitor-Name/), 'Test');
-      await user.click(screen.getByText(/Erstellen & Bearbeiten/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Test');
+      await user.click(screen.getByText(/monitors\.createAndEdit/));
 
       await waitFor(() => {
         expect(mockOnEditMonitor).toHaveBeenCalledWith('new-monitor');
@@ -201,10 +201,10 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
-      await user.click(screen.getByText('Abbrechen'));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByText('tournament:monitors.cancel'));
 
-      expect(screen.queryByText('Neuen Monitor erstellen')).not.toBeInTheDocument();
+      expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
     });
 
     it('schließt Form bei Escape', async () => {
@@ -218,10 +218,10 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
       await user.keyboard('{Escape}');
 
-      expect(screen.queryByText('Neuen Monitor erstellen')).not.toBeInTheDocument();
+      expect(screen.queryByText('tournament:monitors.createTitle')).not.toBeInTheDocument();
     });
 
     it('erstellt bei Enter', async () => {
@@ -237,8 +237,8 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
-      await user.type(screen.getByPlaceholderText(/Monitor-Name/), 'Test{Enter}');
+      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.type(screen.getByPlaceholderText(/monitors\.namePlaceholder/), 'Test{Enter}');
 
       expect(mockCreateMonitor).toHaveBeenCalledWith('Test');
     });
@@ -259,10 +259,10 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
-      await user.click(screen.getByText(/Erstellen & Bearbeiten/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
+      await user.click(screen.getByText(/monitors\.createAndEdit/));
 
-      expect(screen.getByText('Name ist erforderlich')).toBeInTheDocument();
+      expect(screen.getByText('tournament:monitors.errors.nameRequired')).toBeInTheDocument();
     });
 
     it('zeigt Error bei zu langem Namen (>50 Zeichen)', async () => {
@@ -276,14 +276,14 @@ describe('MonitorsConfigTab', () => {
         />
       );
 
-      await user.click(screen.getByText(/Neuer Monitor/));
+      await user.click(screen.getByText(/monitors\.addMonitor/));
       await user.type(
-        screen.getByPlaceholderText(/Monitor-Name/),
+        screen.getByPlaceholderText(/monitors\.namePlaceholder/),
         'A'.repeat(51)
       );
-      await user.click(screen.getByText(/Erstellen & Bearbeiten/));
+      await user.click(screen.getByText(/monitors\.createAndEdit/));
 
-      expect(screen.getByText('Name darf maximal 50 Zeichen haben')).toBeInTheDocument();
+      expect(screen.getByText('tournament:monitors.errors.nameTooLong')).toBeInTheDocument();
     });
   });
 
