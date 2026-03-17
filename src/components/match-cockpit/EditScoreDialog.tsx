@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile, useFocusTrap } from '../../hooks';
@@ -27,6 +28,7 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation('cockpit');
   const [homeScore, setHomeScore] = useState(currentHomeScore);
   const [awayScore, setAwayScore] = useState(currentAwayScore);
 
@@ -173,11 +175,11 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
       >
         <div id="edit-score-dialog-title" style={titleStyle}>
           <span aria-hidden="true">✏️</span>
-          <span>Ergebnis korrigieren</span>
+          <span>{t('editScore.title')}</span>
         </div>
 
         <div style={currentScoreStyle}>
-          Aktueller Stand: <strong>{currentHomeScore} : {currentAwayScore}</strong>
+          {t('editScore.currentScore', { home: currentHomeScore, away: currentAwayScore })}
         </div>
 
         <div style={scoreInputContainerStyle}>
@@ -193,13 +195,13 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 onClick={() => setHomeScore(Math.max(0, homeScore - 1))}
                 disabled={homeScore === 0}
                 type="button"
-                aria-label={`Tore für ${homeTeamName} verringern`}
+                aria-label={t('editScore.decreaseAria', { team: homeTeamName })}
               >
                 −
               </button>
               <div
                 style={scoreDisplayStyle}
-                aria-label={`Tore ${homeTeamName}: ${homeScore}`}
+                aria-label={t('editScore.scoreAria', { team: homeTeamName, score: homeScore })}
                 role="text"
               >
                 {homeScore}
@@ -208,7 +210,7 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 style={scoreButtonStyle}
                 onClick={() => setHomeScore(homeScore + 1)}
                 type="button"
-                aria-label={`Tore für ${homeTeamName} erhöhen`}
+                aria-label={t('editScore.increaseAria', { team: homeTeamName })}
               >
                 +
               </button>
@@ -229,13 +231,13 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 onClick={() => setAwayScore(Math.max(0, awayScore - 1))}
                 disabled={awayScore === 0}
                 type="button"
-                aria-label={`Tore für ${awayTeamName} verringern`}
+                aria-label={t('editScore.decreaseAria', { team: awayTeamName })}
               >
                 −
               </button>
               <div
                 style={scoreDisplayStyle}
-                aria-label={`Tore ${awayTeamName}: ${awayScore}`}
+                aria-label={t('editScore.scoreAria', { team: awayTeamName, score: awayScore })}
                 role="text"
               >
                 {awayScore}
@@ -244,7 +246,7 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
                 style={scoreButtonStyle}
                 onClick={() => setAwayScore(awayScore + 1)}
                 type="button"
-                aria-label={`Tore für ${awayTeamName} erhöhen`}
+                aria-label={t('editScore.increaseAria', { team: awayTeamName })}
               >
                 +
               </button>
@@ -260,7 +262,7 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
             disabled={!hasChanged}
             style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
           >
-            Speichern
+            {t('editScore.save')}
           </Button>
           <Button
             variant="secondary"
@@ -268,7 +270,7 @@ export const EditScoreDialog: React.FC<EditScoreDialogProps> = ({
             onClick={onCancel}
             style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
           >
-            Abbrechen
+            {t('editScore.cancel')}
           </Button>
         </div>
       </div>

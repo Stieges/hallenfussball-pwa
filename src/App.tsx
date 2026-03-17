@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useTournaments } from './hooks/useTournaments';
@@ -77,42 +79,46 @@ const TournamentAdminCenter = lazy(() =>
 );
 
 // Loading fallback component
-const ScreenLoader = () => (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: 'var(--min-h-screen)',
-      background: cssVars.colors.background,
-      color: cssVars.colors.textPrimary,
-    }}
-  >
-    <div style={{ textAlign: 'center' }}>
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          border: `3px solid ${cssVars.colors.border}`,
-          borderTopColor: cssVars.colors.primary,
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 16px',
-        }}
-      />
-      <div>Lade...</div>
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+const ScreenLoader = () => {
+  const { t } = useTranslation('common');
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 'var(--min-h-screen)',
+        background: cssVars.colors.background,
+        color: cssVars.colors.textPrimary,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            border: `3px solid ${cssVars.colors.border}`,
+            borderTopColor: cssVars.colors.primary,
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px',
+          }}
+        />
+        <div>{t('loading.generic')}</div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 type ScreenType = 'dashboard' | 'create' | 'view' | 'public' | 'live' | 'login' | 'register' | 'profile' | 'settings' | 'invite' | 'impressum' | 'datenschutz' | 'monitor-display' | 'auth-callback' | 'auth-confirm' | 'set-password' | 'local-test';
 
 function AppContent() {
+  const { t } = useTranslation('common');
   const { showError } = useToast();
   const { isGuest } = useAuth();
   const navigate = useNavigate();
@@ -174,20 +180,20 @@ function AppContent() {
 
   // Soft Delete Confirmation (move to trash)
   const softDeleteDialog = useConfirmDialog({
-    title: 'Turnier löschen?',
-    message: 'Das Turnier wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.',
+    title: t('tournament.softDelete.title'),
+    message: t('tournament.softDelete.message'),
     variant: 'warning',
-    confirmText: 'In Papierkorb',
-    cancelText: 'Abbrechen',
+    confirmText: t('tournament.softDelete.confirm'),
+    cancelText: t('actions.cancel'),
   });
 
   // Permanent Delete Confirmation
   const permanentDeleteDialog = useConfirmDialog({
-    title: 'Endgültig löschen?',
-    message: 'Das Turnier wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.',
+    title: t('tournament.permanentDelete.title'),
+    message: t('tournament.permanentDelete.message'),
     variant: 'danger',
-    confirmText: 'Endgültig löschen',
-    cancelText: 'Abbrechen',
+    confirmText: t('tournament.permanentDelete.confirm'),
+    cancelText: t('actions.cancel'),
   });
 
   // ============================================================================
@@ -196,7 +202,7 @@ function AppContent() {
 
   const handleSoftDelete = useCallback(async (id: string, title: string) => {
     const confirmed = await softDeleteDialog.confirm({
-      message: `Das Turnier "${title}" wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.`,
+      message: t('tournament.softDelete.messageWithTitle', { title }),
     });
 
     if (confirmed) {
@@ -205,10 +211,10 @@ function AppContent() {
       } catch (error) {
         console.error('[App] Failed to soft delete tournament:', error);
         if (error instanceof Error) { captureFeatureError(error, 'tournament', 'softDelete', { tournamentId: id }); }
-        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+        showError(t('errors.deleteTournament'));
       }
     }
-  }, [softDeleteDialog, softDeleteTournament, showError]);
+  }, [softDeleteDialog, softDeleteTournament, showError, t]);
 
   const handleRestore = useCallback(async (id: string, title: string) => {
     try {
@@ -217,13 +223,13 @@ function AppContent() {
     } catch (error) {
       console.error('[App] Failed to restore tournament:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'restore', { tournamentId: id }); }
-      showError(`Fehler beim Wiederherstellen von "${title}". Bitte versuche es erneut.`);
+      showError(t('errors.restoreTournament', { title }));
     }
-  }, [restoreTournament, showError]);
+  }, [restoreTournament, showError, t]);
 
   const handlePermanentDelete = useCallback(async (id: string, title: string) => {
     const confirmed = await permanentDeleteDialog.confirm({
-      message: `Das Turnier "${title}" wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
+      message: t('tournament.permanentDelete.messageWithTitle', { title }),
     });
 
     if (confirmed) {
@@ -232,10 +238,10 @@ function AppContent() {
       } catch (error) {
         console.error('[App] Failed to permanently delete tournament:', error);
         if (error instanceof Error) { captureFeatureError(error, 'tournament', 'permanentDelete', { tournamentId: id }); }
-        showError('Fehler beim Löschen des Turniers. Bitte versuche es erneut.');
+        showError(t('errors.deleteTournament'));
       }
     }
-  }, [permanentDeleteDialog, permanentDeleteTournament, showError]);
+  }, [permanentDeleteDialog, permanentDeleteTournament, showError, t]);
   const [screen, setScreen] = useState<ScreenType>('dashboard');
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
   const [publicTournamentId, setPublicTournamentId] = useState<string | null>(null);
@@ -325,7 +331,7 @@ function AppContent() {
           color: cssVars.colors.textPrimary,
         }}
       >
-        <div>Lade Turniere...</div>
+        <div>{t('loading.tournaments')}</div>
       </div>
     );
   }
@@ -370,7 +376,7 @@ function AppContent() {
     } catch (error) {
       console.error('[App] Failed to import tournament:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'import'); }
-      showError('Fehler beim Importieren des Turniers. Bitte versuche es erneut.');
+      showError(t('errors.importTournament'));
     }
   };
 
@@ -384,7 +390,7 @@ function AppContent() {
       const copiedTournament: Tournament = {
         ...tournament,
         id: newId,
-        title: `${tournament.title} (Kopie)`,
+        title: `${tournament.title} ${t('tournament.copySuffix')}`,
         status: 'draft' as TournamentStatus,
         createdAt: now,
         updatedAt: now,
@@ -432,7 +438,7 @@ function AppContent() {
     } catch (error) {
       console.error('[App] Failed to copy tournament:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'copy'); }
-      showError('Fehler beim Kopieren des Turniers. Bitte versuche es erneut.');
+      showError(t('errors.copyTournament'));
     }
   };
 
@@ -459,7 +465,7 @@ function AppContent() {
     } catch (error) {
       console.error('[App] Failed to open tournament in wizard:', error);
       if (error instanceof Error) { captureFeatureError(error, 'tournament', 'editInWizard'); }
-      showError('Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut.');
+      showError(t('errors.editInWizard'));
     }
   };
 
@@ -768,7 +774,7 @@ function PendingChangesWarning(): null {
         // Standard way to show browser confirmation
         e.preventDefault();
         // Some browsers require returnValue to be set
-        const message = 'Ungespeicherte Änderungen vorhanden.';
+        const message = i18n.t('common:unsavedChanges');
         // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for cross-browser compatibility
         e.returnValue = message;
         return message;

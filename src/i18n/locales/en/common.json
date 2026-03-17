@@ -1,0 +1,86 @@
+{
+  "loading": {
+    "generic": "Loading...",
+    "tournaments": "Loading tournaments..."
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "retry": "Try again",
+    "reload": "Reload page",
+    "connect": "Connect",
+    "understood": "Understood",
+    "register": "Register",
+    "login": "Sign in",
+    "logout": "Sign out"
+  },
+  "tournament": {
+    "copySuffix": "(Copy)",
+    "softDelete": {
+      "title": "Delete tournament?",
+      "message": "The tournament will be moved to trash and can be restored for 30 days.",
+      "messageWithTitle": "The tournament \"{{title}}\" will be moved to trash and can be restored for 30 days.",
+      "confirm": "Move to trash"
+    },
+    "permanentDelete": {
+      "title": "Delete permanently?",
+      "message": "The tournament will be permanently deleted. This action cannot be undone.",
+      "messageWithTitle": "The tournament \"{{title}}\" will be permanently deleted. This action cannot be undone.",
+      "confirm": "Delete permanently"
+    }
+  },
+  "errors": {
+    "deleteTournament": "Failed to delete tournament. Please try again.",
+    "restoreTournament": "Failed to restore \"{{title}}\". Please try again.",
+    "importTournament": "Failed to import tournament. Please try again.",
+    "copyTournament": "Failed to copy tournament. Please try again.",
+    "editInWizard": "Failed to open tournament in wizard. Please try again."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try again."
+  },
+  "footer": {
+    "copyright": "© {{year}} Spielplan",
+    "legalLinksLabel": "Legal links",
+    "impressum": "Imprint",
+    "impressumAriaLabel": "Open imprint",
+    "datenschutz": "Privacy Policy",
+    "datenschutzAriaLabel": "Open privacy policy",
+    "cookieSettings": "Cookie Settings",
+    "cookieSettingsAriaLabel": "Open cookie settings"
+  },
+  "authSection": {
+    "statusLoading": "Loading login status",
+    "statusAuthenticated": "Signed in as {{name}}",
+    "statusGuest": "Signed in as guest. Registration recommended for full features.",
+    "statusUnauthenticated": "Not signed in. Sign in or register available.",
+    "offlineAriaLabel": "Offline - Click to reconnect",
+    "offline": "Offline",
+    "profileAriaLabel": "Open profile of {{name}}",
+    "myProfile": "My Profile",
+    "settings": "Settings",
+    "guest": "Guest",
+    "guestOptionsAriaLabel": "Open account options (currently as guest)",
+    "accountOptionsAriaLabel": "Open account options"
+  },
+  "offlineBanner": {
+    "message": "Offline mode - Changes are saved locally",
+    "reconnected": "Connection restored",
+    "syncing_one": "Syncing {{count}} change...",
+    "syncing_other": "Syncing {{count}} changes...",
+    "pending_one": "{{count}} pending",
+    "pending_other": "{{count}} pending"
+  },
+  "offlineIndicator": {
+    "title": "Offline Mode",
+    "subtitle": "Data is saved locally and will be synced later",
+    "reconnectAriaLabel": "Reconnect"
+  },
+  "unsavedChanges": "Unsaved changes present.",
+  "progressBar": {
+    "stepLabel": "Step {{step}}: {{label}}",
+    "errorTooltip": "Error: {{errors}}",
+    "errorBadge": "Error"
+  }
+}

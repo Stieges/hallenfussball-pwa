@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState, useCallback, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
@@ -158,6 +159,7 @@ export function ExportsCategory({
   tournament,
   onTournamentUpdate,
 }: ExportsCategoryProps) {
+  const { t } = useTranslation('admin');
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -216,15 +218,15 @@ export function ExportsCategory({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportSuccess('Backup erfolgreich heruntergeladen!');
+      setExportSuccess(t('exports.backupSuccess'));
       setTimeout(() => setExportSuccess(null), 3000);
     } catch (error) {
       console.error('Backup download failed:', error);
-      setExportError('Fehler beim Erstellen des Backups');
+      setExportError(t('exports.backupError'));
     } finally {
       setIsExporting(false);
     }
-  }, [tournament]);
+  }, [tournament, t]);
 
   // Restore handler
   const handleRestore = useCallback(
@@ -238,7 +240,7 @@ export function ExportsCategory({
 
         // Validate backup data
         if (!data.tournament?.id) {
-          throw new Error('Ungültiges Backup-Format');
+          throw new Error(t('exports.invalidBackupFormat'));
         }
 
         // Create automatic backup before restore
@@ -268,20 +270,20 @@ export function ExportsCategory({
         };
 
         onTournamentUpdate(restoredTournament);
-        setExportSuccess('Turnier erfolgreich wiederhergestellt!');
+        setExportSuccess(t('exports.restoreSuccess'));
         setTimeout(() => setExportSuccess(null), 3000);
       } catch (error) {
         console.error('Restore failed:', error);
         setExportError(
           error instanceof Error
-            ? `Fehler: ${error.message}`
-            : 'Fehler beim Wiederherstellen des Backups'
+            ? t('exports.errorWithMessage', { message: error.message })
+            : t('exports.restoreError')
         );
       } finally {
         setIsExporting(false);
       }
     },
-    [tournament, onTournamentUpdate]
+    [tournament, onTournamentUpdate, t]
   );
 
   // File input change handler
@@ -319,10 +321,10 @@ export function ExportsCategory({
       if (file?.type === 'application/json') {
         void handleRestore(file);
       } else {
-        setExportError('Bitte eine JSON-Datei auswählen');
+        setExportError(t('exports.selectJsonOnly'));
       }
     },
-    [handleRestore]
+    [handleRestore, t]
   );
 
   // Click on drop zone
@@ -333,18 +335,18 @@ export function ExportsCategory({
   return (
     <CategoryPage
       icon="📤"
-      title="Exporte"
-      description="Daten exportieren und Backups verwalten"
+      title={t('exports.title')}
+      description={t('exports.description')}
     >
       {/* Game Events Export */}
-      <CollapsibleSection icon="📋" title="Spielereignisse exportieren">
+      <CollapsibleSection icon="📋" title={t('exports.eventsTitle')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Exportiert Ereignisse (Tore, Karten, Strafen) als CSV oder JSON-Datei.
+          {t('exports.eventsDescription')}
         </p>
 
         {/* Format Selection */}
         <div style={styles.optionGroup}>
-          <label style={styles.label}>Format</label>
+          <label style={styles.label}>{t('exports.format')}</label>
           <div style={{ display: 'flex', gap: cssVars.spacing.md }}>
             <label style={styles.checkbox}>
               <input
@@ -353,7 +355,7 @@ export function ExportsCategory({
                 checked={exportFormat === 'csv'}
                 onChange={() => setExportFormat('csv')}
               />
-              CSV (Excel)
+              {t('exports.formatCsv')}
             </label>
             <label style={styles.checkbox}>
               <input
@@ -362,7 +364,7 @@ export function ExportsCategory({
                 checked={exportFormat === 'json'}
                 onChange={() => setExportFormat('json')}
               />
-              JSON (Daten)
+              {t('exports.formatJson')}
             </label>
           </div>
         </div>
@@ -370,31 +372,31 @@ export function ExportsCategory({
         {/* Event Types Selection */}
         <div style={styles.optionGroup}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cssVars.spacing.xs }}>
-            <label style={{ ...styles.label, marginBottom: 0 }}>Ereignisse</label>
+            <label style={{ ...styles.label, marginBottom: 0 }}>{t('exports.events')}</label>
             <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
               <button
                 type="button"
                 style={{ ...styles.badge, border: 'none', cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedEventTypes(['GOAL', 'YELLOW_CARD', 'RED_CARD', 'TIME_PENALTY', 'SUBSTITUTION'])}
               >
-                Alle
+                {t('exports.all')}
               </button>
               <button
                 type="button"
                 style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.border}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedEventTypes([])}
               >
-                Keine
+                {t('exports.none')}
               </button>
             </div>
           </div>
           <div style={styles.checkboxGroup}>
             {[
-              { id: 'GOAL', label: 'Tore' },
-              { id: 'YELLOW_CARD', label: 'Gelbe Karten' },
-              { id: 'RED_CARD', label: 'Rote Karten' },
-              { id: 'TIME_PENALTY', label: 'Zeitstrafen' },
-              { id: 'SUBSTITUTION', label: 'Wechsel' },
+              { id: 'GOAL', label: t('exports.goals') },
+              { id: 'YELLOW_CARD', label: t('exports.yellowCards') },
+              { id: 'RED_CARD', label: t('exports.redCards') },
+              { id: 'TIME_PENALTY', label: t('exports.timePenalties') },
+              { id: 'SUBSTITUTION', label: t('exports.substitutions') },
             ].map((type) => (
               <label key={type.id} style={styles.checkbox}>
                 <input
@@ -417,21 +419,21 @@ export function ExportsCategory({
         {/* Teams Selection (Multi-Select) */}
         <div style={styles.optionGroup}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cssVars.spacing.xs }}>
-            <label style={{ ...styles.label, marginBottom: 0 }}>Teams Filter</label>
+            <label style={{ ...styles.label, marginBottom: 0 }}>{t('exports.teamsFilter')}</label>
             <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
               <button
                 type="button"
                 style={{ ...styles.badge, border: 'none', cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedTeamIds(tournament.teams.map(t => t.id))}
               >
-                Alle
+                {t('exports.all')}
               </button>
               <button
                 type="button"
                 style={{ ...styles.badge, background: cssVars.colors.background, border: `1px solid ${cssVars.colors.border}`, cursor: 'pointer', fontSize: cssVars.fontSizes.labelSm }}
                 onClick={() => setSelectedTeamIds([])}
               >
-                Keine
+                {t('exports.none')}
               </button>
             </div>
           </div>
@@ -444,7 +446,7 @@ export function ExportsCategory({
             padding: cssVars.spacing.sm,
             background: cssVars.colors.inputBg
           }}>
-            {tournament.teams.length === 0 && <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.bodySm }}>Keine Teams vorhanden</span>}
+            {tournament.teams.length === 0 && <span style={{ color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.bodySm }}>{t('exports.noTeams')}</span>}
             {tournament.teams.map((team) => (
               <label key={team.id} style={{ ...styles.checkbox, marginBottom: 4 }}>
                 <input
@@ -463,7 +465,7 @@ export function ExportsCategory({
             ))}
           </div>
           <div style={{ fontSize: cssVars.fontSizes.labelSm, color: cssVars.colors.textMuted, marginTop: 4 }}>
-            {selectedTeamIds.length} von {tournament.teams.length} ausgewählt
+            {t('exports.selectedCount', { selected: selectedTeamIds.length, total: tournament.teams.length })}
           </div>
         </div>
 
@@ -489,7 +491,7 @@ export function ExportsCategory({
               });
 
               if (matchesToExport.length === 0) {
-                setExportError('Keine Spiele für die ausgewählten Teams gefunden.');
+                setExportError(t('exports.noMatchesFound'));
                 setIsExporting(false);
                 return;
               }
@@ -658,25 +660,25 @@ export function ExportsCategory({
               }
 
               setIsExporting(false);
-              setExportSuccess('Spielereignisse erfolgreich exportiert!');
+              setExportSuccess(t('exports.eventsExportSuccess'));
               setTimeout(() => setExportSuccess(null), 3000);
 
             } catch (e) {
               console.error(e);
-              setExportError('Fehler beim Exportieren der Ereignisse.');
+              setExportError(t('exports.eventsExportError'));
               setIsExporting(false);
             }
           }}
           disabled={isExporting}
         >
-          {isExporting ? 'Wird exportiert...' : `📥 Als ${exportFormat.toUpperCase()} herunterladen`}
+          {isExporting ? t('exports.exporting') : t('exports.downloadAs', { format: exportFormat.toUpperCase() })}
         </button>
       </CollapsibleSection>
 
       {/* Audit Log Export */}
-      <CollapsibleSection icon="📋" title="Turnier-Audit-Log exportieren">
+      <CollapsibleSection icon="📋" title={t('exports.auditTitle')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Exportiert das gesamte Änderungsprotokoll (Ergebnisse, Korrekturen, Statusänderungen) als CSV-Datei.
+          {t('exports.auditDescription')}
         </p>
         <button
           style={{
@@ -796,25 +798,25 @@ export function ExportsCategory({
               document.body.removeChild(link);
 
               setIsExporting(false);
-              setExportSuccess('Audit Log erfolgreich exportiert!');
+              setExportSuccess(t('exports.auditExportSuccess'));
               setTimeout(() => setExportSuccess(null), 3000);
 
             } catch (e) {
               console.error(e);
-              setExportError('Fehler beim Exportieren des Audit Logs.');
+              setExportError(t('exports.auditExportError'));
               setIsExporting(false);
             }
           }}
           disabled={isExporting}
         >
-          {isExporting ? 'Wird exportiert...' : '📥 Als CSV herunterladen'}
+          {isExporting ? t('exports.exporting') : t('exports.downloadCsv')}
         </button>
       </CollapsibleSection>
 
       {/* Statistics Export */}
-      <CollapsibleSection icon="📊" title="Statistiken exportieren">
+      <CollapsibleSection icon="📊" title={t('exports.statisticsTitle')}>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Exportiert Statistiken wie Torschützenliste und Fair-Play-Tabelle als PDF.
+          {t('exports.statisticsDescription')}
         </p>
         <button
           style={{
@@ -827,11 +829,11 @@ export function ExportsCategory({
                 setIsExporting(true);
                 await exportStatisticsToPDF(tournament);
                 setIsExporting(false);
-                setExportSuccess('Statistik-Report erfolgreich erstellt!');
+                setExportSuccess(t('exports.statisticsExportSuccess'));
                 setTimeout(() => setExportSuccess(null), 3000);
               } catch (e) {
                 console.error(e);
-                setExportError('Fehler beim Erstellen des Reports.');
+                setExportError(t('exports.statisticsExportError'));
                 setIsExporting(false);
               }
             };
@@ -839,27 +841,25 @@ export function ExportsCategory({
           }}
           disabled={isExporting}
         >
-          {isExporting ? 'Wird erstellt...' : '📊 Als PDF exportieren'}
+          {isExporting ? t('exports.creating') : t('exports.exportPdf')}
         </button>
       </CollapsibleSection>
 
       {/* Tournament Summary - Uses existing PDF Export */}
-      <CollapsibleSection icon="📄" title="Turnier-Zusammenfassung" defaultOpen>
+      <CollapsibleSection icon="📄" title={t('exports.summaryTitle')} defaultOpen>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Generiert einen vollständigen Turnierbericht mit allen Ergebnissen, Tabellen und
-          Statistiken als PDF.
+          {t('exports.summaryDescription')}
         </p>
         <button style={styles.button} onClick={() => setShowPDFDialog(true)}>
-          PDF erstellen
+          {t('exports.createPdf')}
         </button>
       </CollapsibleSection>
 
       {/* Backup & Restore */}
-      <CollapsibleSection icon="💾" title="Backup & Restore" defaultOpen>
-        <h4 style={{ ...styles.label, marginTop: 0 }}>Backup erstellen</h4>
+      <CollapsibleSection icon="💾" title={t('exports.backupTitle')} defaultOpen>
+        <h4 style={{ ...styles.label, marginTop: 0 }}>{t('exports.createBackup')}</h4>
         <p style={{ color: cssVars.colors.textSecondary, marginBottom: cssVars.spacing.md }}>
-          Erstellt ein vollständiges Backup als JSON-Datei. Enthält: Turnier, Teams, Spielplan,
-          Ergebnisse, Sponsoren.
+          {t('exports.backupDescription')}
         </p>
         <button
           style={{
@@ -869,7 +869,7 @@ export function ExportsCategory({
           onClick={handleBackupDownload}
           disabled={isExporting}
         >
-          {isExporting ? 'Wird exportiert...' : '📥 Backup herunterladen'}
+          {isExporting ? t('exports.exporting') : t('exports.downloadBackup')}
         </button>
 
         {exportSuccess && (
@@ -887,7 +887,7 @@ export function ExportsCategory({
         )}
 
         <div style={{ marginTop: cssVars.spacing.xl }}>
-          <h4 style={styles.label}>Backup wiederherstellen</h4>
+          <h4 style={styles.label}>{t('exports.restoreBackup')}</h4>
           <input
             ref={fileInputRef}
             type="file"
@@ -912,14 +912,13 @@ export function ExportsCategory({
               }
             }}
           >
-            <p>📁 JSON-Datei auswählen</p>
-            <p style={{ fontSize: cssVars.fontSizes.labelSm }}>oder per Drag & Drop</p>
+            <p>{t('exports.selectJsonFile')}</p>
+            <p style={{ fontSize: cssVars.fontSizes.labelSm }}>{t('exports.orDragDrop')}</p>
           </div>
           <div style={styles.warning}>
             <span>⚠️</span>
             <span>
-              Überschreibt alle aktuellen Daten dieses Turniers! Ein neues Backup wird automatisch
-              erstellt.
+              {t('exports.restoreWarning')}
             </span>
           </div>
         </div>

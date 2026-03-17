@@ -1,0 +1,45 @@
+{
+  "fieldSelector": {
+    "field": "Feld {{field}}",
+    "matchRunning": "Spiel läuft",
+    "fieldAria": "Feld {{field}}{{running}}"
+  },
+  "nextMatch": {
+    "title": "Nächstes Spiel in ~{{minutes}} Min",
+    "vs": "vs",
+    "field": "Feld {{field}}",
+    "match": "Spiel {{number}}",
+    "group": "Gruppe {{group}}"
+  },
+  "fullscreen": {
+    "exitFullscreen": "Vollbild beenden",
+    "enterFullscreen": "Vollbild aktivieren",
+    "exit": "Beenden",
+    "fullscreen": "Vollbild"
+  },
+  "liveMatch": {
+    "finished": "BEENDET",
+    "waiting": "WARTET",
+    "fieldAndMatch": "Feld {{field}} — Spiel {{number}}",
+    "group": "Gruppe {{group}}",
+    "referee": "Schiedsrichter: {{name}}",
+    "noRunningMatch": "Kein laufendes Spiel",
+    "tablesShownMessage": "Die Tabellen werden angezeigt, bis ein Spiel gestartet wird"
+  },
+  "timer": {
+    "pause": "Pause",
+    "overtime": "Nachspielzeit"
+  },
+  "scoreBlock": {
+    "home": "Heim",
+    "away": "Gast",
+    "scoreAria": "{{position}}: {{score}}"
+  },
+  "cardAnimation": {
+    "redCard": "ROTE KARTE",
+    "yellowCard": "GELBE KARTE"
+  },
+  "goalAnimation": {
+    "goal": "TOR!"
+  }
+}
