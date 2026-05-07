@@ -25,4 +25,5 @@ def sample_finding_dict() -> dict:
         "related": [],
         "parent": None,
         "model_routing": None,
+        "acceptance_criteria": ["Fix the architecture issue"],
     }
