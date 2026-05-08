@@ -63,13 +63,16 @@ Regeln:
 def _call_apply_llm(routing, finding_text: str, code_text: str) -> str:
     if routing.provider == "aihub":
         client = AIHubClient()
+        # max_tokens=2000 (was 8000): empirically validated 2026-05-08 — Qwen-Thinking
+        # at 8000 tokens × ~30 tokens/sec = 4-5 min → LiteLLM-Proxy gateway timeout 504.
+        # 2000 fits structured JSON-fix output AND the thinking block in <90s.
         result = client.chat(
             model=routing.model,
             messages=[
                 {"role": "system", "content": _APPLY_SYSTEM_PROMPT},
                 {"role": "user", "content": f"## Finding\n{finding_text}\n\n## Code\n```\n{code_text}\n```"},
             ],
-            max_tokens=8000,
+            max_tokens=2000,
         )
         return result["content"]
     else:
