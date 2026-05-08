@@ -6,7 +6,7 @@
 | F-002 | 🔴 | security | Non-Null Assertions (!) können Runtime-Errors verursachen | src/utils/FairnessCalculator.ts | 1h | open |
 | F-003 | 🟠 | testing | Type-Safety in Tests durch 'as'-Casts verloren | src/utils/__tests__/ScenarioHMK.test.ts | 30m | open |
 | F-004 | 🟠 | other | || statt ?? für Boolean-Checks erhöht Logik-Risiko | src/utils/filterMatches.ts | 30m | open |
-| F-005 | 🟠 | security | Schwacher Fallback-UUID-Generator | src/utils/idGenerator.ts | 45m | open |
+| F-005 | 🟠 | security | Schwacher Fallback-UUID-Generator | src/utils/idGenerator.ts | 45m | fixed |
 | F-006 | 🟡 | testing | console.log Debug-Output in Tests vorhanden | src/utils/scheduleGenerator_finals_bug.test.ts | 15m | open |
 | F-007 | 🟡 | other | Dead-Code-Kommentar verwirrend | src/utils/knockoutMatchGenerator.ts | 10m | open |
 | F-008 | 🟡 | other | Gemischte Deutsch/Englisch Namen in utils | src/utils/ | 2h | open |
