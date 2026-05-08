@@ -103,30 +103,49 @@ def extract_from_review(review_text: str, *, source: str, existing_ids: List[str
     return findings
 
 
+def existing_finding_ids(findings_dir: Path) -> List[str]:
+    """Return all F-XXX IDs already on disk in findings_dir."""
+    findings_dir = Path(findings_dir)
+    return [fp.stem for fp in findings_dir.glob("F-*.md")]
+
+
 def write_finding_files(findings: List[Finding], *, findings_dir: Path) -> None:
-    """Write per-finding markdown files and update INDEX.md."""
+    """Write per-finding markdown files and rebuild INDEX.md from ALL files on disk.
+
+    Idempotent: writes only the new findings (does NOT overwrite existing F-XXX),
+    then rebuilds INDEX.md by reading every F-*.md present in findings_dir. This
+    is safe under repeated --single invocations.
+    """
     findings_dir = Path(findings_dir)
     findings_dir.mkdir(parents=True, exist_ok=True)
 
     for f in findings:
+        target = findings_dir / f"{f.id}.md"
+        if target.exists():
+            # Defensive: a same-ID file already exists. Skip to avoid clobbering
+            # an unrelated finding (race-safe under --single from multiple shells).
+            print(f"  skipping {f.id}: {target} already exists", file=sys.stderr)
+            continue
         fm = f.model_dump(mode="json")
         body = f"# {f.title}\n\n## Problem\n<extracted by extractor>\n\n## Akzeptanzkriterien\n"
         for ak in f.acceptance_criteria:
             body += f"- [ ] {ak}\n"
-        (findings_dir / f"{f.id}.md").write_text(write_frontmatter(fm, body), encoding="utf-8")
+        target.write_text(write_frontmatter(fm, body), encoding="utf-8")
 
-    # Update INDEX.md
-    index_path = findings_dir / "INDEX.md"
+    # Rebuild INDEX.md from ALL F-*.md files on disk (not just the new ones)
+    from .lib.frontmatter import parse_frontmatter as _parse_fm
+    severity_icon = {"critical": "⚫", "high": "🔴", "medium": "🟠", "low": "🟡"}
     rows = ["| ID | Sev | Area | Title | File | Effort | Status |",
             "|----|-----|------|-------|------|--------|--------|"]
-    severity_icon = {"critical": "⚫", "high": "🔴", "medium": "🟠", "low": "🟡"}
-    for f in findings:
+    for fp in sorted(findings_dir.glob("F-*.md")):
+        fm, _ = _parse_fm(fp.read_text(errors="replace"))
+        sev = fm.get("severity", "low")
         rows.append(
-            f"| {f.id} | {severity_icon[f.severity.value]} | {f.area} | {f.title} | "
-            f"{f.file} | {f.effort or '-'} | {f.status.value} |"
+            f"| {fm.get('id', fp.stem)} | {severity_icon.get(sev, '?')} | "
+            f"{fm.get('area', '?')} | {fm.get('title', '?')} | "
+            f"{fm.get('file', '?')} | {fm.get('effort') or '-'} | {fm.get('status', 'open')} |"
         )
-    header = "# Findings Backlog\n\n" + "\n".join(rows) + "\n"
-    index_path.write_text(header)
+    (findings_dir / "INDEX.md").write_text("# Findings Backlog\n\n" + "\n".join(rows) + "\n")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -162,11 +181,18 @@ def main(argv: list[str] | None = None) -> int:
             if not p.name.endswith("SUMMARY.md") and not p.name.startswith("_")
         ]
 
+    # Seed with IDs already on disk so --single calls don't collide with existing files.
+    seed_ids = existing_finding_ids(findings_dir)
+
     all_findings: List[Finding] = []
     for review_path in review_paths:
         review_text = review_path.read_text(errors="replace")
         try:
-            findings = extract_from_review(review_text, source=str(review_path), existing_ids=[f.id for f in all_findings])
+            findings = extract_from_review(
+                review_text,
+                source=str(review_path),
+                existing_ids=seed_ids + [f.id for f in all_findings],
+            )
             all_findings.extend(findings)
             print(f"  {review_path.name}: extracted {len(findings)} findings")
         except Exception as e:
