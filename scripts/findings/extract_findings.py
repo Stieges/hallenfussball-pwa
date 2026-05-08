@@ -132,16 +132,38 @@ def write_finding_files(findings: List[Finding], *, findings_dir: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     argv = argv or sys.argv[1:]
     if not argv:
-        print("Usage: extract_findings.py <reviews-dir> [--findings-dir docs/findings]", file=sys.stderr)
+        print(
+            "Usage: extract_findings.py <reviews-dir> [--findings-dir docs/findings] [--single <review.md>]",
+            file=sys.stderr,
+        )
         return 2
 
     reviews_dir = Path(argv[0])
-    findings_dir = Path(argv[2]) if len(argv) > 2 and argv[1] == "--findings-dir" else Path("docs/findings")
+
+    # Parse optional flags
+    findings_dir = Path("docs/findings")
+    single_file: Path | None = None
+    i = 1
+    while i < len(argv):
+        if argv[i] == "--findings-dir" and i + 1 < len(argv):
+            findings_dir = Path(argv[i + 1])
+            i += 2
+        elif argv[i] == "--single" and i + 1 < len(argv):
+            single_file = Path(argv[i + 1])
+            i += 2
+        else:
+            i += 1
+
+    if single_file:
+        review_paths = [single_file]
+    else:
+        review_paths = [
+            p for p in sorted(reviews_dir.glob("*.md"))
+            if not p.name.endswith("SUMMARY.md") and not p.name.startswith("_")
+        ]
 
     all_findings: List[Finding] = []
-    for review_path in sorted(reviews_dir.glob("*.md")):
-        if review_path.name.endswith("SUMMARY.md") or review_path.name.startswith("_"):
-            continue
+    for review_path in review_paths:
         review_text = review_path.read_text(errors="replace")
         try:
             findings = extract_from_review(review_text, source=str(review_path), existing_ids=[f.id for f in all_findings])
@@ -150,7 +172,8 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             print(f"  {review_path.name}: ERROR — {e}", file=sys.stderr)
 
-    write_finding_files(all_findings, findings_dir=findings_dir)
+    if all_findings:
+        write_finding_files(all_findings, findings_dir=findings_dir)
     print(f"\nTotal findings: {len(all_findings)} written to {findings_dir}/")
     return 0
 

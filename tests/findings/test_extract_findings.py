@@ -54,3 +54,31 @@ def test_write_finding_files_creates_index_and_per_finding(tmp_path, sample_find
     assert (tmp_path / "INDEX.md").exists()
     index_text = (tmp_path / "INDEX.md").read_text()
     assert "F-001" in index_text
+
+
+def test_main_with_single_flag_processes_only_one_file(tmp_path, monkeypatch):
+    """Test that --single processes only the specified review file."""
+    reviews = tmp_path / "reviews"
+    reviews.mkdir()
+    (reviews / "a.md").write_text("# Review A")
+    (reviews / "b.md").write_text("# Review B")
+    findings_dir = tmp_path / "docs/findings"
+
+    calls: list[str] = []
+
+    def fake_extract(text: str, *, source: str, existing_ids=None):
+        calls.append(source)
+        return []
+
+    monkeypatch.setattr("findings.extract_findings.extract_from_review", fake_extract)
+
+    from findings.extract_findings import main
+    rc = main([
+        str(reviews),
+        "--findings-dir", str(findings_dir),
+        "--single", str(reviews / "a.md"),
+    ])
+    assert rc == 0
+    # Only the 'a.md' source should have been passed to extract_from_review
+    assert len(calls) == 1
+    assert calls[0].endswith("a.md")
