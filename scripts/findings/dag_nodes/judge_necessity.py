@@ -24,13 +24,15 @@ def _call_judge_llm(routing, finding_text: str, code_text: str) -> str:
     """Call the routed LLM (claude or aihub) for the judge step."""
     if routing.provider == "aihub":
         client = AIHubClient()
+        # max_tokens=500 (was 2000): judge produces a tiny JSON {is_still_valid, reasoning}.
+        # Smaller budget keeps Qwen-Thinking total output under the gateway timeout.
         result = client.chat(
             model=routing.model,
             messages=[
                 {"role": "system", "content": _JUDGE_SYSTEM_PROMPT},
                 {"role": "user", "content": f"## Finding\n{finding_text}\n\n## Aktueller Code\n```\n{code_text}\n```"},
             ],
-            max_tokens=2000,
+            max_tokens=500,
         )
         return result["content"]
     else:
@@ -59,11 +61,19 @@ def judge_necessity(state: FindingFixState) -> FindingFixState:
         state.judge_reasoning = f"Judge LLM unreachable ({type(e).__name__}); defaulting to valid."
         state.tool_call_errors += 1
         return state
-    raw = raw.strip().strip("`")
-    if raw.startswith("json"):
-        raw = raw[4:].strip()
+    if not raw:
+        # Empty response (Qwen sometimes returns thinking-only with empty content
+        # despite our normalisation). Conservative: assume still valid.
+        state.is_still_valid = True
+        state.judge_reasoning = "Judge LLM returned empty content; defaulting to valid."
+        return state
+    # Strip <think>…</think>, ```json fences, then parse.
+    import re as _re
+    s = _re.sub(r"<think>.*?</think>", "", raw, flags=_re.DOTALL).strip()
+    s = _re.sub(r"^```(?:json)?\s*", "", s)
+    s = _re.sub(r"\s*```$", "", s).strip()
     try:
-        data = json.loads(raw)
+        data = json.loads(s)
     except json.JSONDecodeError:
         # Conservative: if judge can't speak JSON, assume still valid and let apply_fix decide
         state.is_still_valid = True

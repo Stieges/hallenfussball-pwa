@@ -60,9 +60,14 @@ class AIHubClient:
         data = resp.json()
         msg = data["choices"][0]["message"]
         usage = data.get("usage", {})
+        # Qwen-Thinking-Mode quirk: `content` may be None when the entire
+        # response is a reasoning block. Normalise so callers always see a string,
+        # and fall back to reasoning_content if content is empty/None.
+        content = msg.get("content") or msg.get("reasoning_content") or ""
+        thinking = msg.get("reasoning_content") or ""
         return {
-            "content": msg.get("content", ""),
-            "thinking": msg.get("reasoning_content", ""),
+            "content": content,
+            "thinking": thinking,
             "tokens_in": usage.get("prompt_tokens", 0),
             "tokens_out": usage.get("completion_tokens", 0),
             "raw": data,
