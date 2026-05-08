@@ -86,9 +86,19 @@ class FindingFixState(BaseModel):
     # judge_necessity output:
     is_still_valid: Optional[bool] = None
     judge_reasoning: Optional[str] = None
-    # apply_fix output:
+    # apply_fix output (legacy — kept for backward compat):
     fix_applied: bool = False
     fix_diff: Optional[str] = None
+    # plan_changes output:
+    planned_changes: list = Field(default_factory=list)   # raw aenderungen list
+    plan_analyse: Optional[str] = None                     # human-readable summary
+    # apply_patch output:
+    patch_warnings: list = Field(default_factory=list)
+    patch_errors: list = Field(default_factory=list)
+    patched_content: Optional[str] = None                  # new file content (for review LLM)
+    # review_patch output:
+    review_verdict: Optional[Literal["APPROVED", "REJECTED", "NEEDS_HUMAN"]] = None
+    review_reasoning: Optional[str] = None
     # run_tests output:
     tests_pass: Optional[bool] = None
     test_output: Optional[str] = None
