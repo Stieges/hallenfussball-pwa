@@ -13,14 +13,23 @@ Token-Effizienz.
 ## Quick Start
 
 ```bash
-# 1. Backlog initial füllen (einmalig, ~10-30 min für 30+ Reviews)
+# 1. Backlog initial füllen — variant A (alle Reviews auf einmal):
 npm run findings:extract
+# WARNUNG: Sequenzielle LLM-Calls (~30-90s pro Review × 30+ Reviews = 15-45 min).
+# Bei Hangs: Strg+C, dann auf Single-File-Mode wechseln (siehe unten).
+
+# 1b. Backlog initial füllen — variant B (resilient, Datei für Datei):
+PYTHONPATH=scripts python3 -m findings.extract_findings reviews/ \
+  --findings-dir docs/findings \
+  --single reviews/2026-05-07_2053_architecture.md
+# Wiederhole für jede Review-Datei einzeln. Hängende Calls killbar mit Strg+C.
 
 # 2. Status anschauen
 npm run findings:status
 
 # 3. Einen Fix anwenden (in Claude Code)
 /finding-fix F-042
+# Hard-Timeout: 300s (R7). Bei hängenden LLM-Calls bricht das DAG ab.
 
 # 4. Nach 4 Wochen: Routing-Statistik
 npm run findings:routing-stats
@@ -99,6 +108,23 @@ Auto-Fallback bei Tool-Fail: Sovereign → claude-haiku-4-5.
 - `validate_review_freshness.py` — Phase 0a Stale-Detection
 - `finding_fix.py` — DAG-Orchestrator
 - `findings_status.py` + `findings_routing_stats.py` — Dashboards
+
+## Operationelle Caveats
+
+### Sequenzielle Extraction
+`extract_findings.py` ruft pro Review-File EINEN LLM-Call sequenziell auf. Bei 30+ Reviews
+und qwen-3.5-122b-sovereign mit Thinking-Mode (~30-90s pro Call) läuft die volle Extraction
+**15-45 Minuten**. Es gibt keine Parallelität — bewusst, weil:
+
+1. Map-Reduce-Manage (D13): paralleles Schreiben in INDEX.md würde Race Conditions schaffen
+2. AI Hub Free-Tier hat Throttling-Limits, die Parallel-Calls blockieren würden (404er, 504er Gateway-Timeouts)
+
+**Recovery bei Hang**: Strg+C, dann mit `--single <file>` Datei für Datei nachholen.
+
+### /finding-fix Hard-Timeout
+`HARD_TIMEOUT_S = 300` (5 Min) im DAG-Orchestrator. Hängende LLM-Calls werden nach 5 Min
+abgebrochen — Finding bleibt im Status `open`, kein partieller Commit. Logs landen in
+`.claude/logs/finding-fixes.jsonl`.
 
 ## Bot-Qualitäts-Baseline (empirisch, n=12)
 
