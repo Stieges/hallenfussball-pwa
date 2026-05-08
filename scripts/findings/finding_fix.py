@@ -1,22 +1,31 @@
 """DAG orchestrator for /finding-fix.
 
-Flow (Spec section 5.4):
+Flow (Belegflow-pattern, Spec section 5.4):
   load_finding → verify_path → read_affected_files → judge_necessity
                                                       │
                                                       ▼
-                                                 apply_fix
+                                                 plan_changes  (LLM: structured operations)
                                                       │
                                                       ▼
-                                                 run_tests
+                                                 apply_patch   (local, deterministic)
                                                       │
-                                                ┌─────┴─────┐
-                                              pass         fail
-                                                │           │
-                                                ▼           ▼
-                                          update_index   fallback?
-                                                              │
-                                                              ▼
-                                                      retry with claude-haiku-4-5
+                                                      ▼
+                                                 review_patch  (LLM: validate result)
+                                                      │
+                                              ┌───────┴───────┐
+                                           APPROVED      REJECTED/NEEDS_HUMAN
+                                              │                │
+                                              ▼                ▼
+                                         run_tests        (flag for human)
+                                              │
+                                         ┌───┴───┐
+                                       pass     fail
+                                         │       │
+                                         ▼       ▼
+                                   update_index  fallback?
+                                                    │
+                                                    ▼
+                                            retry from plan_changes
 
 Hard-Caps (R7): max_steps=10 internally, max_duration=300s (HARD_TIMEOUT_S).
 The timeout is enforced via concurrent.futures.ThreadPoolExecutor — NOT signal.alarm,
@@ -37,7 +46,10 @@ from .lib.routing import route_finding_fix, fallback_for, ModelChoice
 from .dag_nodes.verify_path import verify_path
 from .dag_nodes.read_affected_files import read_affected_files
 from .dag_nodes.judge_necessity import judge_necessity
-from .dag_nodes.apply_fix import apply_fix
+from .dag_nodes.apply_fix import apply_fix  # kept for back-compat; no longer called from _run_dag
+from .dag_nodes.plan_changes import plan_changes
+from .dag_nodes.apply_patch import apply_patch
+from .dag_nodes.review_patch import review_patch
 from .dag_nodes.run_tests import run_tests
 from .dag_nodes.update_index import update_finding_status, regenerate_index
 
@@ -58,9 +70,18 @@ def _run_dag(state: FindingFixState, *, repo_root: Path) -> FindingFixState:
     state = judge_necessity(state)
     if not state.is_still_valid:
         return state
-    state = apply_fix(state, repo_root=repo_root)
-    if state.fix_applied:
-        state = run_tests(state, repo_root=repo_root)
+    # NEW: plan → patch → review (Belegflow-pattern, replaces single apply_fix call)
+    state = plan_changes(state, repo_root=repo_root)
+    if not state.planned_changes:
+        return state  # plan failed
+    state = apply_patch(state, repo_root=repo_root)
+    if not state.fix_applied:
+        return state  # patch ops failed (e.g., replace_text not unique)
+    state = review_patch(state)
+    if state.review_verdict != "APPROVED":
+        # REJECTED or NEEDS_HUMAN: do NOT run tests, leave file as patched but flag for human
+        return state
+    state = run_tests(state, repo_root=repo_root)
     return state
 
 
@@ -98,12 +119,18 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             if fb:
                 state.fallback_used = True
                 state.routing = fb
-                # Reset partial state and re-run from apply_fix
+                # Reset partial state and re-run plan→patch→review
+                state.planned_changes = []
                 state.fix_applied = False
                 state.tests_pass = None
-                state = apply_fix(state, repo_root=repo_root)
-                if state.fix_applied:
-                    state = run_tests(state, repo_root=repo_root)
+                state.tool_call_errors = 0  # reset for clean retry
+                state = plan_changes(state, repo_root=repo_root)
+                if state.planned_changes:
+                    state = apply_patch(state, repo_root=repo_root)
+                    if state.fix_applied:
+                        state = review_patch(state)
+                        if state.review_verdict == "APPROVED":
+                            state = run_tests(state, repo_root=repo_root)
 
         # If finally green: mark fixed + commit (not done by DAG; user reviews and commits)
         if state.tests_pass:
@@ -122,6 +149,10 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             "tool_call_errors": state.tool_call_errors,
             "duration_ms": state.duration_ms,
             "path_resolution": state.path_resolution_method,
+            # NEW: Belegflow-pattern fields
+            "planned_changes_count": len(state.planned_changes),
+            "patch_errors_count": len(state.patch_errors) if state.patch_errors else 0,
+            "review_verdict": state.review_verdict,
         })
 
     return state
@@ -140,6 +171,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n--- Result for {fid} ---")
     print(f"Path-resolution: {result.path_resolution_method}")
     print(f"Judge says valid: {result.is_still_valid}")
+    print(f"Planned changes count: {len(result.planned_changes)}")
+    print(f"Patch errors: {result.patch_errors}")
+    print(f"Review verdict: {result.review_verdict}")
     print(f"Fix applied: {result.fix_applied}")
     print(f"Tests pass: {result.tests_pass}")
     print(f"Fallback used: {result.fallback_used}")
