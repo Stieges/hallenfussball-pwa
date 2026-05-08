@@ -30,9 +30,17 @@ def route_finding_fix(finding: Finding) -> ModelChoice:
 def fallback_for(routing: ModelChoice) -> ModelChoice | None:
     """Auto-fallback target on tool-fail (Spec 4.3).
 
-    aihub/qwen → claude-haiku-4-5
+    Strategy: stay within AI Hub for the first fallback (Sovereign-first), escalate
+    to Anthropic only if the AI Hub code-specialist also fails. Keeps `anthropic`
+    SDK as an optional dependency — only loaded when severity HIGH/CRITICAL or an
+    explicit per-finding model_routing override targets claude-*.
+
+    aihub/qwen-3.5-122b-sovereign → aihub/qwen3-coder-480b (paid, code-tuned)
+    aihub/qwen3-coder-480b → claude/haiku-4-5 (last resort, requires anthropic)
     claude/* → no fallback
     """
     if routing.provider == "aihub":
-        return ModelChoice(provider="claude", model="haiku-4-5", require_human_review=False)
+        if routing.model.startswith("qwen3-coder"):
+            return ModelChoice(provider="claude", model="haiku-4-5", require_human_review=False)
+        return ModelChoice(provider="aihub", model="qwen3-coder-480b", require_human_review=False)
     return None
