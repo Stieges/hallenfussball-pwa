@@ -1,0 +1,20 @@
+[project]
+name = "hallenfussball-findings"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+  "pydantic>=2.0",
+  "requests>=2.31",
+  "anthropic>=0.40",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-mock>=3.10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/findings"]
+pythonpath = ["scripts"]
+markers = [
+  "integration: requires AI Hub auth (skipped in CI without secret)",
+]
