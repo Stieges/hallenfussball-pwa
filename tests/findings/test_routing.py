@@ -41,14 +41,14 @@ def test_medium_routes_to_sovereign_qwen():
     f = _make_finding(Severity.MEDIUM)
     mc = route_finding_fix(f)
     assert mc.provider == "aihub"
-    assert mc.model == "qwen-3.5-122b-sovereign"
+    assert mc.model == "qwen-3.6-35b-sovereign"
 
 
 def test_low_routes_to_sovereign_qwen():
     f = _make_finding(Severity.LOW)
     mc = route_finding_fix(f)
     assert mc.provider == "aihub"
-    assert mc.model == "qwen-3.5-122b-sovereign"
+    assert mc.model == "qwen-3.6-35b-sovereign"
 
 
 def test_explicit_override_wins():

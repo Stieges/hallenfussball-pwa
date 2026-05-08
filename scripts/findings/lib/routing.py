@@ -24,7 +24,11 @@ def route_finding_fix(finding: Finding) -> ModelChoice:
     elif finding.severity == Severity.HIGH:
         return ModelChoice(provider="claude", model="sonnet-4-6", require_human_review=False)
     else:  # MEDIUM or LOW
-        return ModelChoice(provider="aihub", model="qwen-3.5-122b-sovereign", require_human_review=False)
+        # qwen-3.6-35b-sovereign is the SWE-Bench/Terminal-Bench leader among
+        # sovereign Qwen models (35B/A3B beats 122B/A10B on coding tasks per
+        # 2026 benchmarks: SWE-Bench Verified 73.4 ≈, Terminal-Bench 51.5 vs 40.5).
+        # Smaller active footprint (3B) → faster than 3.5-122b at thinking-mode.
+        return ModelChoice(provider="aihub", model="qwen-3.6-35b-sovereign", require_human_review=False)
 
 
 def fallback_for(routing: ModelChoice) -> ModelChoice | None:

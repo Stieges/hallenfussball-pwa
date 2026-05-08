@@ -17,6 +17,7 @@ from pathlib import Path
 from ..lib.aihub_client import AIHubClient, AIHubError
 from ..lib.json_extract import extract_json
 from ..lib.models import FindingFixState
+from ..lib.schemas import PLAN_CHANGES_SCHEMA
 
 
 # ---------------------------------------------------------------------------
@@ -114,18 +115,19 @@ def _build_user_message(state: FindingFixState, file_content: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _call_plan_llm(routing, user_message: str) -> str:
-    """Call the AI Hub with the plan prompt. Returns raw LLM response string."""
-    # Temperature: 0.3 — DELIBERATELY lower than Qwen3-Coder default (1.0).
+    """Call the AI Hub with the plan prompt. Returns raw LLM response string.
+
+    Routing default for low/medium severity is qwen-3.6-35b-sovereign (newer
+    SWE-Bench leader among sovereign Qwens, smaller active footprint than 3.5-122b).
+    Fallback chain remains: qwen-3.6 → qwen3-coder-480b → claude-haiku.
+    """
+    # Temperature: 0.3 — DELIBERATELY lower than the model default.
     #
     # Rationale: We need DETERMINISTIC structured operation output (JSON aenderungen-list),
-    # not creative code generation. Higher temperatures cause Qwen3-Coder to occasionally
+    # not creative code generation. Higher temperatures cause Qwen models to occasionally
     # wrap valid JSON in extra prose or vary the operation 'typ' names, breaking the
-    # patcher. Lower temperature reduces the rate at which Qwen3-Coder wraps
-    # JSON in extra prose or varies the 'typ' field naming.
-    #
-    # If patcher-error rates climb above ~10% in .claude/logs/finding-fixes.jsonl,
-    # consider raising to 0.5 or implementing response_format=json_schema (LiteLLM
-    # supports it for Qwen Coder series).
+    # patcher. response_format=PLAN_CHANGES_SCHEMA enforces the shape gateway-side
+    # where supported; the low temperature is the belt to that schema's suspenders.
     client = AIHubClient()
     result = client.chat(
         model=routing.model,
@@ -135,6 +137,7 @@ def _call_plan_llm(routing, user_message: str) -> str:
         ],
         max_tokens=4000,
         temperature_override=0.3,
+        response_format=PLAN_CHANGES_SCHEMA,
     )
     return result["content"]
 
