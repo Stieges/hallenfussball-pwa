@@ -1,4 +1,4 @@
-"""Deterministic code patcher — Belegflow-pattern Foundation Layer.
+"""Deterministic code patcher — foundation layer for the plan/apply/review DAG.
 
 LLM produces structured change operations; this module applies them atomically
 to source file content (pure string-in / string-out, no I/O).

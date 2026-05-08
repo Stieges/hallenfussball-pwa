@@ -1,6 +1,6 @@
 """DAG node: ask the LLM to PLAN structured code changes.
 
-Belegflow-pattern: LLM never produces full file content — only structured
+Pattern: the LLM never produces full file content — only structured
 operations (replace_text, insert_before_line, etc.) that the deterministic
 apply_patch node applies.  This avoids Qwen-Thinking's known incompatibility
 with structured output (Alibaba/vLLM official: thinking mode does not support
@@ -120,8 +120,8 @@ def _call_plan_llm(routing, user_message: str) -> str:
     # Rationale: We need DETERMINISTIC structured operation output (JSON aenderungen-list),
     # not creative code generation. Higher temperatures cause Qwen3-Coder to occasionally
     # wrap valid JSON in extra prose or vary the operation 'typ' names, breaking the
-    # patcher. 0.3 is the value Belegflow's production pipeline uses (workflows/agents/
-    # scripts/aihub_pipeline_v3.py) for the same reason.
+    # patcher. Lower temperature reduces the rate at which Qwen3-Coder wraps
+    # JSON in extra prose or varies the 'typ' field naming.
     #
     # If patcher-error rates climb above ~10% in .claude/logs/finding-fixes.jsonl,
     # consider raising to 0.5 or implementing response_format=json_schema (LiteLLM

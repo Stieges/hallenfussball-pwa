@@ -1,7 +1,7 @@
 """DAG node: apply state.planned_changes to the target file using the local patcher.
 
 Pure local — NO LLM call.  Uses code_patcher.apply_changes (deterministic).
-Implements the "apply" step of the Belegflow-pattern pipeline:
+Implements the "apply" step of the plan/apply/review pipeline:
 
     plan_changes (LLM)  →  apply_patch (LOCAL)  →  review_patch (LLM)
 

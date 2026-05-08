@@ -1,6 +1,6 @@
 """DAG orchestrator for /finding-fix.
 
-Flow (Belegflow-pattern, Spec section 5.4):
+Flow (plan/apply/review DAG, Spec section 5.4):
   load_finding → verify_path → read_affected_files → judge_necessity
                                                       │
                                                       ▼
@@ -70,7 +70,7 @@ def _run_dag(state: FindingFixState, *, repo_root: Path) -> FindingFixState:
     state = judge_necessity(state)
     if not state.is_still_valid:
         return state
-    # NEW: plan → patch → review (Belegflow-pattern, replaces single apply_fix call)
+    # NEW: plan → patch → review (replaces single apply_fix call)
     state = plan_changes(state, repo_root=repo_root)
     if not state.planned_changes:
         return state  # plan failed
@@ -158,7 +158,7 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             "tool_call_errors": state.tool_call_errors,
             "duration_ms": state.duration_ms,
             "path_resolution": state.path_resolution_method,
-            # NEW: Belegflow-pattern fields
+            # NEW: plan/apply/review fields
             "planned_changes_count": len(state.planned_changes),
             "patch_errors_count": len(state.patch_errors) if state.patch_errors else 0,
             "review_verdict": state.review_verdict,

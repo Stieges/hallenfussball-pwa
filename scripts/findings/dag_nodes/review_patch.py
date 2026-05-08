@@ -1,4 +1,4 @@
-"""DAG node: LLM-based patch reviewer (Belegflow-pattern).
+"""DAG node: LLM-based patch reviewer (final stage of plan/apply/review DAG).
 
 Validates that the deterministic patcher produced a correct result by asking
 a second LLM to compare the original finding + planned operations against
@@ -22,8 +22,7 @@ _REVIEW_MODEL = "gpt-4.1-mini"
 # Temperature: 0.5 — middle ground.
 #
 # Reviewer needs both structured JSON output (low temp) AND nuanced judgement
-# about edge cases (higher temp). 0.5 balances both. Belegflow uses the same
-# value for their reviewer agent.
+# about edge cases (higher temp). 0.5 balances both.
 _REVIEW_TEMPERATURE = 0.5
 _REVIEW_MAX_TOKENS = 1500
 
