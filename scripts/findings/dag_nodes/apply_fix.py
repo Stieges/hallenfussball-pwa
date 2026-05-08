@@ -2,9 +2,49 @@
 from __future__ import annotations
 import json
 import os
+import re
 from pathlib import Path
 from ..lib.models import FindingFixState
 from ..lib.aihub_client import AIHubClient
+
+
+def _parse_llm_json(raw: str) -> dict | None:
+    """Extract a JSON object from an LLM response.
+
+    Handles three common Qwen3-Thinking-Mode wrappers:
+    1. <think>...</think> blocks (strip everything inside think tags)
+    2. ```json ... ``` code fences
+    3. Free-form text around a single {...} object (extract first balanced object)
+
+    Returns None if no parseable JSON object is found.
+    """
+    s = raw.strip()
+    # Strip <think>...</think> blocks
+    s = re.sub(r"<think>.*?</think>", "", s, flags=re.DOTALL).strip()
+    # Strip ```json ... ``` or ``` ... ``` fences
+    s = re.sub(r"^```(?:json)?\s*", "", s)
+    s = re.sub(r"\s*```$", "", s).strip()
+    # Try direct parse
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        pass
+    # Fallback: extract first balanced {...} object
+    start = s.find("{")
+    if start < 0:
+        return None
+    depth = 0
+    for i in range(start, len(s)):
+        if s[i] == "{":
+            depth += 1
+        elif s[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(s[start : i + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None
 
 
 _APPLY_SYSTEM_PROMPT = """Du bist ein präziser Code-Editor. Gegeben ein Finding und der ECHTE Code,
@@ -57,13 +97,22 @@ def apply_fix(state: FindingFixState, *, repo_root: str | Path) -> FindingFixSta
         return state
     code_text = state.file_contents[state.path_resolved]
 
-    raw = _call_apply_llm(state.routing, finding_text, code_text)
-    raw = raw.strip().strip("`")
-    if raw.startswith("json"):
-        raw = raw[4:].strip()
+    from ..lib.aihub_client import AIHubError
     try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
+        raw = _call_apply_llm(state.routing, finding_text, code_text)
+    except AIHubError as e:
+        # Provider 504 / network glitch / rate limit. Increment counter so the
+        # orchestrator's auto-fallback path triggers.
+        state.fix_applied = False
+        state.tool_call_errors += 1
+        return state
+    except Exception:
+        # Unknown error — also count as tool error to enable fallback.
+        state.fix_applied = False
+        state.tool_call_errors += 1
+        return state
+    data = _parse_llm_json(raw)
+    if data is None:
         state.fix_applied = False
         state.tool_call_errors += 1
         return state

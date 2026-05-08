@@ -47,9 +47,18 @@ def _call_judge_llm(routing, finding_text: str, code_text: str) -> str:
 
 
 def judge_necessity(state: FindingFixState) -> FindingFixState:
+    from ..lib.aihub_client import AIHubError
     finding_text = f"{state.finding.title}\n{state.finding.area}\nFile: {state.finding.file}"
     code_text = "\n".join(f"# {p}\n{c}" for p, c in state.file_contents.items())
-    raw = _call_judge_llm(state.routing, finding_text, code_text)
+    try:
+        raw = _call_judge_llm(state.routing, finding_text, code_text)
+    except (AIHubError, Exception) as e:
+        # Provider 504 / network glitch / rate limit. Conservative: assume still
+        # valid (apply_fix will decide); count as tool error to enable fallback.
+        state.is_still_valid = True
+        state.judge_reasoning = f"Judge LLM unreachable ({type(e).__name__}); defaulting to valid."
+        state.tool_call_errors += 1
+        return state
     raw = raw.strip().strip("`")
     if raw.startswith("json"):
         raw = raw[4:].strip()
