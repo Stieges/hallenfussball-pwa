@@ -133,6 +133,7 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
                 state.patch_warnings = []
                 state.review_verdict = None
                 state.review_reasoning = None
+                state.review_concerns = []
                 state = plan_changes(state, repo_root=repo_root)
                 if state.planned_changes:
                     state = apply_patch(state, repo_root=repo_root)
