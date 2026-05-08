@@ -119,11 +119,20 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             if fb:
                 state.fallback_used = True
                 state.routing = fb
-                # Reset partial state and re-run plan→patch→review
+                # Reset ALL partial state from the previous attempt so the
+                # fallback log entry is clean and not misleadingly mixed with
+                # stale values (e.g. review_verdict: APPROVED while fix_applied: False).
                 state.planned_changes = []
+                state.plan_analyse = None
                 state.fix_applied = False
                 state.tests_pass = None
+                state.test_output = None
                 state.tool_call_errors = 0  # reset for clean retry
+                state.patched_content = None
+                state.patch_errors = []
+                state.patch_warnings = []
+                state.review_verdict = None
+                state.review_reasoning = None
                 state = plan_changes(state, repo_root=repo_root)
                 if state.planned_changes:
                     state = apply_patch(state, repo_root=repo_root)
