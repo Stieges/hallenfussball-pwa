@@ -17,6 +17,7 @@ DEFAULT_TIMEOUT = 600  # 10 min for thinking-mode
 QWEN_THINKING_PARAMS = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
 QWEN_CODER_PARAMS = {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
 GPT_OSS_PARAMS = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 0.0}
+GPT_OPENAI_PARAMS = {"temperature": 0.5, "top_p": 0.95, "presence_penalty": 0.0}
 
 
 class AIHubError(Exception):
@@ -37,12 +38,34 @@ class AIHubClient:
             return {**QWEN_THINKING_PARAMS, "extra_body": {"enable_thinking": True, "min_p": 0}}
         if model.startswith("gpt-oss"):
             return {**GPT_OSS_PARAMS}
-        # Conservative default
+        if model.startswith("gpt-4") or model.startswith("gpt-3"):
+            # OpenAI-style models (e.g. gpt-4.1-mini): no Qwen extra_body params
+            return {**GPT_OPENAI_PARAMS}
+        # Conservative default (no provider-specific extra_body)
         return {"temperature": 0.6, "top_p": 0.95}
 
-    def chat(self, model: str, messages: List[dict], max_tokens: int = 32000, timeout: int = DEFAULT_TIMEOUT) -> dict:
-        """Send a chat completion request. Returns {content, tokens_in, tokens_out, raw}."""
+    def chat(
+        self,
+        model: str,
+        messages: List[dict],
+        max_tokens: int = 32000,
+        timeout: int = DEFAULT_TIMEOUT,
+        temperature_override: float | None = None,
+    ) -> dict:
+        """Send a chat completion request. Returns {content, tokens_in, tokens_out, raw}.
+
+        Args:
+            model:               Model identifier.
+            messages:            Chat messages list.
+            max_tokens:          Token budget for the response.
+            timeout:             HTTP request timeout in seconds.
+            temperature_override: When set, replaces the model-default temperature.
+                                  Use for nodes that require deterministic output
+                                  (e.g. plan_changes at 0.3 instead of coder-default 1.0).
+        """
         params = self._params_for_model(model)
+        if temperature_override is not None:
+            params = {**params, "temperature": temperature_override}
         payload = {
             "model": model,
             "messages": messages,
