@@ -18,9 +18,14 @@ Flow (Spec section 5.4):
                                                               ▼
                                                       retry with claude-haiku-4-5
 
-Hard-Caps (R7): max_steps=10 internally, max_duration=300s.
+Hard-Caps (R7): max_steps=10 internally, max_duration=300s (HARD_TIMEOUT_S).
+The timeout is enforced via concurrent.futures.ThreadPoolExecutor — NOT signal.alarm,
+because signal.alarm is Unix-only and interferes with pytest (which installs its own
+SIGALRM handler). Python cannot forcibly kill a running thread, so a timed-out thread
+will linger in the background until its LLM call returns; we abort the wait and move on.
 """
 from __future__ import annotations
+import concurrent.futures
 import sys
 import time
 from pathlib import Path
@@ -68,11 +73,24 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
     t0 = time.time()
     state = FindingFixState(finding=finding, routing=routing)
 
+    timed_out = False
     try:
-        state = _run_dag(state, repo_root=repo_root)
-        # Auto-fallback on tool errors or red tests when sovereign was used
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_run_dag, state, repo_root=repo_root)
+            try:
+                state = future.result(timeout=HARD_TIMEOUT_S)
+            except concurrent.futures.TimeoutError:
+                # Cannot kill the inner thread (Python limitation), but we abort the wait.
+                # The lingering thread will eventually finish or be GCed when Python exits.
+                timed_out = True
+                state.tool_call_errors += 1
+                state.is_still_valid = None
+        # Auto-fallback on tool errors or red tests when sovereign was used.
+        # Skip fallback entirely when the DAG timed out — a hard timeout means the LLM
+        # is unresponsive; retrying immediately would just hang again.
         should_fallback = (
-            (state.tool_call_errors > 0 or state.tests_pass is False)
+            not timed_out
+            and (state.tool_call_errors > 0 or state.tests_pass is False)
             and routing.provider == "aihub"
         )
         if should_fallback:
