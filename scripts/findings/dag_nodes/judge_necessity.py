@@ -10,6 +10,7 @@ import json
 import os
 from ..lib.models import FindingFixState
 from ..lib.aihub_client import AIHubClient
+from ..lib.schemas import JUDGE_NECESSITY_SCHEMA
 
 
 _JUDGE_SYSTEM_PROMPT = """Du bist ein Code-Judge. Ein Finding wurde von einem Reviewer-Bot
@@ -26,6 +27,8 @@ def _call_judge_llm(routing, finding_text: str, code_text: str) -> str:
         client = AIHubClient()
         # max_tokens=500 (was 2000): judge produces a tiny JSON {is_still_valid, reasoning}.
         # Smaller budget keeps Qwen-Thinking total output under the gateway timeout.
+        # response_format=JUDGE_NECESSITY_SCHEMA enforces the JSON shape gateway-side
+        # where supported; existing parser handles models that ignore it.
         result = client.chat(
             model=routing.model,
             messages=[
@@ -33,6 +36,7 @@ def _call_judge_llm(routing, finding_text: str, code_text: str) -> str:
                 {"role": "user", "content": f"## Finding\n{finding_text}\n\n## Aktueller Code\n```\n{code_text}\n```"},
             ],
             max_tokens=500,
+            response_format=JUDGE_NECESSITY_SCHEMA,
         )
         return result["content"]
     else:
