@@ -47,6 +47,31 @@ Verdickt-Definitionen:
 - REJECTED:     Der Patch löst das Finding NICHT oder bringt offensichtliche Bugs/Regressionen.
 - NEEDS_HUMAN:  Unklar, Edge-Case, breaking change risk, oder Sicherheits-Implikation.
 
+STRUKTURELLE PFLICHT-CHECKS (alle MÜSSEN ✓ für APPROVED):
+
+1. **Scope-Korrektheit**: Werden neue Funktionen/Konstanten/Types am korrekten Scope-Level eingefügt?
+   - Neue helper-Funktionen → module-level (nicht innerhalb anderer Funktionen)
+   - Neue React-Hooks-Aufrufe → top of component (nicht in conditionals/loops)
+   - Neue Imports → top of file
+   - Verstoß? → REJECTED
+
+2. **Syntax-Plausibilität**: Sind Klammern, Brackets, Generics, JSX-Tags korrekt geschlossen?
+   - Inkonsistente Indentation, fehlende Schließ-Brackets → REJECTED
+
+3. **Side-Effect-Risk**: Verändert der Patch globalen Zustand, Imports, oder API-Contracts?
+   - JA → NEEDS_HUMAN (nicht APPROVED, auch wenn korrekt)
+
+4. **Acceptance-Criteria**: Erfüllt jeder einzelne AK aus dem Finding?
+   - Auch nur EIN AK nicht erfüllt → REJECTED
+
+5. **Test-Impact**: Würden die Änderungen plausibel bestehende Tests brechen?
+   - Function-rename ohne Aufrufer-Update? → REJECTED
+   - Type-Signature-Änderung ohne consumer-update? → REJECTED
+   - Im Zweifel → NEEDS_HUMAN
+
+WENN DU UNSICHER BIST → NEEDS_HUMAN, niemals APPROVED.
+APPROVED ist die Ausnahme, nicht die Regel.
+
 Sei streng: Im Zweifel NEEDS_HUMAN statt APPROVED.
 Antworte NUR mit JSON — kein Markdown, kein Freitext darum herum.
 """
