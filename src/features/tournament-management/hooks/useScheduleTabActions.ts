@@ -7,6 +7,7 @@
  */
 
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
@@ -45,6 +46,7 @@ export function useScheduleTabActions({
   setPendingField,
   lockFinishedResults,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
+  const { t } = useTranslation('tournament');
 
   // Handle redistribution of SR (keeps times fixed)
   const handleRedistributeSR = useCallback(() => {
@@ -59,7 +61,7 @@ export function useScheduleTabActions({
     );
 
     if (result.changes.length === 0) {
-      showSuccess('Schiedsrichter bereits optimal verteilt');
+      showSuccess(t('actions.refereesAlreadyOptimal'));
       return;
     }
 
@@ -78,7 +80,7 @@ export function useScheduleTabActions({
     }, false);
 
     showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess]);
+  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
 
   // Handle redistribution of fields (keeps times fixed)
   const handleRedistributeFields = useCallback(() => {
@@ -92,7 +94,7 @@ export function useScheduleTabActions({
     );
 
     if (result.changes.length === 0) {
-      showSuccess('Felder bereits optimal verteilt');
+      showSuccess(t('actions.fieldsAlreadyOptimal'));
       return;
     }
 
@@ -111,7 +113,7 @@ export function useScheduleTabActions({
     }, false);
 
     showSuccess(result.message);
-  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess]);
+  }, [isEditing, tournament, onTournamentUpdate, saveToHistory, showSuccess, t]);
 
   // Handle match swap via DnD (apply immediately for view sync)
   // Swaps scheduledTime AND field between two matches for complete slot swap
@@ -148,24 +150,20 @@ export function useScheduleTabActions({
       updatedAt: new Date().toISOString(),
     }, false);
 
-    showSuccess(`Spiele ${match1.round} und ${match2.round} getauscht`);
-  }, [tournament, onTournamentUpdate, showSuccess, saveToHistory]);
+    showSuccess(t('actions.matchesSwapped', { match1: match1.round, match2: match2.round }));
+  }, [tournament, onTournamentUpdate, showSuccess, saveToHistory, t]);
 
   // Handle score change with live match warning
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
     // Block editing finished matches (if lock is enabled)
     if (lockFinishedResults && isMatchFinished(matchId, tournament.matches, tournament.id)) {
-      showWarning('Dieses Spiel ist bereits beendet. Verwenden Sie "Ergebnis korrigieren".');
+      showWarning(t('actions.matchAlreadyFinished'));
       return;
     }
 
     // Check if match is currently live
     if (isMatchRunning(matchId, tournament.id)) {
-      const confirmEdit = window.confirm(
-        '⚠️ WARNUNG: Dieses Spiel läuft gerade LIVE in der Turnierleitung!\n\n' +
-        'Wenn Sie hier das Ergebnis ändern, wird es die Live-Verwaltung überschreiben.\n\n' +
-        'Möchten Sie trotzdem fortfahren?'
-      );
+      const confirmEdit = window.confirm(t('actions.liveMatchWarning'));
 
       if (!confirmEdit) { return; }
     }
@@ -197,7 +195,7 @@ export function useScheduleTabActions({
     if (bracketResolution?.wasResolved) {
       onTournamentUpdate(updatedTournament, false);
     }
-  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning, saveToHistory]);
+  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning, saveToHistory, t]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
   const handleRefereeAssignment = useCallback((matchId: string, refereeNumber: number | null) => {

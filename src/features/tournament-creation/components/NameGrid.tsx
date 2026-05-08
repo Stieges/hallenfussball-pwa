@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 
@@ -30,6 +31,8 @@ export const NameGrid: React.FC<NameGridProps> = ({
   namePlaceholder,
   shortCodePlaceholder,
 }) => {
+  const { t } = useTranslation('wizard');
+
   return (
     <>
       {/* Column headers */}
@@ -45,13 +48,13 @@ export const NameGrid: React.FC<NameGridProps> = ({
         }}
       >
         <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, fontWeight: 500 }}>
-          Standard
+          {t('nameGrid.defaultHeader')}
         </span>
         <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, fontWeight: 500 }}>
-          Eigener Name
+          {t('nameGrid.customNameHeader')}
         </span>
         <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, fontWeight: 500, textAlign: 'center' }}>
-          Kürzel
+          {t('nameGrid.shortCodeHeader')}
         </span>
       </div>
 
@@ -99,7 +102,7 @@ export const NameGrid: React.FC<NameGridProps> = ({
                   color: cssVars.colors.error,
                   fontSize: cssVars.fontSizes.xs,
                 }}>
-                  Dieser Name wird bereits verwendet
+                  {t('nameGrid.duplicateName')}
                 </p>
               )}
             </div>

@@ -20,6 +20,7 @@
 
 import { Page } from '@playwright/test';
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 // CI skip removed - using reliable seeding fixture
 
@@ -209,7 +210,7 @@ test.describe('Spielplan 2.0 - Mobile Layout', () => {
 
     // Look for "Speichern" button which is unique to the QuickScoreExpand
     // Use getByRole for more reliable selection
-    const speichernButton = page.getByRole('button', { name: 'Speichern' });
+    const speichernButton = page.getByRole('button', { name: t('tournament:common.save') });
 
     // Assert the expand is visible
     await expect(speichernButton).toBeVisible({ timeout: 3000 });
@@ -537,7 +538,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
         await incrementButton.click();
 
         // Click cancel
-        const cancelButton = page.locator('button').filter({ hasText: /Abbrechen|Cancel/i }).first();
+        const cancelButton = page.locator('button').filter({ hasText: new RegExp(`${t('tournament:common.cancel')}|Cancel`, 'i') }).first();
         if (await cancelButton.isVisible()) {
           await cancelButton.click();
           await page.waitForTimeout(300);
@@ -565,7 +566,7 @@ test.describe('Spielplan 2.0 - Score-Eingabe', () => {
         await incrementButton.click();
 
         // Click save
-        const saveButton = page.locator('button').filter({ hasText: /Speichern|Save/i }).first();
+        const saveButton = page.locator('button').filter({ hasText: new RegExp(`${t('tournament:common.save')}|Save`, 'i') }).first();
         if (await saveButton.isVisible()) {
           await saveButton.click();
           await page.waitForTimeout(300);
@@ -703,7 +704,7 @@ test.describe('Spielplan 2.0 - Cockpit-Integration', () => {
         await incrementButton.click();
 
         // Save
-        const saveButton = page.locator('button').filter({ hasText: /Speichern|Save/i }).first();
+        const saveButton = page.locator('button').filter({ hasText: new RegExp(`${t('tournament:common.save')}|Save`, 'i') }).first();
         if (await saveButton.isVisible()) {
           await saveButton.click();
           await page.waitForTimeout(300);

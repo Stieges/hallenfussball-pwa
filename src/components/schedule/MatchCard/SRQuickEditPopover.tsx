@@ -12,6 +12,7 @@
  */
 
 import { type CSSProperties, useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 
 // ---------------------------------------------------------------------------
@@ -53,6 +54,7 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
   onClose,
   anchorRef,
 }) => {
+  const { t } = useTranslation('tournament');
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
@@ -212,8 +214,8 @@ export const SRQuickEditPopover: React.FC<SRQuickEditPopoverProps> = ({
       <div style={overlayStyle} />
 
       {/* Popover */}
-      <div ref={popoverRef} style={popoverStyle} role="listbox" aria-label="Schiedsrichter auswählen">
-        <div style={headerStyle}>Schiedsrichter wählen</div>
+      <div ref={popoverRef} style={popoverStyle} role="listbox" aria-label={t('matchCard.selectReferee')}>
+        <div style={headerStyle}>{t('matchCard.chooseReferee')}</div>
 
         <ul style={listStyle}>
           {options.map((option) => {

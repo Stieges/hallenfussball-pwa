@@ -7,6 +7,7 @@
  */
 
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
@@ -63,6 +64,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onCreateTournament,
   onRegister,
 }) => {
+  const { t } = useTranslation('auth');
   const { user, isGuest, logout, resetPassword } = useAuth();
   const { showInfo, showSuccess, showError } = useToast();
   const { theme, toggleTheme } = useTheme(); // Use Theme Hook
@@ -109,12 +111,12 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   const handleChangePassword = useCallback(async () => {
     // Rate limiting check
     if (passwordResetCooldown > 0) {
-      showInfo(`Bitte warte noch ${passwordResetCooldown} Sekunden.`);
+      showInfo(t('profile.cooldownMessage', { seconds: passwordResetCooldown }));
       return;
     }
 
     if (!user?.email) {
-      showError('Keine E-Mail-Adresse hinterlegt.');
+      showError(t('errors.noEmailAddress'));
       return;
     }
 
@@ -124,14 +126,14 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
         // Set cooldown timestamp
         safeLocalStorage.setItem(PASSWORD_RESET_TIMESTAMP_KEY, Date.now().toString());
         setPasswordResetCooldown(PASSWORD_RESET_COOLDOWN_SECONDS);
-        showSuccess(`E-Mail zum Zurücksetzen wurde an ${user.email} gesendet.`);
+        showSuccess(t('profile.resetEmailSent', { email: user.email }));
       } else {
-        showError(result.error ?? 'E-Mail konnte nicht gesendet werden.');
+        showError(result.error ?? t('errors.emailSendFailed'));
       }
     } catch (err) {
-      showError('Ein Fehler ist aufgetreten.');
+      showError(t('errors.genericError'));
     }
-  }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError]);
+  }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError, t]);
 
   // AuthGuard in App.tsx handles guest redirect
   if (!user) {
@@ -153,11 +155,11 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           type="button"
           onClick={onBack}
           style={styles.backButton}
-          aria-label="Zurück"
+          aria-label={t('profile.back')}
         >
-          ← Zurück
+          {t('profile.backWithArrow')}
         </button>
-        <h1 style={styles.pageTitle}>Mein Profil</h1>
+        <h1 style={styles.pageTitle}>{t('profile.title')}</h1>
         <div style={{ width: 40 }} /> {/* Spacer for balance */}
       </div>
 
@@ -170,7 +172,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           </Card>
 
           {/* Stats Card */}
-          <Card title="Meine Statistik">
+          <Card title={t('profile.stats')}>
             <ProfileStats
               totalTournaments={counts.total}
               liveTournaments={counts.live}
@@ -179,7 +181,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           </Card>
 
           {/* Preferences Card */}
-          <Card title="Einstellungen">
+          <Card title={t('profile.settings')}>
             <ProfileSettings
               isDark={isDark}
               onToggleTheme={toggleTheme}
@@ -189,7 +191,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           </Card>
 
           {/* Security Card */}
-          <Card title="Sicherheit">
+          <Card title={t('profile.security')}>
             <ProfileActions
               is2FAEnabled={false}
               on2FAToggle={() => alert('2FA Einrichtung startet...')}

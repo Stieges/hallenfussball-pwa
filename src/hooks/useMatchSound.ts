@@ -167,9 +167,13 @@ export function useMatchSound(
     }
   }, [volume]);
 
-  // Cleanup custom URL on unmount
+  // Cleanup audio element and custom URL on unmount
   useEffect(() => {
     return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
       if (customUrlRef.current) {
         URL.revokeObjectURL(customUrlRef.current);
       }

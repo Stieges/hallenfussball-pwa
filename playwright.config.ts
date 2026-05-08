@@ -43,6 +43,10 @@ export default defineConfig({
 
   use: {
     baseURL,
+    // Force German locale so i18n's navigator.language detection picks 'de'.
+    // Without this, CI runners report en-US and the app renders English while
+    // most E2E selectors still target the German UI strings.
+    locale: 'de-DE',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Action and navigation timeouts

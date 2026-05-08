@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
 
@@ -29,11 +30,14 @@ interface TeamSearchInputProps {
 export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
   value,
   onChange,
-  placeholder = 'Team suchen...',
-  label = 'Team',
+  placeholder,
+  label,
   debounceMs = 300,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
+  const resolvedPlaceholder = placeholder ?? t('filter.teamSearchPlaceholder');
+  const resolvedLabel = label ?? t('filter.teamSearch');
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -143,7 +147,7 @@ export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
 
   return (
     <div style={containerStyle}>
-      <label style={labelStyle}>{label}</label>
+      <label style={labelStyle}>{resolvedLabel}</label>
       <div style={inputContainerStyle}>
         <span style={iconStyle}>
           <Icons.Search size={16} />
@@ -153,7 +157,7 @@ export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
           type="text"
           defaultValue={value}
           onChange={handleChange}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           style={inputStyle}
           data-testid={testId}
           onFocus={(e) => {
@@ -166,7 +170,7 @@ export const TeamSearchInput: React.FC<TeamSearchInputProps> = ({
         <button
           style={clearButtonStyle}
           onClick={handleClear}
-          aria-label="Suche leeren"
+          aria-label={t('filter.clearSearch')}
           type="button"
           data-testid={testId ? `${testId}-clear` : undefined}
         >

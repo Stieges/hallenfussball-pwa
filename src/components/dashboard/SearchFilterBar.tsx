@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Icons } from '../ui/Icons';
 import { cssVars } from '../../design-tokens'
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -29,41 +30,42 @@ interface ChipConfig {
   color: string;
 }
 
-const FILTER_CHIPS: ChipConfig[] = [
-  {
-    id: 'running',
-    label: 'Läuft',
-    icon: <Icons.Play size={14} />,
-    color: cssVars.colors.statusLive,
-  },
-  {
-    id: 'upcoming',
-    label: 'Bevorstehend',
-    icon: <Icons.Calendar size={14} />,
-    color: cssVars.colors.statusUpcoming,
-  },
-  {
-    id: 'finished',
-    label: 'Beendet',
-    icon: <Icons.Check size={14} />,
-    color: cssVars.colors.statusFinished,
-  },
-  {
-    id: 'draft',
-    label: 'Entwurf',
-    icon: <Icons.Save size={14} />,
-    color: cssVars.colors.statusDraft,
-  },
-];
-
 export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   searchQuery,
   onSearchChange,
   activeFilters,
   onFilterToggle,
-  placeholder = 'Turniere suchen...',
+  placeholder,
 }) => {
+  const { t } = useTranslation('dashboard');
   const isMobile = useIsMobile();
+
+  const FILTER_CHIPS: ChipConfig[] = [
+    {
+      id: 'running',
+      label: t('status.running'),
+      icon: <Icons.Play size={14} />,
+      color: cssVars.colors.statusLive,
+    },
+    {
+      id: 'upcoming',
+      label: t('status.upcoming'),
+      icon: <Icons.Calendar size={14} />,
+      color: cssVars.colors.statusUpcoming,
+    },
+    {
+      id: 'finished',
+      label: t('status.finished'),
+      icon: <Icons.Check size={14} />,
+      color: cssVars.colors.statusFinished,
+    },
+    {
+      id: 'draft',
+      label: t('status.draft'),
+      icon: <Icons.Save size={14} />,
+      color: cssVars.colors.statusDraft,
+    },
+  ];
 
   const containerStyle: CSSProperties = {
     display: 'flex',
@@ -155,7 +157,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('search.placeholder')}
           style={inputStyle}
           onFocus={(e) => {
             e.target.style.borderColor = cssVars.colors.primary;
@@ -168,7 +170,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
         <button
           style={clearButtonStyle}
           onClick={() => onSearchChange('')}
-          aria-label="Suche leeren"
+          aria-label={t('search.clearLabel')}
           type="button"
           data-testid="search-clear"
         >
@@ -186,7 +188,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
           gap: cssVars.spacing.xs,
         }}>
           <Icons.Filter size={14} />
-          Filter:
+          {t('search.filterLabel')}
         </span>
         {FILTER_CHIPS.map((chip) => {
           const isActive = activeFilters.includes(chip.id);
@@ -197,7 +199,7 @@ export const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
               style={getChipStyle(chip, isActive)}
               type="button"
               aria-pressed={isActive}
-              aria-label={`Filter: ${chip.label} ${isActive ? '(aktiv)' : ''}`}
+              aria-label={t('search.filterAriaLabel', { label: chip.label, activeState: isActive ? t('search.filterActive') : '' })}
               data-testid={`filter-chip-${chip.id}`}
             >
               {chip.icon}

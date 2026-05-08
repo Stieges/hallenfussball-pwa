@@ -2,6 +2,7 @@
  * StandingsDisplay - Zeigt Tabellen für Gruppen oder Gesamtturnier
  */
 import { CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cssVars } from '../../../design-tokens'
 import { Tournament, Standing } from '../../../types/tournament'
 import { getGroupDisplayName } from '../../../utils/displayNames'
@@ -18,10 +19,11 @@ export const StandingsDisplay: React.FC<StandingsDisplayProps> = ({
   teams,
   tournament,
 }) => {
-  const groups = new Set(teams.map((t) => t.group).filter(Boolean))
+  const { t } = useTranslation('tournament');
+  const groups = new Set(teams.map((tm) => tm.group).filter(Boolean))
 
   if (groups.size === 0) {
-    return <StandingsTable standings={standings} title="Tabelle" />
+    return <StandingsTable standings={standings} title={t('standings.table')} />
   }
 
   return (
@@ -62,6 +64,7 @@ interface StandingsTableProps {
 }
 
 export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title }) => {
+  const { t } = useTranslation('tournament');
   const tableStyle: CSSProperties = {
     width: '100%',
     borderCollapse: 'collapse',
@@ -97,12 +100,12 @@ export const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title
       <table style={tableStyle}>
         <thead>
           <tr>
-            <th style={thStyle}>Pl</th>
-            <th style={{ ...thStyle, textAlign: 'left' }}>Team</th>
-            <th style={{ ...thStyle, textAlign: 'center' }}>Sp</th>
-            <th style={{ ...thStyle, textAlign: 'center' }}>Tore</th>
-            <th style={{ ...thStyle, textAlign: 'center' }}>Diff</th>
-            <th style={{ ...thStyle, textAlign: 'center' }}>Pkt</th>
+            <th style={thStyle}>{t('standings.rank')}</th>
+            <th style={{ ...thStyle, textAlign: 'left' }}>{t('standings.team')}</th>
+            <th style={{ ...thStyle, textAlign: 'center' }}>{t('standings.played')}</th>
+            <th style={{ ...thStyle, textAlign: 'center' }}>{t('standings.goals')}</th>
+            <th style={{ ...thStyle, textAlign: 'center' }}>{t('standings.diff')}</th>
+            <th style={{ ...thStyle, textAlign: 'center' }}>{t('standings.points')}</th>
           </tr>
         </thead>
         <tbody>

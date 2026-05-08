@@ -9,6 +9,7 @@
  */
 
 import React, { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { Dialog } from '../../../components/dialogs/Dialog';
@@ -46,6 +47,7 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
   onRegisterClick,
   onLoginClick,
 }) => {
+  const { t } = useTranslation('auth');
   const { used, limit, isLimited } = useTournamentLimit();
 
   // Don't render if user isn't limited
@@ -67,14 +69,14 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Turnier-Limit erreicht"
+      title={t('tournamentLimit.title')}
       maxWidth="420px"
       data-testid="tournament-limit-modal"
     >
       <div style={styles.content}>
         {/* Icon */}
         <div style={styles.iconContainer}>
-          <span style={styles.icon} role="img" aria-label="Warnung">
+          <span style={styles.icon} role="img" aria-label={t('tournamentLimit.warningAriaLabel')}>
             ⚠️
           </span>
         </div>
@@ -82,12 +84,10 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
         {/* Message */}
         <div style={styles.messageContainer}>
           <p style={styles.message}>
-            Du hast das Limit von <strong>{ANONYMOUS_TOURNAMENT_LIMIT} Turnieren</strong> für
-            Gast-Accounts erreicht ({used}/{limit} verwendet).
+            {t('tournamentLimit.message', { limit: ANONYMOUS_TOURNAMENT_LIMIT, used, total: limit })}
           </p>
           <p style={styles.submessage}>
-            Erstelle ein kostenloses Konto, um unbegrenzt viele Turniere zu verwalten
-            und deine Daten sicher in der Cloud zu speichern.
+            {t('tournamentLimit.submessage')}
           </p>
         </div>
 
@@ -95,19 +95,19 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
         <div style={styles.benefitsList}>
           <div style={styles.benefitItem}>
             <span style={styles.checkIcon}>✓</span>
-            <span>Unbegrenzte Turniere</span>
+            <span>{t('tournamentLimit.benefits.unlimitedTournaments')}</span>
           </div>
           <div style={styles.benefitItem}>
             <span style={styles.checkIcon}>✓</span>
-            <span>Cloud-Synchronisation</span>
+            <span>{t('tournamentLimit.benefits.cloudSync')}</span>
           </div>
           <div style={styles.benefitItem}>
             <span style={styles.checkIcon}>✓</span>
-            <span>Zugriff von allen Geräten</span>
+            <span>{t('tournamentLimit.benefits.multiDevice')}</span>
           </div>
           <div style={styles.benefitItem}>
             <span style={styles.checkIcon}>✓</span>
-            <span>Team-Einladungen teilen</span>
+            <span>{t('tournamentLimit.benefits.teamInvites')}</span>
           </div>
         </div>
 
@@ -119,7 +119,7 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
             style={styles.primaryButton}
             data-testid="tournament-limit-register-button"
           >
-            Kostenlos registrieren
+            {t('tournamentLimit.registerFree')}
           </Button>
 
           {onLoginClick && (
@@ -129,14 +129,14 @@ export const TournamentLimitModal: React.FC<TournamentLimitModalProps> = ({
               style={styles.secondaryButton}
               data-testid="tournament-limit-login-button"
             >
-              Ich habe bereits ein Konto
+              {t('tournamentLimit.haveAccount')}
             </Button>
           )}
         </div>
 
         {/* Hint */}
         <p style={styles.hint}>
-          Deine bestehenden Turniere werden automatisch übernommen.
+          {t('tournamentLimit.hint')}
         </p>
       </div>
     </Dialog>

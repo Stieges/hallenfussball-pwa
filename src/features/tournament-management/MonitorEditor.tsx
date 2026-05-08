@@ -13,6 +13,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import type { Tournament, TournamentGroup } from '../../types/tournament';
 import type {
@@ -50,22 +51,22 @@ interface SlideTypeOption {
 // CONSTANTS
 // =============================================================================
 
-const TRANSITION_OPTIONS: { value: TransitionType; label: string }[] = [
-  { value: 'fade', label: 'Überblenden' },
-  { value: 'slide', label: 'Schieben' },
-  { value: 'none', label: 'Harter Schnitt' },
+const TRANSITION_OPTIONS: { value: TransitionType; labelKey: string }[] = [
+  { value: 'fade', labelKey: 'monitorEditor.settings.transitions.fade' },
+  { value: 'slide', labelKey: 'monitorEditor.settings.transitions.slide' },
+  { value: 'none', labelKey: 'monitorEditor.settings.transitions.none' },
 ];
 
-const PERFORMANCE_OPTIONS: { value: PerformanceMode; label: string; description: string }[] = [
-  { value: 'auto', label: 'Automatisch', description: 'Erkennt Smart-TVs automatisch' },
-  { value: 'high', label: 'Hoch', description: 'Alle Animationen aktiv' },
-  { value: 'low', label: 'Energiesparen', description: 'Für ältere Smart-TVs' },
+const PERFORMANCE_OPTIONS: { value: PerformanceMode; labelKey: string; descriptionKey: string }[] = [
+  { value: 'auto', labelKey: 'monitorEditor.settings.performance.auto', descriptionKey: 'monitorEditor.settings.performance.autoDesc' },
+  { value: 'high', labelKey: 'monitorEditor.settings.performance.high', descriptionKey: 'monitorEditor.settings.performance.highDesc' },
+  { value: 'low', labelKey: 'monitorEditor.settings.performance.low', descriptionKey: 'monitorEditor.settings.performance.lowDesc' },
 ];
 
-const THEME_OPTIONS: { value: MonitorTheme; label: string; description: string }[] = [
-  { value: 'dark', label: 'Dunkel', description: 'Dunkler Hintergrund (Standard)' },
-  { value: 'light', label: 'Hell', description: 'Heller Hintergrund für helle Räume' },
-  { value: 'auto', label: 'Automatisch', description: 'Folgt Systemeinstellungen' },
+const THEME_OPTIONS: { value: MonitorTheme; labelKey: string; descriptionKey: string }[] = [
+  { value: 'dark', labelKey: 'monitorEditor.settings.themes.dark', descriptionKey: 'monitorEditor.settings.themes.darkDesc' },
+  { value: 'light', labelKey: 'monitorEditor.settings.themes.light', descriptionKey: 'monitorEditor.settings.themes.lightDesc' },
+  { value: 'auto', labelKey: 'monitorEditor.settings.themes.auto', descriptionKey: 'monitorEditor.settings.themes.autoDesc' },
 ];
 
 const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
@@ -80,6 +81,8 @@ export function MonitorEditor({
   onTournamentUpdate,
   onClose,
 }: MonitorEditorProps) {
+  const { t } = useTranslation('tournament');
+
   // Hooks
   const {
     getMonitorById,
@@ -135,7 +138,7 @@ export function MonitorEditor({
   const groups: TournamentGroup[] = useMemo(() => {
     // Round-robin mode = single group tournament (everyone plays everyone)
     if (tournament.groupSystem === 'roundRobin') {
-      return [{ id: 'default', customName: 'Alle Teams' }];
+      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
     }
 
     // If explicit groups are defined, use them
@@ -147,15 +150,15 @@ export function MonitorEditor({
     const numGroups = tournament.numberOfGroups ?? 1;
     if (numGroups <= 1) {
       // Single group tournament - return one default group
-      return [{ id: 'default', customName: 'Alle Teams' }];
+      return [{ id: 'default', customName: t('monitorEditor.allTeams') }];
     }
 
     // Generate group entries A, B, C, etc.
     return Array.from({ length: numGroups }, (_, i) => ({
       id: String.fromCharCode(65 + i), // A, B, C...
-      customName: `Gruppe ${String.fromCharCode(65 + i)}`,
+      customName: t('monitorEditor.groupLabel', { letter: String.fromCharCode(65 + i) }),
     }));
-  }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem]);
+  }, [tournament.groups, tournament.numberOfGroups, tournament.groupSystem, t]);
 
   // Available slide types (Phase 1 only)
   const availableSlideTypes: SlideTypeOption[] = useMemo(() => {
@@ -190,11 +193,11 @@ export function MonitorEditor({
     try {
       await updateMonitor(monitorId, updates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern');
+      setError(err instanceof Error ? err.message : t('monitorEditor.errors.saveFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [monitor, monitorId, updateMonitor]);
+  }, [monitor, monitorId, updateMonitor, t]);
 
   const handleAddSlide = useCallback(async (type: SlideType) => {
     setIsLoading(true);
@@ -207,11 +210,11 @@ export function MonitorEditor({
       }
       setIsAddingSlide(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Hinzufügen');
+      setError(err instanceof Error ? err.message : t('monitorEditor.errors.addFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [monitorId, addSlide]);
+  }, [monitorId, addSlide, t]);
 
   const handleUpdateSlide = useCallback(async (
     slideId: string,
@@ -223,11 +226,11 @@ export function MonitorEditor({
     try {
       await updateSlide(monitorId, slideId, updates);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Aktualisieren');
+      setError(err instanceof Error ? err.message : t('monitorEditor.errors.updateFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [monitorId, updateSlide]);
+  }, [monitorId, updateSlide, t]);
 
   const handleRemoveSlide = useCallback(async (slideId: string) => {
     setIsLoading(true);
@@ -239,11 +242,11 @@ export function MonitorEditor({
         setEditingSlideId(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Entfernen');
+      setError(err instanceof Error ? err.message : t('monitorEditor.errors.removeFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [monitorId, removeSlide, editingSlideId]);
+  }, [monitorId, removeSlide, editingSlideId, t]);
 
   const handleMoveSlide = useCallback(async (slideId: string, direction: 'up' | 'down') => {
     if (!monitor) {return;}
@@ -263,11 +266,11 @@ export function MonitorEditor({
     try {
       await reorderSlides(monitorId, newSlideIds);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Umordnen');
+      setError(err instanceof Error ? err.message : t('monitorEditor.errors.reorderFailed'));
     } finally {
       setIsLoading(false);
     }
-  }, [monitor, monitorId, reorderSlides]);
+  }, [monitor, monitorId, reorderSlides, t]);
 
   // ==========================================================================
   // HELPERS
@@ -283,23 +286,23 @@ export function MonitorEditor({
     switch (type) {
       case 'live':
       case 'schedule-field': {
-        const fieldName = config.fieldId ? getFieldDisplayName(config.fieldId) : 'Nicht konfiguriert';
+        const fieldName = config.fieldId ? getFieldDisplayName(config.fieldId) : t('monitorEditor.notConfigured');
         return fieldName;
       }
       case 'standings':
       case 'schedule-group': {
         const group = groups.find(g => g.id === config.groupId);
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty customName should use fallback
-        return group?.customName || `Gruppe ${config.groupId}` || 'Nicht konfiguriert';
+        return group?.customName || t('monitorEditor.groupLabel', { letter: config.groupId }) || t('monitorEditor.notConfigured');
       }
       case 'sponsor': {
         const sponsor = sponsors.find(s => s.id === config.sponsorId);
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty name should use fallback
-        return sponsor?.name || 'Nicht konfiguriert';
+        return sponsor?.name || t('monitorEditor.notConfigured');
       }
       case 'custom-text':
         // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty headline should use fallback
-        return config.headline || 'Eigener Text';
+        return config.headline || t('monitorEditor.customText');
       default:
         return '';
     }
@@ -547,15 +550,15 @@ export function MonitorEditor({
         onClick={onClose}
         role="dialog"
         aria-modal="true"
-        aria-label="Monitor nicht gefunden"
+        aria-label={t('monitorEditor.notFound')}
       >
         <div style={editorStyle} onClick={e => e.stopPropagation()}>
           <div style={headerStyle}>
-            <h2 style={titleStyle}>Monitor nicht gefunden</h2>
-            <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">✕</button>
+            <h2 style={titleStyle}>{t('monitorEditor.notFound')}</h2>
+            <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}>✕</button>
           </div>
           <div style={contentStyle}>
-            <p>Der Monitor mit ID &quot;{monitorId}&quot; existiert nicht mehr.</p>
+            <p>{t('monitorEditor.notFoundMessage', { id: monitorId })}</p>
           </div>
         </div>
       </div>
@@ -574,14 +577,14 @@ export function MonitorEditor({
         {/* Header */}
         <div style={headerStyle}>
           <h2 id={titleId} style={titleStyle}>{monitor.name}</h2>
-          <button style={closeButtonStyle} onClick={onClose} aria-label="Schließen">✕</button>
+          <button style={closeButtonStyle} onClick={onClose} aria-label={t('monitorEditor.close')}>✕</button>
         </div>
 
         {/* Content */}
         <div style={contentStyle}>
           {/* Loading Overlay */}
           {isLoading && (
-            <div style={loadingOverlayStyle} aria-label="Wird geladen...">
+            <div style={loadingOverlayStyle} aria-label={t('monitorEditor.loading')}>
               <div style={spinnerStyle} />
             </div>
           )}
@@ -591,11 +594,11 @@ export function MonitorEditor({
 
           {/* Settings Section */}
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>Einstellungen</h3>
+            <h3 style={sectionTitleStyle}>{t('monitorEditor.settings.title')}</h3>
             <div style={settingsGridStyle}>
               {/* Name */}
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Name</label>
+                <label style={labelStyle}>{t('monitorEditor.settings.name')}</label>
                 <input
                   type="text"
                   style={inputStyle}
@@ -606,7 +609,7 @@ export function MonitorEditor({
 
               {/* Duration */}
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Slide-Dauer (Sek.)</label>
+                <label style={labelStyle}>{t('monitorEditor.settings.slideDuration')}</label>
                 <select
                   style={selectStyle}
                   value={monitor.defaultSlideDuration}
@@ -620,42 +623,42 @@ export function MonitorEditor({
 
               {/* Transition */}
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Übergang</label>
+                <label style={labelStyle}>{t('monitorEditor.settings.transition')}</label>
                 <select
                   style={selectStyle}
                   value={monitor.transition}
                   onChange={(e) => void handleUpdateSettings({ transition: e.target.value as TransitionType })}
                 >
                   {TRANSITION_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                   ))}
                 </select>
               </div>
 
               {/* Performance Mode */}
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Performance</label>
+                <label style={labelStyle}>{t('monitorEditor.settings.performanceLabel')}</label>
                 <select
                   style={selectStyle}
                   value={monitor.performanceMode}
                   onChange={(e) => void handleUpdateSettings({ performanceMode: e.target.value as PerformanceMode })}
                 >
                   {PERFORMANCE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                   ))}
                 </select>
               </div>
 
               {/* Theme */}
               <div style={inputGroupStyle}>
-                <label style={labelStyle}>Farbschema</label>
+                <label style={labelStyle}>{t('monitorEditor.settings.themeLabel')}</label>
                 <select
                   style={selectStyle}
                   value={monitor.theme}
                   onChange={(e) => void handleUpdateSettings({ theme: e.target.value as MonitorTheme })}
                 >
                   {THEME_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
                   ))}
                 </select>
               </div>
@@ -663,7 +666,7 @@ export function MonitorEditor({
               {/* Overscan */}
               <div style={inputGroupStyle}>
                 <label style={labelStyle}>
-                  TV-Rand ({monitor.overscanPx ?? 48}px)
+                  {t('monitorEditor.settings.overscan', { px: monitor.overscanPx ?? 48 })}
                 </label>
                 <input
                   type="range"
@@ -680,7 +683,7 @@ export function MonitorEditor({
                   fontSize: cssVars.fontSizes.xs,
                   color: cssVars.colors.textMuted,
                 }}>
-                  <span>Kein Rand</span>
+                  <span>{t('monitorEditor.settings.noMargin')}</span>
                   <span>80px</span>
                 </div>
               </div>
@@ -689,7 +692,7 @@ export function MonitorEditor({
 
           {/* Slides Section */}
           <div style={sectionStyle}>
-            <h3 style={sectionTitleStyle}>Slides ({monitor.slides.length})</h3>
+            <h3 style={sectionTitleStyle}>{t('monitorEditor.slides.title', { count: monitor.slides.length })}</h3>
 
             <div style={slidesListStyle}>
               {monitor.slides.map((slide, index) => {
@@ -714,7 +717,7 @@ export function MonitorEditor({
                           style={iconButtonStyle}
                           onClick={() => void handleMoveSlide(slide.id, 'up')}
                           disabled={index === 0}
-                          title="Nach oben"
+                          title={t('monitorEditor.slides.moveUp')}
                         >
                           ↑
                         </button>
@@ -722,21 +725,21 @@ export function MonitorEditor({
                           style={iconButtonStyle}
                           onClick={() => void handleMoveSlide(slide.id, 'down')}
                           disabled={index === monitor.slides.length - 1}
-                          title="Nach unten"
+                          title={t('monitorEditor.slides.moveDown')}
                         >
                           ↓
                         </button>
                         <button
                           style={iconButtonStyle}
                           onClick={() => setEditingSlideId(isEditing ? null : slide.id)}
-                          title="Bearbeiten"
+                          title={t('monitorEditor.slides.edit')}
                         >
                           ✏️
                         </button>
                         <button
                           style={iconButtonStyle}
                           onClick={() => void handleRemoveSlide(slide.id)}
-                          title="Entfernen"
+                          title={t('monitorEditor.slides.remove')}
                         >
                           🗑️
                         </button>
@@ -770,7 +773,7 @@ export function MonitorEditor({
                 onClick={() => setIsAddingSlide(!isAddingSlide)}
               >
                 <span>+</span>
-                <span>Slide hinzufügen</span>
+                <span>{t('monitorEditor.slides.addSlide')}</span>
               </button>
 
               {/* Slide Type Selector */}

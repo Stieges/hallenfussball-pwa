@@ -5,6 +5,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Standing, Tournament, TeamLogo, TeamColors } from '../../types/tournament';
 import { getGroupDisplayName } from '../../utils/displayNames';
@@ -25,6 +26,7 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
   tournament,
   activeMatchTeamIds,
 }) => {
+  const { t } = useTranslation('tournament');
   const groupStandings = getGroupStandings(standings, teams);
 
   if (groupStandings.length === 0) {
@@ -35,9 +37,9 @@ export const GroupTables: React.FC<GroupTablesProps> = ({
         color: cssVars.colors.textSecondary,
         fontSize: cssVars.fontSizes.lg,
       }}>
-        Noch keine Spiele gespielt.
+        {t('groupTables.empty.noGames')}
         <br />
-        Die Tabelle wird nach den ersten Spielen angezeigt.
+        {t('groupTables.empty.showAfterGames')}
       </div>
     );
   }
@@ -91,6 +93,7 @@ interface StandingsTableProps {
 }
 
 const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tournament, activeMatchTeamIds }) => {
+  const { t } = useTranslation('tournament');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // ... (rest of logic)
 
@@ -160,15 +163,15 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>Pl.</th>
-              <th style={thStyle}>Team</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>Sp</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>S</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>U</th>
-              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>N</th>
-              <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Tore</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>Diff</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>Pkt</th>
+              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.rank')}</th>
+              <th style={thStyle}>{t('groupTables.columns.team')}</th>
+              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.played')}</th>
+              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.won')}</th>
+              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.drawn')}</th>
+              <th style={{ ...thStyle, width: '40px', textAlign: 'center' }}>{t('groupTables.columns.lost')}</th>
+              <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>{t('groupTables.columns.goals')}</th>
+              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.diff')}</th>
+              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.points')}</th>
             </tr>
           </thead>
           <tbody>
@@ -195,7 +198,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                       {/* LIVE INDICATOR */}
                       {activeMatchTeamIds?.has(standing.team.id) && (
                         <span
-                          title="Gerade im Spiel"
+                          title={t('groupTables.currentlyPlaying')}
                           style={{
                             width: '8px',
                             height: '8px',
@@ -276,10 +279,10 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
         <table style={tableStyle}>
           <thead>
             <tr>
-              <th style={{ ...thStyle, width: '35px', textAlign: 'center' }}>Pl.</th>
-              <th style={thStyle}>Team</th>
-              <th style={{ ...thStyle, width: '45px', textAlign: 'center' }}>Pkt</th>
-              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>Diff</th>
+              <th style={{ ...thStyle, width: '35px', textAlign: 'center' }}>{t('groupTables.columns.rank')}</th>
+              <th style={thStyle}>{t('groupTables.columns.team')}</th>
+              <th style={{ ...thStyle, width: '45px', textAlign: 'center' }}>{t('groupTables.columns.points')}</th>
+              <th style={{ ...thStyle, width: '50px', textAlign: 'center' }}>{t('groupTables.columns.diff')}</th>
               <th style={{ ...thStyle, width: '30px', textAlign: 'center' }}></th>
             </tr>
           </thead>
@@ -314,7 +317,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                         {/* LIVE INDICATOR */}
                         {activeMatchTeamIds?.has(standing.team.id) && (
                           <span
-                            title="Gerade im Spiel"
+                            title={t('groupTables.currentlyPlaying')}
                             style={{
                               width: '8px',
                               height: '8px',
@@ -375,13 +378,13 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                           fontSize: cssVars.fontSizes.sm,
                         }}>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Spiele</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.played')}</div>
                             <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.played}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Siege</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.wins')}</div>
                             <div style={{
                               fontWeight: cssVars.fontWeights.semibold,
                               color: cssVars.colors.textPrimary,
@@ -394,19 +397,19 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Unent.</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.draws')}</div>
                             <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.drawn}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Niederl.</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.losses')}</div>
                             <div style={{ fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
                               {standing.lost}
                             </div>
                           </div>
                           <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Tore geschossen</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.goalsFor')}</div>
                             <div style={{
                               fontWeight: cssVars.fontWeights.semibold,
                               color: cssVars.colors.textPrimary,
@@ -419,7 +422,7 @@ const StandingsTable: React.FC<StandingsTableProps> = ({ standings, title, tourn
                             </div>
                           </div>
                           <div style={{ textAlign: 'center', gridColumn: 'span 2' }}>
-                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>Tore kassiert</div>
+                            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.xs, marginBottom: '4px' }}>{t('groupTables.details.goalsAgainst')}</div>
                             <div style={{
                               fontWeight: cssVars.fontWeights.semibold,
                               color: cssVars.colors.textPrimary,

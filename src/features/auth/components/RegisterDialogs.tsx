@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { Button } from '../../../components/ui/Button';
 import { registerStyles as styles } from './RegisterScreen.styles';
@@ -29,6 +30,7 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
   migratedCount,
   onClose,
 }) => {
+  const { t } = useTranslation('auth');
   const trap = useFocusTrap({
     isActive: true,
     onEscape: onClose,
@@ -48,17 +50,16 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
           type="button"
           onClick={onClose}
           style={styles.successCloseButton}
-          aria-label="Schließen"
+          aria-label={t('login.close')}
         >
           ✕
         </button>
         <div style={styles.successIcon}>✉</div>
-        <h2 id="email-confirm-title" style={styles.successTitle}>Bestätige deine E-Mail</h2>
+        <h2 id="email-confirm-title" style={styles.successTitle}>{t('registerDialogs.emailConfirmation.title')}</h2>
         <p style={styles.successText}>
-          Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
-          Bitte klicke auf den Link in der E-Mail, um dein Konto zu aktivieren.
+          {t('registerDialogs.emailConfirmation.message', { email })}
           {migratedCount > 0 && (
-            <><br /><br />{migratedCount} Turnier{migratedCount === 1 ? ' wird' : 'e werden'} nach der Aktivierung synchronisiert.</>
+            <><br /><br />{t('registerDialogs.emailConfirmation.migrated', { count: migratedCount })}</>
           )}
         </p>
         <Button
@@ -67,7 +68,7 @@ export const RegisterEmailConfirmationDialog: React.FC<RegisterEmailConfirmation
           onClick={onClose}
           style={{ marginTop: cssVars.spacing.lg }}
         >
-          Zum Login
+          {t('registerDialogs.emailConfirmation.toLogin')}
         </Button>
       </div>
     </div>
@@ -87,6 +88,7 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
   migratedCount,
   onClose,
 }) => {
+  const { t } = useTranslation('auth');
   const trap = useFocusTrap({
     isActive: true,
     onEscape: onClose,
@@ -106,16 +108,16 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
           type="button"
           onClick={onClose}
           style={styles.successCloseButton}
-          aria-label="Schließen"
+          aria-label={t('login.close')}
         >
           ✕
         </button>
         <div style={styles.successIcon}>✓</div>
-        <h2 id="success-title" style={styles.successTitle}>Willkommen!</h2>
+        <h2 id="success-title" style={styles.successTitle}>{t('registerDialogs.success.title')}</h2>
         <p style={styles.successText}>
-          Dein Konto wurde erstellt.
+          {t('registerDialogs.success.message')}
           {migratedCount > 0 && (
-            <><br />{migratedCount} Turnier{migratedCount === 1 ? '' : 'e'} synchronisiert!</>
+            <><br />{t('registerDialogs.success.migrated', { count: migratedCount })}</>
           )}
         </p>
         <Button
@@ -124,7 +126,7 @@ export const RegisterSuccessDialog: React.FC<RegisterSuccessDialogProps> = ({
           onClick={onClose}
           style={{ marginTop: cssVars.spacing.lg }}
         >
-          Weiter
+          {t('registerDialogs.success.continue')}
         </Button>
       </div>
     </div>

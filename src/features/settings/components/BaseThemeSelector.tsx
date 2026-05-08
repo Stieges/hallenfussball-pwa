@@ -11,6 +11,7 @@
  */
 
 import React, { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { BaseTheme, BASE_THEME_LABELS } from '../types/settings.types';
 
@@ -36,10 +37,11 @@ export const BaseThemeSelector: React.FC<BaseThemeSelectorProps> = ({
   onChange,
   resolvedTheme,
 }) => {
+  const { t } = useTranslation('settings');
   const themes: BaseTheme[] = ['system', 'light', 'dark', 'high-contrast'];
 
   return (
-    <div style={styles.container} role="radiogroup" aria-label="Theme auswählen">
+    <div style={styles.container} role="radiogroup" aria-label={t('baseTheme.selectLabel')}>
       {themes.map((theme) => {
         const { label, description, icon } = BASE_THEME_LABELS[theme];
         const isSelected = value === theme;
@@ -65,7 +67,7 @@ export const BaseThemeSelector: React.FC<BaseThemeSelectorProps> = ({
                 {isSystem && resolvedTheme && (
                   <span style={styles.resolvedHint}>
                     {' '}
-                    (aktuell: {resolvedTheme === 'dark' ? 'Dunkel' : 'Hell'})
+                    ({t('baseTheme.currentPrefix')}{resolvedTheme === 'dark' ? t('baseTheme.dark.label') : t('baseTheme.light.label')})
                   </span>
                 )}
               </span>

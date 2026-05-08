@@ -1,0 +1,534 @@
+{
+  "step1": {
+    "title": "Sport & Tournament Type",
+    "sportLabel": "Sport",
+    "sportAriaLabel": "Select sport",
+    "gameDuration": "Game duration:",
+    "breakDuration": "Break:",
+    "points": "Points:",
+    "tournamentTypeLabel": "Tournament Type",
+    "tournamentTypeAriaLabel": "Select tournament type",
+    "classic": {
+      "title": "Classic Tournament",
+      "detail1": "Table placement",
+      "detail2": "Final rounds possible",
+      "detail3": "Normal {{goalTerm}} counting"
+    },
+    "bambini": {
+      "title": "Bambini Tournament",
+      "detail1": "Result-neutral",
+      "detail2": "Without tables/rankings",
+      "detail3": "Only win/draw/loss",
+      "hintTitle": "Bambini Tournament",
+      "hintText": "In Bambini tournaments, results and tables are hidden from spectators by default. You can adjust this in the next step."
+    },
+    "minuteSuffix": "min"
+  },
+
+  "step2": {
+    "title": "Mode & Game System",
+    "structureLocked": {
+      "title": "Structure changes locked",
+      "description": "The tournament already has results. Number of teams, fields, and groups cannot be changed anymore.",
+      "resetButton": "Reset tournament"
+    },
+    "basicSystem": "Basic System",
+    "teamCount": "Number of Teams",
+    "groupCount": "Number of Groups",
+    "fieldCount": "Number of Fields",
+    "fieldCountOther": "Number of Playing Areas",
+    "smartConfigTip": "Tip: Let us calculate the optimal configuration",
+    "advancedSettings": "Advanced Settings",
+    "timePlanning": "Time Planning",
+    "tableRules": "Table Rules",
+    "finalsSection": "Final Round",
+    "refereesSection": "Referees",
+    "specialRules": "Special Rules",
+    "cockpitSection": "Match Cockpit Pro",
+    "cockpitDescription": "Settings for the live match management cockpit: Timer, sound, haptics, and auto functions.",
+    "miniFussball": {
+      "title": "Mini-Football / Funino",
+      "description": "This feature will be available in a future version. It will support field rotation and special rules for mini-football.",
+      "comingSoon": "Coming Soon"
+    },
+    "summaries": {
+      "activeCriteria": "{{count}} active criteria",
+      "refereeNone": "None",
+      "refereeCount": "{{count}} Ref",
+      "refereeTeams": "Teams provide referees",
+      "time": "{{game}}′ Game / {{break}}′ Break",
+      "finalsNone": "None",
+      "finalsFinalOnly": "Final only",
+      "finalsTop4": "SF + Final",
+      "finalsTop8": "With QF",
+      "finalsTop16": "With R16",
+      "finalsAllPlaces": "All places",
+      "specialNone": "None",
+      "specialBambini": "Bambini mode",
+      "specialBambiniHidden": "Bambini ({{count}} hidden)",
+      "cockpitStandard": "Standard"
+    }
+  },
+
+  "modeSelection": {
+    "label": "Tournament Mode",
+    "classic": {
+      "title": "Classic Indoor Tournament",
+      "subtitle": "Groups + Final Round"
+    },
+    "miniFussball": {
+      "title": "Mini-Football / Funino",
+      "subtitle": "Field rotation, multiple fields",
+      "disabledTitle": "This feature will be available in a future version"
+    },
+    "comingSoon": "Coming Soon"
+  },
+
+  "step3": {
+    "title": "Master Data",
+    "tournamentName": "Tournament Name",
+    "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
+    "organizer": "Organizer (optional)",
+    "organizerPlaceholder": "My Club",
+    "ageClass": "Age Group",
+    "ageClassPlaceholder": "Search or select...",
+    "startDate": "Start Date",
+    "startTime": "Start Time",
+    "startTimePlaceholder": "09:00"
+  },
+
+  "location": {
+    "label": "Venue",
+    "placeholder": "Sports Hall Example City",
+    "extendedToggle": "Extended address data (optional)",
+    "street": "Street & Number",
+    "streetPlaceholder": "Example Street 1",
+    "postalCode": "Postal Code",
+    "postalCodePlaceholder": "12345",
+    "city": "City",
+    "cityPlaceholder": "Example City",
+    "country": "Country",
+    "countryPlaceholder": "Germany",
+    "hint": "This information is optional and will be used for PDF export and detail view."
+  },
+
+  "contact": {
+    "toggle": "Contact details (optional)",
+    "name": "Contact Person",
+    "namePlaceholder": "First and last name",
+    "email": "Email",
+    "emailPlaceholder": "contact@club.com",
+    "phone": "Phone",
+    "phonePlaceholder": "+49 123 456789",
+    "website": "Website",
+    "websitePlaceholder": "www.my-club.com",
+    "hint": "This information will appear in the schedule footer and PDF export."
+  },
+
+  "step4": {
+    "title": "Teams",
+    "addTeam": "Add Team",
+    "generateTeams": "Generate {{count}} teams",
+    "autoAssignGroups": "Auto-assign groups",
+    "noTeams": "No teams added yet",
+    "teamNamePlaceholder": "Enter team name",
+    "duplicateName": "This name is already used",
+    "avatarExpand": "Edit logo and colors for {{name}}",
+    "avatarCollapse": "Collapse logo and colors for {{name}}",
+    "collapseLabel": "Collapse",
+    "expandLabel": "Logo & Colors",
+    "deleteTeam": "Delete team {{name}}",
+    "logo": "Logo",
+    "changeLogo": "Change logo",
+    "uploadLogo": "Upload logo",
+    "jerseyColor": "Jersey Color",
+    "groupLabel": "Group:",
+    "noGroup": "No group",
+    "groupAriaLabel": "Group for {{name}}",
+    "groupWarningsAriaLabel": "Group assignment notes",
+    "teamsAdded_one": "{{count}} team added",
+    "teamsAdded_other": "{{count}} teams added",
+    "groupsCanBeAssigned": "Groups can now be assigned",
+    "warnings": {
+      "unassigned_one": "{{count}} team without group assignment",
+      "unassigned_other": "{{count}} teams without group assignment",
+      "unassignedAction": "Auto-assign groups",
+      "emptyGroup_one": "Group {{groups}} has no teams",
+      "emptyGroup_other": "Groups {{groups}} have no teams",
+      "emptyGroupAction": "Redistribute groups",
+      "singleTeamGroup_one": "Group {{groups}} has only 1 team – no matches possible",
+      "singleTeamGroup_other": "Groups {{groups}} have only 1 team – no matches possible",
+      "unbalanced": "Uneven group sizes ({{distribution}})",
+      "unbalancedAction": "Distribute evenly for fairer schedule",
+      "distribution": "Group distribution: {{distribution}}"
+    }
+  },
+
+  "step5": {
+    "title": "Summary",
+    "tournamentName": "Tournament Name",
+    "organizer": "Organizer",
+    "sport": "Sport",
+    "tournamentType": "Tournament Type",
+    "ageClass": "Age Group",
+    "mode": "Mode",
+    "date": "Date",
+    "locationLabel": "Location",
+    "teamsLabel": "Teams",
+    "notSpecified": "(not specified)",
+    "football": "Football",
+    "otherSport": "Other",
+    "bambiniType": "Bambini",
+    "classicType": "Classic",
+    "classicMode": "Classic",
+    "miniFussballMode": "Mini-Football",
+    "teamsCount": "{{count}} teams",
+    "showPreview": "Show Preview"
+  },
+
+  "groupsAndFields": {
+    "infoText": "This step is optional. You can click \"Next\" directly – the default names (Group A, B, C... and Field 1, 2...) will be used. Expand the sections below if you want to use custom names.",
+    "fieldSection": {
+      "title": "Name Fields ({{count}})",
+      "description": "Give your playing fields custom names (e.g., \"North Hall\", \"Court 1\").",
+      "shortCodeHint": "The short code (max 3 characters) is used in compact views like PDF export."
+    },
+    "groupSection": {
+      "title": "Name Groups ({{count}})",
+      "description": "Give your groups custom names (e.g., \"Lions\", \"Tigers\").",
+      "shortCodeHint": "The short code (max 3 characters) is used in compact views like PDF export."
+    },
+    "matrix": {
+      "title": "Group-Field Assignment",
+      "description": "Optional: Define which fields each group can play on. By default, all groups can play on all fields.",
+      "minOneField": "At least one field must be assigned",
+      "defaultAssignment": "All groups can play on all fields – optimal schedule distribution"
+    },
+    "roundRobinInfo": "In round robin, all matches are automatically distributed across available fields.",
+    "defaultGroupName": "Group {{id}}"
+  },
+
+  "nameGrid": {
+    "defaultHeader": "Default",
+    "customNameHeader": "Custom Name",
+    "shortCodeHeader": "Short Code",
+    "duplicateName": "This name is already used"
+  },
+
+  "gameTimeConfig": {
+    "groupPhaseTitle": "Group Stage - Game Time Settings",
+    "finalsTitle": "Final Round - Game Time Settings",
+    "gameDuration": "Game Duration",
+    "breakBetweenGames": "Break Between Games",
+    "gamePeriods": "Game Periods",
+    "halftimeBreak": "Halftime Break",
+    "periodBreakdown": "The game is divided into {{periods}} periods of {{duration}} min each",
+    "phaseBreak": "Break Before Final Round",
+    "finalsHint": "Game period settings also apply to the final round",
+    "minuteSuffix": "min"
+  },
+
+  "finalsConfig": {
+    "title": "Final Round",
+    "recommendedHint_one": "⭐ = Recommended for {{count}} group",
+    "recommendedHint_other": "⭐ = Recommended for {{count}} groups",
+    "advancedOptions": "More options (theoretically possible, but less recommended)",
+    "warnings": {
+      "top8TooFewGroups": "<strong>Note:</strong> Top 8 with quarterfinals requires at least 4 groups (8 teams). With {{count}} groups, Top 4 (semifinals) will be used automatically.",
+      "allPlacesInfo": "<strong>Info:</strong> All possible placements will be played out.",
+      "allPlaces2Groups": "With 2 groups: Semifinals + places 3, 5, and 7.",
+      "allPlaces4Groups": "With 4+ groups: Quarterfinals + all placements."
+    },
+    "parallelization": {
+      "title": "Parallelization",
+      "semifinals": "Play semifinals simultaneously",
+      "quarterfinals": "Play quarterfinals simultaneously",
+      "roundOf16": "Play round of 16 simultaneously",
+      "hint": "With multiple fields, matches can take place simultaneously"
+    },
+    "tiebreaker": {
+      "title": "In Case of Draw",
+      "shootout": "Directly to penalty shootout",
+      "shootoutHint": "(private tournament)",
+      "overtimeThenShootout": "Extra time, then penalty shootout",
+      "overtimeHint": "(official)",
+      "goldenGoal": "Golden Goal",
+      "goldenGoalDuration": "Golden Goal time:",
+      "overtimeDuration": "Extra time:",
+      "minutes": "minutes"
+    }
+  },
+
+  "finalsOptions": {
+    "none": {
+      "label": "No Final Round",
+      "description": "Group stage only, placement by table",
+      "explanation": "Recommended for very limited time or pure tournament days"
+    },
+    "finalOnly": {
+      "label": "Final Only",
+      "description2g": "Direct final: 1A vs 1B",
+      "description3g": "Best 2 teams directly in final",
+      "description4g": "Best 2 group winners directly in final",
+      "descriptionDefault": "Best 2 teams directly in final",
+      "explanation2g": "Too few final matches, second places don't play for 3rd",
+      "explanation3g": "Too few final matches, unfair due to bye issues",
+      "explanation4g": "Too few final matches for 4 groups",
+      "explanation5to7g": "Too few final matches for many groups",
+      "explanation8g": "Far too few final matches for this many groups"
+    },
+    "top4": {
+      "label2g": "Top 4 (Semifinals + Final)",
+      "description2g": "Cross matches: 1A-2B, 1B-2A → Final + 3rd place",
+      "explanation2g": "Standard for 2 groups - fair and clear",
+      "label3g": "Top 4 (Semifinals + Final)",
+      "description3g": "Best 4 teams → Semifinals → Final + 3rd place",
+      "explanation3g": "Sensible for 3 groups - best group winner gets bye",
+      "label4g": "Top 4 (Group Winners Only)",
+      "description4g": "Only group winners → Semifinals → Final",
+      "explanation4g": "Shorter variant - good when time is limited",
+      "label5to7g": "Top 4 (Semifinals)",
+      "description5to7g": "Best 4 teams → Semifinals → Final",
+      "explanation5to7g": "Shorter variant for many groups",
+      "label8g": "Top 4 (Semifinals Only)",
+      "description8g": "Best 4 teams → Semifinals → Final",
+      "explanation8g": "Very short variant - only the absolute best teams"
+    },
+    "top8": {
+      "label4g": "Top 8 (with Quarterfinals)",
+      "description4g": "Top 2 per group → Quarterfinals → Semifinals → Final",
+      "explanation4g": "Classic for 4 groups - perfect symmetry",
+      "label5to7g": "Top 8 (with Quarterfinals)",
+      "description5to7g": "Best 8 teams → Quarterfinals → Semifinals → Final",
+      "explanation5to7g": "Standard for large tournaments - proven structure",
+      "label8g": "Top 8 (with Quarterfinals)",
+      "description8g": "Best 8 teams → Quarterfinals → Semifinals → Final",
+      "explanation8g": "Shorter variant - good when time is limited"
+    },
+    "top16": {
+      "label": "Top 16 (with Round of 16)",
+      "description": "Best 16 teams → Round of 16 → Quarterfinals → Semifinals → Final",
+      "explanation": "Classic for 8+ groups - perfect symmetry for large tournaments"
+    },
+    "allPlaces": {
+      "label2g": "Play All Places",
+      "description2g": "Semifinals + places 3, 5, 7",
+      "explanation2g": "Every team has another final match - high participation",
+      "label3g": "Top 6 (all group winners + runners-up)",
+      "description3g": "6-team final round with intermediate groups or KO",
+      "explanation3g": "Complex - two 3-team intermediate groups needed, much time required",
+      "label4g": "All Places (Top 16)",
+      "description4g": "All teams in final round - complete placements",
+      "explanation4g": "Many matches - only realistic for all-day tournaments",
+      "label5to7g": "All Places",
+      "description5to7g": "Maximum number of teams in final round",
+      "explanation5to7g": "Only sensible for very large, multi-day tournaments",
+      "label8g": "All Places",
+      "description8g": "Maximum number of teams in final round",
+      "explanation8g": "Only realistic for multi-day large tournaments - very many matches"
+    }
+  },
+
+  "referees": {
+    "title": "Referees",
+    "modeLabel": "Referee Mode",
+    "modes": {
+      "none": "No referees",
+      "organizer": "Organizer provides referees",
+      "teams": "Teams provide referees (after own match)"
+    },
+    "modeHint": {
+      "organizerMode": "Organizer mode:",
+      "organizerDescription": "You bring your own referees (e.g., Ref1, Ref2).",
+      "teamsMode": "Teams mode:",
+      "teamsDescription": "Each team referees the next match on the same field after their own game."
+    },
+    "organizerSettings": {
+      "count": "Number of Referees",
+      "maxConsecutive": "Max consecutive matches",
+      "distributionHint": "Referees are automatically distributed fairly across all matches. \"Max consecutive = 1\" means no directly consecutive assignments.",
+      "enableNames": "Specify referee names",
+      "namesTitle": "Referee Names",
+      "namePlaceholder": "Name of referee {{number}}",
+      "nameLabel": "Ref {{number}}",
+      "duplicateName": "This name is already used",
+      "namesHint": "Names will appear in the schedule instead of \"Ref1\", \"Ref2\", etc."
+    },
+    "finalsMode": {
+      "label": "Referees in Final Phase",
+      "none": "No referees in final phase",
+      "neutralTeams": "Eliminated teams (not in final round)",
+      "nonParticipatingTeams": "Non-participating teams (not in current match)",
+      "hintNeutral": "Eliminated teams:",
+      "hintNeutralDescription": "Only teams not playing in the final round.",
+      "hintNonParticipating": "Non-participating teams:",
+      "hintNonParticipatingDescription": "Teams not currently in the final match (more flexible)."
+    }
+  },
+
+  "validation": {
+    "ariaLabel": "Configuration warnings",
+    "issueCount_one": "{{count}} configuration note",
+    "issueCount_other": "{{count}} configuration notes",
+    "tooManyTeamsOneField": "{{teams}} teams on only 1 field leads to very long tournament duration",
+    "tooManyTeamsOneFieldSuggestion": "Recommended: at least {{fields}} fields",
+    "unrealisticDuration": "Estimated duration of {{hours}}h is unrealistic for one day",
+    "unrealisticDurationSuggestion": "Increase field count or reduce team count",
+    "longDuration": "Long tournament duration of approx. {{hours}}h",
+    "longDurationSuggestion": "With {{fields}} fields or shorter game time (e.g., {{duration}} min), duration decreases",
+    "unevenGroups": "Uneven group sizes: {{majorCount}}x {{teamsPerGroup}} teams, 1x {{lastGroupSize}} teams",
+    "unevenGroupsSuggestion": "For even groups: choose {{count}} teams",
+    "tooFewTeams": "Too few teams for {{groups}} groups (min. {{min}} needed)",
+    "tooFewTeamsSuggestion": "Reduce group count or increase team count",
+    "dfbMismatch": "DFB pattern matches {{patternTeams}} teams (current: {{currentTeams}})",
+    "dfbMismatchSuggestion": "Change team count to {{count}} or choose different DFB pattern",
+    "shortGameDuration": "Very short game duration of {{duration}} minutes",
+    "shortGameDurationSuggestion": "Recommended: at least 8-10 minutes per game",
+    "noBreak": "No break between games - teams have no recovery time",
+    "noBreakSuggestion": "Recommended: 2-3 minutes break for team changes",
+    "zeroPoints": "Point system has 0 points everywhere - table won't be meaningful",
+    "zeroPointsSuggestion": "Standard point system: 3 points win, 1 point draw, 0 points loss"
+  },
+
+  "smartConfig": {
+    "title": "Smart Configuration",
+    "ariaLabel": "Smart Configuration",
+    "lastConfig": "Last configuration: {{teams}} teams, {{fields}} {{fieldLabel}}, {{duration}}min",
+    "fieldSingular": "field",
+    "fieldPlural": "fields",
+    "restore": "Restore",
+    "restoreAriaLabel": "Restore last configuration",
+    "timeQuestion": "How much time do you have for the tournament?",
+    "hoursAriaLabel": "Hours",
+    "minutesAriaLabel": "Minutes",
+    "calculate": "Calculate",
+    "calculateAriaLabel": "Calculate optimal configuration",
+    "constraints": {
+      "title": "Fixed Constraints",
+      "hint": "Enable values that cannot be changed",
+      "teamCount": "Number of teams:",
+      "groupCount": "Number of groups:",
+      "fieldCount": "Number of fields:",
+      "gameDuration": "Game duration:",
+      "breakDuration": "Break duration:",
+      "minuteSuffix": " min"
+    },
+    "result": {
+      "title": "Recommended Configuration",
+      "teams": "Teams",
+      "fields": "Fields",
+      "gameDuration": "Game Duration",
+      "pause": "Break",
+      "minuteSuffix": "min",
+      "matches": "{{count}} matches",
+      "duration": "~{{hours}}h tournament duration"
+    },
+    "apply": "Apply Configuration",
+    "applyAriaLabel": "Apply recommended configuration",
+    "teamsWarning": "{{current}} teams don't fit in {{hours}}h. Alternative: {{suggested}} teams or plan more time/fields."
+  },
+
+  "bambini": {
+    "title": "Extended Bambini Settings",
+    "hideScores": "Hide scores from spectators",
+    "hideRankings": "Hide tables from spectators"
+  },
+
+  "pointSystem": {
+    "title": "Point System",
+    "presets": {
+      "standard": "Standard",
+      "classic": "Classic",
+      "winsOnly": "Wins Only",
+      "custom": "Custom"
+    },
+    "custom": {
+      "win": "Win",
+      "draw": "Draw",
+      "loss": "Loss",
+      "hint": "Positive, negative numbers, and zero are allowed. Decimals are also possible (e.g., 2.5)"
+    }
+  },
+
+  "dfb": {
+    "checkboxLabel": "Use DFB key system",
+    "description": "Uses the official DFB scheduling patterns for round-robin tournaments",
+    "patternLabel": "Scheduling Pattern",
+    "patternOption": "{{code}} ({{teams}} teams)",
+    "stats": {
+      "teams": "Teams",
+      "matches": "Matches",
+      "rounds": "Rounds",
+      "perRound": "Per round"
+    },
+    "infoAriaLabel": "Pattern details",
+    "byeWarning": "Odd team count - includes byes",
+    "patternCode": "Key: {{code}} = {{days}} day, {{teams}} teams",
+    "patternCodeSubgroups": ", {{subgroups}} subgroups"
+  },
+
+  "durationEstimate": {
+    "estimatedDuration": "Estimated tournament duration: ",
+    "hoursAndMinutes": "{{hours}}h {{minutes}}min",
+    "minutesOnly": "{{minutes}}min",
+    "matchInfo": "({{matches}} matches, {{fields}} {{fieldLabel}})",
+    "fieldSingular": "field",
+    "fieldPlural": "fields",
+    "groupPhaseBreakdown": "Group stage: {{matches}} matches (~{{hours}}h {{minutes}}min)",
+    "finalsBreakdown": "Final round: {{matches}} matches (~{{hours}}h {{minutes}}min)",
+    "criticalWarning": "This tournament duration is unrealistic for one day. Recommendation: {{fields}} fields or reduce game time to {{duration}} min.",
+    "durationWarning": "Tip: With {{fields}} fields approx. {{hours}}h or with {{duration}} min game time, duration decreases."
+  },
+
+  "placementLogic": {
+    "title": "Placement Logic",
+    "helpText": "Drag and drop criteria or use arrow keys",
+    "listAriaLabel": "Placement criteria, sortable",
+    "itemAriaLabel": "{{label}}, position {{position}} of {{total}}",
+    "dragHandle": "Drag to reorder",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "activate": "Activate criterion",
+    "deactivate": "Deactivate criterion",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+
+  "options": {
+    "groupSystem": {
+      "roundRobin": "Round robin",
+      "groupsAndFinals": "Group stage + Final round"
+    },
+    "groups": {
+      "one": "1 group",
+      "multiple": "{{count}} groups"
+    },
+    "fields": {
+      "one": "1 field",
+      "multiple": "{{count}} fields"
+    },
+    "rounds": "{{count}} rounds",
+    "gamePeriods": {
+      "one": "1 (continuous)",
+      "two": "2 (two halves)",
+      "three": "3 periods",
+      "four": "4 periods"
+    },
+    "ageClass": {
+      "gJugend": "U7",
+      "fJugend": "U9",
+      "eJugend": "U10/U11",
+      "dJugend": "U12/U13",
+      "cJugend": "U14/U15",
+      "bJugend": "U16/U17",
+      "aJugend": "U18/U19",
+      "senioren": "Seniors",
+      "herren": "Men",
+      "damen": "Women",
+      "ah": "Veterans",
+      "jugend": "Youth",
+      "erwachsene": "Adults",
+      "mixed": "Mixed"
+    }
+  }
+}

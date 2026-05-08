@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, fontSizesMd3, letterSpacing } from '../../design-tokens'
 interface LiveBadgeProps {
   /** Optional compact mode for smaller displays */
@@ -18,6 +19,7 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
   compact = false,
   style,
 }) => {
+  const { t } = useTranslation('tournament');
   const badgeStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -45,9 +47,9 @@ export const LiveBadge: React.FC<LiveBadgeProps> = ({
 
   return (
     <>
-      <span style={badgeStyle} role="status" aria-label="Spiel läuft gerade">
+      <span style={badgeStyle} role="status" aria-label={t('liveBadge.ariaLabel')}>
         <span style={dotStyle} aria-hidden="true" />
-        <span>Live</span>
+        <span>{t('liveBadge.live')}</span>
       </span>
 
       <style>{`

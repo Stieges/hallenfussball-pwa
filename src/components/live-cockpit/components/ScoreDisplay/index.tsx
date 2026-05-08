@@ -17,6 +17,7 @@
  */
 
 import { useState, useEffect, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { Team, MatchStatus, MatchPlayPhase } from '../../types';
@@ -72,6 +73,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   breakpoint = 'desktop',
   compact = false,
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
   const isTablet = breakpoint === 'tablet';
   const isRunning = status === 'RUNNING';
@@ -106,9 +108,9 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
   // ---------------------------------------------------------------------------
 
   const getPhaseLabel = () => {
-    if (playPhase === 'overtime') {return 'Verlängerung';}
-    if (playPhase === 'goldenGoal') {return 'Golden Goal';}
-    if (playPhase === 'penalty') {return 'Elfmeterschießen';}
+    if (playPhase === 'overtime') {return t('score.overtime');}
+    if (playPhase === 'goldenGoal') {return t('score.goldenGoal');}
+    if (playPhase === 'penalty') {return t('score.penaltyShootout');}
     return null;
   };
 
@@ -336,11 +338,11 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         role={onTimerClick ? 'button' : undefined}
         tabIndex={onTimerClick ? 0 : undefined}
         onKeyDown={onTimerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTimerClick(); } } : undefined}
-        aria-label={onTimerClick ? 'Zeit anpassen - klicken zum Bearbeiten' : undefined}
+        aria-label={onTimerClick ? t('score.editTimeAria') : undefined}
       >
         {isRunning && <span style={{ color: cssVars.colors.error }}>●</span>}
         <span style={timerLabelStyle}>
-          {status === 'NOT_STARTED' ? 'Spielzeit' : status === 'FINISHED' ? 'Endstand' : 'LIVE'}
+          {status === 'NOT_STARTED' ? t('score.matchTime') : status === 'FINISHED' ? t('score.finalScore') : t('score.live')}
         </span>
         <span style={timerValueStyle} aria-live="polite">
           {formatTime(elapsedSeconds)}
@@ -360,7 +362,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         {/* Home Team */}
         <div style={teamColumnStyle('home')}>
           <span style={teamNameStyle}>{homeTeam.name}</span>
-          <span style={teamLabelStyle}>Heim</span>
+          <span style={teamLabelStyle}>{t('score.home')}</span>
         </div>
 
         {/* Score */}
@@ -387,7 +389,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         {/* Away Team */}
         <div style={teamColumnStyle('away')}>
           <span style={teamNameStyle}>{awayTeam.name}</span>
-          <span style={teamLabelStyle}>Gast</span>
+          <span style={teamLabelStyle}>{t('score.away')}</span>
         </div>
       </div>
 
@@ -397,14 +399,14 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
         <div style={{ display: 'flex', gap: cssVars.spacing.md, flexWrap: 'wrap', justifyContent: 'center' }}>
           {overtimeScore && (
             <AdditionalScore
-              label="Verlängerung"
+              label={t('score.overtime')}
               homeScore={overtimeScore.home}
               awayScore={overtimeScore.away}
             />
           )}
           {penaltyScore && (
             <AdditionalScore
-              label="Elfmeter"
+              label={t('score.penaltyShootout')}
               homeScore={penaltyScore.home}
               awayScore={penaltyScore.away}
             />

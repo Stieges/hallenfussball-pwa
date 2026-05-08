@@ -61,7 +61,7 @@ export const Dialog = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: cssVars.zIndex.navigation,
     padding: cssVars.spacing.lg,
     overflowY: 'auto',
   };

@@ -6,13 +6,14 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MatchStatus } from '../../../../types/tournament';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
 
 interface StatusConfig {
   id: MatchStatus;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
   color: string;
 }
@@ -20,19 +21,19 @@ interface StatusConfig {
 const STATUS_OPTIONS: StatusConfig[] = [
   {
     id: 'scheduled',
-    label: 'Geplant',
+    labelKey: 'filter.status.scheduled',
     icon: <Icons.Calendar size={14} />,
     color: cssVars.colors.statusUpcoming,
   },
   {
     id: 'running',
-    label: 'Laufend',
+    labelKey: 'filter.status.running',
     icon: <Icons.Play size={14} />,
     color: cssVars.colors.statusLive,
   },
   {
     id: 'finished',
-    label: 'Beendet',
+    labelKey: 'filter.status.finished',
     icon: <Icons.Check size={14} />,
     color: cssVars.colors.statusFinished,
   },
@@ -52,9 +53,11 @@ interface StatusMultiSelectProps {
 export const StatusMultiSelect: React.FC<StatusMultiSelectProps> = ({
   value,
   onChange,
-  label = 'Status',
+  label,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
+  const resolvedLabel = label ?? t('filter.status.label');
   const toggleStatus = (status: MatchStatus) => {
     if (value.includes(status)) {
       onChange(value.filter((s) => s !== status));
@@ -101,7 +104,7 @@ export const StatusMultiSelect: React.FC<StatusMultiSelectProps> = ({
 
   return (
     <div style={containerStyle} data-testid={testId}>
-      <span style={labelStyle}>{label}</span>
+      <span style={labelStyle}>{resolvedLabel}</span>
       <div style={chipsContainerStyle}>
         {STATUS_OPTIONS.map((config) => {
           const isActive = value.includes(config.id);
@@ -112,11 +115,11 @@ export const StatusMultiSelect: React.FC<StatusMultiSelectProps> = ({
               style={getChipStyle(config, isActive)}
               type="button"
               aria-pressed={isActive}
-              aria-label={`Status: ${config.label} ${isActive ? '(aktiv)' : ''}`}
+              aria-label={`${t('filter.status.label')}: ${String(t(config.labelKey as never))} ${isActive ? t('filter.status.active') : ''}`}
               data-testid={testId ? `${testId}-${config.id}` : undefined}
             >
               {config.icon}
-              <span>{config.label}</span>
+              <span>{t(config.labelKey as never)}</span>
             </button>
           );
         })}

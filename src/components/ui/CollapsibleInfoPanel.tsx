@@ -107,6 +107,13 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
     cursor: 'pointer',
     userSelect: 'none',
     minHeight: '44px', // Touch target minimum
+    // Reset native button styles
+    background: 'none',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left',
+    font: 'inherit',
+    color: 'inherit',
   };
 
   const iconContainerStyle: CSSProperties = {
@@ -150,26 +157,19 @@ export const CollapsibleInfoPanel: React.FC<CollapsibleInfoPanelProps> = ({
 
   return (
     <div style={containerStyle} data-testid={testId}>
-      <div
+      <button
+        type="button"
         style={headerStyle}
         onClick={handleToggle}
-        role="button"
-        tabIndex={0}
         aria-expanded={!isCollapsed}
         aria-controls={contentId}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            handleToggle();
-          }
-        }}
       >
         <span style={iconContainerStyle} aria-hidden="true">
           {icon}
         </span>
         <h4 style={titleStyle}>{title}</h4>
         <span style={chevronStyle} aria-hidden="true">▼</span>
-      </div>
+      </button>
       <div id={contentId} style={contentStyle}>
         {children}
       </div>

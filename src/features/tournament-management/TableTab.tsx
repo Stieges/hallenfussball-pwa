@@ -5,6 +5,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Card } from '../../components/ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -23,6 +24,7 @@ export const TableTab: React.FC<TableTabProps> = ({
   schedule,
   currentStandings,
 }) => {
+  const { t } = useTranslation('tournament');
   const isMobile = useIsMobile();
   const hasGroups = tournament.teams.some(t => t.group);
 
@@ -44,9 +46,9 @@ export const TableTab: React.FC<TableTabProps> = ({
       <div style={containerStyle}>
         <Card>
           <div style={noGroupsStyle}>
-            Dieses Turnier hat keine Gruppen.
+            {t('tables.noGroups')}
             <br />
-            Die Tabelle ist nur für Gruppenturniere verfügbar.
+            {t('tables.tableOnlyInfo')}
           </div>
         </Card>
       </div>

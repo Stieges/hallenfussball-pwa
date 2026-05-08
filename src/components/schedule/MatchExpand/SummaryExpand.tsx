@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { ScoreHeader } from '../MatchSummary/ScoreHeader';
 import { EventList } from '../MatchSummary/EventList';
@@ -29,6 +30,7 @@ export function SummaryExpand({
     onEditEvent,
 
 }: SummaryExpandProps) {
+    const { t } = useTranslation('tournament');
 
     const containerStyle: CSSProperties = {
         padding: cssVars.spacing.md,
@@ -68,7 +70,7 @@ export function SummaryExpand({
 
             {/* Events */}
             <div>
-                <h3 style={sectionTitleStyle}>Ereignisse</h3>
+                <h3 style={sectionTitleStyle}>{t('matchExpand.summary.events')}</h3>
                 {events.length > 0 ? (
                     <div style={eventsSectionStyle}>
                         <EventList
@@ -83,7 +85,7 @@ export function SummaryExpand({
                     </div>
                 ) : (
                     <div style={{ padding: cssVars.spacing.sm, textAlign: 'center', color: cssVars.colors.textMuted, fontSize: cssVars.fontSizes.sm, fontStyle: 'italic' }}>
-                        Keine Ereignisse verzeichnet
+                        {t('matchExpand.summary.noEvents')}
                     </div>
                 )}
             </div>

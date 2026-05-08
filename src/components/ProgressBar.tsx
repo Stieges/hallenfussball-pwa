@@ -1,4 +1,5 @@
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens'
 import { useIsMobile } from '../hooks/useIsMobile';
 
@@ -59,6 +60,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   clickable = true,
 }) => {
   const isMobile = useIsMobile();
+  const { t } = useTranslation('common');
   const iconSize = isMobile ? 12 : 14;
 
   const isStepVisited = (stepIndex: number): boolean => {
@@ -181,15 +183,15 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               onClick={() => handleStepClick(index)}
               disabled={!isClickableStep}
               style={buttonStyle(index)}
-              title={hasErrors ? `Fehler: ${stepErrors?.[stepNum]?.join(', ')}` : label}
-              aria-label={`Schritt ${stepNum}: ${label}`}
+              title={hasErrors ? t('progressBar.errorTooltip', { errors: stepErrors?.[stepNum]?.join(', ') }) : label}
+              aria-label={t('progressBar.stepLabel', { step: stepNum, label })}
               aria-current={isCurrent ? 'step' : undefined}
               role="tab"
               tabIndex={isClickableStep ? 0 : -1}
             >
               {getStepIcon(index)}
               {getDisplayLabel(label)}
-              {hasErrors && <span style={errorBadgeStyle} aria-label="Fehler" />}
+              {hasErrors && <span style={errorBadgeStyle} aria-label={t('progressBar.errorBadge')} />}
             </button>
           );
         })}

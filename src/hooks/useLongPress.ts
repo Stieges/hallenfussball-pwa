@@ -13,7 +13,7 @@
  * - Works with both touch and mouse events
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface UseLongPressOptions {
   /** Delay in ms before long press is triggered (default: 500) */
@@ -48,7 +48,7 @@ export function useLongPress({
 }: UseLongPressOptions): UseLongPressReturn {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
-  const isPressedRef = useRef(false);
+  const [isPressed, setIsPressed] = useState(false);
   const startPosRef = useRef({ x: 0, y: 0 });
 
   const clearTimer = useCallback(() => {
@@ -59,7 +59,7 @@ export function useLongPress({
   }, []);
 
   const handlePressStart = useCallback((x: number, y: number) => {
-    isPressedRef.current = true;
+    setIsPressed(true);
     isLongPressRef.current = false;
     startPosRef.current = { x, y };
 
@@ -67,7 +67,7 @@ export function useLongPress({
 
     timerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
-      isPressedRef.current = false;
+      setIsPressed(false);
       onLongPress?.();
     }, delay);
   }, [delay, onLongPress, clearTimer]);
@@ -75,17 +75,17 @@ export function useLongPress({
   const handlePressEnd = useCallback(() => {
     clearTimer();
 
-    if (isPressedRef.current && !isLongPressRef.current) {
+    if (isPressed && !isLongPressRef.current) {
       // Short press (tap)
       onShortPress?.();
     }
 
-    isPressedRef.current = false;
+    setIsPressed(false);
     isLongPressRef.current = false;
-  }, [onShortPress, clearTimer]);
+  }, [isPressed, onShortPress, clearTimer]);
 
   const handleMove = useCallback((x: number, y: number) => {
-    if (!isPressedRef.current) {return;}
+    if (!isPressed) {return;}
 
     const deltaX = Math.abs(x - startPosRef.current.x);
     const deltaY = Math.abs(y - startPosRef.current.y);
@@ -93,13 +93,13 @@ export function useLongPress({
     if (deltaX > moveThreshold || deltaY > moveThreshold) {
       // Movement exceeded threshold, cancel long press
       clearTimer();
-      isPressedRef.current = false;
+      setIsPressed(false);
     }
-  }, [moveThreshold, clearTimer]);
+  }, [isPressed, moveThreshold, clearTimer]);
 
   const handleCancel = useCallback(() => {
     clearTimer();
-    isPressedRef.current = false;
+    setIsPressed(false);
     isLongPressRef.current = false;
   }, [clearTimer]);
 
@@ -140,7 +140,7 @@ export function useLongPress({
       onTouchEnd,
       onTouchMove,
     },
-    isPressed: isPressedRef.current,
+    isPressed,
   };
 }
 

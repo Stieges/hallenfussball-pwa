@@ -32,35 +32,41 @@ export const MatchSchema = z.object({
     slot: z.number().optional(),
     teamA: z.string(),
     teamB: z.string(),
-    scoreA: z.number().optional(),
-    scoreB: z.number().optional(),
+    scoreA: z.number().min(0).optional(),
+    scoreB: z.number().min(0).optional(),
     group: z.string().optional(),
     isFinal: z.boolean().optional(),
     finalType: z.string().optional(),
     label: z.string().optional(),
-    scheduledTime: z.union([z.string(), z.date()]).optional(), // Date or string in JSON? JSON makes it string. Zod should handle transform?
+    scheduledTime: z.preprocess(
+      (arg) => {
+        if (arg instanceof Date) {
+          return arg;
+        }
+        if (typeof arg === 'string' && arg.length > 0) {
+          return new Date(arg);
+        }
+        return arg;
+      },
+      z.date().optional()
+    ),
     referee: z.number().optional(),
     matchStatus: z.string().optional(), // 'scheduled' | ...
     finishedAt: z.string().optional(),
     timerStartTime: z.string().optional(),
     timerPausedAt: z.string().optional(),
     timerElapsedSeconds: z.number().optional(),
-    overtimeScoreA: z.number().optional(),
-    overtimeScoreB: z.number().optional(),
-    penaltyScoreA: z.number().optional(),
-    penaltyScoreB: z.number().optional(),
+    overtimeScoreA: z.number().min(0).optional(),
+    overtimeScoreB: z.number().min(0).optional(),
+    penaltyScoreA: z.number().min(0).optional(),
+    penaltyScoreB: z.number().min(0).optional(),
     decidedBy: z.string().optional(),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
     events: z.array(RuntimeMatchEventSchema).optional(),
 });
 
-// Handling Date: JSON has strings. Our application assumes Date objects for some fields?
-// `scheduledTime?: Date`.
-// When loading from localStorage, it is a STRING.
-// We should probably transform it to Date in the Repository if the app expects Date.
-// Or schema handles string and we transform it.
-// `z.preprocess((arg) => typeof arg === 'string' ? new Date(arg) : arg, z.date())`
+// scheduledTime uses z.preprocess to handle both Date objects and ISO strings from JSON/localStorage
 
 export const TournamentSchema = z.object({
     id: z.string(),

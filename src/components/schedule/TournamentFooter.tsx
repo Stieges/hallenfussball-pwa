@@ -13,6 +13,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars, letterSpacing } from '../../design-tokens'
 import { ContactInfo } from '../../types/tournament';
 
@@ -31,6 +32,7 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
   contactInfo,
   compact = false,
 }) => {
+  const { t } = useTranslation('tournament');
   // Zeige nichts wenn keine Daten vorhanden
   if (!organizer && !contactInfo) {
     return null;
@@ -91,7 +93,7 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
         {/* Veranstalter Sektion */}
         {organizer && (
           <div style={sectionStyle}>
-            <div style={labelStyle}>Veranstalter</div>
+            <div style={labelStyle}>{t('footer.organizer')}</div>
             <div style={valueStyle}>{organizer}</div>
           </div>
         )}
@@ -99,7 +101,7 @@ export const TournamentFooter: React.FC<TournamentFooterProps> = ({
         {/* Kontakt Sektion */}
         {hasContact && (
           <div style={sectionStyle}>
-            <div style={labelStyle}>Kontakt</div>
+            <div style={labelStyle}>{t('footer.contact')}</div>
             <div style={valueStyle}>
               {contactInfo.name && (
                 <div>{contactInfo.name}</div>

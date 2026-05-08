@@ -10,6 +10,7 @@
 
 import { useState, useEffect, CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { cssVars, mediaQueries } from '../../design-tokens';
 import { setConsentStatus, type ConsentStatus } from '../../lib/consent';
 import { useFocusTrap } from '../../hooks';
@@ -20,6 +21,7 @@ interface ConsentDialogProps {
 }
 
 export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
+  const { t } = useTranslation('settings');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Focus trap for accessibility (WCAG 4.1.3)
@@ -195,26 +197,22 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
       <div style={modalStyle} className="consent-dialog-modal">
         <div style={headerStyle}>
           <h2 id={titleId} style={titleStyle}>
-            Datenschutz-Einstellungen
+            {t('consent.title')}
           </h2>
         </div>
 
         <div style={contentStyle}>
           {/* Explanation text */}
           <p style={textStyle}>
-            Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern.
-            Optional können Sie Session-Replays aktivieren, um uns bei der
-            Fehlerbehebung zu helfen.
+            {t('consent.description')}
           </p>
 
           {/* Info box */}
           <div style={infoBoxStyle}>
             <p style={infoTextStyle}>
-              <strong>Notwendig:</strong> Anonymisierte Fehlerberichte (keine
-              persönlichen Daten)
+              <strong>{t('consent.necessary')}</strong> {t('consent.necessaryDescription')}
               <br />
-              <strong>Optional:</strong> Session-Replays zur Fehlerbehebung
-              (Texte werden maskiert)
+              <strong>{t('consent.optional')}</strong> {t('consent.optionalDescription')}
             </p>
           </div>
 
@@ -234,7 +232,7 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
                 e.currentTarget.style.backgroundColor = cssVars.colors.primary;
               }}
             >
-              Alle akzeptieren
+              {t('consent.acceptAll')}
             </button>
             <button
               onClick={handleAcceptNecessary}
@@ -253,7 +251,7 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
                 e.currentTarget.style.borderColor = cssVars.colors.border;
               }}
             >
-              Nur notwendige
+              {t('consent.acceptNecessary')}
             </button>
           </div>
 
@@ -264,7 +262,7 @@ export const ConsentDialog = ({ isOpen, onConsent }: ConsentDialogProps) => {
             rel="noopener noreferrer"
             style={linkStyle}
           >
-            Datenschutzerklärung
+            {t('consent.privacyLink')}
           </a>
         </div>
       </div>

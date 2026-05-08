@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cssVars, spacingSemantics } from '../../design-tokens'
@@ -92,6 +93,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
   onFieldChange,
   showGroupLabel = true,
 }) => {
+  const { t } = useTranslation('tournament');
   const isLocked = status === 'running' || status === 'finished';
   const canDrag = editingSchedule && canSwap && !isLocked;
   const hasConflicts = conflicts.length > 0;
@@ -271,7 +273,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
         <div
           style={dragHandleStyle}
           {...(canDrag ? { ...attributes, ...listeners } : {})}
-          aria-label={isLocked ? 'Spiel kann nicht verschoben werden' : 'Ziehen zum Verschieben'}
+          aria-label={isLocked ? t('matchCard.cannotMove') : t('matchCard.dragToMove')}
         >
           {isLocked ? '🔒' : '⋮⋮'}
         </div>
@@ -295,12 +297,12 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
                 onRefereeChange(match.id, value ? parseInt(value) : null);
               }}
               style={srSelectStyle}
-              aria-label="Schiedsrichter"
+              aria-label={t('sortable.referee')}
             >
-              <option value="">SR -</option>
+              <option value="">{t('sortable.refereePlaceholder')}</option>
               {refereeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  SR {opt.label}
+                  {t('sortable.refereeOption', { label: opt.label })}
                 </option>
               ))}
             </select>
@@ -324,7 +326,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
               value={displayedField ?? 1}
               onChange={(e) => onFieldChange(match.id, parseInt(e.target.value))}
               style={fieldSelectStyle}
-              aria-label="Feld"
+              aria-label={t('sortable.fieldLabel')}
             >
               {fieldOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -337,7 +339,7 @@ export const SortableDesktopCard: React.FC<SortableDesktopCardProps> = ({
           {/* Group */}
           <div style={groupStyle}>
             {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use group fallback */}
-            {showGroupLabel && (match.label || (match.group && match.group !== 'all' ? `Gr. ${getGroupShortCode(match.group, tournament)}` : ''))}
+            {showGroupLabel && (match.label || (match.group && match.group !== 'all' ? t('matchCard.groupShort', { group: getGroupShortCode(match.group, tournament) }) : ''))}
           </div>
         </div>
       </div>

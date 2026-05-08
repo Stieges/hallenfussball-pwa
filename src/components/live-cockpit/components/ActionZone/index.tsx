@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useLongPress, type Breakpoint } from '../../../../hooks';
 import { triggerHaptic } from '../../../../utils/haptics';
@@ -45,6 +46,7 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
   showMinusButtons = true,
   breakpoint = 'desktop',
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
 
   const containerStyle: CSSProperties = {
@@ -70,7 +72,7 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
             onClick={() => onGoal('home', 'DEC')}
             disabled={disabled || !canDecrementHome}
             breakpoint={breakpoint}
-            ariaLabel={`Tor für ${homeTeamName} entfernen`}
+            ariaLabel={t('action.removeGoalAria', { teamName: homeTeamName })}
           />
         )}
         <GoalButton
@@ -81,7 +83,8 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
           breakpoint={breakpoint}
           side="home"
           teamName={homeTeamName}
-          ariaLabel={`Tor für ${homeTeamName} hinzufügen`}
+          ariaLabel={t('action.addGoalAria', { teamName: homeTeamName })}
+          longPressHint={t('action.longPressHint')}
         />
       </div>
 
@@ -95,14 +98,15 @@ export const ActionZone: React.FC<ActionZoneProps> = ({
           breakpoint={breakpoint}
           side="away"
           teamName={awayTeamName}
-          ariaLabel={`Tor für ${awayTeamName} hinzufügen`}
+          ariaLabel={t('action.addGoalAria', { teamName: awayTeamName })}
+          longPressHint={t('action.longPressHint')}
         />
         {showMinusButtons && (
           <MinusButton
             onClick={() => onGoal('away', 'DEC')}
             disabled={disabled || !canDecrementAway}
             breakpoint={breakpoint}
-            ariaLabel={`Tor für ${awayTeamName} entfernen`}
+            ariaLabel={t('action.removeGoalAria', { teamName: awayTeamName })}
           />
         )}
       </div>
@@ -125,6 +129,8 @@ interface GoalButtonProps {
   ariaLabel: string;
   /** Whether long press is enabled (e.g., requires score > 0) */
   canLongPress?: boolean;
+  /** Hint text for long press action */
+  longPressHint?: string;
 }
 
 const GoalButton: React.FC<GoalButtonProps> = ({
@@ -136,6 +142,7 @@ const GoalButton: React.FC<GoalButtonProps> = ({
   teamName,
   ariaLabel,
   canLongPress = false,
+  longPressHint,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -236,8 +243,8 @@ const GoalButton: React.FC<GoalButtonProps> = ({
   };
 
   // Build aria label with long press hint
-  const fullAriaLabel = canLongPress && onLongPress
-    ? `${ariaLabel}. Lange drücken zum Entfernen.`
+  const fullAriaLabel = canLongPress && onLongPress && longPressHint
+    ? `${ariaLabel}. ${longPressHint}`
     : ariaLabel;
 
   return (

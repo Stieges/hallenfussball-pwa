@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useDialogTimer, useFocusTrap } from '../../../../hooks';
 import moduleStyles from '../../LiveCockpit.module.css';
@@ -44,6 +45,7 @@ export function GoalScorerDialog({
   teamColor = cssVars.colors.primary,
   autoDismissSeconds = 10,
 }: GoalScorerDialogProps) {
+  const { t } = useTranslation('cockpit');
   const [jerseyNumber, setJerseyNumber] = useState<string>('');
   const [assist1, setAssist1] = useState<string>('');
   const [assist2, setAssist2] = useState<string>('');
@@ -202,14 +204,14 @@ export function GoalScorerDialog({
         <div style={{ ...styles.header, borderColor: teamColor }}>
           <span style={styles.goalIcon}>⚽</span>
           <div>
-            <div id="goal-scorer-dialog-title" style={styles.headerTitle}>Tor für</div>
+            <div id="goal-scorer-dialog-title" style={styles.headerTitle}>{t('goalScorer.title')}</div>
             <div style={{ ...styles.teamName, color: teamColor }}>{teamName}</div>
           </div>
         </div>
 
         {/* Jersey Number Input */}
         <div style={styles.inputSection}>
-          <label style={styles.inputLabel}>Rückennummer (optional)</label>
+          <label style={styles.inputLabel}>{t('goalScorer.jerseyNumber')}</label>
           <input
             ref={inputRef}
             type="text"
@@ -218,9 +220,9 @@ export function GoalScorerDialog({
             value={jerseyNumber}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="—"
+            placeholder={t('goalScorer.placeholder')}
             style={styles.numberInput}
-            aria-label="Rückennummer eingeben"
+            aria-label={t('goalScorer.jerseyAria')}
           />
         </div>
 
@@ -247,7 +249,7 @@ export function GoalScorerDialog({
 
         {/* Assist Input Section */}
         <div style={styles.assistSection}>
-          <label style={styles.assistLabel}>Assist (optional)</label>
+          <label style={styles.assistLabel}>{t('goalScorer.assist')}</label>
           <div style={styles.assistInputRow}>
             <input
               type="text"
@@ -256,9 +258,9 @@ export function GoalScorerDialog({
               value={assist1}
               onChange={handleAssist1Change}
               onKeyDown={handleKeyDown}
-              placeholder="—"
+              placeholder={t('goalScorer.placeholder')}
               style={styles.assistInput}
-              aria-label="Assist 1 Rückennummer"
+              aria-label={t('goalScorer.assist1Aria')}
             />
             <input
               type="text"
@@ -267,9 +269,9 @@ export function GoalScorerDialog({
               value={assist2}
               onChange={handleAssist2Change}
               onKeyDown={handleKeyDown}
-              placeholder="—"
+              placeholder={t('goalScorer.placeholder')}
               style={styles.assistInput}
-              aria-label="Assist 2 Rückennummer"
+              aria-label={t('goalScorer.assist2Aria')}
             />
           </div>
         </div>
@@ -277,7 +279,7 @@ export function GoalScorerDialog({
         {/* Actions */}
         <div style={styles.actions}>
           <button style={styles.skipButton} onClick={handleSkip} data-testid="dialog-skip-button">
-            Ohne Nr.{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
+            {t('goalScorer.withoutNumber')}{isActive && remainingSeconds > 0 ? ` (${remainingSeconds}s)` : ''}
           </button>
           <button
             style={{
@@ -287,7 +289,7 @@ export function GoalScorerDialog({
             onClick={handleConfirm}
             data-testid="dialog-confirm-button"
           >
-            Speichern
+            {t('goalScorer.save')}
           </button>
         </div>
       </div>

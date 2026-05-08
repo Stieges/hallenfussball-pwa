@@ -14,6 +14,7 @@
  */
 
 import { useState, useRef, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card, Input } from '../../components/ui';
 import { cssVars } from '../../design-tokens';
 import type { Tournament } from '../../types/tournament';
@@ -48,10 +49,10 @@ const EMPTY_FORM: SponsorFormData = {
 // TIER CONFIG
 // =============================================================================
 
-const TIER_CONFIG: Record<SponsorTier, { label: string; color: string; icon: string }> = {
-  gold: { label: 'Gold', color: '#FFD700', icon: '🥇' },
-  silver: { label: 'Silber', color: '#C0C0C0', icon: '🥈' },
-  bronze: { label: 'Bronze', color: '#CD7F32', icon: '🥉' },
+const TIER_CONFIG: Record<SponsorTier, { labelKey: string; color: string; icon: string }> = {
+  gold: { labelKey: 'sponsor.tiers.gold', color: '#FFD700', icon: '🥇' },
+  silver: { labelKey: 'sponsor.tiers.silver', color: '#C0C0C0', icon: '🥈' },
+  bronze: { labelKey: 'sponsor.tiers.bronze', color: '#CD7F32', icon: '🥉' },
 };
 
 // =============================================================================
@@ -62,6 +63,8 @@ export function SponsorManagement({
   tournament,
   onTournamentUpdate,
 }: SponsorManagementProps) {
+  const { t } = useTranslation('tournament');
+
   // State
   const [isAdding, setIsAdding] = useState(false);
   const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export function SponsorManagement({
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      setError('Name ist erforderlich');
+      setError(t('sponsor.errors.nameRequired'));
       return;
     }
 
@@ -139,7 +142,7 @@ export function SponsorManagement({
 
       handleCancel();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Speichern');
+      setError(err instanceof Error ? err.message : t('sponsor.errors.saveFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -160,7 +163,7 @@ export function SponsorManagement({
 
       setDeleteConfirmId(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Löschen');
+      setError(err instanceof Error ? err.message : t('sponsor.errors.deleteFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -184,13 +187,13 @@ export function SponsorManagement({
 
     // Validate file type
     if (!SPONSOR_LOGO_CONSTRAINTS.allowedMimeTypes.includes(file.type as typeof SPONSOR_LOGO_CONSTRAINTS.allowedMimeTypes[number])) {
-      setError('Ungültiges Dateiformat. Erlaubt: PNG, JPG, WebP, SVG');
+      setError(t('sponsor.errors.invalidFormat'));
       return;
     }
 
     // Validate file size
     if (file.size > SPONSOR_LOGO_CONSTRAINTS.maxFileSizeBytes) {
-      setError(`Datei zu groß. Max: ${SPONSOR_LOGO_CONSTRAINTS.maxFileSizeBytes / 1024}KB`);
+      setError(t('sponsor.errors.fileTooLarge', { maxKB: SPONSOR_LOGO_CONSTRAINTS.maxFileSizeBytes / 1024 }));
       return;
     }
 
@@ -199,7 +202,7 @@ export function SponsorManagement({
       setFormData(prev => ({ ...prev, logoBase64: base64 }));
       setError(null);
     } catch (err) {
-      setError('Fehler beim Laden des Logos');
+      setError(t('sponsor.errors.logoLoadFailed'));
     }
 
     // Reset input
@@ -433,11 +436,11 @@ export function SponsorManagement({
       <div style={containerStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h3 style={titleStyle}>Sponsoren</h3>
+          <h3 style={titleStyle}>{t('sponsor.title')}</h3>
           {!isEditing && (
             <button style={addButtonStyle} onClick={handleStartAdd}>
               <span>+</span>
-              <span>Sponsor</span>
+              <span>{t('sponsor.addSponsor')}</span>
             </button>
           )}
         </div>
@@ -452,7 +455,7 @@ export function SponsorManagement({
               {/* Logo Upload */}
               <div>
                 <label style={{ display: 'block', marginBottom: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
-                  Logo
+                  {t('sponsor.logo')}
                 </label>
                 <div style={logoUploadStyle} onClick={handleLogoClick}>
                   {formData.logoBase64 ? (
@@ -464,7 +467,7 @@ export function SponsorManagement({
                       />
                       <button
                         onClick={(e) => { e.stopPropagation(); handleRemoveLogo(); }}
-                        aria-label="Logo entfernen"
+                        aria-label={t('sponsor.removeLogo')}
                         style={{
                           position: 'absolute',
                           top: '4px',
@@ -503,14 +506,14 @@ export function SponsorManagement({
               {/* Name & URL */}
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <Input
-                  label="Name *"
+                  label={t('sponsor.nameLabel')}
                   value={formData.name}
                   onChange={(v) => setFormData(prev => ({ ...prev, name: v }))}
-                  placeholder="Sponsor-Name"
+                  placeholder={t('sponsor.namePlaceholder')}
                 />
                 <div style={{ marginTop: cssVars.spacing.md }}>
                   <Input
-                    label="Website (optional)"
+                    label={t('sponsor.websiteLabel')}
                     value={formData.websiteUrl}
                     onChange={(v) => setFormData(prev => ({ ...prev, websiteUrl: v }))}
                     placeholder="https://..."
@@ -522,7 +525,7 @@ export function SponsorManagement({
             {/* Tier Selection */}
             <div style={{ marginTop: cssVars.spacing.lg }}>
               <label style={{ display: 'block', marginBottom: cssVars.spacing.xs, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textSecondary }}>
-                Kategorie
+                {t('sponsor.category')}
               </label>
               <div style={tierSelectStyle}>
                 {(['gold', 'silver', 'bronze'] as SponsorTier[]).map((tier) => (
@@ -533,7 +536,7 @@ export function SponsorManagement({
                     type="button"
                   >
                     <span>{TIER_CONFIG[tier].icon}</span>
-                    <span>{TIER_CONFIG[tier].label}</span>
+                    <span>{t(TIER_CONFIG[tier].labelKey as never)}</span>
                   </button>
                 ))}
               </div>
@@ -542,10 +545,10 @@ export function SponsorManagement({
             {/* Buttons */}
             <div style={buttonRowStyle}>
               <button style={cancelButtonStyle} onClick={handleCancel}>
-                Abbrechen
+                {t('sponsor.cancel')}
               </button>
               <button style={saveButtonStyle} onClick={() => void handleSave()} disabled={isLoading}>
-                {isLoading ? 'Speichern...' : editingSponsorId ? 'Aktualisieren' : 'Hinzufügen'}
+                {isLoading ? t('sponsor.saving') : editingSponsorId ? t('sponsor.update') : t('sponsor.add')}
               </button>
             </div>
           </div>
@@ -555,9 +558,9 @@ export function SponsorManagement({
         {!isEditing && (
           sponsors.length === 0 ? (
             <div style={emptyStateStyle}>
-              <p style={{ margin: 0, fontSize: cssVars.fontSizes.md }}>Keine Sponsoren vorhanden</p>
+              <p style={{ margin: 0, fontSize: cssVars.fontSizes.md }}>{t('sponsor.emptyState')}</p>
               <p style={{ margin: `${cssVars.spacing.sm} 0 0`, fontSize: cssVars.fontSizes.sm }}>
-                Füge Sponsoren hinzu, um sie in Monitor-Slides anzuzeigen.
+                {t('sponsor.emptyStateHint')}
               </p>
             </div>
           ) : (
@@ -588,11 +591,11 @@ export function SponsorManagement({
                         <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm, marginTop: '4px' }}>
                           <span style={tierBadgeStyle(sponsor.tier ?? 'bronze')}>
                             {TIER_CONFIG[sponsor.tier ?? 'bronze'].icon}
-                            {TIER_CONFIG[sponsor.tier ?? 'bronze'].label}
+                            {t(TIER_CONFIG[sponsor.tier ?? 'bronze'].labelKey as never)}
                           </span>
                           {isUsed && (
                             <span style={{ fontSize: cssVars.fontSizes.xs, color: cssVars.colors.textMuted }}>
-                              In Slides verwendet
+                              {t('sponsor.usedInSlides')}
                             </span>
                           )}
                         </div>
@@ -602,8 +605,8 @@ export function SponsorManagement({
                       <button
                         style={actionButtonStyle}
                         onClick={() => handleStartEdit(sponsor)}
-                        aria-label={`${sponsor.name} bearbeiten`}
-                        title="Bearbeiten"
+                        aria-label={t('sponsor.editAria', { name: sponsor.name })}
+                        title={t('sponsor.edit')}
                       >
                         ✏️
                       </button>
@@ -613,8 +616,8 @@ export function SponsorManagement({
                           borderColor: isDeleting ? cssVars.colors.error : cssVars.colors.border,
                         }}
                         onClick={() => void handleDelete(sponsor.id)}
-                        aria-label={`${sponsor.name} löschen`}
-                        title={isDeleting ? 'Klicken zum Bestätigen' : 'Löschen'}
+                        aria-label={t('sponsor.deleteAria', { name: sponsor.name })}
+                        title={isDeleting ? t('sponsor.clickToConfirm') : t('sponsor.delete')}
                       >
                         🗑️
                       </button>
@@ -625,8 +628,8 @@ export function SponsorManagement({
                       <div style={deleteConfirmStyle}>
                         <span style={{ flex: 1, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.error }}>
                           {isUsed
-                            ? 'Sponsor wird aus allen Slides entfernt! Wirklich löschen?'
-                            : 'Wirklich löschen?'}
+                            ? t('sponsor.deleteUsedConfirm')
+                            : t('sponsor.deleteConfirm')}
                         </span>
                         <button
                           style={{
@@ -639,7 +642,7 @@ export function SponsorManagement({
                           }}
                           onClick={() => void handleDelete(sponsor.id)}
                         >
-                          Ja, löschen
+                          {t('sponsor.confirmDelete')}
                         </button>
                         <button
                           style={{
@@ -649,7 +652,7 @@ export function SponsorManagement({
                           }}
                           onClick={handleCancelDelete}
                         >
-                          Abbrechen
+                          {t('sponsor.cancel')}
                         </button>
                       </div>
                     )}

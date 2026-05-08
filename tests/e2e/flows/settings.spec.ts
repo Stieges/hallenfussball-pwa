@@ -12,6 +12,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 test.describe('App Settings', () => {
 
@@ -262,7 +263,7 @@ test.describe('App Settings', () => {
 
   test('Link zu Impressum funktioniert', async ({ page }) => {
     // WHEN - Impressum-Link klicken
-    const impressumLink = page.getByRole('link', { name: /Impressum/i });
+    const impressumLink = page.getByRole('link', { name: /Impressum/i }); // TODO: no i18n key for legal links
 
     if (await impressumLink.count() > 0) {
       await impressumLink.click();
@@ -357,7 +358,7 @@ test.describe('App Settings', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - Zurück-Button klicken (use exact name to avoid matching "Zurücksetzen")
-    const backButton = page.getByRole('button', { name: 'Zurück', exact: true });
+    const backButton = page.getByRole('button', { name: t('settings:back'), exact: true });
 
     if (await backButton.count() > 0) {
       await backButton.click();
@@ -375,7 +376,7 @@ test.describe('App Settings', () => {
     }
 
     // Wait for settings page to load
-    await expect(page.getByRole('heading', { name: /Einstellungen/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: t('settings:pageTitle') })).toBeVisible({ timeout: 10000 });
 
     // THEN - Settings page is scrollable (body or document element)
     // The settings screen uses a div container without a main element,

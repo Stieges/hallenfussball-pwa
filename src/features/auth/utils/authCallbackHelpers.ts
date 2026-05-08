@@ -6,6 +6,7 @@
  * @module authCallbackHelpers
  */
 
+import i18n from 'i18next';
 import { supabase } from '../../../lib/supabase';
 import { safeSessionStorage, safeLocalStorage } from '../../../core/utils/safeStorage';
 import { AUTH_ERRORS } from '../constants';
@@ -246,7 +247,7 @@ export async function handleImplicitFlow(
         refresh_token: refreshToken,
       }),
       10000,
-      'Session-Erstellung hat zu lange gedauert. Bitte versuche es erneut.'
+      i18n.t('auth:errors.sessionTimeout')
     );
 
     if (import.meta.env.DEV) {
@@ -265,7 +266,7 @@ export async function handleImplicitFlow(
     const { data: { session } } = await withTimeout(
       supabase.auth.getSession(),
       5000,
-      'Session-Verifikation fehlgeschlagen.'
+      i18n.t('auth:errors.sessionVerificationFailed')
     );
 
     if (!session) {

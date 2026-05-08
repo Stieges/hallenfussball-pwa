@@ -1,4 +1,5 @@
 import { useState, useEffect, CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from './Dialog';
 import { Button } from '../ui/Button';
 import { Icons } from '../ui/Icons';
@@ -38,6 +39,7 @@ export const ShareDialog = ({
   baseUrl,
   deepLinkUrl,
 }: ShareDialogProps) => {
+  const { t } = useTranslation('dashboard');
   const [qrCode, setQrCode] = useState<string>('');
   const [feedback, setFeedback] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -82,17 +84,17 @@ export const ShareDialog = ({
   const handleCopyLink = async () => {
     const success = await copyToClipboard(activeUrl);
     if (success) {
-      setFeedback('Link in Zwischenablage kopiert!');
+      setFeedback(t('share.copySuccess'));
     } else {
-      setFeedback('Fehler beim Kopieren');
+      setFeedback(t('share.copyError'));
     }
   };
 
   const handleNativeShare = async () => {
     const result = await shareUrl({
       url: activeUrl,
-      title: `${tournamentTitle} - Spielplan`,
-      text: `Sieh dir den Spielplan für ${tournamentTitle} an`,
+      title: t('share.nativeShareTitle', { title: tournamentTitle }),
+      text: t('share.nativeShareText', { title: tournamentTitle }),
     });
 
     const message = getShareMessage(result);
@@ -211,13 +213,13 @@ export const ShareDialog = ({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title="Spielplan teilen" maxWidth="500px">
+    <Dialog isOpen={isOpen} onClose={onClose} title={t('share.title')} maxWidth="500px">
       <div style={containerStyle}>
         {/* Share Code Display (if public) */}
         {hasShareCode && (
           <div style={shareCodeDisplayStyle}>
             <span style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
-              Share-Code:
+              {t('share.shareCode')}
             </span>
             <span style={shareCodeValueStyle}>{shareCode}</span>
           </div>
@@ -226,23 +228,23 @@ export const ShareDialog = ({
         {/* Not Public Hint */}
         {!hasShareCode && (
           <div style={notPublicHintStyle}>
-            ⚠️ Turnier ist nicht öffentlich. Aktiviere &quot;Öffentlich freigeben&quot; in den Sichtbarkeits-Einstellungen für einen kurzen Share-Link.
+            {'⚠️ '}{t('share.notPublicHint')}
           </div>
         )}
 
         {/* QR Code Section */}
         <div style={qrSectionStyle}>
           {isGenerating ? (
-            <div style={qrPlaceholderStyle}>QR-Code wird generiert...</div>
+            <div style={qrPlaceholderStyle}>{t('share.qrGenerating')}</div>
           ) : qrCode ? (
             <img src={qrCode} alt="QR Code" style={qrImageStyle} />
           ) : (
-            <div style={qrPlaceholderStyle}>QR-Code nicht verfügbar</div>
+            <div style={qrPlaceholderStyle}>{t('share.qrNotAvailable')}</div>
           )}
           <p style={qrCaptionStyle}>
             {hasShareCode
-              ? 'QR-Code scannen für öffentliche Live-Ansicht'
-              : 'QR-Code scannen (nur mit Anmeldung)'}
+              ? t('share.qrCaptionPublic')
+              : t('share.qrCaptionPrivate')}
           </p>
         </div>
 
@@ -251,7 +253,7 @@ export const ShareDialog = ({
         {/* URL Display Section */}
         <div style={urlSectionStyle}>
           <label style={labelStyle}>
-            {hasShareCode ? 'Öffentlicher Link:' : 'Interner Link:'}
+            {hasShareCode ? t('share.publicLink') : t('share.internalLink')}
           </label>
           <input
             type="text"
@@ -278,7 +280,7 @@ export const ShareDialog = ({
                 style={{ width: '16px', height: '16px', accentColor: cssVars.colors.primary }}
               />
               <span style={{ fontSize: cssVars.fontSizes.sm, color: cssVars.colors.textPrimary }}>
-                Aktuelle Ansicht inkl. Filter teilen
+                {t('share.deepLinkOption')}
               </span>
             </label>
           )}
@@ -293,7 +295,7 @@ export const ShareDialog = ({
             onClick={() => void handleCopyLink()}
             fullWidth
           >
-            Link kopieren
+            {t('share.copyLink')}
           </Button>
 
           {isShareSupported() && (
@@ -304,7 +306,7 @@ export const ShareDialog = ({
               onClick={() => void handleNativeShare()}
               fullWidth
             >
-              Teilen
+              {t('share.shareButton')}
             </Button>
           )}
         </div>

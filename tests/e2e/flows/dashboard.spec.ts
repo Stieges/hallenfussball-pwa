@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../helpers/test-fixtures';
+import { t } from '../helpers/i18n';
 
 test.describe('Dashboard', () => {
 
@@ -21,7 +22,7 @@ test.describe('Dashboard', () => {
 
     // THEN - Haupt-Elemente sichtbar
     await expect(page.getByRole('heading', { name: /Turniere|Dashboard/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Neues Turnier/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: t('dashboard:buttons.newTournament') })).toBeVisible();
   });
 
   test('zeigt leeren Zustand wenn keine Turniere', async ({ page }) => {
@@ -31,7 +32,7 @@ test.describe('Dashboard', () => {
 
     // THEN - Leerer Zustand mit Call-to-Action
     const emptyState = page.locator('[data-testid="empty-state"]').or(
-      page.getByText(/Noch keine Turniere/i)
+      page.getByText(t('dashboard:emptyState.noTournaments'))
     );
 
     // Either tournaments exist or empty state is shown
@@ -89,7 +90,7 @@ test.describe('Dashboard', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - "Neues Turnier" Button klicken
-    await page.getByRole('button', { name: /Neues Turnier/i }).click();
+    await page.getByRole('button', { name: t('dashboard:buttons.newTournament') }).click();
 
     // THEN - Wizard öffnet sich
     await expect(page).toHaveURL(/.*\/tournament\/new/);
@@ -181,7 +182,7 @@ test.describe('Dashboard', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN - Suchfeld ausfüllen
-    const searchInput = page.getByPlaceholder(/Suchen/i).or(page.getByRole('searchbox'));
+    const searchInput = page.getByPlaceholder(t('dashboard:search.placeholder')).or(page.getByRole('searchbox'));
     if (await searchInput.count() > 0) {
       await searchInput.fill('Bayern');
 

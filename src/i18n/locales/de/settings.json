@@ -1,0 +1,188 @@
+{
+  "pageTitle": "Einstellungen",
+  "back": "Zurück",
+  "backWithArrow": "← Zurück",
+  "backAriaLabel": "Zurück",
+
+  "categories": {
+    "appearance": "Erscheinungsbild",
+    "language": "Sprache",
+    "behavior": "App-Verhalten",
+    "data": "Daten",
+    "support": "Hilfe & Support",
+    "about": "Über",
+    "privacy": "Datenschutz",
+    "legal": "Rechtliches"
+  },
+
+  "appearance": {
+    "theme": "Theme",
+    "fontSize": "Schriftgröße"
+  },
+
+  "baseTheme": {
+    "selectLabel": "Theme auswählen",
+    "currentPrefix": "aktuell: ",
+    "system": {
+      "label": "System",
+      "description": "Automatisch nach Geräteeinstellung"
+    },
+    "light": {
+      "label": "Hell",
+      "description": "Helles Erscheinungsbild"
+    },
+    "dark": {
+      "label": "Dunkel",
+      "description": "Dunkles Erscheinungsbild"
+    },
+    "highContrast": {
+      "label": "Hoher Kontrast",
+      "description": "Maximale Lesbarkeit bei hellem Umgebungslicht"
+    }
+  },
+
+  "fontSize": {
+    "selectLabel": "Schriftgröße auswählen",
+    "small": "Klein",
+    "normal": "Normal",
+    "large": "Groß",
+    "xLarge": "Sehr groß"
+  },
+
+  "accentTheme": {
+    "default": "Standard (Grün)",
+    "fcBayern": "FC Bayern München",
+    "bvb": "Borussia Dortmund",
+    "schalke": "FC Schalke 04",
+    "werder": "Werder Bremen",
+    "hsv": "Hamburger SV",
+    "custom": "Eigene Farben"
+  },
+
+  "language": {
+    "label": "Sprache",
+    "description": "App-Sprache auswählen",
+    "de": "Deutsch",
+    "en": "English"
+  },
+
+  "behavior": {
+    "confirmDelete": {
+      "label": "Löschen bestätigen",
+      "description": "Vor dem Löschen nachfragen"
+    },
+    "autoSave": {
+      "label": "Auto-Speichern",
+      "description": "Änderungen automatisch speichern"
+    },
+    "timerSound": {
+      "label": "Timer-Sound",
+      "description": "Ton bei Spielende abspielen"
+    },
+    "hapticFeedback": {
+      "label": "Haptisches Feedback",
+      "description": "Vibration bei Aktionen"
+    }
+  },
+
+  "data": {
+    "export": {
+      "label": "Alle Daten exportieren",
+      "description": "Turniere und Einstellungen als JSON",
+      "action": "Exportieren",
+      "todo": "Export wird in Kürze implementiert"
+    },
+    "import": {
+      "label": "Daten importieren",
+      "description": "Aus einer Backup-Datei wiederherstellen",
+      "action": "Importieren",
+      "todo": "Import wird in Kürze implementiert"
+    },
+    "clearCache": {
+      "label": "Cache leeren",
+      "description": "Temporäre Daten löschen",
+      "action": "Leeren",
+      "success": "Cache wurde geleert"
+    },
+    "forceUpdate": {
+      "label": "App-Update erzwingen",
+      "description": "Service Worker zurücksetzen bei Problemen",
+      "loading": "Lädt...",
+      "action": "Zurücksetzen",
+      "confirmMessage": "App-Update erzwingen?\n\nDies löscht den Service Worker Cache und lädt die App neu. Deine Turnierdaten bleiben erhalten.\n\nNutze diese Funktion, wenn die App nicht richtig funktioniert.",
+      "errorMessage": "Fehler beim Zurücksetzen. Bitte versuche es erneut oder lösche die Browser-Daten manuell."
+    }
+  },
+
+  "support": {
+    "bug": {
+      "label": "Fehler melden",
+      "description": "Bug Report per E-Mail senden",
+      "subject": "Fehler melden – Spielplan App"
+    },
+    "feature": {
+      "label": "Feature vorschlagen",
+      "description": "Ideen für neue Funktionen",
+      "subject": "Feature-Vorschlag – Spielplan App"
+    },
+    "feedback": {
+      "label": "Feedback senden",
+      "description": "Allgemeines Feedback",
+      "subject": "Feedback – Spielplan App"
+    },
+    "emailBody": "Meine Nachricht:"
+  },
+
+  "about": {
+    "version": "Version",
+    "changelog": {
+      "label": "Changelog",
+      "description": "Was ist neu?",
+      "content": "Version {{version}}\n\n• Settings-Screen hinzugefügt\n• Theme-Auswahl\n• Schriftgröße anpassbar"
+    }
+  },
+
+  "privacy": {
+    "errorTracking": {
+      "label": "Error-Tracking",
+      "description": "Anonymisierte Fehlerberichte senden"
+    },
+    "sessionReplay": {
+      "label": "Session Replay",
+      "description": "Anonymisierte Sitzungsaufzeichnungen zur Fehlerbehebung"
+    },
+    "revoke": {
+      "label": "Einwilligung widerrufen",
+      "description": "Alle Tracking-Einstellungen zurücksetzen",
+      "action": "Widerrufen",
+      "confirmMessage": "Möchten Sie Ihre Datenschutz-Einwilligung widerrufen?\n\nDies deaktiviert Error-Tracking und Session-Replay. Beim nächsten App-Start werden Sie erneut nach Ihrer Einwilligung gefragt.",
+      "successMessage": "Ihre Einwilligung wurde widerrufen."
+    }
+  },
+
+  "legal": {
+    "imprint": "Impressum",
+    "privacy": "Datenschutz",
+    "terms": {
+      "label": "Nutzungsbedingungen",
+      "todo": "Nutzungsbedingungen werden in Kürze hinzugefügt"
+    }
+  },
+
+  "settingItem": {
+    "openAriaLabel": "{{label}} öffnen",
+    "proBadge": "Pro-Feature"
+  },
+
+  "consent": {
+    "title": "Datenschutz-Einstellungen",
+    "description": "Wir nutzen anonymisiertes Error-Tracking, um die App zu verbessern. Optional können Sie Session-Replays aktivieren, um uns bei der Fehlerbehebung zu helfen.",
+    "necessary": "Notwendig:",
+    "necessaryDescription": "Anonymisierte Fehlerberichte (keine persönlichen Daten)",
+    "optional": "Optional:",
+    "optionalDescription": "Session-Replays zur Fehlerbehebung (Texte werden maskiert)",
+    "acceptAll": "Alle akzeptieren",
+    "acceptNecessary": "Nur notwendige",
+    "privacyLink": "Datenschutzerklärung"
+  }
+}

@@ -6,6 +6,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 import type { MatchStatus } from '../../types';
@@ -48,6 +49,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   canUndo = false,
   breakpoint = 'desktop',
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
   const isRunning = status === 'RUNNING';
   const isPaused = status === 'PAUSED';
@@ -109,10 +111,10 @@ export const GameControls: React.FC<GameControlsProps> = ({
 
   // Main button label
   const getMainButtonLabel = (): string => {
-    if (isNotStarted) { return '▶ Start'; }
-    if (isRunning) { return '⏸ Pause'; }
-    if (isPaused) { return '▶ Start'; }
-    return '▶ Start';
+    if (isNotStarted) { return t('controls.start'); }
+    if (isRunning) { return t('controls.pause'); }
+    if (isPaused) { return t('controls.start'); }
+    return t('controls.start');
   };
 
   const handleMainButtonClick = () => {

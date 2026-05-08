@@ -9,6 +9,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tournament } from '../types/tournament';
 import { Card, Button, Icons } from './ui';
 import { cssVars } from '../design-tokens'
@@ -30,11 +31,12 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   onPermanentDelete,
   onClick,
 }) => {
+  const { t, i18n } = useTranslation('dashboard');
   const isMobile = useIsMobile();
   const countdownStyle = getCountdownStyle(remainingDays);
 
   const deletedDate = tournament.deletedAt
-    ? new Date(tournament.deletedAt).toLocaleDateString('de-DE', {
+    ? new Date(tournament.deletedAt).toLocaleDateString(i18n.language === 'de' ? 'de-DE' : 'en-US', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -120,12 +122,9 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
   // Format countdown text
   const getCountdownText = (): string => {
     if (remainingDays === 0) {
-      return 'Wird heute gelöscht';
+      return t('trash.deletingToday');
     }
-    if (remainingDays === 1) {
-      return 'Noch 1 Tag';
-    }
-    return `Noch ${remainingDays} Tage`;
+    return t('trash.daysRemaining', { count: remainingDays });
   };
 
   return (
@@ -133,7 +132,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
       <div style={contentStyle}>
         <div style={infoStyle}>
           <h3 style={titleStyle}>{tournament.title}</h3>
-          <p style={metaStyle}>Gelöscht am {deletedDate}</p>
+          <p style={metaStyle}>{t('trash.deletedAt', { date: deletedDate })}</p>
           <div style={countdownContainerStyle}>
             {countdownStyle !== 'normal' && (
               <Icons.AlertTriangle size={14} color={getCountdownColor()} />
@@ -153,7 +152,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
             icon={<Icons.Restore size={16} />}
             style={{ flex: isMobile ? 1 : 'none' }}
           >
-            Wiederherstellen
+            {t('trash.restore')}
           </Button>
           <Button
             variant="secondary"
@@ -166,7 +165,7 @@ export const TrashTournamentCard: React.FC<TrashTournamentCardProps> = ({
               borderColor: cssVars.colors.errorBorder,
             }}
           >
-            Endgültig löschen
+            {t('trash.permanentDelete')}
           </Button>
         </div>
       </div>

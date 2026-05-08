@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- Error boundary with fallback component */
 import React, { Component, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
 import { captureFeatureError } from '../lib/sentry';
 interface ErrorBoundaryProps {
@@ -63,7 +64,9 @@ interface DefaultErrorFallbackProps {
   onReset: () => void;
 }
 
-const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onReset }) => (
+const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onReset }) => {
+  const { t } = useTranslation('common');
+  return (
   <div
     style={{
       padding: cssVars.spacing.lg,
@@ -87,7 +90,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             color: cssVars.colors.error,
           }}
         >
-          Etwas ist schiefgelaufen
+          {t('errorBoundary.title')}
         </h3>
         <p
           style={{
@@ -97,7 +100,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             lineHeight: '1.5',
           }}
         >
-          Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
+          {t('errorBoundary.message')}
         </p>
 
         {error && process.env.NODE_ENV === 'development' && (
@@ -132,7 +135,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               cursor: 'pointer',
             }}
           >
-            Erneut versuchen
+            {t('actions.retry')}
           </button>
           <button
             onClick={() => window.location.reload()}
@@ -147,13 +150,14 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
               cursor: 'pointer',
             }}
           >
-            Seite neu laden
+            {t('actions.reload')}
           </button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 /**
  * Higher-order component to wrap a component with an ErrorBoundary

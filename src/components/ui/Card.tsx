@@ -30,6 +30,8 @@ export const Card: React.FC<CardProps> = ({
     ...style,
   };
 
+  const isInteractive = !!onClick;
+
   return (
     <div
       style={cardStyles}
@@ -38,6 +40,16 @@ export const Card: React.FC<CardProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       data-testid={testId}
+      {...(isInteractive && {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick?.();
+          }
+        },
+      })}
     >
       {children}
     </div>

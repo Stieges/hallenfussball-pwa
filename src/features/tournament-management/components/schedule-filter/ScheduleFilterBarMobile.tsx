@@ -10,6 +10,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScheduleFilters } from '../../../../types/scheduleFilters';
 import { cssVars } from '../../../../design-tokens';
 import { Icons } from '../../../../components/ui/Icons';
@@ -38,6 +39,7 @@ export const ScheduleFilterBarMobile: React.FC<ScheduleFilterBarMobileProps> = (
   isVisible = true,
   'data-testid': testId,
 }) => {
+  const { t } = useTranslation('tournament');
   const containerStyle: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -107,11 +109,11 @@ export const ScheduleFilterBarMobile: React.FC<ScheduleFilterBarMobileProps> = (
         style={filterButtonStyle}
         onClick={onOpenSheet}
         type="button"
-        aria-label={`Filter öffnen (${activeFilterCount} aktiv)`}
+        aria-label={t('filter.openAriaLabel', { count: activeFilterCount })}
         data-testid={testId ? `${testId}-button` : 'filter-button-mobile'}
       >
         <Icons.Filter size={18} />
-        <span>Filter</span>
+        <span>{t('filter.filter')}</span>
         {activeFilterCount > 0 && (
           <span style={badgeStyle}>{activeFilterCount}</span>
         )}
@@ -126,7 +128,7 @@ export const ScheduleFilterBarMobile: React.FC<ScheduleFilterBarMobileProps> = (
             data-testid={testId ? `${testId}-chips` : 'filter-chips-mobile'}
           />
         ) : (
-          <span style={placeholderStyle}>Keine Filter aktiv</span>
+          <span style={placeholderStyle}>{t('filter.noActiveFilters')}</span>
         )}
       </div>
     </div>

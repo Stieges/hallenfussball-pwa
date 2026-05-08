@@ -9,6 +9,7 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
 
@@ -44,6 +45,7 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
   disabled = false,
   breakpoint = 'desktop',
 }) => {
+  const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
 
   // ---------------------------------------------------------------------------
@@ -91,9 +93,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onEditScore}
           disabled={disabled}
           type="button"
-          aria-label="Ergebnis korrigieren"
+          aria-label={t('extended.editScoreAria')}
         >
-          ✏️ {!isMobile && 'Ergebnis'}
+          ✏️ {!isMobile && t('extended.score')}
         </button>
       )}
 
@@ -104,9 +106,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onAdjustTime}
           disabled={disabled}
           type="button"
-          aria-label="Zeit anpassen"
+          aria-label={t('extended.adjustTimeAria')}
         >
-          ⏱️ {!isMobile && 'Zeit'}
+          ⏱️ {!isMobile && t('extended.time')}
         </button>
       )}
 
@@ -117,9 +119,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onYellowCard}
           disabled={disabled}
           type="button"
-          aria-label="Gelbe Karte"
+          aria-label={t('extended.yellowCardAria')}
         >
-          🟨 {!isMobile && 'Gelb'}
+          🟨 {!isMobile && t('extended.yellow')}
         </button>
       )}
 
@@ -130,9 +132,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onRedCard}
           disabled={disabled}
           type="button"
-          aria-label="Rote Karte"
+          aria-label={t('extended.redCardAria')}
         >
-          🟥 {!isMobile && 'Rot'}
+          🟥 {!isMobile && t('extended.red')}
         </button>
       )}
 
@@ -143,9 +145,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onTimePenalty}
           disabled={disabled}
           type="button"
-          aria-label="Zeitstrafe"
+          aria-label={t('extended.timePenaltyAria')}
         >
-          ⏱️ {!isMobile && 'Zeitstrafe'}
+          ⏱️ {!isMobile && t('extended.timePenalty')}
         </button>
       )}
 
@@ -156,9 +158,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onSubstitution}
           disabled={disabled}
           type="button"
-          aria-label="Wechsel"
+          aria-label={t('extended.substitutionAria')}
         >
-          🔄 {!isMobile && 'Wechsel'}
+          🔄 {!isMobile && t('extended.substitution')}
         </button>
       )}
 
@@ -169,9 +171,9 @@ export const ExtendedActionsPanel: React.FC<ExtendedActionsPanelProps> = ({
           onClick={onEventLog}
           disabled={disabled}
           type="button"
-          aria-label="Ereignisprotokoll anzeigen"
+          aria-label={t('extended.eventLogAria')}
         >
-          📋 {!isMobile && 'Ereignisse'}
+          📋 {!isMobile && t('extended.events')}
         </button>
       )}
     </div>

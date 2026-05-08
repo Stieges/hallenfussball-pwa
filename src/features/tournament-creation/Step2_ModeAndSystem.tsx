@@ -1,7 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { Card, Select, NumberStepper, CollapsibleSection } from '../../components/ui';
 import { Tournament, GroupSystem, PlacementCriterion, MatchCockpitSettings, DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
 import { cssVars, displaySizes } from '../../design-tokens'
-import { GROUP_SYSTEM_OPTIONS } from '../../constants/tournamentOptions';
+import { getGroupSystemOptions } from '../../constants/tournamentOptions';
 import { getDFBPattern } from '../../constants/dfbMatchPatterns';
 import styles from './Step2_ModeAndSystem.module.css';
 import {
@@ -40,6 +41,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   hasResults = false,
   onResetTournament,
 }) => {
+  const { t } = useTranslation('wizard');
   const canUseGroups = formData.groupSystem === 'groupsAndFinals';
   const useDFBKeys = formData.useDFBKeys ?? false;
 
@@ -62,49 +64,49 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
   const getPlacementSummary = (): string => {
     if (!formData.placementLogic) {return '';}
     const active = formData.placementLogic.filter(p => p.enabled);
-    return `${active.length} aktive Kriterien`;
+    return t('step2.summaries.activeCriteria', { count: active.length });
   };
 
   // Helper to get referee summary
   const getRefereeSummary = (): string => {
     const mode = formData.refereeConfig?.mode;
-    if (mode === 'none') {return 'Keine';}
+    if (mode === 'none') {return t('step2.summaries.refereeNone');}
     if (mode === 'organizer') {
       const count = formData.refereeConfig?.numberOfReferees ?? 0;
-      return `${count} SR`;
+      return t('step2.summaries.refereeCount', { count });
     }
-    if (mode === 'teams') {return 'Teams stellen SR';}
-    return 'Keine';
+    if (mode === 'teams') {return t('step2.summaries.refereeTeams');}
+    return t('step2.summaries.refereeNone');
   };
 
   // Helper to get time planning summary
   const getTimeSummary = (): string => {
     const gameDuration = formData.groupPhaseGameDuration ?? 10;
     const breakDuration = formData.groupPhaseBreakDuration ?? 2;
-    return `${gameDuration}′ Spiel / ${breakDuration}′ Pause`;
+    return t('step2.summaries.time', { game: gameDuration, break: breakDuration });
   };
 
   // Helper to get finals summary
   const getFinalsSummary = (): string => {
     const preset = formData.finalsConfig?.preset ?? 'none';
     switch (preset) {
-      case 'none': return 'Keine';
-      case 'final-only': return 'Nur Finale';
-      case 'top-4': return 'HF + Finale';
-      case 'top-8': return 'Mit VF';
-      case 'top-16': return 'Mit AF';
-      case 'all-places': return 'Alle Plätze';
+      case 'none': return t('step2.summaries.finalsNone');
+      case 'final-only': return t('step2.summaries.finalsFinalOnly');
+      case 'top-4': return t('step2.summaries.finalsTop4');
+      case 'top-8': return t('step2.summaries.finalsTop8');
+      case 'top-16': return t('step2.summaries.finalsTop16');
+      case 'all-places': return t('step2.summaries.finalsAllPlaces');
     }
   };
 
   // Helper to get special rules summary
   const getSpecialRulesSummary = (): string => {
-    if (formData.tournamentType !== 'bambini') {return 'Keine';}
+    if (formData.tournamentType !== 'bambini') {return t('step2.summaries.specialNone');}
     const rules: string[] = [];
     if (formData.hideScoresForPublic) {rules.push('Ergebnisse');}
     if (formData.hideRankingsForPublic) {rules.push('Tabellen');}
-    if (rules.length === 0) {return 'Bambini-Modus';}
-    return `Bambini (${rules.length} verborgen)`;
+    if (rules.length === 0) {return t('step2.summaries.specialBambini');}
+    return t('step2.summaries.specialBambiniHidden', { count: rules.length });
   };
 
   // Helper to get cockpit summary
@@ -114,7 +116,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
     if (settings.soundEnabled) {features.push('Sound');}
     if (settings.hapticEnabled) {features.push('Haptik');}
     if (settings.autoFinishEnabled) {features.push('Auto');}
-    if (features.length === 0) {return 'Standard';}
+    if (features.length === 0) {return t('step2.summaries.cockpitStandard');}
     return features.join(' + ');
   };
 
@@ -136,7 +138,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
         fontSize: cssVars.fontSizes.xl,
         margin: '0 0 24px 0'
       }}>
-        Modus & Spielsystem
+        {t('step2.title')}
       </h2>
 
       {/* TOUR-EDIT-STRUCTURE: Warning banner when structure is locked */}
@@ -156,14 +158,14 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 fontWeight: cssVars.fontWeights.semibold,
                 marginBottom: '4px'
               }}>
-                Strukturänderungen gesperrt
+                {t('step2.structureLocked.title')}
               </div>
               <div style={{
                 color: cssVars.colors.textSecondary,
                 fontSize: cssVars.fontSizes.sm,
                 marginBottom: cssVars.spacing.md
               }}>
-                Das Turnier hat bereits Ergebnisse. Anzahl Teams, Felder und Gruppen können nicht mehr geändert werden.
+                {t('step2.structureLocked.description')}
               </div>
               {onResetTournament && (
                 <button
@@ -183,7 +185,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                   }}
                   data-testid="wizard-reset-tournament"
                 >
-                  <span>🔄</span> Turnier zurücksetzen
+                  <span>🔄</span> {t('step2.structureLocked.resetButton')}
                 </button>
               )}
             </div>
@@ -206,10 +208,10 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
           <div style={{ marginTop: '16px' }}>
             {/* Group System Select */}
             <Select
-              label="Grundsystem"
+              label={t('step2.basicSystem')}
               value={formData.groupSystem ?? 'roundRobin'}
               onChange={(v) => onUpdate('groupSystem', v as GroupSystem)}
-              options={GROUP_SYSTEM_OPTIONS}
+              options={getGroupSystemOptions()}
               disabled={structureFieldsLocked}
             />
 
@@ -222,7 +224,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             {/* Basic Tournament Parameters - Responsive Grid */}
             <div className={`${styles.configGrid} ${canUseGroups ? styles.threeColumns : ''}`}>
               <NumberStepper
-                label="Anzahl Teams"
+                label={t('step2.teamCount')}
                 value={formData.numberOfTeams ?? 4}
                 onChange={handleTeamCountChange}
                 min={2}
@@ -232,7 +234,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               />
               {canUseGroups && (
                 <NumberStepper
-                  label="Anzahl Gruppen"
+                  label={t('step2.groupCount')}
                   value={formData.numberOfGroups ?? 2}
                   onChange={(v) => onUpdate('numberOfGroups', v)}
                   min={2}
@@ -242,7 +244,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
                 />
               )}
               <NumberStepper
-                label={`Anzahl ${formData.sport === 'other' ? 'Spielflächen' : 'Felder'}`}
+                label={t(formData.sport === 'other' ? 'step2.fieldCountOther' : 'step2.fieldCount')}
                 value={formData.numberOfFields ?? 1}
                 onChange={(v) => onUpdate('numberOfFields', v)}
                 min={1}
@@ -275,7 +277,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               margin: `0 0 ${cssVars.spacing.sm} 0`,
               textAlign: 'center',
             }}>
-              💡 Tipp: Lass dir die optimale Konfiguration berechnen
+              💡 {t('step2.smartConfigTip')}
             </p>
             <SmartConfig
               formData={formData}
@@ -311,7 +313,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               letterSpacing: '0.5px',
               whiteSpace: 'nowrap',
             }}>
-              Erweiterte Einstellungen
+              {t('step2.advancedSettings')}
             </span>
             <div style={{
               flex: 1,
@@ -324,7 +326,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SECTION 2: Zeitplanung (collapsible)
               ============================================ */}
           <CollapsibleSection
-            title="Zeitplanung"
+            title={t('step2.timePlanning')}
             badge={getTimeSummary()}
             defaultOpen={false}
           >
@@ -349,7 +351,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SECTION 3: Tabellenregeln (collapsible)
               ============================================ */}
           <CollapsibleSection
-            title="Tabellenregeln"
+            title={t('step2.tableRules')}
             badge={getPlacementSummary()}
             defaultOpen={false}
           >
@@ -375,7 +377,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               ============================================ */}
           {canUseGroups && (
             <CollapsibleSection
-              title="Finalrunde"
+              title={t('step2.finalsSection')}
               badge={getFinalsSummary()}
               variant="primary"
               defaultOpen={false}
@@ -391,7 +393,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SECTION 5: Schiedsrichter (collapsible)
               ============================================ */}
           <CollapsibleSection
-            title="Schiedsrichter"
+            title={t('step2.refereesSection')}
             badge={getRefereeSummary()}
             defaultOpen={false}
           >
@@ -405,7 +407,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SECTION 6: Sonderregeln (collapsible)
               ============================================ */}
           <CollapsibleSection
-            title="Sonderregeln"
+            title={t('step2.specialRules')}
             badge={getSpecialRulesSummary()}
             defaultOpen={false}
           >
@@ -419,7 +421,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               SECTION 7: Match Cockpit Pro (collapsible)
               ============================================ */}
           <CollapsibleSection
-            title="Match Cockpit Pro"
+            title={t('step2.cockpitSection')}
             badge={getCockpitSummary()}
             defaultOpen={false}
             variant="primary"
@@ -429,7 +431,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
               fontSize: cssVars.fontSizes.sm,
               marginBottom: cssVars.spacing.md,
             }}>
-              Einstellungen für das Live-Spielverwaltungs-Cockpit: Timer, Sound, Haptik und Auto-Funktionen.
+              {t('step2.cockpitDescription')}
             </p>
             <MatchCockpitSettingsPanel
               settings={cockpitSettings}
@@ -456,7 +458,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             fontSize: cssVars.fontSizes.xl,
             margin: '0 0 8px 0'
           }}>
-            Mini-Fußball / Funino
+            {t('step2.miniFussball.title')}
           </h3>
           <p style={{
             color: cssVars.colors.textSecondary,
@@ -464,8 +466,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             margin: '0 0 16px 0',
             lineHeight: '1.5'
           }}>
-            Dieses Feature wird in einer zukünftigen Version verfügbar sein.
-            Es wird Feldrotation und spezielle Regeln für Mini-Fußball unterstützen.
+            {t('step2.miniFussball.description')}
           </p>
           <span style={{
             display: 'inline-block',
@@ -479,7 +480,7 @@ export const Step2_ModeAndSystem: React.FC<Step2Props> = ({
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
           }}>
-            Coming Soon
+            {t('step2.miniFussball.comingSoon')}
           </span>
         </div>
       )}

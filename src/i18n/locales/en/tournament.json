@@ -1,0 +1,690 @@
+{
+  "groupStage": {
+    "title": "Group Stage",
+    "scheduleTitle": "Schedule",
+    "noMatches": "No matches available",
+    "noReferee": "No Ref",
+    "refereeLabel": "Ref {{number}}"
+  },
+  "finals": {
+    "title": "Final Round",
+    "noMatches": "No matches available",
+    "correct": "Correct",
+    "field": "Field",
+    "columns": {
+      "number": "No.",
+      "referee": "Ref",
+      "time": "Time",
+      "round": "Round",
+      "home": "Home",
+      "result": "Result",
+      "away": "Away",
+      "field": "Field"
+    },
+    "labels": {
+      "final": "Final",
+      "thirdPlace": "3rd Place Match",
+      "fifthSixth": "5th Place Match",
+      "seventhEighth": "7th Place Match",
+      "semifinal": "Semifinal",
+      "quarterfinal": "Quarterfinal",
+      "finalMatch": "Final Match"
+    }
+  },
+  "groupTables": {
+    "empty": {
+      "noGames": "No matches played yet.",
+      "showAfterGames": "The table will be shown after the first matches."
+    },
+    "columns": {
+      "rank": "Pos",
+      "team": "Team",
+      "played": "P",
+      "won": "W",
+      "drawn": "D",
+      "lost": "L",
+      "goals": "Goals",
+      "diff": "GD",
+      "points": "Pts"
+    },
+    "currentlyPlaying": "Currently playing",
+    "details": {
+      "played": "Played",
+      "wins": "Wins",
+      "draws": "Draws",
+      "losses": "Losses",
+      "goalsFor": "Goals scored",
+      "goalsAgainst": "Goals conceded"
+    }
+  },
+  "finalRankings": {
+    "title": "Final Rankings",
+    "columns": {
+      "rank": "Pos",
+      "team": "Team",
+      "decision": "Decided by"
+    },
+    "groupStage": "Group stage"
+  },
+  "header": {
+    "liveResults": "Live Results",
+    "organizer": "Organizer",
+    "date": "Date",
+    "startTime": "Start",
+    "endTimeApprox": "End (approx.)",
+    "matchDuration": "Match Duration",
+    "participants": "Participants",
+    "totalMatches": "Total Matches",
+    "venue": "Venue",
+    "timeValue": "{{time}}",
+    "minutesValue": "{{count}} minutes",
+    "teamsValue": "{{count}} teams"
+  },
+  "footer": {
+    "organizer": "Organizer",
+    "contact": "Contact"
+  },
+  "participants": {
+    "title": "Participants"
+  },
+  "correctionDialog": {
+    "title": "Correct Result",
+    "currentResult": "Current Result",
+    "correctedResult": "Corrected Result",
+    "goalsFor": "Goals {{team}}",
+    "reason": "Reason for correction *",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "Optional note for the correction",
+    "warningTitle": "Note",
+    "warningText": "The correction will be logged. Group tables and playoff pairings will be recalculated.",
+    "cancel": "Cancel",
+    "confirm": "Save Correction",
+    "validation": {
+      "mustDiffer": "The new result must be different from the original."
+    }
+  },
+  "schedule": {
+    "runningMatchNoPermission": "Running match cannot be edited.",
+    "matchLabel": "Round {{round}}",
+    "conflicts": {
+      "title": "Conflicts found",
+      "saveAnyway": "Save anyway",
+      "backToEdit": "Back to editing"
+    },
+    "runningMatch": {
+      "title": "Running Match",
+      "message": "{{teamA}} vs {{teamB}} ({{scoreA}}:{{scoreB}}) is currently playing.",
+      "confirmSwitch": "Switch anyway"
+    }
+  },
+  "pdfExport": {
+    "title": "Export as PDF",
+    "error": "Error exporting PDF. Please try again.",
+    "cancel": "Cancel",
+    "export": "Export",
+    "exporting": "Exporting...",
+    "options": {
+      "scoresLabel": "Scores",
+      "withScores": "With scores",
+      "withScoresDesc": "Shows current results in PDF",
+      "withoutScores": "Without scores",
+      "withoutScoresDesc": "Empty fields for manual entry",
+      "includeStandings": "Include tables",
+      "includeStandingsDesc": "Shows group tables in PDF"
+    }
+  },
+  "teams": {
+    "title": "Manage Teams",
+    "renameWarning": "Warning\n\n{{warning}}\n\nDo you want to change the name anyway?",
+    "renameError": "Error renaming",
+    "deleteError": "Error deleting",
+    "restoreConfirm": "Do you want to restore this team?\n\nThe team will be shown again in the table and schedule.",
+    "editInfo": {
+      "title": "Team Editing",
+      "renameLabel": "Rename:",
+      "renameDesc": "Always possible (e.g., for spelling corrections)",
+      "deleteNoResultsLabel": "Delete without results:",
+      "deleteNoResultsDesc": "Team and all matches will be removed",
+      "deleteWithResultsLabel": "Delete with results:",
+      "deleteWithResultsDesc": "Matches with results will be preserved"
+    },
+    "activeTeams": "Active Teams ({{count}})",
+    "noActiveTeams": "No active teams available.",
+    "jerseyColor": "Jersey color: {{color}}",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "planned_one": "{{count}} planned",
+    "planned_other": "{{count}} planned",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "teamName": "Team name",
+    "logo": {
+      "label": "Logo:",
+      "change": "Change logo",
+      "upload": "Upload logo",
+      "remove": "Remove logo"
+    },
+    "jerseyColorLabel": "Jersey color:",
+    "rename": "Rename",
+    "delete": "Delete",
+    "removedTeams": "Removed Teams ({{count}})",
+    "removedTeamsInfo": "These teams were removed, but their historical results are still visible in the schedule.",
+    "historicResults_one": "{{count}} historical result",
+    "historicResults_other": "{{count}} historical results",
+    "removedAt": "Removed on {{date}}",
+    "restore": "Restore",
+    "deleteDialog": {
+      "title": "Delete team?",
+      "confirmMessage": "Do you really want to delete \"{{name}}\"?",
+      "markedAsRemoved": "The team will be marked as \"removed\". Results will be preserved for fairness to other teams.",
+      "markAsRemoved": "Mark as removed"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "unsavedChangesWarning": "You have unsaved changes. Do you really want to leave the page?",
+    "confirmReset": "Do you want to discard all changes and restore the original values?",
+    "confirmLeaveToWizard": "You have unsaved changes. Do you really want to switch to the wizard?\n\nChanges in this tab will be lost.",
+    "wizardSteps": {
+      "masterData": "Master Data",
+      "sport": "Sport",
+      "gameMode": "Game Mode",
+      "groupsAndFields": "Groups & Fields",
+      "teams": "Teams",
+      "overview": "Overview"
+    },
+    "wizard": "Wizard",
+    "confirmWizardEdit": "Do you want to edit \"{{step}}\"?\n\nThe schedule will be regenerated and all previous results will be lost!",
+    "editMetadata": "Edit metadata",
+    "editMetadataHint": "Adjust tournament name, location, date & time",
+    "unsavedChanges": "Unsaved changes",
+    "saved": "Saved",
+    "discardChanges": "Discard changes",
+    "reset": "Reset",
+    "saveChanges": "Save changes",
+    "noChanges": "No changes",
+    "masterData": "Master Data",
+    "tournamentName": "Tournament Name",
+    "tournamentNamePlaceholder": "Club Name Indoor Cup 2025",
+    "organizer": "Organizer (optional)",
+    "organizerPlaceholder": "My Club",
+    "ageClass": "Age Group",
+    "ageClassPlaceholder": "Search or select...",
+    "locationAndContact": "Location & Contact",
+    "dateAndTime": "Date & Time",
+    "startDate": "Start Date",
+    "startTime": "Start Time",
+    "immutableSettings": {
+      "title": "Immutable Settings",
+      "description": "The following settings cannot be changed after publication, as they would affect the schedule:",
+      "numberOfTeams": "Number of teams ({{count}})",
+      "numberOfGroups": "Number of groups ({{count}})",
+      "numberOfFields": "Number of fields ({{count}})",
+      "gameMode": "Game mode ({{mode}})",
+      "tournamentType": "Tournament type ({{type}})"
+    },
+    "advancedEditing": {
+      "title": "Advanced Editing",
+      "description": "Select the area you want to edit. After saving, you'll return directly.",
+      "warning": "Warning: The schedule will be regenerated and all results will be lost!",
+      "editTeams": "Edit teams",
+      "changeGameMode": "Change game mode",
+      "groupsAndFields": "Groups & Fields"
+    }
+  },
+  "monitors": {
+    "title": "Configure Monitors",
+    "subtitle": "Create display setups for TVs, projectors, or other screens",
+    "addMonitor": "New Monitor",
+    "createTitle": "Create New Monitor",
+    "namePlaceholder": "Monitor name (e.g., Main Hall Entrance)",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "createAndEdit": "Create & Edit",
+    "emptyState": "No monitors configured yet",
+    "emptyStateHint": "Create a monitor to display a slideshow with live matches, tables, schedules, and sponsors.",
+    "displayUrlHint": "Open the display URL on a TV or projector for fullscreen display",
+    "slidesCount_one": "{{count}} slide",
+    "slidesCount_other": "{{count}} slides",
+    "perSlide": "{{duration}} per slide",
+    "moreSlides": "+{{count}} more",
+    "edit": "Edit",
+    "editAria": "Edit monitor \"{{name}}\"",
+    "open": "Open",
+    "openAria": "Open monitor \"{{name}}\" in new tab",
+    "copyUrl": "Copy URL",
+    "copyUrlAria": "Copy URL for monitor \"{{name}}\"",
+    "urlCopied": "URL copied",
+    "copied": "Copied!",
+    "duplicate": "Duplicate",
+    "duplicateAria": "Duplicate monitor \"{{name}}\"",
+    "delete": "Delete",
+    "deleteAria": "Delete monitor \"{{name}}\"",
+    "confirm": "Confirm",
+    "confirmDeleteAria": "Confirm deletion of \"{{name}}\"",
+    "deleteConfirmMessage": "Really delete monitor \"{{name}}\"?",
+    "permanentDeleteAria": "Permanently delete monitor \"{{name}}\"",
+    "confirmDelete": "Yes, delete",
+    "cancelDeleteAria": "Cancel deletion",
+    "heartbeat": {
+      "online": "Online",
+      "stale": "Connection unstable",
+      "staleShort": "Unstable",
+      "offline": "Offline"
+    },
+    "errors": {
+      "nameRequired": "Name is required",
+      "nameTooLong": "Name must not exceed 50 characters",
+      "duplicateName": "A monitor with this name already exists",
+      "createFailed": "Error creating",
+      "deleteFailed": "Error deleting",
+      "duplicateFailed": "Error duplicating",
+      "copyFailed": "Could not copy URL"
+    }
+  },
+  "sponsor": {
+    "title": "Sponsors",
+    "addSponsor": "Sponsor",
+    "logo": "Logo",
+    "removeLogo": "Remove logo",
+    "nameLabel": "Name *",
+    "namePlaceholder": "Sponsor name",
+    "websiteLabel": "Website (optional)",
+    "category": "Category",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "update": "Update",
+    "add": "Add",
+    "emptyState": "No sponsors available",
+    "emptyStateHint": "Add sponsors to display them in monitor slides.",
+    "usedInSlides": "Used in slides",
+    "edit": "Edit",
+    "editAria": "Edit {{name}}",
+    "delete": "Delete",
+    "deleteAria": "Delete {{name}}",
+    "clickToConfirm": "Click to confirm",
+    "deleteUsedConfirm": "Sponsor will be removed from all slides! Really delete?",
+    "deleteConfirm": "Really delete?",
+    "confirmDelete": "Yes, delete",
+    "tiers": {
+      "gold": "Gold",
+      "silver": "Silver",
+      "bronze": "Bronze"
+    },
+    "errors": {
+      "nameRequired": "Name is required",
+      "saveFailed": "Error saving",
+      "deleteFailed": "Error deleting",
+      "invalidFormat": "Invalid file format. Allowed: PNG, JPG, WebP, SVG",
+      "fileTooLarge": "File too large. Max: {{maxKB}}KB",
+      "logoLoadFailed": "Error loading logo"
+    }
+  },
+  "ranking": {
+    "title": "Final Rankings",
+    "playoffNotStarted": "Playoffs not yet started",
+    "playoffInProgress": "Playoffs in progress ({{completed}}/{{total}} matches)",
+    "tournamentCompleted": "Tournament completed",
+    "exitFullscreen": "Exit fullscreen",
+    "fullscreen": "Fullscreen",
+    "placementLogic": "Placement logic:",
+    "playoff": "Playoff",
+    "groupStage": "Group stage",
+    "noResults": "No results yet.",
+    "noResultsInfo": "Rankings will be shown after the first matches.",
+    "headers": {
+      "rank": "Rank",
+      "rankShort": "Pos",
+      "team": "Team",
+      "decidedBy": "Decided by",
+      "group": "Group",
+      "played": "P",
+      "won": "W",
+      "drawn": "D",
+      "lost": "L",
+      "goals": "Goals",
+      "diff": "GD",
+      "points": "Pts"
+    },
+    "details": {
+      "matches": "Played",
+      "wins": "Wins",
+      "draws": "Draws",
+      "losses": "Losses",
+      "goalsScored": "Goals scored",
+      "goalsConceded": "Goals conceded"
+    }
+  },
+  "management": {
+    "existingResults": "Existing results",
+    "startAnyway": "Start anyway",
+    "runningMatch": "Running match",
+    "switch": "Switch",
+    "groupStage": "Group Stage",
+    "finalRound": "Final Round",
+    "existingResultsMessage": "This match already has results!\n\nCurrent score: {{homeScore}}:{{awayScore}}\n\nIf you start the match now, existing results will be deleted and replaced with live capture (starting at 0:0).",
+    "matchDetails": "Match #{{number}}: {{home}} vs {{away}}",
+    "switchMatchMessage": "Match #{{number}} is still running!\n\n{{home}} vs {{away}}\nCurrent score: {{homeScore}}:{{awayScore}}\n\nIf you switch to another match, the running match will be automatically ended.",
+    "endAndSwitch": "End match & switch",
+    "field": "Field {{number}}",
+    "selectMatch": "Select match (optional - next match is selected automatically):",
+    "autoNextMatch": "Automatic (next match)",
+    "matchLoading": "Loading match...",
+    "noMatchesOnField": "No matches on this field"
+  },
+  "tables": {
+    "noGroups": "This tournament has no groups.",
+    "groupsOnlyInfo": "Group tables are only available for group tournaments.",
+    "tableOnlyInfo": "Tables are only available for group tournaments.",
+    "groups": "Groups"
+  },
+  "matchCard": {
+    "cannotMove": "Match cannot be moved",
+    "dragToMove": "Drag to move",
+    "changeReferee": "Change referee",
+    "noReferee": "No Ref",
+    "locked": "Locked (running/finished)",
+    "ariaLabel": "Match {{matchNumber}}: {{homeTeam}} vs {{awayTeam}}",
+    "field": "Field {{field}}",
+    "groupPrefix": "Gr. {{group}}",
+    "refereePrefix": "Ref: {{referee}}",
+    "refereeSR": "Ref {{referee}}",
+    "groupShort": "Gr. {{group}}",
+    "scoreAriaLive": "Score {{homeScore}}:{{awayScore}}, {{elapsed}}",
+    "live": "Live",
+    "startMatch": "Start match",
+    "scoreAriaFinal": "Final score {{homeScore}}:{{awayScore}}",
+    "finished": "End",
+    "selectReferee": "Select referee",
+    "chooseReferee": "Choose referee"
+  },
+  "conflict": {
+    "teamDoubleBooking": "Team double booking",
+    "refereeDoubleBooking": "Referee double booking",
+    "fieldOverlap": "Field overlap",
+    "breakViolation": "Break time violated",
+    "dependencyViolation": "Dependency conflict",
+    "generic": "Conflict",
+    "count_one": "{{count}} conflict",
+    "count_other": "{{count}} conflicts",
+    "criticalErrors": "Critical errors ({{count}})",
+    "warnings": "Warnings ({{count}})"
+  },
+  "matchExpand": {
+    "details": {
+      "goalScorers": "Goal Scorers ({{count}})",
+      "addGoal": "+ Add goal",
+      "addScorerAria": "Add goal scorer",
+      "addNumberTitle": "Add number",
+      "deleteGoalAria": "Delete goal",
+      "deleteTitle": "Delete",
+      "noGoals": "No goals recorded",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save"
+    },
+    "liveInfo": {
+      "recentEvents": "Recent Events",
+      "noEvents": "No events yet",
+      "close": "Close",
+      "gotoCockpit": "Go to Cockpit"
+    },
+    "quickScore": {
+      "goalScorers": "Goal Scorers",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save"
+    },
+    "start": {
+      "matchNumber": "Match {{number}}",
+      "timeLabel": "{{time}}",
+      "confirmQuestion": "Start this match now?",
+      "confirmHint": "The match will be opened in the live cockpit",
+      "cancel": "Cancel",
+      "starting": "Starting...",
+      "gotoCockpit": "Go to Cockpit"
+    },
+    "summary": {
+      "events": "Events",
+      "noEvents": "No events recorded"
+    }
+  },
+  "matchSummary": {
+    "title": "Match Summary",
+    "close": "Close",
+    "editScore": "Edit score",
+    "events": {
+      "title": "Match Events",
+      "goalDecrement": "−1 {{team}}",
+      "goal": "GOAL {{team}}{{player}}",
+      "assist": "Assist",
+      "yellowCard": "Yellow card {{team}}{{player}}",
+      "redCard": "Red card {{team}}{{player}}",
+      "timePenalty": "{{duration}} min time penalty {{team}}{{player}}",
+      "substitutionDetail": "Substitution {{team}}: {{out}} → {{in}}",
+      "substitution": "Substitution {{team}}",
+      "foul": "Foul {{team}}",
+      "noEvents": "No events recorded",
+      "editAria": "Edit {{description}}"
+    }
+  },
+  "goalList": {
+    "title": "Goal Scorers",
+    "missingNumbers": "Missing numbers",
+    "openCount_one": "{{count}} open",
+    "openCount_other": "{{count}} open",
+    "addGoal": "+ Goal",
+    "noGoals": "No goals recorded",
+    "assist": "Assist",
+    "addScorerAria": "Add goal scorer",
+    "addNumberTitle": "Add number",
+    "deleteGoalAria": "Delete goal",
+    "deleteTitle": "Delete",
+    "addGoalDialog": {
+      "title": "Add Goal",
+      "team": "Team",
+      "jerseyNumber": "Jersey number (optional)",
+      "jerseyHint": "Can be added later",
+      "matchMinute": "Match minute",
+      "timeHintLive": "Current time is suggested",
+      "timeHintFormat": "Format: MM:SS",
+      "cancel": "Cancel",
+      "addGoal": "Add goal"
+    }
+  },
+  "correction": {
+    "modeActive": "CORRECTION MODE ACTIVE",
+    "cancel": "Cancel correction",
+    "correcting": "You are correcting: {{matchLabel}} – {{teamA}} vs {{teamB}}",
+    "warning": "WARNING:",
+    "warningText": "Changes affect table and possibly playoff pairings",
+    "recalcStandings": "Group table will be recalculated",
+    "playoffChange": "Playoff pairings may change",
+    "finalsUnchanged": "Already played final rounds remain unchanged",
+    "originalScore": "Original result: {{scoreA}}:{{scoreB}}"
+  },
+  "liveBadge": {
+    "ariaLabel": "Match is currently running",
+    "live": "Live"
+  },
+  "scoreCell": {
+    "correctResult": "Correct result"
+  },
+  "sortable": {
+    "referee": "Referee",
+    "refereePlaceholder": "Ref -",
+    "refereeOption": "Ref {{label}}",
+    "fieldLabel": "Field"
+  },
+  "field": {
+    "saveError": "Error saving",
+    "title": "Playing Fields",
+    "count_one": "{{count}} field",
+    "count_other": "{{count}} fields",
+    "noFields": "No fields available",
+    "noFieldsInfo": "Fields are configured in the wizard when creating the tournament.",
+    "inSlides": "In slides",
+    "default": "Default",
+    "editLabel": "Edit label",
+    "customName": "Custom name",
+    "shortCode": "Short code (max 3)",
+    "customNameInfo": "Custom names are displayed in monitor slides and the schedule. The number of fields can only be changed in the wizard."
+  },
+  "monitorEditor": {
+    "allTeams": "All Teams",
+    "groupLabel": "Group {{letter}}",
+    "notConfigured": "Not configured",
+    "customText": "Custom Text",
+    "notFound": "Monitor not found",
+    "close": "Close",
+    "notFoundMessage": "The monitor with ID \"{{id}}\" no longer exists.",
+    "loading": "Loading...",
+    "errors": {
+      "saveFailed": "Error saving",
+      "addFailed": "Error adding",
+      "updateFailed": "Error updating",
+      "removeFailed": "Error removing",
+      "reorderFailed": "Error reordering"
+    },
+    "settings": {
+      "title": "Settings",
+      "name": "Name",
+      "slideDuration": "Slide duration (sec.)",
+      "transition": "Transition",
+      "performanceLabel": "Performance",
+      "themeLabel": "Color Scheme",
+      "overscan": "TV margin ({{px}}px)",
+      "noMargin": "No margin"
+    },
+    "slides": {
+      "title": "Slides ({{count}})",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "edit": "Edit",
+      "remove": "Remove",
+      "addSlide": "Add slide"
+    }
+  },
+  "colorScheme": {
+    "scoreColors": "Score Colors",
+    "homeColor": "Home Color",
+    "awayColor": "Away Color",
+    "useTeamColors": "Use team colors (if available)",
+    "schemaAria": "Color scheme: {{name}}",
+    "pickColorAria": "Pick {{label}} color: {{color}}",
+    "hexValueAria": "{{label}} hex value",
+    "recentlyUsed": "Recently used",
+    "useColorAria": "Use color {{color}}",
+    "done": "Done"
+  },
+  "toolbar": {
+    "editSchedule": "Edit schedule",
+    "editMode": "Edit mode",
+    "undo": "Undo",
+    "redo": "Redo",
+    "redistributeSR": "Redistribute referees",
+    "redistributeFields": "Redistribute fields",
+    "save": "Save",
+    "cancel": "Cancel",
+    "switchView": "Switch view",
+    "viewTable": "Table",
+    "viewGrid": "Grid"
+  },
+  "slideEditor": {
+    "configAria": "Configuration for {{type}} slide",
+    "field": "Field",
+    "pleaseSelect": "Please select...",
+    "whenIdleLabel": "When no match is running",
+    "pauseRotation": "Pause rotation during match",
+    "group": "Group",
+    "allGroups": "All Groups",
+    "groupLabel": "Group {{letter}}",
+    "allStandingsInfo": "Shows tables of all groups in one overview.",
+    "matchCount": "Number of Matches",
+    "nMatches_one": "{{count}} match",
+    "nMatches_other": "{{count}} matches",
+    "numberOfPlayers": "Number of Players",
+    "sponsor": "Sponsor",
+    "showQrCode": "Show QR code",
+    "qrTargetLabel": "QR Code Target",
+    "customUrl": "Custom URL",
+    "headline": "Headline",
+    "headlinePlaceholder": "e.g., Important Announcement",
+    "text": "Text",
+    "textPlaceholder": "Your text here...",
+    "textAlignment": "Text Alignment",
+    "colorSchemeLabel": "Color Scheme",
+    "customDuration": "Custom duration (sec.) - empty = monitor default",
+    "defaultPlaceholder": "Default"
+  },
+  "slidePreview": {
+    "previewAria": "Preview: {{type}}"
+  },
+  "standings": {
+    "table": "Table",
+    "rank": "Pos",
+    "team": "Team",
+    "played": "P",
+    "goals": "Goals",
+    "diff": "GD",
+    "points": "Pts"
+  },
+  "nextMatch": {
+    "matchNumber": "Match {{number}}",
+    "field": "Field {{field}}"
+  },
+  "monitorTab": {
+    "standings": "Tables",
+    "noMatchOnField": "No match on field {{field}}",
+    "noRunningMatch": "No running match",
+    "nextMatch": "Next Match"
+  },
+  "filter": {
+    "filter": "Filter",
+    "allPhases": "All phases",
+    "groupStage": "Group Stage",
+    "finals": "Final Round",
+    "allGroups": "All Groups",
+    "groupLabel": "Group {{group}}",
+    "allFields": "All Fields",
+    "fieldLabel": "Field {{field}}",
+    "matchCount": "{{count}} of {{total}} matches",
+    "phase": "Phase",
+    "group": "Group",
+    "field": "Field",
+    "reset": "Reset",
+    "apply": "Apply ({{count}})",
+    "resetAriaLabel": "Reset filters ({{count}} active)",
+    "removeAriaLabel": "Remove filter: {{label}}",
+    "openAriaLabel": "Open filters ({{count}} active)",
+    "noActiveFilters": "No active filters",
+    "noResults": "No matches found",
+    "noResultsDescription": "No matches found with the current filter settings. Try different filters or reset all filters.",
+    "resetAll": "Reset filters",
+    "teamSearchPlaceholder": "Search team...",
+    "teamSearch": "Team",
+    "clearSearch": "Clear search",
+    "status": {
+      "label": "Status",
+      "scheduled": "Scheduled",
+      "waiting": "Waiting",
+      "running": "Running",
+      "finished": "Finished",
+      "skipped": "Skipped",
+      "active": "(active)"
+    }
+  },
+  "actions": {
+    "refereesAlreadyOptimal": "Referees already optimally distributed",
+    "fieldsAlreadyOptimal": "Fields already optimally distributed",
+    "matchesSwapped": "Matches {{match1}} and {{match2}} swapped",
+    "matchAlreadyFinished": "This match is already finished. Use \"Correct result\".",
+    "liveMatchWarning": "WARNING: This match is currently LIVE in tournament management!\n\nIf you change the result here, it will overwrite the live management.\n\nDo you want to continue anyway?",
+    "changesSaved": "Schedule changes saved"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving..."
+  }
+}

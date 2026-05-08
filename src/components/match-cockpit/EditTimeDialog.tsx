@@ -6,6 +6,7 @@
  */
 
 import { CSSProperties, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile, useFocusTrap } from '../../hooks';
@@ -23,6 +24,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
+  const { t } = useTranslation('cockpit');
   const currentMinutes = Math.floor(currentElapsedSeconds / 60);
   const currentSeconds = currentElapsedSeconds % 60;
 
@@ -210,23 +212,23 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
       >
         <div id="edit-time-dialog-title" style={titleStyle}>
           <span aria-hidden="true">⏱️</span>
-          <span>Spielzeit anpassen</span>
+          <span>{t('editTime.title')}</span>
         </div>
 
         <div style={currentTimeStyle}>
-          Aktuelle Zeit: <strong>{formatTime(currentMinutes, currentSeconds)}</strong>
+          {t('editTime.currentTime', { time: formatTime(currentMinutes, currentSeconds) })}
         </div>
 
         <div style={timeInputContainerStyle}>
           <div style={timeBlockStyle}>
-            <div style={labelStyle} id="minutes-label">Minuten</div>
+            <div style={labelStyle} id="minutes-label">{t('editTime.minutes')}</div>
             <div style={timeControlsStyle}>
               <button
                 style={timeButtonStyle}
                 onClick={() => handleMinutesChange(1)}
                 disabled={minutes >= maxMinutes}
                 type="button"
-                aria-label="Minuten erhöhen"
+                aria-label={t('editTime.increaseMinutes')}
               >
                 +
               </button>
@@ -246,7 +248,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
                 onClick={() => handleMinutesChange(-1)}
                 disabled={minutes === 0}
                 type="button"
-                aria-label="Minuten verringern"
+                aria-label={t('editTime.decreaseMinutes')}
               >
                 −
               </button>
@@ -256,13 +258,13 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
           <div style={colonStyle} aria-hidden="true">:</div>
 
           <div style={timeBlockStyle}>
-            <div style={labelStyle} id="seconds-label">Sekunden</div>
+            <div style={labelStyle} id="seconds-label">{t('editTime.seconds')}</div>
             <div style={timeControlsStyle}>
               <button
                 style={timeButtonStyle}
                 onClick={() => handleSecondsChange(1)}
                 type="button"
-                aria-label="Sekunden erhöhen"
+                aria-label={t('editTime.increaseSeconds')}
               >
                 +
               </button>
@@ -282,7 +284,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
                 onClick={() => handleSecondsChange(-1)}
                 disabled={seconds === 0 && minutes === 0}
                 type="button"
-                aria-label="Sekunden verringern"
+                aria-label={t('editTime.decreaseSeconds')}
               >
                 −
               </button>
@@ -291,7 +293,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
         </div>
 
         <div style={durationInfoStyle}>
-          Spieldauer: {durationMinutes}:00 Min
+          {t('editTime.matchDuration', { duration: durationMinutes })}
         </div>
 
         <div style={buttonsStyle}>
@@ -302,7 +304,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
             disabled={!hasChanged}
             style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
           >
-            Speichern
+            {t('editTime.save')}
           </Button>
           <Button
             variant="secondary"
@@ -310,7 +312,7 @@ export const EditTimeDialog: React.FC<EditTimeDialogProps> = ({
             onClick={onCancel}
             style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
           >
-            Abbrechen
+            {t('editTime.cancel')}
           </Button>
         </div>
       </div>

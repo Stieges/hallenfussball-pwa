@@ -1,0 +1,86 @@
+{
+  "loading": {
+    "generic": "Lade...",
+    "tournaments": "Lade Turniere..."
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "retry": "Erneut versuchen",
+    "reload": "Seite neu laden",
+    "connect": "Verbinden",
+    "understood": "Verstanden",
+    "register": "Registrieren",
+    "login": "Anmelden",
+    "logout": "Abmelden"
+  },
+  "tournament": {
+    "copySuffix": "(Kopie)",
+    "softDelete": {
+      "title": "Turnier löschen?",
+      "message": "Das Turnier wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.",
+      "messageWithTitle": "Das Turnier \"{{title}}\" wird in den Papierkorb verschoben und kann 30 Tage lang wiederhergestellt werden.",
+      "confirm": "In Papierkorb"
+    },
+    "permanentDelete": {
+      "title": "Endgültig löschen?",
+      "message": "Das Turnier wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "messageWithTitle": "Das Turnier \"{{title}}\" wird unwiderruflich gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Endgültig löschen"
+    }
+  },
+  "errors": {
+    "deleteTournament": "Fehler beim Löschen des Turniers. Bitte versuche es erneut.",
+    "restoreTournament": "Fehler beim Wiederherstellen von \"{{title}}\". Bitte versuche es erneut.",
+    "importTournament": "Fehler beim Importieren des Turniers. Bitte versuche es erneut.",
+    "copyTournament": "Fehler beim Kopieren des Turniers. Bitte versuche es erneut.",
+    "editInWizard": "Fehler beim Öffnen des Turniers im Wizard. Bitte versuche es erneut."
+  },
+  "errorBoundary": {
+    "title": "Etwas ist schiefgelaufen",
+    "message": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut."
+  },
+  "footer": {
+    "copyright": "© {{year}} Spielplan",
+    "legalLinksLabel": "Rechtliche Links",
+    "impressum": "Impressum",
+    "impressumAriaLabel": "Impressum öffnen",
+    "datenschutz": "Datenschutz",
+    "datenschutzAriaLabel": "Datenschutzerklärung öffnen",
+    "cookieSettings": "Cookie-Einstellungen",
+    "cookieSettingsAriaLabel": "Cookie-Einstellungen öffnen"
+  },
+  "authSection": {
+    "statusLoading": "Anmeldestatus wird geladen",
+    "statusAuthenticated": "Angemeldet als {{name}}",
+    "statusGuest": "Als Gast angemeldet. Registrierung empfohlen für volle Funktionen.",
+    "statusUnauthenticated": "Nicht angemeldet. Anmelden oder Registrieren möglich.",
+    "offlineAriaLabel": "Offline - Klicken zum erneut verbinden",
+    "offline": "Offline",
+    "profileAriaLabel": "Profil von {{name}} öffnen",
+    "myProfile": "Mein Profil",
+    "settings": "Einstellungen",
+    "guest": "Gast",
+    "guestOptionsAriaLabel": "Konto-Optionen öffnen (aktuell als Gast)",
+    "accountOptionsAriaLabel": "Konto-Optionen öffnen"
+  },
+  "offlineBanner": {
+    "message": "Offline-Modus - Änderungen werden lokal gespeichert",
+    "reconnected": "Verbindung wiederhergestellt",
+    "syncing_one": "Synchronisiere {{count}} Änderung...",
+    "syncing_other": "Synchronisiere {{count}} Änderungen...",
+    "pending_one": "{{count}} ausstehend",
+    "pending_other": "{{count}} ausstehend"
+  },
+  "offlineIndicator": {
+    "title": "Offline-Modus",
+    "subtitle": "Daten werden lokal gespeichert und später synchronisiert",
+    "reconnectAriaLabel": "Erneut verbinden"
+  },
+  "unsavedChanges": "Ungespeicherte Änderungen vorhanden.",
+  "progressBar": {
+    "stepLabel": "Schritt {{step}}: {{label}}",
+    "errorTooltip": "Fehler: {{errors}}",
+    "errorBadge": "Fehler"
+  }
+}

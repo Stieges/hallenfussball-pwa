@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Card } from '../ui';
 import { useToast } from '../ui/Toast';
@@ -77,6 +78,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
   onForceFinish,
   onCancelTiebreaker,
 }) => {
+  const { t } = useTranslation('cockpit');
   useToast();
   const isMobile = useIsMobile();
 
@@ -110,15 +112,15 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
       {/* HEADER */}
       <div style={cardHeaderStyle}>
         <div>
-          <div style={cardTitleStyle}>Aktuelles Spiel</div>
+          <div style={cardTitleStyle}>{t('currentMatch.title')}</div>
           <div style={cardSubtitleStyle}>
             {currentMatch
-              ? `Spiel ${currentMatch.number} · ${currentMatch.phaseLabel}`
-              : 'Kein aktives Spiel'}
+              ? t('currentMatch.subtitle', { number: currentMatch.number, phase: currentMatch.phaseLabel })
+              : t('currentMatch.noActiveMatch')}
           </div>
         </div>
         <div style={cardSubtitleStyle}>
-          {currentMatch && `Geplante Anstoßzeit: ${currentMatch.scheduledKickoff}`}
+          {currentMatch && t('currentMatch.scheduledKickoff', { time: currentMatch.scheduledKickoff })}
         </div>
       </div>
 
@@ -197,7 +199,7 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
         </>
       ) : (
         <div style={{ padding: cssVars.spacing.xl, textAlign: 'center', color: cssVars.colors.textSecondary }}>
-          Kein aktives Spiel vorhanden
+          {t('currentMatch.emptyState')}
         </div>
       )}
 
@@ -230,10 +232,10 @@ export const CurrentMatchPanel: React.FC<CurrentMatchPanelProps> = ({
 
       {showRestartConfirm && currentMatch && (
         <ConfirmDialog
-          title="Spiel neu starten?"
-          message={`Achtung: Dieses Spiel wurde bereits beendet!\n\nMöchten Sie das Spiel wirklich neu starten?\n\nDabei wird das Spiel auf 0:0 zurückgesetzt und alle Ereignisse werden gelöscht.`}
-          confirmLabel="Neu starten"
-          cancelLabel="Abbrechen"
+          title={t('currentMatch.restartTitle')}
+          message={t('currentMatch.restartMessage')}
+          confirmLabel={t('currentMatch.restart')}
+          cancelLabel={t('currentMatch.cancel')}
           variant="danger"
           onConfirm={() => {
             onStart(currentMatch.id);
