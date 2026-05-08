@@ -86,3 +86,53 @@ def test_client_returns_content_and_usage():
         assert result["content"] == "Hello"
         assert result["tokens_in"] == 5
         assert result["tokens_out"] == 1
+
+
+def test_chat_passes_response_format_when_set():
+    """Phase A: response_format must be forwarded verbatim to the gateway when supplied."""
+    client = AIHubClient(api_key="sk-test")
+    schema = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "test_schema",
+            "schema": {"type": "object", "properties": {"x": {"type": "integer"}}},
+        },
+    }
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "{\"x\":1}"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="gpt-oss-120b-sovereign",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+            response_format=schema,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert payload["response_format"] == schema
+
+
+def test_chat_omits_response_format_when_not_set():
+    """Phase A: response_format key must NOT appear in payload when caller omits it."""
+    client = AIHubClient(api_key="sk-test")
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="qwen-3.5-122b-sovereign",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert "response_format" not in payload

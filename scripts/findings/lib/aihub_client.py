@@ -51,6 +51,7 @@ class AIHubClient:
         max_tokens: int = 32000,
         timeout: int = DEFAULT_TIMEOUT,
         temperature_override: float | None = None,
+        response_format: dict | None = None,
     ) -> dict:
         """Send a chat completion request. Returns {content, tokens_in, tokens_out, raw}.
 
@@ -62,6 +63,12 @@ class AIHubClient:
             temperature_override: When set, replaces the model-default temperature.
                                   Use for nodes that require deterministic output
                                   (e.g. plan_changes at 0.3 instead of coder-default 1.0).
+            response_format:     Optional structured-output constraint forwarded as-is to
+                                 the LiteLLM gateway. Models that support it (qwen3-coder,
+                                 gpt-oss, OpenAI gpt-4*) will enforce the schema; models
+                                 without support fall back to free-form text and the
+                                 caller's json_extract parser handles the output.
+                                 Typical value: {"type": "json_schema", "json_schema": {...}}.
         """
         params = self._params_for_model(model)
         if temperature_override is not None:
@@ -72,6 +79,8 @@ class AIHubClient:
             "max_tokens": max_tokens,
             **params,
         }
+        if response_format is not None:
+            payload["response_format"] = response_format
         resp = requests.post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
