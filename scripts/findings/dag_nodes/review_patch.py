@@ -19,6 +19,11 @@ from ..lib.json_extract import extract_json
 from ..lib.models import FindingFixState
 
 _REVIEW_MODEL = "gpt-4.1-mini"
+# Temperature: 0.5 — middle ground.
+#
+# Reviewer needs both structured JSON output (low temp) AND nuanced judgement
+# about edge cases (higher temp). 0.5 balances both. Belegflow uses the same
+# value for their reviewer agent.
 _REVIEW_TEMPERATURE = 0.5
 _REVIEW_MAX_TOKENS = 1500
 
