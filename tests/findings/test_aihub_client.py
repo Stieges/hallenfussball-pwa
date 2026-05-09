@@ -51,6 +51,51 @@ def test_client_uses_qwen3_coder_higher_temp():
         assert payload["temperature"] == 1.0
 
 
+def test_qwen_coder_params_omit_presence_penalty():
+    """Recovery-1: AWS Bedrock rejects presence_penalty for qwen3-coder; payload must not include it."""
+    client = AIHubClient(api_key="sk-test")
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="qwen3-coder-480b",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert "presence_penalty" not in payload, (
+            "qwen3-coder-480b is Bedrock-routed and rejects presence_penalty. "
+            "Payload must not include this key."
+        )
+
+
+def test_qwen_thinking_params_keep_presence_penalty():
+    """Recovery-1 regression-guard: sovereign-hosted Qwen still receives presence_penalty."""
+    client = AIHubClient(api_key="sk-test")
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="qwen-3.5-122b-sovereign",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert payload.get("presence_penalty") == 0.0
+
+
 def test_client_raises_on_401():
     client = AIHubClient(api_key="sk-bad")
 
@@ -86,3 +131,53 @@ def test_client_returns_content_and_usage():
         assert result["content"] == "Hello"
         assert result["tokens_in"] == 5
         assert result["tokens_out"] == 1
+
+
+def test_chat_passes_response_format_when_set():
+    """Phase A: response_format must be forwarded verbatim to the gateway when supplied."""
+    client = AIHubClient(api_key="sk-test")
+    schema = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "test_schema",
+            "schema": {"type": "object", "properties": {"x": {"type": "integer"}}},
+        },
+    }
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "{\"x\":1}"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="gpt-oss-120b-sovereign",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+            response_format=schema,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert payload["response_format"] == schema
+
+
+def test_chat_omits_response_format_when_not_set():
+    """Phase A: response_format key must NOT appear in payload when caller omits it."""
+    client = AIHubClient(api_key="sk-test")
+
+    with patch("findings.lib.aihub_client.requests.post") as mock_post:
+        mock_post.return_value.ok = True
+        mock_post.return_value.json.return_value = {
+            "choices": [{"message": {"content": "ok"}}],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+        client.chat(
+            model="qwen-3.5-122b-sovereign",
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=10,
+        )
+
+        payload = mock_post.call_args.kwargs["json"]
+        assert "response_format" not in payload

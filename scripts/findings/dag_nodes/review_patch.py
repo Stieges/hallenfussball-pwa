@@ -4,8 +4,15 @@ Validates that the deterministic patcher produced a correct result by asking
 a second LLM to compare the original finding + planned operations against
 the actual patched file content.
 
-Routing: gpt-4.1-mini via AI Hub (EU-hosted, OpenAI-style API, no
-Qwen thinking-mode conflicts).
+Routing: qwen-3.5-122b-sovereign via AI Hub (sovereign, free, adesso-hosted).
+Same model family as plan_changes — diversity is provided by the structurally
+different prompt (verification vs generation) plus the few-shot REJECTED
+patterns that anchor the reviewer on concrete failure modes.
+
+Schema: model_supports_response_format() returns False for Qwen-Thinking
+variants (lmstudio-bug-tracker#1773 — schema constraint applies to reasoning
+stream, content empty). Reviewer therefore relies on the json_extract parser
+plus the explicit JSON-schema-as-prose in the system prompt.
 
 Verdicts:
   APPROVED     — patch fulfils all acceptance criteria, no obvious bugs
@@ -17,13 +24,15 @@ from __future__ import annotations
 from ..lib.aihub_client import AIHubClient, AIHubError
 from ..lib.json_extract import extract_json
 from ..lib.models import FindingFixState
+from ..lib.schemas import REVIEW_PATCH_SCHEMA, model_supports_response_format
 
-_REVIEW_MODEL = "gpt-4.1-mini"
-# Temperature: 0.5 — middle ground.
+_REVIEW_MODEL = "qwen-3.5-122b-sovereign"
+# Temperature: 0.6 — Qwen3 thinking-mode default per Spec 4.0.
 #
-# Reviewer needs both structured JSON output (low temp) AND nuanced judgement
-# about edge cases (higher temp). 0.5 balances both.
-_REVIEW_TEMPERATURE = 0.5
+# Qwen-Thinking models warm up via reasoning before producing JSON; the
+# json_extract parser strips <think> blocks and prose preambles so the
+# verbose reasoning doesn't pollute the verdict.
+_REVIEW_TEMPERATURE = 0.6
 _REVIEW_MAX_TOKENS = 1500
 
 
@@ -73,11 +82,51 @@ STRUKTURELLE PFLICHT-CHECKS (alle MÜSSEN ✓ für APPROVED):
    - Type-Signature-Änderung ohne consumer-update? → REJECTED
    - Im Zweifel → NEEDS_HUMAN
 
+## REJECTED-Beispiele (lerne aus echten Fehlern)
+
+### Beispiel 1: Strukturbug — neue Funktion in falschem Scope
+Die Datei NACH Patch enthält:
+
+    export function addMinutes(date: Date, minutes: number): Date {
+      return new Date(date.getTime() + minutes * 60000)
+
+    /**
+     * Konvertiert UTC-Zeitstempel ...
+     */
+    export function formatTimeForDisplay(...): string {
+      return date.toLocaleTimeString(...)
+    }
+    }
+
+→ REJECTED. Die neue Funktion `formatTimeForDisplay` wurde **innerhalb** der
+   Funktion `addMinutes` eingefügt (zwischen `return` und schließendem `}`).
+   Dadurch ist die Datei syntaktisch broken: orphaned brace, nested function,
+   unreachable code nach return.
+   Verstoß gegen Check #1 (Scope-Korrektheit) UND Check #2 (Syntax-Plausibilität).
+
+### Beispiel 2: Missing-Return — Fallback entfernt ohne Replacement
+Die Datei NACH Patch enthält:
+
+    export function generateUniqueId(): string {
+      if (crypto?.randomUUID) {
+        return crypto.randomUUID();
+      }
+
+    }
+
+→ REJECTED. Der bisherige `Math.random()`-Fallback wurde entfernt, aber kein
+   Replacement (kein `throw`, kein zweiter Crypto-Pfad) wurde hinzugefügt.
+   Wenn `crypto?.randomUUID` falsy ist, fällt die Funktion durch ohne Return —
+   gibt `undefined` zurück und bricht den TypeScript-Type-Contract `: string`.
+   Verstoß gegen Check #4 (AKs „Keine schwachen Fallback-Implementierungen"
+   wurde nur halbherzig erfüllt) UND Check #2 (broken Control-Flow).
+
 WENN DU UNSICHER BIST → NEEDS_HUMAN, niemals APPROVED.
 APPROVED ist die Ausnahme, nicht die Regel.
 
 Sei streng: Im Zweifel NEEDS_HUMAN statt APPROVED.
 Antworte NUR mit JSON — kein Markdown, kein Freitext darum herum.
+Pflichtfeld `concerns` ist immer ein Array (auch leer: `[]`).
 """
 
 
@@ -114,8 +163,16 @@ def _build_review_user_message(state: FindingFixState) -> str:
 # ---------------------------------------------------------------------------
 
 def _call_review_llm(user_message: str) -> str:
-    """Call the review LLM and return raw response string."""
+    """Call the review LLM and return raw response string.
+
+    response_format=REVIEW_PATCH_SCHEMA is passed only for models that reliably
+    honour it (OpenAI-family). Qwen-Thinking variants leak the schema constraint
+    into the reasoning stream (lmstudio-bug-tracker#1773), so for those we rely
+    on the system-prompt's JSON-as-prose specification plus the json_extract
+    parser in the public node.
+    """
     client = AIHubClient()
+    response_format = REVIEW_PATCH_SCHEMA if model_supports_response_format(_REVIEW_MODEL) else None
     result = client.chat(
         model=_REVIEW_MODEL,
         messages=[
@@ -124,6 +181,7 @@ def _call_review_llm(user_message: str) -> str:
         ],
         max_tokens=_REVIEW_MAX_TOKENS,
         temperature_override=_REVIEW_TEMPERATURE,
+        response_format=response_format,
     )
     return result["content"]
 
@@ -148,6 +206,15 @@ def review_patch(state: FindingFixState) -> FindingFixState:
         # Nothing was patched; skip review but mark as needing human attention
         state.review_verdict = "NEEDS_HUMAN"
         state.review_reasoning = "apply_patch did not produce a patch (fix_applied=False)"
+        return state
+
+    # Empty-Plan-Guard: protects against state-reset race in finding_fix.py's
+    # fallback flow that occasionally produced verdict=APPROVED with
+    # planned_changes_count=0. If there are no planned changes, there is
+    # nothing to review.
+    if not state.planned_changes:
+        state.review_verdict = "NEEDS_HUMAN"
+        state.review_reasoning = "review skipped: no planned_changes available"
         return state
 
     user_message = _build_review_user_message(state)
@@ -180,4 +247,7 @@ def review_patch(state: FindingFixState) -> FindingFixState:
 
     state.review_verdict = raw_verdict  # type: ignore[assignment]
     state.review_reasoning = data.get("reasoning") or ""
+    raw_concerns = data.get("concerns")
+    if isinstance(raw_concerns, list):
+        state.review_concerns = [str(c) for c in raw_concerns]
     return state

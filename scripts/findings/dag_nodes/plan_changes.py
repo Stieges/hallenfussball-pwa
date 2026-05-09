@@ -17,6 +17,7 @@ from pathlib import Path
 from ..lib.aihub_client import AIHubClient, AIHubError
 from ..lib.json_extract import extract_json
 from ..lib.models import FindingFixState
+from ..lib.schemas import PLAN_CHANGES_SCHEMA, model_supports_response_format
 
 
 # ---------------------------------------------------------------------------
@@ -114,19 +115,25 @@ def _build_user_message(state: FindingFixState, file_content: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _call_plan_llm(routing, user_message: str) -> str:
-    """Call the AI Hub with the plan prompt. Returns raw LLM response string."""
-    # Temperature: 0.3 — DELIBERATELY lower than Qwen3-Coder default (1.0).
+    """Call the AI Hub with the plan prompt. Returns raw LLM response string.
+
+    Routing default for low/medium severity is qwen-3.6-35b-sovereign (newer
+    SWE-Bench leader among sovereign Qwens, smaller active footprint than 3.5-122b).
+    Fallback chain remains: qwen-3.6 → qwen3-coder-480b → claude-haiku.
+    """
+    # Temperature: 0.3 — DELIBERATELY lower than the model default.
     #
     # Rationale: We need DETERMINISTIC structured operation output (JSON aenderungen-list),
-    # not creative code generation. Higher temperatures cause Qwen3-Coder to occasionally
+    # not creative code generation. Higher temperatures cause Qwen models to occasionally
     # wrap valid JSON in extra prose or vary the operation 'typ' names, breaking the
-    # patcher. Lower temperature reduces the rate at which Qwen3-Coder wraps
-    # JSON in extra prose or varies the 'typ' field naming.
-    #
-    # If patcher-error rates climb above ~10% in .claude/logs/finding-fixes.jsonl,
-    # consider raising to 0.5 or implementing response_format=json_schema (LiteLLM
-    # supports it for Qwen Coder series).
+    # patcher. response_format=PLAN_CHANGES_SCHEMA enforces the shape gateway-side
+    # where supported; the low temperature is the belt to that schema's suspenders.
     client = AIHubClient()
+    # Qwen-Thinking variants apply response_format=json_schema to the
+    # reasoning_content stream instead of content, leaving content empty
+    # (lmstudio-ai/lmstudio-bug-tracker#1773). Skip schema for those models;
+    # the json_extract parser in plan_changes() handles the free-form output.
+    response_format = PLAN_CHANGES_SCHEMA if model_supports_response_format(routing.model) else None
     result = client.chat(
         model=routing.model,
         messages=[
@@ -135,6 +142,7 @@ def _call_plan_llm(routing, user_message: str) -> str:
         ],
         max_tokens=4000,
         temperature_override=0.3,
+        response_format=response_format,
     )
     return result["content"]
 
@@ -177,17 +185,24 @@ def plan_changes(state: FindingFixState, *, repo_root: str | Path) -> FindingFix
 
     try:
         raw = _call_plan_llm(state.routing, user_message)
-    except AIHubError:
+    except AIHubError as exc:
+        import sys
+        print(f"[DEBUG plan_changes] AIHubError on model={state.routing.model}: {exc}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state
-    except Exception:
+    except Exception as exc:
+        import sys
+        print(f"[DEBUG plan_changes] Unexpected error on model={state.routing.model}: {type(exc).__name__}: {exc}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state
 
     data = extract_json(raw)
     if data is None:
+        import sys
+        snippet = raw[:500] if raw else "(empty)"
+        print(f"[DEBUG plan_changes] extract_json returned None on model={state.routing.model}; raw[:500]={snippet!r}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state

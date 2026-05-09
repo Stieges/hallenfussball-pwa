@@ -85,3 +85,43 @@ def test_think_block_with_fenced_json():
     )
     result = extract_json(raw)
     assert result == {"verdict": "NEEDS_HUMAN", "reasoning": "edge case"}
+
+
+# ---------------------------------------------------------------------------
+# Recovery-2: prose-leaked thinking output (Qwen-3.6 leakage)
+# ---------------------------------------------------------------------------
+
+def test_extract_strips_thinking_process_preamble():
+    """Qwen-3.6 sometimes prefixes the JSON with 'Here's a thinking process:' prose."""
+    raw = (
+        "Here's a thinking process:\n\n"
+        "1. **Analyze the User Input:**\n"
+        "   - **Finding:** \"Schwacher Fallback\"\n\n"
+        '{"analyse": "fix the fallback", "aenderungen": []}'
+    )
+    result = extract_json(raw)
+    assert result == {"analyse": "fix the fallback", "aenderungen": []}
+
+
+def test_extract_strips_okay_so_preamble():
+    """Other prose preambles (\"Okay, so...\", \"Let me think...\") also handled."""
+    raw = (
+        "Okay, so the user wants me to plan changes for this finding. "
+        "Let me think about what to do.\n\n"
+        '{"verdict": "APPROVED", "reasoning": "looks fine", "concerns": []}'
+    )
+    result = extract_json(raw)
+    assert result == {"verdict": "APPROVED", "reasoning": "looks fine", "concerns": []}
+
+
+def test_extract_handles_pure_json_unchanged():
+    """Regression: pure JSON (no prose preamble) still parses identically."""
+    raw = '{"x": 1, "y": "two"}'
+    result = extract_json(raw)
+    assert result == {"x": 1, "y": "two"}
+
+
+def test_extract_returns_none_for_pure_prose():
+    """Pure prose with no `{` or `[` anywhere → None (existing behaviour)."""
+    raw = "This is just thinking out loud without any JSON structure at all."
+    assert extract_json(raw) is None

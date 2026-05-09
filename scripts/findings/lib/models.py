@@ -99,6 +99,7 @@ class FindingFixState(BaseModel):
     # review_patch output:
     review_verdict: Optional[Literal["APPROVED", "REJECTED", "NEEDS_HUMAN"]] = None
     review_reasoning: Optional[str] = None
+    review_concerns: List[str] = Field(default_factory=list)
     # run_tests output:
     tests_pass: Optional[bool] = None
     test_output: Optional[str] = None

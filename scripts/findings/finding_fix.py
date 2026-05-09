@@ -133,6 +133,7 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
                 state.patch_warnings = []
                 state.review_verdict = None
                 state.review_reasoning = None
+                state.review_concerns = []
                 state = plan_changes(state, repo_root=repo_root)
                 if state.planned_changes:
                     state = apply_patch(state, repo_root=repo_root)
@@ -162,6 +163,9 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             "planned_changes_count": len(state.planned_changes),
             "patch_errors_count": len(state.patch_errors) if state.patch_errors else 0,
             "review_verdict": state.review_verdict,
+            "review_reasoning": state.review_reasoning,
+            "review_concerns_count": len(state.review_concerns),
+            "review_concerns": state.review_concerns,
         })
 
     return state

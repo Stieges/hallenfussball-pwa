@@ -24,6 +24,17 @@ def route_finding_fix(finding: Finding) -> ModelChoice:
     elif finding.severity == Severity.HIGH:
         return ModelChoice(provider="claude", model="sonnet-4-6", require_human_review=False)
     else:  # MEDIUM or LOW
+        # qwen-3.5-122b-sovereign — known-working in our AI Hub setup.
+        #
+        # qwen-3.6-35b-sovereign was tried (Recovery-3 rollback reverts it)
+        # but leaks chain-of-thought as prose into the content field on the
+        # current AI Hub gateway, breaking JSON parsing despite Recovery-2's
+        # parser hardening. Documented at:
+        # https://huggingface.co/Qwen/Qwen3.5-35B-A3B/discussions/18
+        #
+        # To re-evaluate 3.6 in future: try `enable_thinking=False` as a
+        # separate experiment branch. If gateway honours that flag, 3.6's
+        # SWE-Bench advantage becomes accessible without the leak issue.
         return ModelChoice(provider="aihub", model="qwen-3.5-122b-sovereign", require_human_review=False)
 
 

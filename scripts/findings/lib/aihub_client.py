@@ -15,7 +15,11 @@ DEFAULT_BASE_URL = "https://adesso-ai-hub.3asabc.de/v1"
 DEFAULT_TIMEOUT = 600  # 10 min for thinking-mode
 
 QWEN_THINKING_PARAMS = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
-QWEN_CODER_PARAMS = {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
+# qwen3-coder-480b is AWS Bedrock-hosted (not sovereign). Bedrock rejects
+# presence_penalty with HTTP 400 ("UnsupportedParamsError"). Sovereign-hosted
+# Qwens accept presence_penalty natively but tolerate its absence too — so we
+# just keep this set Bedrock-compatible.
+QWEN_CODER_PARAMS = {"temperature": 1.0, "top_p": 0.95, "top_k": 20}
 GPT_OSS_PARAMS = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "presence_penalty": 0.0}
 GPT_OPENAI_PARAMS = {"temperature": 0.5, "top_p": 0.95, "presence_penalty": 0.0}
 
@@ -51,6 +55,7 @@ class AIHubClient:
         max_tokens: int = 32000,
         timeout: int = DEFAULT_TIMEOUT,
         temperature_override: float | None = None,
+        response_format: dict | None = None,
     ) -> dict:
         """Send a chat completion request. Returns {content, tokens_in, tokens_out, raw}.
 
@@ -62,6 +67,12 @@ class AIHubClient:
             temperature_override: When set, replaces the model-default temperature.
                                   Use for nodes that require deterministic output
                                   (e.g. plan_changes at 0.3 instead of coder-default 1.0).
+            response_format:     Optional structured-output constraint forwarded as-is to
+                                 the LiteLLM gateway. Models that support it (qwen3-coder,
+                                 gpt-oss, OpenAI gpt-4*) will enforce the schema; models
+                                 without support fall back to free-form text and the
+                                 caller's json_extract parser handles the output.
+                                 Typical value: {"type": "json_schema", "json_schema": {...}}.
         """
         params = self._params_for_model(model)
         if temperature_override is not None:
@@ -72,6 +83,8 @@ class AIHubClient:
             "max_tokens": max_tokens,
             **params,
         }
+        if response_format is not None:
+            payload["response_format"] = response_format
         resp = requests.post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
