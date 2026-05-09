@@ -11,6 +11,7 @@ from findings.lib.schemas import (
     REVIEW_PATCH_SCHEMA,
     JUDGE_NECESSITY_SCHEMA,
     EXTRACT_FINDINGS_SCHEMA_DRAFT,
+    model_supports_response_format,
 )
 
 
@@ -89,6 +90,28 @@ def test_extract_findings_severity_enum_matches_models():
     severities = set(op["properties"]["severity"]["enum"])
     expected = {s.value for s in Severity}
     assert severities == expected
+
+
+def test_model_supports_response_format_for_known_working():
+    """OpenAI-family models (gpt-oss, gpt-4*, gpt-5*) reliably honour json_schema."""
+    assert model_supports_response_format("gpt-oss-120b-sovereign") is True
+    assert model_supports_response_format("gpt-4.1-mini") is True
+    assert model_supports_response_format("gpt-4.1") is True
+    assert model_supports_response_format("gpt-5") is True
+    assert model_supports_response_format("gpt-5-mini") is True
+
+
+def test_model_supports_response_format_skips_qwen_thinking():
+    """Qwen-Thinking variants apply schema to reasoning_content (lmstudio#1773); skip."""
+    assert model_supports_response_format("qwen-3.5-122b-sovereign") is False
+    assert model_supports_response_format("qwen-3.6-35b-sovereign") is False
+    assert model_supports_response_format("qwen3-coder-480b") is False
+
+
+def test_model_supports_response_format_unknown_defaults_false():
+    """Conservative default: unknown models skip schema enforcement."""
+    assert model_supports_response_format("some-future-model") is False
+    assert model_supports_response_format("") is False
 
 
 def test_extract_findings_area_enum_is_complete():

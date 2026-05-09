@@ -17,7 +17,7 @@ from pathlib import Path
 from ..lib.aihub_client import AIHubClient, AIHubError
 from ..lib.json_extract import extract_json
 from ..lib.models import FindingFixState
-from ..lib.schemas import PLAN_CHANGES_SCHEMA
+from ..lib.schemas import PLAN_CHANGES_SCHEMA, model_supports_response_format
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +129,11 @@ def _call_plan_llm(routing, user_message: str) -> str:
     # patcher. response_format=PLAN_CHANGES_SCHEMA enforces the shape gateway-side
     # where supported; the low temperature is the belt to that schema's suspenders.
     client = AIHubClient()
+    # Qwen-Thinking variants apply response_format=json_schema to the
+    # reasoning_content stream instead of content, leaving content empty
+    # (lmstudio-ai/lmstudio-bug-tracker#1773). Skip schema for those models;
+    # the json_extract parser in plan_changes() handles the free-form output.
+    response_format = PLAN_CHANGES_SCHEMA if model_supports_response_format(routing.model) else None
     result = client.chat(
         model=routing.model,
         messages=[
@@ -137,7 +142,7 @@ def _call_plan_llm(routing, user_message: str) -> str:
         ],
         max_tokens=4000,
         temperature_override=0.3,
-        response_format=PLAN_CHANGES_SCHEMA,
+        response_format=response_format,
     )
     return result["content"]
 
@@ -180,17 +185,24 @@ def plan_changes(state: FindingFixState, *, repo_root: str | Path) -> FindingFix
 
     try:
         raw = _call_plan_llm(state.routing, user_message)
-    except AIHubError:
+    except AIHubError as exc:
+        import sys
+        print(f"[DEBUG plan_changes] AIHubError on model={state.routing.model}: {exc}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state
-    except Exception:
+    except Exception as exc:
+        import sys
+        print(f"[DEBUG plan_changes] Unexpected error on model={state.routing.model}: {type(exc).__name__}: {exc}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state
 
     data = extract_json(raw)
     if data is None:
+        import sys
+        snippet = raw[:500] if raw else "(empty)"
+        print(f"[DEBUG plan_changes] extract_json returned None on model={state.routing.model}; raw[:500]={snippet!r}", file=sys.stderr)
         state.planned_changes = []
         state.tool_call_errors += 1
         return state

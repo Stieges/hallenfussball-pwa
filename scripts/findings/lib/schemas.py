@@ -1,10 +1,14 @@
 """Centralized JSON Schemas for response_format constraints.
 
-LLM nodes pass these schemas to AIHubClient.chat(response_format=...) where the
-underlying gateway/model supports it (gpt-oss-120b-sovereign, qwen3-coder, OpenAI
-gpt-4*). Models without support (Qwen-Thinking variants in older vLLM configs)
-fall back to free-form text and the json_extract parser handles the output.
-This is the hybrid strategy: enforcement where possible, parser as safety net.
+LLM nodes pass these schemas to AIHubClient.chat(response_format=...) ONLY for
+models that reliably honour the constraint. Qwen-Thinking variants
+(qwen-3.5*, qwen-3.6*) have a known bug where the schema is applied to
+reasoning_content instead of the final content stream, leaving content empty:
+- https://github.com/lmstudio-ai/lmstudio-bug-tracker/issues/1773
+- https://huggingface.co/Qwen/Qwen3.5-35B-A3B/discussions/18
+
+For those models we skip response_format entirely and rely on the json_extract
+parser. For OpenAI-family models (gpt-oss, gpt-4*) the schema works as expected.
 
 Reference: OpenAI Structured Outputs spec — response_format envelope is
     {"type": "json_schema", "json_schema": {"name": "...", "strict": True, "schema": {...}}}
@@ -19,6 +23,26 @@ isn't set the gateway either honours response_format anyway, ignores it, or
 returns 400. We accept all three: parser is the universal fallback.
 """
 from __future__ import annotations
+
+
+def model_supports_response_format(model: str) -> bool:
+    """Returns True iff `model` reliably honours response_format=json_schema.
+
+    Known broken (skip response_format):
+      - qwen-3.5* / qwen-3.6* (Qwen-Thinking variants)
+      - qwen3-coder-480b (passes thinking-mode params, see aihub_client.py)
+
+    Known working (apply response_format):
+      - gpt-oss-* (OpenAI Open-Weights; structured output is native)
+      - gpt-4* / gpt-3* / gpt-5* (OpenAI Azure)
+
+    Conservative default for unknown models: False (skip schema, use parser).
+    """
+    if model.startswith("gpt-oss"):
+        return True
+    if model.startswith(("gpt-4", "gpt-3", "gpt-5", "o3-", "o4-")):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
