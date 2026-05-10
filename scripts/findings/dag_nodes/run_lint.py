@@ -29,4 +29,31 @@ def run_lint(
     ext = Path(state.path_resolved).suffix.lower()
     if ext not in _LINTABLE_EXTENSIONS:
         return state
+
+    repo_root = Path(repo_root)
+    try:
+        proc = subprocess.run(
+            ["npx", "eslint", "--max-warnings", "0", state.path_resolved],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        state.lint_passed = False
+        state.lint_output = f"TIMEOUT after {timeout}s"
+        state.review_verdict = "NEEDS_HUMAN"
+        state.review_reasoning = state.lint_output
+        return state
+
+    state.lint_output = (proc.stdout or "") + (proc.stderr or "")
+    if proc.returncode == 0:
+        state.lint_passed = True
+        return state
+
+    state.lint_passed = False
+    state.review_verdict = "NEEDS_HUMAN"
+    state.review_reasoning = (
+        f"ESLint failed (exit {proc.returncode}):\n{state.lint_output[:1500]}"
+    )
     return state
