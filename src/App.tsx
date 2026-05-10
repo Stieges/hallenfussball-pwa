@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react';
+import { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from 'i18next';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -35,47 +35,59 @@ import { ConsentDialog } from './components/dialogs/ConsentDialog';
 import { hasConsent } from './lib/consent';
 import { reinitializeSentry, captureFeatureError } from './lib/sentry';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { lazyWithRetry } from './lib/lazyWithRetry';
 
 // Lazy load screens for better initial load performance
-const DashboardScreen = lazy(() =>
-  import('./screens/DashboardScreen').then(m => ({ default: m.DashboardScreen }))
+const DashboardScreen = lazyWithRetry(
+  () => import('./screens/DashboardScreen').then(m => ({ default: m.DashboardScreen })),
+  'DashboardScreen'
 );
-const TournamentCreationScreen = lazy(() =>
-  import('./screens/TournamentCreationScreen').then(m => ({ default: m.TournamentCreationScreen }))
+const TournamentCreationScreen = lazyWithRetry(
+  () => import('./screens/TournamentCreationScreen').then(m => ({ default: m.TournamentCreationScreen })),
+  'TournamentCreationScreen'
 );
-const TournamentManagementScreen = lazy(() =>
-  import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen }))
+const TournamentManagementScreen = lazyWithRetry(
+  () => import('./screens/TournamentManagementScreen').then(m => ({ default: m.TournamentManagementScreen })),
+  'TournamentManagementScreen'
 );
-const PublicTournamentViewScreen = lazy(() =>
-  import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen }))
+const PublicTournamentViewScreen = lazyWithRetry(
+  () => import('./screens/PublicTournamentViewScreen').then(m => ({ default: m.PublicTournamentViewScreen })),
+  'PublicTournamentViewScreen'
 );
-const LiveViewScreen = lazy(() =>
-  import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen }))
+const LiveViewScreen = lazyWithRetry(
+  () => import('./screens/LiveViewScreen').then(m => ({ default: m.LiveViewScreen })),
+  'LiveViewScreen'
 );
 // NOTE: PublicLiveViewScreen removed - LiveViewScreen handles /live/:code
-const ImpressumScreen = lazy(() =>
-  import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen }))
+const ImpressumScreen = lazyWithRetry(
+  () => import('./screens/ImpressumScreen').then(m => ({ default: m.ImpressumScreen })),
+  'ImpressumScreen'
 );
-const DatenschutzScreen = lazy(() =>
-  import('./screens/DatenschutzScreen').then(m => ({ default: m.DatenschutzScreen }))
+const DatenschutzScreen = lazyWithRetry(
+  () => import('./screens/DatenschutzScreen').then(m => ({ default: m.DatenschutzScreen })),
+  'DatenschutzScreen'
 );
-const SettingsScreen = lazy(() =>
-  import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen }))
+const SettingsScreen = lazyWithRetry(
+  () => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })),
+  'SettingsScreen'
 );
 
 // Local Test Screen (DEV only)
-const LocalTestScreen = lazy(() =>
-  import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen }))
+const LocalTestScreen = lazyWithRetry(
+  () => import('./screens/LocalTestScreen').then(m => ({ default: m.LocalTestScreen })),
+  'LocalTestScreen'
 );
 
 // MON-KONF-01: Monitor Display für TVs/Beamer
-const MonitorDisplayPage = lazy(() =>
-  import('./features/monitor-display').then(m => ({ default: m.MonitorDisplayPage }))
+const MonitorDisplayPage = lazyWithRetry(
+  () => import('./features/monitor-display').then(m => ({ default: m.MonitorDisplayPage })),
+  'MonitorDisplayPage'
 );
 
 // Tournament Admin Center
-const TournamentAdminCenter = lazy(() =>
-  import('./features/tournament-admin').then(m => ({ default: m.TournamentAdminCenter }))
+const TournamentAdminCenter = lazyWithRetry(
+  () => import('./features/tournament-admin').then(m => ({ default: m.TournamentAdminCenter })),
+  'TournamentAdminCenter'
 );
 
 // Loading fallback component

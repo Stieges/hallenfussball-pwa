@@ -38,7 +38,8 @@
   },
   "errorBoundary": {
     "title": "Something went wrong",
-    "message": "An unexpected error occurred. Please try again."
+    "message": "An unexpected error occurred. Please try again.",
+    "refreshRequired": "A new version of the app is available. Please reload the page to continue."
   },
   "footer": {
     "copyright": "© {{year}} Spielplan",

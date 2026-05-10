@@ -2,7 +2,10 @@
 import React, { Component, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../design-tokens';
+import { LAZY_IMPORT_FAILED_EVENT, type LazyImportFailedDetail } from '../lib/lazyWithRetry';
 import { captureFeatureError } from '../lib/sentry';
+
+const LAZY_IMPORT_ERROR_PREFIX = 'Lazy import failed:';
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
@@ -30,6 +33,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return { hasError: true, error };
   }
 
+  componentDidMount(): void {
+    window.addEventListener(LAZY_IMPORT_FAILED_EVENT, this.handleLazyImportFailed);
+  }
+
+  componentWillUnmount(): void {
+    window.removeEventListener(LAZY_IMPORT_FAILED_EVENT, this.handleLazyImportFailed);
+  }
+
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
 
@@ -40,6 +51,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     this.props.onError?.(error, errorInfo);
   }
+
+  handleLazyImportFailed = (e: Event): void => {
+    const detail = (e as CustomEvent<LazyImportFailedDetail>).detail;
+    this.setState({
+      hasError: true,
+      error: new Error(`${LAZY_IMPORT_ERROR_PREFIX} ${detail?.chunkName ?? 'unknown chunk'}`),
+    });
+  };
 
   handleReset = (): void => {
     this.setState({ hasError: false, error: null });
@@ -66,6 +85,7 @@ interface DefaultErrorFallbackProps {
 
 const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onReset }) => {
   const { t } = useTranslation('common');
+  const isLazyImportError = error?.message.startsWith(LAZY_IMPORT_ERROR_PREFIX) ?? false;
   return (
   <div
     style={{
@@ -100,7 +120,7 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
             lineHeight: '1.5',
           }}
         >
-          {t('errorBoundary.message')}
+          {isLazyImportError ? t('errorBoundary.refreshRequired') : t('errorBoundary.message')}
         </p>
 
         {error && process.env.NODE_ENV === 'development' && (
@@ -122,31 +142,33 @@ const DefaultErrorFallback: React.FC<DefaultErrorFallbackProps> = ({ error, onRe
         )}
 
         <div style={{ display: 'flex', gap: cssVars.spacing.sm }}>
-          <button
-            onClick={onReset}
-            style={{
-              padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-              background: cssVars.colors.primary,
-              border: 'none',
-              borderRadius: cssVars.borderRadius.sm,
-              color: cssVars.colors.onPrimary,
-              fontSize: cssVars.fontSizes.md,
-              fontWeight: cssVars.fontWeights.semibold,
-              cursor: 'pointer',
-            }}
-          >
-            {t('actions.retry')}
-          </button>
+          {!isLazyImportError && (
+            <button
+              onClick={onReset}
+              style={{
+                padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
+                background: cssVars.colors.primary,
+                border: 'none',
+                borderRadius: cssVars.borderRadius.sm,
+                color: cssVars.colors.onPrimary,
+                fontSize: cssVars.fontSizes.md,
+                fontWeight: cssVars.fontWeights.semibold,
+                cursor: 'pointer',
+              }}
+            >
+              {t('actions.retry')}
+            </button>
+          )}
           <button
             onClick={() => window.location.reload()}
             style={{
               padding: `${cssVars.spacing.sm} ${cssVars.spacing.md}`,
-              background: cssVars.colors.surfaceElevated,
-              border: `1px solid ${cssVars.colors.border}`,
+              background: isLazyImportError ? cssVars.colors.primary : cssVars.colors.surfaceElevated,
+              border: isLazyImportError ? 'none' : `1px solid ${cssVars.colors.border}`,
               borderRadius: cssVars.borderRadius.sm,
-              color: cssVars.colors.textPrimary,
+              color: isLazyImportError ? cssVars.colors.onPrimary : cssVars.colors.textPrimary,
               fontSize: cssVars.fontSizes.md,
-              fontWeight: cssVars.fontWeights.medium,
+              fontWeight: isLazyImportError ? cssVars.fontWeights.semibold : cssVars.fontWeights.medium,
               cursor: 'pointer',
             }}
           >
