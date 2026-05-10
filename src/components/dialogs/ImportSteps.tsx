@@ -101,6 +101,7 @@ export const SelectStep = ({
         accept=".json,.csv"
         onChange={onFileSelect}
         style={{ display: 'none' }}
+        data-testid="import-file-input"
       />
 
       {selectedFile && !error && (
@@ -110,7 +111,7 @@ export const SelectStep = ({
       )}
 
       {error && (
-        <div style={errorStyle}>
+        <div style={errorStyle} data-testid="import-error">
           {error}
         </div>
       )}
@@ -337,7 +338,7 @@ export const PreviewStep = ({ tournament, onBack, onImport }: PreviewStepProps) 
         <Button variant="secondary" size="md" onClick={onBack} fullWidth>
           {t('import.preview.back')}
         </Button>
-        <Button variant="primary" size="md" onClick={onImport} fullWidth>
+        <Button variant="primary" size="md" onClick={onImport} fullWidth data-testid="import-confirm">
           {t('import.preview.import')}
         </Button>
       </div>
@@ -389,7 +390,7 @@ export const SuccessStep = ({ tournament, onComplete }: SuccessStepProps) => {
         </p>
       </div>
 
-      <Button variant="primary" size="md" onClick={onComplete} fullWidth>
+      <Button variant="primary" size="md" onClick={onComplete} fullWidth data-testid="import-success-go">
         {t('import.success.goToTournament')}
       </Button>
     </>
