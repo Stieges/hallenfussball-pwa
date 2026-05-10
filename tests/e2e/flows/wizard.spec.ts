@@ -337,6 +337,76 @@ test.describe('Tournament Creation Wizard', () => {
     }
   });
 
+  // ═══════════════════════════════════════════════════════════════
+  // SMOKE: KOMPLETTER WIZARD-FLOW (Step 1 → Publish)
+  // ═══════════════════════════════════════════════════════════════
+
+  test('Smoke: Kompletter Wizard-Flow Step 1 bis Veröffentlichen', async ({ page }) => {
+    // Step 1: Stammdaten
+    await expect(page.getByRole('heading', { name: t('wizard:step3.title') })).toBeVisible();
+
+    const nameInput = page.locator(`input[placeholder*="${t('wizard:step3.tournamentNamePlaceholder')}"]`).or(
+      page.locator('label:has-text("Turniername")').locator('..').locator('input')
+    );
+    await nameInput.first().fill('Smoke Test Turnier');
+
+    const locationInput = page.locator('input[placeholder*="Sporthalle"]').or(
+      page.locator('label:has-text("Hallenname")').locator('..').locator('input')
+    );
+    if (await locationInput.count() > 0) {
+      await locationInput.first().fill('E2E Halle');
+    }
+
+    await page.locator('input[type="date"]').first().fill('2026-12-01');
+    await page.locator('input[type="time"]').first().fill('09:00');
+
+    const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
+    await expect(nextButton).toBeEnabled({ timeout: 5000 });
+    await nextButton.click();
+
+    // Step 2: Sport & Turniertyp - klassisch wählen
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=2/, { timeout: 10000 });
+    await page.locator('[data-testid="wizard-type-classic"]').click();
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 3: Modus - Defaults akzeptieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=3/, { timeout: 10000 });
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 4: Gruppen & Felder - Defaults akzeptieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=4/, { timeout: 10000 });
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 5: Teams - 4 Teams generieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=5/, { timeout: 10000 });
+
+    const generateButton = page.locator('[data-testid="wizard-generate-teams"]');
+    if (await generateButton.count() > 0 && await generateButton.isVisible()) {
+      await generateButton.click();
+    } else {
+      // Fallback: manuell 4 Teams hinzufügen
+      const addTeam = page.locator('[data-testid="wizard-add-team"]');
+      for (let i = 1; i <= 4; i++) {
+        await addTeam.click();
+        await page.locator(`input[placeholder="${t('wizard:step4.teamNamePlaceholder')}"]`).last().fill(`Team ${i}`);
+      }
+    }
+
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 6: Übersicht → Vorschau generieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=6/, { timeout: 10000 });
+    await page.locator('[data-testid="wizard-show-preview"]').click();
+
+    // Preview-Ansicht: Publish-Button erscheint nach Schedule-Generierung
+    await expect(page.locator('[data-testid="preview-publish"]')).toBeVisible({ timeout: 15000 });
+    await page.locator('[data-testid="preview-publish"]').click();
+
+    // Erwartung: Redirect zur Tournament-Verwaltung mit ID in URL (nicht "/tournament/new")
+    await expect(page).toHaveURL(/\/tournament\/(?!new)[a-z0-9-]+/i, { timeout: 10000 });
+    await expect(page).not.toHaveURL(/\/tournament\/new/);
+  });
+
   test('Responsive: Wizard auf Mobile funktioniert', async ({ page }) => {
     // GIVEN - Check if we're on mobile viewport
     const viewport = page.viewportSize();
