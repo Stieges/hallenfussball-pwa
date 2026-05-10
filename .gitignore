@@ -47,8 +47,9 @@ clarify-*.js
 search-property-names.js
 validate-bye-fix.js
 
-# Interne Dokumentation (nicht öffentlich)
+# Interne Dokumentation, Pläne, Reviews, Investigates (nicht öffentlich)
 docs/
+reviews/
 
 # Playwright test results
 test-results/
