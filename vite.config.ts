@@ -126,8 +126,8 @@ export default defineConfig(({ mode }) => ({
     // Sentry source map upload - only in production with auth token
     mode === 'production' && process.env.SENTRY_AUTH_TOKEN
       ? sentryVitePlugin({
-          org: 'stieges',
-          project: 'hallenfussball-pwa',
+          org: 'stiegler-is',
+          project: 'javascript-react',
           authToken: process.env.SENTRY_AUTH_TOKEN,
           sourcemaps: {
             filesToDeleteAfterUpload: ['./dist/**/*.map'],
