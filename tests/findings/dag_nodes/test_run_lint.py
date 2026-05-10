@@ -47,3 +47,18 @@ def test_run_lint_sets_lint_passed_true_on_zero_exit():
     call_args = mock_run.call_args
     assert call_args[0][0] == ["npx", "eslint", "--max-warnings", "0", "src/hooks/foo.ts"]
     assert call_args[1]["timeout"] == 60
+
+
+def test_run_lint_sets_needs_human_on_lint_fail():
+    state = _state(fix_applied=True, path="src/hooks/useClickOutside.ts")
+    eslint_output = (
+        "55:6  warning  React Hook useEffect has a missing dependency: 'ref'.   react-hooks/exhaustive-deps\n"
+        "✖ 1 problem (0 errors, 1 warning)"
+    )
+    with patch("findings.dag_nodes.run_lint.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=1, stdout=eslint_output, stderr="")
+        state = run_lint(state, repo_root="/tmp")
+    assert state.lint_passed is False
+    assert state.review_verdict == "NEEDS_HUMAN"
+    assert "react-hooks/exhaustive-deps" in state.review_reasoning
+    assert "exit 1" in state.review_reasoning
