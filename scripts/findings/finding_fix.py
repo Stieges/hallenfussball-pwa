@@ -138,11 +138,15 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
                 state.review_verdict = None
                 state.review_reasoning = None
                 state.review_concerns = []
+                state.lint_passed = None
+                state.lint_output = None
                 state = plan_changes(state, repo_root=repo_root)
                 if state.planned_changes:
                     state = apply_patch(state, repo_root=repo_root)
                     if state.fix_applied:
-                        state = review_patch(state)
+                        state = run_lint(state, repo_root=repo_root)
+                        if state.review_verdict is None:
+                            state = review_patch(state)
                         if state.review_verdict == "APPROVED":
                             state = run_tests(state, repo_root=repo_root)
 

@@ -222,3 +222,43 @@ def test_lint_fail_skips_review_and_tests(tmp_path):
     assert result.review_verdict == "NEEDS_HUMAN"
     assert "react-hooks/exhaustive-deps" in result.review_reasoning
     assert result.tests_pass is None
+
+
+def test_fallback_path_runs_lint_pregate(tmp_path):
+    """Fallback-flow also routes through run_lint before review_patch."""
+    findings = tmp_path / "docs" / "findings"
+    findings.mkdir(parents=True)
+    (findings / "F-006.md").write_text(
+        "---\nid: F-006\nseverity: medium\narea: ux\ntitle: t\nfile: src/u.ts\n"
+        "status: open\nsource: reviews/r.md\ndetected: 2026-05-07\nrelated: []\n"
+        "acceptance_criteria: [AK1]\n---\n\nbody\n"
+    )
+    src = tmp_path / "src" / "u.ts"
+    src.parent.mkdir(parents=True)
+    src.write_text("let u = 1;\n")
+
+    eslint_output = "1:1  warning  some-rule  test\n✖ 1 problem"
+
+    def _fake_subprocess(args, **kwargs):
+        if "eslint" in args:
+            return MagicMock(returncode=1, stdout=eslint_output, stderr="")
+        return MagicMock(returncode=0, stdout="ok", stderr="")
+
+    with patch("findings.dag_nodes.plan_changes._call_plan_llm") as mock_plan, \
+         patch("findings.dag_nodes.judge_necessity._call_judge_llm") as mock_judge, \
+         patch("findings.dag_nodes.review_patch._call_review_llm") as mock_review, \
+         patch("findings.dag_nodes.run_tests.subprocess.run", side_effect=_fake_subprocess):
+        # First plan call (primary aihub) fails JSON, second (fallback) succeeds → triggers fallback flow
+        mock_plan.side_effect = [
+            "INVALID JSON",
+            '{"analyse": "fix", "aenderungen": [{"typ": "replace_text", "find": "let u = 1;", "replace": "const u = 1;"}]}',
+        ]
+        mock_judge.return_value = '{"is_still_valid": true, "reasoning":"y"}'
+
+        result = run_finding_fix(finding_id="F-006", findings_dir=findings, repo_root=tmp_path)
+
+    # Fallback ran AND lint Pre-Gate caught the failure → review never invoked
+    assert result.fallback_used is True
+    assert result.lint_passed is False
+    assert result.review_verdict == "NEEDS_HUMAN"
+    mock_review.assert_not_called()
