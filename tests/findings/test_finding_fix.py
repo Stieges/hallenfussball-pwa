@@ -20,10 +20,14 @@ def test_full_pipeline_low_severity_with_mocked_llm(tmp_path):
     src.parent.mkdir(parents=True)
     src.write_text("let x = 1;\n")
 
+    def _fake_subprocess(args, **kwargs):
+        # run_lint runs `npx eslint ...`, run_tests runs `npm test ...`
+        return MagicMock(returncode=0, stdout="ok", stderr="")
+
     with patch("findings.dag_nodes.judge_necessity._call_judge_llm") as mock_judge, \
          patch("findings.dag_nodes.plan_changes._call_plan_llm") as mock_plan, \
          patch("findings.dag_nodes.review_patch._call_review_llm") as mock_review, \
-         patch("findings.dag_nodes.run_tests.subprocess.run") as mock_run:
+         patch("findings.dag_nodes.run_tests.subprocess.run", side_effect=_fake_subprocess):
         mock_judge.return_value = '{"is_still_valid": true, "reasoning": "yes"}'
         mock_plan.return_value = (
             '{"analyse": "test fix", "aenderungen": ['
@@ -31,7 +35,6 @@ def test_full_pipeline_low_severity_with_mocked_llm(tmp_path):
             ']}'
         )
         mock_review.return_value = '{"verdict": "APPROVED", "reasoning": "looks good"}'
-        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
 
         result = run_finding_fix(
             finding_id="F-001",
@@ -42,6 +45,7 @@ def test_full_pipeline_low_severity_with_mocked_llm(tmp_path):
     assert result.fix_applied is True
     assert result.tests_pass is True
     assert result.review_verdict == "APPROVED"
+    assert result.lint_passed is True
     # File content should have changed
     assert src.read_text() == "const x = 1;\n"
     # The status should be flipped to 'fixed'
@@ -61,11 +65,14 @@ def test_fallback_kicks_in_after_aihub_failure(tmp_path):
     src.parent.mkdir(parents=True)
     src.write_text("let a = 1;\n")
 
-    # Simulate aihub failure in plan_changes → fallback to claude haiku re-runs plan
+    def _fake_subprocess(args, **kwargs):
+        return MagicMock(returncode=0, stdout="ok", stderr="")
+
+    # Simulate aihub failure in plan_changes → fallback re-runs plan
     with patch("findings.dag_nodes.plan_changes._call_plan_llm") as mock_plan, \
          patch("findings.dag_nodes.judge_necessity._call_judge_llm") as mock_judge, \
          patch("findings.dag_nodes.review_patch._call_review_llm") as mock_review, \
-         patch("findings.dag_nodes.run_tests.subprocess.run") as mock_run:
+         patch("findings.dag_nodes.run_tests.subprocess.run", side_effect=_fake_subprocess):
         # First call (aihub) fails JSON parse, second call (fallback) succeeds
         mock_plan.side_effect = [
             "INVALID JSON",
@@ -73,7 +80,6 @@ def test_fallback_kicks_in_after_aihub_failure(tmp_path):
         ]
         mock_judge.return_value = '{"is_still_valid": true, "reasoning":"y"}'
         mock_review.return_value = '{"verdict": "APPROVED", "reasoning": "looks good"}'
-        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
 
         result = run_finding_fix(finding_id="F-002", findings_dir=findings, repo_root=tmp_path)
 
@@ -126,10 +132,17 @@ def test_review_rejected_skips_tests(tmp_path):
     src.parent.mkdir(parents=True)
     src.write_text("let w = 1;\n")
 
+    npm_test_calls = []
+
+    def _fake_subprocess(args, **kwargs):
+        if args[0:2] == ["npm", "test"]:
+            npm_test_calls.append(args)
+        return MagicMock(returncode=0, stdout="ok", stderr="")
+
     with patch("findings.dag_nodes.judge_necessity._call_judge_llm") as mock_judge, \
          patch("findings.dag_nodes.plan_changes._call_plan_llm") as mock_plan, \
          patch("findings.dag_nodes.review_patch._call_review_llm") as mock_review, \
-         patch("findings.dag_nodes.run_tests.subprocess.run") as mock_run:
+         patch("findings.dag_nodes.run_tests.subprocess.run", side_effect=_fake_subprocess):
         mock_judge.return_value = '{"is_still_valid": true, "reasoning": "yes"}'
         mock_plan.return_value = (
             '{"analyse": "test fix", "aenderungen": ['
@@ -144,9 +157,68 @@ def test_review_rejected_skips_tests(tmp_path):
             repo_root=tmp_path,
         )
 
-    # Review rejected → tests must NOT have been run
-    mock_run.assert_not_called()
+    # Review rejected → tests must NOT have been run (no npm test invocation)
+    assert npm_test_calls == []
     assert result.review_verdict == "REJECTED"
     # fix_applied is True (patch was applied), but tests_pass is None
     assert result.fix_applied is True
+    assert result.tests_pass is None
+
+
+def test_lint_fail_skips_review_and_tests(tmp_path):
+    """Pre-Gate: lint-fail sets NEEDS_HUMAN, so review_patch and run_tests are skipped.
+
+    Captures the F-037 class of bugs: reviewer halluzinated APPROVED on a patch
+    that violates react-hooks/exhaustive-deps. With run_lint as deterministic
+    Pre-Gate, the LLM reviewer is never invoked.
+    """
+    findings = tmp_path / "docs" / "findings"
+    findings.mkdir(parents=True)
+    (findings / "F-005.md").write_text(
+        "---\nid: F-005\nseverity: low\narea: ux\ntitle: lint-fail case\nfile: src/v.ts\n"
+        "status: open\nsource: reviews/r.md\ndetected: 2026-05-07\nrelated: []\n"
+        "acceptance_criteria: []\n---\n\nbody\n"
+    )
+    src = tmp_path / "src" / "v.ts"
+    src.parent.mkdir(parents=True)
+    src.write_text("let v = 1;\n")
+
+    eslint_output = (
+        "1:1  warning  React Hook useEffect has a missing dependency: 'v'.   react-hooks/exhaustive-deps\n"
+        "✖ 1 problem (0 errors, 1 warning)"
+    )
+    npm_test_calls = []
+
+    def _fake_subprocess(args, **kwargs):
+        if "eslint" in args:
+            return MagicMock(returncode=1, stdout=eslint_output, stderr="")
+        if args[0:2] == ["npm", "test"]:
+            npm_test_calls.append(args)
+        return MagicMock(returncode=0, stdout="ok", stderr="")
+
+    with patch("findings.dag_nodes.judge_necessity._call_judge_llm") as mock_judge, \
+         patch("findings.dag_nodes.plan_changes._call_plan_llm") as mock_plan, \
+         patch("findings.dag_nodes.review_patch._call_review_llm") as mock_review, \
+         patch("findings.dag_nodes.run_tests.subprocess.run", side_effect=_fake_subprocess):
+        mock_judge.return_value = '{"is_still_valid": true, "reasoning": "yes"}'
+        mock_plan.return_value = (
+            '{"analyse": "test fix", "aenderungen": ['
+            '{"typ": "replace_text", "find": "let v = 1;", "replace": "const v = 1;"}'
+            ']}'
+        )
+
+        result = run_finding_fix(
+            finding_id="F-005",
+            findings_dir=findings,
+            repo_root=tmp_path,
+        )
+
+    # Pre-Gate semantics: review_patch and run_tests must NOT be called
+    mock_review.assert_not_called()
+    assert npm_test_calls == []
+    # State reflects the Pre-Gate verdict
+    assert result.fix_applied is True  # apply_patch ran successfully
+    assert result.lint_passed is False
+    assert result.review_verdict == "NEEDS_HUMAN"
+    assert "react-hooks/exhaustive-deps" in result.review_reasoning
     assert result.tests_pass is None

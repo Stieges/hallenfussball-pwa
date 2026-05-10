@@ -50,6 +50,7 @@ from .dag_nodes.apply_fix import apply_fix  # kept for back-compat; no longer ca
 from .dag_nodes.plan_changes import plan_changes
 from .dag_nodes.apply_patch import apply_patch
 from .dag_nodes.review_patch import review_patch
+from .dag_nodes.run_lint import run_lint
 from .dag_nodes.run_tests import run_tests
 from .dag_nodes.update_index import update_finding_status, regenerate_index
 
@@ -77,9 +78,12 @@ def _run_dag(state: FindingFixState, *, repo_root: Path) -> FindingFixState:
     state = apply_patch(state, repo_root=repo_root)
     if not state.fix_applied:
         return state  # patch ops failed (e.g., replace_text not unique)
-    state = review_patch(state)
+    state = run_lint(state, repo_root=repo_root)
+    if state.review_verdict is None:
+        # lint passed (or was skipped for non-JS/TS) → ask LLM reviewer
+        state = review_patch(state)
     if state.review_verdict != "APPROVED":
-        # REJECTED or NEEDS_HUMAN: do NOT run tests, leave file as patched but flag for human
+        # REJECTED or NEEDS_HUMAN (incl. lint-fail): do NOT run tests, flag for human
         return state
     state = run_tests(state, repo_root=repo_root)
     return state
