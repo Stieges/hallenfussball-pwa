@@ -338,6 +338,40 @@ test.describe('Tournament Creation Wizard', () => {
   });
 
   // ═══════════════════════════════════════════════════════════════
+  // DEEP-LINK: Direkter Sprung auf Step bleibt ohne Redirect
+  // ═══════════════════════════════════════════════════════════════
+
+  // Bekannte Inkonsistenz: Deep-Link auf Step 3+ ohne vorherige Step-1-Daten
+  // lässt die URL stehen, rendert aber stillschweigend Step 1. test.fail() pinnt
+  // den Bug als known-failing — sobald die Validation den Step ehrlich rendert
+  // oder sauber zu Step 1 redirected (inkl. URL-Reset), schlägt der Test fehl
+  // und wird zurück auf test() konvertiert.
+  // Siehe Finding F-DEEPLINK-1 (HP-1 Closure-Doc).
+  test.fail('Deep-Link: Step 3 wird direkt gerendert ohne Redirect zu Step 1', async ({ page }) => {
+    await page.goto('/#/tournament/new?step=3');
+    await page.waitForLoadState('networkidle');
+
+    // URL bleibt step=3
+    await expect(page).toHaveURL(/\?step=3/);
+
+    // Step-3-Heading "Modus & Spielsystem" sollte sichtbar sein (aktuell: Stammdaten erscheint)
+    await expect(page.getByRole('heading', { name: t('wizard:step2.title') })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Deep-Link: URL bleibt nach Browser-Refresh erhalten', async ({ page }) => {
+    await page.goto('/#/tournament/new?step=4');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\?step=4/);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // URL muss step=4 bewahren (Content selbst kann durch fehlende Vorgänger-Steps
+    // gerendert sein — separate Inkonsistenz, siehe test.fail oben).
+    await expect(page).toHaveURL(/\?step=4/);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
   // SMOKE: KOMPLETTER WIZARD-FLOW (Step 1 → Publish)
   // ═══════════════════════════════════════════════════════════════
 

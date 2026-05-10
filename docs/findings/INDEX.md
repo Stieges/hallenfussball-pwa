@@ -322,3 +322,4 @@
 | F-318 | 🟡 | architecture | Status Labels Duplikation zwischen Komponenten | src/features/tournament-management/components/schedule-filter/FilterChips.tsx | 15m | open |
 | F-319 | 🟡 | architecture | Hardcoded letterSpacing statt Design Token | src/features/tournament-management/components/schedule-filter/FilterDropdown.tsx | 10m | open |
 | F-320 | 🟡 | architecture | Hardcoded padding statt Design Token | src/features/tournament-management/components/schedule-filter/FilterChips.tsx | 5m | open |
+| F-321 | 🟡 | ux | Wizard-Deep-Link rendert Step 1 obwohl URL höhere Step-Nummer trägt | src/screens/TournamentCreationScreen.tsx | 1h | open |
