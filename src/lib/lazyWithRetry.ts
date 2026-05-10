@@ -27,7 +27,7 @@ export interface LazyImportFailedDetail {
   attempts: number;
 }
 
-async function importWithRetry<T>(
+export async function importWithRetry<T>(
   factory: ModuleFactory<T>,
   chunkName: string,
 ): Promise<{ default: ComponentType<T> }> {

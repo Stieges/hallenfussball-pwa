@@ -14,4 +14,17 @@ describe('lazyWithRetry', () => {
 
     expect(importer).not.toHaveBeenCalled();
   });
+
+  it('retries on transient import failure and eventually succeeds', async () => {
+    const fakeComponent = { default: () => null };
+    const importer = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce(fakeComponent);
+
+    const mod = await import('../lazyWithRetry');
+    expect(typeof mod.importWithRetry).toBe('function');
+    await expect(mod.importWithRetry(importer, 'TestChunk')).resolves.toEqual(fakeComponent);
+    expect(importer).toHaveBeenCalledTimes(2);
+  });
 });
