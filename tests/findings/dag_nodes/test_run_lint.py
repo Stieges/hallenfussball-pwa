@@ -26,3 +26,11 @@ def test_run_lint_skips_if_no_fix_applied():
     assert state.lint_passed is None
     assert state.review_verdict is None
     mock_run.assert_not_called()
+
+
+def test_run_lint_skips_for_non_js_extensions():
+    state = _state(fix_applied=True, path="docs/some.md")
+    with patch("findings.dag_nodes.run_lint.subprocess.run") as mock_run:
+        state = run_lint(state, repo_root="/tmp")
+    assert state.lint_passed is None
+    mock_run.assert_not_called()

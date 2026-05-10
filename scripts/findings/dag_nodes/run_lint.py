@@ -24,4 +24,9 @@ def run_lint(
 ) -> FindingFixState:
     if not state.fix_applied:
         return state
+    if not state.path_resolved:
+        return state
+    ext = Path(state.path_resolved).suffix.lower()
+    if ext not in _LINTABLE_EXTENSIONS:
+        return state
     return state
