@@ -174,6 +174,7 @@ def run_finding_fix(*, finding_id: str, findings_dir: Path, repo_root: Path) -> 
             "review_reasoning": state.review_reasoning,
             "review_concerns_count": len(state.review_concerns),
             "review_concerns": state.review_concerns,
+            "lint_passed": state.lint_passed,
         })
 
     return state
