@@ -27,4 +27,33 @@ describe('lazyWithRetry', () => {
     await expect(mod.importWithRetry(importer, 'TestChunk')).resolves.toEqual(fakeComponent);
     expect(importer).toHaveBeenCalledTimes(2);
   });
+
+  it('reports to Sentry and dispatches event after all retries fail', async () => {
+    const sentryMock = vi.hoisted(() => vi.fn());
+    vi.mock('../sentry', () => ({ captureFeatureError: sentryMock }));
+
+    const eventListener = vi.fn();
+    window.addEventListener('lazy-import-failed', eventListener);
+
+    const importer = vi.fn().mockRejectedValue(new Error('chunk not found'));
+    const mod = await import('../lazyWithRetry');
+
+    await expect(mod.importWithRetry(importer, 'FailChunk')).rejects.toThrow('chunk not found');
+    expect(importer).toHaveBeenCalledTimes(3);
+    expect(sentryMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'chunk not found' }),
+      'lazy-import',
+      'FailChunk',
+      { attempts: 3 },
+    );
+    expect(eventListener).toHaveBeenCalled();
+    const customEvent = eventListener.mock.calls[0][0] as CustomEvent;
+    expect(customEvent.detail).toEqual({
+      chunkName: 'FailChunk',
+      error: expect.any(Error),
+      attempts: 3,
+    });
+
+    window.removeEventListener('lazy-import-failed', eventListener);
+  });
 });
