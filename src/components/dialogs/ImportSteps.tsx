@@ -241,7 +241,7 @@ export const WarningsStep = ({ warnings, onBack, onContinue }: WarningsStepProps
         <Button variant="secondary" size="md" onClick={onBack} fullWidth>
           {t('import.warnings.back')}
         </Button>
-        <Button variant="primary" size="md" onClick={onContinue} fullWidth>
+        <Button variant="primary" size="md" onClick={onContinue} fullWidth data-testid="import-warnings-continue">
           {t('import.warnings.continueAnyway')}
         </Button>
       </div>
