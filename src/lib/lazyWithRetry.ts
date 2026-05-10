@@ -19,7 +19,13 @@ export const LAZY_IMPORT_FAILED_EVENT = 'lazy-import-failed';
 const RETRY_COUNT = 3;
 const RETRY_BACKOFF_MS = [200, 500, 1500];
 
-type ModuleFactory<T> = () => Promise<{ default: ComponentType<T> }>;
+// `any` is the canonical generic constraint for "a React component with any props shape";
+// it preserves each call site's specific Props type via inference.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type AnyComponent = ComponentType<any>;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+type ModuleFactory<T extends AnyComponent> = () => Promise<{ default: T }>;
 
 export interface LazyImportFailedDetail {
   chunkName: string;
@@ -27,10 +33,10 @@ export interface LazyImportFailedDetail {
   attempts: number;
 }
 
-export async function importWithRetry<T>(
+export async function importWithRetry<T extends AnyComponent>(
   factory: ModuleFactory<T>,
   chunkName: string,
-): Promise<{ default: ComponentType<T> }> {
+): Promise<{ default: T }> {
   let lastError: Error | null = null;
   for (let attempt = 0; attempt < RETRY_COUNT; attempt++) {
     try {
@@ -52,6 +58,9 @@ export async function importWithRetry<T>(
   throw finalError;
 }
 
-export function lazyWithRetry<T>(factory: ModuleFactory<T>, chunkName: string) {
+export function lazyWithRetry<T extends AnyComponent>(
+  factory: ModuleFactory<T>,
+  chunkName: string,
+) {
   return lazy(() => importWithRetry(factory, chunkName));
 }
