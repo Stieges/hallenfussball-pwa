@@ -55,3 +55,17 @@ def test_finding_acceptance_criteria_optional_for_low(sample_finding_dict):
 def test_model_choice_for_critical():
     mc = ModelChoice(provider="claude", model="opus-4-6", require_human_review=True)
     assert mc.require_human_review is True
+
+
+def test_finding_fix_state_lint_passed_defaults_to_none():
+    """run_lint output fields exist and default to None (not yet executed)."""
+    finding = Finding(
+        id="F-001", severity=Severity.LOW, area="ux", title="t", file="src/x.ts",
+        status=Status.OPEN, source="r", detected="2026-05-07", related=[], acceptance_criteria=[],
+    )
+    state = FindingFixState(
+        finding=finding,
+        routing=ModelChoice(provider="aihub", model="x"),
+    )
+    assert state.lint_passed is None
+    assert state.lint_output is None
