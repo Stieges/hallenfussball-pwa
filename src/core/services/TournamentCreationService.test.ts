@@ -115,6 +115,40 @@ describe('TournamentCreationService', () => {
             expect(errors).toHaveLength(0);
         });
 
+        it('F-114: rejects empty/whitespace-only team names', () => {
+            const errors = service.validateStep(5, {
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: '   ' },
+                    { id: '3', name: '' },
+                ] as any,
+            });
+            expect(errors).toContain('Teamnamen dürfen nicht leer sein');
+        });
+
+        it('F-209: rejects mismatch between numberOfTeams and teams.length', () => {
+            const errors = service.validateStep(5, {
+                numberOfTeams: 4,
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: 'B' },
+                    { id: '3', name: 'C' },
+                ] as any,
+            });
+            expect(errors.some(e => e.includes('3 von 4'))).toBe(true);
+        });
+
+        it('F-209: no mismatch error when numberOfTeams matches teams.length', () => {
+            const errors = service.validateStep(5, {
+                numberOfTeams: 2,
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: 'B' },
+                ] as any,
+            });
+            expect(errors.find(e => e.includes('von'))).toBeUndefined();
+        });
+
         it('F-116: groupsAndFinals — group with empty allowedFieldIds is rejected', () => {
             const errors = service.validateStep(4, {
                 groupSystem: 'groupsAndFinals',

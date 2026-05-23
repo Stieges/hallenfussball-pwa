@@ -115,7 +115,7 @@
 | F-111 | 🟡 | data | Missing Tournament Abort Calculation | src/core/services/tournamentAbbruchService.ts | 1h | open |
 | F-112 | 🔴 | perf | Division durch Null in DurationEstimate.tsx | src/features/tournament-creation/components/DurationEstimate.tsx | 30m | fixed |
 | F-113 | 🔴 | data | startDate Validierung fehlt in Metadata | src/features/tournament-creation/Step3_Metadata.tsx | 20m | fixed |
-| F-114 | 🔴 | data | Team-Namen Validierung nicht vollständig | src/features/tournament-creation/Step4_Teams.tsx | 30m | open |
+| F-114 | 🔴 | data | Team-Namen Validierung nicht vollständig | src/features/tournament-creation/Step4_Teams.tsx | 30m | fixed |
 | F-115 | 🔴 | ux | Mobile Team-Verwaltung zu komplex | src/features/tournament-creation/Step4_Teams.tsx | 2h | open |
 | F-116 | 🔴 | data | Gruppe ohne Feld-Zuordnung möglich | src/features/tournament-creation/Step_GroupsAndFields.tsx | 45m | fixed |
 | F-117 | 🟠 | architecture | numberOfGroups State-Leck bei Moduswechsel | src/features/tournament-creation/Step2_ModeAndSystem.tsx | 30m | open |
@@ -210,13 +210,13 @@
 | F-206 | 🟡 | testing | PWA-Features ungetestet | public/sw.js | 2h | open |
 | F-207 | 🟠 | testing | Error-Handling nicht umfassend getestet | src/services/ | 2h | open |
 | F-208 | 🟡 | security | Security-Tests fehlen | tests/ | 4h | open |
-| F-209 | 🔴 | data | Team-Count Inkonsistenz zwischen numberOfTeams und teams.length | src/features/tournament-creation/Step4_Teams.tsx | 1h | open |
+| F-209 | 🔴 | data | Team-Count Inkonsistenz zwischen numberOfTeams und teams.length | src/features/tournament-creation/Step4_Teams.tsx | 1h | fixed |
 | F-210 | 🟠 | other | Ungleichgewicht bei Gruppenverteilung mit ungerader Teamzahl | src/features/tournament-creation/ScheduleGenerator.ts | 2h | open |
 | F-211 | 🔴 | other | Schedule-Generation ohne Error-Handling kann App crashen | src/features/tournament-creation/TournamentPreview.tsx | 1h | open |
 | F-212 | 🟡 | doc | Fehlendes Zod-Validierungsschema für Wizard | src/features/tournament-creation/wizardSchema.ts | 4h | open |
 | F-213 | 🔴 | ux | Keine Auto-Save Persistierung bei Browser-Crash | src/features/tournament-creation/TournamentWizard.tsx | 3h | open |
 | F-214 | 🟠 | ux | Keine Fortschrittsanzeige im Wizard-Flow | src/features/tournament-creation/TournamentWizard.tsx | 2h | open |
-| F-215 | 🟠 | a11y | XSS-Risiko bei Team-Namen ohne Input-Sanitization | src/features/tournament-creation/Step4_Teams.tsx | 2h | open |
+| F-215 | 🟠 | a11y | XSS-Risiko bei Team-Namen ohne Input-Sanitization | src/features/tournament-creation/Step4_Teams.tsx | 2h | fixed |
 | F-216 | ⚫ | data | LiveMatch Optimistic Locking ohne Conflict-Resolution | src/features/live-match/LiveMatch.ts | 4h | open |
 | F-217 | 🟠 | ux | Keine Warnung bei Browser-Schließen während Wizard aktiv | src/features/tournament-creation/TournamentWizard.tsx | 1h | open |
 | F-218 | 🟡 | ux | Kein Bulk-Import für Teams (CSV/Excel) | src/features/tournament-creation/Step4_Teams.tsx | 6h | open |

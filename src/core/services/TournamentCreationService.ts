@@ -145,6 +145,18 @@ export class TournamentCreationService {
                     if (this.findDuplicates(teamNames).size > 0) {
                         errors.push('Teamnamen müssen eindeutig sein');
                     }
+                    // F-114: empty/whitespace-only names block save
+                    if (data.teams.some(t => !t.name?.trim())) {
+                        errors.push('Teamnamen dürfen nicht leer sein');
+                    }
+                }
+                // F-209: team count must match planned numberOfTeams
+                if (
+                    typeof data.numberOfTeams === 'number' &&
+                    Array.isArray(data.teams) &&
+                    data.teams.length !== data.numberOfTeams
+                ) {
+                    errors.push(`Anzahl Teams: ${data.teams.length} von ${data.numberOfTeams} hinzugefügt`);
                 }
                 break;
         }

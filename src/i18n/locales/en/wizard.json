@@ -134,6 +134,8 @@
     "noTeams": "No teams added yet",
     "teamNamePlaceholder": "Enter team name",
     "duplicateName": "This name is already used",
+    "emptyName": "Team name cannot be empty",
+    "countMismatch": "{{actual}} of {{expected}} teams added — please add or remove teams",
     "avatarExpand": "Edit logo and colors for {{name}}",
     "avatarCollapse": "Collapse logo and colors for {{name}}",
     "collapseLabel": "Collapse",
