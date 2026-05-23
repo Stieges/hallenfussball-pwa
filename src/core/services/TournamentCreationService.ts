@@ -125,6 +125,16 @@ export class TournamentCreationService {
                         errors.push('Gruppennamen müssen eindeutig sein');
                     }
                 }
+                // F-116: in groupsAndFinals every group must be assigned to ≥1 field.
+                // `undefined` means "use all fields" (default), only an explicit empty array is invalid.
+                if (data.groupSystem === 'groupsAndFinals' && data.groups) {
+                    const hasUnassignedGroup = data.groups.some(
+                        g => Array.isArray(g.allowedFieldIds) && g.allowedFieldIds.length === 0
+                    );
+                    if (hasUnassignedGroup) {
+                        errors.push('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+                    }
+                }
                 break;
             case 5:
                 if ((data.teams?.length ?? 0) < 2) {

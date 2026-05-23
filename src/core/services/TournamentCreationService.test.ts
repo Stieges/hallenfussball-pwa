@@ -114,6 +114,39 @@ describe('TournamentCreationService', () => {
             });
             expect(errors).toHaveLength(0);
         });
+
+        it('F-116: groupsAndFinals — group with empty allowedFieldIds is rejected', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'groupsAndFinals',
+                groups: [
+                    { id: '1', customName: 'A', allowedFieldIds: ['f1'] },
+                    { id: '2', customName: 'B', allowedFieldIds: [] }, // Missing assignment
+                ] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+        });
+
+        it('F-116: groupsAndFinals — undefined allowedFieldIds is valid (uses all fields)', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'groupsAndFinals',
+                groups: [
+                    { id: '1', customName: 'A' },
+                    { id: '2', customName: 'B' },
+                ] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+        });
+
+        it('F-116: roundRobin — empty allowedFieldIds is not flagged (groups unused)', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'roundRobin',
+                groups: [{ id: '1', customName: 'A', allowedFieldIds: [] }] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+        });
     });
 
     describe('saveDraft', () => {

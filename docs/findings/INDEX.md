@@ -117,7 +117,7 @@
 | F-113 | 🔴 | data | startDate Validierung fehlt in Metadata | src/features/tournament-creation/Step3_Metadata.tsx | 20m | fixed |
 | F-114 | 🔴 | data | Team-Namen Validierung nicht vollständig | src/features/tournament-creation/Step4_Teams.tsx | 30m | open |
 | F-115 | 🔴 | ux | Mobile Team-Verwaltung zu komplex | src/features/tournament-creation/Step4_Teams.tsx | 2h | open |
-| F-116 | 🔴 | data | Gruppe ohne Feld-Zuordnung möglich | src/features/tournament-creation/Step_GroupsAndFields.tsx | 45m | open |
+| F-116 | 🔴 | data | Gruppe ohne Feld-Zuordnung möglich | src/features/tournament-creation/Step_GroupsAndFields.tsx | 45m | fixed |
 | F-117 | 🟠 | architecture | numberOfGroups State-Leck bei Moduswechsel | src/features/tournament-creation/Step2_ModeAndSystem.tsx | 30m | open |
 | F-118 | 🟠 | architecture | Referee Config Typisierung unsicher | src/features/tournament-creation/components/RefereeSettings.tsx | 20m | open |
 | F-119 | 🟠 | data | ShortCode Eindeutigkeit nicht geprüft | src/features/tournament-creation/components/NameGrid.tsx | 30m | open |
