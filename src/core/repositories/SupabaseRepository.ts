@@ -18,6 +18,7 @@ import {
   mapMatchUpdateToSupabase,
   mapTeamToSupabase,
   mapMatchToSupabase,
+  type TournamentUpdate,
 } from './supabaseMappers';
 
 /**
@@ -110,7 +111,7 @@ export class SupabaseRepository implements ITournamentRepository {
    * Prevents overwriting valid teams/matches when only changing settings.
    */
   async updateTournamentMetadata(id: string, metadata: Partial<Tournament>): Promise<void> {
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: TournamentUpdate = {};
 
     // Map frontend fields to DB columns
     if (metadata.title !== undefined) {updatePayload.title = metadata.title;}
@@ -366,7 +367,7 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     // Update tournament's updated_at timestamp AND version if provided
-    const updatePayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const updatePayload: TournamentUpdate = { updated_at: new Date().toISOString() };
     if (baseVersion !== undefined) {
       updatePayload.version = baseVersion + 1;
     }

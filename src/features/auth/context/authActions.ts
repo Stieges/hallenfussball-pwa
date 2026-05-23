@@ -17,6 +17,7 @@ import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
 import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
+import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 
@@ -770,23 +771,23 @@ export async function updateProfile(
   }
 
   try {
-    const profileUpdates: Record<string, unknown> = {};
-
+    let displayName: string | undefined;
     if (updates.name !== undefined) {
       const trimmedName = updates.name.trim();
       if (trimmedName.length < 2 || trimmedName.length > 100) {
         return { success: false, error: AUTH_ERRORS.NAME_LENGTH_INVALID };
       }
-      profileUpdates.display_name = trimmedName;
+      displayName = trimmedName;
     }
 
-    if (updates.avatarUrl !== undefined) {
-      profileUpdates.avatar_url = updates.avatarUrl;
-    }
+    const profileUpdates = mapProfileUpdateToSupabase({
+      displayName,
+      avatarUrl: updates.avatarUrl,
+    });
 
     const { error } = await supabase
       .from('profiles')
-      .update(profileUpdates as { display_name?: string; avatar_url?: string })
+      .update(profileUpdates)
       .eq('id', user.id);
 
     if (error) {

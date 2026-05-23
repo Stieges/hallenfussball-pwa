@@ -10,6 +10,11 @@ import type { TournamentMembership, TournamentRole } from '../types/auth.types';
 import { canChangeRole, canSetRoleTo, canTransferOwnership } from '../utils/permissions';
 // getCurrentUser removed - userId now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
+import {
+  mapMembershipInsertToSupabase,
+  mapMembershipRoleUpdateToSupabase,
+  mapMembershipTeamsUpdateToSupabase,
+} from '../../../core/repositories/supabaseMappers';
 
 // ============================================
 // TYPES
@@ -100,14 +105,16 @@ export const createOwnerMembership = async (
   try {
     const { data, error } = await supabase
       .from('tournament_collaborators')
-      .insert({
-        tournament_id: tournamentId,
-        user_id: userId,
-        role: 'owner',
-        team_ids: [],
-        created_at: now,
-        accepted_at: now, // Owner is automatically accepted
-      })
+      .insert(
+        mapMembershipInsertToSupabase({
+          tournamentId,
+          userId,
+          role: 'owner',
+          teamIds: [],
+          createdAtIso: now,
+          acceptedAtIso: now, // Owner is automatically accepted
+        })
+      )
       .select()
       .single();
 
@@ -246,10 +253,12 @@ export const changeRole = async (
     // Update role
     const { data: updatedData, error: updateError } = await supabase
       .from('tournament_collaborators')
-      .update({
-        role: newRole,
-        team_ids: newRole === 'trainer' ? (newTeamIds ?? targetMembership.teamIds) : [],
-      })
+      .update(
+        mapMembershipRoleUpdateToSupabase({
+          role: newRole,
+          teamIds: newRole === 'trainer' ? (newTeamIds ?? targetMembership.teamIds) : [],
+        })
+      )
       .eq('id', membershipId)
       .select()
       .single();
@@ -313,10 +322,9 @@ export const updateTrainerTeams = async (
     }
 
     // Update team assignments
-    // Note: team_ids exists in DB but Supabase types may be out of sync
     const { data: updatedData, error: updateError } = await supabase
       .from('tournament_collaborators')
-      .update({ team_ids: teamIds } as Record<string, unknown>)
+      .update(mapMembershipTeamsUpdateToSupabase(teamIds))
       .eq('id', membershipId)
       .select()
       .single();

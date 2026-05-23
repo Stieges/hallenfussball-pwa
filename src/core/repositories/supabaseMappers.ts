@@ -25,11 +25,18 @@ import type {
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
 type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
+type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
 type TeamRow = Database['public']['Tables']['teams']['Row'];
 type TeamInsert = Database['public']['Tables']['teams']['Insert'];
 type MatchRow = Database['public']['Tables']['matches']['Row'];
 type MatchInsert = Database['public']['Tables']['matches']['Insert'];
 type MatchUpdate = Database['public']['Tables']['matches']['Update'];
+type CollaboratorInsert = Database['public']['Tables']['tournament_collaborators']['Insert'];
+type CollaboratorUpdate = Database['public']['Tables']['tournament_collaborators']['Update'];
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+
+// Re-export so callers don't need to know the table-key plumbing.
+export type { TournamentUpdate, CollaboratorInsert, CollaboratorUpdate, ProfileUpdate };
 
 // =============================================================================
 // TEAM MAPPERS
@@ -601,4 +608,143 @@ export function mapTournamentToSupabase(
   );
 
   return { tournamentRow, teamRows, matchRows };
+}
+
+// =============================================================================
+// TOURNAMENT_COLLABORATORS MAPPERS (Invitations + Memberships)
+// =============================================================================
+
+export interface InvitationInsertInput {
+  tournamentId: string;
+  inviteCode: string;
+  role: string;
+  teamIds?: string[];
+  label?: string | null;
+  maxUses?: number;
+  expiresAtIso: string;
+  invitedBy: string;
+  invitedAtIso?: string;
+}
+
+/**
+ * Maps an invitation-creation request to a tournament_collaborators insert row.
+ * Used by invitationService.createInvitation.
+ */
+export function mapInvitationInsertToSupabase(
+  input: InvitationInsertInput
+): CollaboratorInsert {
+  return {
+    tournament_id: input.tournamentId,
+    invite_code: input.inviteCode,
+    role: input.role,
+    team_ids: input.teamIds ?? [],
+    label: input.label ?? null,
+    max_uses: input.maxUses ?? 1,
+    use_count: 0,
+    expires_at: input.expiresAtIso,
+    invited_by: input.invitedBy,
+    invited_at: input.invitedAtIso ?? new Date().toISOString(),
+  };
+}
+
+export interface InvitationAcceptUpdate {
+  userId: string;
+  acceptedAtIso: string;
+  newUseCount: number;
+}
+
+/**
+ * Maps an "invitation accepted" event to the row update.
+ */
+export function mapInvitationAcceptToSupabase(
+  input: InvitationAcceptUpdate
+): CollaboratorUpdate {
+  return {
+    user_id: input.userId,
+    accepted_at: input.acceptedAtIso,
+    use_count: input.newUseCount,
+  };
+}
+
+export interface MembershipInsertInput {
+  tournamentId: string;
+  userId: string;
+  role: string;
+  teamIds?: string[];
+  createdAtIso?: string;
+  acceptedAtIso?: string;
+}
+
+/**
+ * Maps an owner-membership creation to a tournament_collaborators insert row.
+ * Used by membershipService.createOwnerMembership.
+ */
+export function mapMembershipInsertToSupabase(
+  input: MembershipInsertInput
+): CollaboratorInsert {
+  const now = new Date().toISOString();
+  return {
+    tournament_id: input.tournamentId,
+    user_id: input.userId,
+    role: input.role,
+    team_ids: input.teamIds ?? [],
+    created_at: input.createdAtIso ?? now,
+    accepted_at: input.acceptedAtIso ?? now,
+  };
+}
+
+export interface MembershipRoleUpdate {
+  role: string;
+  teamIds: string[];
+}
+
+/**
+ * Maps a role-change to a tournament_collaborators update row.
+ * Used by membershipService.changeRole.
+ */
+export function mapMembershipRoleUpdateToSupabase(
+  input: MembershipRoleUpdate
+): CollaboratorUpdate {
+  return {
+    role: input.role,
+    team_ids: input.teamIds,
+  };
+}
+
+/**
+ * Maps trainer team-id changes to a tournament_collaborators update row.
+ * Used by membershipService.updateTrainerTeams.
+ */
+export function mapMembershipTeamsUpdateToSupabase(
+  teamIds: string[]
+): CollaboratorUpdate {
+  return {
+    team_ids: teamIds,
+  };
+}
+
+// =============================================================================
+// PROFILES MAPPER
+// =============================================================================
+
+export interface ProfileUpdateInput {
+  displayName?: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Maps a profile-update request from the auth layer to a profiles update row.
+ * Only fields explicitly provided are forwarded.
+ */
+export function mapProfileUpdateToSupabase(
+  input: ProfileUpdateInput
+): ProfileUpdate {
+  const update: ProfileUpdate = {};
+  if (input.displayName !== undefined) {
+    update.display_name = input.displayName;
+  }
+  if (input.avatarUrl !== undefined) {
+    update.avatar_url = input.avatarUrl;
+  }
+  return update;
 }
