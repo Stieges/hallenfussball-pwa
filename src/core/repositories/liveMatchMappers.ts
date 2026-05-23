@@ -5,7 +5,7 @@
  * Used by SupabaseLiveMatchRepository for real-time match state sync.
  */
 
-import type { Json, Tables } from '../../types/supabase';
+import type { Json, Tables, TablesInsert } from '../../types/supabase';
 import type {
   LiveMatch,
   LiveTeamInfo,
@@ -24,6 +24,7 @@ import type { TeamLogo, TeamColors } from '../../types/tournament';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
+type MatchEventInsert = TablesInsert<'match_events'>;
 type TeamRow = Tables<'teams'>;
 
 // ============================================================================
@@ -130,7 +131,7 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
 export function mapMatchEventToSupabase(
   event: MatchEvent,
   matchId: string
-): Omit<MatchEventRow, 'created_at'> {
+): MatchEventInsert {
   return {
     id: event.id,
     match_id: matchId,
@@ -257,7 +258,7 @@ export function mapLiveMatchToSupabase(
   existingEventIds: Set<string> = new Set<string>()
 ): {
   matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null };
-  newEvents: Array<Omit<MatchEventRow, 'created_at'>>;
+  newEvents: MatchEventInsert[];
 } {
   // Build live_state JSONB
   const liveState: LiveStateJson = {
@@ -283,7 +284,7 @@ export function mapLiveMatchToSupabase(
     overtime_score_b: liveMatch.overtimeScoreB ?? null,
     penalty_score_a: liveMatch.penaltyScoreA ?? null,
     penalty_score_b: liveMatch.penaltyScoreB ?? null,
-    live_state: liveMatch.status === 'FINISHED' ? null : liveState,
+    live_state: (liveMatch.status === 'FINISHED' ? null : liveState) as Json | null,
     updated_at: new Date().toISOString(),
   };
 
