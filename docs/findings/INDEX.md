@@ -212,7 +212,7 @@
 | F-208 | 🟡 | security | Security-Tests fehlen | tests/ | 4h | open |
 | F-209 | 🔴 | data | Team-Count Inkonsistenz zwischen numberOfTeams und teams.length | src/features/tournament-creation/Step4_Teams.tsx | 1h | fixed |
 | F-210 | 🟠 | other | Ungleichgewicht bei Gruppenverteilung mit ungerader Teamzahl | src/features/tournament-creation/ScheduleGenerator.ts | 2h | open |
-| F-211 | 🔴 | other | Schedule-Generation ohne Error-Handling kann App crashen | src/features/tournament-creation/TournamentPreview.tsx | 1h | open |
+| F-211 | 🔴 | other | Schedule-Generation ohne Error-Handling kann App crashen | src/features/tournament-creation/TournamentPreview.tsx | 1h | fixed |
 | F-212 | 🟡 | doc | Fehlendes Zod-Validierungsschema für Wizard | src/features/tournament-creation/wizardSchema.ts | 4h | open |
 | F-213 | 🔴 | ux | Keine Auto-Save Persistierung bei Browser-Crash | src/features/tournament-creation/TournamentWizard.tsx | 3h | open |
 | F-214 | 🟠 | ux | Keine Fortschrittsanzeige im Wizard-Flow | src/features/tournament-creation/TournamentWizard.tsx | 2h | open |
