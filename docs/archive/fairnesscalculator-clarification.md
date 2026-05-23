@@ -1,4 +1,4 @@
-# FairnessCalculator Implementation - Klärung mit adesso Agent
+# FairnessCalculator Implementation - Klärung mit Review-Agent
 
 > **Erstellt:** 2025-12-04
 > **Model:** gpt-oss-120b-sovereign
@@ -15,7 +15,7 @@ Was genau soll der FairnessCalculator machen?
 
 ---
 
-## 💡 adesso Agent Antwort
+## 💡 Review-Agent Antwort
 
 ## TL;DR  
 

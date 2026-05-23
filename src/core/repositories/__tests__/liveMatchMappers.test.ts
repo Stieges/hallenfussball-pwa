@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import type { Tables } from '../../../types/supabase';
 import {
   mapTeamToLiveTeamInfo,
   mapMatchEventFromSupabase,
@@ -9,109 +8,14 @@ import {
   isMatchActive,
   clearLiveState,
 } from '../liveMatchMappers';
-
-// =============================================================================
-// Test Data Factories
-// =============================================================================
-
-type TeamRow = Tables<'teams'>;
-type MatchRow = Tables<'matches'>;
-type MatchEventRow = Tables<'match_events'>;
-
-function createTeamRow(overrides: Partial<TeamRow> = {}): TeamRow {
-  return {
-    id: 'team-1',
-    name: 'FC Test',
-    tournament_id: 'tournament-1',
-    group_letter: null,
-    is_removed: null,
-    removed_at: null,
-    removed_reason: null,
-    logo_path: null,
-    logo_background_color: null,
-    color_primary: null,
-    color_secondary: null,
-    contact_name: null,
-    contact_email: null,
-    contact_phone: null,
-    sort_order: null,
-    is_public: null,
-    owner_id: null,
-    created_at: null,
-    updated_at: null,
-    version: 1,
-    ...overrides,
-  };
-}
-
-function createMatchRow(overrides: Partial<MatchRow & { live_state?: unknown }> = {}): MatchRow {
-  return {
-    id: 'match-1',
-    tournament_id: 'tournament-1',
-    round: 1,
-    field: 1,
-    slot: null,
-    team_a_id: null,
-    team_b_id: null,
-    team_a_placeholder: null,
-    team_b_placeholder: null,
-    score_a: null,
-    score_b: null,
-    group_letter: null,
-    is_final: null,
-    final_type: null,
-    label: null,
-    scheduled_start: null,
-    match_number: null,
-    phase: null,
-    referee_number: null,
-    referee_team_id: null,
-    match_status: null,
-    actual_start: null,
-    actual_end: null,
-    timer_start_time: null,
-    timer_paused_at: null,
-    timer_elapsed_seconds: null,
-    overtime_score_a: null,
-    overtime_score_b: null,
-    penalty_score_a: null,
-    penalty_score_b: null,
-    decided_by: null,
-    skipped_reason: null,
-    skipped_at: null,
-    duration_minutes: null,
-    last_modified_by: null,
-    live_state: null,
-    is_public: null,
-    owner_id: null,
-    created_at: null,
-    updated_at: null,
-    version: null,
-    ...overrides,
-  } as MatchRow;
-}
-
-function createEventRow(overrides: Partial<MatchEventRow> = {}): MatchEventRow {
-  return {
-    id: 'event-1',
-    match_id: 'match-1',
-    timestamp_seconds: 120,
-    type: 'GOAL',
-    payload: { team: 'home', delta: 1 },
-    score_home: 1,
-    score_away: 0,
-    team_id: null,
-    player_id: null,
-    period: null,
-    incomplete: null,
-    is_deleted: null,
-    is_public: null,
-    owner_id: null,
-    version: 1,
-    created_at: null,
-    ...overrides,
-  };
-}
+import {
+  createTeamRow,
+  createMatchRow,
+  createEventRow,
+  type TeamRow,
+  type MatchRow,
+  type MatchEventRow,
+} from '../../../../tests/factories/supabase';
 
 // =============================================================================
 // TEAM INFO MAPPER

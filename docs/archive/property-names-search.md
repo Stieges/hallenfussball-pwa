@@ -6,7 +6,7 @@
 
 ---
 
-## 🔍 adesso Agent Analyse
+## 🔍 Review-Agent Analyse
 
 ## 1. `team1` Vorkommen  
 

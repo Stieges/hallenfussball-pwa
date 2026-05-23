@@ -18,13 +18,13 @@ docs/
 ├── index-code.md                       ← Code-Kontext & Antworten auf 8 Fragen
 ├── blocker-validation.md               ← Agent-Suche nach 4 Blockern im Plan
 ├── blocker-summary.md                  ← Zusammenfassung für User
-├── plan-evaluation-adesso.md           ← Agent-Review des Plans (7 Blocker)
-├── plan-response-to-adesso.md          ← Claudes erste Antwort
+├── plan-evaluation-reviewer.md           ← Agent-Review des Plans (7 Blocker)
+├── plan-response-to-reviewer.md          ← Claudes erste Antwort
 ├── implementation-decision-analysis.md ← 4 Entscheidungen (User getroffen)
 ├── fairnesscalculator-clarification.md ← FairnessCalculator Design-Klärung
 ├── property-names-search.md            ← Validierung Property-Namen
 ├── fairscheduler-code-review.md        ← Initiale Agent-Analyse
-├── adesso-followup-analysis.md         ← Agent Follow-up Fragen
+├── reviewer-followup-analysis.md         ← Agent Follow-up Fragen
 ├── FAIR_SCHEDULER.md                   ← Dokumentation (alt)
 └── SCHEDULER_EXAMPLES.md               ← Beispiele (alt)
 ```
@@ -48,7 +48,7 @@ docs/
 
 ### 2. **index-code.md**
 
-**Zweck:** Beantwortet alle 8 Rückfragen des adesso Agents durch Code-Analyse
+**Zweck:** Beantwortet alle 8 Rückfragen des Review-Agents durch Code-Analyse
 
 **Inhalt:**
 - ✅ `minRestSlotsPerTeam` existiert bereits
@@ -93,7 +93,7 @@ docs/
 
 ### Phase 1: Initiale Analyse
 1. **fairscheduler-code-review.md** - Erste Agent-Analyse (3 kritische Issues)
-2. **adesso-followup-analysis.md** - Agent beantwortet Claudes Fragen
+2. **reviewer-followup-analysis.md** - Agent beantwortet Claudes Fragen
 3. **implementation-decision-analysis.md** - Claude stellt 4 Entscheidungen vor
 4. **User entscheidet:** Option B (Team | null), beide Perf-Opts, Stall jetzt
 
@@ -101,10 +101,10 @@ docs/
 5. **Plan erstellt:** `.claude/plans/giggly-tickling-lake.md`
 6. **property-names-search.md** - Validierung: Plan hatte falsche Namen
 7. **fairnesscalculator-clarification.md** - Agent klärt FairnessCalculator Design
-8. **plan-evaluation-adesso.md** - Agent findet 7 kritische Blocker im Plan
+8. **plan-evaluation-reviewer.md** - Agent findet 7 kritische Blocker im Plan
 
 ### Phase 3: Blocker-Klärung
-9. **plan-response-to-adesso.md** - Claude analysiert erste Agent-Kritik
+9. **plan-response-to-reviewer.md** - Claude analysiert erste Agent-Kritik
 10. **index-code.md** - Claude beantwortet 8 Fragen durch Code-Analyse
 11. **blocker-validation.md** - Agent sucht gezielt nach 4 Blockern
 12. **blocker-summary.md** - User-Zusammenfassung (3 Fixes nötig)
@@ -133,18 +133,18 @@ docs/
 |-------|-------------------|--------|
 | **fix1-bye-handling-validation.md** | Redundant zu all-fixes-validation.md | docs/archive/ |
 | **blocker-summary.md** | Veraltet (falsche Fixes) | docs/archive/ |
-| **plan-response-to-adesso.md** | Überholte Zwischen-Analyse | docs/archive/ |
+| **plan-response-to-reviewer.md** | Überholte Zwischen-Analyse | docs/archive/ |
 | **implementation-decision-analysis.md** | Entscheidungen bereits im Plan | docs/archive/ |
 | **property-names-search.md** | Plan bereits korrigiert | docs/archive/ |
 | **fairnesscalculator-clarification.md** | Info bereits in Plan integriert | docs/archive/ |
-| **adesso-followup-analysis.md** | Überholte Zwischen-Analyse | docs/archive/ |
+| **reviewer-followup-analysis.md** | Überholte Zwischen-Analyse | docs/archive/ |
 | **fairscheduler-code-review.md** | Erste Analyse, überholt | docs/archive/ |
 
 ### ✅ BEHALTEN (Dokumentation)
 
 | Datei | Warum behalten? |
 |-------|----------------|
-| **plan-evaluation-adesso.md** | Zeigt Risiken - hilfreich für Review |
+| **plan-evaluation-reviewer.md** | Zeigt Risiken - hilfreich für Review |
 | **FAIR_SCHEDULER.md** | Projekt-Dokumentation |
 | **SCHEDULER_EXAMPLES.md** | Projekt-Dokumentation |
 
@@ -155,7 +155,7 @@ docs/
 ### Für User (Quick Start):
 1. **all-fixes-validation.md** - Was ist das Ergebnis?
 2. **index-code.md** - Wie sieht der Code aus?
-3. **plan-evaluation-adesso.md** - Welche Risiken gibt es noch?
+3. **plan-evaluation-reviewer.md** - Welche Risiken gibt es noch?
 
 ### Für Implementation:
 1. **all-fixes-validation.md** - Was muss geändert werden?

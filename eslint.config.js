@@ -22,7 +22,7 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/node_modules/**',
-      '**/mcp-adesso-analyzer/**',
+      '**/mcp-ai-hub-analyzer/**',
       '**/eslint-rules/**',
       '**/scripts/**',
       '**/supabase/functions/**',
@@ -149,8 +149,49 @@ export default tseslint.config(
       '@typescript-eslint/dot-notation': 'off',
       '@typescript-eslint/no-useless-constructor': 'warn',
       '@typescript-eslint/consistent-type-definitions': 'off',
+
+      // Supabase-spezifische Guardrails: blockt `as any`-Bypässe der typisierten Client-API
+      // (eingeführt nach PR #137 — Sanitizer-Bypass via untyped .from()).
+      'no-restricted-syntax': ['error',
+        {
+          selector: "TSAsExpression[expression.name='supabase'][typeAnnotation.type='TSAnyKeyword']",
+          message: 'Avoid `supabase as any`. Use the typed client (Database generic) or extend the mapper layer.',
+        },
+        {
+          selector: "MemberExpression[object.type='TSAsExpression'][object.typeAnnotation.type='TSAnyKeyword'][property.name='from']",
+          message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
+        },
+      ],
+
+      // Layering-Guardrail (Clean-Architecture-Boundaries):
+      // Spezifischere Overrides unten setzen Layer-Boundaries pro Folder
+      // (core/, hooks/, components/). Cross-Feature-Boundary (features/<X> →
+      // features/<Y>) ist mit statischen Patterns nicht ohne false-positives
+      // ausdrückbar (screens/ orchestrieren features, das ist OK) — bleibt
+      // manueller Review-Punkt. Details: .claude/conventions/LAYERING.md
     },
   },
+
+  // Layering-Override: core/ ist framework-free — KEINE features/hooks/components/react Imports
+  {
+    files: ['src/core/**/*.ts', 'src/core/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['**/features/**', '@/features/**'],   message: 'core/ darf nicht aus features/ importieren (core ist pure business logic).' },
+          { group: ['**/hooks/**', '@/hooks/**'],         message: 'core/ darf nicht aus hooks/ importieren (core ist React-frei).' },
+          { group: ['**/components/**', '@/components/**'], message: 'core/ darf nicht aus components/ importieren.' },
+          { group: ['react', 'react-dom', 'react/*'],     message: 'core/ ist framework-free, kein React.' },
+        ],
+      }],
+    },
+  },
+
+  // ANMERKUNG: Boundaries components/→features/ und hooks/→features/ sind
+  // aktuell NICHT enforced. Der semantische Status von src/features/ ist
+  // ungeklärt (Module/Reuse-Units vs. echte Bounded Contexts). Bis die
+  // Architektur-Entscheidung gefallen ist, bleiben diese Boundaries
+  // Review-Pflicht statt automatisierter Lint. Siehe LAYERING.md.
 
   // Test files: Relax strict rules
   {
@@ -164,6 +205,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      // Supabase-Guardrail in Tests: nicht hart blocken (Tests dürfen pragmatischer
+      // sein z.B. zum Mocken untypisierter Antworten), aber als Warnung sichtbar bleiben.
+      'no-restricted-syntax': 'warn',
     },
   },
 

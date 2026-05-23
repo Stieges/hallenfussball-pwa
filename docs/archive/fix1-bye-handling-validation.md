@@ -8,7 +8,7 @@
 
 ## 🔍 Agent-Empfehlung
 
-Der adesso Agent empfiehlt in `blocker-validation.md`:
+Der Review-Agent empfiehlt in `blocker-validation.md`:
 
 ```typescript
 // Im Scheduler-Loop (Line 334-344):

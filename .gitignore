@@ -24,11 +24,15 @@ dist-ssr
 *.sw?
 
 # MCP Server und sensitive Daten
-mcp-adesso-analyzer/
+mcp-ai-hub-analyzer/
 .mcp.json
 .claude/
 **/mcp*.md
 **/MCP*.md
+
+# CLAUDE.md ist lokal in .claude/CLAUDE.md konsolidiert (gitignored).
+# Root-Level CLAUDE.md soll NICHT versehentlich getrackt werden.
+/CLAUDE.md
 
 # API Keys und Credentials
 *.key
@@ -41,7 +45,7 @@ mcp-adesso-analyzer/
 **/*apikey*
 TEST-CREDENTIALS.md
 
-# Entwickler-Skripte mit API Keys (adesso AI Hub)
+# Entwickler-Skripte mit API Keys (AI Hub)
 evaluate-plan.js
 clarify-*.js
 search-property-names.js
@@ -64,3 +68,5 @@ scripts/dev-mcp-server.ts
 # Backup files and CI/build run outputs
 *.bak.*
 ci_logs.txt
+.vercel
+.env*.local

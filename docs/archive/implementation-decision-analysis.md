@@ -1,14 +1,14 @@
 # Implementierungs-Entscheidungsanalyse: fairScheduler.ts Fixes
 
 > **Erstellt:** 04.12.2025
-> **Basis:** Adesso AI Hub Analyse + Follow-up
+> **Basis:** AI Hub Analyse + Follow-up
 > **Status:** ⏳ Wartet auf User-Entscheidungen
 
 ---
 
 ## 🎯 Executive Summary
 
-Der adesso-Agent hat **3 CRITICAL/HIGH Issues** identifiziert und **2 Lösungsansätze** vorgeschlagen:
+Der Review-Agent hat **3 CRITICAL/HIGH Issues** identifiziert und **2 Lösungsansätze** vorgeschlagen:
 
 | Issue | Breaking Change? | Empfehlung | Geschätzter Aufwand |
 |-------|------------------|------------|---------------------|
@@ -92,7 +92,7 @@ const teamsWithBye = n % 2 === 0 ? [...teams] : [...teams, BYE_TEAM];
 **Meine Empfehlung:** **Option B**
 **Begründung:**
 1. Kein Breaking Change → schnelleres Deployment
-2. Der adesso-Agent empfiehlt es explizit
+2. Der Review-Agent empfiehlt es explizit
 3. Funktional identisch, da BYE bereits gefiltert wird
 4. Risiko minimal: `__BYE__` ID ist hochgradig spezifisch
 
@@ -114,7 +114,7 @@ const stateB = teamStates.get(teamBId)!;
 
 ### Lösung
 
-Der adesso-Agent schlägt **3 verschiedene Strategien** vor, je nach Kontext:
+Der Review-Agent schlägt **3 verschiedene Strategien** vor, je nach Kontext:
 
 #### Strategie 1: Error werfen (calculateFairnessScore - Lines 177-178)
 
@@ -263,7 +263,7 @@ function calculateFairnessScore(
 1. Keine Breaking Changes (nur interne Interfaces)
 2. 10x Performance-Boost ist massive UX-Verbesserung
 3. Macht 64+ Teams Turniere machbar
-4. Adesso-Agent hat detaillierte Implementierung geliefert
+4. Review-Agent hat detaillierte Implementierung geliefert
 
 **Validierung:** Vor/Nach Vergleich mit Testdaten sicherstellen dass Ergebnisse identisch sind
 
@@ -347,7 +347,7 @@ while (remainingPairings.length > 0) {
 2. **Umsetzungsplan erstellen** - Detaillierter Step-by-Step Plan als MD
 3. **Implementierung** - Code-Änderungen durchführen
 4. **Tests schreiben** - Sicherstellen dass alles funktioniert
-5. **Review** - Nochmal mit adesso-Agent validieren
+5. **Review** - Nochmal mit Review-Agent validieren
 6. **Deployment** - Merge und Release
 
 ---
@@ -366,7 +366,7 @@ Ein Change ist **NICHT Breaking** wenn:
 - Neue optionale Parameter hinzugefügt werden
 - Verhalten identisch bleibt (nur Performance verbessert)
 
-### Adesso-Agent Kompetenz-Bewertung
+### Review-Agent Kompetenz-Bewertung
 
 ✅ **Stärken:**
 - Sehr detaillierte Line-by-Line Analyse

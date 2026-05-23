@@ -3,7 +3,7 @@
 Code Review mit parallelen Qwen Thinking-Agents.
 
 12 spezialisierte Agents mit fokussierten Verzeichnissen fuer tiefe Analyse.
-Nutzt qwen-3.5-122b-sovereign ueber adesso AI Hub (Thinking Mode).
+Nutzt qwen-3.5-122b-sovereign ueber AI Hub (Thinking Mode).
 
 Nutzung:
   python reviews/code-review-agents.py                    # Alle 12 Agents
@@ -30,8 +30,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REVIEWS_DIR = PROJECT_ROOT / "reviews"
 REVIEWS_DIR.mkdir(exist_ok=True)
 
-API_BASE = os.environ.get("ADESSO_AI_HUB_BASE_URL", "https://adesso-ai-hub.3asabc.de/v1")
-API_KEY = os.environ.get("ADESSO_AI_HUB_API_KEY", "")
+API_BASE = os.environ.get("AI_HUB_BASE_URL", "")
+API_KEY = os.environ.get("AI_HUB_API_KEY", "")
 MODEL = "qwen-3.5-122b-sovereign"
 MAX_TOKENS = 32000
 TIMEOUT = 600  # 10 Minuten pro Agent (Thinking braucht laenger)
@@ -683,8 +683,12 @@ def main():
         return
 
     if not API_KEY:
-        print("FEHLER: ADESSO_AI_HUB_API_KEY nicht gesetzt")
-        print("  export ADESSO_AI_HUB_API_KEY=...")
+        print("FEHLER: AI_HUB_API_KEY nicht gesetzt")
+        print("  export AI_HUB_API_KEY=...")
+        sys.exit(1)
+    if not API_BASE:
+        print("FEHLER: AI_HUB_BASE_URL nicht gesetzt")
+        print("  export AI_HUB_BASE_URL=https://your-ai-hub.example/v1")
         sys.exit(1)
 
     agents_to_run = AGENTS

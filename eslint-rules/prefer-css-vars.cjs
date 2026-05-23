@@ -77,7 +77,8 @@ module.exports = {
       'fontSizesMd3',
     ]);
 
-    const filename = context.getFilename();
+    // ESLint 10 entfernt context.getFilename(); 8.40+ haben context.filename
+    const filename = context.filename ?? context.getFilename();
     const basename = filename.split('/').pop() || '';
 
     // Skip internal token files
