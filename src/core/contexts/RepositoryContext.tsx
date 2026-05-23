@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- TODO(layering): RepositoryContext ist React-Bridge in core/; sollte mittelfristig nach hooks/ oder src/contexts/ migrieren. Bewusster Verstoß gegen "core/ ist framework-free". Siehe .claude/conventions/LAYERING.md
 import React, { createContext, useContext, useMemo, useEffect, useRef } from 'react';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { ILiveMatchRepository } from '../repositories/ILiveMatchRepository';

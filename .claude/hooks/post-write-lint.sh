@@ -38,7 +38,7 @@ fi
 cd "$PROJECT_ROOT" || exit 0
 
 # Run ESLint, max-warnings 0
-RESULT=$(npx --no-install eslint "$FILE_PATH" --max-warnings 0 --format=compact 2>&1)
+RESULT=$(npx --no-install eslint "$FILE_PATH" --max-warnings 0 2>&1)
 EXIT=$?
 
 if [ $EXIT -ne 0 ]; then

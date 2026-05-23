@@ -162,8 +162,36 @@ export default tseslint.config(
           message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
         },
       ],
+
+      // Layering-Guardrail (Clean-Architecture-Boundaries):
+      // Spezifischere Overrides unten setzen Layer-Boundaries pro Folder
+      // (core/, hooks/, components/). Cross-Feature-Boundary (features/<X> →
+      // features/<Y>) ist mit statischen Patterns nicht ohne false-positives
+      // ausdrückbar (screens/ orchestrieren features, das ist OK) — bleibt
+      // manueller Review-Punkt. Details: .claude/conventions/LAYERING.md
     },
   },
+
+  // Layering-Override: core/ ist framework-free — KEINE features/hooks/components/react Imports
+  {
+    files: ['src/core/**/*.ts', 'src/core/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['**/features/**', '@/features/**'],   message: 'core/ darf nicht aus features/ importieren (core ist pure business logic).' },
+          { group: ['**/hooks/**', '@/hooks/**'],         message: 'core/ darf nicht aus hooks/ importieren (core ist React-frei).' },
+          { group: ['**/components/**', '@/components/**'], message: 'core/ darf nicht aus components/ importieren.' },
+          { group: ['react', 'react-dom', 'react/*'],     message: 'core/ ist framework-free, kein React.' },
+        ],
+      }],
+    },
+  },
+
+  // ANMERKUNG: Boundaries components/→features/ und hooks/→features/ sind
+  // aktuell NICHT enforced. Der semantische Status von src/features/ ist
+  // ungeklärt (Module/Reuse-Units vs. echte Bounded Contexts). Bis die
+  // Architektur-Entscheidung gefallen ist, bleiben diese Boundaries
+  // Review-Pflicht statt automatisierter Lint. Siehe LAYERING.md.
 
   // Test files: Relax strict rules
   {
