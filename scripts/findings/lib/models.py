@@ -103,6 +103,9 @@ class FindingFixState(BaseModel):
     # run_tests output:
     tests_pass: Optional[bool] = None
     test_output: Optional[str] = None
+    # run_lint output (Defense-in-Depth Pre-Gate before review_patch):
+    lint_passed: Optional[bool] = None
+    lint_output: Optional[str] = None
     # tracking
     tool_call_errors: int = 0
     fallback_used: bool = False

@@ -17,8 +17,9 @@ import { migrateGuestTournaments } from '../services/guestMigrationService';
 import { createAuthRetryService, isAbortError } from '../../../core/services';
 import { clearProfileCache, cacheUserProfile } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
+import { mapProfileUpdateToSupabase } from '../../../core/repositories/supabaseMappers';
 import { executeWithTimeout } from '../../../core/utils/SingleFlight';
-import { captureFeatureError } from '../../../lib/sentry';
+import { captureFeatureError, setUserContext as setSentryUserContext } from '../../../lib/sentry';
 
 /**
  * Timeout for auth operations (login, register, etc.)
@@ -91,6 +92,18 @@ export async function clearStaleAuthState(): Promise<void> {
   } catch {
     // localStorage not available or signOut failed
   }
+}
+
+/**
+ * Wraps deps.setUser to also update Sentry user-context.
+ * PII-safe: only user.id is forwarded to Sentry.
+ */
+function setUserAndSentry(
+  deps: { setUser: (u: User | null) => void },
+  user: User | null
+): void {
+  deps.setUser(user);
+  setSentryUserContext(user?.id ?? null);
 }
 
 /**
@@ -446,7 +459,7 @@ export async function logout(deps: AuthActionDeps): Promise<void> {
     safeLocalStorage.removeItem('mutation_queue_v1');
     safeLocalStorage.removeItem('mutation_queue_failed_v1');
     void clearProfileCache();
-    deps.setUser(null);
+    setUserAndSentry(deps, null);
     deps.setSession(null);
     deps.setIsGuest(false);
   };
@@ -499,7 +512,7 @@ export async function continueAsGuest(deps: AuthActionDeps): Promise<User> {
           // Clear any existing guest user data
           safeLocalStorage.removeItem('auth:guestUser');
 
-          deps.setUser(mappedUser);
+          setUserAndSentry(deps, mappedUser);
           deps.setSession(data.session ? mapSupabaseSession(data.session) : null);
           deps.setIsGuest(false); // Not a local guest, but an anonymous Supabase user
           deps.setConnectionState('connected');
@@ -528,7 +541,7 @@ export async function continueAsGuest(deps: AuthActionDeps): Promise<User> {
   // Fall back to local guest (no cloud sync)
   const guestUser = createLocalGuestUser();
   safeLocalStorage.setItem('auth:guestUser', JSON.stringify(guestUser));
-  deps.setUser(guestUser);
+  setUserAndSentry(deps, guestUser);
   deps.setSession(null);
   deps.setIsGuest(true);
   return guestUser;
@@ -642,7 +655,7 @@ export async function reconnect(deps: AuthActionDeps): Promise<boolean> {
         console.warn('[Auth] Session expired, clearing auth state for fresh login');
       }
       await clearStaleAuthState();
-      deps.setUser(null);
+      setUserAndSentry(deps, null);
       deps.setSession(null);
       deps.setIsGuest(false);
       deps.setConnectionState('connected'); // Not 'offline' - Supabase is reachable, just need re-auth
@@ -758,23 +771,23 @@ export async function updateProfile(
   }
 
   try {
-    const profileUpdates: Record<string, unknown> = {};
-
+    let displayName: string | undefined;
     if (updates.name !== undefined) {
       const trimmedName = updates.name.trim();
       if (trimmedName.length < 2 || trimmedName.length > 100) {
         return { success: false, error: AUTH_ERRORS.NAME_LENGTH_INVALID };
       }
-      profileUpdates.display_name = trimmedName;
+      displayName = trimmedName;
     }
 
-    if (updates.avatarUrl !== undefined) {
-      profileUpdates.avatar_url = updates.avatarUrl;
-    }
+    const profileUpdates = mapProfileUpdateToSupabase({
+      displayName,
+      avatarUrl: updates.avatarUrl,
+    });
 
     const { error } = await supabase
       .from('profiles')
-      .update(profileUpdates as { display_name?: string; avatar_url?: string })
+      .update(profileUpdates)
       .eq('id', user.id);
 
     if (error) {
@@ -788,7 +801,7 @@ export async function updateProfile(
       avatarUrl: updates.avatarUrl ?? user.avatarUrl,
       updatedAt: new Date().toISOString(),
     };
-    deps.setUser(updatedUser);
+    setUserAndSentry(deps, updatedUser);
 
     // Sync to offline caches (localStorage + IndexedDB)
     try {

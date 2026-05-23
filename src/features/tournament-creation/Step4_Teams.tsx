@@ -7,6 +7,7 @@ import { cssVars } from '../../design-tokens'
 import { generateGroupLabels } from '../../utils/groupHelpers';
 import { getGroupDisplayName } from '../../utils/displayNames';
 import { generateTeamId } from '../../utils/idGenerator';
+import { sanitizeTeamName } from '../../core/utils/textSanitizer';
 import styles from './Step4_Teams.module.css';
 
 interface Step4Props {
@@ -249,6 +250,7 @@ export const Step4_Teams: React.FC<Step4Props> = ({
             const isDuplicate = isTeamDuplicate(team.id, team.name);
             const isOriginal = isTeamOriginal(team.id, team.name);
             const hasError = isDuplicate || isOriginal;
+            const isEmpty = !team.name?.trim();
             const isExpanded = expandedTeamId === team.id;
 
             return (
@@ -278,9 +280,9 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                   <div className={styles.teamNameInput}>
                     <Input
                       value={team.name}
-                      onChange={(v) => onUpdateTeam(team.id, { name: v })}
+                      onChange={(v) => onUpdateTeam(team.id, { name: sanitizeTeamName(v) })}
                       placeholder={t('step4.teamNamePlaceholder')}
-                      error={hasError}
+                      error={hasError || isEmpty}
                     />
                     {hasError && (
                       <p style={{
@@ -289,6 +291,15 @@ export const Step4_Teams: React.FC<Step4Props> = ({
                         fontSize: cssVars.fontSizes.xs,
                       }}>
                         {t('step4.duplicateName')}
+                      </p>
+                    )}
+                    {!hasError && isEmpty && (
+                      <p style={{
+                        margin: `${cssVars.spacing.xs} 0 0 0`,
+                        color: cssVars.colors.error,
+                        fontSize: cssVars.fontSizes.xs,
+                      }}>
+                        {t('step4.emptyName')}
                       </p>
                     )}
                   </div>
@@ -467,6 +478,24 @@ export const Step4_Teams: React.FC<Step4Props> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {teams.length > 0 && teams.length !== numberOfTeams && (
+        <div
+          role="alert"
+          data-testid="wizard-team-count-mismatch"
+          style={{
+            marginTop: '16px',
+            padding: '12px',
+            background: cssVars.colors.errorLight,
+            borderRadius: cssVars.borderRadius.md,
+            border: `1px solid ${cssVars.colors.errorBorder}`,
+            color: cssVars.colors.error,
+            fontSize: cssVars.fontSizes.sm,
+          }}
+        >
+          {t('step4.countMismatch', { actual: teams.length, expected: numberOfTeams })}
         </div>
       )}
 

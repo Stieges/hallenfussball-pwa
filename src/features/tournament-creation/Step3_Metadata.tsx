@@ -14,6 +14,13 @@ interface Step3Props {
 export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => {
   const { t } = useTranslation('wizard');
 
+  // F-113: prevent past start dates. min= today (local ISO).
+  const now = new Date();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const currentStartDate = formData.startDate ?? formData.date ?? '';
+  const startDateInPast =
+    !!currentStartDate && /^\d{4}-\d{2}-\d{2}$/.test(currentStartDate) && currentStartDate < todayIso;
+
   return (
     <Card>
       <h2 style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.xl, margin: '0 0 24px 0' }}>
@@ -62,13 +69,16 @@ export const Step3_Metadata: React.FC<Step3Props> = ({ formData, onUpdate }) => 
         <Input
           label={t('step3.startDate')}
           type="date"
-          value={(formData.startDate ?? formData.date) ?? ''}
+          value={currentStartDate}
+          min={todayIso}
           onChange={(v) => {
             onUpdate('startDate', v);
             // Keep legacy field in sync
             onUpdate('date', v);
           }}
           required
+          errorMessage={startDateInPast ? t('step3.startDatePastError') : undefined}
+          data-testid="wizard-start-date"
         />
         <Input
           label={t('step3.startTime')}

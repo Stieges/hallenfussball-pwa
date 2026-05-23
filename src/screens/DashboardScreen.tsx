@@ -263,6 +263,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({
               fontWeight: cssVars.fontWeights.medium,
               flex: isMobile ? 1 : undefined,
             }}
+            data-testid="dashboard-import-trigger"
           >
             {t('buttons.import')}
           </Button>

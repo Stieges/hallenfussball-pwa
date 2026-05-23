@@ -65,9 +65,30 @@ describe('TournamentCreationService', () => {
             expect(errors).toContain('Startdatum erforderlich');
             expect(errors).toContain('Ort erforderlich');
 
-            // Valid data
-            errors = service.validateStep(1, { title: 'T', date: '2023-01-01', location: { name: 'Gym' } });
+            // Valid data — future date
+            const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            errors = service.validateStep(1, { title: 'T', date: future, location: { name: 'Gym' } });
             expect(errors).toHaveLength(0);
+        });
+
+        it('F-113: should reject past start dates in step 1', () => {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const errors = service.validateStep(1, {
+                title: 'T',
+                date: yesterday,
+                location: { name: 'Gym' },
+            });
+            expect(errors).toContain('Startdatum darf nicht in der Vergangenheit liegen');
+        });
+
+        it("F-113: should accept today's date as start date", () => {
+            const today = new Date().toISOString().slice(0, 10);
+            const errors = service.validateStep(1, {
+                title: 'T',
+                date: today,
+                location: { name: 'Gym' },
+            });
+            expect(errors).not.toContain('Startdatum darf nicht in der Vergangenheit liegen');
         });
 
         it('should validate step 5 (Teams)', () => {
@@ -92,6 +113,73 @@ describe('TournamentCreationService', () => {
                 ] as any
             });
             expect(errors).toHaveLength(0);
+        });
+
+        it('F-114: rejects empty/whitespace-only team names', () => {
+            const errors = service.validateStep(5, {
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: '   ' },
+                    { id: '3', name: '' },
+                ] as any,
+            });
+            expect(errors).toContain('Teamnamen dürfen nicht leer sein');
+        });
+
+        it('F-209: rejects mismatch between numberOfTeams and teams.length', () => {
+            const errors = service.validateStep(5, {
+                numberOfTeams: 4,
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: 'B' },
+                    { id: '3', name: 'C' },
+                ] as any,
+            });
+            expect(errors.some(e => e.includes('3 von 4'))).toBe(true);
+        });
+
+        it('F-209: no mismatch error when numberOfTeams matches teams.length', () => {
+            const errors = service.validateStep(5, {
+                numberOfTeams: 2,
+                teams: [
+                    { id: '1', name: 'A' },
+                    { id: '2', name: 'B' },
+                ] as any,
+            });
+            expect(errors.find(e => e.includes('von'))).toBeUndefined();
+        });
+
+        it('F-116: groupsAndFinals — group with empty allowedFieldIds is rejected', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'groupsAndFinals',
+                groups: [
+                    { id: '1', customName: 'A', allowedFieldIds: ['f1'] },
+                    { id: '2', customName: 'B', allowedFieldIds: [] }, // Missing assignment
+                ] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+        });
+
+        it('F-116: groupsAndFinals — undefined allowedFieldIds is valid (uses all fields)', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'groupsAndFinals',
+                groups: [
+                    { id: '1', customName: 'A' },
+                    { id: '2', customName: 'B' },
+                ] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+        });
+
+        it('F-116: roundRobin — empty allowedFieldIds is not flagged (groups unused)', () => {
+            const errors = service.validateStep(4, {
+                groupSystem: 'roundRobin',
+                groups: [{ id: '1', customName: 'A', allowedFieldIds: [] }] as any,
+                fields: [{ id: 'f1', customName: 'Halle' }] as any,
+            });
+            expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
         });
     });
 

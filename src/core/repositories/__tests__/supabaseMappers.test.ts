@@ -8,6 +8,12 @@ import {
   mapMatchUpdateToSupabase,
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
+  mapInvitationInsertToSupabase,
+  mapInvitationAcceptToSupabase,
+  mapMembershipInsertToSupabase,
+  mapMembershipRoleUpdateToSupabase,
+  mapMembershipTeamsUpdateToSupabase,
+  mapProfileUpdateToSupabase,
 } from '../supabaseMappers';
 
 // =============================================================================
@@ -35,9 +41,11 @@ function createTeamRow(overrides: Partial<TeamRow> = {}): TeamRow {
     contact_email: null,
     contact_phone: null,
     sort_order: null,
+    is_public: null,
+    owner_id: null,
     created_at: null,
     updated_at: null,
-    version: null,
+    version: 1,
     ...overrides,
   };
 }
@@ -79,6 +87,9 @@ function createMatchRow(overrides: Partial<MatchRow> = {}): MatchRow {
     skipped_at: null,
     duration_minutes: null,
     last_modified_by: null,
+    live_state: null,
+    is_public: null,
+    owner_id: null,
     created_at: null,
     updated_at: null,
     version: null,
@@ -114,6 +125,7 @@ function createTournamentRow(overrides: Partial<TournamentRow> = {}): Tournament
     config: {},
     is_public: null,
     share_code: null,
+    share_code_created_at: null,
     completed_at: null,
     deleted_at: null,
     last_modified_by: null,
@@ -686,5 +698,126 @@ describe('mapTournamentToSupabase', () => {
     // Match rows should have team IDs resolved
     expect(result.matchRows[0].team_a_id).toBe('team-a');
     expect(result.matchRows[0].team_b_id).toBe('team-b');
+  });
+});
+
+// =============================================================================
+// TOURNAMENT_COLLABORATORS + PROFILE MAPPER TESTS (Supabase 2.105 upgrade)
+// =============================================================================
+
+describe('mapInvitationInsertToSupabase', () => {
+  it('maps an invitation creation with defaults', () => {
+    const result = mapInvitationInsertToSupabase({
+      tournamentId: 't1',
+      inviteCode: 'CODE123',
+      role: 'trainer',
+      expiresAtIso: '2026-12-31T00:00:00Z',
+      invitedBy: 'user-1',
+    });
+
+    expect(result.tournament_id).toBe('t1');
+    expect(result.invite_code).toBe('CODE123');
+    expect(result.role).toBe('trainer');
+    expect(result.team_ids).toEqual([]);
+    expect(result.max_uses).toBe(1);
+    expect(result.use_count).toBe(0);
+    expect(result.expires_at).toBe('2026-12-31T00:00:00Z');
+    expect(result.invited_by).toBe('user-1');
+    expect(result.invited_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.label).toBeNull();
+  });
+
+  it('passes through provided teamIds, label, maxUses', () => {
+    const result = mapInvitationInsertToSupabase({
+      tournamentId: 't1',
+      inviteCode: 'C',
+      role: 'co-admin',
+      teamIds: ['team-1', 'team-2'],
+      label: 'Trainer-Einladung',
+      maxUses: 5,
+      expiresAtIso: '2026-12-31T00:00:00Z',
+      invitedBy: 'user-1',
+      invitedAtIso: '2026-05-23T10:00:00Z',
+    });
+
+    expect(result.team_ids).toEqual(['team-1', 'team-2']);
+    expect(result.label).toBe('Trainer-Einladung');
+    expect(result.max_uses).toBe(5);
+    expect(result.invited_at).toBe('2026-05-23T10:00:00Z');
+  });
+});
+
+describe('mapInvitationAcceptToSupabase', () => {
+  it('produces an update payload with user_id, accepted_at, use_count', () => {
+    const result = mapInvitationAcceptToSupabase({
+      userId: 'user-42',
+      acceptedAtIso: '2026-05-23T10:00:00Z',
+      newUseCount: 3,
+    });
+
+    expect(result).toEqual({
+      user_id: 'user-42',
+      accepted_at: '2026-05-23T10:00:00Z',
+      use_count: 3,
+    });
+  });
+});
+
+describe('mapMembershipInsertToSupabase', () => {
+  it('maps an owner membership with defaults', () => {
+    const result = mapMembershipInsertToSupabase({
+      tournamentId: 't1',
+      userId: 'u1',
+      role: 'owner',
+    });
+
+    expect(result.tournament_id).toBe('t1');
+    expect(result.user_id).toBe('u1');
+    expect(result.role).toBe('owner');
+    expect(result.team_ids).toEqual([]);
+    expect(result.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(result.accepted_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('mapMembershipRoleUpdateToSupabase', () => {
+  it('produces an update payload with role + team_ids', () => {
+    const result = mapMembershipRoleUpdateToSupabase({
+      role: 'trainer',
+      teamIds: ['team-1'],
+    });
+
+    expect(result).toEqual({ role: 'trainer', team_ids: ['team-1'] });
+  });
+});
+
+describe('mapMembershipTeamsUpdateToSupabase', () => {
+  it('produces an update payload with only team_ids', () => {
+    const result = mapMembershipTeamsUpdateToSupabase(['team-1', 'team-2']);
+    expect(result).toEqual({ team_ids: ['team-1', 'team-2'] });
+  });
+});
+
+describe('mapProfileUpdateToSupabase', () => {
+  it('returns empty update for no inputs', () => {
+    expect(mapProfileUpdateToSupabase({})).toEqual({});
+  });
+
+  it('forwards display_name when displayName is provided', () => {
+    expect(mapProfileUpdateToSupabase({ displayName: 'Max' })).toEqual({
+      display_name: 'Max',
+    });
+  });
+
+  it('forwards avatar_url when avatarUrl is provided', () => {
+    expect(
+      mapProfileUpdateToSupabase({ avatarUrl: 'https://example.com/a.png' })
+    ).toEqual({ avatar_url: 'https://example.com/a.png' });
+  });
+
+  it('forwards both fields when both are provided', () => {
+    expect(
+      mapProfileUpdateToSupabase({ displayName: 'Max', avatarUrl: 'url' })
+    ).toEqual({ display_name: 'Max', avatar_url: 'url' });
   });
 });

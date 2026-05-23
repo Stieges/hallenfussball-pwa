@@ -52,6 +52,16 @@ export const DurationEstimate: React.FC<DurationEstimateProps> = ({ formData }) 
   const numberOfGroups = formData.numberOfGroups ?? 2;
   const groupSystem = formData.groupSystem ?? 'roundRobin';
 
+  // F-112: guard against division-by-zero / invalid state.
+  // Steppers enforce min ≥ 1, but imported or partial form data may be invalid.
+  if (
+    !Number.isFinite(teams) || teams < 1 ||
+    !Number.isFinite(fields) || fields < 1 ||
+    (groupSystem === 'groupsAndFinals' && (!Number.isFinite(numberOfGroups) || numberOfGroups < 1))
+  ) {
+    return null;
+  }
+
   // Group phase timing
   const groupGameDuration = formData.groupPhaseGameDuration ?? DEFAULT_VALUES.groupPhaseGameDuration;
   const groupBreakDuration = formData.groupPhaseBreakDuration ?? DEFAULT_VALUES.groupPhaseBreakDuration;

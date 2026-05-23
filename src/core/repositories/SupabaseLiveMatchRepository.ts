@@ -185,7 +185,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // The DB trigger will auto-increment version on successful update
       const { data: updatedRow, error: matchError } = await supabase
         .from('matches')
-        .update(matchUpdate as unknown as Record<string, unknown>)
+        .update(matchUpdate)
         .eq('id', match.id)
         .eq('version', match.version) // Optimistic lock check
         .select('version')
@@ -212,7 +212,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         if (currentMatch && (currentMatch.match_status === 'not_started' || currentMatch.match_status === 'scheduled')) {
           const { data: retryRow, error: retryError } = await supabase
             .from('matches')
-            .update(matchUpdate as unknown as Record<string, unknown>)
+            .update(matchUpdate)
             .eq('id', match.id)
             .eq('version', currentVersion)
             .select('version')
@@ -247,9 +247,12 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
           // Don't throw - match was updated successfully
         }
 
-        // Update event ID cache
+        // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
+        // even though MatchEventInsert types it as optional.
         for (const event of newEvents) {
-          existingEventIds.add(event.id);
+          if (event.id) {
+            existingEventIds.add(event.id);
+          }
         }
         this.eventIdsCache.set(match.id, existingEventIds);
       }
@@ -280,7 +283,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // Clear live_state (don't delete the match, just clear live state)
       const { error } = await supabase
         .from('matches')
-        .update({ live_state: null } as unknown as Record<string, unknown>)
+        .update({ live_state: null })
         .eq('id', matchId);
 
       if (error) {
@@ -305,7 +308,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // Clear live_state for all tournament matches
       const { error } = await supabase
         .from('matches')
-        .update({ live_state: null } as unknown as Record<string, unknown>)
+        .update({ live_state: null })
         .eq('tournament_id', tournamentId);
 
       if (error) {

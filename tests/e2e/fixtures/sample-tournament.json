@@ -1,0 +1,25 @@
+{
+  "title": "E2E Import Sample",
+  "organizer": "E2E Test e.V.",
+  "ageClass": "U12",
+  "date": "2026-12-01",
+  "startDate": "2026-12-01",
+  "startTime": "10:00",
+  "location": {
+    "name": "E2E Sporthalle"
+  },
+  "sport": "football",
+  "sportId": "football-indoor",
+  "tournamentType": "classic",
+  "mode": "classic",
+  "numberOfFields": 1,
+  "numberOfTeams": 4,
+  "numberOfGroups": 1,
+  "teams": [
+    { "id": "t1", "name": "Alpha" },
+    { "id": "t2", "name": "Beta" },
+    { "id": "t3", "name": "Gamma" },
+    { "id": "t4", "name": "Delta" }
+  ],
+  "matches": []
+}
