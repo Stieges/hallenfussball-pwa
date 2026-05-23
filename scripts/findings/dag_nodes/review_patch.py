@@ -4,7 +4,7 @@ Validates that the deterministic patcher produced a correct result by asking
 a second LLM to compare the original finding + planned operations against
 the actual patched file content.
 
-Routing: qwen-3.5-122b-sovereign via AI Hub (sovereign, free, adesso-hosted).
+Routing: qwen-3.5-122b-sovereign via AI Hub (sovereign, free).
 Same model family as plan_changes — diversity is provided by the structurally
 different prompt (verification vs generation) plus the few-shot REJECTED
 patterns that anchor the reviewer on concrete failure modes.

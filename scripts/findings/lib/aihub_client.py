@@ -11,7 +11,6 @@ from typing import List
 import requests
 
 
-DEFAULT_BASE_URL = "https://adesso-ai-hub.3asabc.de/v1"
 DEFAULT_TIMEOUT = 600  # 10 min for thinking-mode
 
 QWEN_THINKING_PARAMS = {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "presence_penalty": 0.0}
@@ -30,10 +29,12 @@ class AIHubError(Exception):
 
 class AIHubClient:
     def __init__(self, api_key: str | None = None, base_url: str | None = None):
-        self.api_key = api_key or os.environ.get("ADESSO_API_KEY") or os.environ.get("ADESSO_AI_HUB_API_KEY")
+        self.api_key = api_key or os.environ.get("AI_HUB_API_KEY")
         if not self.api_key:
-            raise ValueError("ADESSO_API_KEY environment variable not set")
-        self.base_url = base_url or os.environ.get("ADESSO_AI_HUB_BASE_URL", DEFAULT_BASE_URL)
+            raise ValueError("AI_HUB_API_KEY environment variable not set")
+        self.base_url = base_url or os.environ.get("AI_HUB_BASE_URL")
+        if not self.base_url:
+            raise ValueError("AI_HUB_BASE_URL environment variable not set")
 
     def _params_for_model(self, model: str) -> dict:
         if model.startswith("qwen3-coder"):
