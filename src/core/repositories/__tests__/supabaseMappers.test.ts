@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import type { Database } from '../../../types/supabase';
 import {
   mapTeamFromSupabase,
   mapTeamToSupabase,
@@ -15,126 +14,11 @@ import {
   mapMembershipTeamsUpdateToSupabase,
   mapProfileUpdateToSupabase,
 } from '../supabaseMappers';
-
-// =============================================================================
-// Test Data Factories
-// =============================================================================
-
-type TeamRow = Database['public']['Tables']['teams']['Row'];
-type MatchRow = Database['public']['Tables']['matches']['Row'];
-type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
-
-function createTeamRow(overrides: Partial<TeamRow> = {}): TeamRow {
-  return {
-    id: 'team-1',
-    name: 'FC Test',
-    tournament_id: 'tournament-1',
-    group_letter: null,
-    is_removed: null,
-    removed_at: null,
-    removed_reason: null,
-    logo_path: null,
-    logo_background_color: null,
-    color_primary: null,
-    color_secondary: null,
-    contact_name: null,
-    contact_email: null,
-    contact_phone: null,
-    sort_order: null,
-    is_public: null,
-    owner_id: null,
-    created_at: null,
-    updated_at: null,
-    version: 1,
-    ...overrides,
-  };
-}
-
-function createMatchRow(overrides: Partial<MatchRow> = {}): MatchRow {
-  return {
-    id: 'match-1',
-    tournament_id: 'tournament-1',
-    round: 1,
-    field: 1,
-    slot: null,
-    team_a_id: null,
-    team_b_id: null,
-    team_a_placeholder: null,
-    team_b_placeholder: null,
-    score_a: null,
-    score_b: null,
-    group_letter: null,
-    is_final: null,
-    final_type: null,
-    label: null,
-    scheduled_start: null,
-    match_number: null,
-    phase: null,
-    referee_number: null,
-    referee_team_id: null,
-    match_status: null,
-    actual_start: null,
-    actual_end: null,
-    timer_start_time: null,
-    timer_paused_at: null,
-    timer_elapsed_seconds: null,
-    overtime_score_a: null,
-    overtime_score_b: null,
-    penalty_score_a: null,
-    penalty_score_b: null,
-    decided_by: null,
-    skipped_reason: null,
-    skipped_at: null,
-    duration_minutes: null,
-    last_modified_by: null,
-    live_state: null,
-    is_public: null,
-    owner_id: null,
-    created_at: null,
-    updated_at: null,
-    version: null,
-    ...overrides,
-  };
-}
-
-function createTournamentRow(overrides: Partial<TournamentRow> = {}): TournamentRow {
-  return {
-    id: 'tournament-1',
-    owner_id: 'user-1',
-    title: 'Test Turnier',
-    status: 'draft',
-    sport: 'football-indoor',
-    tournament_type: 'classic',
-    date: '2026-01-15',
-    start_time: '14:00',
-    location_name: 'Sporthalle Test',
-    location_street: null,
-    location_city: null,
-    location_postal_code: null,
-    location_country: null,
-    number_of_fields: 2,
-    number_of_teams: 8,
-    number_of_groups: 2,
-    group_phase_duration: 10,
-    group_phase_break: 2,
-    final_round_duration: 12,
-    final_round_break: 3,
-    point_system: { win: 3, draw: 1, loss: 0 },
-    finals_config: null,
-    referee_config: null,
-    config: {},
-    is_public: null,
-    share_code: null,
-    share_code_created_at: null,
-    completed_at: null,
-    deleted_at: null,
-    last_modified_by: null,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
-    version: 1,
-    ...overrides,
-  };
-}
+import {
+  createTeamRow,
+  createMatchRow,
+  createTournamentRow,
+} from '../../../../tests/factories/supabase';
 
 // =============================================================================
 // TEAM MAPPER TESTS

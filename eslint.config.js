@@ -149,6 +149,19 @@ export default tseslint.config(
       '@typescript-eslint/dot-notation': 'off',
       '@typescript-eslint/no-useless-constructor': 'warn',
       '@typescript-eslint/consistent-type-definitions': 'off',
+
+      // Supabase-spezifische Guardrails: blockt `as any`-Bypässe der typisierten Client-API
+      // (eingeführt nach PR #137 — Sanitizer-Bypass via untyped .from()).
+      'no-restricted-syntax': ['error',
+        {
+          selector: "TSAsExpression[expression.name='supabase'][typeAnnotation.type='TSAnyKeyword']",
+          message: 'Avoid `supabase as any`. Use the typed client (Database generic) or extend the mapper layer.',
+        },
+        {
+          selector: "MemberExpression[object.type='TSAsExpression'][object.typeAnnotation.type='TSAnyKeyword'][property.name='from']",
+          message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
+        },
+      ],
     },
   },
 
@@ -164,6 +177,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
+      // Supabase-Guardrail in Tests: nicht hart blocken (Tests dürfen pragmatischer
+      // sein z.B. zum Mocken untypisierter Antworten), aber als Warnung sichtbar bleiben.
+      'no-restricted-syntax': 'warn',
     },
   },
 
