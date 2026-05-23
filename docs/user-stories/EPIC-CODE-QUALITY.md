@@ -19,7 +19,7 @@
 Dieses Epic fasst alle identifizierten Code-Qualitäts-Verbesserungen zusammen, basierend auf:
 - **Code-Qualitäts-Analyse** (Score: 5.0/10 → Ziel: 8.0/10)
 - **6 User Stories** mit detaillierten Refinements
-- **adesso AI Hub Refinement-Feedback** für jede Story
+- **AI Hub Refinement-Feedback** für jede Story
 
 ### Kritische Erkenntnisse aus Refinements
 
@@ -281,4 +281,4 @@ Die vollständigen Refinement-Berichte für jede Story befinden sich in den jewe
 
 - [Code-Quality-Analysis.md](/docs/CODE-QUALITY-ANALYSIS.md) - Ursprüngliche Analyse
 - React Best Practices 2024/2025
-- adesso AI Hub Refinement-Feedback
+- AI Hub Refinement-Feedback

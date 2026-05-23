@@ -149,7 +149,7 @@ export interface TeamScheduleState {
 | Datei | Zweck |
 |-------|-------|
 | **docs/blocker-validation.md** | Agent-Suche nach Blockern |
-| **docs/plan-evaluation-adesso.md** | Agent-Review (7 Risiken) |
+| **docs/plan-evaluation-reviewer.md** | Agent-Review (7 Risiken) |
 | **docs/FAIR_SCHEDULER.md** | Projekt-Dokumentation |
 
 ### Archiv (veraltet)
@@ -157,11 +157,11 @@ export interface TeamScheduleState {
 | Datei | Warum archivieren? |
 |-------|-------------------|
 | **docs/blocker-summary.md** | Veraltet (falsche Fixes) |
-| **docs/plan-response-to-adesso.md** | Überholte Zwischen-Analyse |
+| **docs/plan-response-to-reviewer.md** | Überholte Zwischen-Analyse |
 | **docs/implementation-decision-analysis.md** | Entscheidungen im Plan |
 | **docs/property-names-search.md** | Plan bereits korrigiert |
 | **docs/fairnesscalculator-clarification.md** | Info im Plan integriert |
-| **docs/adesso-followup-analysis.md** | Überholte Analyse |
+| **docs/reviewer-followup-analysis.md** | Überholte Analyse |
 | **docs/fairscheduler-code-review.md** | Initiale Analyse, überholt |
 
 📁 **Archiv-Verzeichnis:** `docs/archive/` (erstellt, aber Dateien noch nicht verschoben)

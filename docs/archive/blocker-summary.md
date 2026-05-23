@@ -7,7 +7,7 @@
 
 ## 📊 Ergebnis der gezielten Suche
 
-Der adesso Agent hat den Implementierungsplan systematisch nach den 4 validierten Blockern durchsucht:
+Der Review-Agent hat den Implementierungsplan systematisch nach den 4 validierten Blockern durchsucht:
 
 | Blocker | Status | Bewertung |
 |---------|--------|-----------|
@@ -24,7 +24,7 @@ Der adesso Agent hat den Implementierungsplan systematisch nach den 4 validierte
 
 ### Phase 1: Systematische Code-Analyse
 
-Ich habe alle 8 Rückfragen des adesso Agents durch direkte Code-Analyse beantwortet:
+Ich habe alle 8 Rückfragen des Review-Agents durch direkte Code-Analyse beantwortet:
 
 **✅ Bestätigt:**
 1. `minRestSlotsPerTeam` existiert in `GroupPhaseScheduleOptions` (Line 42)
@@ -41,7 +41,7 @@ Ich habe alle 8 Rückfragen des adesso Agents durch direkte Code-Analyse beantwo
 ### Phase 2: Gezielte Blocker-Suche
 
 Ich habe ein Script erstellt ([clarify-blockers.js](../clarify-blockers.js)), das:
-1. Den Code-Kontext an adesso Agent sendet
+1. Den Code-Kontext an Review-Agent sendet
 2. Agent gezielt nach den 4 validierten Blockern im Plan suchen lässt
 3. Für jeden Blocker konkrete Fundstellen und Bewertungen liefert
 
@@ -393,7 +393,7 @@ Wir starten mit dem aktuellen Plan und beheben die Blocker während der Umsetzun
 **Risiko:** Mehr Trial-and-Error während der Implementation
 
 ### Option C: Agent nochmal Plan updaten lassen
-Der adesso Agent könnte den Plan mit den Fixes aktualisieren.
+Der Review-Agent könnte den Plan mit den Fixes aktualisieren.
 
 **Vorteil:** Agent macht die Detail-Arbeit
 **Aufwand:** ~10 Minuten (Script schreiben + Agent-Call)
@@ -438,5 +438,5 @@ Der adesso Agent könnte den Plan mit den Fixes aktualisieren.
 
 **A)** Ich passe den Plan jetzt mit den 3 Fixes an (~5 min)
 **B)** Wir starten die Implementation und beheben Blocker während der Umsetzung
-**C)** Der adesso Agent soll den Plan updaten (~10 min)
+**C)** Der Review-Agent soll den Plan updaten (~10 min)
 **D)** Du möchtest weitere Klärungen vor dem Start

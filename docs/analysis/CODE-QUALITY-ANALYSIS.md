@@ -1,7 +1,7 @@
 # Code-Qualitätsanalyse: Hallenfußball-PWA
 
 **Erstellt:** 2025-12-25
-**Analyst:** adesso AI Hub (gpt-oss-120b-sovereign) + Claude
+**Analyst:** AI Hub (gpt-oss-120b-sovereign) + Claude
 **Version:** 1.0
 
 ---

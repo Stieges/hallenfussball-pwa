@@ -32,7 +32,7 @@ Dieses Dokument beschreibt die Architektur für die Multi-User-Fähigkeit der Ha
 - Open Source (kein Vendor Lock-in)
 - PostgreSQL (relationale Daten ideal für Turniere)
 - Row Level Security (RLS) für feingranulare Berechtigungen
-- Self-Hosting möglich (adesso-konform)
+- Self-Hosting möglich (self-hosting-tauglich)
 - Realtime Subscriptions für Live-Updates
 
 **Firebase Vorteile:**

@@ -14,7 +14,7 @@ Der empfohlene Fix im Scheduler-Loop wäre daher Dead Code.
 
 ---
 
-## 💬 adesso Agent Antwort
+## 💬 Review-Agent Antwort
 
 ## 1️⃣  Dein Verständnis des Code‑Flows  
 

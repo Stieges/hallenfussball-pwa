@@ -1,14 +1,14 @@
-# Antwort auf adesso Agent Plan-Evaluation
+# Antwort auf Review-Agent Plan-Evaluation
 
 > **Erstellt:** 2025-12-04
-> **Basis:** Codebase-Untersuchung + adesso Evaluation
+> **Basis:** Codebase-Untersuchung + Reviewer Evaluation
 > **Status:** Bereit für User-Entscheidungen
 
 ---
 
 ## 🔍 Codebase-Analyse: Findings
 
-Ich habe den tatsächlichen Code untersucht, um die Fragen des adesso Agenten zu beantworten:
+Ich habe den tatsächlichen Code untersucht, um die Fragen des Review-Agenten zu beantworten:
 
 ### ✅ BESTÄTIGT durch Code-Analyse:
 
@@ -46,7 +46,7 @@ Der Plan referenziert falsche Property-Namen:
 
 ---
 
-## 📋 Antworten auf adesso Agent Rückfragen
+## 📋 Antworten auf Review-Agent Rückfragen
 
 ### 1. Wie wird `teamRestMap` aktuell verwendet?
 
@@ -128,7 +128,7 @@ Begründung:
 
 ### 1️⃣ Typ-Definition `team2: Team | null` ohne Discriminated Union
 
-**adesso Bedenken:** Runtime `Cannot read property 'id' of null`
+**Reviewer-Bedenken:** Runtime `Cannot read property 'id' of null`
 
 **Meine Analyse:**
 - ✅ Der Code hat bereits `if (teamA && teamB)` Check (Line 105)
@@ -164,7 +164,7 @@ interface TeamPairing {
 
 ### 2️⃣ Fehlende `FairnessCalculator`-Integration in allen Pfaden
 
-**adesso Bedenken:** `teamRestMap` wird woanders verwendet
+**Reviewer-Bedenken:** `teamRestMap` wird woanders verwendet
 
 **Meine Analyse:**
 - ❌ `teamRestMap` **existiert nicht** im Code
@@ -229,11 +229,11 @@ export class FairnessCalculator {
 
 ### 3️⃣ Early-Termination kann zu unvollständigen Spielplänen führen
 
-**adesso Bedenken:** `break` lässt restliche Pairings ungescheduled
+**Reviewer-Bedenken:** `break` lässt restliche Pairings ungescheduled
 
 **Meine Analyse:**
 - ✅ **Bedenken ist VALIDE**
-- ✅ adesso schlägt Fallback-Scheduler vor
+- ✅ der Reviewer schlägt Fallback-Scheduler vor
 
 **MEINE EMPFEHLUNG:** **ZWEI-STUFEN-ANSATZ**
 
@@ -262,11 +262,11 @@ if (remainingPairings.length > 0) {
 
 ### 4️⃣ Pre-Validation Heuristik zu simpel
 
-**adesso Bedenken:** `Math.ceil(totalMatches / 100)` ist willkürlich
+**Reviewer-Bedenken:** `Math.ceil(totalMatches / 100)` ist willkürlich
 
 **Meine Analyse:**
 - ✅ **Bedenken ist VALIDE**
-- ✅ adesso schlägt Zeit-basierte Berechnung vor
+- ✅ der Reviewer schlägt Zeit-basierte Berechnung vor
 
 **KORRIGIERTE Validation:**
 
@@ -302,7 +302,7 @@ function validateSchedulingConstraints(
 
 ### 5️⃣ Tests decken keine Edge Cases für `null`-Handling
 
-**adesso Bedenken:** Tests prüfen nur Match-Anzahl, nicht null-Safety
+**Reviewer-Bedenken:** Tests prüfen nur Match-Anzahl, nicht null-Safety
 
 **Meine Analyse:**
 - ✅ **Bedenken ist VALIDE**
@@ -362,7 +362,7 @@ describe('Fair Scheduler - Null Handling', () => {
 
 ### 6️⃣ Fehlende Rollback-Strategie
 
-**adesso Bedenken:** Feature-Flag nötig für Production-Rollback
+**Reviewer-Bedenken:** Feature-Flag nötig für Production-Rollback
 
 **Meine Analyse:**
 - ⚠️ **Feature-Flag ist OVERKILL** für dieses Projekt
@@ -458,7 +458,7 @@ describe('Fair Scheduler - Null Handling', () => {
 
 ## ✅ POSITIVE ASPEKTE (Ergänzungen)
 
-Zusätzlich zu adesso's Punkten:
+Zusätzlich zu Reviewer- Punkten:
 
 | Aspekt | Warum das gut ist |
 |--------|-------------------|
@@ -502,7 +502,7 @@ Zusätzlich zu adesso's Punkten:
 
 ## 📊 Risiko-Assessment (Nach Korrekturen)
 
-| Issue | adesso Rating | Nach Analyse | Begründung |
+| Issue | Reviewer-Rating | Nach Analyse | Begründung |
 |-------|---------------|--------------|------------|
 | 1. Null-Handling | 🚨 CRITICAL | ⚠️ MEDIUM | Checks bereits vorhanden, nur Type-Annotation fehlt |
 | 2. FairnessCalculator | 🚨 CRITICAL | ✅ LOW | teamRestMap existiert nicht, einfachere Lösung möglich |
@@ -525,11 +525,11 @@ Der Plan verwendet `team1`/`team2`, aber der Code hat `teamA`/`teamB`.
 
 ### 2. Early-Termination Strategie
 
-adesso empfiehlt Fallback Round-Robin, ich empfehle Error werfen (Fail-Fast).
+der Reviewer empfiehlt Fallback Round-Robin, ich empfehle Error werfen (Fail-Fast).
 
 **Bevorzugst du:**
 - [ ] **Error werfen** (meine Empfehlung) - User bekommt klares Feedback
-- [ ] **Fallback-Scheduler** (adesso Empfehlung) - Immer ein Schedule, aber vielleicht unfair
+- [ ] **Fallback-Scheduler** (Reviewer-Empfehlung) - Immer ein Schedule, aber vielleicht unfair
 - [ ] **Beides** - Error werfen, aber in Session 3 Fallback implementieren
 
 ### 3. FairnessCalculator Refactoring-Tiefe
@@ -539,11 +539,11 @@ Der Plan will einen großen Refactoring (`teamRestMap` → `FairnessCalculator`)
 **Soll ich:**
 - [ ] **Vereinfachten FairnessCalculator** bauen (nur Variance-Cache)
 - [ ] **Plan beibehalten** und FairnessCalculator wie beschrieben implementieren
-- [ ] **Nochmal mit adesso Agent diskutieren** was genau gemeint ist
+- [ ] **Nochmal mit Review-Agent diskutieren** was genau gemeint ist
 
 ### 4. Test-Strategie Erweiterung
 
-adesso hat Recht dass Null-Handling Tests fehlen.
+der Reviewer hat Recht dass Null-Handling Tests fehlen.
 
 **Sollen diese Tests:**
 - [ ] **In Session 1** hinzugefügt werden (mehr Aufwand, aber sicherer)
@@ -557,7 +557,7 @@ adesso hat Recht dass Null-Handling Tests fehlen.
 **Wenn du die 4 Fragen beantwortet hast:**
 
 1. Ich aktualisiere den Plan mit Korrekturen
-2. Optional: Nochmal mit adesso Agent diskutieren (falls gewünscht)
+2. Optional: Nochmal mit Review-Agent diskutieren (falls gewünscht)
 3. Überarbeiteten Plan von dir genehmigen lassen
 4. Dann kann Implementation starten
 
