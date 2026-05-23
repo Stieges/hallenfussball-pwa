@@ -30,6 +30,10 @@ mcp-ai-hub-analyzer/
 **/mcp*.md
 **/MCP*.md
 
+# CLAUDE.md ist lokal in .claude/CLAUDE.md konsolidiert (gitignored).
+# Root-Level CLAUDE.md soll NICHT versehentlich getrackt werden.
+/CLAUDE.md
+
 # API Keys und Credentials
 *.key
 *.pem
