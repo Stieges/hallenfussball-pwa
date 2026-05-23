@@ -12,6 +12,9 @@ import {
   createTeamRow,
   createMatchRow,
   createEventRow,
+  type TeamRow,
+  type MatchRow,
+  type MatchEventRow,
 } from '../../../../tests/factories/supabase';
 
 // =============================================================================

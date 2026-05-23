@@ -18,6 +18,7 @@ import {
   createTeamRow,
   createMatchRow,
   createTournamentRow,
+  type Database,
 } from '../../../../tests/factories/supabase';
 
 // =============================================================================

@@ -10,12 +10,15 @@
  * object. When the schema gains new columns, the central factory is
  * the single place to extend — keeping mapper tests in sync.
  */
-import type { Tables } from '../../src/types/supabase';
+import type { Database, Tables } from '../../src/types/supabase';
 
-type TeamRow = Tables<'teams'>;
-type MatchRow = Tables<'matches'>;
-type TournamentRow = Tables<'tournaments'>;
-type MatchEventRow = Tables<'match_events'>;
+// Re-exported so Mapper-Test-Files das ganze Type-Set aus einer Quelle ziehen.
+export type { Database, Tables };
+
+export type TeamRow = Tables<'teams'>;
+export type MatchRow = Tables<'matches'>;
+export type TournamentRow = Tables<'tournaments'>;
+export type MatchEventRow = Tables<'match_events'>;
 
 export function createTeamRow(overrides: Partial<TeamRow> = {}): TeamRow {
   return {
