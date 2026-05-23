@@ -71,8 +71,15 @@ describe('TournamentCreationService', () => {
             expect(errors).toHaveLength(0);
         });
 
+        // Uses local-date formatting to match the production validator
+        // (TournamentCreationService.isPastDate compares against local
+        // calendar day). UTC-based ISO strings diverge near midnight.
+        function localIsoDate(d: Date): string {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
         it('F-113: should reject past start dates in step 1', () => {
-            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const yesterday = localIsoDate(new Date(Date.now() - 24 * 60 * 60 * 1000));
             const errors = service.validateStep(1, {
                 title: 'T',
                 date: yesterday,
@@ -82,7 +89,7 @@ describe('TournamentCreationService', () => {
         });
 
         it("F-113: should accept today's date as start date", () => {
-            const today = new Date().toISOString().slice(0, 10);
+            const today = localIsoDate(new Date());
             const errors = service.validateStep(1, {
                 title: 'T',
                 date: today,

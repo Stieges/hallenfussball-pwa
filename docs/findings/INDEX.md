@@ -327,3 +327,5 @@
 | F-319 | 🟡 | architecture | Hardcoded letterSpacing statt Design Token | src/features/tournament-management/components/schedule-filter/FilterDropdown.tsx | 10m | open | — | — |
 | F-320 | 🟡 | architecture | Hardcoded padding statt Design Token | src/features/tournament-management/components/schedule-filter/FilterChips.tsx | 5m | open | — | — |
 | F-321 | 🟡 | ux | Wizard-Deep-Link rendert Step 1 obwohl URL höhere Step-Nummer trägt | src/screens/TournamentCreationScreen.tsx | 1h | fixed | tests/e2e/flows/wizard.spec.ts | b562562 |
+| F-322 | 🟠 | architecture | RealtimeService has no reconnect limit or exponential backoff | src/core/realtime/RealtimeService.ts | 2h | open | src/core/realtime/__tests__/RealtimeService.test.ts | — |
+| F-323 | 🟡 | architecture | RealtimeService — no leak detection for double-subscribe without unsubscribe | src/core/realtime/RealtimeService.ts | 30m | open | src/core/realtime/__tests__/RealtimeService.test.ts | — |
