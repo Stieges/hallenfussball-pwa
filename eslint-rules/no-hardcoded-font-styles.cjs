@@ -39,7 +39,8 @@ module.exports = {
   },
 
   create(context) {
-    const filename = context.getFilename();
+    // ESLint 10 entfernt context.getFilename(); 8.40+ haben context.filename
+    const filename = context.filename ?? context.getFilename();
 
     // Files/paths that are allowed to use hardcoded values
     const allowedPatterns = [
