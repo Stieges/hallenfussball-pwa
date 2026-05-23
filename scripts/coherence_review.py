@@ -153,10 +153,12 @@ def main() -> int:
         return 2
 
     context_files = collect_context_files(project_root)
-    # Deduplicate while preserving order (scope first)
+    # Deduplicate while preserving order. Context-Files FIRST so they survive
+    # budget truncation — they're essential for interface-mismatch detection
+    # (mappers + type defs) and would otherwise be dropped when scope is large.
     seen = set()
     all_files = []
-    for f in scope_files + context_files:
+    for f in context_files + scope_files:
         if f not in seen:
             seen.add(f)
             all_files.append(f)
