@@ -247,9 +247,12 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
           // Don't throw - match was updated successfully
         }
 
-        // Update event ID cache
+        // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
+        // even though MatchEventInsert types it as optional.
         for (const event of newEvents) {
-          existingEventIds.add(event.id);
+          if (event.id) {
+            existingEventIds.add(event.id);
+          }
         }
         this.eventIdsCache.set(match.id, existingEventIds);
       }

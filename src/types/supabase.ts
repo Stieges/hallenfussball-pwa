@@ -1,11 +1,13 @@
 /**
  * Supabase Database Types
  *
- * Auto-generiert von Supabase CLI
+ * Auto-generiert via Supabase MCP (project: amtlqicosscsjnnthvzm)
+ * Letzte Regeneration: 2026-05-23
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
  * npx supabase gen types typescript --project-id amtlqicosscsjnnthvzm > src/types/supabase.ts
+ * oder via MCP: mcp__supabase__generate_typescript_types
  */
 
 export type Json =
@@ -29,10 +31,12 @@ export type Database = {
           corrected_at: string | null
           corrected_by: string | null
           id: string
+          is_public: boolean | null
           match_id: string
           new_score_a: number
           new_score_b: number
           note: string | null
+          owner_id: string | null
           previous_score_a: number
           previous_score_b: number
           reason_type: string | null
@@ -41,10 +45,12 @@ export type Database = {
           corrected_at?: string | null
           corrected_by?: string | null
           id?: string
+          is_public?: boolean | null
           match_id: string
           new_score_a: number
           new_score_b: number
           note?: string | null
+          owner_id?: string | null
           previous_score_a: number
           previous_score_b: number
           reason_type?: string | null
@@ -53,10 +59,12 @@ export type Database = {
           corrected_at?: string | null
           corrected_by?: string | null
           id?: string
+          is_public?: boolean | null
           match_id?: string
           new_score_a?: number
           new_score_b?: number
           note?: string | null
+          owner_id?: string | null
           previous_score_a?: number
           previous_score_b?: number
           reason_type?: string | null
@@ -77,7 +85,9 @@ export type Database = {
           id: string
           incomplete: boolean | null
           is_deleted: boolean | null
+          is_public: boolean | null
           match_id: string
+          owner_id: string | null
           payload: Json
           period: string | null
           player_id: string | null
@@ -86,13 +96,16 @@ export type Database = {
           team_id: string | null
           timestamp_seconds: number
           type: string
+          version: number
         }
         Insert: {
           created_at?: string | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
+          is_public?: boolean | null
           match_id: string
+          owner_id?: string | null
           payload?: Json
           period?: string | null
           player_id?: string | null
@@ -101,13 +114,16 @@ export type Database = {
           team_id?: string | null
           timestamp_seconds: number
           type: string
+          version?: number
         }
         Update: {
           created_at?: string | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
+          is_public?: boolean | null
           match_id?: string
+          owner_id?: string | null
           payload?: Json
           period?: string | null
           player_id?: string | null
@@ -116,6 +132,7 @@ export type Database = {
           team_id?: string | null
           timestamp_seconds?: number
           type?: string
+          version?: number
         }
         Relationships: [
           {
@@ -153,12 +170,15 @@ export type Database = {
           group_letter: string | null
           id: string
           is_final: boolean | null
+          is_public: boolean | null
           label: string | null
           last_modified_by: string | null
+          live_state: Json | null
           match_number: number | null
           match_status: string | null
           overtime_score_a: number | null
           overtime_score_b: number | null
+          owner_id: string | null
           penalty_score_a: number | null
           penalty_score_b: number | null
           phase: string | null
@@ -193,12 +213,15 @@ export type Database = {
           group_letter?: string | null
           id?: string
           is_final?: boolean | null
+          is_public?: boolean | null
           label?: string | null
           last_modified_by?: string | null
+          live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
+          owner_id?: string | null
           penalty_score_a?: number | null
           penalty_score_b?: number | null
           phase?: string | null
@@ -233,12 +256,15 @@ export type Database = {
           group_letter?: string | null
           id?: string
           is_final?: boolean | null
+          is_public?: boolean | null
           label?: string | null
           last_modified_by?: string | null
+          live_state?: Json | null
           match_number?: number | null
           match_status?: string | null
           overtime_score_a?: number | null
           overtime_score_b?: number | null
+          owner_id?: string | null
           penalty_score_a?: number | null
           penalty_score_b?: number | null
           phase?: string | null
@@ -300,10 +326,13 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_public: boolean | null
           name: string
+          owner_id: string | null
           tournament_id: string
           type: string
           updated_at: string | null
+          version: number
         }
         Insert: {
           access_code?: string | null
@@ -311,10 +340,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
           name: string
+          owner_id?: string | null
           tournament_id: string
           type?: string
           updated_at?: string | null
+          version?: number
         }
         Update: {
           access_code?: string | null
@@ -322,10 +354,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
           name?: string
+          owner_id?: string | null
           tournament_id?: string
           type?: string
           updated_at?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -346,7 +381,7 @@ export type Database = {
           email: string | null
           id: string
           preferences: Json | null
-          role: string | null
+          role: string
           updated_at: string | null
         }
         Insert: {
@@ -357,7 +392,7 @@ export type Database = {
           email?: string | null
           id: string
           preferences?: Json | null
-          role?: string | null
+          role?: string
           updated_at?: string | null
         }
         Update: {
@@ -368,7 +403,7 @@ export type Database = {
           email?: string | null
           id?: string
           preferences?: Json | null
-          role?: string | null
+          role?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -381,14 +416,17 @@ export type Database = {
           id: string
           impressions: number | null
           is_active: boolean | null
+          is_public: boolean | null
           logo_path: string | null
           name: string
+          owner_id: string | null
           show_on_monitor: boolean | null
           show_on_pdf: boolean | null
           show_on_schedule: boolean | null
           tier: string | null
           tournament_id: string
           updated_at: string | null
+          version: number
           website_url: string | null
         }
         Insert: {
@@ -398,14 +436,17 @@ export type Database = {
           id?: string
           impressions?: number | null
           is_active?: boolean | null
+          is_public?: boolean | null
           logo_path?: string | null
           name: string
+          owner_id?: string | null
           show_on_monitor?: boolean | null
           show_on_pdf?: boolean | null
           show_on_schedule?: boolean | null
           tier?: string | null
           tournament_id: string
           updated_at?: string | null
+          version?: number
           website_url?: string | null
         }
         Update: {
@@ -415,14 +456,17 @@ export type Database = {
           id?: string
           impressions?: number | null
           is_active?: boolean | null
+          is_public?: boolean | null
           logo_path?: string | null
           name?: string
+          owner_id?: string | null
           show_on_monitor?: boolean | null
           show_on_pdf?: boolean | null
           show_on_schedule?: boolean | null
           tier?: string | null
           tournament_id?: string
           updated_at?: string | null
+          version?: number
           website_url?: string | null
         }
         Relationships: [
@@ -576,16 +620,18 @@ export type Database = {
           created_at: string | null
           group_letter: string | null
           id: string
+          is_public: boolean | null
           is_removed: boolean | null
           logo_background_color: string | null
           logo_path: string | null
           name: string
+          owner_id: string | null
           removed_at: string | null
           removed_reason: string | null
           sort_order: number | null
           tournament_id: string
           updated_at: string | null
-          version: number | null
+          version: number
         }
         Insert: {
           color_primary?: string | null
@@ -596,16 +642,18 @@ export type Database = {
           created_at?: string | null
           group_letter?: string | null
           id?: string
+          is_public?: boolean | null
           is_removed?: boolean | null
           logo_background_color?: string | null
           logo_path?: string | null
           name: string
+          owner_id?: string | null
           removed_at?: string | null
           removed_reason?: string | null
           sort_order?: number | null
           tournament_id: string
           updated_at?: string | null
-          version?: number | null
+          version?: number
         }
         Update: {
           color_primary?: string | null
@@ -616,16 +664,18 @@ export type Database = {
           created_at?: string | null
           group_letter?: string | null
           id?: string
+          is_public?: boolean | null
           is_removed?: boolean | null
           logo_background_color?: string | null
           logo_path?: string | null
           name?: string
+          owner_id?: string | null
           removed_at?: string | null
           removed_reason?: string | null
           sort_order?: number | null
           tournament_id?: string
           updated_at?: string | null
-          version?: number | null
+          version?: number
         }
         Relationships: [
           {
@@ -644,13 +694,18 @@ export type Database = {
           allowed_groups: string[] | null
           created_at: string | null
           declined_at: string | null
+          expires_at: string | null
           id: string
           invite_code: string | null
           invite_email: string | null
           invited_at: string | null
           invited_by: string | null
+          label: string | null
+          max_uses: number | null
           role: string
+          team_ids: string[] | null
           tournament_id: string
+          use_count: number | null
           user_id: string | null
         }
         Insert: {
@@ -659,13 +714,18 @@ export type Database = {
           allowed_groups?: string[] | null
           created_at?: string | null
           declined_at?: string | null
+          expires_at?: string | null
           id?: string
           invite_code?: string | null
           invite_email?: string | null
           invited_at?: string | null
           invited_by?: string | null
+          label?: string | null
+          max_uses?: number | null
           role?: string
+          team_ids?: string[] | null
           tournament_id: string
+          use_count?: number | null
           user_id?: string | null
         }
         Update: {
@@ -674,13 +734,18 @@ export type Database = {
           allowed_groups?: string[] | null
           created_at?: string | null
           declined_at?: string | null
+          expires_at?: string | null
           id?: string
           invite_code?: string | null
           invite_email?: string | null
           invited_at?: string | null
           invited_by?: string | null
+          label?: string | null
+          max_uses?: number | null
           role?: string
+          team_ids?: string[] | null
           tournament_id?: string
+          use_count?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -765,6 +830,7 @@ export type Database = {
           point_system: Json
           referee_config: Json | null
           share_code: string | null
+          share_code_created_at: string | null
           sport: string
           start_time: string | null
           status: string
@@ -799,6 +865,7 @@ export type Database = {
           point_system?: Json
           referee_config?: Json | null
           share_code?: string | null
+          share_code_created_at?: string | null
           sport?: string
           start_time?: string | null
           status?: string
@@ -833,6 +900,7 @@ export type Database = {
           point_system?: Json
           referee_config?: Json | null
           share_code?: string | null
+          share_code_created_at?: string | null
           sport?: string
           start_time?: string | null
           status?: string
@@ -848,7 +916,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      anonymous_tournament_limit: { Args: never; Returns: number }
+      can_create_tournament: { Args: never; Returns: Json }
+      count_active_tournaments: { Args: { user_id: string }; Returns: number }
+      generate_share_code: { Args: never; Returns: string }
+      is_anonymous_user: { Args: never; Returns: boolean }
+      is_tournament_admin: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
+      is_tournament_collaborator: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
+      is_tournament_owner: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
+      make_tournament_private: {
+        Args: { tournament_id: string }
+        Returns: undefined
+      }
+      make_tournament_public: {
+        Args: { tournament_id: string }
+        Returns: {
+          share_code: string
+          share_code_created_at: string
+        }[]
+      }
+      merge_user_data: {
+        Args: { p_source_user_id: string; p_target_user_id: string }
+        Returns: Json
+      }
+      regenerate_share_code: {
+        Args: { tournament_id: string }
+        Returns: {
+          share_code: string
+          share_code_created_at: string
+        }[]
+      }
+      tournament_limit_error_message: { Args: never; Returns: string }
+      user_owns_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
@@ -865,116 +976,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-  : never = never,
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-  ? R
-  : never
+    ? R
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R
-    }
-  ? R
-  : never
-  : never
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
+      Insert: infer I
+    }
+    ? I
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Insert: infer I
-  }
-  ? I
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-  | keyof DefaultSchema["Tables"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-    Update: infer U
-  }
-  ? U
-  : never
+      Update: infer U
+    }
+    ? U
+    : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-    Update: infer U
-  }
-  ? U
-  : never
-  : never
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-  | keyof DefaultSchema["Enums"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-  | keyof DefaultSchema["CompositeTypes"]
-  | { schema: keyof DatabaseWithoutInternals },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-  : never = never,
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {

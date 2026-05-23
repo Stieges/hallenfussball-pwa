@@ -35,9 +35,11 @@ function createTeamRow(overrides: Partial<TeamRow> = {}): TeamRow {
     contact_email: null,
     contact_phone: null,
     sort_order: null,
+    is_public: null,
+    owner_id: null,
     created_at: null,
     updated_at: null,
-    version: null,
+    version: 1,
     ...overrides,
   };
 }
@@ -79,6 +81,9 @@ function createMatchRow(overrides: Partial<MatchRow & { live_state?: unknown }> 
     skipped_at: null,
     duration_minutes: null,
     last_modified_by: null,
+    live_state: null,
+    is_public: null,
+    owner_id: null,
     created_at: null,
     updated_at: null,
     version: null,
@@ -100,6 +105,9 @@ function createEventRow(overrides: Partial<MatchEventRow> = {}): MatchEventRow {
     period: null,
     incomplete: null,
     is_deleted: null,
+    is_public: null,
+    owner_id: null,
+    version: 1,
     created_at: null,
     ...overrides,
   };
