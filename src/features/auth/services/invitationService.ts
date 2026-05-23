@@ -18,6 +18,10 @@ export type { InvitationValidationResult } from '../types/auth.types';
 import { generateToken } from '../utils/tokenGenerator';
 // getCurrentUser removed - user now passed as parameter
 import { supabase, isSupabaseConfigured } from '../../../lib/supabase';
+import {
+  mapInvitationAcceptToSupabase,
+  mapInvitationInsertToSupabase,
+} from '../../../core/repositories/supabaseMappers';
 
 // ============================================
 // TYPES
@@ -168,18 +172,19 @@ export const createInvitation = async (
   try {
     const { data, error } = await supabase
       .from('tournament_collaborators')
-      .insert({
-        tournament_id: options.tournamentId,
-        invite_code: inviteCode,
-        role: options.role,
-        team_ids: options.teamIds ?? [],
-        label: options.label,
-        max_uses: options.maxUses ?? 1,
-        use_count: 0,
-        expires_at: new Date(now.getTime() + daysInMs).toISOString(),
-        invited_by: options.createdBy,
-        invited_at: now.toISOString(),
-      })
+      .insert(
+        mapInvitationInsertToSupabase({
+          tournamentId: options.tournamentId,
+          inviteCode,
+          role: options.role,
+          teamIds: options.teamIds,
+          label: options.label,
+          maxUses: options.maxUses,
+          expiresAtIso: new Date(now.getTime() + daysInMs).toISOString(),
+          invitedBy: options.createdBy,
+          invitedAtIso: now.toISOString(),
+        })
+      )
       .select()
       .single();
 
@@ -319,11 +324,13 @@ export const acceptInvitation = async (token: string, userId: string): Promise<A
     // Update the invitation row: set user_id and accepted_at
     const { data, error } = await supabase
       .from('tournament_collaborators')
-      .update({
-        user_id: userId,
-        accepted_at: now,
-        use_count: invitation.useCount + 1,
-      })
+      .update(
+        mapInvitationAcceptToSupabase({
+          userId,
+          acceptedAtIso: now,
+          newUseCount: invitation.useCount + 1,
+        })
+      )
       .eq('id', invitation.id)
       .select()
       .single();
