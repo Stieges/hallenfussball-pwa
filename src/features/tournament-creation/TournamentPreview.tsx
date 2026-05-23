@@ -34,14 +34,29 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 }) => {
   const [currentTournament, setCurrentTournament] = useState(tournament);
   const [schedule, setSchedule] = useState(initialSchedule);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+
+  // F-211: shared regeneration helper — keeps the previous schedule visible
+  // on failure and surfaces the error in the UI without crashing the wizard.
+  const regenerateSchedule = (updatedTournament: Tournament): boolean => {
+    try {
+      const newSchedule = generateFullSchedule(updatedTournament);
+      setSchedule(newSchedule);
+      setScheduleError(null);
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[TournamentPreview] Schedule generation failed:', err);
+      setScheduleError(message);
+      return false;
+    }
+  };
 
   const handleFinalsConfigChange = (config: FinalsConfig) => {
     const updatedTournament = { ...currentTournament, finalsConfig: config };
     setCurrentTournament(updatedTournament);
 
-    // Regenerate schedule with new finals config
-    const newSchedule = generateFullSchedule(updatedTournament);
-    setSchedule(newSchedule);
+    regenerateSchedule(updatedTournament);
 
     // Notify parent if callback provided
     if (onTournamentChange) {
@@ -73,9 +88,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
     setCurrentTournament(updatedTournament);
 
-    // Regenerate schedule with new referee assignments
-    const newSchedule = generateFullSchedule(updatedTournament);
-    setSchedule(newSchedule);
+    regenerateSchedule(updatedTournament);
 
     // Notify parent if callback provided
     if (onTournamentChange) {
@@ -94,9 +107,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
       setCurrentTournament(updatedTournament);
 
-      // Regenerate schedule with automatic assignments
-      const newSchedule = generateFullSchedule(updatedTournament);
-      setSchedule(newSchedule);
+      regenerateSchedule(updatedTournament);
 
       // Notify parent if callback provided
       if (onTournamentChange) {
@@ -115,9 +126,7 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
 
     setCurrentTournament(updatedTournament);
 
-    // Regenerate schedule with new field assignments
-    const newSchedule = generateFullSchedule(updatedTournament);
-    setSchedule(newSchedule);
+    regenerateSchedule(updatedTournament);
 
     // Notify parent if callback provided
     if (onTournamentChange) {
@@ -257,6 +266,40 @@ export const TournamentPreview: React.FC<TournamentPreviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* F-211: Schedule-Generation Error Banner */}
+      {scheduleError && (
+        <div
+          role="alert"
+          data-testid="schedule-error-banner"
+          style={{
+            marginBottom: '24px',
+            padding: '16px 20px',
+            background: cssVars.colors.errorLight,
+            border: `1px solid ${cssVars.colors.errorBorder}`,
+            borderRadius: cssVars.borderRadius.md,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+          }}
+        >
+          <span style={{ fontSize: cssVars.fontSizes.lg, flexShrink: 0 }} aria-hidden="true">⚠️</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: cssVars.colors.error, fontWeight: cssVars.fontWeights.semibold, fontSize: cssVars.fontSizes.md, marginBottom: '4px' }}>
+              Spielplan konnte nicht neu generiert werden
+            </div>
+            <div style={{ color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.sm, marginBottom: '8px' }}>
+              {scheduleError}
+            </div>
+            <div style={{ color: cssVars.colors.textSecondary, fontSize: cssVars.fontSizes.sm }}>
+              Der vorherige Spielplan ist weiterhin sichtbar. Bitte gehe zurück auf "Bearbeiten" und passe die Konfiguration an.
+            </div>
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => setScheduleError(null)}>
+            Schließen
+          </Button>
+        </div>
+      )}
 
       {/* Spielplan-Vorschau */}
       <Card>

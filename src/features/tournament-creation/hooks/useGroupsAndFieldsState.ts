@@ -132,6 +132,14 @@ export function useGroupsAndFieldsState({
 
     groups.forEach(group => {
       const allowedFields = group.allowedFieldIds ?? fields.map(f => f.id);
+
+      // F-116: explicit empty assignment blocks scheduling
+      if (Array.isArray(group.allowedFieldIds) && group.allowedFieldIds.length === 0) {
+        const groupName = group.customName ?? `Gruppe ${group.id}`;
+        warnings.push(`${groupName} ist keinem Feld zugeordnet - bitte mindestens ein Feld auswählen`);
+        return;
+      }
+
       if (allowedFields.length === 1 && (formData.numberOfTeams ?? 0) > 4) {
         const groupName = group.customName ?? `Gruppe ${group.id}`;
         warnings.push(`${groupName} hat nur 1 Feld - bei vielen Teams kann es eng werden`);

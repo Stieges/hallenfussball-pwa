@@ -109,18 +109,11 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/tournament/new?step=2');
     await page.waitForLoadState('networkidle');
 
-    // THEN - Wizard content visible (step 2 or redirected to step 1 if validation requires)
-    // Look for sport/tournament type selection OR Stammdaten (if redirected)
-    const sportSection = page.getByText(/Sportart|Fußball|Handball|Basketball/i).first();
-    const stammdatenSection = page.getByText(/Stammdaten|Turniername/i).first();
+    // THEN - lazy-loaded step content becomes visible after chunk resolves
+    await expect(
+      page.getByText(/Sportart|Fußball|Handball|Basketball/i).first()
+    ).toBeVisible({ timeout: 5000 });
 
-    const hasSportSection = await sportSection.isVisible().catch(() => false);
-    const hasStammdatenSection = await stammdatenSection.isVisible().catch(() => false);
-
-    // Either step 2 content or redirect to step 1 is valid
-    expect(hasSportSection || hasStammdatenSection).toBeTruthy();
-
-    // THEN - Weiter button exists (may or may not be enabled depending on step)
     const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
     await expect(nextButton).toBeVisible();
   });
@@ -134,17 +127,10 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/tournament/new?step=3');
     await page.waitForLoadState('networkidle');
 
-    // THEN - Wizard content visible (step 3 or redirected to earlier step if validation requires)
-    const modeSection = page.getByText(/Modus|Spielsystem|Spieldauer|Spielzeit/i).first();
-    const stammdatenSection = page.getByText(/Stammdaten|Turniername/i).first();
+    await expect(
+      page.getByText(/Modus|Spielsystem|Spieldauer|Spielzeit/i).first()
+    ).toBeVisible({ timeout: 5000 });
 
-    const hasModeSection = await modeSection.isVisible().catch(() => false);
-    const hasStammdatenSection = await stammdatenSection.isVisible().catch(() => false);
-
-    // Either step 3 content or redirect to earlier step is valid
-    expect(hasModeSection || hasStammdatenSection).toBeTruthy();
-
-    // THEN - Weiter button exists
     const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
     await expect(nextButton).toBeVisible();
   });
@@ -158,17 +144,10 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/tournament/new?step=4');
     await page.waitForLoadState('networkidle');
 
-    // THEN - Wizard content visible (step 4 or redirected to earlier step if validation requires)
-    const groupsSection = page.getByText(/Gruppen|Gruppe A|Anzahl Gruppen|Felder|Spielfelder/i).first();
-    const stammdatenSection = page.getByText(/Stammdaten|Turniername/i).first();
+    await expect(
+      page.getByText(/Gruppen|Gruppe A|Anzahl Gruppen|Felder|Spielfelder/i).first()
+    ).toBeVisible({ timeout: 5000 });
 
-    const hasGroupsSection = await groupsSection.isVisible().catch(() => false);
-    const hasStammdatenSection = await stammdatenSection.isVisible().catch(() => false);
-
-    // Either step 4 content or redirect to earlier step is valid
-    expect(hasGroupsSection || hasStammdatenSection).toBeTruthy();
-
-    // THEN - Weiter button exists
     const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
     await expect(nextButton).toBeVisible();
   });
@@ -182,17 +161,10 @@ test.describe('Tournament Creation Wizard', () => {
     await page.goto('/#/tournament/new?step=5');
     await page.waitForLoadState('networkidle');
 
-    // THEN - Wizard content visible (step 5 or redirected to earlier step if validation requires)
-    const teamsSection = page.getByText(/Teams|Team-Namen|Mannschaften/i).first();
-    const stammdatenSection = page.getByText(/Stammdaten|Turniername/i).first();
+    await expect(
+      page.getByText(/Teams|Team-Namen|Mannschaften/i).first()
+    ).toBeVisible({ timeout: 5000 });
 
-    const hasTeamsSection = await teamsSection.isVisible().catch(() => false);
-    const hasStammdatenSection = await stammdatenSection.isVisible().catch(() => false);
-
-    // Either step 5 content or redirect to earlier step is valid
-    expect(hasTeamsSection || hasStammdatenSection).toBeTruthy();
-
-    // THEN - Weiter button exists
     const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
     await expect(nextButton).toBeVisible();
   });
@@ -335,6 +307,107 @@ test.describe('Tournament Creation Wizard', () => {
       const hasError = await page.getByText(/Error|404|Not Found/i).count() > 0;
       expect(hasError).toBeFalsy();
     }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // DEEP-LINK: Direkter Sprung auf Step rendert den Step (F-321)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Deep-Link auf /tournament/new?step=N rendert den gewünschten Step direkt,
+  // statt stillschweigend auf Step 1 zurückzufallen. Fix: F-321 (Effect reagiert
+  // jetzt auf location.search-Änderungen statt nur auf mount).
+  test('Deep-Link: Step 3 wird direkt gerendert', async ({ page }) => {
+    await page.goto('/#/tournament/new?step=3');
+    await page.waitForLoadState('networkidle');
+
+    // URL bleibt step=3
+    await expect(page).toHaveURL(/\?step=3/);
+
+    // Step-3-Heading "Modus & Spielsystem" muss sichtbar sein
+    await expect(page.getByRole('heading', { name: t('wizard:step2.title') })).toBeVisible({ timeout: 5000 });
+  });
+
+  test('Deep-Link: URL bleibt nach Browser-Refresh erhalten', async ({ page }) => {
+    await page.goto('/#/tournament/new?step=4');
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/\?step=4/);
+
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    // URL muss step=4 bewahren (Content selbst kann durch fehlende Vorgänger-Steps
+    // gerendert sein — separate Inkonsistenz, siehe test.fail oben).
+    await expect(page).toHaveURL(/\?step=4/);
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // SMOKE: KOMPLETTER WIZARD-FLOW (Step 1 → Publish)
+  // ═══════════════════════════════════════════════════════════════
+
+  test('Smoke: Kompletter Wizard-Flow Step 1 bis Veröffentlichen', async ({ page }) => {
+    // Step 1: Stammdaten
+    await expect(page.getByRole('heading', { name: t('wizard:step3.title') })).toBeVisible();
+
+    const nameInput = page.locator(`input[placeholder*="${t('wizard:step3.tournamentNamePlaceholder')}"]`).or(
+      page.locator('label:has-text("Turniername")').locator('..').locator('input')
+    );
+    await nameInput.first().fill('Smoke Test Turnier');
+
+    const locationInput = page.locator('input[placeholder*="Sporthalle"]').or(
+      page.locator('label:has-text("Hallenname")').locator('..').locator('input')
+    );
+    if (await locationInput.count() > 0) {
+      await locationInput.first().fill('E2E Halle');
+    }
+
+    await page.locator('input[type="date"]').first().fill('2026-12-01');
+    await page.locator('input[type="time"]').first().fill('09:00');
+
+    const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
+    await expect(nextButton).toBeEnabled({ timeout: 5000 });
+    await nextButton.click();
+
+    // Step 2: Sport & Turniertyp - klassisch wählen
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=2/, { timeout: 10000 });
+    await page.locator('[data-testid="wizard-type-classic"]').click();
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 3: Modus - Defaults akzeptieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=3/, { timeout: 10000 });
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 4: Gruppen & Felder - Defaults akzeptieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=4/, { timeout: 10000 });
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 5: Teams - 4 Teams generieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=5/, { timeout: 10000 });
+
+    const generateButton = page.locator('[data-testid="wizard-generate-teams"]');
+    if (await generateButton.count() > 0 && await generateButton.isVisible()) {
+      await generateButton.click();
+    } else {
+      // Fallback: manuell 4 Teams hinzufügen
+      const addTeam = page.locator('[data-testid="wizard-add-team"]');
+      for (let i = 1; i <= 4; i++) {
+        await addTeam.click();
+        await page.locator(`input[placeholder="${t('wizard:step4.teamNamePlaceholder')}"]`).last().fill(`Team ${i}`);
+      }
+    }
+
+    await page.getByRole('button', { name: 'Weiter', exact: true }).click();
+
+    // Step 6: Übersicht → Vorschau generieren
+    await expect(page).toHaveURL(/.*\/tournament\/new\?step=6/, { timeout: 10000 });
+    await page.locator('[data-testid="wizard-show-preview"]').click();
+
+    // Preview-Ansicht: Publish-Button erscheint nach Schedule-Generierung
+    await expect(page.locator('[data-testid="preview-publish"]')).toBeVisible({ timeout: 15000 });
+    await page.locator('[data-testid="preview-publish"]').click();
+
+    // Erwartung: Redirect zur Tournament-Verwaltung mit ID in URL (nicht "/tournament/new")
+    await expect(page).toHaveURL(/\/tournament\/(?!new)[a-z0-9-]+/i, { timeout: 10000 });
+    await expect(page).not.toHaveURL(/\/tournament\/new/);
   });
 
   test('Responsive: Wizard auf Mobile funktioniert', async ({ page }) => {

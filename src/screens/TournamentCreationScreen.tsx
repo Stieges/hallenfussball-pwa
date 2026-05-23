@@ -125,19 +125,24 @@ export const TournamentCreationScreen: React.FC<TournamentCreationScreenProps> =
     publishTournament,
   } = useTournamentWizard(existingTournament);
 
-  // Sync step from URL on mount (for deep-linking)
-  // This effect intentionally runs only on mount to read initial URL step
+  // F-321: Sync step from URL whenever the search params change (for deep-linking).
+  // Previously this effect ran only on mount with an empty dep array, which left the
+  // URL and the rendered step inconsistent when the router re-parsed `location.search`
+  // after the first render. We now react to location.search changes and also seed
+  // `visitedSteps` so the renderer actually shows the requested step.
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const urlStep = getStepFromSearchParams(searchParams);
 
-    // Only sync if this is a fresh navigation (not an existing draft)
-    // and the URL step differs from the current step
-    if (!existingTournament?.lastVisitedStep && urlStep !== step) {
+    if (existingTournament?.lastVisitedStep) {
+      return;
+    }
+
+    if (urlStep !== step) {
       setStep(urlStep);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- step is intentionally read-once per URL change
+  }, [location.search, existingTournament?.lastVisitedStep]);
 
   // ============================================================================
   // SCREEN-SPECIFIC STATE (not in hook)

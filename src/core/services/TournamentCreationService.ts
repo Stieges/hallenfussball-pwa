@@ -92,7 +92,11 @@ export class TournamentCreationService {
         switch (step) {
             case 1:
                 if (!data.title) { errors.push('Turniername erforderlich'); }
-                if (!data.date) { errors.push('Startdatum erforderlich'); }
+                if (!data.date) {
+                    errors.push('Startdatum erforderlich');
+                } else if (this.isPastDate(data.date)) {
+                    errors.push('Startdatum darf nicht in der Vergangenheit liegen');
+                }
                 if (!data.location?.name) { errors.push('Ort erforderlich'); }
                 break;
             case 2:
@@ -121,6 +125,16 @@ export class TournamentCreationService {
                         errors.push('Gruppennamen müssen eindeutig sein');
                     }
                 }
+                // F-116: in groupsAndFinals every group must be assigned to ≥1 field.
+                // `undefined` means "use all fields" (default), only an explicit empty array is invalid.
+                if (data.groupSystem === 'groupsAndFinals' && data.groups) {
+                    const hasUnassignedGroup = data.groups.some(
+                        g => Array.isArray(g.allowedFieldIds) && g.allowedFieldIds.length === 0
+                    );
+                    if (hasUnassignedGroup) {
+                        errors.push('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
+                    }
+                }
                 break;
             case 5:
                 if ((data.teams?.length ?? 0) < 2) {
@@ -131,6 +145,18 @@ export class TournamentCreationService {
                     if (this.findDuplicates(teamNames).size > 0) {
                         errors.push('Teamnamen müssen eindeutig sein');
                     }
+                    // F-114: empty/whitespace-only names block save
+                    if (data.teams.some(t => !t.name?.trim())) {
+                        errors.push('Teamnamen dürfen nicht leer sein');
+                    }
+                }
+                // F-209: team count must match planned numberOfTeams
+                if (
+                    typeof data.numberOfTeams === 'number' &&
+                    Array.isArray(data.teams) &&
+                    data.teams.length !== data.numberOfTeams
+                ) {
+                    errors.push(`Anzahl Teams: ${data.teams.length} von ${data.numberOfTeams} hinzugefügt`);
                 }
                 break;
         }
@@ -192,6 +218,19 @@ export class TournamentCreationService {
 
         await this.repository.save(tournament);
         return tournament;
+    }
+
+    /**
+     * F-113: Compares an ISO date string (YYYY-MM-DD) against today's local date.
+     * Returns true if the given date is strictly before today.
+     */
+    private isPastDate(isoDate: string): boolean {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+            return false;
+        }
+        const today = new Date();
+        const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        return isoDate < todayIso;
     }
 
     private findDuplicates(items: (string | undefined)[]): Set<string> {
