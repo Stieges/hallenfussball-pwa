@@ -65,9 +65,30 @@ describe('TournamentCreationService', () => {
             expect(errors).toContain('Startdatum erforderlich');
             expect(errors).toContain('Ort erforderlich');
 
-            // Valid data
-            errors = service.validateStep(1, { title: 'T', date: '2023-01-01', location: { name: 'Gym' } });
+            // Valid data — future date
+            const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            errors = service.validateStep(1, { title: 'T', date: future, location: { name: 'Gym' } });
             expect(errors).toHaveLength(0);
+        });
+
+        it('F-113: should reject past start dates in step 1', () => {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const errors = service.validateStep(1, {
+                title: 'T',
+                date: yesterday,
+                location: { name: 'Gym' },
+            });
+            expect(errors).toContain('Startdatum darf nicht in der Vergangenheit liegen');
+        });
+
+        it("F-113: should accept today's date as start date", () => {
+            const today = new Date().toISOString().slice(0, 10);
+            const errors = service.validateStep(1, {
+                title: 'T',
+                date: today,
+                location: { name: 'Gym' },
+            });
+            expect(errors).not.toContain('Startdatum darf nicht in der Vergangenheit liegen');
         });
 
         it('should validate step 5 (Teams)', () => {

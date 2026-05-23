@@ -114,7 +114,7 @@
 | F-110 | 🟡 | data | Missing Result Correction Recalculation | src/core/services/resultCorrectionService.ts | 2h | open |
 | F-111 | 🟡 | data | Missing Tournament Abort Calculation | src/core/services/tournamentAbbruchService.ts | 1h | open |
 | F-112 | 🔴 | perf | Division durch Null in DurationEstimate.tsx | src/features/tournament-creation/components/DurationEstimate.tsx | 30m | fixed |
-| F-113 | 🔴 | data | startDate Validierung fehlt in Metadata | src/features/tournament-creation/Step3_Metadata.tsx | 20m | open |
+| F-113 | 🔴 | data | startDate Validierung fehlt in Metadata | src/features/tournament-creation/Step3_Metadata.tsx | 20m | fixed |
 | F-114 | 🔴 | data | Team-Namen Validierung nicht vollständig | src/features/tournament-creation/Step4_Teams.tsx | 30m | open |
 | F-115 | 🔴 | ux | Mobile Team-Verwaltung zu komplex | src/features/tournament-creation/Step4_Teams.tsx | 2h | open |
 | F-116 | 🔴 | data | Gruppe ohne Feld-Zuordnung möglich | src/features/tournament-creation/Step_GroupsAndFields.tsx | 45m | open |

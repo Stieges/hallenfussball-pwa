@@ -93,6 +93,7 @@
     "ageClass": "Altersklasse",
     "ageClassPlaceholder": "Suchen oder auswählen...",
     "startDate": "Startdatum",
+    "startDatePastError": "Startdatum darf nicht in der Vergangenheit liegen",
     "startTime": "Startzeit",
     "startTimePlaceholder": "09:00"
   },
