@@ -67,7 +67,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     onEscape: onBack,
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     setApiError(null);
 
