@@ -232,10 +232,6 @@ export async function handleImplicitFlow(
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
     console.log('[AuthCallback] Starting implicit flow with tokens...');
-    // eslint-disable-next-line no-console
-    console.log('[AuthCallback] Access token length:', accessToken.length);
-    // eslint-disable-next-line no-console
-    console.log('[AuthCallback] Refresh token length:', refreshToken.length);
   }
 
   try {
