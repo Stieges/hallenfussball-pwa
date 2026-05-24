@@ -193,7 +193,7 @@ export const createInvitation = async (
       return { success: false, error: error.message };
     }
 
-    const invitation = mapRowToInvitation(data as CollaboratorRow);
+    const invitation = mapRowToInvitation(data);
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.turnier.de';
     const inviteLink = `${baseUrl}/invite?token=${inviteCode}`;
 
@@ -340,7 +340,7 @@ export const acceptInvitation = async (token: string, userId: string): Promise<A
       return { success: false, error: error.message };
     }
 
-    const membership = mapRowToMembership(data as CollaboratorRow);
+    const membership = mapRowToMembership(data);
 
     return { success: true, membership };
   } catch (err) {
@@ -433,7 +433,7 @@ export const getInvitationByToken = async (token: string): Promise<Invitation | 
       return undefined;
     }
 
-    return mapRowToInvitation(data as CollaboratorRow);
+    return mapRowToInvitation(data);
   } catch {
     return undefined;
   }

@@ -98,7 +98,7 @@ export const Step5_Overview: React.FC<Step5Props> = ({ formData, onSave }) => {
               {t('step5.locationLabel')}
             </div>
             <div style={{ fontSize: cssVars.fontSizes.lg, fontWeight: cssVars.fontWeights.semibold, color: cssVars.colors.textPrimary }}>
-              {formData.location ? getFullLocationAddress(formData as Tournament) : '-'}
+              {formData.location ? getFullLocationAddress(formData) : '-'}
             </div>
           </div>
         </div>

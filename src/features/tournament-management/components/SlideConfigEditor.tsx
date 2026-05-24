@@ -339,7 +339,7 @@ export function SlideConfigEditor({
                                     id={`${idPrefix}-qrTarget`}
                                     style={accessibleSelectStyle}
                                     value={config.qrTarget ?? 'tournament'}
-                                    onChange={(e) => handleConfigChange('qrTarget', e.target.value as QrTargetType)}
+                                    onChange={(e) => handleConfigChange('qrTarget', e.target.value)}
                                 >
                                     {QR_TARGET_OPTIONS.map(opt => (
                                         <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
@@ -444,7 +444,7 @@ export function SlideConfigEditor({
                             id={`${idPrefix}-textAlign`}
                             style={accessibleSelectStyle}
                             value={config.textAlign ?? 'center'}
-                            onChange={(e) => handleConfigChange('textAlign', e.target.value as SlideConfig['textAlign'])}
+                            onChange={(e) => handleConfigChange('textAlign', e.target.value)}
                         >
                             {TEXT_ALIGN_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>
@@ -461,7 +461,7 @@ export function SlideConfigEditor({
                             id={`${idPrefix}-colorScheme`}
                             style={accessibleSelectStyle}
                             value={config.colorScheme ?? 'default'}
-                            onChange={(e) => handleConfigChange('colorScheme', e.target.value as ColorScheme)}
+                            onChange={(e) => handleConfigChange('colorScheme', e.target.value)}
                         >
                             {COLOR_SCHEME_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{t(opt.labelKey as never)}</option>

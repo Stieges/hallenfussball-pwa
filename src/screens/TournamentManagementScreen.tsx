@@ -124,7 +124,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     if (tab === 'more') {
       setShowMoreMenu(true);
     } else {
-      handleTabChange(tab as TabType);
+      handleTabChange(tab);
     }
   };
 

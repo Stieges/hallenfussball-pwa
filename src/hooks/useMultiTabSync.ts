@@ -94,7 +94,7 @@ export function useMultiTabSync({
             matchId,
             tabId: TAB_ID,
             timestamp: Date.now(),
-          } as TabSyncMessage);
+          });
         });
 
         return () => {
@@ -105,7 +105,7 @@ export function useMultiTabSync({
               matchId,
               tabId: TAB_ID,
               timestamp: Date.now(),
-            } as TabSyncMessage);
+            });
           });
           channel.close();
           channelRef.current = null;

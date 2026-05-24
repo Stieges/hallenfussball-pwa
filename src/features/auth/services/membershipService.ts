@@ -123,7 +123,7 @@ export const createOwnerMembership = async (
       return undefined;
     }
 
-    return mapRowToMembership(data as CollaboratorRow);
+    return mapRowToMembership(data);
   } catch (err) {
     if (import.meta.env.DEV) { console.error('Create owner membership error:', err); }
     return undefined;
@@ -191,7 +191,7 @@ export const getUserMembership = async (
       return undefined;
     }
 
-    return mapRowToMembership(data as CollaboratorRow);
+    return mapRowToMembership(data);
   } catch {
     return undefined;
   }
@@ -232,7 +232,7 @@ export const changeRole = async (
       return { success: false, error: 'Mitglied nicht gefunden' };
     }
 
-    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+    const targetMembership = mapRowToMembership(targetData);
 
     // Get my membership in the same tournament
     const myMembership = await getUserMembership(targetMembership.tournamentId, userId);
@@ -268,7 +268,7 @@ export const changeRole = async (
       return { success: false, error: updateError.message };
     }
 
-    return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
+    return { success: true, membership: mapRowToMembership(updatedData) };
   } catch (err) {
     if (import.meta.env.DEV) { console.error('Change role error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -308,7 +308,7 @@ export const updateTrainerTeams = async (
       return { success: false, error: 'Mitglied nicht gefunden' };
     }
 
-    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+    const targetMembership = mapRowToMembership(targetData);
 
     if (targetMembership.role !== 'trainer') {
       return { success: false, error: 'Nur Trainer haben Team-Zuordnungen' };
@@ -334,7 +334,7 @@ export const updateTrainerTeams = async (
       return { success: false, error: updateError.message };
     }
 
-    return { success: true, membership: mapRowToMembership(updatedData as CollaboratorRow) };
+    return { success: true, membership: mapRowToMembership(updatedData) };
   } catch (err) {
     if (import.meta.env.DEV) { console.error('Update trainer teams error:', err); }
     return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten' };
@@ -369,7 +369,7 @@ export const removeMember = async (membershipId: string, userId: string): Promis
       return false;
     }
 
-    const targetMembership = mapRowToMembership(targetData as CollaboratorRow);
+    const targetMembership = mapRowToMembership(targetData);
 
     // Owner cannot be removed
     if (targetMembership.role === 'owner') {
@@ -478,8 +478,8 @@ export const transferOwnership = async (
 
     return {
       success: true,
-      oldOwnerMembership: mapRowToMembership(oldOwnerData as CollaboratorRow),
-      newOwnerMembership: mapRowToMembership(newOwnerData as CollaboratorRow),
+      oldOwnerMembership: mapRowToMembership(oldOwnerData),
+      newOwnerMembership: mapRowToMembership(newOwnerData),
     };
   } catch (err) {
     if (import.meta.env.DEV) { console.error('Transfer ownership error:', err); }

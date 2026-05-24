@@ -415,7 +415,7 @@ describe('Skip/Unskip', () => {
           matchStatus: 'skipped',
           skippedReason: 'Test reason',
           skippedAt: new Date().toISOString(),
-        } as Partial<Match>),
+        }),
       ],
     });
     const onUpdate = vi.fn();

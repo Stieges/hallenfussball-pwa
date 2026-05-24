@@ -13,7 +13,6 @@ import {
   createMatchRow,
   createEventRow,
   type TeamRow,
-  type MatchRow,
   type MatchEventRow,
 } from '../../../../tests/factories/supabase';
 
@@ -228,7 +227,7 @@ describe('mapLiveMatchFromSupabase', () => {
         playPhase: 'regular',
         refereeName: 'SR1',
       },
-    } as Partial<MatchRow>);
+    });
     const teamsMap = new Map<string, TeamRow>();
 
     const liveMatch = mapLiveMatchFromSupabase(matchRow, [], teamsMap);
@@ -296,7 +295,7 @@ describe('mapLiveMatchToSupabase', () => {
     const matchRow = createMatchRow({
       match_status: 'running',
       live_state: { elapsedSeconds: 120, durationSeconds: 600 },
-    } as Partial<MatchRow>);
+    });
     const liveMatch = mapLiveMatchFromSupabase(matchRow, [], new Map());
     const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
 
@@ -363,7 +362,7 @@ describe('isMatchActive', () => {
     const row = createMatchRow({
       match_status: 'not_started',
       live_state: { elapsedSeconds: 0 },
-    } as Partial<MatchRow>);
+    });
     expect(isMatchActive(row)).toBe(true);
   });
 });

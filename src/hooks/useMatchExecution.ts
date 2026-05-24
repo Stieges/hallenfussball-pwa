@@ -12,7 +12,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tournament } from '../types/tournament';
 import { ScheduledMatch } from '../core/generators';
 import { MatchExecutionService } from '../core/services/MatchExecutionService';
-import { LiveMatch, MatchStatus } from '../core/models/LiveMatch';
+import { LiveMatch } from '../core/models/LiveMatch';
 import { OptimisticLockError } from '../core/errors';
 import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
@@ -616,7 +616,7 @@ export function useMatchExecution({
         if (match) {
             const reopened: LiveMatch = {
                 ...match,
-                status: 'NOT_STARTED' as MatchStatus,
+                status: 'NOT_STARTED',
                 elapsedSeconds: 0,
                 timerStartTime: undefined,
                 timerPausedAt: undefined,

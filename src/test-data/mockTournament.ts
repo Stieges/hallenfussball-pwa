@@ -5,7 +5,7 @@
  * Zum Testen der PublicLiveView ohne Supabase
  */
 
-import { Tournament, Team, Match, RuntimeMatchEvent, MatchStatus } from '../types/tournament';
+import { Tournament, Team, Match, RuntimeMatchEvent } from '../types/tournament';
 
 // 7 realistische deutsche Jugendvereine
 const MOCK_TEAMS: Team[] = [
@@ -65,7 +65,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'finished' as MatchStatus,
+    matchStatus: 'finished',
     scheduledTime: match1Time,
     finishedAt: new Date(match1Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
@@ -92,7 +92,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'finished' as MatchStatus,
+    matchStatus: 'finished',
     scheduledTime: match2Time,
     finishedAt: new Date(match2Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
@@ -116,7 +116,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'running' as MatchStatus,
+    matchStatus: 'running',
     scheduledTime: match3Time,
     timerStartTime: new Date().toISOString(),
     timerElapsedSeconds: 300,
@@ -141,7 +141,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'running' as MatchStatus,
+    matchStatus: 'running',
     scheduledTime: match3Time,
     timerStartTime: new Date().toISOString(),
     timerElapsedSeconds: 180,
@@ -163,7 +163,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: match5Time,
     events: [],
   });
@@ -182,7 +182,7 @@ function createMockMatches(): Match[] {
     group: 'A',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: match5Time,
     events: [],
   });
@@ -203,7 +203,7 @@ function createMockMatches(): Match[] {
     group: 'B',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'finished' as MatchStatus,
+    matchStatus: 'finished',
     scheduledTime: match7Time,
     finishedAt: new Date(match7Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
@@ -229,7 +229,7 @@ function createMockMatches(): Match[] {
     group: 'B',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'finished' as MatchStatus,
+    matchStatus: 'finished',
     scheduledTime: match8Time,
     finishedAt: new Date(match8Time.getTime() + 12 * 60 * 1000).toISOString(),
     events: [
@@ -256,7 +256,7 @@ function createMockMatches(): Match[] {
     group: 'B',
     phase: 'groupStage',
     isFinal: false,
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: match9Time,
     events: [],
   });
@@ -275,7 +275,7 @@ function createMockMatches(): Match[] {
     field: 1,
     phase: 'semifinal',
     isFinal: true,
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: hfTime,
     events: [],
     label: 'Halbfinale 1',
@@ -293,7 +293,7 @@ function createMockMatches(): Match[] {
     field: 2,
     phase: 'semifinal',
     isFinal: true,
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: hfTime,
     events: [],
     label: 'Halbfinale 2',
@@ -314,7 +314,7 @@ function createMockMatches(): Match[] {
     phase: 'final',
     isFinal: true,
     finalType: 'final',
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: finalTime,
     events: [],
     label: 'Finale',
@@ -334,7 +334,7 @@ function createMockMatches(): Match[] {
     phase: 'thirdPlace',
     isFinal: true,
     finalType: 'thirdPlace',
-    matchStatus: 'scheduled' as MatchStatus,
+    matchStatus: 'scheduled',
     scheduledTime: finalTime,
     events: [],
     label: 'Spiel um Platz 3',

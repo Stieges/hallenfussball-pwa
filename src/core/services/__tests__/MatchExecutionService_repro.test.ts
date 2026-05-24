@@ -1,7 +1,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { MatchExecutionService } from '../MatchExecutionService';
-import { LiveMatch, MatchEvent, MatchEventType } from '../../models/LiveMatch';
+import { LiveMatch, MatchEvent } from '../../models/LiveMatch';
 
 // Mock Interfaces
 const mockLiveMatchRepo = {
@@ -32,7 +32,7 @@ describe('MatchExecutionService - Event Persistence', () => {
             {
                 id: 'evt1',
                 matchId: matchId,
-                type: 'GOAL' as MatchEventType,
+                type: 'GOAL',
                 timestampSeconds: 60,
                 payload: { team: 'home', playerNumber: 10 },
                 scoreAfter: { home: 1, away: 0 }

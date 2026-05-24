@@ -36,7 +36,7 @@ export function createMockTournament(overrides?: Partial<Tournament>): Tournamen
     placementLogic: createMockPlacementLogic(),
     finals: createMockFinals(),
     ...overrides,
-  } as Tournament
+  }
 }
 
 /**

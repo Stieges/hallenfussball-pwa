@@ -214,7 +214,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       id: event.id,
       type: event.type,
       timestampSeconds: event.timestampSeconds,
-      payload: event.payload as EditableMatchEvent['payload'],
+      payload: event.payload,
     };
   }, [editingEventId, currentMatch?.events]);
 

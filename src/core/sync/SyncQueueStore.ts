@@ -10,7 +10,7 @@
  * - Failed mutations kept for manual retry
  */
 
-import { QueuedMutation, SyncTable, SyncOperation } from './types';
+import { QueuedMutation, SyncOperation } from './types';
 
 const DB_NAME = 'hallenfussball-sync-queue';
 const DB_VERSION = 1;
@@ -345,7 +345,7 @@ export function createTournamentMutation(
   payload: Record<string, unknown>
 ): Omit<QueuedMutation, 'id' | 'createdAt' | 'retries' | 'status'> {
   return {
-    table: 'tournaments' as SyncTable,
+    table: 'tournaments',
     operation,
     recordId,
     payload,
@@ -361,7 +361,7 @@ export function createMatchMutation(
   payload: Record<string, unknown>
 ): Omit<QueuedMutation, 'id' | 'createdAt' | 'retries' | 'status'> {
   return {
-    table: 'matches' as SyncTable,
+    table: 'matches',
     operation,
     recordId,
     payload,

@@ -31,6 +31,13 @@ vi.mock('../../../hooks', () => ({
   })),
 }));
 
+// Prevent useMonitorHeartbeats from opening a real Supabase Realtime
+// WebSocket during this test — Vitest 4 + the new undici upgrade
+// surfaces the post-test WebSocket cleanup as an unhandled error.
+vi.mock('../../../hooks/useMonitorHeartbeats', () => ({
+  useMonitorHeartbeats: () => ({}),
+}));
+
 // Helper to create mock tournament (using unknown cast for test simplicity)
 function createMockTournament(monitors: TournamentMonitor[] = []): Tournament {
   return {
