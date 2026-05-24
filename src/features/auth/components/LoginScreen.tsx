@@ -14,7 +14,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../../../components/ui/Button';
 import { PasswordInput } from '../../../components/ui/PasswordInput';
@@ -26,6 +26,60 @@ import { loginStyles as styles } from './LoginScreen.styles';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
 import { OfflineBanner } from './OfflineBanner';
+import { ConnectingIndicator } from './ConnectingIndicator';
+
+/** Soft threshold (ms) after which the subtle "connecting…" pill surfaces. */
+const CONNECTING_HINT_DELAY_MS = 3000;
+
+function getInitialBrowserOnline(): boolean {
+  return typeof navigator !== 'undefined' ? navigator.onLine : true;
+}
+
+/**
+ * Tracks the real browser-level online status independent of the auth
+ * connection-state machine. The login form should only show the loud
+ * OfflineBanner when the browser genuinely reports offline; auth-init
+ * slowness or stalls get a subtler pill instead.
+ */
+function useBrowserOnlineStatus(): boolean {
+  const [browserOnline, setBrowserOnline] = useState(getInitialBrowserOnline);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const goOnline = () => setBrowserOnline(true);
+    const goOffline = () => setBrowserOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
+  }, []);
+
+  return browserOnline;
+}
+
+/**
+ * Returns true once the auth connection has been in 'connecting' state
+ * for longer than `delayMs`, so the UI can switch from "silent" to a
+ * subtle pill without flashing on every fast handshake.
+ */
+function useConnectingHintAfter(connectionState: string, delayMs: number): boolean {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (connectionState !== 'connecting') {
+      setShow(false);
+      return;
+    }
+    const id = setTimeout(() => setShow(true), delayMs);
+    return () => { clearTimeout(id); };
+  }, [connectionState, delayMs]);
+
+  return show;
+}
 
 interface LoginScreenProps {
   /** Called when login is successful */
@@ -46,7 +100,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 }) => {
   const { t } = useTranslation('auth');
   const { login, sendMagicLink, loginWithGoogle, continueAsGuest, resetPassword, connectionState, reconnect } = useAuth();
-  const isOffline = connectionState === 'offline';
+
+  // Connection-state UX (HP-5 hotfix):
+  // - Browser-truly-offline → loud OfflineBanner (existing behaviour)
+  // - Auth handshake slow/stalled but browser online → subtle ConnectingIndicator pill,
+  //   form remains usable. Prevents the "scary offline banner" on mount when
+  //   getSession() takes longer than expected.
+  const browserOnline = useBrowserOnlineStatus();
+  const showConnectingHint = useConnectingHintAfter(connectionState, CONNECTING_HINT_DELAY_MS);
+  const isBrowserOffline = !browserOnline;
+  const isAuthHandshakeStalled = !isBrowserOffline && connectionState === 'offline';
+  const isAuthConnecting = !isBrowserOffline && connectionState === 'connecting' && showConnectingHint;
 
   const {
     formData, errors: fieldErrors,
@@ -248,12 +312,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
         <h1 id="login-title" style={styles.title}>{t('login.title')}</h1>
 
-        {/* Offline Banner */}
-        {isOffline && (
+        {/* Connection status — loud banner only for true browser-offline,
+            subtle pill for slow / stalled auth handshakes. */}
+        {isBrowserOffline && (
           <OfflineBanner
             subtitle={t('login.offlineSubtitle')}
             onRetry={() => void reconnect()}
             data-testid="offline-banner"
+          />
+        )}
+        {!isBrowserOffline && isAuthHandshakeStalled && (
+          <ConnectingIndicator
+            variant="stalled"
+            label={t('login.stalledHint')}
+            retryLabel={t('login.retryConnection')}
+            onRetry={() => void reconnect()}
+            data-testid="connecting-indicator"
+          />
+        )}
+        {!isBrowserOffline && !isAuthHandshakeStalled && isAuthConnecting && (
+          <ConnectingIndicator
+            variant="connecting"
+            label={t('login.connectingHint')}
+            data-testid="connecting-indicator"
           />
         )}
 
