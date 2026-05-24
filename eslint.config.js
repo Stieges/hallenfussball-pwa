@@ -7,12 +7,14 @@ import globals from 'globals';
 // Local rules als Plugin-Objekt
 import preferCssVars from './eslint-rules/prefer-css-vars.cjs';
 import noHardcodedFontStyles from './eslint-rules/no-hardcoded-font-styles.cjs';
+import noTokenInLogs from './eslint-rules/no-token-in-logs.cjs';
 
 const localRulesPlugin = {
   meta: { name: 'local-rules' },
   rules: {
     'prefer-css-vars': preferCssVars,
     'no-hardcoded-font-styles': noHardcodedFontStyles,
+    'no-token-in-logs': noTokenInLogs,
   },
 };
 
@@ -110,6 +112,11 @@ export default tseslint.config(
       'local-rules/prefer-css-vars': 'warn',
       'local-rules/no-hardcoded-font-styles': 'warn',
 
+      // Auth-Token-Guardrail (HP-5d): blockt das Loggen von credential-artigen
+      // Identifiern (token, jwt, password, secret, credential) via console.*.
+      // Siehe eslint-rules/no-token-in-logs.cjs für Begründung und Beispiele.
+      'local-rules/no-token-in-logs': 'error',
+
       // New rules in typescript-eslint v8 - temporarily disabled for migration
       '@typescript-eslint/prefer-regexp-exec': 'off',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
@@ -152,6 +159,7 @@ export default tseslint.config(
 
       // Supabase-spezifische Guardrails: blockt `as any`-Bypässe der typisierten Client-API
       // (eingeführt nach PR #137 — Sanitizer-Bypass via untyped .from()).
+      // HP-5d ergänzt um localStorage/sessionStorage.setItem mit credential-artigen Keys.
       'no-restricted-syntax': ['error',
         {
           selector: "TSAsExpression[expression.name='supabase'][typeAnnotation.type='TSAnyKeyword']",
@@ -160,6 +168,10 @@ export default tseslint.config(
         {
           selector: "MemberExpression[object.type='TSAsExpression'][object.typeAnnotation.type='TSAnyKeyword'][property.name='from']",
           message: 'Avoid `(x as any).from(...)`. Use the typed Supabase client to keep row types in sync.',
+        },
+        {
+          selector: "CallExpression[callee.object.name=/^(localStorage|sessionStorage)$/][callee.property.name='setItem'][arguments.0.type='Literal'][arguments.0.value=/token|jwt|password|secret|credential/i]",
+          message: 'Do not persist credential-like keys (token/jwt/password/secret/credential) to localStorage/sessionStorage. Use a secure transport (HttpOnly cookies / Supabase auth-helper) instead.',
         },
       ],
 
