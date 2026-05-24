@@ -57,8 +57,8 @@ export const AuthCallback: React.FC = () => {
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
           console.log('[AuthCallback] Parsed params:', {
-            code: !!params.code,
-            accessToken: !!params.accessToken,
+            hasCode: !!params.code,
+            hasAccessToken: !!params.accessToken,
             type: params.type,
             errorDescription: params.errorDescription,
           });
