@@ -12,7 +12,6 @@ import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
-import { RuntimeMatchEvent } from '../../types/tournament';
 import { executeWithRetry } from '../utils/SingleFlight';
 
 // ============================================================================
@@ -729,7 +728,7 @@ export class MatchExecutionService {
             status: 'NOT_STARTED',
             elapsedSeconds: 0,
             events: [],
-            tournamentPhase: scheduledMatch.phase as LiveMatch['tournamentPhase'],
+            tournamentPhase: scheduledMatch.phase,
             tiebreakerMode,
             overtimeDurationSeconds: tiebreakerDuration * 60,
         };
@@ -806,7 +805,7 @@ export class MatchExecutionService {
             penaltyScoreA: match.penaltyScoreA,
             penaltyScoreB: match.penaltyScoreB,
             decidedBy,
-            events: match.events as unknown as RuntimeMatchEvent[], // Persist full event history
+            events: match.events, // Persist full event history
         });
     }
 }

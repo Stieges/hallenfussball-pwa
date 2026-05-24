@@ -55,9 +55,9 @@ export function generateFullSchedule(
     teamMap.set(team.id, team.name)
   })
 
-  let allMatches: ScheduledMatch[] = []
-  let groupStageMatches: Match[] = []
-  let finalMatches: Match[] = []
+  let allMatches: ScheduledMatch[]
+  let groupStageMatches: Match[]
+  let finalMatches: Match[]
 
   // Helper interfaces for imported data - separate from strict Match/Tournament interfaces
   // to avoid inheritance conflicts with different property types
@@ -143,12 +143,12 @@ export function generateFullSchedule(
         // Ensure scores are preserved
         scoreA: m.scoreA,
         scoreB: m.scoreB
-      } as ScheduledMatch;
+      };
     })
 
     // Categorize into group/final for stats
     groupStageMatches = mappedMatches.filter(m => !m.isFinal && m.phase === 'groupStage').map(m => m as unknown as Match)
-    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Boolean OR logic: match is final if isFinal OR phase is not groupStage
+     
     finalMatches = mappedMatches.filter(m => m.isFinal || m.phase !== 'groupStage').map(m => m as unknown as Match)
 
     // HYBRID MODE: If we have group matches but NO final matches (or they look incomplete), check if we SHOULD have finals

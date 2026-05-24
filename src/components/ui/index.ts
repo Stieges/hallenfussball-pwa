@@ -15,8 +15,9 @@ export { FieldDisplay } from './FieldDisplay';
 export type { FieldDisplayVariant } from './FieldDisplay';
 
 // Loading States
-export { Skeleton, SkeletonPresets } from './Skeleton';
+export { Skeleton } from './Skeleton';
 export type { SkeletonProps } from './Skeleton';
+export { SkeletonPresets } from './SkeletonPresets';
 
 // Mobile Navigation
 export { BottomNavigation } from './BottomNavigation';

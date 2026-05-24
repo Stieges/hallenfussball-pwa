@@ -224,7 +224,7 @@ export class LocalStorageRepository implements ITournamentRepository {
                 const result = TournamentSchema.safeParse(itemData);
                 if (result.success) {
                     // Hydrate: Convert date strings back to Date objects
-                    return hydrateTournament(result.data as unknown);
+                    return hydrateTournament(result.data);
                 }
                 // If validation fails, log + report to Sentry, but return raw item to avoid data loss
                 // Still hydrate to ensure date fields are proper Date objects

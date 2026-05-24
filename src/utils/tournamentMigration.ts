@@ -183,7 +183,7 @@ export function migrateMatchEvents(events: RuntimeMatchEvent[]): RuntimeMatchEve
     anyMigrated = true;
     return {
       ...event,
-      payload: migrateEventPayload(legacyPayload) as RuntimeMatchEvent['payload'],
+      payload: migrateEventPayload(legacyPayload),
     };
   });
 

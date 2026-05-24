@@ -120,7 +120,7 @@ void i18n.use(initReactI18next).init({
   lng: detectLanguage(),
   fallbackLng: 'de',
   defaultNS: 'common',
-  ns: NAMESPACES as unknown as string[],
+  ns: NAMESPACES,
 
   interpolation: {
     escapeValue: false, // React already escapes

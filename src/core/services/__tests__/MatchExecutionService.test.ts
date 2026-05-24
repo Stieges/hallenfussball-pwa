@@ -2,7 +2,6 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MatchExecutionService } from '../MatchExecutionService';
-import { ILiveMatchRepository } from '../../repositories/ILiveMatchRepository';
 import { ITournamentRepository } from '../../repositories/ITournamentRepository';
 import { LiveMatch } from '../../models/LiveMatch';
 import { ScheduledMatch } from '../../../core/generators';
@@ -29,7 +28,7 @@ describe('MatchExecutionService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         service = new MatchExecutionService(
-            mockLiveMatchRepo as unknown as ILiveMatchRepository,
+            mockLiveMatchRepo,
             mockTournamentRepo as unknown as ITournamentRepository
         );
     });

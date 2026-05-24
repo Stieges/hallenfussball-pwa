@@ -408,7 +408,7 @@ function AppContent() {
         ...tournament,
         id: newId,
         title: `${tournament.title} ${t('tournament.copySuffix')}`,
-        status: 'draft' as TournamentStatus,
+        status: 'draft',
         createdAt: now,
         updatedAt: now,
         lastVisitedStep: 1, // Start at Step 1 so user can review

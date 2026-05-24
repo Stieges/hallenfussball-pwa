@@ -169,7 +169,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   }, [t]);
 
   // Map current theme to BaseTheme
-  const currentBaseTheme: BaseTheme = theme as BaseTheme;
+  const currentBaseTheme: BaseTheme = theme;
 
   const handleBaseThemeChange = (newTheme: BaseTheme) => {
     setTheme(newTheme);
@@ -183,7 +183,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       feedback: t('support.feedback.subject'),
     };
 
-    /* eslint-disable @typescript-eslint/no-deprecated -- navigator.platform still useful for support emails */
+     
     const body = `
 ───────────────────────────────
 App-Version: ${APP_VERSION}

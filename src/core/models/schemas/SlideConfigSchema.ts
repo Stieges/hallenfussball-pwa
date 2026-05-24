@@ -151,7 +151,7 @@ export function validateMonitorSlide(slide: unknown): {
 } {
     const result = MonitorSlideSchema.safeParse(slide);
     if (result.success) {
-        const configErrors = validateSlideConfig(result.data.type, result.data.config as Record<string, unknown>);
+        const configErrors = validateSlideConfig(result.data.type, result.data.config);
         if (Object.keys(configErrors).length > 0) {
             return { success: false, errors: configErrors };
         }

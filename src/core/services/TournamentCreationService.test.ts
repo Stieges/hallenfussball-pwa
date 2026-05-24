@@ -108,7 +108,7 @@ describe('TournamentCreationService', () => {
                 teams: [
                     { id: '1', name: 'A' },
                     { id: '2', name: 'A' } // Duplicate
-                ] as any
+                ]
             });
             expect(errors).toContain('Teamnamen müssen eindeutig sein');
 
@@ -117,7 +117,7 @@ describe('TournamentCreationService', () => {
                 teams: [
                     { id: '1', name: 'A' },
                     { id: '2', name: 'B' }
-                ] as any
+                ]
             });
             expect(errors).toHaveLength(0);
         });
@@ -128,7 +128,7 @@ describe('TournamentCreationService', () => {
                     { id: '1', name: 'A' },
                     { id: '2', name: '   ' },
                     { id: '3', name: '' },
-                ] as any,
+                ],
             });
             expect(errors).toContain('Teamnamen dürfen nicht leer sein');
         });
@@ -140,7 +140,7 @@ describe('TournamentCreationService', () => {
                     { id: '1', name: 'A' },
                     { id: '2', name: 'B' },
                     { id: '3', name: 'C' },
-                ] as any,
+                ],
             });
             expect(errors.some(e => e.includes('3 von 4'))).toBe(true);
         });
@@ -151,7 +151,7 @@ describe('TournamentCreationService', () => {
                 teams: [
                     { id: '1', name: 'A' },
                     { id: '2', name: 'B' },
-                ] as any,
+                ],
             });
             expect(errors.find(e => e.includes('von'))).toBeUndefined();
         });
@@ -162,7 +162,7 @@ describe('TournamentCreationService', () => {
                 groups: [
                     { id: '1', customName: 'A', allowedFieldIds: ['f1'] },
                     { id: '2', customName: 'B', allowedFieldIds: [] }, // Missing assignment
-                ] as any,
+                ],
                 fields: [{ id: 'f1', customName: 'Halle' }] as any,
             });
             expect(errors).toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
@@ -174,7 +174,7 @@ describe('TournamentCreationService', () => {
                 groups: [
                     { id: '1', customName: 'A' },
                     { id: '2', customName: 'B' },
-                ] as any,
+                ],
                 fields: [{ id: 'f1', customName: 'Halle' }] as any,
             });
             expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');
@@ -183,7 +183,7 @@ describe('TournamentCreationService', () => {
         it('F-116: roundRobin — empty allowedFieldIds is not flagged (groups unused)', () => {
             const errors = service.validateStep(4, {
                 groupSystem: 'roundRobin',
-                groups: [{ id: '1', customName: 'A', allowedFieldIds: [] }] as any,
+                groups: [{ id: '1', customName: 'A', allowedFieldIds: [] }],
                 fields: [{ id: 'f1', customName: 'Halle' }] as any,
             });
             expect(errors).not.toContain('Jede Gruppe muss mindestens einem Feld zugeordnet sein');

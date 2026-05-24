@@ -96,7 +96,7 @@ export const SelectStep = ({
       </div>
 
       <input
-        ref={fileInputRef as React.RefObject<HTMLInputElement>}
+        ref={fileInputRef}
         type="file"
         accept=".json,.csv"
         onChange={onFileSelect}
