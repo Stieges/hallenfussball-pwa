@@ -181,7 +181,7 @@ export function migrateLocationsToStructured(tournaments: Tournament[]): Tournam
     // String zu LocationDetails konvertieren
     if (typeof location === 'string' && (location as string).length > 0) {
       const locationDetails: LocationDetails = {
-        name: location as string,
+        name: location,
         // Andere Felder bleiben leer (Nutzer kann später ergänzen)
       };
 

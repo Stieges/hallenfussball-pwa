@@ -390,7 +390,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
             options.onMatchChange?.(
               matchRow.id,
               liveMatch,
-              payload.eventType as 'INSERT' | 'UPDATE'
+              payload.eventType
             );
             } catch (error) {
               console.error('[SupabaseLiveMatchRepository] subscription handler error:', error);

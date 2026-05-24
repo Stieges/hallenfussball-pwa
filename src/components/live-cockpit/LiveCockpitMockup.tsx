@@ -468,7 +468,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
           id: fullEvent.id,
           type: fullEvent.type,
           timestampSeconds: fullEvent.timestampSeconds,
-          payload: fullEvent.payload as EditableMatchEvent['payload'],
+          payload: fullEvent.payload,
         };
         setEditingEvent(editableEvent);
         setShowEventEditDialog(true);

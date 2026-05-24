@@ -739,7 +739,7 @@ interface CustomTextSlideProps {
 function CustomTextSlide({ slide, style }: CustomTextSlideProps) {
   const colorSchemeKey = slide.config.colorScheme;
   const scheme = (colorSchemeKey && colorSchemeKey in displayColorSchemes)
-    ? displayColorSchemes[colorSchemeKey as keyof typeof displayColorSchemes]
+    ? displayColorSchemes[colorSchemeKey]
     : displayColorSchemes.default;
 
   return (
@@ -899,7 +899,7 @@ export function MonitorDisplayPage({
     direction: 'next',
   });
   const [isPaused, setIsPaused] = useState(false);
-  const [lastFetch, setLastFetch] = useState<number>(Date.now());
+  const [lastFetch, setLastFetch] = useState<number>(() => Date.now());
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
 
   // Live match events for animations

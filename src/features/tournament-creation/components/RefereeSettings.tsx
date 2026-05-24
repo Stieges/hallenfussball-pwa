@@ -64,7 +64,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
         ...refereeConfig,
         mode: 'organizer',
         refereeNames: names,
-      } as RefereeConfig);
+      });
     } else {
       // Remove names but keep other config
       const { refereeNames: _refereeNames, ...rest } = refereeConfig ?? {};
@@ -81,7 +81,7 @@ export const RefereeSettings: React.FC<RefereeSettingsProps> = ({
       ...refereeConfig,
       mode: 'organizer',
       refereeNames: updatedNames,
-    } as RefereeConfig);
+    });
   };
 
   const handleFinalsRefereeMode = (newMode: string) => {

@@ -124,7 +124,7 @@ export function getAppSetting<K extends keyof AppSettings>(key: K): AppSettings[
       const parsed: unknown = JSON.parse(stored);
       if (isStoredProfileData(parsed) && parsed.settings && key in parsed.settings) {
         // key in parsed.settings guarantees the value exists
-        return parsed.settings[key] as AppSettings[K];
+        return parsed.settings[key];
       }
     }
   } catch (e) {

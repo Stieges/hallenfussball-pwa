@@ -137,7 +137,7 @@ export function mapMatchEventToSupabase(
     match_id: matchId,
     timestamp_seconds: event.timestampSeconds,
     type: event.type,
-    payload: event.payload as unknown as Json,
+    payload: event.payload,
     score_home: event.scoreAfter.home,
     score_away: event.scoreAfter.away,
     team_id: null, // Could be mapped if we track team_id in payload

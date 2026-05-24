@@ -146,10 +146,15 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 600, // Erhöht von 500KB auf 600KB
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Vendor chunks für besseres Caching
-          'react-vendor': ['react', 'react-dom'],
-          'pdf-vendor': ['jspdf', 'jspdf-autotable'],
+        // Vite 7+ / rolldown only accepts the function form of manualChunks.
+        manualChunks: (id) => {
+          if (id.includes('node_modules/react-dom') || id.includes('node_modules/react/')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules/jspdf')) {
+            return 'pdf-vendor';
+          }
+          return undefined;
         },
       },
     },

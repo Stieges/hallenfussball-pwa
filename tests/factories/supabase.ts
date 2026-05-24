@@ -95,7 +95,7 @@ export function createMatchRow(
     updated_at: null,
     version: null,
     ...overrides,
-  } as MatchRow;
+  };
 }
 
 export function createTournamentRow(

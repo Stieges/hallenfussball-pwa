@@ -16,7 +16,7 @@ import i18n from 'i18next';
 
 export type FontSize = 'small' | 'normal' | 'large' | 'x-large';
 
-export const FONT_SIZE_LABELS: Record<FontSize, string> = Object.create(null as unknown as object, {
+export const FONT_SIZE_LABELS: Record<FontSize, string> = Object.create(null, {
   small: { get: () => i18n.t('settings:fontSize.small', { defaultValue: '' }), enumerable: true },
   normal: { get: () => i18n.t('settings:fontSize.normal', { defaultValue: '' }), enumerable: true },
   large: { get: () => i18n.t('settings:fontSize.large', { defaultValue: '' }), enumerable: true },
@@ -37,7 +37,7 @@ export const FONT_SCALE_VALUES: Record<FontSize, number> = {
 export type BaseTheme = 'system' | 'light' | 'dark' | 'high-contrast';
 
 type BaseThemeLabelRecord = Record<BaseTheme, { label: string; description: string; icon: string }>;
-export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null as unknown as object, {
+export const BASE_THEME_LABELS: BaseThemeLabelRecord = Object.create(null, {
   system: {
     get: () => ({
       label: i18n.t('settings:baseTheme.system.label', { defaultValue: '' }),
@@ -161,7 +161,7 @@ const _accentThemeBase = {
   },
 };
 
-export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = Object.create(null as unknown as object, {
+export const ACCENT_THEMES: Record<AccentThemeId, AccentTheme> = Object.create(null, {
   default: {
     get: () => ({ ..._accentThemeBase.default, name: i18n.t('settings:accentTheme.default', { defaultValue: '' }) }),
     enumerable: true,
@@ -276,7 +276,7 @@ export type SettingsCategory =
   | 'legal';
 
 type SettingsCategoryRecord = Record<SettingsCategory, { label: string; icon: string }>;
-export const SETTINGS_CATEGORIES: SettingsCategoryRecord = Object.create(null as unknown as object, {
+export const SETTINGS_CATEGORIES: SettingsCategoryRecord = Object.create(null, {
   appearance: { get: () => ({ label: i18n.t('settings:categories.appearance', { defaultValue: '' }), icon: '🎨' }), enumerable: true },
   language: { get: () => ({ label: i18n.t('settings:categories.language', { defaultValue: '' }), icon: '🌍' }), enumerable: true },
   behavior: { get: () => ({ label: i18n.t('settings:categories.behavior', { defaultValue: '' }), icon: '⚡' }), enumerable: true },

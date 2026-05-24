@@ -54,10 +54,10 @@ describe('StorageFactory', () => {
         // Note: Using function() instead of arrow for constructor compatibility
         vi.mocked(IndexedDBAdapter).mockImplementation(function () {
             return createMockAdapter();
-        } as unknown as () => IndexedDBAdapter);
+        });
         vi.mocked(LocalStorageAdapter).mockImplementation(function () {
             return createMockAdapter();
-        } as unknown as () => LocalStorageAdapter);
+        });
 
         // Improve IndexedDB mock to handle isIndexedDBAvailable check
         mockIndexedDB.open.mockImplementation(() => {
@@ -112,7 +112,7 @@ describe('StorageFactory', () => {
             return createMockAdapter({
                 init: vi.fn().mockRejectedValue(new Error('Init failed')),
             });
-        } as unknown as () => IndexedDBAdapter);
+        });
 
         await createStorage();
 

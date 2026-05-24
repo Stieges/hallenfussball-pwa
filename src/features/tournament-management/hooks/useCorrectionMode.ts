@@ -10,7 +10,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '../../../components/ui/Toast';
 import { useUserProfile } from '../../../hooks/useUserProfile';
-import { Tournament, CorrectionEntry, CorrectionReasonType, Match } from '../../../types/tournament';
+import { Tournament, CorrectionEntry, Match } from '../../../types/tournament';
 import { CorrectionReason } from '../../../types/userProfile';
 
 // Correction state interface
@@ -98,7 +98,7 @@ export function useCorrectionMode({
       previousScoreB: correctionState.originalScoreB,
       newScoreA,
       newScoreB,
-      reasonType: reason as CorrectionReasonType,
+      reasonType: reason,
       note,
       userName: profile.name,
     };

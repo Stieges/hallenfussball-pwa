@@ -7,7 +7,7 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 5.3
  */
 
-import { CSSProperties, useState, useCallback, useMemo, useRef } from 'react';
+import { CSSProperties, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
@@ -173,7 +173,7 @@ export function ExportsCategory({
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
 
   // Initialize selected teams with all teams once tournament loads
-  useMemo(() => {
+  useEffect(() => {
     if (tournament.teams.length > 0 && selectedTeamIds.length === 0) {
       setSelectedTeamIds(tournament.teams.map(t => t.id));
     }

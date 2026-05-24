@@ -447,7 +447,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         const liveEvents = liveMatch?.events;
         const sourceEvents = match.events ?? liveEvents;
         const events: RuntimeMatchEvent[] = sourceEvents
-          ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
+          ? (sourceEvents).map(e => ({
             ...e,
             matchId: e.matchId ?? match.id,
             scoreAfter: e.scoreAfter,
@@ -864,7 +864,7 @@ export const GroupStageSchedule: React.FC<GroupStageScheduleProps> = ({
         // Prefer persisted events from match object
         const sourceEvents = match.events ?? liveEvents;
         const events: RuntimeMatchEvent[] = sourceEvents
-          ? (sourceEvents as unknown as RuntimeMatchEvent[]).map(e => ({
+          ? (sourceEvents).map(e => ({
             ...e,
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty string matchId should use fallback
             matchId: e.matchId || summaryMatchId,

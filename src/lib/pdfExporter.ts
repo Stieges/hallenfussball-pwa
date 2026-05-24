@@ -663,7 +663,7 @@ function renderGroupStage(
       styles[colIndex++] = { halign: 'center', cellWidth: 25 }; // Ergebnis
       styles[colIndex++] = { halign: 'left' }; // Gast
       if (refereeConfig && refereeConfig.mode !== 'none') {
-        styles[colIndex++] = { halign: 'center', cellWidth: 15 }; // SR
+        styles[colIndex] = { halign: 'center', cellWidth: 15 }; // SR
       }
 
       return styles;
