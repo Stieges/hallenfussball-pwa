@@ -68,7 +68,7 @@ export function initSentry(): void {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
-    release: `hallenfussball-pwa@${(import.meta.env.VITE_APP_VERSION as string) || '1.0.0'}`,
+    release: `hallenfussball-pwa@${__BUILD_HASH__}`,
 
     // Sampling Rates
     tracesSampleRate: 0.1, // 10% of transactions
@@ -214,6 +214,133 @@ export function addBreadcrumb(
     data,
     level: 'info',
   });
+}
+
+/**
+ * Boot-Context payload sent to Sentry once per app start, capturing the
+ * client-side state we need to diagnose stale-cache and false-offline bugs:
+ * - build hash actually executing (vs. the latest deploy in Vercel)
+ * - service-worker state (none/installing/waiting/active/redundant)
+ * - cache-storage keys present (e.g. workbox-precache-v2-* identifies stale precache)
+ * - navigator.onLine initial value (false-positives feed false-offline UX)
+ * - indexedDB DBs present (anonymous, no row data)
+ *
+ * Sent as a structured message at level=info so it shows up in Issue search
+ * by tag. PII-free by construction.
+ */
+export interface BootContext {
+  buildHash: string;
+  swState: 'none' | 'installing' | 'waiting' | 'active' | 'redundant' | 'unsupported';
+  swScriptURL: string | null;
+  cacheNames: string[];
+  navigatorOnLine: boolean;
+  idbDatabases: string[];
+}
+
+export async function collectBootContext(): Promise<BootContext> {
+  const ctx: BootContext = {
+    buildHash: __BUILD_HASH__,
+    swState: 'unsupported',
+    swScriptURL: null,
+    cacheNames: [],
+    navigatorOnLine: typeof navigator !== 'undefined' ? navigator.onLine : true,
+    idbDatabases: [],
+  };
+
+  if (typeof navigator === 'undefined') {
+    return ctx;
+  }
+
+  if ('serviceWorker' in navigator && navigator.serviceWorker) {
+    const controller = navigator.serviceWorker.controller;
+    if (controller) {
+      ctx.swState = controller.state as BootContext['swState'];
+      ctx.swScriptURL = controller.scriptURL;
+    } else {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length === 0) {
+          ctx.swState = 'none';
+        } else {
+          const reg = regs[0];
+          if (reg.installing) {
+            ctx.swState = 'installing';
+            ctx.swScriptURL = reg.installing.scriptURL;
+          } else if (reg.waiting) {
+            ctx.swState = 'waiting';
+            ctx.swScriptURL = reg.waiting.scriptURL;
+          } else if (reg.active) {
+            ctx.swState = 'active';
+            ctx.swScriptURL = reg.active.scriptURL;
+          }
+        }
+      } catch {
+        // getRegistrations may throw in some sandboxed contexts
+      }
+    }
+  }
+
+  if (typeof caches !== 'undefined') {
+    try {
+      ctx.cacheNames = await caches.keys();
+    } catch {
+      // caches API may be unavailable
+    }
+  }
+
+  if ('databases' in indexedDB && typeof indexedDB.databases === 'function') {
+    try {
+      const dbs = await indexedDB.databases();
+      ctx.idbDatabases = dbs.map((d) => d.name ?? '<unnamed>').filter(Boolean);
+    } catch {
+      // Some browsers don't support indexedDB.databases()
+    }
+  }
+
+  return ctx;
+}
+
+/**
+ * Sends a one-shot boot event to Sentry with cache/SW/online state.
+ *
+ * Intentionally a `captureMessage` (info-level) rather than `captureException`
+ * so it doesn't pollute the Issues stream — appears under Discover/Events with
+ * the `boot` tag for ad-hoc querying.
+ *
+ * No-op in dev (where Sentry isn't initialized). Safe to call before consent
+ * is given; if Sentry isn't initialized, captureMessage's existing dev-mode
+ * branch logs to console instead.
+ */
+export async function captureBootContext(): Promise<void> {
+  let context: BootContext;
+  try {
+    context = await collectBootContext();
+  } catch (error) {
+    // Don't let telemetry break the app under any circumstances
+    if (import.meta.env.DEV) {
+      console.warn('[BootContext] collection failed:', error);
+    }
+    return;
+  }
+
+  // Always log in dev so we can see what would have been sent
+  if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.log('[BootContext]', context);
+    return;
+  }
+
+  captureMessage('app.boot', 'info', {
+    boot: context,
+  });
+
+  // Also surface key fields as Sentry tags so they're queryable as facets
+  if (isInitialized) {
+    Sentry.setTag('build_hash', context.buildHash);
+    Sentry.setTag('sw_state', context.swState);
+    Sentry.setTag('navigator_on_line', String(context.navigatorOnLine));
+    Sentry.setTag('cache_count', String(context.cacheNames.length));
+  }
 }
 
 // Re-export Sentry for direct access if needed

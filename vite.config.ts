@@ -4,8 +4,23 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import { VitePWA } from 'vite-plugin-pwa'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 
+// Build identifier — short Vercel commit SHA in production, timestamp marker locally.
+// Injected at build time via `define` and consumed by Sentry release-tag + boot-context telemetry.
+function resolveBuildHash(): string {
+  const vercelSha = process.env.VERCEL_GIT_COMMIT_SHA;
+  if (vercelSha && vercelSha.length >= 8) {
+    return vercelSha.slice(0, 8);
+  }
+  return `local-${Date.now().toString(36)}`;
+}
+
+const BUILD_HASH = resolveBuildHash();
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    __BUILD_HASH__: JSON.stringify(BUILD_HASH),
+  },
   plugins: [
     react(),
     // PWA Plugin - Enables offline functionality

@@ -11,7 +11,7 @@ import '@fontsource-variable/inter';
 import App from './App';
 import './styles/global.css';
 import { initInertPolyfill } from './utils/polyfills/inert';
-import { initSentry } from './lib/sentry';
+import { initSentry, captureBootContext } from './lib/sentry';
 
 /**
  * Global handler for unhandled promise rejections
@@ -90,6 +90,11 @@ initInertPolyfill().catch((error) => {
 // Initialize Sentry error tracking (only in production, with consent)
 // Must be called early to catch all errors
 initSentry();
+
+// Telemetry snapshot of the client state at boot (build hash, SW state, cache
+// keys, navigator.onLine). Lets us correlate auth/cache bugs with specific
+// deploys and surface the stale-precache class of issues. Async, fire-and-forget.
+void captureBootContext();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
