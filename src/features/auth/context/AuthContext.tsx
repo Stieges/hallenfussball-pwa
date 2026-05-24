@@ -205,6 +205,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const safetyTimeout = setTimeout(async () => {
         if (mounted && isLoading) {
           console.warn('Auth init timed out after 15s - releasing UI');
+
+          // Telemetry (HP-5 hotfix): capture every timeout to Sentry so we can
+          // measure how often this fires in production and on which clients.
+          // Without this signal we'd be flying blind on the root cause of
+          // the "login page reports offline" bug.
+          captureFeatureError(
+            new Error('AuthInitTimeout: getSession() did not resolve within 15s'),
+            'auth',
+            'initTimeout',
+            {
+              online: typeof navigator !== 'undefined' ? navigator.onLine : null,
+              supabaseConfigured: isSupabaseConfigured,
+            },
+          );
+
           // Set to 'offline' to trigger reconnect logic, NOT 'connected' which would mask issues
           setConnectionState('offline');
           setIsLoading(false);
