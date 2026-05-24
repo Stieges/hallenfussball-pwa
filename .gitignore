@@ -65,6 +65,10 @@ playwright-report/
 supabase/.temp/
 scripts/dev-mcp-server.ts
 
+# Local-only helper scripts (user environment, not part of the project)
+/loc_refiner.py
+/run-individual-tests.sh
+
 # Backup files and CI/build run outputs
 *.bak.*
 ci_logs.txt
