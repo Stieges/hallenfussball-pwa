@@ -1,32 +1,107 @@
-import { describe, it } from 'vitest';
+/**
+ * Behaviour-level tests for the LoginScreen ↔ useBrowserOnlineStatus
+ * integration. We test the hook in isolation through a thin probe wrapper
+ * (the hook is fully exported from src/features/auth/hooks/useBrowserOnlineStatus)
+ * rather than mounting the entire LoginScreen — those broader UI flows live
+ * in the existing LoginScreen.test.tsx and don't need re-litigating here.
+ */
 
-// =============================================================================
-// PR 2 surface — resilient online detection (C2 in the sub-spec).
-//
-// Today: useBrowserOnlineStatus() in LoginScreen.tsx trusts navigator.onLine's
-// initial value. If the browser/OS reports a false-negative on mount (a known
-// issue after SW startup with cache-hit), the loud OfflineBanner persists for
-// the rest of the session.
-//
-// PR 2 adds a one-shot HEAD probe against the Supabase auth health endpoint
-// when navigator.onLine === false at mount, and trusts the probe over the
-// initial flag.
-//
-// These .todo() markers convert 1:1 to it() in PR 2 against the real probe
-// implementation. They intentionally don't reference modules that don't exist
-// yet — that would block PR 1 from importing.
-// =============================================================================
+import { renderHook, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('LoginScreen — online probe (PR 2)', () => {
-  it.todo('does not render the loud OfflineBanner when navigator.onLine === true');
-  it.todo(
-    'when navigator.onLine === false but probe HEAD /auth/v1/health returns 200, sets browserOnline=true and suppresses the loud banner',
-  );
-  it.todo(
-    'when navigator.onLine === false and probe fails or times out (3s), keeps browserOnline=false and renders the loud banner',
-  );
-  it.todo('runs the probe at most once per component lifecycle (no polling)');
-  it.todo(
-    'records a Sentry breadcrumb when navigator.onLine disagrees with the probe result (false-negative observability)',
-  );
+import { useBrowserOnlineStatus } from '../../hooks/useBrowserOnlineStatus';
+
+const onLineDescriptor = Object.getOwnPropertyDescriptor(
+  Object.getPrototypeOf(navigator) as object,
+  'onLine',
+);
+
+function setOnLine(value: boolean): void {
+  Object.defineProperty(navigator, 'onLine', { configurable: true, value });
+}
+
+afterEach(() => {
+  if (onLineDescriptor) {
+    Object.defineProperty(navigator, 'onLine', onLineDescriptor);
+  }
+});
+
+describe('useBrowserOnlineStatus', () => {
+  beforeEach(() => {
+    setOnLine(true);
+  });
+
+  it('returns true when navigator.onLine === true and skips the probe', async () => {
+    const probe = vi.fn().mockResolvedValue('online' as const);
+    const { result } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(true);
+    // Give microtasks a chance to flush — probe must NOT run on the happy path
+    await Promise.resolve();
+    expect(probe).not.toHaveBeenCalled();
+  });
+
+  it('flips browserOnline=true when navigator.onLine is false but the probe succeeds', async () => {
+    setOnLine(false);
+    const probe = vi.fn().mockResolvedValue('online' as const);
+    const { result } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(false);
+    await waitFor(() => {
+      expect(result.current).toBe(true);
+    });
+    expect(probe).toHaveBeenCalledOnce();
+  });
+
+  it('keeps browserOnline=false when navigator.onLine is false and the probe fails', async () => {
+    setOnLine(false);
+    const probe = vi.fn().mockResolvedValue('offline' as const);
+    const { result } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(false);
+    // wait long enough that the probe promise resolves
+    await new Promise((r) => setTimeout(r, 0));
+    expect(probe).toHaveBeenCalledOnce();
+    expect(result.current).toBe(false);
+  });
+
+  it('keeps browserOnline=false when the probe outcome is "unknown" (no Supabase URL configured)', async () => {
+    setOnLine(false);
+    const probe = vi.fn().mockResolvedValue('unknown' as const);
+    const { result } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(false);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(probe).toHaveBeenCalledOnce();
+    expect(result.current).toBe(false);
+  });
+
+  it('does not act on a late probe response after unmount', async () => {
+    setOnLine(false);
+    let resolveProbe: ((v: 'online') => void) | undefined;
+    const probe = vi.fn(
+      () =>
+        new Promise<'online'>((resolve) => {
+          resolveProbe = resolve;
+        }),
+    );
+    const { result, unmount } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(false);
+
+    unmount();
+    // Late probe resolution must not throw or trigger React warnings
+    resolveProbe?.('online');
+    await new Promise((r) => setTimeout(r, 0));
+    // Nothing to assert beyond "no error". renderHook's last result snapshot
+    // stays at the pre-unmount value.
+    expect(result.current).toBe(false);
+  });
+
+  it('reacts to the window "offline" event after mount', async () => {
+    const probe = vi.fn();
+    const { result } = renderHook(() => useBrowserOnlineStatus({ probe }));
+    expect(result.current).toBe(true);
+
+    setOnLine(false);
+    window.dispatchEvent(new Event('offline'));
+    await waitFor(() => {
+      expect(result.current).toBe(false);
+    });
+  });
 });

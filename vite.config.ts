@@ -25,7 +25,11 @@ export default defineConfig(({ mode }) => ({
     react(),
     // PWA Plugin - Enables offline functionality
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' gives our swRegistration.setupSwAutoReload control over the
+      // update flow (toast + hard reload). 'autoUpdate' silently installs the
+      // new SW but never reloads the open tab, which leaves users on the
+      // stale precached bundle — root cause of the 2026-05-24 login-bug.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.svg'],
       manifest: {
         name: 'Hallenfußball Turnier-Manager',

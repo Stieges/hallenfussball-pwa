@@ -14,6 +14,13 @@ const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.t
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim();
 
 /**
+ * Supabase base URL — exposed for low-level probes (e.g. online-detection
+ * HEAD requests) that need to hit a known-good Supabase endpoint without
+ * going through the JS client. May be undefined in offline-only mode.
+ */
+export const supabaseProjectUrl = supabaseUrl;
+
+/**
  * Check if Supabase is configured
  *
  * When running in development or CI without Supabase credentials,
