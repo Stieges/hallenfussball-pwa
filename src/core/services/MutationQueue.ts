@@ -30,7 +30,7 @@ export interface MutationItem {
 
 const STORAGE_KEY = 'mutation_queue_v1';
 const FAILED_STORAGE_KEY = 'mutation_queue_failed_v1';
-const MAX_RETRIES = 5;
+export const MAX_RETRIES = 5;
 
 /**
  * A mutation that failed permanently (exceeded max retries)
