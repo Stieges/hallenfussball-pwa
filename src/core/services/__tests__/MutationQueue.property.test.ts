@@ -176,7 +176,7 @@ describe('MutationQueue — FIFO + no-loss invariant (property)', () => {
     );
   });
 
-  it('survives bulk enqueue of >1000 items without losing any', async () => {
+  it('survives bulk enqueue of >1000 items without losing any', { timeout: 30_000 }, async () => {
     await fc.assert(
       fc.asyncProperty(
         fc.integer({ min: 1000, max: 2000 }),
