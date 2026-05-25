@@ -14,6 +14,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
+import { useSwAutoReload } from './hooks/useSwAutoReload';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
@@ -138,6 +139,11 @@ function AppContent() {
 
   // QW-002: Show toast if auth initialization timed out
   useAuthTimeoutToast();
+
+  // Sub-Spec 1 C1: register the service worker with explicit "new version
+  // available → toast + hard reload" semantics so users never linger on a
+  // stale precached bundle (root cause of the 2026-05-24 login-bug).
+  useSwAutoReload();
 
   // P0-4 Task 4.4: Conflict Resolution at app level
   const { pendingConflict, resolveConflict, dismissConflict } = useSyncConflicts();

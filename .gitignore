@@ -74,3 +74,6 @@ scripts/dev-mcp-server.ts
 ci_logs.txt
 .vercel
 .env*.local
+
+# Local diagnostic artifacts (HAR analyses, screenshots from chrome-devtools MCP)
+.tmp-repro/

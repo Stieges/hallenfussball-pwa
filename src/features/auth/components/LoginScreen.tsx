@@ -27,39 +27,11 @@ import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { LoginResetPasswordDialog, LoginMagicLinkDialog, LoginSuccessDialog } from './LoginDialogs';
 import { OfflineBanner } from './OfflineBanner';
 import { ConnectingIndicator } from './ConnectingIndicator';
+import { clearCachesAndReload } from '../../../lib/cacheRecovery';
+import { useBrowserOnlineStatus } from '../hooks/useBrowserOnlineStatus';
 
 /** Soft threshold (ms) after which the subtle "connecting…" pill surfaces. */
 const CONNECTING_HINT_DELAY_MS = 3000;
-
-function getInitialBrowserOnline(): boolean {
-  return typeof navigator !== 'undefined' ? navigator.onLine : true;
-}
-
-/**
- * Tracks the real browser-level online status independent of the auth
- * connection-state machine. The login form should only show the loud
- * OfflineBanner when the browser genuinely reports offline; auth-init
- * slowness or stalls get a subtler pill instead.
- */
-function useBrowserOnlineStatus(): boolean {
-  const [browserOnline, setBrowserOnline] = useState(getInitialBrowserOnline);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const goOnline = () => setBrowserOnline(true);
-    const goOffline = () => setBrowserOnline(false);
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
-
-  return browserOnline;
-}
 
 /**
  * Returns true once the auth connection has been in 'connecting' state
@@ -318,6 +290,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <OfflineBanner
             subtitle={t('login.offlineSubtitle')}
             onRetry={() => void reconnect()}
+            onClearCache={() =>
+              clearCachesAndReload({
+                buildHash: __BUILD_HASH__,
+                onLine: typeof navigator !== 'undefined' ? navigator.onLine : true,
+              })
+            }
+            clearCacheLabel={t('login.clearCacheAndReload')}
+            clearCacheDisclaimer={t('login.clearCacheDisclaimer')}
             data-testid="offline-banner"
           />
         )}
