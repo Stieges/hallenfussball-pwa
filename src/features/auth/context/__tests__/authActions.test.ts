@@ -253,6 +253,83 @@ describe('authActions', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
     });
+
+    // =========================================================================
+    // Sub-Spec 1.5 F3: fetchProfile timeout
+    // =========================================================================
+    it('succeeds with minimal user when fetchProfile times out (F3)', async () => {
+      vi.useFakeTimers();
+      try {
+        const mockUser = createMockSupabaseUser({
+          id: 'login-user-id',
+          email: 'user@example.com',
+        });
+        const mockSession = createMockSupabaseSession(mockUser);
+
+        supabaseMock.auth.signInWithPassword.mockResolvedValue({
+          data: { user: mockUser, session: mockSession },
+          error: null,
+        });
+
+        // fetchProfile never resolves — login must time it out at 8 s
+        mockDeps.fetchProfile.mockReturnValue(
+          new Promise<never>(() => { /* intentional never-resolving */ }),
+        );
+
+        const loginPromise = authActions.login(
+          mockDeps,
+          'user@example.com',
+          'Password123!'
+        );
+
+        // Advance past the AUTH_FETCH_PROFILE_TIMEOUT_MS (8000 ms)
+        await vi.advanceTimersByTimeAsync(8_500);
+
+        const result = await loginPromise;
+        expect(result.success).toBe(true);
+        // User is returned with the Supabase auth data even though profile
+        // fetch never completed (minimal-user fallback path).
+        expect(result.user).toBeDefined();
+        expect(result.user?.id).toBe('login-user-id');
+        expect(mockDeps.setConnectionState).toHaveBeenCalledWith('connected');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // =========================================================================
+    // Sub-Spec 1.5 F4: migrateGuestTournaments fire-and-forget
+    // =========================================================================
+    it('returns immediately even if migrateGuestTournaments hangs (F4)', async () => {
+      const mockUser = createMockSupabaseUser({
+        id: 'login-user-id',
+        email: 'user@example.com',
+      });
+      const mockSession = createMockSupabaseSession(mockUser);
+
+      supabaseMock.auth.signInWithPassword.mockResolvedValue({
+        data: { user: mockUser, session: mockSession },
+        error: null,
+      });
+      mockDeps.fetchProfile.mockResolvedValue(createMockProfileData());
+
+      const start = Date.now();
+      const result = await authActions.login(
+        mockDeps,
+        'user@example.com',
+        'Password123!'
+      );
+      const elapsed = Date.now() - start;
+
+      expect(result.success).toBe(true);
+      // login() must NOT await migrateGuestTournaments — guard against any
+      // future code that re-introduces the blocking await.
+      expect(elapsed).toBeLessThan(3_000);
+      // wasMigrated is intentionally false in the fire-and-forget path;
+      // dashboard surfaces migrated entries via its own list refresh.
+      expect(result.wasMigrated).toBe(false);
+      expect(result.migratedCount).toBe(0);
+    });
   });
 
   // ===========================================================================

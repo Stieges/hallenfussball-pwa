@@ -32,6 +32,7 @@ import {
 } from '../services/profileCacheService';
 import { isFeatureEnabled } from '../../../config';
 import { captureFeatureError } from '../../../lib/sentry';
+import { executeWithTimeout } from '../../../core/utils/SingleFlight';
 
 // Re-export the context for consumers
 export { AuthContext } from './authContextInstance';
@@ -46,6 +47,21 @@ export { AuthContext } from './authContextInstance';
  * 15s accounts for cold starts, slow networks, and serverless function warmup.
  */
 const AUTH_INIT_TIMEOUT_MS = 15_000;
+
+/**
+ * Per-call timeout for `supabase.auth.getSession()`. Set slightly lower than
+ * the umbrella safetyTimeout (AUTH_INIT_TIMEOUT_MS) so the executeWithTimeout
+ * wrapper rejects first and the structured catch-block fallback (cached user
+ * → offline mode) runs before the broad safety net fires (Sub-Spec 1.5 F1).
+ */
+const AUTH_GETSESSION_TIMEOUT_MS = 12_000;
+
+/**
+ * Per-call timeout for cross-tab + reconnect `getSession()` calls.
+ * Shorter than init because these paths happen after the first successful
+ * connection — if they hang, we don't want to block the UI for 12 s.
+ */
+const AUTH_GETSESSION_REFRESH_TIMEOUT_MS = 8_000;
 
 /**
  * Maximum number of retry attempts for transient auth errors (e.g., AbortError).
@@ -206,10 +222,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (mounted && isLoading) {
           console.warn('Auth init timed out after 15s - releasing UI');
 
-          // Telemetry (HP-5 hotfix): capture every timeout to Sentry so we can
-          // measure how often this fires in production and on which clients.
-          // Without this signal we'd be flying blind on the root cause of
-          // the "login page reports offline" bug.
+          // Telemetry: capture every timeout to Sentry so we can measure how
+          // often this fires in production and on which clients (HP-5 hotfix).
           captureFeatureError(
             new Error('AuthInitTimeout: getSession() did not resolve within 15s'),
             'auth',
@@ -220,12 +234,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
             },
           );
 
-          // Set to 'offline' to trigger reconnect logic, NOT 'connected' which would mask issues
+          // Sub-Spec 1.5 F2: prefer the cached user over wiping state. The user
+          // briefly stays logged in (offline mode) instead of being kicked back
+          // to a logged-out shell — which is the visible symptom of the bug we
+          // are chasing.
+          const cachedUser = await restoreUserFromCache();
+          if (cachedUser) {
+            setUser(cachedUser);
+            setConnectionState('offline');
+            setIsLoading(false);
+            try {
+              safeSessionStorage.setItem('auth:timeoutFlag', Date.now().toString());
+            } catch {
+              // sessionStorage nicht verfügbar
+            }
+            return;
+          }
+
+          // No cached user: clear stale state and release UI for guest/login.
           setConnectionState('offline');
           setIsLoading(false);
-
-          // Clear stale auth state (both localStorage AND client's internal cache)
-          // to prevent getSession() from reusing stale in-memory tokens on reconnect
           await clearStaleAuthState();
 
           // Set flag for toast notification (read by useAuthTimeoutToast hook)
@@ -247,8 +275,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
           return;
         }
 
-        // Get current session
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        // Get current session. Wrapped in executeWithTimeout so a hung
+        // getSession() rejects with a timeout error instead of leaving the
+        // safetyTimeout as the only escape hatch (Sub-Spec 1.5 F1).
+        // Capture client reference to satisfy the closure's type narrowing.
+        const supabaseClient = supabase;
+        const { data: { session: currentSession } } = await executeWithTimeout(
+          () => supabaseClient.auth.getSession(),
+          AUTH_GETSESSION_TIMEOUT_MS,
+        );
 
         if (mounted) {
           setConnectionState('connected');
@@ -430,7 +465,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setConnectionState('connecting');
 
       try {
-        const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
+        const { data: { session: currentSession } } = await executeWithTimeout(
+          () => supabaseClient.auth.getSession(),
+          AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
+        );
         setConnectionState('connected');
         await updateAuthState(currentSession);
         if (import.meta.env.DEV) {
@@ -502,10 +540,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.log('Auth token changed in another tab, syncing...');
         }
 
-        // Re-fetch session from Supabase (which reads from localStorage)
-        void supabaseClient.auth.getSession().then(({ data: { session: newSession } }) => {
-          void updateAuthState(newSession);
-        });
+        // Re-fetch session from Supabase (which reads from localStorage).
+        // Timeout-wrapped so a cross-tab event with a hung Supabase can't
+        // leak a never-resolving promise into the UI (Sub-Spec 1.5 F5).
+        void executeWithTimeout(
+          () => supabaseClient.auth.getSession(),
+          AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
+        )
+          .then(({ data: { session: newSession } }) => {
+            void updateAuthState(newSession);
+          })
+          .catch((err: unknown) => {
+            if (import.meta.env.DEV) {
+              console.warn('Cross-tab getSession timed out:', err);
+            }
+          });
       }
 
       // Also sync guest user changes across tabs
@@ -525,9 +574,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else {
           // Guest user was removed (logged out or upgraded to real account)
           // Re-fetch to check if there's a real session now
-          void supabaseClient.auth.getSession().then(({ data: { session: newSession } }) => {
-            void updateAuthState(newSession);
-          });
+          void executeWithTimeout(
+            () => supabaseClient.auth.getSession(),
+            AUTH_GETSESSION_REFRESH_TIMEOUT_MS,
+          )
+            .then(({ data: { session: newSession } }) => {
+              void updateAuthState(newSession);
+            })
+            .catch((err: unknown) => {
+              if (import.meta.env.DEV) {
+                console.warn('Cross-tab getSession (guest-removed) timed out:', err);
+              }
+            });
         }
       }
     };
