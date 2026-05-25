@@ -28,6 +28,14 @@ import { captureFeatureError, setUserContext as setSentryUserContext } from '../
 const AUTH_OPERATION_TIMEOUT_MS = 15_000;
 
 /**
+ * Timeout for the post-login profile fetch (Sub-Spec 1.5 F3). Shorter than
+ * the umbrella auth-op timeout because the user has already been authenticated
+ * — if the profile read hangs we proceed with a minimal user object rather
+ * than blocking the success-screen handoff.
+ */
+const AUTH_FETCH_PROFILE_TIMEOUT_MS = 8_000;
+
+/**
  * Checks if an error is an Invalid Refresh Token error from Supabase.
  * These errors indicate the session is permanently invalid and cannot be recovered.
  */
@@ -288,32 +296,58 @@ export async function login(
     // Clear guest data
     safeLocalStorage.removeItem('auth:guestUser');
 
-    const profileData = await deps.fetchProfile(data.user.id);
+    // Sub-Spec 1.5 F3: fetchProfile must not hang the login flow indefinitely.
+    // If the profile fetch times out we fall back to a minimal user object so
+    // the user lands on the dashboard logged in; the profile catches up on the
+    // next render cycle via the regular cached-profile path.
+    let profileData;
+    try {
+      profileData = await executeWithTimeout(
+        () => deps.fetchProfile(data.user.id),
+        AUTH_FETCH_PROFILE_TIMEOUT_MS,
+      );
+    } catch (profileError) {
+      if (import.meta.env.DEV) {
+        console.warn('fetchProfile timed out — proceeding with minimal user:', profileError);
+      }
+      if (profileError instanceof Error) {
+        captureFeatureError(profileError, 'auth', 'fetchProfileTimeout', {
+          userId: data.user.id,
+        });
+      }
+      profileData = null;
+    }
     const mappedUser = mapSupabaseUser(data.user, profileData);
 
-    // Migrate any local guest tournaments to the logged-in account
-    let migrationResult = { migratedCount: 0 };
-    try {
-      migrationResult = await migrateGuestTournaments();
-      if (import.meta.env.DEV && migrationResult.migratedCount > 0) {
-        // eslint-disable-next-line no-console
-        console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after login`);
-      }
-    } catch (migrationError) {
-      if (import.meta.env.DEV) {
-        console.error('Migration after login failed:', migrationError);
-      }
-      // Don't fail the login if migration fails
-    }
-
     deps.setConnectionState('connected');
+
+    // Sub-Spec 1.5 F4: migrateGuestTournaments runs fire-and-forget so the
+    // login completes immediately. A slow migration (or a hung Supabase
+    // request inside it) used to block the success-screen handoff.
+    void migrateGuestTournaments()
+      .then((migrationResult) => {
+        if (import.meta.env.DEV && migrationResult.migratedCount > 0) {
+          // eslint-disable-next-line no-console
+          console.log(`Migrated ${migrationResult.migratedCount} tournament(s) after login`);
+        }
+      })
+      .catch((migrationError: unknown) => {
+        if (import.meta.env.DEV) {
+          console.error('Migration after login failed:', migrationError);
+        }
+        if (migrationError instanceof Error) {
+          captureFeatureError(migrationError, 'auth', 'migrateGuestTournaments');
+        }
+      });
 
     return {
       success: true,
       user: mappedUser ?? undefined,
       session: mapSupabaseSession(data.session) ?? undefined,
-      wasMigrated: migrationResult.migratedCount > 0,
-      migratedCount: migrationResult.migratedCount,
+      // Migration runs in the background now; the dashboard's tournament list
+      // refresh will surface migrated entries when it polls.
+      wasMigrated: false,
+      migratedCount: 0,
     };
   } catch (err) {
     // Handle timeout specifically
