@@ -30,8 +30,6 @@ import {
   AuthGuard,
 } from './features/auth/components';
 import { Footer } from './components/layout';
-import { useSyncConflicts } from './features/sync/hooks/useSyncConflicts';
-import { ConflictResolutionDialog } from './features/sync/components/ConflictResolutionDialog';
 import { ConsentDialog } from './components/dialogs/ConsentDialog';
 import { hasConsent } from './lib/consent';
 import { reinitializeSentry, captureFeatureError } from './lib/sentry';
@@ -144,9 +142,6 @@ function AppContent() {
   // available → toast + hard reload" semantics so users never linger on a
   // stale precached bundle (root cause of the 2026-05-24 login-bug).
   useSwAutoReload();
-
-  // P0-4 Task 4.4: Conflict Resolution at app level
-  const { pendingConflict, resolveConflict, dismissConflict } = useSyncConflicts();
 
   // Check if current path is a dashboard path
   const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
@@ -765,18 +760,6 @@ function AppContent() {
       {/* Confirm Dialogs */}
       <ConfirmDialog {...softDeleteDialog.dialogProps} />
       <ConfirmDialog {...permanentDeleteDialog.dialogProps} />
-
-      {/* P0-4 Task 4.4: Conflict Resolution Dialog */}
-      {pendingConflict && (
-        <ConflictResolutionDialog
-          isOpen={true}
-          onClose={dismissConflict}
-          conflict={pendingConflict}
-          onResolve={(strategy) => {
-            void resolveConflict(strategy);
-          }}
-        />
-      )}
     </div>
   );
 }
