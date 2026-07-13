@@ -126,15 +126,6 @@ export function useRegisterForm(): UseRegisterFormReturn {
       newErrors.confirmPassword = AUTH_ERRORS.PASSWORD_MISMATCH;
     }
 
-    // Registration code validation (case-insensitive)
-    const expectedCode = import.meta.env.VITE_REGISTRATION_CODE as string | undefined;
-    const providedCode = formData.registrationCode.trim().toLowerCase();
-    const expectedCodeNormalized = expectedCode?.trim().toLowerCase();
-
-    if (expectedCodeNormalized && providedCode !== expectedCodeNormalized) {
-      newErrors.registrationCode = AUTH_ERRORS.REGISTRATION_CODE_INVALID;
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [formData]);
