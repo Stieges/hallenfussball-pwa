@@ -44,6 +44,7 @@ import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { supabase } from '../../lib/supabase';
+import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
 // THEME RESOLUTION
@@ -1000,6 +1001,7 @@ export function MonitorDisplayPage({
   }, [loadData, monitor, performanceSettings.pollingInterval]);
 
   // Heartbeat sender — every 30s so admin dashboard can show online status
+  const heartbeatErrorReported = useRef(false);
   useEffect(() => {
     if (!monitor || !tournament) {
       return;
@@ -1009,25 +1011,25 @@ export function MonitorDisplayPage({
       if (!supabase) {
         return;
       }
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-restricted-syntax -- monitor_heartbeats not yet in generated types; track regen via /supabase-types-regen
-        await (supabase as any).from('monitor_heartbeats').upsert({
-          monitor_id: monitor.id,
-          tournament_id: tournament.id,
-          last_seen: new Date().toISOString(),
-          slide_index: slideState.currentIndex,
-          cache_status: cacheStatus.connectionStatus,
-          user_agent: navigator.userAgent,
-        }, { onConflict: 'monitor_id' });
-      } catch {
-        // Heartbeat failure is non-critical — silently ignore
+      const { error } = await supabase.rpc('record_monitor_heartbeat', {
+        p_monitor_id: monitor.id,
+        p_tournament_id: tournament.id,
+        p_slide_index: slideState.currentIndex,
+        p_cache_status: cacheStatus.status,
+        p_user_agent: navigator.userAgent,
+      });
+      if (error && !heartbeatErrorReported.current) {
+        // supabase-js wirft bei PG-Fehlern nicht — einmal pro Mount signalisieren,
+        // sonst bleibt ein kaputter Heartbeat-Pfad wieder monatelang unsichtbar.
+        heartbeatErrorReported.current = true;
+        captureFeatureError(new Error(`heartbeat failed: ${error.message}`), 'monitor', 'heartbeat');
       }
     };
 
     void sendHeartbeat();
     const interval = setInterval(() => void sendHeartbeat(), 30_000);
     return () => clearInterval(interval);
-  }, [monitor, tournament, slideState.currentIndex, cacheStatus.connectionStatus]);
+  }, [monitor, tournament, slideState.currentIndex, cacheStatus.status]);
 
   // ==========================================================================
   // SLIDESHOW LOGIC
