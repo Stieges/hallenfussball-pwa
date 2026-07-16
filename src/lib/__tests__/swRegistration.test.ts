@@ -150,7 +150,7 @@ describe('setupSwAutoReload', () => {
     expect(h.scheduleReload).toHaveBeenCalledOnce();
   });
 
-  it('invokes reload() when the scheduled callback fires', () => {
+  it('invokes updateSW(true) instead of reload() when the scheduled callback fires', () => {
     const h = makeHarness();
     // Real scheduleReload via setTimeout so we can advance fake timers
     setupSwAutoReload({
@@ -161,7 +161,39 @@ describe('setupSwAutoReload', () => {
     });
     h.triggerNeedRefresh();
     vi.advanceTimersByTime(DEFAULT_RELOAD_DELAY_MS);
-    expect(h.reload).toHaveBeenCalledOnce();
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+    expect(h.reload).not.toHaveBeenCalled();
+  });
+
+  it('falls back to reload when updateSW rejects', async () => {
+    const h = makeHarness();
+    h.updateSW.mockRejectedValueOnce(new Error('sw update failed'));
+    setupSwAutoReload({
+      registerSW: h.registerSW,
+      showToast: h.showToast,
+      updatingMessage: 'Updating…',
+      reload: h.reload,
+      scheduleReload: h.scheduleReload,
+    });
+    h.triggerNeedRefresh();
+    h.scheduleReload.mock.calls[0][0]();
+    await vi.waitFor(() => expect(h.reload).toHaveBeenCalledOnce());
+    expect(h.updateSW).toHaveBeenCalledWith(true);
+  });
+
+  it('falls back to reload when updateSW rejects with a non-Error', async () => {
+    const h = makeHarness();
+    h.updateSW.mockRejectedValueOnce('kaputt');
+    setupSwAutoReload({
+      registerSW: h.registerSW,
+      showToast: h.showToast,
+      updatingMessage: 'Updating…',
+      reload: h.reload,
+      scheduleReload: h.scheduleReload,
+    });
+    h.triggerNeedRefresh();
+    h.scheduleReload.mock.calls[0][0]();
+    await vi.waitFor(() => expect(h.reload).toHaveBeenCalledOnce());
   });
 
   it('does not throw when onRegisterError fires with a non-Error value', () => {

@@ -2,7 +2,7 @@
  * Supabase Database Types
  *
  * Auto-generiert via Supabase MCP (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-05-23
+ * Letzte Regeneration: 2026-07-16
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -312,6 +312,51 @@ export type Database = {
           },
           {
             foreignKeyName: "matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monitor_heartbeats: {
+        Row: {
+          cache_status: string | null
+          created_at: string | null
+          last_seen: string
+          monitor_id: string
+          slide_index: number | null
+          tournament_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          cache_status?: string | null
+          created_at?: string | null
+          last_seen?: string
+          monitor_id: string
+          slide_index?: number | null
+          tournament_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          cache_status?: string | null
+          created_at?: string | null
+          last_seen?: string
+          monitor_id?: string
+          slide_index?: number | null
+          tournament_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitor_heartbeats_monitor_id_fkey"
+            columns: ["monitor_id"]
+            isOneToOne: true
+            referencedRelation: "monitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monitor_heartbeats_tournament_id_fkey"
             columns: ["tournament_id"]
             isOneToOne: false
             referencedRelation: "tournaments"
@@ -947,6 +992,16 @@ export type Database = {
       merge_user_data: {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
+      }
+      record_monitor_heartbeat: {
+        Args: {
+          p_cache_status?: string
+          p_monitor_id: string
+          p_slide_index?: number
+          p_tournament_id: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       regenerate_share_code: {
         Args: { tournament_id: string }
