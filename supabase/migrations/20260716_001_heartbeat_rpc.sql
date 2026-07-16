@@ -50,3 +50,8 @@ GRANT EXECUTE ON FUNCTION public.record_monitor_heartbeat(uuid, uuid, int, text,
 -- Direkte anon-Writes sind obsolet (liefen wegen des CHECK-Verstoßes nie durch):
 DROP POLICY IF EXISTS "anon_insert_heartbeats" ON monitor_heartbeats;
 DROP POLICY IF EXISTS "anon_update_heartbeats" ON monitor_heartbeats;
+
+-- Realtime-Events für das Owner-Dashboard (useMonitorHeartbeats subscribed
+-- auf postgres_changes; ohne Publication-Mitgliedschaft kommt nie ein Event.
+-- RLS wird von Realtime respektiert — owner_select_heartbeats gated die Events).
+ALTER PUBLICATION supabase_realtime ADD TABLE public.monitor_heartbeats;

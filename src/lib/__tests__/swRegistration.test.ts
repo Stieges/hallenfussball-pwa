@@ -150,7 +150,7 @@ describe('setupSwAutoReload', () => {
     expect(h.scheduleReload).toHaveBeenCalledOnce();
   });
 
-  it('invokes reload() when the scheduled callback fires', () => {
+  it('invokes updateSW(true) instead of reload() when the scheduled callback fires', () => {
     const h = makeHarness();
     // Real scheduleReload via setTimeout so we can advance fake timers
     setupSwAutoReload({
