@@ -4,8 +4,10 @@
  * The actual logic lives in `src/lib/swRegistration.ts` — this hook just
  * fetches the localized toast message and the showToast callback (both
  * only available inside the React tree) and forwards them. The dynamic
- * import of `virtual:pwa-register` keeps unit tests free of the virtual
- * module dependency.
+ * import of `virtual:pwa-register` keeps the SW registration out of the
+ * initial bundle; in unit tests it resolves via the `vitest.config.ts`
+ * `resolve.alias` to `src/test/mocks/virtual-pwa-register.ts` instead of
+ * vite-plugin-pwa's real virtual module.
  */
 
 import { useEffect } from 'react';
@@ -23,11 +25,10 @@ export function useSwAutoReload(): void {
     let cancelled = false;
     void (async () => {
       try {
-        // Dynamic import avoids pulling vite-plugin-pwa's virtual module
-        // into unit tests (where it doesn't exist).
-        const mod = (await import(/* @vite-ignore */ 'virtual:pwa-register')) as {
-          registerSW: Parameters<typeof setupSwAutoReload>[0]['registerSW'];
-        };
+        // Dynamic import, resolved at build time (typed natively via
+        // vite-plugin-pwa/client, see src/vite-env.d.ts); test isolation is
+        // handled by the vitest.config.ts alias, not by a runtime cast.
+        const mod = await import('virtual:pwa-register');
         if (cancelled) {
           return;
         }

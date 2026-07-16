@@ -9,10 +9,13 @@
  * for the false-offline UX on /login.
  *
  * This module flips to `prompt` semantics so we can control the update flow
- * ourselves: a brief toast informs the user, then we hard-reload to flush
- * the precache. The registration callback is injected (no direct import of
- * `virtual:pwa-register`) so the unit tests don't need to mock virtual
- * vite modules.
+ * ourselves: a brief toast informs the user, then we call the injected
+ * `updateSW(true)` (vite-plugin-pwa's own updater) to skip waiting — the
+ * plugin's controlling-change listener then reloads the page and flushes the
+ * precache. A direct `reload()` is kept only as a defensive fallback for the
+ * rare case where `updateSW` rejects. The registration callback is injected
+ * (no direct import of `virtual:pwa-register`) so the unit tests don't need
+ * to mock virtual vite modules.
  */
 
 import { addBreadcrumb, captureFeatureError } from './sentry';
@@ -92,7 +95,15 @@ export function setupSwAutoReload(options: SetupOptions): (reloadPage?: boolean)
         }
       }
       scheduleReload(() => {
-        reload();
+        // vite-plugin-pwa (prompt): updateSW() sendet SKIP_WAITING; den Reload
+        // übernimmt der plugin-interne controlling-Listener. Der Fallback-reload
+        // ist rein defensiv (updateSW rejected in der Praxis nicht).
+        updateSW(true).catch((err: unknown) => {
+          if (err instanceof Error) {
+            captureFeatureError(err, 'sw', 'updateSW');
+          }
+          reload();
+        });
       }, delay);
     },
     onRegisterError: (error) => {
