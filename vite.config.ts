@@ -126,8 +126,11 @@ export default defineConfig(({ mode }) => ({
             },
           },
         ],
-        // Skip waiting and claim clients immediately
-        skipWaiting: true,
+        // prompt-Flow (registerType oben): Der neue SW WARTET, bis
+        // swRegistration.setupSwAutoReload nach Toast updateSW(true) ruft
+        // (SKIP_WAITING-Signal). skipWaiting:true würde onNeedRefresh nie
+        // feuern lassen und Clients still auf gemischte Bundles kippen.
+        skipWaiting: false,
         clientsClaim: true,
       },
       // Development options
