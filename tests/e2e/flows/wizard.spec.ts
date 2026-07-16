@@ -15,6 +15,12 @@
 import { test, expect } from '../helpers/test-fixtures';
 import { t } from '../helpers/i18n';
 
+// F-113 lehnt Startdaten in der Vergangenheit ab — Testdatum muss dynamisch
+// in der Zukunft liegen, sonst bricht der Test nach Ablauf eines Fixdatums.
+const FUTURE_DATE = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  .toISOString()
+  .split('T')[0];
+
 test.describe('Tournament Creation Wizard', () => {
 
   test.beforeEach(async ({ page }) => {
@@ -56,7 +62,7 @@ test.describe('Tournament Creation Wizard', () => {
     // Date input
     const dateInput = page.locator('input[type="date"]');
     if (await dateInput.count() > 0) {
-      await dateInput.first().fill('2026-06-15');
+      await dateInput.first().fill(FUTURE_DATE);
     }
 
     // Time input
@@ -360,7 +366,7 @@ test.describe('Tournament Creation Wizard', () => {
       await locationInput.first().fill('E2E Halle');
     }
 
-    await page.locator('input[type="date"]').first().fill('2026-12-01');
+    await page.locator('input[type="date"]').first().fill(FUTURE_DATE);
     await page.locator('input[type="time"]').first().fill('09:00');
 
     const nextButton = page.getByRole('button', { name: 'Weiter', exact: true });
