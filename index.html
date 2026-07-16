@@ -12,6 +12,8 @@
     <title>Hallenfußball Turnierverwaltung</title>
     <!-- FOUC Prevention: Apply saved corporate colors before React hydration -->
     <script src="/theme-init.js"></script>
+    <!-- Zod jitless VOR dem Modul-Bundle setzen (CSP: verhindert eval-Probe) -->
+    <script src="/zod-jitless.js"></script>
   </head>
   <body>
     <div id="root"></div>
