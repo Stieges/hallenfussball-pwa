@@ -2,13 +2,12 @@
  * Zentrale Routen-Registry. Ersetzt die Inline-Regex-Matcher aus App.tsx.
  * FIRST-MATCH-WINS: Die Reihenfolge ist semantisch (wizardEdit/admin VOR tournament).
  *
- * Alle Patterns sind zeichengleich aus App.tsx übernommen (siehe Zeilenangaben
- * unten). Kein `.includes(...)`-Substring-Sonderfall (App.tsx:160
- * `!location.pathname.includes('/new')`) — die First-Match-Wins-Reihenfolge
- * (wizardNew vor tournament) deckt den einzigen praxisrelevanten Fall
- * (`/tournament/new`) bereits ab; echte Tournament-IDs sind kryptographisch
- * generierte UUIDs (siehe `src/utils/idGenerator.ts`) und können daher nie
- * mit "new" beginnen, sodass der Substring-Sonderfall in der Praxis nie greift.
+ * Alle `pattern`-Regexe sind zeichengleich aus App.tsx übernommen (siehe
+ * Zeilenangaben unten). Wo App.tsx einen Regex-Match zusätzlich mit einer
+ * separaten Boolean-Bedingung UND-verknüpft (z.B. isTournamentPath, App.tsx:160
+ * `!location.pathname.includes('/new')`), wird das über `guard` auf dem
+ * jeweiligen RouteDef abgebildet statt in den Regex hineinkompiliert — das
+ * hält `pattern` weiterhin 1:1 mit der App.tsx-Quelle vergleichbar.
  */
 export type RouteName =
   | 'dashboard' | 'archive' | 'trash'
@@ -28,6 +27,14 @@ interface RouteDef {
   pattern: RegExp;
   /** Namen der Capture-Groups in Pattern-Reihenfolge */
   paramNames: readonly string[];
+  /**
+   * Optionale Zusatzbedingung neben dem Pattern-Match (bildet eine separate
+   * Boolean-AND-Verknüpfung aus App.tsx ab, siehe Kommentar am jeweiligen
+   * RouteDef-Eintrag). Bekommt den vollen pathname, nicht nur die Capture-Groups
+   * — App.tsx:160 prüft `.includes('/new')` auf dem gesamten Pfad, nicht nur
+   * auf einem einzelnen Segment.
+   */
+  guard?: (pathname: string) => boolean;
 }
 
 const ROUTES: readonly RouteDef[] = [
@@ -43,7 +50,18 @@ const ROUTES: readonly RouteDef[] = [
   // App.tsx:153 — /^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/
   { name: 'admin', pattern: /^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/, paramNames: ['tournamentId', 'category'] },
   // App.tsx:159 — /^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/
-  { name: 'tournament', pattern: /^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/, paramNames: ['tournamentId', 'tab'] },
+  // App.tsx:160 — isTournamentPath UND-verknüpft zusätzlich
+  // !location.pathname.includes('/new') (Substring-Check auf dem GANZEN Pfad,
+  // nicht nur auf einem Segment — z.B. schließt das auch
+  // /tournament/abc-123/newt aus, weil "/newt" mit "/new" beginnt).
+  // wizardEdit/admin-Exklusion übernimmt bereits die First-Match-Wins-Reihenfolge
+  // oben; nur der '/new'-Substring-Fall braucht einen expliziten Guard.
+  {
+    name: 'tournament',
+    pattern: /^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/,
+    paramNames: ['tournamentId', 'tab'],
+    guard: (pathname) => !pathname.includes('/new'),
+  },
 
   // App.tsx:164 — /^\/live\/([A-Za-z0-9]+)$/ (bewusst kein Längen-Limit, siehe
   // App.tsx:276 `/^\/live\/([A-Z0-9]{6})$/i` für den abweichenden, strengeren
@@ -83,7 +101,7 @@ const ROUTES: readonly RouteDef[] = [
 export function matchRoute(pathname: string): RouteMatch | null {
   for (const route of ROUTES) {
     const m = route.pattern.exec(pathname);
-    if (m) {
+    if (m && (!route.guard || route.guard(pathname))) {
       const params: Record<string, string> = {};
       route.paramNames.forEach((key, i) => {
         const value = m[i + 1];

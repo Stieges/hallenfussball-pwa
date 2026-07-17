@@ -12,6 +12,10 @@ describe('matchRoute', () => {
     ['/tournament/abc-123/admin/monitore', 'admin', { tournamentId: 'abc-123', category: 'monitore' }],
     ['/tournament/abc-123', 'tournament', { tournamentId: 'abc-123' }],
     ['/tournament/abc-123/spielplan', 'tournament', { tournamentId: 'abc-123', tab: 'spielplan' }],
+    // Guard-Präzision: "new" als Teil einer ID/eines Tabs, aber NICHT als
+    // "/new"-Substring, darf NICHT ausgeschlossen werden (App.tsx:160 prüft
+    // nur die exakte Substring-Folge "/new").
+    ['/tournament/x-new-y', 'tournament', { tournamentId: 'x-new-y' }],
     ['/live/ABC123', 'publicLive', { shareCode: 'ABC123' }],
     ['/display/t-1/m-1', 'monitorDisplay', { tournamentId: 't-1', monitorId: 'm-1' }],
     ['/login', 'login', {}],
@@ -48,5 +52,16 @@ describe('matchRoute', () => {
   });
   it('matcht /tournament/new NIE als tournament (tournamentId="new")', () => {
     expect(matchRoute('/tournament/new')?.name).toBe('wizardNew');
+  });
+
+  // Reviewer-Finding: App.tsx:160 `!location.pathname.includes('/new')` gilt
+  // für den GESAMTEN Pfad, nicht nur ein Segment — jede tournamentId oder jeder
+  // tab, der mit "new" beginnt (also einen "/new"-Substring erzeugt), macht
+  // isTournamentPath false. matchRoute muss das exakt reproduzieren.
+  it('matcht /tournament/:id NIE als tournament, wenn die ID mit "new" beginnt (App.tsx:160 Substring-Guard)', () => {
+    expect(matchRoute('/tournament/newYear2026')).toBeNull();
+  });
+  it('matcht /tournament/:id/:tab NIE als tournament, wenn der tab mit "new" beginnt (App.tsx:160 Substring-Guard)', () => {
+    expect(matchRoute('/tournament/abc-123/newt')).toBeNull();
   });
 });
