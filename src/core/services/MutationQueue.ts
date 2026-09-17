@@ -1,10 +1,13 @@
 
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { generateUniqueId } from '../../utils/idGenerator';
-import { safeLocalStorage } from '../utils/safeStorage';
-import { captureFeatureError } from '../../lib/sentry';
-import { MutationItemSchema, FailedMutationItemSchema } from '../models/schemas/MutationItemSchema';
+import {
+    GenericMutationQueue,
+    type GenericMutationItem,
+    type FailedMutationItem as GenericFailedMutationItem,
+} from './GenericMutationQueue';
+
+export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
 
 /**
  * Supported mutation types
@@ -17,444 +20,117 @@ export type MutationType =
     | 'UPDATE_TOURNAMENT_METADATA';
 
 /**
- * A requested change to be persisted to the cloud
+ * Load-time allowlist, deliberately a `Record<MutationType, true>` and not a
+ * `readonly MutationType[]`: TypeScript enforces that every key of the
+ * `MutationType` union is present as a property, so adding a member to that
+ * union without updating this object fails compilation. An array gave no
+ * such guarantee — enqueue/execute never load, so a forgotten entry would
+ * work fine online, and only offline (mutation persisted, then rejected as
+ * "unknown" by isKnownType on the next load()) would the gap surface, as a
+ * silently dropped user change.
  */
-export interface MutationItem {
-    id: string;
-    type: MutationType;
+const KNOWN_MUTATION_TYPES: Record<MutationType, true> = {
+    SAVE_TOURNAMENT: true,
+    DELETE_TOURNAMENT: true,
+    UPDATE_MATCH: true,
+    UPDATE_MATCHES: true,
+    UPDATE_TOURNAMENT_METADATA: true,
+};
+
+/**
+ * A requested change to be persisted to the cloud.
+ *
+ * GenericMutationItem<TType>.payload is `unknown` by design (it is shared
+ * machinery, not tournament-specific). The existing tournament queue and its
+ * consumers/tests rely on `payload: any` (with the established
+ * eslint-disable), so it is preserved here locally rather than propagated
+ * from the generic type — compatibility beats elegance for this extraction.
+ */
+export type MutationItem = Omit<GenericMutationItem<MutationType>, 'payload'> & {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     payload: any;
-    timestamp: number;
-    retryCount: number;
-}
-
-const STORAGE_KEY = 'mutation_queue_v1';
-const FAILED_STORAGE_KEY = 'mutation_queue_failed_v1';
-export const MAX_RETRIES = 5;
+};
 
 /**
- * A mutation that failed permanently (exceeded max retries)
+ * A mutation that failed permanently (exceeded max retries).
+ *
+ * Bound explicitly to MutationType (not re-exported bare from
+ * GenericMutationQueue, whose FailedMutationItem<TType> defaults to
+ * `string`) so `import { FailedMutationItem } from './MutationQueue'`
+ * yields `type: MutationType` / `payload: any`, exactly as before the
+ * extraction — not `type: string` / `payload: unknown`.
  */
-export interface FailedMutationItem extends MutationItem {
-    failedAt: number;
-    lastError?: string;
-}
-
-/**
- * Status info for subscribers
- */
-export interface MutationQueueStatus {
-    pendingCount: number;
-    failedCount: number;
-}
-
-
-export class MutationQueue {
-    private queue: MutationItem[] = [];
-    private failedQueue: FailedMutationItem[] = [];
-    private isProcessing = false;
-    private listeners: ((status: MutationQueueStatus) => void)[] = [];
-
-    constructor(private supabaseRepo: SupabaseRepository) {
-        this.load();
-        this.loadFailed();
-
-        // Auto-process on online
-        if (typeof window !== 'undefined') {
-            window.addEventListener('online', () => {
-                // eslint-disable-next-line no-console
-                if (import.meta.env.DEV) { console.log('MutationQueue: Online detected, processing queue...'); }
-                void this.process();
-            });
-
-            // Try processing on start if online
-            if (navigator.onLine) {
-                void this.process();
-            }
-        }
-    }
-
-    /**
-     * Add a mutation to the queue and persist it.
-     * Triggers processing immediately if online.
-     *
-     * COALESCING: For certain mutation types, existing pending mutations
-     * for the same entity will be replaced instead of duplicated.
-     * This prevents queue bloat during rapid updates (e.g., team renaming).
-     */
+export type FailedMutationItem = Omit<GenericFailedMutationItem<MutationType>, 'payload'> & {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public enqueue(type: MutationType, payload: any): void {
-        // Try to coalesce with existing mutation
-        const coalesceKey = this.getCoalesceKey(type, payload);
-        if (coalesceKey) {
-            const existingIndex = this.queue.findIndex(
-                item => this.getCoalesceKey(item.type, item.payload) === coalesceKey
-            );
+    payload: any;
+};
 
-            if (existingIndex !== -1) {
-                // Replace existing mutation with newer payload
-                this.queue[existingIndex] = {
-                    ...this.queue[existingIndex],
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                    payload,
-                    timestamp: Date.now(),
-                    // Keep retryCount from existing item (don't reset on coalesce)
-                };
-                this.save();
-                this.notifyListeners();
+export class MutationQueue extends GenericMutationQueue<MutationType> {
+    constructor(supabaseRepo: SupabaseRepository) {
+        super({
+            storageKey: 'mutation_queue_v1',
+            failedStorageKey: 'mutation_queue_failed_v1',
+            sentryFeature: 'sync',
+            // Unknown-type items are rejected at load exactly like schema-invalid
+            // ones (see GenericMutationQueue.isKnownType doc) — restores 1:1
+            // load-time fidelity with the pre-extraction enum-restricted schema.
+            isKnownType: (type): boolean => Object.prototype.hasOwnProperty.call(KNOWN_MUTATION_TYPES, type),
 
-                if (import.meta.env.DEV) {
-                    // eslint-disable-next-line no-console
-                    console.log(`MutationQueue: Coalesced ${type} for ${coalesceKey}`);
-                }
-
-                // Still trigger processing
-                if (navigator.onLine) {
-                    void this.process();
-                }
-                return;
-            }
-        }
-
-        // No coalescing possible - add new item
-        const item: MutationItem = {
-            id: generateUniqueId(),
-            type,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            payload,
-            timestamp: Date.now(),
-            retryCount: 0
-        };
-
-        this.queue.push(item);
-        this.save();
-        this.notifyListeners();
-
-        // Optimistic processing
-        if (navigator.onLine) {
-            void this.process();
-        }
-    }
-
-    /**
-     * Get a coalesce key for mutations that can be merged.
-     * Returns null if the mutation type doesn't support coalescing.
-     *
-     * Coalescing rules:
-     * - SAVE_TOURNAMENT: Coalesce by tournament ID (keep latest full state)
-     * - UPDATE_TOURNAMENT_METADATA: Coalesce by tournament ID
-     * - DELETE_TOURNAMENT: Do NOT coalesce (order matters for delete)
-     * - UPDATE_MATCH/UPDATE_MATCHES: Do NOT coalesce (granular updates)
-     */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private getCoalesceKey(type: MutationType, payload: any): string | null {
-        switch (type) {
-            case 'SAVE_TOURNAMENT': {
-                // Tournament has 'id' field
-                const tournament = payload as Tournament;
-                return tournament?.id ? `SAVE_TOURNAMENT:${tournament.id}` : null;
-            }
-            case 'UPDATE_TOURNAMENT_METADATA': {
-                // Payload has 'tournamentId' field
-                const meta = payload as { tournamentId: string };
-                return meta?.tournamentId ? `UPDATE_METADATA:${meta.tournamentId}` : null;
-            }
-            default:
-                // No coalescing for other types
-                return null;
-        }
-    }
-
-    public getPendingCount(): number {
-        return this.queue.length;
-    }
-
-    public getFailedCount(): number {
-        return this.failedQueue.length;
-    }
-
-    public getFailedMutations(): FailedMutationItem[] {
-        return [...this.failedQueue];
-    }
-
-    public getStatus(): MutationQueueStatus {
-        return {
-            pendingCount: this.queue.length,
-            failedCount: this.failedQueue.length,
-        };
-    }
-
-    public subscribe(listener: (status: MutationQueueStatus) => void): () => void {
-        this.listeners.push(listener);
-        return () => {
-            this.listeners = this.listeners.filter(l => l !== listener);
-        };
-    }
-
-    private notifyListeners() {
-        this.listeners.forEach(l => l(this.getStatus()));
-    }
-
-    /**
-     * Move a failed mutation to the dead-letter queue
-     */
-    private moveToDeadLetter(item: MutationItem, error?: string): void {
-        const failedItem: FailedMutationItem = {
-            ...item,
-            failedAt: Date.now(),
-            lastError: error,
-        };
-        this.failedQueue.push(failedItem);
-        this.saveFailed();
-        // eslint-disable-next-line no-console
-        if (import.meta.env.DEV) { console.log(`MutationQueue: Moved ${item.id} to dead-letter queue`); }
-    }
-
-    /**
-     * Retry a specific failed mutation
-     * Moves it back to the regular queue for processing
-     */
-    public retryFailedMutation(id: string): boolean {
-        const index = this.failedQueue.findIndex(item => item.id === id);
-        if (index === -1) {
-            return false;
-        }
-
-        const [failedItem] = this.failedQueue.splice(index, 1);
-        this.saveFailed();
-
-        // Reset retry count and re-enqueue
-        const retriedItem: MutationItem = {
-            id: failedItem.id,
-            type: failedItem.type,
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            payload: failedItem.payload,
-            timestamp: Date.now(),
-            retryCount: 0,
-        };
-
-        this.queue.push(retriedItem);
-        this.save();
-        this.notifyListeners();
-
-        // eslint-disable-next-line no-console
-        if (import.meta.env.DEV) { console.log(`MutationQueue: Retrying failed mutation ${id}`); }
-
-        // Try to process immediately
-        if (navigator.onLine) {
-            void this.process();
-        }
-
-        return true;
-    }
-
-    /**
-     * Retry all failed mutations
-     */
-    public retryAllFailed(): number {
-        const count = this.failedQueue.length;
-        if (count === 0) {
-            return 0;
-        }
-
-        // Move all failed items back to main queue
-        for (const failedItem of this.failedQueue) {
-            const retriedItem: MutationItem = {
-                id: failedItem.id,
-                type: failedItem.type,
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                payload: failedItem.payload,
-                timestamp: Date.now(),
-                retryCount: 0,
-            };
-            this.queue.push(retriedItem);
-        }
-
-        this.failedQueue = [];
-        this.saveFailed();
-        this.save();
-        this.notifyListeners();
-
-        // eslint-disable-next-line no-console
-        if (import.meta.env.DEV) { console.log(`MutationQueue: Retrying ${count} failed mutations`); }
-
-        // Try to process immediately
-        if (navigator.onLine) {
-            void this.process();
-        }
-
-        return count;
-    }
-
-    /**
-     * Clear a specific failed mutation (discard it permanently)
-     */
-    public clearFailedMutation(id: string): boolean {
-        const index = this.failedQueue.findIndex(item => item.id === id);
-        if (index === -1) {
-            return false;
-        }
-
-        this.failedQueue.splice(index, 1);
-        this.saveFailed();
-        this.notifyListeners();
-        return true;
-    }
-
-    /**
-     * Clear all failed mutations
-     */
-    public clearAllFailed(): number {
-        const count = this.failedQueue.length;
-        this.failedQueue = [];
-        this.saveFailed();
-        this.notifyListeners();
-        return count;
-    }
-
-    private load() {
-        try {
-            const raw = safeLocalStorage.getItem(STORAGE_KEY);
-            if (raw) {
-                const parsed: unknown[] = JSON.parse(raw) as unknown[];
-                this.queue = parsed.filter((item) => {
-                    const result = MutationItemSchema.safeParse(item);
-                    if (!result.success) {
-                        captureFeatureError(
-                            new Error(`Invalid mutation item in queue: ${result.error.message}`),
-                            'sync', 'loadQueue:validation'
-                        );
-                        return false;
+            /**
+             * Get a coalesce key for mutations that can be merged.
+             * Returns null if the mutation type doesn't support coalescing.
+             *
+             * Coalescing rules:
+             * - SAVE_TOURNAMENT: Coalesce by tournament ID (keep latest full state)
+             * - UPDATE_TOURNAMENT_METADATA: Coalesce by tournament ID
+             * - DELETE_TOURNAMENT: Do NOT coalesce (order matters for delete)
+             * - UPDATE_MATCH/UPDATE_MATCHES: Do NOT coalesce (granular updates)
+             */
+            coalesceKey: (type, payload) => {
+                switch (type) {
+                    case 'SAVE_TOURNAMENT': {
+                        // Tournament has 'id' field
+                        const tournament = payload as Tournament;
+                        return tournament?.id ? `SAVE_TOURNAMENT:${tournament.id}` : null;
                     }
-                    return true;
-                }) as MutationItem[];
-            }
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, 'sync', 'loadQueue'); }
-            this.queue = [];
-        }
-    }
-
-    private save() {
-        try {
-            safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(this.queue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, 'sync', 'saveQueue'); }
-        }
-    }
-
-    private loadFailed() {
-        try {
-            const raw = safeLocalStorage.getItem(FAILED_STORAGE_KEY);
-            if (raw) {
-                const parsed: unknown[] = JSON.parse(raw) as unknown[];
-                this.failedQueue = parsed.filter((item) => {
-                    const result = FailedMutationItemSchema.safeParse(item);
-                    if (!result.success) {
-                        captureFeatureError(
-                            new Error(`Invalid failed mutation item: ${result.error.message}`),
-                            'sync', 'loadFailedQueue:validation'
-                        );
-                        return false;
+                    case 'UPDATE_TOURNAMENT_METADATA': {
+                        // Payload has 'tournamentId' field
+                        const meta = payload as { tournamentId: string };
+                        return meta?.tournamentId ? `UPDATE_METADATA:${meta.tournamentId}` : null;
                     }
-                    return true;
-                }) as FailedMutationItem[];
-            }
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to load failed queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, 'sync', 'loadFailedQueue'); }
-            this.failedQueue = [];
-        }
-    }
+                    default:
+                        // No coalescing for other types
+                        return null;
+                }
+            },
 
-    private saveFailed() {
-        try {
-            safeLocalStorage.setItem(FAILED_STORAGE_KEY, JSON.stringify(this.failedQueue));
-        } catch (e) {
-            if (import.meta.env.DEV) { console.error('MutationQueue: Failed to save failed queue', e); }
-            if (e instanceof Error) { captureFeatureError(e, 'sync', 'saveFailedQueue'); }
-        }
-    }
-
-    /**
-     * Process the queue sequentially.
-     * Stops on error (preserving order) unless max retries exceeded.
-     */
-    public async process(): Promise<void> {
-        if (this.isProcessing || this.queue.length === 0) { return; }
-        if (!(navigator.onLine)) { return; }
-
-        this.isProcessing = true;
-
-        try {
-            // Process head of queue
-            while (this.queue.length > 0) {
-                if (!(navigator.onLine)) { break; }
-
-                const item = this.queue[0]; // Peek
-
-
-                try {
-                    await this.executeMutation(item);
-                } catch (error) {
-                    if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
-
-                    item.retryCount++;
-
-                    if (item.retryCount >= MAX_RETRIES) {
-                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                        if (import.meta.env.DEV) { console.error(`MutationQueue: Max retries exceeded for ${item.id}. Moving to dead-letter queue.`); }
-                        if (error instanceof Error) { captureFeatureError(error, 'sync', 'deadLetter', { mutationType: item.type, mutationId: item.id }); }
-                        // Move to dead-letter queue instead of dropping
-                        this.queue.shift();
-                        this.moveToDeadLetter(item, errorMessage);
-                        this.save();
-                        this.notifyListeners();
-                        continue; // Continue to next item
-                    } else {
-                        // Keep in queue, stop processing for now (retry later)
-                        this.save();
-                        // break loop to retry later
+            execute: async (item) => {
+                switch (item.type) {
+                    case 'SAVE_TOURNAMENT':
+                        await supabaseRepo.save(item.payload as Tournament);
+                        break;
+                    case 'DELETE_TOURNAMENT':
+                        await supabaseRepo.delete(item.payload as string);
+                        break;
+                    case 'UPDATE_MATCH': {
+                        const { tournamentId, update } = item.payload as { tournamentId: string, update: MatchUpdate };
+                        await supabaseRepo.updateMatch(tournamentId, update);
                         break;
                     }
+                    case 'UPDATE_MATCHES': {
+                        const { tournamentId, updates } = item.payload as { tournamentId: string, updates: MatchUpdate[] };
+                        await supabaseRepo.updateMatches(tournamentId, updates);
+                        break;
+                    }
+                    case 'UPDATE_TOURNAMENT_METADATA': {
+                        const { tournamentId, metadata } = item.payload as { tournamentId: string, metadata: Partial<Tournament> };
+                        await supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
+                        break;
+                    }
+                    default:
+                        throw new Error(`Unknown mutation type: ${item.type as string}`);
                 }
-
-                this.queue.shift(); // Remove handled item
-                this.save();
-                this.notifyListeners();
-            }
-        } finally {
-            this.isProcessing = false;
-        }
-    }
-
-    private async executeMutation(item: MutationItem): Promise<void> {
-        switch (item.type) {
-            case 'SAVE_TOURNAMENT':
-                await this.supabaseRepo.save(item.payload as Tournament);
-                break;
-            case 'DELETE_TOURNAMENT':
-                await this.supabaseRepo.delete(item.payload as string);
-                break;
-            case 'UPDATE_MATCH': {
-                const { tournamentId, update } = item.payload as { tournamentId: string, update: MatchUpdate };
-                await this.supabaseRepo.updateMatch(tournamentId, update);
-                break;
-            }
-            case 'UPDATE_MATCHES': {
-                const { tournamentId, updates } = item.payload as { tournamentId: string, updates: MatchUpdate[] };
-                await this.supabaseRepo.updateMatches(tournamentId, updates);
-                break;
-            }
-            case 'UPDATE_TOURNAMENT_METADATA': {
-                const { tournamentId, metadata } = item.payload as { tournamentId: string, metadata: Partial<Tournament> };
-                await this.supabaseRepo.updateTournamentMetadata(tournamentId, metadata);
-                break;
-            }
-            default:
-                throw new Error(`Unknown mutation type: ${item.type as string}`);
-        }
+            },
+        });
     }
 }

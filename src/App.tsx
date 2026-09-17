@@ -15,6 +15,8 @@ import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
+import { useRouteMatch } from './hooks/useRouteMatch';
+import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
 import { useAuth } from './features/auth/hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
@@ -143,40 +145,56 @@ function AppContent() {
   // stale precached bundle (root cause of the 2026-05-24 login-bug).
   useSwAutoReload();
 
+  // Central route match — replaces the individual location.pathname regex
+  // matchers below (derivations only; render blocks stay untouched).
+  const route = useRouteMatch();
+
   // Check if current path is a dashboard path
-  const isDashboardPath = ['/', '/archiv', '/papierkorb'].includes(location.pathname);
+  const isDashboardPath = route?.name === 'dashboard' || route?.name === 'archive' || route?.name === 'trash';
 
   // Check if current path is a legal page path
-  const isLegalPath = ['/impressum', '/datenschutz'].includes(location.pathname);
+  const isLegalPath = route?.name === 'impressum' || route?.name === 'datenschutz';
 
   // Check if current path is an admin center path (e.g., /tournament/:id/admin or /tournament/:id/admin/:category)
-  const adminMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/);
-  const isAdminPath = !!adminMatch;
-  const adminTournamentId = adminMatch?.[1] ?? null;
-  const adminCategory = adminMatch?.[2];
+  const isAdminPath = route?.name === 'admin';
+  const adminTournamentId = route?.name === 'admin' ? route.params.tournamentId ?? null : null;
+  const adminCategory = route?.name === 'admin' ? route.params.category : undefined;
 
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
-  const tournamentMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/);
-  const isTournamentPath = !!tournamentMatch && !location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath;
-  const tournamentIdFromUrl = tournamentMatch?.[1] ?? null;
+  // NOTE: the exclusion cascade that used to live here (former App.tsx:160,
+  // `!location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath`)
+  // is guaranteed by the registry through a mix of first-match-wins ordering
+  // (wizardEdit/admin are matched before tournament, covering the '/edit' and
+  // isAdminPath clauses for every path with 3+ segments) and an explicit guard
+  // on the tournament RouteDef that reproduces the remaining '/new'-substring
+  // and '/edit'-suffix clauses — the latter needed because the two-segment
+  // /tournament/edit ends with '/edit' but doesn't match wizardEdit's
+  // three-segment pattern, so ordering alone doesn't cover it. See
+  // src/core/routing/routeRegistry.ts for the full guard and its rationale.
+  const isTournamentPath = route?.name === 'tournament';
+  const tournamentIdFromUrl = route?.name === 'tournament' ? route.params.tournamentId ?? null : null;
 
   // Check if current path is a public live view path (/live/:shareCode)
-  const publicLiveMatch = location.pathname.match(/^\/live\/([A-Za-z0-9]+)$/);
-  const isPublicLivePath = !!publicLiveMatch;
+  const isPublicLivePath = route?.name === 'publicLive';
 
   // Check if current path is a monitor display path (/display/:tournamentId/:monitorId)
-  const monitorDisplayMatch = location.pathname.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
-  const isMonitorDisplayPath = !!monitorDisplayMatch;
-  const monitorDisplayParamsFromUrl = monitorDisplayMatch
-    ? { tournamentId: monitorDisplayMatch[1], monitorId: monitorDisplayMatch[2] }
+  const isMonitorDisplayPath = route?.name === 'monitorDisplay';
+  // Both capture groups on the monitorDisplay RouteDef are mandatory (no
+  // optional segment), so route.params.tournamentId/.monitorId are always
+  // defined whenever route.name === 'monitorDisplay' — but RouteMatch.params
+  // types every value as `string | undefined` (see routeRegistry.ts), so the
+  // truthiness check below is what keeps this object's shape honestly
+  // non-optional without a non-null assertion. It never actually falls
+  // through to null for a real match; behavior is unchanged.
+  const monitorDisplayParamsFromUrl = route?.name === 'monitorDisplay' && route.params.tournamentId && route.params.monitorId
+    ? { tournamentId: route.params.tournamentId, monitorId: route.params.monitorId }
     : null;
 
   // Check if current path is a wizard path (/tournament/new or /tournament/:id/edit)
-  const isNewWizardPath = location.pathname === '/tournament/new';
-  const editWizardMatch = location.pathname.match(/^\/tournament\/([a-zA-Z0-9-]+)\/edit$/);
-  const isEditWizardPath = !!editWizardMatch;
+  const isNewWizardPath = route?.name === 'wizardNew';
+  const isEditWizardPath = route?.name === 'wizardEdit';
   const isWizardPath = isNewWizardPath || isEditWizardPath;
-  const editingTournamentId = editWizardMatch?.[1] ?? null;
+  const editingTournamentId = route?.name === 'wizardEdit' ? route.params.tournamentId ?? null : null;
   const {
     tournaments,
     loading,
@@ -272,13 +290,23 @@ function AppContent() {
   useEffect(() => {
     const path = location.pathname; // Use React Router's parsed pathname
     const search = location.search; // Use React Router's parsed search params
-    const publicMatch = path.match(/^\/public\/([a-zA-Z0-9-]+)$/);
+    // Local, effect-scoped route match (derived purely from `path`, which is
+    // already a dependency below) — deliberately NOT the render-scope `route`
+    // from useRouteMatch() above, so this effect doesn't need `route` itself in
+    // its dependency array (matchRoute() returns a fresh object identity on
+    // every call, which would otherwise make this effect re-run on every
+    // unrelated re-render instead of only on real pathname/search changes).
+    const matchedRoute = matchRoute(path);
+    // INTENTIONALLY NOT registry-derived: this is a stricter, case-insensitive,
+    // exactly-6-char variant of the publicLive pattern (historically App.tsx:276),
+    // semantically different from the registry's publicLive route (which mirrors
+    // the unbounded, case-sensitive App.tsx:164 variant used for isPublicLivePath
+    // above). Converting this to `matchedRoute?.name === 'publicLive'` would change
+    // behavior for share codes that aren't exactly 6 case-insensitive alphanumeric
+    // chars, so it stays a raw regex match. See Task 2 report for details.
     const liveMatch = path.match(/^\/live\/([A-Z0-9]{6})$/i);
-    const inviteMatch = path.match(/^\/invite$/);
-    // MON-KONF-01: Monitor Display route /display/:tournamentId/:monitorId
-    const displayMatch = path.match(/^\/display\/([a-zA-Z0-9-]+)\/([a-zA-Z0-9-]+)$/);
 
-    if (displayMatch) {
+    if (matchedRoute?.name === 'monitorDisplay') {
       // Monitor Display route (for TVs/Beamer)
       // Note: Using URL-based detection (monitorDisplayParamsFromUrl) for rendering
       setScreen('monitor-display');
@@ -286,44 +314,54 @@ function AppContent() {
       // Live View via share code (e.g., /live/ABC123)
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
-    } else if (publicMatch) {
-      setPublicTournamentId(publicMatch[1]);
+    } else if (matchedRoute?.name === 'public') {
+      // public's tournamentId capture group is mandatory, so this is always
+      // defined for a real match; `?? null` only satisfies setPublicTournamentId's
+      // `string | null` type honestly (RouteMatch.params is now Partial) and
+      // never actually changes what gets set.
+      setPublicTournamentId(matchedRoute.params.tournamentId ?? null);
       setScreen('public');
-    } else if (inviteMatch) {
+    } else if (matchedRoute?.name === 'invite') {
       const params = new URLSearchParams(search);
       const token = params.get('token');
       if (token) {
         setInviteToken(token);
         setScreen('invite');
       }
-    } else if (path === '/auth/callback') {
+    } else if (matchedRoute?.name === 'authCallback') {
       // Handle OAuth/Magic Link callback
       setScreen('auth-callback');
-    } else if (path === '/auth/confirm') {
+    } else if (matchedRoute?.name === 'authConfirm') {
       // Handle email confirmation with button click (defeats email scanners)
       setScreen('auth-confirm');
-    } else if (path === '/test-live') {
+    } else if (matchedRoute?.name === 'localTest') {
       // Local test screen (DEV only)
       setScreen('local-test');
-    } else if (path === '/settings') {
+    } else if (matchedRoute?.name === 'settings') {
       setScreen('settings');
-    } else if (path === '/profile') {
+    } else if (matchedRoute?.name === 'profile') {
       setScreen('profile');
-    } else if (path === '/register') {
+    } else if (matchedRoute?.name === 'register') {
       setScreen('register');
-    } else if (path === '/login') {
+    } else if (matchedRoute?.name === 'login') {
       setScreen('login');
-    } else if (path === '/set-password') {
+    } else if (matchedRoute?.name === 'setPassword') {
       setScreen('set-password');
-    } else if (path === '/impressum') {
+    } else if (matchedRoute?.name === 'impressum') {
       setScreen('impressum');
-    } else if (path === '/datenschutz') {
+    } else if (matchedRoute?.name === 'datenschutz') {
       setScreen('datenschutz');
-    } else if (['/', '/archiv', '/papierkorb'].includes(path)) {
+    } else if (matchedRoute?.name === 'dashboard' || matchedRoute?.name === 'archive' || matchedRoute?.name === 'trash') {
       setScreen('dashboard');
     } else if (path.startsWith('/tournament/')) {
-      // Tournament sub-routes handled by TournamentManagementScreen/Wizard
-      // Don't override screen here
+      // Tournament sub-routes handled by TournamentManagementScreen/Wizard.
+      // Don't override screen here. INTENTIONALLY NOT registry-derived: unlike
+      // the exact-pattern branches above, this is a broad prefix check that also
+      // covers malformed/edge-case paths (e.g. bare "/tournament/", ids with
+      // disallowed characters, extra segments) that don't match any registry
+      // RouteDef. Replacing it with a route-name check (wizardNew/wizardEdit/
+      // admin/tournament) would send those edge cases to the 'not-found' branch
+      // instead of leaving screen untouched — a behavior change. See Task 2 report.
     } else {
       setScreen('not-found');
     }
