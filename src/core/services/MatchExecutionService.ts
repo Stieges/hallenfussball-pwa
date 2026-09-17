@@ -255,27 +255,48 @@ export class MatchExecutionService {
     /** Löscht ein Match-Event und korrigiert bei GOAL den Spielstand. Erst Spielstand + Array (save),
      *  dann Soft-Delete — umgekehrt stünde bei einem Fehler ein Spielstand ohne Event in der DB.
      *  Abweichung vom Brief: MatchEvent.payload verwendet `team`/`delta` (siehe recordGoal oben,
-     *  undoLastEvent unten), nicht `teamId` — der Brief-Sketch ging von einem anderen Payload-Format aus. */
+     *  undoLastEvent unten), nicht `teamId` — der Brief-Sketch ging von einem anderen Payload-Format aus.
+     *  Fixround-Fix (Critical): in overtime/goldenGoal muss overtimeScoreA/B korrigiert werden, nicht
+     *  homeScore/awayScore — siehe recordGoal (Zeile ~205-221) und undoLastEvent (Zeile ~615-630), deren
+     *  Verzweigung hier gespiegelt wird. Abweichend von undoLastEvent wird auch der Overtime-Zweig auf 0
+     *  geflootet (ein negativer Spielstand ist nie sinnvoll).
+     *  Fixround-Fix (Important): wie recordGoal jetzt mit executeWithRetry gegen OptimisticLockError
+     *  abgesichert — sonst bleibt ein Konflikt mit einem zweiten Organisator-Gerät für den Aufrufer
+     *  unsichtbar (siehe LiveCockpit.tsx, fire-and-forget-Aufruf + vorgezogener Erfolgs-Toast). */
     async deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<LiveMatch> {
-        const match = await this.liveMatchRepo.get(tournamentId, matchId);
-        if (!match) { throw new Error(`Match ${matchId} not found`); }
-        const event = match.events.find((e) => e.id === eventId);
-        if (!event) { return match; }
+        return executeWithRetry(
+            async () => {
+                const match = await this.liveMatchRepo.get(tournamentId, matchId);
+                if (!match) { throw new Error(`Match ${matchId} not found`); }
+                const event = match.events.find((e) => e.id === eventId);
+                if (!event) { return match; }
 
-        const isGoal = event.type === 'GOAL';
-        const team = event.payload.team;
-        const delta = event.payload.delta ?? 1;
+                const isGoal = event.type === 'GOAL';
+                const team = event.payload.team;
+                const delta = event.payload.delta ?? 1;
+                const isOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
 
-        const updated: LiveMatch = {
-            ...match,
-            events: match.events.filter((e) => e.id !== eventId),
-            ...(isGoal && team === 'home' ? { homeScore: Math.max(0, match.homeScore - delta) } : {}),
-            ...(isGoal && team === 'away' ? { awayScore: Math.max(0, match.awayScore - delta) } : {}),
-        };
+                const updated: LiveMatch = isOvertime
+                    ? {
+                        ...match,
+                        events: match.events.filter((e) => e.id !== eventId),
+                        ...(isGoal && team === 'home' ? { overtimeScoreA: Math.max(0, (match.overtimeScoreA ?? 0) - delta) } : {}),
+                        ...(isGoal && team === 'away' ? { overtimeScoreB: Math.max(0, (match.overtimeScoreB ?? 0) - delta) } : {}),
+                    }
+                    : {
+                        ...match,
+                        events: match.events.filter((e) => e.id !== eventId),
+                        ...(isGoal && team === 'home' ? { homeScore: Math.max(0, match.homeScore - delta) } : {}),
+                        ...(isGoal && team === 'away' ? { awayScore: Math.max(0, match.awayScore - delta) } : {}),
+                    };
 
-        await this.liveMatchRepo.save(tournamentId, updated);
-        await this.liveMatchRepo.deleteEvent(tournamentId, matchId, eventId);
-        return updated;
+                await this.liveMatchRepo.save(tournamentId, updated);
+                await this.liveMatchRepo.deleteEvent(tournamentId, matchId, eventId);
+                return updated;
+            },
+            (error) => error instanceof OptimisticLockError,
+            { maxRetries: MAX_OPTIMISTIC_LOCK_RETRIES, timeoutMs: 10000, backoffBaseMs: 100 }
+        );
     }
 
     async recordCard(
