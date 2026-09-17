@@ -1,0 +1,38 @@
+name: Supabase Keep-Alive
+
+# Free-Plan-Projekte pausieren nach 7 Tagen ohne API-Traffic (passiert 2026-07 und 2026-09).
+# Dieser Workflow setzt alle 3 Tage eine echte REST-Query ab, die als Aktivität zählt.
+# Fehlende Secrets sind ein FEHLER, kein Skip — ein still übersprungener Check hat beim
+# Drift-Check zwei Monate lang alles verschleiert.
+
+on:
+  schedule:
+    # Alle 3 Tage um 06:00 UTC (deutlich unter der 7-Tage-Schwelle, auch über Monatswechsel)
+    - cron: '0 6 */3 * *'
+  workflow_dispatch: # Manueller Trigger für Verifikation
+
+jobs:
+  ping:
+    name: Ping Supabase REST (counts as activity)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Query tournaments via REST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY secret not set — keep-alive cannot run."
+            exit 1
+          fi
+          status=$(curl -sS -o /tmp/body.json -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/tournaments?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Supabase REST returned HTTP $status (project paused or secrets wrong?)"
+            cat /tmp/body.json
+            exit 1
+          fi
+          echo "Keep-alive OK — project active."
