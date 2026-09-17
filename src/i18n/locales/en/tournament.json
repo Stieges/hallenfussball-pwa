@@ -244,6 +244,7 @@
     "emptyState": "No monitors configured yet",
     "emptyStateHint": "Create a monitor to display a slideshow with live matches, tables, schedules, and sponsors.",
     "displayUrlHint": "Open the display URL on a TV or projector for fullscreen display",
+    "visibilityWarning": "This tournament is currently not public. On a different device — i.e. the venue monitor — the display cannot load it. Set the visibility under Admin › Visibility to \"Shareable with link\" or \"Publicly listed\" before opening the URL on the monitor.",
     "slidesCount_one": "{{count}} slide",
     "slidesCount_other": "{{count}} slides",
     "perSlide": "{{duration}} per slide",
