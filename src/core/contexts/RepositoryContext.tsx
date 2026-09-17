@@ -28,6 +28,14 @@ interface RepositoryContextValue {
     isRealtimeEnabled: boolean;
     /** Supabase-specific repo for subscriptions (null if not available) */
     supabaseLiveMatchRepo: SupabaseLiveMatchRepository | null;
+    /**
+     * Ausschließlich LESENDER Supabase-Live-Repo für anonyme Zuschauer und Hallen-Monitore.
+     * Verfügbar sobald Supabase konfiguriert ist — auch ohne angemeldeten Nutzer.
+     * Bewusst getrennt von `liveMatchRepository`: Der Schreibpfad (MutationQueue/OfflineRepository)
+     * bleibt unverändert; Schreibversuche scheiterten ohnehin an RLS, anonyme UIs versuchen sie nie.
+     * Konsumenten entscheiden sich über useLiveMatches(id, { allowPublicRealtime }) ausdrücklich dafür.
+     */
+    publicLiveMatchRepo: SupabaseLiveMatchRepository | null;
 }
 
 // ============================================================================
@@ -38,11 +46,17 @@ const RepositoryContext = createContext<RepositoryContextValue | null>(null);
 
 export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: RepositoryUser | null }> = ({ children, user }) => {
     const supabaseLiveMatchRepoRef = useRef<SupabaseLiveMatchRepository | null>(null);
+    const publicLiveMatchRepoRef = useRef<SupabaseLiveMatchRepository | null>(null);
 
     const value = useMemo(() => {
         // Always need local repos
         const localTournamentRepo = new LocalStorageRepository();
         const localLiveMatchRepo = new LocalStorageLiveMatchRepository();
+
+        // Anon-Lese-Repo: unabhängig vom User, nur an isSupabaseConfigured gebunden.
+        // SupabaseLiveMatchRepository hat keinen Konstruktor-Guard; alle Methoden prüfen intern.
+        const publicLiveMatchRepo = isSupabaseConfigured ? new SupabaseLiveMatchRepository() : null;
+        publicLiveMatchRepoRef.current = publicLiveMatchRepo;
 
         // Use Supabase repos if:
         // 1. Supabase is configured AND
@@ -71,6 +85,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
                     liveMatchRepository: supabaseLiveMatchRepo,
                     isRealtimeEnabled: true,
                     supabaseLiveMatchRepo: supabaseLiveMatchRepo,
+                    publicLiveMatchRepo,
                 };
             } catch (e) {
                 console.error('RepositoryProvider: Failed to init Supabase repos', e);
@@ -80,6 +95,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
                     liveMatchRepository: localLiveMatchRepo,
                     isRealtimeEnabled: false,
                     supabaseLiveMatchRepo: null,
+                    publicLiveMatchRepo,
                 };
             }
         }
@@ -91,6 +107,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
             liveMatchRepository: localLiveMatchRepo,
             isRealtimeEnabled: false,
             supabaseLiveMatchRepo: null,
+            publicLiveMatchRepo,
         };
     }, [user]);
 
@@ -98,6 +115,7 @@ export const RepositoryProvider: React.FC<{ children: React.ReactNode; user: Rep
     useEffect(() => {
         return () => {
             supabaseLiveMatchRepoRef.current?.unsubscribeAll();
+            publicLiveMatchRepoRef.current?.unsubscribeAll();
         };
     }, []);
 
