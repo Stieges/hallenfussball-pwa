@@ -245,4 +245,47 @@ describe('OfflineRepository - Granular Sync', () => {
 
         expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
     });
+
+    // =========================================================================
+    // Re-Review der Fix-Welle, N2: Die Normalisierung aus Fix 3 durfte nicht in die
+    // andere Richtung kippen. Lokal `undefined` heißt "diese Kopie weiß es nicht"
+    // (vor M1 gecacht), nicht "false". Als `false` hochgeschrieben nähme eine
+    // veraltete lokale Kopie ein öffentliches Turnier wieder vom Netz — exakt der
+    // K1-Schaden, dessen Beseitigung dieser Meilenstein ist.
+    // =========================================================================
+    it('N2: isPublic undefined (lokal) vs. true (Cloud) nimmt das Turnier NICHT vom Netz', async () => {
+        const localT = { ...baseTournament, version: 2 }; // isPublic undefined, lokale Version voraus
+        const remoteT = { ...baseTournament, isPublic: true, version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const pushedVisibility = calls.some((call) => {
+            const payload = call[1] as { isPublic?: boolean } | undefined;
+            return payload !== undefined && 'isPublic' in payload;
+        });
+        expect(pushedVisibility).toBe(false);
+    });
+
+    // =========================================================================
+    // Re-Review der Fix-Welle, N3: `visibilityStale` aus Fix 2 hebelte die
+    // Versionsprüfung für den GANZEN Datensatz aus. Eine offline vorgenommene
+    // Veröffentlichung (lokale Version voraus, MutationQueue noch nicht abgespielt)
+    // hätte sich damit selbst mit dem älteren Cloud-Stand überschrieben.
+    // =========================================================================
+    it('N3: refreshFromCloudInBackground überschreibt eine NEUERE lokale Kopie nicht, nur weil isPublic abweicht', async () => {
+        const localT = { ...baseTournament, isPublic: true, shareCode: 'ABC123', version: 5 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 4 }; // ÄLTER
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).not.toHaveBeenCalled();
+    });
 });

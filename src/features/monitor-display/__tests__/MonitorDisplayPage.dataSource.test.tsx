@@ -146,6 +146,33 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
     expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
   });
+
+  it('N1: ein dauerhaft lokal bedienter Bildschirm nimmt lokale Änderungen weiterhin auf', async () => {
+    // Die Kehrseite des F-324-Guards: Er darf nur einen Bildschirm schützen, der gerade aus
+    // der Cloud bedient wird. Hier ist das Netz dauerhaft weg und die lokale Kopie ist die
+    // einzige Quelle — jeder Poll hat `lookupFailed && source === 'local'`. Ohne die
+    // Herkunftsprüfung kehrte der Guard bei jedem Tick zurück und der Bildschirm bliebe für
+    // immer auf dem Stand des ersten Polls stehen.
+    supabaseGet.mockRejectedValue(new Error('offline'));
+    localGet.mockResolvedValue(cloudTournament);
+
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: false });
+
+    // Der Organisator ändert den Slide-Text; die Änderung liegt lokal vor.
+    localGet.mockResolvedValue({
+      ...cloudTournament,
+      monitors: [{
+        ...cloudTournament.monitors[0],
+        slides: [{ id: 's1', type: 'custom-text', config: { headline: 'Halle B statt Halle A' }, duration: 15, order: 0 }],
+      }],
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    expect(screen.getByText('Halle B statt Halle A')).toBeInTheDocument();
+  });
 });
 
 // =============================================================================

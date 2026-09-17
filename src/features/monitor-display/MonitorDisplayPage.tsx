@@ -950,10 +950,18 @@ export function MonitorDisplayPage({
   // Polling-Effekt (der von loadData abhängt) das Intervall bei jedem Tick neu aufsetzen.
   const hasDataRef = useRef(false);
 
+  // N1: Die Herkunft ebenfalls als Ref. Der Rückstufungs-Guard unten darf nur einen
+  // Bildschirm schützen, der gerade aus der Cloud bedient wird. Auf einem Gerät, das
+  // ohnehin lokal läuft (Netz dauerhaft weg, lokale Kopie vorhanden), wäre jeder Poll
+  // `lookupFailed && source === 'local'` — der Guard würde dann bei jedem Tick
+  // zurückkehren und lokale Änderungen nie mehr aufnehmen.
+  const dataSourceRef = useRef<'cloud' | 'local' | null>(null);
+
   // Neues tournamentId/monitorId = neues Ziel — ein "hatte schon Daten" von der vorigen
   // Route darf nicht einen echten Not-found-Fehler für das neue Ziel unterdrücken.
   useEffect(() => {
     hasDataRef.current = false;
+    dataSourceRef.current = null;
   }, [tournamentId, monitorId]);
 
   // Derived state
@@ -1065,7 +1073,7 @@ export function MonitorDisplayPage({
       // nicht, weil der lokale Fallback ja etwas geliefert hat. Beim nächsten Poll ist die Cloud
       // meist wieder da; ein sauberes leeres Cloud-Ergebnis (lookupFailed === false) fällt weiterhin
       // regulär auf local zurück.
-      if (hadData && lookupFailed && source === 'local') { return; }
+      if (hadData && lookupFailed && source === 'local' && dataSourceRef.current === 'cloud') { return; }
 
       const foundMonitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId);
       if (!foundMonitor) {
@@ -1080,6 +1088,7 @@ export function MonitorDisplayPage({
       setTournament(found);
       setMonitor(foundMonitor);
       setDataSource(source);
+      dataSourceRef.current = source;
       setLastFetch(Date.now());
       setError(null); // heilt einen früheren Aussetzer, falls einer aufgetreten war
       setLoading(false);

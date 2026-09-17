@@ -126,7 +126,12 @@ export class OfflineRepository implements ITournamentRepository {
                 // gar nicht gelesen, lokale Kopien tragen dort `undefined`. Bei gleichem
                 // Versionsstand griffe der Refresh sonst nie — und der nächste Voll-Save
                 // schriebe erneut `is_public: false` auf alle Team- und Spielzeilen.
-                const visibilityStale = localData !== null && localData.isPublic !== cloudData.isPublic;
+                // N3: Nur wenn die Cloud nicht ÄLTER ist. Sonst überschriebe eine offline
+                // vorgenommene Veröffentlichung (lokale Version voraus, Queue noch nicht
+                // abgespielt) sich selbst mit dem älteren Cloud-Stand.
+                const visibilityStale = localData !== null
+                    && localData.isPublic !== cloudData.isPublic
+                    && cloudVersion >= localVersion;
 
                 if (cloudVersion > localVersion || visibilityStale) {
                     await this.localRepo.save(cloudData);
@@ -381,10 +386,14 @@ export class OfflineRepository implements ITournamentRepository {
         // liefert seit K2 einen echten Boolean. Ein roher Vergleich meldete sonst eine
         // Phantom-Änderung, deren leerer Payload die Cloud-Version nicht bewegt — während
         // die lokale Version hochgezählt wird und das Gerät danach keine Cloud-Updates mehr zieht.
-        const localPublic = local.isPublic ?? false;
+        // N2: Ein `undefined` ist KEIN "false", sondern "diese Kopie weiß es nicht" — sie
+        // stammt von vor M1, als der Mapper die Spalte nicht las. Würde man es als `false`
+        // hochschreiben, nähme eine veraltete lokale Kopie ein öffentliches Turnier wieder
+        // vom Netz: genau der K1-Schaden, den M1 beseitigt. Nur eine Kopie, die einen
+        // echten Wert trägt, darf die Sichtbarkeit ändern; `get()` heilt die andere.
         const remotePublic = remote.isPublic ?? false;
-        if (localPublic !== remotePublic) {
-            changes.isPublic = localPublic;
+        if (local.isPublic !== undefined && local.isPublic !== remotePublic) {
+            changes.isPublic = local.isPublic;
             hasChanges = true;
         }
 
