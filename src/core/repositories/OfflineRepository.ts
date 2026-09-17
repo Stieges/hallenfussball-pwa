@@ -333,6 +333,12 @@ export class OfflineRepository implements ITournamentRepository {
         if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
         if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) {return true;}
 
+        // L3: Monitor-/Sponsoren-Konfiguration liegt im config-JSONB und wird nur vom Voll-Save
+        // transportiert. Ohne diese Prüfung meldet der Delta-Sync "keine Änderung", zieht die
+        // lokale Version herunter und die Änderung erreicht die Cloud nie.
+        if (JSON.stringify(local.monitors) !== JSON.stringify(remote.monitors)) {return true;}
+        if (JSON.stringify(local.sponsors) !== JSON.stringify(remote.sponsors)) {return true;}
+
         return false;
     }
 

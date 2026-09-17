@@ -108,6 +108,27 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
     });
 
+    it('L3: erzwingt einen Voll-Save wenn sich nur die Monitor-Konfiguration ändert', async () => {
+        const monitor = { id: 'mon-1', name: 'Haupthalle', slides: [] };
+        const localT = { ...baseTournament, monitors: [monitor], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        expect(mockSupabase.save).toHaveBeenCalled();
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    it('L3: erzwingt einen Voll-Save wenn sich nur die Sponsoren ändern', async () => {
+        const sponsor = { id: 'spo-1', name: 'Autohaus Muster' };
+        const localT = { ...baseTournament, sponsors: [sponsor], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        expect(mockSupabase.save).toHaveBeenCalled();
+    });
+
     it('should update local version after successful sync', async () => {
         const localT = { ...baseTournament, title: 'Updated', version: 2 };
         const remoteT = { ...baseTournament, version: 1 }; // Remote is behind
