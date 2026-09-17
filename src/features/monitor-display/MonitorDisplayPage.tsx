@@ -1041,10 +1041,20 @@ export function MonitorDisplayPage({
         // sauber durchliefen und nichts lieferten, ist das Turnier bestätigt weg —
         // das gehört auf den Schirm.
         if (hadData && lookupFailed) { return; }
-        setError(
-          `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
-          'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" oder "Öffentlich gelistet" stehen.'
-        );
+        if (lookupFailed) {
+          // Ein Verbindungsfehler beim allerersten Laden ist keine Sichtbarkeitsfrage — die
+          // Einstellung ist meist bereits korrekt. Das Poll-Intervall läuft immer (Fix 1),
+          // das Versprechen "automatisch" stimmt also.
+          setError(
+            `Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. ` +
+            `Der nächste Versuch läuft automatisch.`
+          );
+        } else {
+          setError(
+            `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
+            'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" stehen.'
+          );
+        }
         setLoading(false);
         return;
       }
@@ -1082,15 +1092,15 @@ export function MonitorDisplayPage({
   }, [loadData]);
 
   // Periodic refresh
+  // Auch ohne geladenen Monitor pollen: Ein Hallen-Bildschirm startet regelmäßig, bevor
+  // das WLAN steht. Ohne Wiederholung bliebe der erste Fehlschlag den ganzen Tag stehen.
+  // Schnellere Taktung bis etwas da ist, danach das konfigurierte Profil-Intervall.
+  const pollIntervalMs = monitor ? performanceSettings.pollingInterval : 5000;
+
   useEffect(() => {
-    if (!monitor) {return;}
-
-    const interval = setInterval(() => {
-      void loadData();
-    }, performanceSettings.pollingInterval);
-
+    const interval = setInterval(() => { void loadData(); }, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [loadData, monitor, performanceSettings.pollingInterval]);
+  }, [loadData, pollIntervalMs]);
 
   // Heartbeat sender — every 30s so admin dashboard can show online status
   const heartbeatErrorReported = useRef(false);

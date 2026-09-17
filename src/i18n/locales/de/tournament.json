@@ -244,7 +244,7 @@
     "emptyState": "Noch keine Monitore konfiguriert",
     "emptyStateHint": "Erstelle einen Monitor, um eine Diashow mit Live-Spielen, Tabellen, Spielplänen und Sponsoren anzuzeigen.",
     "displayUrlHint": "Öffne die Display-URL auf einem TV oder Beamer für die Vollbild-Anzeige",
-    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\" oder \"Öffentlich gelistet\", bevor du die URL auf dem Monitor öffnest.",
+    "visibilityWarning": "Dieses Turnier ist derzeit nicht öffentlich. Auf einem anderen Gerät — also auf dem Hallen-Monitor — kann die Anzeige das Turnier dann nicht laden. Stelle die Sichtbarkeit unter Admin › Sichtbarkeit auf \"Mit Link teilbar\", bevor du die URL auf dem Monitor öffnest.",
     "slidesCount_one": "{{count}} Slide",
     "slidesCount_other": "{{count}} Slides",
     "perSlide": "{{duration}} pro Slide",

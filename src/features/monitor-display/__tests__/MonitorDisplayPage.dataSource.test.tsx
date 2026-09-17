@@ -111,7 +111,23 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
   });
 
-  it('Important: ein fehlgeschlagener Poll nach Cloud-Load lässt dataSource nicht auf local zurückfallen (kein Realtime-Flapping)', async () => {
+  it('Important: ein vollständig fehlgeschlagener Poll (Cloud UND lokal leer) rührt die Realtime-Anbindung nicht an', async () => {
+    // Fix-Runde-Review (M1): Der ursprüngliche Titel dieses Tests versprach "kein
+    // Realtime-Flapping", auch wenn ein Poll auf lokale Daten zurückfällt. Mit
+    // `localGet` auf `null` (beforeEach) erreicht der Code aber nie den
+    // dataSource-Zweig — die `hadData && lookupFailed`-Guard in loadData() greift
+    // vorher und verlässt die Funktion, bevor `setDataSource` überhaupt aufgerufen
+    // würde. Der Test bestand daher unabhängig davon, ob die Guard existierte.
+    // Empirisch geprüft: Lässt man stattdessen `localGet` in diesem Poll erfolgreich
+    // auflösen (`localGet.mockResolvedValueOnce(cloudTournament)`), wechselt
+    // `dataSource` tatsächlich auf 'local' und `useLiveMatches` bekommt
+    // `allowPublicRealtime: false` — der Cloud-zu-Local-Flapping-Fall, den der
+    // Titel ausschließen wollte, ist also (noch) NICHT abgesichert. Das ist ein
+    // eigenständiger, hier nicht behobener Befund (kein Teil dieser Fix-Welle) und
+    // gehört auf docs/findings/INDEX.md, nicht in diesen Test hineingemogelt.
+    // Dieser Test bleibt bei dem, was er tatsächlich beweist: Bei einem TOTAL
+    // fehlgeschlagenen Poll (beide Quellen liefern nichts) bleibt die
+    // Realtime-Anbindung unverändert bestehen.
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
@@ -120,8 +136,6 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     supabaseGet.mockRejectedValueOnce(new Error('network blip'));
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
-    // dataSource muss 'cloud' bleiben, sonst würde useLiveMatches den Anon-Realtime-Pfad
-    // verlassen und wieder betreten — verlorene Goal-Animation inklusive (siehe Finding 2).
     expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
   });
 });
@@ -198,5 +212,70 @@ describe('MonitorDisplayPage — Wake Lock (L7)', () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await waitFor(() => expect(screen.getByText(/Turnier nicht gefunden/)).toBeInTheDocument());
     expect(request).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// Fix 1 (M1-Fixwelle): Ein fehlgeschlagenes Erstladen darf den Bildschirm nicht für
+// den Rest des Tages auf der Fehlerseite stehen lassen. Vorher war der Poll-Effekt
+// mit `if (!monitor) { return; }` gated — lief also NIE an, solange das Erstladen nie
+// erfolgreich war. Praxisfall: Der Hallen-TV schaltet ein, bevor das WLAN steht.
+// =============================================================================
+describe('MonitorDisplayPage — Fix 1: Erstladen-Fehlschlag erholt sich automatisch', () => {
+  // Kein Monitor geladen -> schnellere Taktung laut Fix 1 (5s statt Profil-Intervall).
+  const FAST_RETRY_MS = 5000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('Critical: ein fehlgeschlagenes Erstladen (TV vor WLAN-Verbindung) erholt sich beim nächsten Poll ohne manuelles Neuladen', async () => {
+    // Erstladen: Cloud-Timeout/Reject, lokal nichts (fremdes TV-Gerät ohne eigenen Cache).
+    supabaseGet.mockRejectedValueOnce(new Error('network blip'));
+    localGet.mockResolvedValueOnce(null);
+
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+
+    // Ohne Fix 1 pollt die Seite ab hier nie wieder (Poll-Effekt war auf `monitor` gated,
+    // der wegen des Fehlschlags nie gesetzt wurde) — der Bildschirm bliebe für den Rest
+    // des Tages auf der Fehlerseite stehen.
+    supabaseGet.mockResolvedValue(cloudTournament);
+    localGet.mockResolvedValue(null);
+    await act(async () => { await vi.advanceTimersByTimeAsync(FAST_RETRY_MS); });
+
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+  });
+});
+
+// =============================================================================
+// Fix 6 (M1-Fixwelle): Auf dem allerersten Laden ist `lookupFailed` bislang ungenutzt
+// geblieben — ein Verbindungsfehler (Cloud-Timeout/Reject) erzeugte dieselbe
+// Sichtbarkeits-Meldung wie eine bestätigte Abwesenheit. Das schickt den Organisator im
+// schlimmsten Moment (WLAN-Aussetzer beim Hochfahren) an eine bereits korrekte
+// Einstellung. Gehört inhaltlich zu Fix 1: Erst wenn der Poll wirklich immer weiterläuft,
+// stimmt das Versprechen "automatisch".
+// =============================================================================
+describe('MonitorDisplayPage — Fix 6: Erstladen-Fehler unterscheidet Netzwerk von Sichtbarkeit', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('Critical: ein Cloud-Reject beim Erstladen zeigt die Verbindungs-Meldung, nicht die Sichtbarkeits-Meldung', async () => {
+    supabaseGet.mockRejectedValueOnce(new Error('network blip'));
+    localGet.mockResolvedValueOnce(null);
+
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument());
+    const message = screen.getByTestId('monitor-error-message').textContent ?? '';
+    expect(message).toContain('Verbindung zum Server fehlgeschlagen');
+    expect(message).not.toContain('Sichtbarkeits-Einstellungen');
   });
 });
