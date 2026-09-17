@@ -66,4 +66,32 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ awaitingTiebreakerChoice: false }), allTb())} />);
     expect(screen.queryByTestId('tiebreaker-banner')).not.toBeInTheDocument();
   });
+  it('L1: Score im Banner zählt die Verlängerungstore mit (overtimeScoreA/B), nicht nur die reguläre Zeit', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ homeScore: 1, overtimeScoreA: 1, awayScore: 1, overtimeScoreB: 1 }), allTb())} />);
+    expect(screen.getByText('2 : 2')).toBeInTheDocument();
+  });
+});
+
+describe('LiveCockpit — Elfmeterschießen (L1)', () => {
+  beforeEach(() => vi.clearAllMocks());
+  const pen = () => ({ onRecordPenaltyResult: vi.fn(), onCancelTiebreaker: vi.fn() });
+
+  it('L1: öffnet den Dialog, wenn das Match in der Penalty-Phase ist', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), pen())} />);
+    expect(screen.getByTestId('penalty-shootout-dialog')).toBeInTheDocument();
+  });
+  it('Regression: kein Dialog in der regulären Phase', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'regular', awaitingTiebreakerChoice: false }), pen())} />);
+    expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
+  });
+  it('Regression: kein Dialog bei bereits beendetem Match', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', status: 'FINISHED', awaitingTiebreakerChoice: false }), pen())} />);
+    expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
+  });
+  it('L1: Abbrechen ruft onCancelTiebreaker mit der matchId', async () => {
+    const h = pen(); const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), h)} />);
+    await user.click(screen.getByRole('button', { name: /Abbrechen/i }));
+    expect(h.onCancelTiebreaker).toHaveBeenCalledWith('match-1');
+  });
 });

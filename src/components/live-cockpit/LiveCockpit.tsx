@@ -36,6 +36,7 @@ import {
 
   SettingsDialog,
   TiebreakerBanner,
+  PenaltyShootoutDialog,
 } from './components';
 import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
 
@@ -76,9 +77,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onStartOvertime,
   onStartGoldenGoal,
   onStartPenaltyShootout,
-  onRecordPenaltyResult: _onRecordPenaltyResult,
+  onRecordPenaltyResult,
   onForceFinish,
-  onCancelTiebreaker: _onCancelTiebreaker,
+  onCancelTiebreaker,
   // Event tracking handlers (new)
   onTimePenalty,
   onCard,
@@ -134,6 +135,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [sidesSwapped, setSidesSwapped] = useState(false);
   // Settings Dialog
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  // L1: Elfmeterschießen-Dialog (Task 11)
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, dismissToast } = useToast();
@@ -605,9 +608,29 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const handleStartPenaltyShootout = useCallback(() => {
     if (!currentMatch) { return; }
     onStartPenaltyShootout?.(currentMatch.id);
+    setShowPenaltyDialog(true);
   }, [currentMatch, onStartPenaltyShootout]);
   // "Als Unentschieden beenden": MatchExecutionService.cancelTiebreaker persistiert als regulären Ausgang.
   const handleEndAsDraw = useCallback(() => { if (!currentMatch) { return; } onForceFinish?.(currentMatch.id); }, [currentMatch, onForceFinish]);
+
+  // L1: Elfmeterschießen — der Dialog verwaltet seine Schussliste selbst, wir brauchen nur das Endergebnis.
+  // MatchExecutionService.recordPenaltyResult schreibt penaltyScoreA/B, decidedBy='penalty' (524–541).
+  const handlePenaltyFinish = useCallback((homeScore: number, awayScore: number) => {
+    if (!currentMatch) { return; }
+    onRecordPenaltyResult?.(currentMatch.id, homeScore, awayScore);
+    setShowPenaltyDialog(false);
+  }, [currentMatch, onRecordPenaltyResult]);
+  const handlePenaltyCancel = useCallback(() => {
+    if (!currentMatch) { return; }
+    setShowPenaltyDialog(false);
+    onCancelTiebreaker?.(currentMatch.id);
+  }, [currentMatch, onCancelTiebreaker]);
+
+  // L1: Dialog an die persistierte Phase koppeln (matches.live_state.playPhase über Realtime) —
+  // der Zustand kann von einem anderen Gerät kommen, nicht nur über handleStartPenaltyShootout oben.
+  useEffect(() => {
+    setShowPenaltyDialog(currentMatch?.playPhase === 'penalty' && currentMatch.status !== 'FINISHED');
+  }, [currentMatch?.playPhase, currentMatch?.status]);
 
   // ---------------------------------------------------------------------------
   // Early return AFTER all hooks
@@ -1117,12 +1140,22 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       {match.awaitingTiebreakerChoice && (
         <TiebreakerBanner
           homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
-          score={match.homeScore} tiebreakerMode={match.tiebreakerMode}
+          score={match.homeScore + (match.overtimeScoreA ?? 0)} tiebreakerMode={match.tiebreakerMode}
           overtimeMinutes={Math.round((match.overtimeDurationSeconds ?? 300) / 60)}
           onStartOvertime={onStartOvertime ? handleStartOvertime : undefined}
           onStartGoldenGoal={onStartGoldenGoal ? handleStartGoldenGoal : undefined}
           onStartPenaltyShootout={onStartPenaltyShootout ? handleStartPenaltyShootout : undefined}
           onEndAsDraw={onForceFinish ? handleEndAsDraw : undefined}
+        />
+      )}
+
+      {/* L1: Elfmeterschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
+          persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz. */}
+      {showPenaltyDialog && onRecordPenaltyResult && onCancelTiebreaker && (
+        <PenaltyShootoutDialog
+          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
+          onRecordShot={() => { /* Einzelschüsse werden nicht persistiert (Follow-up, Task 22) */ }}
+          onFinish={handlePenaltyFinish} onCancel={handlePenaltyCancel}
         />
       )}
 
