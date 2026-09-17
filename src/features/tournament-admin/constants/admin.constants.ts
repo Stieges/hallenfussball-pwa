@@ -208,7 +208,7 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     action: 'archive_tournament',
     title: 'Turnier abschließen und ins Archiv legen',
     description:
-      'Markiert das Turnier als abgeschlossen. Es erscheint danach unter "Beendete Turniere".',
+      'Markiert das Turnier als abgeschlossen. Ein veröffentlichtes Turnier erscheint danach unter "Beendete Turniere"; ein Entwurf bleibt unter "Gespeicherte Turniere".',
     consequences: [
       'Turnier gilt als beendet, Tabellen und Platzierungen werden finalisiert',
       'Eine Statistik-Momentaufnahme wird gespeichert',
