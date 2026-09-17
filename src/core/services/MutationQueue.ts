@@ -1,9 +1,13 @@
 
 import { SupabaseRepository } from '../repositories/SupabaseRepository';
 import { Tournament, MatchUpdate } from '../models/types';
-import { GenericMutationQueue, type GenericMutationItem } from './GenericMutationQueue';
+import {
+    GenericMutationQueue,
+    type GenericMutationItem,
+    type FailedMutationItem as GenericFailedMutationItem,
+} from './GenericMutationQueue';
 
-export { MAX_RETRIES, type FailedMutationItem, type MutationQueueStatus } from './GenericMutationQueue';
+export { MAX_RETRIES, type MutationQueueStatus } from './GenericMutationQueue';
 
 /**
  * Supported mutation types
@@ -14,6 +18,14 @@ export type MutationType =
     | 'UPDATE_MATCH'
     | 'UPDATE_MATCHES'
     | 'UPDATE_TOURNAMENT_METADATA';
+
+const KNOWN_MUTATION_TYPES: readonly MutationType[] = [
+    'SAVE_TOURNAMENT',
+    'DELETE_TOURNAMENT',
+    'UPDATE_MATCH',
+    'UPDATE_MATCHES',
+    'UPDATE_TOURNAMENT_METADATA',
+];
 
 /**
  * A requested change to be persisted to the cloud.
@@ -29,12 +41,30 @@ export type MutationItem = Omit<GenericMutationItem<MutationType>, 'payload'> & 
     payload: any;
 };
 
+/**
+ * A mutation that failed permanently (exceeded max retries).
+ *
+ * Bound explicitly to MutationType (not re-exported bare from
+ * GenericMutationQueue, whose FailedMutationItem<TType> defaults to
+ * `string`) so `import { FailedMutationItem } from './MutationQueue'`
+ * yields `type: MutationType` / `payload: any`, exactly as before the
+ * extraction — not `type: string` / `payload: unknown`.
+ */
+export type FailedMutationItem = Omit<GenericFailedMutationItem<MutationType>, 'payload'> & {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload: any;
+};
+
 export class MutationQueue extends GenericMutationQueue<MutationType> {
     constructor(supabaseRepo: SupabaseRepository) {
         super({
             storageKey: 'mutation_queue_v1',
             failedStorageKey: 'mutation_queue_failed_v1',
             sentryFeature: 'sync',
+            // Unknown-type items are rejected at load exactly like schema-invalid
+            // ones (see GenericMutationQueue.isKnownType doc) — restores 1:1
+            // load-time fidelity with the pre-extraction enum-restricted schema.
+            isKnownType: (type): boolean => (KNOWN_MUTATION_TYPES as readonly string[]).includes(type),
 
             /**
              * Get a coalesce key for mutations that can be merged.

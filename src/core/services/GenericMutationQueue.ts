@@ -74,6 +74,21 @@ export interface MutationQueueConfig<TType extends string> {
     coalesceKey: (type: TType, payload: unknown) => string | null;
     /** Sentry-Feature-Tag (Bestand: 'sync'). */
     sentryFeature: string;
+    /**
+     * Optional guard restricting which `type` values are accepted at load.
+     * An item whose type fails this check is rejected exactly like a
+     * schema-invalid item (filtered out, same Sentry/logging path) — it
+     * never enters the queue. This exists because an unrecognized type that
+     * *does* enter the queue can sit at the head and head-of-line-block
+     * every mutation behind it for up to MAX_RETRIES processing cycles
+     * (process() intentionally `break`s, not `continue`s, on a non-final
+     * retry failure, to preserve ordering for genuine transient failures).
+     *
+     * When omitted, every structurally-valid item is accepted (today's
+     * default for a consumer that doesn't need this — e.g. a future
+     * Tournament-Series queue that hasn't opted in yet).
+     */
+    isKnownType?: (type: string) => boolean;
 }
 
 /**
@@ -329,6 +344,13 @@ export class GenericMutationQueue<TType extends string> {
                         );
                         return false;
                     }
+                    if (this.config.isKnownType && !this.config.isKnownType(result.data.type)) {
+                        captureFeatureError(
+                            new Error(`Invalid mutation item in queue: unknown type "${result.data.type}"`),
+                            this.config.sentryFeature, 'loadQueue:validation'
+                        );
+                        return false;
+                    }
                     return true;
                 }) as GenericMutationItem<TType>[];
             }
@@ -358,6 +380,13 @@ export class GenericMutationQueue<TType extends string> {
                     if (!result.success) {
                         captureFeatureError(
                             new Error(`Invalid failed mutation item: ${result.error.message}`),
+                            this.config.sentryFeature, 'loadFailedQueue:validation'
+                        );
+                        return false;
+                    }
+                    if (this.config.isKnownType && !this.config.isKnownType(result.data.type)) {
+                        captureFeatureError(
+                            new Error(`Invalid failed mutation item: unknown type "${result.data.type}"`),
                             this.config.sentryFeature, 'loadFailedQueue:validation'
                         );
                         return false;

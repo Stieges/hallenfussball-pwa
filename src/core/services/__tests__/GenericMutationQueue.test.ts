@@ -39,6 +39,7 @@ function makeQueue(opts?: {
   online?: boolean;
   storageKey?: string;
   failedStorageKey?: string;
+  isKnownType?: (type: string) => boolean;
 }) {
   if (opts?.online === false) {
     onlineSpy.mockReturnValue(false);
@@ -51,6 +52,7 @@ function makeQueue(opts?: {
     coalesceKey: (type, p) =>
       type === 'SAVE_THING' && (p as { id?: string })?.id ? `SAVE:${(p as { id: string }).id}` : null,
     sentryFeature: 'sync',
+    ...(opts?.isKnownType ? { isKnownType: opts.isKnownType } : {}),
   });
   return { queue, execute };
 }
@@ -89,6 +91,64 @@ describe('GenericMutationQueue', () => {
 
     q1.enqueue('SAVE_THING', { id: 'a' });
     expect(q2.getPendingCount()).toBe(0);
+  });
+
+  // ===========================================================================
+  // isKnownType (load-time guard — Task-3-Review Finding 1)
+  // ===========================================================================
+
+  it('lehnt Items mit unbekanntem Type beim Laden ab, wenn isKnownType konfiguriert ist', () => {
+    const preload: GenericMutationItem<TestType>[] = [
+      // Cast needed: simulating a corrupted/legacy item outside the known TestType union.
+      { id: 'poisoned', type: 'UNKNOWN_TYPE' as TestType, payload: {}, timestamp: 1000, retryCount: 0 },
+    ];
+    mockStorage.set('test_queue_v1', JSON.stringify(preload));
+
+    const { queue } = makeQueue({
+      online: false,
+      isKnownType: (type) => type === 'SAVE_THING' || type === 'DELETE_THING',
+    });
+
+    expect(queue.getPendingCount()).toBe(0);
+  });
+
+  it('lädt Items mit unbekanntem Type unverändert, wenn kein isKnownType konfiguriert ist', () => {
+    const preload: GenericMutationItem<TestType>[] = [
+      { id: 'unchecked', type: 'UNKNOWN_TYPE' as TestType, payload: {}, timestamp: 1000, retryCount: 0 },
+    ];
+    mockStorage.set('test_queue_v1', JSON.stringify(preload));
+
+    const { queue } = makeQueue({ online: false });
+
+    expect(queue.getPendingCount()).toBe(1);
+  });
+
+  it('lehnt Failed-Queue-Items mit unbekanntem Type beim Laden ab, wenn isKnownType konfiguriert ist', () => {
+    const preloadFailed: FailedMutationItem<TestType>[] = [
+      { id: 'poisoned-f', type: 'UNKNOWN_TYPE' as TestType, payload: {}, timestamp: 1000, retryCount: MAX_RETRIES, failedAt: 2000 },
+    ];
+    mockStorage.set('test_queue_failed_v1', JSON.stringify(preloadFailed));
+
+    const { queue } = makeQueue({
+      online: false,
+      isKnownType: (type) => type === 'SAVE_THING' || type === 'DELETE_THING',
+    });
+
+    expect(queue.getFailedCount()).toBe(0);
+  });
+
+  it('lässt bekannte Types beim Laden unverändert durch isKnownType passieren', () => {
+    const preload: GenericMutationItem<TestType>[] = [
+      { id: 'ok', type: 'SAVE_THING', payload: { id: 'a' }, timestamp: 1000, retryCount: 0 },
+    ];
+    mockStorage.set('test_queue_v1', JSON.stringify(preload));
+
+    const { queue } = makeQueue({
+      online: false,
+      isKnownType: (type) => type === 'SAVE_THING' || type === 'DELETE_THING',
+    });
+
+    expect(queue.getPendingCount()).toBe(1);
   });
 
   // ===========================================================================
