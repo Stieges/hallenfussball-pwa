@@ -38,6 +38,9 @@ export { useSyncedPenalties } from './useSyncedPenalties'
 export { useSyncStatus, type SyncState, type UseSyncStatusReturn } from './useSyncStatus'
 export { useRealtimeTournament, type UseRealtimeTournamentOptions, type UseRealtimeTournamentReturn } from './useRealtimeTournament'
 
+// Routing
+export { useRouteMatch } from './useRouteMatch'
+
 // Domain Specific
 export { useTournaments } from './useTournaments'
 export { useSportConfig } from './useSportConfig'
