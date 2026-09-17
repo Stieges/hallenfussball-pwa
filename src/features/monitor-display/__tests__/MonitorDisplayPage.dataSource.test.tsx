@@ -112,22 +112,9 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
   });
 
   it('Important: ein vollständig fehlgeschlagener Poll (Cloud UND lokal leer) rührt die Realtime-Anbindung nicht an', async () => {
-    // Fix-Runde-Review (M1): Der ursprüngliche Titel dieses Tests versprach "kein
-    // Realtime-Flapping", auch wenn ein Poll auf lokale Daten zurückfällt. Mit
-    // `localGet` auf `null` (beforeEach) erreicht der Code aber nie den
-    // dataSource-Zweig — die `hadData && lookupFailed`-Guard in loadData() greift
-    // vorher und verlässt die Funktion, bevor `setDataSource` überhaupt aufgerufen
-    // würde. Der Test bestand daher unabhängig davon, ob die Guard existierte.
-    // Empirisch geprüft: Lässt man stattdessen `localGet` in diesem Poll erfolgreich
-    // auflösen (`localGet.mockResolvedValueOnce(cloudTournament)`), wechselt
-    // `dataSource` tatsächlich auf 'local' und `useLiveMatches` bekommt
-    // `allowPublicRealtime: false` — der Cloud-zu-Local-Flapping-Fall, den der
-    // Titel ausschließen wollte, ist also (noch) NICHT abgesichert. Das ist ein
-    // eigenständiger, hier nicht behobener Befund (kein Teil dieser Fix-Welle) und
-    // gehört auf docs/findings/INDEX.md, nicht in diesen Test hineingemogelt.
-    // Dieser Test bleibt bei dem, was er tatsächlich beweist: Bei einem TOTAL
-    // fehlgeschlagenen Poll (beide Quellen liefern nichts) bleibt die
-    // Realtime-Anbindung unverändert bestehen.
+    // Deckt den Fall ab, in dem BEIDE Quellen nichts liefern: Der Hallen-TV hat keinen
+    // eigenen localStorage-Stand, der !found-Guard in loadData() greift, dataSource
+    // bleibt unberührt.
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
@@ -137,6 +124,27 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
 
     expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+  });
+
+  it('F-324: ein Cloud-Aussetzer stuft einen laufenden Bildschirm nicht auf die lokale Kopie zurück', async () => {
+    // Der eigentliche Flapping-Fall, den der Test darüber NICHT erreicht: Auf einem Gerät
+    // mit lokalem Stand (Organisator-Laptop) liefert der Fallback etwas, der !found-Guard
+    // greift also nicht. Ohne den F-324-Guard liefe der Code bis setDataSource('local')
+    // durch, meldete die Realtime-Subscription ab und ersetzte die frischen Cloud-Daten
+    // durch die (womöglich veraltete) lokale Kopie.
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+
+    // Poll 2: Cloud fällt aus, lokal liegt ein älterer Stand.
+    supabaseGet.mockRejectedValueOnce(new Error('network blip'));
+    localGet.mockResolvedValueOnce({ ...cloudTournament, title: 'Veralteter lokaler Stand' });
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
   });
 });
 

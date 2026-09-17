@@ -1059,6 +1059,14 @@ export function MonitorDisplayPage({
         return;
       }
 
+      // F-324: Ein Cloud-Aussetzer darf einen laufenden Bildschirm nicht auf die lokale Kopie
+      // zurückstufen. setDataSource('local') meldet die Realtime-Subscription ab, und die lokale
+      // Kopie kann älter sein als das, was gerade zu sehen ist. Der obige !found-Guard greift hier
+      // nicht, weil der lokale Fallback ja etwas geliefert hat. Beim nächsten Poll ist die Cloud
+      // meist wieder da; ein sauberes leeres Cloud-Ergebnis (lookupFailed === false) fällt weiterhin
+      // regulär auf local zurück.
+      if (hadData && lookupFailed && source === 'local') { return; }
+
       const foundMonitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId);
       if (!foundMonitor) {
         // Der Turnier-Abruf war erfolgreich; dieser Monitor existiert definitiv nicht mehr.
