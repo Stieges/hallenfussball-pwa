@@ -11,7 +11,7 @@
 
 | Aufgabe | Priorität | Status | Notizen |
 |---|---|---|---|
-| ~~Supabase pausiert (Free-Plan, 7-Tage-Regel)~~ | – | ✅ Erledigt 2026-09-17 | 2× passiert (Juli, September). Restore via MCP + **Keep-Alive-Workflow** `.github/workflows/supabase-keep-alive.yml` (alle 3 Tage REST-Query, fail-loud). Secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_ID` gesetzt |
+| ~~Supabase pausiert (Free-Plan, 7-Tage-Regel)~~ | – | ✅ Erledigt 2026-09-17 | 2× passiert (Juli, September). Restore via MCP + **Keep-Alive-Workflow** `.github/workflows/supabase-keep-alive.yml` (tägliche REST-Query, fail-loud). Secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_ID` gesetzt |
 | ~~Dependabot #181 (production)~~ | – | ✅ Gemerged 2026-09-17 | 10 Patch/Minor-Bumps; schließt Runtime-High-Alert react-router |
 | ~~Runtime-Alerts dompurify/fflate~~ | – | ✅ Erledigt 2026-09-17 | 11 Alerts via `npm update` (beide nur über jspdf) — Hygiene-PR |
 | ~~Stale Remote-Branches~~ | – | ✅ Gelöscht 2026-09-17 | 17 Stück: 5 Feature-Branches gemergter Squash-PRs + 12 Dependabot-Reste. Remote hält jetzt nur noch `main` |

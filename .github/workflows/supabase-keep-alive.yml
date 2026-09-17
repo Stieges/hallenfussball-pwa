@@ -44,10 +44,19 @@ jobs:
                 ;;
             esac
           fi
+          # curl schreibt bei Hard-Failures (DNS/TLS/Timeout) selbst schon '000' nach
+          # stdout und beendet sich danach non-zero. Deshalb den Exit-Code separat
+          # auswerten statt Fallback anzuhaengen — sonst steht 000000 im Log.
+          set +e
           status=$(curl -sS --connect-timeout 10 --max-time 60 \
             -o /tmp/body.json -w '%{http_code}' \
             "$SUPABASE_URL/rest/v1/tournaments?select=id&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY" || echo 000)
+            -H "apikey: $SUPABASE_ANON_KEY")
+          curl_rc=$?
+          set -e
+          if [ $curl_rc -ne 0 ]; then
+            status=000
+          fi
           echo "HTTP $status"
           if [ "$status" != "200" ]; then
             echo "::error::Supabase REST returned HTTP $status (project paused, network failure or secrets wrong?)"
