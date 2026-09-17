@@ -1,0 +1,66 @@
+name: Supabase Keep-Alive
+
+# Free-Plan-Projekte pausieren nach 7 Tagen ohne API-Traffic (passiert 2026-07 und 2026-09).
+# Dieser Workflow setzt täglich eine echte REST-Query ab, die als Aktivität zählt.
+# Täglich statt alle 3 Tage, weil GitHub Scheduled Runs unter Last verwerfen kann:
+# täglich verträgt 5 ausgefallene Läufe bis zur 7-Tage-Schwelle, alle 3 Tage nur einen.
+# Fehlende Secrets sind ein FEHLER, kein Skip — ein still übersprungener Check hat beim
+# Drift-Check zwei Monate lang alles verschleiert.
+
+on:
+  schedule:
+    # Täglich um 06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Manueller Trigger für Verifikation
+
+permissions: {}
+
+jobs:
+  ping:
+    name: Ping Supabase REST (counts as activity)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Query tournaments via REST
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL or SUPABASE_ANON_KEY secret not set — keep-alive cannot run."
+            exit 1
+          fi
+          # Guard gegen die letzte Variante von "gruen, aber wirkungslos": eine URL, die
+          # auf ein anderes (lebendes) Supabase-Projekt zeigt, liefert 200 — waehrend das
+          # eigentliche Projekt weiter pausiert.
+          if [ -n "$SUPABASE_PROJECT_ID" ]; then
+            case "$SUPABASE_URL" in
+              *"$SUPABASE_PROJECT_ID"*) ;;
+              *)
+                echo "::error::SUPABASE_URL does not contain SUPABASE_PROJECT_ID — pinging the wrong project."
+                exit 1
+                ;;
+            esac
+          fi
+          # curl schreibt bei Hard-Failures (DNS/TLS/Timeout) selbst schon '000' nach
+          # stdout und beendet sich danach non-zero. Deshalb den Exit-Code separat
+          # auswerten statt Fallback anzuhaengen — sonst steht 000000 im Log.
+          set +e
+          status=$(curl -sS --connect-timeout 10 --max-time 60 \
+            -o /tmp/body.json -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/tournaments?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+          curl_rc=$?
+          set -e
+          if [ $curl_rc -ne 0 ]; then
+            status=000
+          fi
+          echo "HTTP $status"
+          if [ "$status" != "200" ]; then
+            echo "::error::Supabase REST returned HTTP $status (project paused, network failure or secrets wrong?)"
+            cat /tmp/body.json 2>/dev/null || true
+            exit 1
+          fi
+          echo "Keep-alive OK — project active."

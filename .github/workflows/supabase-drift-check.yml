@@ -14,6 +14,9 @@ on:
       - 'supabase/migrations/**'
   workflow_dispatch: # Manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   drift-check:
     name: Compare live schema vs committed types
@@ -34,9 +37,9 @@ jobs:
           SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
-            echo "::warning::SUPABASE_ACCESS_TOKEN or SUPABASE_PROJECT_ID secret not set."
-            echo "::warning::Skipping drift check. Configure repo secrets to enable."
-            exit 0
+            echo "::error::SUPABASE_ACCESS_TOKEN or SUPABASE_PROJECT_ID secret not set — drift check cannot run."
+            echo "::error::Configure both repo secrets (Settings → Secrets → Actions). A skipped check must never be green."
+            exit 1
           fi
           supabase gen types typescript \
             --project-id "$SUPABASE_PROJECT_ID" \
@@ -45,8 +48,8 @@ jobs:
       - name: Diff against committed types
         run: |
           if [ ! -f /tmp/types-live.ts ]; then
-            echo "Skipped (no secrets configured)."
-            exit 0
+            echo "::error::No generated types found — previous step must have failed."
+            exit 1
           fi
           if ! diff -u src/types/supabase.ts /tmp/types-live.ts > /tmp/types-diff.txt; then
             echo "::error::Supabase schema has drifted from src/types/supabase.ts."
