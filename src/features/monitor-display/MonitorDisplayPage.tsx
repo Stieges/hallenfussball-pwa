@@ -148,6 +148,26 @@ function getSafeUrl(url: string | undefined, fallback: string): string {
   return isValidUrl(url) ? url : fallback;
 }
 
+// L2: SupabaseRepository.get() hat kein eingebautes Timeout. Ohne Begrenzung würde ein
+// hängender Request isFetchingRef dauerhaft auf true halten und damit jeden weiteren
+// Poll-Tick blockieren — beim Erstladen bliebe der Spinner stehen statt auf lokal
+// zurückzufallen. Bewusst deutlich UNTER der schnellsten konfigurierten pollingInterval
+// (PERFORMANCE_PROFILES.high = 5000ms, siehe types/monitor.ts) gewählt, damit ein Hänger
+// nicht auch noch den nächsten Poll-Tick verschluckt (der sonst wegen isFetchingRef
+// überspringen würde). Der zugrunde liegende Request läuft nach dem Timeout einfach weiter
+// im Hintergrund aus — wir warten nur nicht mehr darauf.
+const CLOUD_TIMEOUT_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Cloud-Anfrage nach ${ms}ms abgebrochen (Timeout)`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err: unknown) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
+    );
+  });
+}
+
 // =============================================================================
 // SLIDE RENDERER COMPONENT
 // =============================================================================
@@ -918,6 +938,18 @@ export function MonitorDisplayPage({
   // Ref to track if a fetch is in progress (prevents race conditions)
   const isFetchingRef = useRef(false);
 
+  // L2: Ref statt State — ein Poll, der bereits gültige Daten hat, soll bei einem
+  // Aussetzer NICHTS ändern (weder error noch dataSource). Als Ref, damit loadData()
+  // seine Identität nicht bei jedem erfolgreichen Poll wechselt — sonst würde der
+  // Polling-Effekt (der von loadData abhängt) das Intervall bei jedem Tick neu aufsetzen.
+  const hasDataRef = useRef(false);
+
+  // Neues tournamentId/monitorId = neues Ziel — ein "hatte schon Daten" von der vorigen
+  // Route darf nicht einen echten Not-found-Fehler für das neue Ziel unterdrücken.
+  useEffect(() => {
+    hasDataRef.current = false;
+  }, [tournamentId, monitorId]);
+
   // Derived state
   const performanceSettings = useMemo(
     () => monitor ? getPerformanceSettings(monitor.performanceMode) : PERFORMANCE_PROFILES.high,
@@ -959,6 +991,13 @@ export function MonitorDisplayPage({
 
     isFetchingRef.current = true;
 
+    // Ein späterer Poll darf einen früheren Fehler heilen, aber ein Poll, der bereits
+    // gültige Daten auf dem Bildschirm hat, darf bei einem Aussetzer NICHTS ändern —
+    // weder error setzen (Render-Gate ist `error || !tournament || !monitor`, also friert
+    // der Bildschirm sonst auf der Fehlerseite ein) noch dataSource umschalten (das würde
+    // die Realtime-Subscription in useLiveMatches bei jedem Aussetzer ab-/wieder anmelden).
+    const hadData = hasDataRef.current;
+
     try {
       let found: Tournament | null = null;
       let source: 'cloud' | 'local' = 'local';
@@ -966,7 +1005,9 @@ export function MonitorDisplayPage({
       // L2: Cloud zuerst — ein Hallen-Monitor läuft auf einem fremden Gerät ohne localStorage.
       if (isSupabaseConfigured) {
         try {
-          found = await new SupabaseRepository().get(tournamentId);
+          // Kein Timeout im Repository -> hier begrenzen. Ohne das blockiert ein hängender
+          // Request über isFetchingRef jeden weiteren Poll-Tick auf unbestimmte Zeit.
+          found = await withTimeout(new SupabaseRepository().get(tournamentId), CLOUD_TIMEOUT_MS);
           if (found) { source = 'cloud'; }
         } catch (err) {
           console.warn('[MonitorDisplay] Supabase-Lookup fehlgeschlagen, versuche lokal:', err);
@@ -982,6 +1023,8 @@ export function MonitorDisplayPage({
       }
 
       if (!found) {
+        // Wir hatten schon Daten: der Poll war nur ein Aussetzer. Alten Stand behalten.
+        if (hadData) { return; }
         setError(
           `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
           'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Öffentlich freigeben" stehen.'
@@ -992,6 +1035,7 @@ export function MonitorDisplayPage({
 
       const foundMonitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId);
       if (!foundMonitor) {
+        if (hadData) { return; }
         setError(`Monitor nicht gefunden: ${monitorId}`);
         setLoading(false);
         return;
@@ -1001,10 +1045,14 @@ export function MonitorDisplayPage({
       setMonitor(foundMonitor);
       setDataSource(source);
       setLastFetch(Date.now());
+      setError(null); // heilt einen früheren Aussetzer, falls einer aufgetreten war
       setLoading(false);
+      hasDataRef.current = true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden');
-      setLoading(false);
+      if (!hadData) {
+        setError(err instanceof Error ? err.message : 'Fehler beim Laden');
+        setLoading(false);
+      }
     } finally {
       isFetchingRef.current = false;
     }

@@ -1,6 +1,6 @@
 /** MonitorDisplayPage — lädt das Turnier über die Repositories (L2). Vorher: alte lokale API-Schicht, nur ein Gerät. */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
 
 // vi.mock factories are hoisted above all top-level statements, including plain `const`
 // declarations further down the file — referencing those directly throws a TDZ error
@@ -64,5 +64,64 @@ describe('MonitorDisplayPage — Datenherkunft (L2)', () => {
     render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
     await waitFor(() => expect(localGet).toHaveBeenCalledWith('tour-1'));
     await waitFor(() => expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: false }));
+  });
+});
+
+// =============================================================================
+// Fix-Runde nach Review: ein einzelner fehlgeschlagener Poll darf einen bereits
+// erfolgreich geladenen Bildschirm nicht kaputt machen (weder Fehlerseite noch
+// Realtime-Flapping). Braucht kontrollierte Zeit für den setInterval-Poll-Tick,
+// daher eigener describe-Block mit Fake-Timern (Vorbild: RetryService.test.ts,
+// OfflineBanner.test.tsx — vi.advanceTimersByTimeAsync für Timer-gated async Code).
+// =============================================================================
+describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
+  // cloudTournament.monitors[0].performanceMode ist 'low' -> PERFORMANCE_PROFILES.low.pollingInterval (types/monitor.ts).
+  const POLLING_INTERVAL_MS = 10_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    supabaseGet.mockResolvedValue(cloudTournament);
+    localGet.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('Critical: ein Poll-Aussetzer nach erfolgreichem Laden lässt den Bildschirm nicht auf der Fehlerseite einfrieren', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+
+    // Initial-Load (aus einem useEffect direkt beim Mount) läuft über Microtasks, kein Timer nötig.
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+
+    // Poll 2: Cloud UND lokal liefern nichts — genau das Zielgerät dieses Tasks
+    // (Hallen-TV ohne eigenen localStorage-Stand) bei einem einzelnen WLAN-Aussetzer.
+    supabaseGet.mockRejectedValueOnce(new Error('network blip'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+
+    // Poll 3: erholt sich wieder.
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+    expect(screen.queryByTestId('monitor-error-state')).not.toBeInTheDocument();
+  });
+
+  it('Important: ein fehlgeschlagener Poll nach Cloud-Load lässt dataSource nicht auf local zurückfallen (kein Realtime-Flapping)', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
+
+    supabaseGet.mockRejectedValueOnce(new Error('network blip'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    // dataSource muss 'cloud' bleiben, sonst würde useLiveMatches den Anon-Realtime-Pfad
+    // verlassen und wieder betreten — verlorene Goal-Animation inklusive (siehe Finding 2).
+    expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
   });
 });
