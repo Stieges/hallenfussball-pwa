@@ -329,3 +329,4 @@
 | F-321 | 🟡 | ux | Wizard-Deep-Link rendert Step 1 obwohl URL höhere Step-Nummer trägt | src/screens/TournamentCreationScreen.tsx | 1h | fixed | tests/e2e/flows/wizard.spec.ts | b562562 |
 | F-322 | 🟠 | architecture | RealtimeService has no reconnect limit or exponential backoff | src/core/realtime/RealtimeService.ts | 2h | open | src/core/realtime/__tests__/RealtimeService.test.ts | — |
 | F-323 | 🟡 | architecture | RealtimeService — no leak detection for double-subscribe without unsubscribe | src/core/realtime/RealtimeService.ts | 30m | open | src/core/realtime/__tests__/RealtimeService.test.ts | — |
+| F-324 | 🟡 | architecture | loadData() flippt dataSource auf 'local' (Realtime-Flapping), wenn Cloud transient scheitert aber lokal ein Stand existiert | src/features/monitor-display/MonitorDisplayPage.tsx | 1h | fixed | 2026-09-18 | 5355a24 |
