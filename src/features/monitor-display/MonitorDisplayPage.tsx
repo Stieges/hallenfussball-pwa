@@ -44,6 +44,7 @@ import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import { usePixelShift } from '../../hooks/usePixelShift';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
 
@@ -934,6 +935,11 @@ export function MonitorDisplayPage({
     lastCardEvent,
     clearLastCardEvent,
   } = useLiveMatches(tournamentId, { allowPublicRealtime: dataSource === 'cloud' });
+
+  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
+  // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
+  // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
+  useWakeLock(monitor !== null);
 
   // Ref to track if a fetch is in progress (prevents race conditions)
   const isFetchingRef = useRef(false);

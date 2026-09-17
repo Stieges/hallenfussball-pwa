@@ -177,3 +177,26 @@ describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler 
     expect(screen.getByTestId('monitor-error-message')).toHaveTextContent('Turnier nicht gefunden: tour-1');
   });
 });
+
+// =============================================================================
+// Wake Lock — Task 8
+// =============================================================================
+describe('MonitorDisplayPage — Wake Lock (L7)', () => {
+  beforeEach(() => { vi.clearAllMocks(); supabaseGet.mockResolvedValue(cloudTournament); localGet.mockResolvedValue(null); });
+
+  it('L7: fordert Wake Lock an, sobald der Monitor geladen ist', async () => {
+    const request = vi.fn().mockResolvedValue({ release: vi.fn().mockResolvedValue(undefined), addEventListener: vi.fn(), removeEventListener: vi.fn() });
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await waitFor(() => expect(request).toHaveBeenCalledWith('screen'));
+  });
+
+  it('L7: fordert keinen Wake Lock an, solange kein Monitor geladen ist', async () => {
+    supabaseGet.mockResolvedValue(null); localGet.mockResolvedValue(null);
+    const request = vi.fn();
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true });
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await waitFor(() => expect(screen.getByText(/Turnier nicht gefunden/)).toBeInTheDocument());
+    expect(request).not.toHaveBeenCalled();
+  });
+});
