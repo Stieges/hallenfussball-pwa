@@ -524,6 +524,22 @@ describe('mapTournamentFromSupabase', () => {
     expect(tournament.deletedAt).toBe('2026-01-15T00:00:00Z');
     expect(tournament.completedAt).toBe('2026-01-14T18:00:00Z');
   });
+
+  it('K2: mappt is_public, share_code und share_code_created_at', () => {
+    const row = createTournamentRow({
+      is_public: true, share_code: 'ABC123', share_code_created_at: '2026-02-01T10:00:00Z',
+    });
+    const tournament = mapTournamentFromSupabase(row, [], []);
+    expect(tournament.isPublic).toBe(true);
+    expect(tournament.shareCode).toBe('ABC123');
+    expect(tournament.shareCodeCreatedAt).toBe('2026-02-01T10:00:00Z');
+  });
+
+  it('K2: defaultet isPublic auf false wenn die Spalte null ist', () => {
+    const tournament = mapTournamentFromSupabase(createTournamentRow({ is_public: null }), [], []);
+    expect(tournament.isPublic).toBe(false);
+    expect(tournament.shareCode).toBeUndefined();
+  });
 });
 
 describe('mapTournamentToSupabase', () => {
@@ -583,6 +599,28 @@ describe('mapTournamentToSupabase', () => {
     // Match rows should have team IDs resolved
     expect(result.matchRows[0].team_a_id).toBe('team-a');
     expect(result.matchRows[0].team_b_id).toBe('team-b');
+  });
+
+  it('K1: denormalisiert is_public=true auf Team- und Match-Zeilen eines öffentlichen Turniers', () => {
+    const tournament = mapTournamentFromSupabase(
+      createTournamentRow({ is_public: true }),
+      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
+      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+    );
+    const result = mapTournamentToSupabase(tournament, 'user-1');
+    expect(result.teamRows[0].is_public).toBe(true);
+    expect(result.matchRows[0].is_public).toBe(true);
+  });
+
+  it('K1: denormalisiert is_public=false bei privatem Turnier', () => {
+    const tournament = mapTournamentFromSupabase(
+      createTournamentRow({ is_public: false }),
+      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
+      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+    );
+    const result = mapTournamentToSupabase(tournament, 'user-1');
+    expect(result.teamRows[0].is_public).toBe(false);
+    expect(result.matchRows[0].is_public).toBe(false);
   });
 });
 
