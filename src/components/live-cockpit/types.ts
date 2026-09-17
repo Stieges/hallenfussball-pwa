@@ -108,7 +108,6 @@ export interface LiveCockpitProps {
   onStartPenaltyShootout?(matchId: string): void;
   onRecordPenaltyResult?(matchId: string, homeScore: number, awayScore: number): void;
   onForceFinish?(matchId: string): void;
-  onForceFinish?(matchId: string): void;
   onCancelTiebreaker?(matchId: string): void;
 
   /** Update cockpit settings directly from the view */

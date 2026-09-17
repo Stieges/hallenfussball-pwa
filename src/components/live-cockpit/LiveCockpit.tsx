@@ -35,6 +35,7 @@ import {
   // Overflow Menu for quick actions + settings link
 
   SettingsDialog,
+  TiebreakerBanner,
 } from './components';
 import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
 
@@ -72,11 +73,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onAdjustTime,
   onLoadNextMatch: _onLoadNextMatch,
   onReopenLastMatch: _onReopenLastMatch,
-  onStartOvertime: _onStartOvertime,
-  onStartGoldenGoal: _onStartGoldenGoal,
-  onStartPenaltyShootout: _onStartPenaltyShootout,
+  onStartOvertime,
+  onStartGoldenGoal,
+  onStartPenaltyShootout,
   onRecordPenaltyResult: _onRecordPenaltyResult,
-  onForceFinish: _onForceFinish,
+  onForceFinish,
   onCancelTiebreaker: _onCancelTiebreaker,
   // Event tracking handlers (new)
   onTimePenalty,
@@ -598,6 +599,16 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     [currentMatch, onGoal, showInfo]
   );
 
+  // L1: Tiebreaker-Handler — leiten die Entscheidung an den Parent weiter (matchId).
+  const handleStartOvertime = useCallback(() => { if (!currentMatch) { return; } onStartOvertime?.(currentMatch.id); }, [currentMatch, onStartOvertime]);
+  const handleStartGoldenGoal = useCallback(() => { if (!currentMatch) { return; } onStartGoldenGoal?.(currentMatch.id); }, [currentMatch, onStartGoldenGoal]);
+  const handleStartPenaltyShootout = useCallback(() => {
+    if (!currentMatch) { return; }
+    onStartPenaltyShootout?.(currentMatch.id);
+  }, [currentMatch, onStartPenaltyShootout]);
+  // "Als Unentschieden beenden": MatchExecutionService.cancelTiebreaker persistiert als regulären Ausgang.
+  const handleEndAsDraw = useCallback(() => { if (!currentMatch) { return; } onForceFinish?.(currentMatch.id); }, [currentMatch, onForceFinish]);
+
   // ---------------------------------------------------------------------------
   // Early return AFTER all hooks
   // ---------------------------------------------------------------------------
@@ -1098,6 +1109,20 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         <AudioActivationBanner
           show={true}
           onActivate={sound.activate}
+        />
+      )}
+
+      {/* L1: Tiebreaker-Banner — MatchExecutionService.finishMatch setzt awaitingTiebreakerChoice,
+          useMatchExecution.handleFinish lädt das Match neu, der Zustand kommt hier an. */}
+      {match.awaitingTiebreakerChoice && (
+        <TiebreakerBanner
+          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
+          score={match.homeScore} tiebreakerMode={match.tiebreakerMode}
+          overtimeMinutes={Math.round((match.overtimeDurationSeconds ?? 300) / 60)}
+          onStartOvertime={onStartOvertime ? handleStartOvertime : undefined}
+          onStartGoldenGoal={onStartGoldenGoal ? handleStartGoldenGoal : undefined}
+          onStartPenaltyShootout={onStartPenaltyShootout ? handleStartPenaltyShootout : undefined}
+          onEndAsDraw={onForceFinish ? handleEndAsDraw : undefined}
         />
       )}
 
