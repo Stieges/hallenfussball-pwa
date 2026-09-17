@@ -77,3 +77,6 @@ ci_logs.txt
 
 # Local diagnostic artifacts (HAR analyses, screenshots from chrome-devtools MCP)
 .tmp-repro/
+
+# Vitest coverage output (M0)
+coverage/

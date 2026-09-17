@@ -21,6 +21,7 @@
 | **`supabase/setup-cli` pinnen** | Niedrig | Offen | `version: latest` im Drift-Check ist flaky: Run `33303138564` (2026-08-30) starb an „Failed to resolve latest Supabase CLI release: rate limit exceeded". Seit der Fail-Loud-Umstellung kostet jeder Flake ein falsches Alarmsignal. Auf konkrete CLI-Version pinnen |
 | **Drift-Check auf Fork-PRs** | Niedrig | Offen | Öffentliches Repo: Fork-PRs bekommen keine Secrets, der Check schlägt seit der Fail-Loud-Umstellung für externe Beiträge rot fehl (vorher grün übersprungen). Kein Merge-Blocker (nicht in den Required Checks). Falls externe Beiträge gewünscht: `if: github.event.pull_request.head.repo.full_name == github.repository` |
 | **PDF-Export ohne Testabdeckung** | Niedrig | Offen | Weder Vitest noch Playwright berühren `src/lib/pdfExporter.ts` / `pdfStatisticsExporter.ts`. Beim dompurify/fflate-Bump gab es deshalb keinen automatischen Nachweis; manueller Smoke musste einspringen |
+| ~~Testabdeckung wird nicht erfasst~~ | – | ✅ Erledigt 2026-09-17 | `npm run test:coverage` (v8), CI lädt `coverage-report` als Artefakt hoch (non-blocking). **Baseline:** Stmts 56.32 % · Branches 46.18 % · Funcs 48.71 % · Lines 57.37 %. Thresholds bewusst entfernt, bis Schwellen aus der Baseline abgeleitet sind. Bekannt lückenlos ungetestet: `LiveViewScreen`, `MonitorDisplayPage`, `LiveCockpit`, `DangerZone`, `ScheduleDisplay` (M1–M3 schließen das) |
 
 ---
 

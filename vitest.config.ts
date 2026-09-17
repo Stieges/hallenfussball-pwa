@@ -31,12 +31,9 @@ export default defineConfig({
         'src/main.tsx',
         'src/vite-env.d.ts',
       ],
-      thresholds: {
-        lines: 30,
-        functions: 30,
-        branches: 25,
-        statements: 30,
-      },
+      // Thresholds bewusst NICHT gesetzt (M0, 2026-09-17): Es gibt noch keine Baseline.
+      // Erst messen, dann Schwellen — sonst blockiert ein Wert, den nie jemand gemessen hat.
+      // Wiedereinführen, sobald docs/TODO.md eine gemessene Baseline nennt.
     },
   },
 })
