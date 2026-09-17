@@ -1,7 +1,63 @@
 # TODO - Hallenfußball PWA
 
 > Zentrale Aufgabenliste für das Projekt. Neue Aufgaben werden hier erfasst.
-> **Letzte Aktualisierung:** 2026-01-20
+> **Letzte Aktualisierung:** 2026-09-17
+
+---
+
+## 🔵 Analyse-Triage 2026-07-13/14 (PR #167) — ✅ GEMERGED 2026-07-16 als `5efdc5b`
+
+Triage der externen SWOT-Auswertung. Plan: `docs/superpowers/plans/2026-07-13-analyse-triage.md`, Ledger: `.superpowers/sdd/progress.md`.
+Die Task-Commit-Hashes unten leben im (gelöschten) PR-Branch weiter; auf main ist alles in Squash `5efdc5b`.
+
+### Erledigt (PR #167, Branch `chore/analyse-triage`)
+
+| Aufgabe | Commit | Status |
+|---|---|---|
+| Registration-Code-Client-Fallback entfernt (Secret nicht mehr im Bundle) | `9d03989` | ✅ |
+| CORS-Allowlist beide Edge Functions (deployed + curl-verifiziert) | `a86226c`, `bcc1130` | ✅ |
+| CSP Report-Only in vercel.json (+ theme-init.js extrahiert, img-src erweitert) | `01494ce`, `6a1671f` | ✅ |
+| Heartbeat-RLS gehärtet (Migration live angewendet, Negativ/Positiv-Test belegt) | `6077ba0` | ✅ |
+| Node-Engine angeglichen (.nvmrc 24 = engines) + README-Versionen | `f22ce16` | ✅ |
+| Legacy-Sync-Stack entfernt (−3.286 Zeilen: core/sync, HybridRepository, useSyncQueue, SyncIndicator, features/sync) | `966a429` | ✅ |
+| E2E-Fix: wizard.spec.ts hartkodiertes Datum → dynamisch (F-113) | `5e39f30` | ✅ |
+
+### Geprüft — kein Handlungsbedarf (Falsch-Positive der Auswertung)
+
+- `.mcp.json` „mit Secrets committed" → war **nie** in Git (gitignored seit jeher). Kein Leak, kein Token-Rotieren nötig.
+- `.env.local.bak` mit API-Key → nur lokale Disk, gitignored; Datei gelöscht (2026-07-13).
+- „SyncService implementieren" → Stack war toter Code ohne Aufrufer; korrekt war Löschen (siehe oben).
+
+### Neue Follow-ups aus der Triage
+
+| Aufgabe | Priorität | Status | Notizen |
+|---|---|---|---|
+| **Heartbeat-Pipeline reparieren** | Hoch | Offen | Pre-existing Prod-Bug: (a) Tabelle fehlte seit Jan. in Live-DB (Drift, 2026-07-13 nachgezogen), (b) `MonitorDisplayPage` Upsert (`onConflict` + default `returning`) scheitert als anon an owner-only-SELECT-Policy → Heartbeats haben nie funktioniert. Empfehlung: security-definer RPC; Alternativen: enge anon-SELECT-Policy / insert-then-update ohne returning. Details: `.superpowers/sdd/task-4-report.md` |
+| ~~Drift-Check-Workflow prüfen~~ | – | ✅ Geklärt 2026-09-17 | **Root Cause: Repo hatte nie Secrets.** Skip-Pfad endete mit `exit 0` → seit Mai jeder Run „grün" ohne je zu laufen. Fix: Skip → `exit 1` (Hygiene-PR). Läuft real erst, wenn `SUPABASE_ACCESS_TOKEN` gesetzt ist (User-Aktion unten) |
+| ~~CSP auf Enforce umstellen~~ | – | ✅ Erledigt 2026-07-16 | **PR #170 (`2e84a21`)**: Enforce live, 0 Blocks über alle Hauptrouten (frischer Kontext). eval-Quelle war Zods `allowsEval`-Probe → Fix via `public/zod-jitless.js` Pre-Module-Skript (PR #169) |
+| ~~BUG: `useSwAutoReload`~~ | – | ✅ Erledigt 2026-07-16 | **PR #169 (`b546586`) + #170 (`2e84a21`)**: Import build-aufgelöst, updateSW(true)-Wiring, skipWaiting→false (Zwei-Phasen-Rollout). **Update-Flow live bewiesen**: Phase-A-Tab → Toast → Auto-Reload → Phase-B-Bundle. Sentry Issue D root-caused + gefixt |
+| ~~Heartbeat-Pipeline reparieren~~ | – | ✅ Erledigt 2026-07-16 | **PR #169**: security-definer RPC `record_monitor_heartbeat` (Konsistenz + Sichtbarkeits-Check), Client-Fix `cacheStatus.status` (echte Root-Cause: CHECK-Verstoß durch `'online'`), Realtime-Publication ergänzt. Endpoint als anon bewiesen (42501-Probe). ⚠️ Browser-E2E offen bis erster echter Monitor existiert (Prod hat 0 Monitore) |
+| **User-Aktionen** | Info | Offen | (1) Sentry-Issue D („virtual:pwa-register") resolven — gefixt in #169/#170. (2) Dauer-Monitore einmalig neu laden. (3) **`SUPABASE_ACCESS_TOKEN` setzen:** Supabase-Dashboard → Account → Access Tokens → Generate → `gh secret set SUPABASE_ACCESS_TOKEN` — bis dahin schlägt der tägliche Drift-Check absichtlich fehl. (4) Supabase **Pro-Plan** erwägen (kein Auto-Pause, Backups) — für Oktober-Live mit echten Vereinen die belastbarere Basis |
+| `useMonitorHeartbeats.ts` any-Cast ablösen | Niedrig | Offen | Types enthalten `monitor_heartbeats` jetzt (regeneriert in #169) — eslint-disable + Cast in Z. 84-85 obsolet |
+| **UI-Polish-Pass** | Mittel | Offen | User-Wunsch 2026-07-16: „optisch müssen wir auch was machen" — Funktionalität geht vor; Umfang/Prioritäten mit User klären (Kandidaten: Consent-Dialog, Dashboard-Karten, lose Komponenten in src/components/) |
+| **Dependabot production-Gruppe** | – | ✅ Erledigt 2026-07-16 | #166 von Dependabot durch #168 ersetzt (9 Updates, frisch gegen main) → CI komplett grün → **gemerged als `ecf2db9`** |
+| **Kuratierter dev-deps-Bump** | Mittel | Offen | #165 und #180 geschlossen (TypeScript-7-Major bricht typescript-eslint). Ersatz: manueller Bump nach Muster PR #155, **TS 7 ausgenommen**. Zielversionen aus den 53 offenen Dev-Alerts: vite ≥8.0.16, undici ≥7.29.0, fast-uri ≥3.1.6, postcss ≥8.5.18, brace-expansion ≥2.1.2, hono ≥4.12.25, ip-address ≥10.3.1, browserslist ≥4.28.7, @babel/plugin-transform-modules-systemjs ≥7.29.4 |
+| **AI-Hub-Delegation aus Subagents** | Niedrig | Dokumentiert | Auto-Mode-Classifier hard-blockt Code-an-Hub aus Subagents (final, autoMode.environment reicht nicht). Workaround: Default-Mode (Shift+Tab) für Hub-Delegations-Sessions. Skript `aihub-chat.mjs` selbst voll funktionsfähig |
+| **CORS × Preview-Deployments** | Niedrig | Offen | Registrierung/Merge scheitern auf Vercel-Previews designbedingt an CORS; bei Bedarf Preview-Origin in `ALLOWED_ORIGINS`-Secret |
+| `useRegisterForm.validateForm` toter Code | Niedrig | Offen | RegisterScreen definiert eigenes validateForm (Duplikat); konsolidieren |
+| RLS-Policies role-scopen (`TO anon`) | Niedrig | Offen | Heartbeat-Policies gelten für PUBLIC (Muster der Basis-Migration); im Zuge des Heartbeat-Fixes mitziehen |
+| `docs/HOSTING-DATA-OVERVIEW.md` aktualisieren | Niedrig | Offen | Dokumentiert `VITE_REGISTRATION_CODE` noch als Vercel-Env-Var (Zeile ~322/335) — ist jetzt nur noch Supabase-Function-Secret |
+| Auth-Sentry-Follow-ups (3 Items) | Niedrig | Offen | Timeout-Label, Release-Tag, cacheHit-Logging — siehe Memory-Anker `auth-followups-2026-05-25` |
+| ~~Supabase pausiert (Free-Plan, 7-Tage-Regel)~~ | – | ✅ Erledigt 2026-09-17 | 2× passiert (Juli, September). Restore via MCP + **Keep-Alive-Workflow** `.github/workflows/supabase-keep-alive.yml` (alle 3 Tage REST-Query, fail-loud). Secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_ID` gesetzt |
+| ~~Dependabot #181 (production)~~ | – | ✅ Gemerged 2026-09-17 | 10 Patch/Minor-Bumps; schließt Runtime-High-Alert react-router |
+| ~~Runtime-Alerts dompurify/fflate~~ | – | ✅ Erledigt 2026-09-17 | 11 Alerts via `npm update` (beide nur über jspdf) — Hygiene-PR |
+| ~~Stale Remote-Branches~~ | – | ✅ Gelöscht 2026-09-17 | 17 Stück: 5 Feature-Branches gemergter Squash-PRs + 12 Dependabot-Reste. Remote hält jetzt nur noch `main` |
+| **Leaked-Password-Protection aktivieren** | Niedrig | Offen | Supabase-Advisor-WARN (2026-09-17): `auth_leaked_password_protection` ist deaktiviert. Reiner Dashboard-Schalter (Auth → Policies), prüft Passwörter gegen HaveIBeenPwned |
+| **Oktober-Scope entscheiden** | **Hoch** | Offen | B1 komplett ≈ 4,5–5,5 Wo nach M0 → nicht vor Ende Oktober. Optionen: A) B1-Mini „Zuschauer-Layer" (series + series_id + Serien-Admin + `/serie/:code` mit QR, ≈2–2,5 Wo, Empfehlung) · B) B1 komplett · C) Oktober ohne Serie. Entscheidung Daniel, Details im Restart-Plan 2026-09-17 |
+
+### Nächstes Hauptthema danach
+
+➡️ **B1-M0 abschließen** (Branch `refactor/route-registry-and-generic-queue`, Plan `docs/superpowers/plans/2026-07-17-b1-m0-refactorings.md`), danach **Oktober-Scope-Entscheidung** (siehe Tabelle oben) vor dem M1-Plan.
 
 ---
 
