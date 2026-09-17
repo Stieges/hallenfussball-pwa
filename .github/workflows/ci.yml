@@ -33,6 +33,20 @@ jobs:
       - name: Run Tests
         run: npm test -- --run --reporter=verbose
 
+      - name: Coverage report (non-blocking)
+        run: npm run test:coverage -- --reporter=dot 2>&1 | tee coverage-summary.txt | tail -40
+        continue-on-error: true
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage/
+            coverage-summary.txt
+          retention-days: 14
+
   e2e-tests:
     name: E2E Tests (${{ matrix.project }})
     runs-on: ubuntu-latest
