@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Tournament, TournamentStatsSnapshot, TRASH_RETENTION_DAYS } from '../types/tournament';
+import { Tournament, TRASH_RETENTION_DAYS } from '../types/tournament';
 import { useRepository } from '../hooks/useRepository';
 import { migrateLocationsToStructured } from '../utils/locationHelpers';
 import {
@@ -8,6 +8,7 @@ import {
   getExpiredTrashedTournaments,
   getRemainingDays,
 } from '../utils/tournamentCategories';
+import { createStatsSnapshot, buildFinishTournamentPatch } from '../utils/tournamentStats';
 
 /**
  * Custom hook for managing tournaments
@@ -212,46 +213,13 @@ export const useTournaments = () => {
   // ============================================================================
 
   /**
-   * Create stats snapshot for archiving
-   */
-  const createStatsSnapshot = (tournament: Tournament): TournamentStatsSnapshot => {
-    const matches = tournament.matches;
-    const teams = tournament.teams;
-
-    const totalMatches = matches.length;
-    const completedMatches = matches.filter(
-      m => typeof m.scoreA === 'number' && typeof m.scoreB === 'number'
-    ).length;
-
-    const totalGoals = matches.reduce((sum, m) => {
-      return sum + (m.scoreA ?? 0) + (m.scoreB ?? 0);
-    }, 0);
-
-    return {
-      teamCount: teams.length,
-      totalMatches,
-      completedMatches,
-      totalGoals,
-      createdAt: new Date().toISOString(),
-    };
-  };
-
-  /**
    * Finish tournament: Mark as completed and create stats snapshot
    */
   const finishTournament = useCallback(async (id: string) => {
     const tournament = tournaments.find(t => t.id === id);
     if (!tournament) { return; }
 
-    const updated: Tournament = {
-      ...tournament,
-      manuallyCompleted: true,
-      completedAt: new Date().toISOString(),
-      statsSnapshot: createStatsSnapshot(tournament),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await saveTournament(updated);
+    await saveTournament({ ...tournament, ...buildFinishTournamentPatch(tournament) });
   }, [saveTournament, tournaments]);
 
   /**
