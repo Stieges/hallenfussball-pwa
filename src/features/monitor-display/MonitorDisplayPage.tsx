@@ -34,7 +34,8 @@ import type {
   MonitorTheme,
 } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus, CacheStatus } from '../../types/monitor';
-import { getAllTournaments } from '../../services/api';
+import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
+import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
 import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
@@ -43,7 +44,7 @@ import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import { usePixelShift } from '../../hooks/usePixelShift';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
@@ -902,6 +903,9 @@ export function MonitorDisplayPage({
   const [isPaused, setIsPaused] = useState(false);
   const [lastFetch, setLastFetch] = useState<number>(() => Date.now());
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
+  // L2: welche Quelle das Turnier geliefert hat — steuert, ob useLiveMatches den
+  // Anon-Realtime-Pfad nutzen darf (nur sinnvoll, wenn das Turnier nachweislich aus der Cloud kam).
+  const [dataSource, setDataSource] = useState<'cloud' | 'local' | null>(null);
 
   // Live match events for animations
   const {
@@ -909,7 +913,7 @@ export function MonitorDisplayPage({
     clearLastGoalEvent,
     lastCardEvent,
     clearLastCardEvent,
-  } = useLiveMatches(tournamentId);
+  } = useLiveMatches(tournamentId, { allowPublicRealtime: dataSource === 'cloud' });
 
   // Ref to track if a fetch is in progress (prevents race conditions)
   const isFetchingRef = useRef(false);
@@ -956,11 +960,32 @@ export function MonitorDisplayPage({
     isFetchingRef.current = true;
 
     try {
-      const tournaments = await getAllTournaments();
-      const found = tournaments.find((t: Tournament) => t.id === tournamentId);
+      let found: Tournament | null = null;
+      let source: 'cloud' | 'local' = 'local';
+
+      // L2: Cloud zuerst — ein Hallen-Monitor läuft auf einem fremden Gerät ohne localStorage.
+      if (isSupabaseConfigured) {
+        try {
+          found = await new SupabaseRepository().get(tournamentId);
+          if (found) { source = 'cloud'; }
+        } catch (err) {
+          console.warn('[MonitorDisplay] Supabase-Lookup fehlgeschlagen, versuche lokal:', err);
+        }
+      }
+      if (!found) {
+        try {
+          found = await new LocalStorageRepository().get(tournamentId);
+          if (found) { source = 'local'; }
+        } catch (err) {
+          console.warn('[MonitorDisplay] LocalStorage-Lookup fehlgeschlagen:', err);
+        }
+      }
 
       if (!found) {
-        setError(`Turnier nicht gefunden: ${tournamentId}`);
+        setError(
+          `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
+          'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Öffentlich freigeben" stehen.'
+        );
         setLoading(false);
         return;
       }
@@ -974,6 +999,7 @@ export function MonitorDisplayPage({
 
       setTournament(found);
       setMonitor(foundMonitor);
+      setDataSource(source);
       setLastFetch(Date.now());
       setLoading(false);
     } catch (err) {
