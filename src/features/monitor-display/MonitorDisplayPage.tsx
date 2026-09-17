@@ -998,6 +998,12 @@ export function MonitorDisplayPage({
     // die Realtime-Subscription in useLiveMatches bei jedem Aussetzer ab-/wieder anmelden).
     const hadData = hasDataRef.current;
 
+    // Ein leeres Ergebnis und ein fehlgeschlagener Aufruf sind nicht dasselbe:
+    // SupabaseRepository.get() liefert bei fehlender Zeile sauber `null` zurück und wirft nicht.
+    // Nur ein echter Fehler (Timeout, Netz, RLS-Ausnahme) rechtfertigt es, einen bestehenden
+    // Bildschirm unverändert stehen zu lassen — eine bestätigte Löschung muss sichtbar werden.
+    let lookupFailed = false;
+
     try {
       let found: Tournament | null = null;
       let source: 'cloud' | 'local' = 'local';
@@ -1010,6 +1016,7 @@ export function MonitorDisplayPage({
           found = await withTimeout(new SupabaseRepository().get(tournamentId), CLOUD_TIMEOUT_MS);
           if (found) { source = 'cloud'; }
         } catch (err) {
+          lookupFailed = true;
           console.warn('[MonitorDisplay] Supabase-Lookup fehlgeschlagen, versuche lokal:', err);
         }
       }
@@ -1018,13 +1025,16 @@ export function MonitorDisplayPage({
           found = await new LocalStorageRepository().get(tournamentId);
           if (found) { source = 'local'; }
         } catch (err) {
+          lookupFailed = true;
           console.warn('[MonitorDisplay] LocalStorage-Lookup fehlgeschlagen:', err);
         }
       }
 
       if (!found) {
-        // Wir hatten schon Daten: der Poll war nur ein Aussetzer. Alten Stand behalten.
-        if (hadData) { return; }
+        // Nur bei einem echten Fehlschlag den bestehenden Stand halten. Wenn alle Abrufe
+        // sauber durchliefen und nichts lieferten, ist das Turnier bestätigt weg —
+        // das gehört auf den Schirm.
+        if (hadData && lookupFailed) { return; }
         setError(
           `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
           'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Öffentlich freigeben" stehen.'
@@ -1035,7 +1045,9 @@ export function MonitorDisplayPage({
 
       const foundMonitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId);
       if (!foundMonitor) {
-        if (hadData) { return; }
+        // Der Turnier-Abruf war erfolgreich; dieser Monitor existiert definitiv nicht mehr.
+        // Kein hadData-Schutz: sonst liefe der Bildschirm ewig mit den Slides eines
+        // gelöschten Monitors weiter, ohne dass jemand es merkt.
         setError(`Monitor nicht gefunden: ${monitorId}`);
         setLoading(false);
         return;

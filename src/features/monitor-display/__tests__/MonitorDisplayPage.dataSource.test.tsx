@@ -125,3 +125,55 @@ describe('MonitorDisplayPage — Poll-Resilienz (Fix-Runde)', () => {
     expect(useLiveMatchesSpy).toHaveBeenLastCalledWith('tour-1', { allowPublicRealtime: true });
   });
 });
+
+// =============================================================================
+// Fix-Runde 2 nach Re-Review: ein leeres Ergebnis und ein fehlgeschlagener Aufruf sind
+// nicht dasselbe. SupabaseRepository.get() liefert bei fehlender Zeile sauber `null`
+// zurück und wirft nicht — ein sauberer leerer Treffer ist eine bestätigte Löschung
+// (Monitor oder ganzes Turnier), kein Aussetzer, und muss sichtbar werden. Nur ein
+// echter Fehlschlag (Reject/Timeout) rechtfertigt es, den bestehenden Stand zu halten.
+// =============================================================================
+describe('MonitorDisplayPage — bestätigte Abwesenheit vs. transienter Fehler (Fix-Runde 2)', () => {
+  const POLLING_INTERVAL_MS = 10_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    supabaseGet.mockResolvedValue(cloudTournament);
+    localGet.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('Important: ein gelöschter Monitor wird nach erfolgreichem Laden sichtbar gemeldet (kein hadData-Schutz)', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+
+    // Poll 2: Der Turnier-Abruf läuft sauber durch (kein Reject!), aber der Monitor
+    // wurde vom Organisator gelöscht — monitors enthält "mon-1" nicht mehr.
+    supabaseGet.mockResolvedValueOnce({ ...cloudTournament, monitors: [] });
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-error-message')).toHaveTextContent('Monitor nicht gefunden: mon-1');
+  });
+
+  it('Important: ein bestätigt gelöschtes Turnier wird sichtbar gemeldet, obwohl vorher schon Daten da waren', async () => {
+    render(<MonitorDisplayPage tournamentId="tour-1" monitorId="mon-1" onBack={vi.fn()} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText('Willkommen in der Halle')).toBeInTheDocument();
+
+    // Poll 2: beide Repos lösen sauber zu null auf (kein Reject) — bestätigt weg,
+    // im Gegensatz zum "Critical"-Test oben, wo Supabase mit einem Reject scheitert
+    // und der Bildschirm unverändert bleiben muss.
+    supabaseGet.mockResolvedValueOnce(null);
+    localGet.mockResolvedValueOnce(null);
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLLING_INTERVAL_MS); });
+
+    expect(screen.getByTestId('monitor-error-state')).toBeInTheDocument();
+    expect(screen.getByTestId('monitor-error-message')).toHaveTextContent('Turnier nicht gefunden: tour-1');
+  });
+});
