@@ -1043,7 +1043,7 @@ export function MonitorDisplayPage({
         if (hadData && lookupFailed) { return; }
         setError(
           `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
-          'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Öffentlich freigeben" stehen.'
+          'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" oder "Öffentlich gelistet" stehen.'
         );
         setLoading(false);
         return;
