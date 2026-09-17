@@ -32,6 +32,27 @@ export interface SyncConflict {
     remoteUser?: string;
 }
 
+/**
+ * Stabiler Vergleichs-Schlüssel für JSON-artige Werte.
+ *
+ * Nötig, weil Postgres `jsonb` die Schlüsselreihenfolge NICHT erhält: ein Objekt, das über
+ * tournaments.config in die Cloud geschrieben und wieder gelesen wird, kommt in interner
+ * Sortierung zurück (Länge, dann lexikografisch), während die lokale Kopie ihre ursprüngliche
+ * Reihenfolge behält. Ein roher JSON.stringify-Vergleich meldet deshalb ab dem ersten
+ * Cloud-Round-Trip bei JEDEM Sync eine Änderung und erzwingt dauerhaft den Voll-Save-Pfad.
+ * Empirisch am Live-Projekt belegt (2026-09-17).
+ */
+function stableKey(value: unknown): string {
+    return JSON.stringify(value, (_k, v: unknown) => {
+        if (v === null || typeof v !== 'object' || Array.isArray(v)) { return v; }
+        const source = v as Record<string, unknown>;
+        return Object.keys(source).sort().reduce<Record<string, unknown>>((acc, key) => {
+            acc[key] = source[key];
+            return acc;
+        }, {});
+    });
+}
+
 export class OfflineRepository implements ITournamentRepository {
     private _mutationQueue: MutationQueue;
 
@@ -336,8 +357,8 @@ export class OfflineRepository implements ITournamentRepository {
         // L3: Monitor-/Sponsoren-Konfiguration liegt im config-JSONB und wird nur vom Voll-Save
         // transportiert. Ohne diese Prüfung meldet der Delta-Sync "keine Änderung", zieht die
         // lokale Version herunter und die Änderung erreicht die Cloud nie.
-        if (JSON.stringify(local.monitors) !== JSON.stringify(remote.monitors)) {return true;}
-        if (JSON.stringify(local.sponsors) !== JSON.stringify(remote.sponsors)) {return true;}
+        if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
+        if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
 
         return false;
     }

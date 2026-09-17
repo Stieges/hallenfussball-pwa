@@ -129,6 +129,35 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.save).toHaveBeenCalled();
     });
 
+    it('L3: meldet KEINE Änderung, wenn sich nur die Schlüsselreihenfolge unterscheidet (jsonb-Round-Trip)', async () => {
+        // Postgres jsonb re-serializes in internal order (key length, then lexicographic).
+        // Local keeps whatever order the app built. stableKey() must normalize for comparison.
+        const monitorLocal = { id: 'mon-1', name: 'Haupthalle', slides: [] };
+        const monitorRemote = { slides: [], name: 'Haupthalle', id: 'mon-1' }; // Different key order, identical data
+        const localT = { ...baseTournament, monitors: [monitorLocal], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [monitorRemote as any], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        // Without stableKey fix, this fails: JSON.stringify sees different strings due to key order
+        // With the fix, same data in different key order is recognized as identical
+        expect(mockSupabase.save).not.toHaveBeenCalled(); // No full save needed
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled(); // No changes at all
+    });
+
+    it('L3: meldet EINE Änderung, wenn sich die Slide-Reihenfolge unterscheidet (semantisch bedeutsam)', async () => {
+        // Slide array order is the slideshow sequence and is meaningful
+        const monitorLocal = { id: 'mon-1', name: 'Haupthalle', slides: [{ id: 's1' }, { id: 's2' }] };
+        const monitorRemote = { id: 'mon-1', name: 'Haupthalle', slides: [{ id: 's2' }, { id: 's1' }] }; // Slides reordered
+        const localT = { ...baseTournament, monitors: [monitorLocal], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [monitorRemote as any], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        // stableKey preserves array order (only sorts objects), so different slide order is detected
+        expect(mockSupabase.save).toHaveBeenCalled(); // Full save due to slide array change
+    });
+
     it('should update local version after successful sync', async () => {
         const localT = { ...baseTournament, title: 'Updated', version: 2 };
         const remoteT = { ...baseTournament, version: 1 }; // Remote is behind
