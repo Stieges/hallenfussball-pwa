@@ -14,6 +14,9 @@ on:
       - 'supabase/migrations/**'
   workflow_dispatch: # Manual trigger
 
+permissions:
+  contents: read
+
 jobs:
   drift-check:
     name: Compare live schema vs committed types

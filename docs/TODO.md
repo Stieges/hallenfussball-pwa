@@ -5,6 +5,25 @@
 
 ---
 
+## 🟠 Restart 2026-09-17 — Infra-Hygiene nach 2 Monaten Pause
+
+> Nach 62 Tagen ohne Commit: Supabase pausiert, CI-Guard-Rails still kaputt. Plan (lokal, gitignored): `docs/superpowers/plans/2026-09-17-restart-infra-hygiene.md`.
+
+| Aufgabe | Priorität | Status | Notizen |
+|---|---|---|---|
+| ~~Supabase pausiert (Free-Plan, 7-Tage-Regel)~~ | – | ✅ Erledigt 2026-09-17 | 2× passiert (Juli, September). Restore via MCP + **Keep-Alive-Workflow** `.github/workflows/supabase-keep-alive.yml` (alle 3 Tage REST-Query, fail-loud). Secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_ID` gesetzt |
+| ~~Dependabot #181 (production)~~ | – | ✅ Gemerged 2026-09-17 | 10 Patch/Minor-Bumps; schließt Runtime-High-Alert react-router |
+| ~~Runtime-Alerts dompurify/fflate~~ | – | ✅ Erledigt 2026-09-17 | 11 Alerts via `npm update` (beide nur über jspdf) — Hygiene-PR |
+| ~~Stale Remote-Branches~~ | – | ✅ Gelöscht 2026-09-17 | 17 Stück: 5 Feature-Branches gemergter Squash-PRs + 12 Dependabot-Reste. Remote hält jetzt nur noch `main` |
+| **Leaked-Password-Protection aktivieren** | Niedrig | Offen | Supabase-Advisor-WARN (2026-09-17): `auth_leaked_password_protection` ist deaktiviert. Reiner Dashboard-Schalter (Auth → Policies), prüft Passwörter gegen HaveIBeenPwned |
+| **Oktober-Scope entscheiden** | **Hoch** | Offen | B1 komplett ≈ 4,5–5,5 Wo nach M0 → nicht vor Ende Oktober. Optionen: A) B1-Mini „Zuschauer-Layer" (series + series_id + Serien-Admin + `/serie/:code` mit QR, ≈2–2,5 Wo, Empfehlung) · B) B1 komplett · C) Oktober ohne Serie. Entscheidung Daniel, Details im Restart-Plan 2026-09-17 |
+| **Scheduled-Workflows sterben nach 60 Tagen Inaktivität** | Mittel | Offen | GitHub deaktiviert `schedule`-Workflows in **öffentlichen** Repos nach 60 Tagen ohne Repo-Aktivität — und meldet das nicht. Die Juli→September-Lücke war 62 Tage; dass der Drift-Check weiterlief, lag allein an Dependabot-PRs, die als Aktivität zählten. Der Keep-Alive hängt damit an Dependabot. Fällt der aus, stirbt der Keep-Alive still und Supabase pausiert ~7 Tage später. Stärkstes Argument für den Pro-Plan (kein Auto-Pause, kein Keep-Alive nötig) |
+| **`supabase/setup-cli` pinnen** | Niedrig | Offen | `version: latest` im Drift-Check ist flaky: Run `33303138564` (2026-08-30) starb an „Failed to resolve latest Supabase CLI release: rate limit exceeded". Seit der Fail-Loud-Umstellung kostet jeder Flake ein falsches Alarmsignal. Auf konkrete CLI-Version pinnen |
+| **Drift-Check auf Fork-PRs** | Niedrig | Offen | Öffentliches Repo: Fork-PRs bekommen keine Secrets, der Check schlägt seit der Fail-Loud-Umstellung für externe Beiträge rot fehl (vorher grün übersprungen). Kein Merge-Blocker (nicht in den Required Checks). Falls externe Beiträge gewünscht: `if: github.event.pull_request.head.repo.full_name == github.repository` |
+| **PDF-Export ohne Testabdeckung** | Niedrig | Offen | Weder Vitest noch Playwright berühren `src/lib/pdfExporter.ts` / `pdfStatisticsExporter.ts`. Beim dompurify/fflate-Bump gab es deshalb keinen automatischen Nachweis; manueller Smoke musste einspringen |
+
+---
+
 ## 🔵 Analyse-Triage 2026-07-13/14 (PR #167) — ✅ GEMERGED 2026-07-16 als `5efdc5b`
 
 Triage der externen SWOT-Auswertung. Plan: `docs/superpowers/plans/2026-07-13-analyse-triage.md`, Ledger: `.superpowers/sdd/progress.md`.
@@ -32,7 +51,6 @@ Die Task-Commit-Hashes unten leben im (gelöschten) PR-Branch weiter; auf main i
 
 | Aufgabe | Priorität | Status | Notizen |
 |---|---|---|---|
-| **Heartbeat-Pipeline reparieren** | Hoch | Offen | Pre-existing Prod-Bug: (a) Tabelle fehlte seit Jan. in Live-DB (Drift, 2026-07-13 nachgezogen), (b) `MonitorDisplayPage` Upsert (`onConflict` + default `returning`) scheitert als anon an owner-only-SELECT-Policy → Heartbeats haben nie funktioniert. Empfehlung: security-definer RPC; Alternativen: enge anon-SELECT-Policy / insert-then-update ohne returning. Details: `.superpowers/sdd/task-4-report.md` |
 | ~~Drift-Check-Workflow prüfen~~ | – | ✅ Geklärt 2026-09-17 | **Root Cause: Repo hatte nie Secrets.** Skip-Pfad endete mit `exit 0` → seit Mai jeder Run „grün" ohne je zu laufen. Fix: Skip → `exit 1` (Hygiene-PR). Läuft real erst, wenn `SUPABASE_ACCESS_TOKEN` gesetzt ist (User-Aktion unten) |
 | ~~CSP auf Enforce umstellen~~ | – | ✅ Erledigt 2026-07-16 | **PR #170 (`2e84a21`)**: Enforce live, 0 Blocks über alle Hauptrouten (frischer Kontext). eval-Quelle war Zods `allowsEval`-Probe → Fix via `public/zod-jitless.js` Pre-Module-Skript (PR #169) |
 | ~~BUG: `useSwAutoReload`~~ | – | ✅ Erledigt 2026-07-16 | **PR #169 (`b546586`) + #170 (`2e84a21`)**: Import build-aufgelöst, updateSW(true)-Wiring, skipWaiting→false (Zwei-Phasen-Rollout). **Update-Flow live bewiesen**: Phase-A-Tab → Toast → Auto-Reload → Phase-B-Bundle. Sentry Issue D root-caused + gefixt |
@@ -48,12 +66,6 @@ Die Task-Commit-Hashes unten leben im (gelöschten) PR-Branch weiter; auf main i
 | RLS-Policies role-scopen (`TO anon`) | Niedrig | Offen | Heartbeat-Policies gelten für PUBLIC (Muster der Basis-Migration); im Zuge des Heartbeat-Fixes mitziehen |
 | `docs/HOSTING-DATA-OVERVIEW.md` aktualisieren | Niedrig | Offen | Dokumentiert `VITE_REGISTRATION_CODE` noch als Vercel-Env-Var (Zeile ~322/335) — ist jetzt nur noch Supabase-Function-Secret |
 | Auth-Sentry-Follow-ups (3 Items) | Niedrig | Offen | Timeout-Label, Release-Tag, cacheHit-Logging — siehe Memory-Anker `auth-followups-2026-05-25` |
-| ~~Supabase pausiert (Free-Plan, 7-Tage-Regel)~~ | – | ✅ Erledigt 2026-09-17 | 2× passiert (Juli, September). Restore via MCP + **Keep-Alive-Workflow** `.github/workflows/supabase-keep-alive.yml` (alle 3 Tage REST-Query, fail-loud). Secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_PROJECT_ID` gesetzt |
-| ~~Dependabot #181 (production)~~ | – | ✅ Gemerged 2026-09-17 | 10 Patch/Minor-Bumps; schließt Runtime-High-Alert react-router |
-| ~~Runtime-Alerts dompurify/fflate~~ | – | ✅ Erledigt 2026-09-17 | 11 Alerts via `npm update` (beide nur über jspdf) — Hygiene-PR |
-| ~~Stale Remote-Branches~~ | – | ✅ Gelöscht 2026-09-17 | 17 Stück: 5 Feature-Branches gemergter Squash-PRs + 12 Dependabot-Reste. Remote hält jetzt nur noch `main` |
-| **Leaked-Password-Protection aktivieren** | Niedrig | Offen | Supabase-Advisor-WARN (2026-09-17): `auth_leaked_password_protection` ist deaktiviert. Reiner Dashboard-Schalter (Auth → Policies), prüft Passwörter gegen HaveIBeenPwned |
-| **Oktober-Scope entscheiden** | **Hoch** | Offen | B1 komplett ≈ 4,5–5,5 Wo nach M0 → nicht vor Ende Oktober. Optionen: A) B1-Mini „Zuschauer-Layer" (series + series_id + Serien-Admin + `/serie/:code` mit QR, ≈2–2,5 Wo, Empfehlung) · B) B1 komplett · C) Oktober ohne Serie. Entscheidung Daniel, Details im Restart-Plan 2026-09-17 |
 
 ### Nächstes Hauptthema danach
 
