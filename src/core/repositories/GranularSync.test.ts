@@ -108,6 +108,56 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
     });
 
+    it('L3: erzwingt einen Voll-Save wenn sich nur die Monitor-Konfiguration ändert', async () => {
+        const monitor = { id: 'mon-1', name: 'Haupthalle', slides: [] };
+        const localT = { ...baseTournament, monitors: [monitor], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        expect(mockSupabase.save).toHaveBeenCalled();
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    it('L3: erzwingt einen Voll-Save wenn sich nur die Sponsoren ändern', async () => {
+        const sponsor = { id: 'spo-1', name: 'Autohaus Muster' };
+        const localT = { ...baseTournament, sponsors: [sponsor], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        expect(mockSupabase.save).toHaveBeenCalled();
+    });
+
+    it('L3: meldet KEINE Änderung, wenn sich nur die Schlüsselreihenfolge unterscheidet (jsonb-Round-Trip)', async () => {
+        // Postgres jsonb re-serializes in internal order (key length, then lexicographic).
+        // Local keeps whatever order the app built. stableKey() must normalize for comparison.
+        const monitorLocal = { id: 'mon-1', name: 'Haupthalle', slides: [] };
+        const monitorRemote = { slides: [], name: 'Haupthalle', id: 'mon-1' }; // Different key order, identical data
+        const localT = { ...baseTournament, monitors: [monitorLocal], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [monitorRemote as any], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        // Without stableKey fix, this fails: JSON.stringify sees different strings due to key order
+        // With the fix, same data in different key order is recognized as identical
+        expect(mockSupabase.save).not.toHaveBeenCalled(); // No full save needed
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled(); // No changes at all
+    });
+
+    it('L3: meldet EINE Änderung, wenn sich die Slide-Reihenfolge unterscheidet (semantisch bedeutsam)', async () => {
+        // Slide array order is the slideshow sequence and is meaningful
+        const monitorLocal = { id: 'mon-1', name: 'Haupthalle', slides: [{ id: 's1' }, { id: 's2' }] };
+        const monitorRemote = { id: 'mon-1', name: 'Haupthalle', slides: [{ id: 's2' }, { id: 's1' }] }; // Slides reordered
+        const localT = { ...baseTournament, monitors: [monitorLocal], version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, monitors: [monitorRemote as any], version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+        await offlineRepo.syncUp();
+        // stableKey preserves array order (only sorts objects), so different slide order is detected
+        expect(mockSupabase.save).toHaveBeenCalled(); // Full save due to slide array change
+    });
+
     it('should update local version after successful sync', async () => {
         const localT = { ...baseTournament, title: 'Updated', version: 2 };
         const remoteT = { ...baseTournament, version: 1 }; // Remote is behind
@@ -138,5 +188,104 @@ describe('OfflineRepository - Granular Sync', () => {
         // Assert
         expect(mockSupabase.save).toHaveBeenCalled(); // Should trigger full save
         expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // M1-Fixwelle Fix 2: refreshFromCloudInBackground() muss lokal auch dann
+    // korrigieren, wenn die Version gleich bleibt, aber isPublic abweicht.
+    // Vor M1 hat der Mapper isPublic nie gelesen -> lokale Kopien tragen `undefined`.
+    // Bei gleichem Versionsstand griff der Refresh bisher NIE, und der nächste
+    // Voll-Save schrieb `is_public: false` erneut auf alle Team-/Spielzeilen.
+    // =========================================================================
+    it('Fix 2: refreshFromCloudInBackground schreibt lokal bei gleicher Version, wenn isPublic abweicht (vor M1 gecachte Kopie)', async () => {
+        // isPublic bewusst weggelassen -> undefined, wie bei einer vor M1 gecachten Kopie.
+        const localT = { ...baseTournament, version: 1 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 1 }; // echter Boolean seit K2, GLEICHE Version
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        // Privater Methodenzugriff, da refreshFromCloudInBackground() in get() nur
+        // fire-and-forget (`void ...`) aufgerufen wird und hier isoliert geprüft werden soll.
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).toHaveBeenCalledWith(cloudT);
+    });
+
+    it('Fix 2 (Kontrolle): refreshFromCloudInBackground schreibt NICHT, wenn Version UND isPublic gleich sind', async () => {
+        const localT = { ...baseTournament, isPublic: false, version: 1 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 1 };
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // M1-Fixwelle Fix 3: getMetadataChanges() (über syncTournamentDelta/syncUp) muss
+    // `isPublic: undefined` (vor M1 gecachte lokale Kopie) und `isPublic: false`
+    // (echter Boolean von der Cloud seit K2) als GLEICH behandeln. Ein roher
+    // Vergleich meldet sonst eine Phantom-Änderung, deren leerer Payload die
+    // Cloud-Version nicht bewegt, während die lokale Version trotzdem hochgezählt
+    // wird — das Gerät verliert danach dauerhaft alle Cloud-Updates.
+    // =========================================================================
+    it('Fix 3: isPublic undefined (lokal) vs. false (Cloud) meldet KEINE Metadaten-Änderung', async () => {
+        const localT = { ...baseTournament, version: 2 }; // isPublic undefined
+        const remoteT = { ...baseTournament, isPublic: false, version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // Re-Review der Fix-Welle, N2: Die Normalisierung aus Fix 3 durfte nicht in die
+    // andere Richtung kippen. Lokal `undefined` heißt "diese Kopie weiß es nicht"
+    // (vor M1 gecacht), nicht "false". Als `false` hochgeschrieben nähme eine
+    // veraltete lokale Kopie ein öffentliches Turnier wieder vom Netz — exakt der
+    // K1-Schaden, dessen Beseitigung dieser Meilenstein ist.
+    // =========================================================================
+    it('N2: isPublic undefined (lokal) vs. true (Cloud) nimmt das Turnier NICHT vom Netz', async () => {
+        const localT = { ...baseTournament, version: 2 }; // isPublic undefined, lokale Version voraus
+        const remoteT = { ...baseTournament, isPublic: true, version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const pushedVisibility = calls.some((call) => {
+            const payload = call[1] as { isPublic?: boolean } | undefined;
+            return payload !== undefined && 'isPublic' in payload;
+        });
+        expect(pushedVisibility).toBe(false);
+    });
+
+    // =========================================================================
+    // Re-Review der Fix-Welle, N3: `visibilityStale` aus Fix 2 hebelte die
+    // Versionsprüfung für den GANZEN Datensatz aus. Eine offline vorgenommene
+    // Veröffentlichung (lokale Version voraus, MutationQueue noch nicht abgespielt)
+    // hätte sich damit selbst mit dem älteren Cloud-Stand überschrieben.
+    // =========================================================================
+    it('N3: refreshFromCloudInBackground überschreibt eine NEUERE lokale Kopie nicht, nur weil isPublic abweicht', async () => {
+        const localT = { ...baseTournament, isPublic: true, shareCode: 'ABC123', version: 5 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 4 }; // ÄLTER
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).not.toHaveBeenCalled();
     });
 });

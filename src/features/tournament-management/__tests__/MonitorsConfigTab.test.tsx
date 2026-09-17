@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MonitorsConfigTab } from '../MonitorsConfigTab';
+import { useMonitors } from '../../../hooks';
 import type { Tournament } from '../../../types/tournament';
 import type { TournamentMonitor } from '../../../types/monitor';
 
@@ -35,7 +36,7 @@ vi.mock('../../../hooks', () => ({
 // WebSocket during this test — Vitest 4 + the new undici upgrade
 // surfaces the post-test WebSocket cleanup as an unhandled error.
 vi.mock('../../../hooks/useMonitorHeartbeats', () => ({
-  useMonitorHeartbeats: () => ({}),
+  useMonitorHeartbeats: () => new Map(),
 }));
 
 // Helper to create mock tournament (using unknown cast for test simplicity)
@@ -291,6 +292,27 @@ describe('MonitorsConfigTab', () => {
       await user.click(screen.getByText(/monitors\.createAndEdit/));
 
       expect(screen.getByText('tournament:monitors.errors.nameTooLong')).toBeInTheDocument();
+    });
+  });
+
+  // ==========================================================================
+  // L2-Vorbedingung: Sichtbarkeitshinweis
+  // ==========================================================================
+  describe('L2-Vorbedingung: Sichtbarkeitshinweis', () => {
+    const monitors = [{ id: 'mon-1', name: 'Haupthalle', slides: [] } as unknown as TournamentMonitor];
+
+    it('warnt, wenn Monitore konfiguriert sind und das Turnier nicht öffentlich ist', async () => {
+      vi.mocked(useMonitors).mockReturnValue({ monitors, createMonitor: mockCreateMonitor, deleteMonitor: mockDeleteMonitor, duplicateMonitor: mockDuplicateMonitor, getDisplayUrl: mockGetDisplayUrl } as never);
+      const tournament = { ...createMockTournament(monitors), isPublic: false };
+      render(<MonitorsConfigTab tournament={tournament} onTournamentUpdate={mockOnTournamentUpdate} />);
+      expect(await screen.findByTestId('monitor-visibility-warning')).toBeInTheDocument();
+    });
+
+    it('warnt nicht, wenn das Turnier öffentlich ist', () => {
+      vi.mocked(useMonitors).mockReturnValue({ monitors, createMonitor: mockCreateMonitor, deleteMonitor: mockDeleteMonitor, duplicateMonitor: mockDuplicateMonitor, getDisplayUrl: mockGetDisplayUrl } as never);
+      const tournament = { ...createMockTournament(monitors), isPublic: true };
+      render(<MonitorsConfigTab tournament={tournament} onTournamentUpdate={mockOnTournamentUpdate} />);
+      expect(screen.queryByTestId('monitor-visibility-warning')).not.toBeInTheDocument();
     });
   });
 

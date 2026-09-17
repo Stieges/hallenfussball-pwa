@@ -34,7 +34,8 @@ import type {
   MonitorTheme,
 } from '../../types/monitor';
 import { PERFORMANCE_PROFILES, calculateCacheStatus, CacheStatus } from '../../types/monitor';
-import { getAllTournaments } from '../../services/api';
+import { SupabaseRepository } from '../../core/repositories/SupabaseRepository';
+import { LocalStorageRepository } from '../../core/repositories/LocalStorageRepository';
 import { calculateStandings } from '../../utils/calculations';
 import { TeamAvatar } from '../../components/ui/TeamAvatar';
 import { useLiveMatches } from '../../hooks/useLiveMatches';
@@ -43,7 +44,8 @@ import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
 import { usePixelShift } from '../../hooks/usePixelShift';
-import { supabase } from '../../lib/supabase';
+import { useWakeLock } from '../../hooks/useWakeLock';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
@@ -145,6 +147,26 @@ function isValidUrl(url: string): boolean {
 function getSafeUrl(url: string | undefined, fallback: string): string {
   if (!url) {return fallback;}
   return isValidUrl(url) ? url : fallback;
+}
+
+// L2: SupabaseRepository.get() hat kein eingebautes Timeout. Ohne Begrenzung würde ein
+// hängender Request isFetchingRef dauerhaft auf true halten und damit jeden weiteren
+// Poll-Tick blockieren — beim Erstladen bliebe der Spinner stehen statt auf lokal
+// zurückzufallen. Bewusst deutlich UNTER der schnellsten konfigurierten pollingInterval
+// (PERFORMANCE_PROFILES.high = 5000ms, siehe types/monitor.ts) gewählt, damit ein Hänger
+// nicht auch noch den nächsten Poll-Tick verschluckt (der sonst wegen isFetchingRef
+// überspringen würde). Der zugrunde liegende Request läuft nach dem Timeout einfach weiter
+// im Hintergrund aus — wir warten nur nicht mehr darauf.
+const CLOUD_TIMEOUT_MS = 4_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Cloud-Anfrage nach ${ms}ms abgebrochen (Timeout)`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err: unknown) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
+    );
+  });
 }
 
 // =============================================================================
@@ -902,6 +924,9 @@ export function MonitorDisplayPage({
   const [isPaused, setIsPaused] = useState(false);
   const [lastFetch, setLastFetch] = useState<number>(() => Date.now());
   const [showCacheIndicator, setShowCacheIndicator] = useState(false);
+  // L2: welche Quelle das Turnier geliefert hat — steuert, ob useLiveMatches den
+  // Anon-Realtime-Pfad nutzen darf (nur sinnvoll, wenn das Turnier nachweislich aus der Cloud kam).
+  const [dataSource, setDataSource] = useState<'cloud' | 'local' | null>(null);
 
   // Live match events for animations
   const {
@@ -909,10 +934,35 @@ export function MonitorDisplayPage({
     clearLastGoalEvent,
     lastCardEvent,
     clearLastCardEvent,
-  } = useLiveMatches(tournamentId);
+  } = useLiveMatches(tournamentId, { allowPublicRealtime: dataSource === 'cloud' });
+
+  // L7: Hallen-Monitore laufen stundenlang unbeaufsichtigt; ohne Wake Lock dimmen Smart-TVs und
+  // Beamer-Laptops ab. Erst aktivieren, wenn ein Monitor geladen ist — auf der Fehlerseite wäre
+  // die Permission-Anfrage sinnlos. Kein Destructuring: noUnusedLocals ist aktiv.
+  useWakeLock(monitor !== null);
 
   // Ref to track if a fetch is in progress (prevents race conditions)
   const isFetchingRef = useRef(false);
+
+  // L2: Ref statt State — ein Poll, der bereits gültige Daten hat, soll bei einem
+  // Aussetzer NICHTS ändern (weder error noch dataSource). Als Ref, damit loadData()
+  // seine Identität nicht bei jedem erfolgreichen Poll wechselt — sonst würde der
+  // Polling-Effekt (der von loadData abhängt) das Intervall bei jedem Tick neu aufsetzen.
+  const hasDataRef = useRef(false);
+
+  // N1: Die Herkunft ebenfalls als Ref. Der Rückstufungs-Guard unten darf nur einen
+  // Bildschirm schützen, der gerade aus der Cloud bedient wird. Auf einem Gerät, das
+  // ohnehin lokal läuft (Netz dauerhaft weg, lokale Kopie vorhanden), wäre jeder Poll
+  // `lookupFailed && source === 'local'` — der Guard würde dann bei jedem Tick
+  // zurückkehren und lokale Änderungen nie mehr aufnehmen.
+  const dataSourceRef = useRef<'cloud' | 'local' | null>(null);
+
+  // Neues tournamentId/monitorId = neues Ziel — ein "hatte schon Daten" von der vorigen
+  // Route darf nicht einen echten Not-found-Fehler für das neue Ziel unterdrücken.
+  useEffect(() => {
+    hasDataRef.current = false;
+    dataSourceRef.current = null;
+  }, [tournamentId, monitorId]);
 
   // Derived state
   const performanceSettings = useMemo(
@@ -955,18 +1005,81 @@ export function MonitorDisplayPage({
 
     isFetchingRef.current = true;
 
+    // Ein späterer Poll darf einen früheren Fehler heilen, aber ein Poll, der bereits
+    // gültige Daten auf dem Bildschirm hat, darf bei einem Aussetzer NICHTS ändern —
+    // weder error setzen (Render-Gate ist `error || !tournament || !monitor`, also friert
+    // der Bildschirm sonst auf der Fehlerseite ein) noch dataSource umschalten (das würde
+    // die Realtime-Subscription in useLiveMatches bei jedem Aussetzer ab-/wieder anmelden).
+    const hadData = hasDataRef.current;
+
+    // Ein leeres Ergebnis und ein fehlgeschlagener Aufruf sind nicht dasselbe:
+    // SupabaseRepository.get() liefert bei fehlender Zeile sauber `null` zurück und wirft nicht.
+    // Nur ein echter Fehler (Timeout, Netz, RLS-Ausnahme) rechtfertigt es, einen bestehenden
+    // Bildschirm unverändert stehen zu lassen — eine bestätigte Löschung muss sichtbar werden.
+    let lookupFailed = false;
+
     try {
-      const tournaments = await getAllTournaments();
-      const found = tournaments.find((t: Tournament) => t.id === tournamentId);
+      let found: Tournament | null = null;
+      let source: 'cloud' | 'local' = 'local';
+
+      // L2: Cloud zuerst — ein Hallen-Monitor läuft auf einem fremden Gerät ohne localStorage.
+      if (isSupabaseConfigured) {
+        try {
+          // Kein Timeout im Repository -> hier begrenzen. Ohne das blockiert ein hängender
+          // Request über isFetchingRef jeden weiteren Poll-Tick auf unbestimmte Zeit.
+          found = await withTimeout(new SupabaseRepository().get(tournamentId), CLOUD_TIMEOUT_MS);
+          if (found) { source = 'cloud'; }
+        } catch (err) {
+          lookupFailed = true;
+          console.warn('[MonitorDisplay] Supabase-Lookup fehlgeschlagen, versuche lokal:', err);
+        }
+      }
+      if (!found) {
+        try {
+          found = await new LocalStorageRepository().get(tournamentId);
+          if (found) { source = 'local'; }
+        } catch (err) {
+          lookupFailed = true;
+          console.warn('[MonitorDisplay] LocalStorage-Lookup fehlgeschlagen:', err);
+        }
+      }
 
       if (!found) {
-        setError(`Turnier nicht gefunden: ${tournamentId}`);
+        // Nur bei einem echten Fehlschlag den bestehenden Stand halten. Wenn alle Abrufe
+        // sauber durchliefen und nichts lieferten, ist das Turnier bestätigt weg —
+        // das gehört auf den Schirm.
+        if (hadData && lookupFailed) { return; }
+        if (lookupFailed) {
+          // Ein Verbindungsfehler beim allerersten Laden ist keine Sichtbarkeitsfrage — die
+          // Einstellung ist meist bereits korrekt. Das Poll-Intervall läuft immer (Fix 1),
+          // das Versprechen "automatisch" stimmt also.
+          setError(
+            `Turnier konnte nicht geladen werden: Verbindung zum Server fehlgeschlagen. ` +
+            `Der nächste Versuch läuft automatisch.`
+          );
+        } else {
+          setError(
+            `Turnier nicht gefunden: ${tournamentId}. Läuft dieser Bildschirm auf einem anderen Gerät als der ` +
+            'Organisator-Laptop, muss das Turnier in den Sichtbarkeits-Einstellungen auf "Mit Link teilbar" stehen.'
+          );
+        }
         setLoading(false);
         return;
       }
 
+      // F-324: Ein Cloud-Aussetzer darf einen laufenden Bildschirm nicht auf die lokale Kopie
+      // zurückstufen. setDataSource('local') meldet die Realtime-Subscription ab, und die lokale
+      // Kopie kann älter sein als das, was gerade zu sehen ist. Der obige !found-Guard greift hier
+      // nicht, weil der lokale Fallback ja etwas geliefert hat. Beim nächsten Poll ist die Cloud
+      // meist wieder da; ein sauberes leeres Cloud-Ergebnis (lookupFailed === false) fällt weiterhin
+      // regulär auf local zurück.
+      if (hadData && lookupFailed && source === 'local' && dataSourceRef.current === 'cloud') { return; }
+
       const foundMonitor = found.monitors?.find((m: TournamentMonitor) => m.id === monitorId);
       if (!foundMonitor) {
+        // Der Turnier-Abruf war erfolgreich; dieser Monitor existiert definitiv nicht mehr.
+        // Kein hadData-Schutz: sonst liefe der Bildschirm ewig mit den Slides eines
+        // gelöschten Monitors weiter, ohne dass jemand es merkt.
         setError(`Monitor nicht gefunden: ${monitorId}`);
         setLoading(false);
         return;
@@ -974,11 +1087,17 @@ export function MonitorDisplayPage({
 
       setTournament(found);
       setMonitor(foundMonitor);
+      setDataSource(source);
+      dataSourceRef.current = source;
       setLastFetch(Date.now());
+      setError(null); // heilt einen früheren Aussetzer, falls einer aufgetreten war
       setLoading(false);
+      hasDataRef.current = true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler beim Laden');
-      setLoading(false);
+      if (!hadData) {
+        setError(err instanceof Error ? err.message : 'Fehler beim Laden');
+        setLoading(false);
+      }
     } finally {
       isFetchingRef.current = false;
     }
@@ -990,15 +1109,15 @@ export function MonitorDisplayPage({
   }, [loadData]);
 
   // Periodic refresh
+  // Auch ohne geladenen Monitor pollen: Ein Hallen-Bildschirm startet regelmäßig, bevor
+  // das WLAN steht. Ohne Wiederholung bliebe der erste Fehlschlag den ganzen Tag stehen.
+  // Schnellere Taktung bis etwas da ist, danach das konfigurierte Profil-Intervall.
+  const pollIntervalMs = monitor ? performanceSettings.pollingInterval : 5000;
+
   useEffect(() => {
-    if (!monitor) {return;}
-
-    const interval = setInterval(() => {
-      void loadData();
-    }, performanceSettings.pollingInterval);
-
+    const interval = setInterval(() => { void loadData(); }, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [loadData, monitor, performanceSettings.pollingInterval]);
+  }, [loadData, pollIntervalMs]);
 
   // Heartbeat sender — every 30s so admin dashboard can show online status
   const heartbeatErrorReported = useRef(false);
