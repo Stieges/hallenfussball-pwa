@@ -193,7 +193,7 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     action: 'end_tournament',
     title: 'Turnier vorzeitig beenden',
     description:
-      'Markiert das Turnier als abgeschlossen. Noch laufende Spiele werden gestoppt.',
+      'Markiert das Turnier als abgeschlossen. Laufende Spiele musst du vorher selbst im Live-Cockpit beenden.',
     consequences: [
       'Laufende Spiele werden nicht automatisch beendet — beende sie vorher im Live-Cockpit.',
       'Keine weiteren Ergebnisse können eingetragen werden',
