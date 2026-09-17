@@ -70,6 +70,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleRecordPenaltyResult,
     handleCancelTiebreaker,
     handleUpdateEvent,
+    handleDeleteEvent,
   } = useMatchExecution({ tournament, onTournamentUpdate });
 
   // Permission check: Get current user's role in this tournament
@@ -432,6 +433,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
           onCancelTiebreaker={(matchId) => { void handleCancelTiebreaker(matchId); }}
           onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
+          onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
           onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}
         />
       ) : isInitializingMatch ? (

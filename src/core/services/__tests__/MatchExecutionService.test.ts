@@ -14,6 +14,7 @@ const mockLiveMatchRepo = {
     save: vi.fn(),
     saveAll: vi.fn(),
     delete: vi.fn(),
+    deleteEvent: vi.fn(),
     clear: vi.fn()
 };
 

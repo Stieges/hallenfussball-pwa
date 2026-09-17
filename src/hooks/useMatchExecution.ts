@@ -95,6 +95,8 @@ export interface UseMatchExecutionReturn {
     handleUndoLastEvent: (matchId: string) => Promise<void>;
     handleReopenMatch: (matchData: ScheduledMatch) => Promise<void>;
     handleUpdateEvent: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => Promise<void>;
+    /** L9: Löscht ein Event dauerhaft und korrigiert bei GOAL den Spielstand (siehe MatchExecutionService.deleteEvent). */
+    handleDeleteEvent: (matchId: string, eventId: string) => Promise<void>;
     handleSyncMetadata: (matchId: string) => Promise<void>;
     hasRunningMatch: () => LiveMatch | undefined;
 }
@@ -636,6 +638,11 @@ export function useMatchExecution({
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
     }, [service, tournament.id]);
 
+    const handleDeleteEvent = useCallback(async (matchId: string, eventId: string): Promise<void> => {
+        const updated = await service.deleteEvent(tournament.id, matchId, eventId);
+        setLiveMatches(prev => new Map(prev).set(matchId, updated));
+    }, [service, tournament.id]);
+
     const handleSyncMetadata = useCallback(async (matchId: string): Promise<void> => {
         const match = tournament.matches.find(m => m.id === matchId);
         if (!match) {
@@ -686,6 +693,7 @@ export function useMatchExecution({
         handleUndoLastEvent,
         handleReopenMatch,
         handleUpdateEvent,
+        handleDeleteEvent,
         handleSyncMetadata,
         hasRunningMatch,
     };

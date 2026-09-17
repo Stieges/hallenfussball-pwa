@@ -252,6 +252,32 @@ export class MatchExecutionService {
         );
     }
 
+    /** Löscht ein Match-Event und korrigiert bei GOAL den Spielstand. Erst Spielstand + Array (save),
+     *  dann Soft-Delete — umgekehrt stünde bei einem Fehler ein Spielstand ohne Event in der DB.
+     *  Abweichung vom Brief: MatchEvent.payload verwendet `team`/`delta` (siehe recordGoal oben,
+     *  undoLastEvent unten), nicht `teamId` — der Brief-Sketch ging von einem anderen Payload-Format aus. */
+    async deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<LiveMatch> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+        const event = match.events.find((e) => e.id === eventId);
+        if (!event) { return match; }
+
+        const isGoal = event.type === 'GOAL';
+        const team = event.payload.team;
+        const delta = event.payload.delta ?? 1;
+
+        const updated: LiveMatch = {
+            ...match,
+            events: match.events.filter((e) => e.id !== eventId),
+            ...(isGoal && team === 'home' ? { homeScore: Math.max(0, match.homeScore - delta) } : {}),
+            ...(isGoal && team === 'away' ? { awayScore: Math.max(0, match.awayScore - delta) } : {}),
+        };
+
+        await this.liveMatchRepo.save(tournamentId, updated);
+        await this.liveMatchRepo.deleteEvent(tournamentId, matchId, eventId);
+        return updated;
+    }
+
     async recordCard(
         tournamentId: string,
         matchId: string,

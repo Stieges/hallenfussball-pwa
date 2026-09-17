@@ -85,6 +85,8 @@ export interface LiveCockpitProps {
 
   /** Callback when an event is updated */
   onUpdateEvent?: (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => void;
+  /** L9: Callback when an event is deleted — persists the deletion and corrects the score (if GOAL) in the service. */
+  onDeleteEvent?: (matchId: string, eventId: string) => void;
   // Event tracking handlers (new)
   onTimePenalty?(matchId: string, teamId: string, options?: {
     playerNumber?: number;

@@ -32,6 +32,11 @@ export interface ILiveMatchRepository {
      */
     delete(tournamentId: string, matchId: string): Promise<void>;
 
+    /** Soft-Delete eines Match-Events. Kein Hard-Delete: match_events.is_deleted existiert und wird von getAll/get
+     *  bereits gefiltert. Ein Entfernen aus LiveMatch.events allein genügt nicht — SupabaseLiveMatchRepository.save
+     *  macht für Events nur INSERTs und ließe das Event beim nächsten Laden wiederauferstehen. */
+    deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<void>;
+
     /**
      * Clear all live matches for a tournament
      */

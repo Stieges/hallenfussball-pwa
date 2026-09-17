@@ -47,6 +47,16 @@ import { useToast } from './hooks';
 // Main Component
 // ---------------------------------------------------------------------------
 
+// BUG-010/L9: Shared event-type labels (was duplicated in handleEventUpdate + handleEventDelete)
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  GOAL: 'Tor',
+  YELLOW_CARD: 'Gelbe Karte',
+  RED_CARD: 'Rote Karte',
+  TIME_PENALTY: 'Zeitstrafe',
+  SUBSTITUTION: 'Wechsel',
+  FOUL: 'Foul',
+};
+
 // Helper to get cockpit settings with defaults
 function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCockpitSettings {
   return {
@@ -86,6 +96,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onSubstitution,
   onFoul,
   onUpdateEvent,
+  onDeleteEvent,
   onUpdateSettings,
 }) => {
   const { t } = useTranslation('cockpit');
@@ -544,15 +555,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       if (!event) { return; }
 
       // Show success toast with event type
-      const eventTypeLabels: Record<string, string> = {
-        GOAL: 'Tor',
-        YELLOW_CARD: 'Gelbe Karte',
-        RED_CARD: 'Rote Karte',
-        TIME_PENALTY: 'Zeitstrafe',
-        SUBSTITUTION: 'Wechsel',
-        FOUL: 'Foul',
-      };
-      const label = eventTypeLabels[event.type] ?? event.type;
+      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
       const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
 
       // Call parent handler to persist update
@@ -566,40 +569,24 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     [currentMatch, showSuccess, showInfo, onUpdateEvent]
   );
 
-  // BUG-010: Handler for deleting events (with score adjustment for GOALs)
+  // L9: Handler for deleting events — persistence + score correction now live in
+  // MatchExecutionService.deleteEvent. No onGoal(-1) here anymore: the service already
+  // corrects the score, so calling onGoal too would decrement it a second time.
   const handleEventDelete = useCallback(
     (eventId: string) => {
       if (!currentMatch) { return; }
       const event = currentMatch.events.find(e => e.id === eventId);
       if (!event) { return; }
-
-      const eventTypeLabels: Record<string, string> = {
-        GOAL: 'Tor',
-        YELLOW_CARD: 'Gelbe Karte',
-        RED_CARD: 'Rote Karte',
-        TIME_PENALTY: 'Zeitstrafe',
-        SUBSTITUTION: 'Wechsel',
-        FOUL: 'Foul',
-      };
-      const label = eventTypeLabels[event.type] ?? event.type;
-
-      // If it's a GOAL event, also decrement the score
-      // match-cockpit format: payload.teamId
-      const eventTeamId = event.payload.teamId;
-      if (event.type === 'GOAL' && eventTeamId) {
-        onGoal(currentMatch.id, eventTeamId, -1);
-        const teamName = eventTeamId === currentMatch.homeTeam.id
-          ? currentMatch.homeTeam.name
-          : currentMatch.awayTeam.name;
-        showInfo(`🗑️ ${label} für ${teamName} gelöscht (Spielstand angepasst)`);
+      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
+      if (onDeleteEvent) {
+        // L9: Der Service entfernt das Event, korrigiert bei GOAL den Spielstand, setzt is_deleted.
+        onDeleteEvent(currentMatch.id, eventId);
+        showSuccess(`🗑️ ${label} gelöscht`);
       } else {
-        showInfo(`🗑️ ${label} gelöscht`);
+        showInfo(`(Vorschau) ${label} gelöscht — nicht gespeichert`);
       }
-
-      // Note: Full persistence would require parent callback
-      // TODO: Add onDeleteEvent prop to LiveCockpitProps when backend is ready
     },
-    [currentMatch, onGoal, showInfo]
+    [currentMatch, onDeleteEvent, showSuccess, showInfo]
   );
 
   // L1: Tiebreaker-Handler — leiten die Entscheidung an den Parent weiter (matchId).
