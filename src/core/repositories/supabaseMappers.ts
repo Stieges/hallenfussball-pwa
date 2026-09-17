@@ -387,6 +387,11 @@ interface TournamentConfig {
 
   // Wizard state
   lastVisitedStep?: number;
+
+  // L3: Monitor-/Sponsoren-Konfiguration. Bewusst JSONB in tournaments.config statt in den
+  // verwaisten Tabellen monitors/sponsors — deren type-Enum passt nicht zum Slides-Modell.
+  monitors?: unknown[];
+  sponsors?: unknown[];
 }
 
 /**
@@ -505,6 +510,8 @@ export function mapTournamentFromSupabase(
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
     dfbKeyPattern: config.dfbKeyPattern,
+    monitors: config.monitors as Tournament['monitors'],
+    sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined,
     // K2: is_public/share_code müssen rundreisen — sonst sieht mapTournamentToSupabase
     // immer `undefined`, denormalisiert `false` auf alle Team-/Match-Zeilen (K1), und
@@ -567,6 +574,8 @@ export function mapTournamentToSupabase(
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
     dfbKeyPattern: tournament.dfbKeyPattern,
+    monitors: tournament.monitors,
+    sponsors: tournament.sponsors,
   };
 
   const tournamentRow: TournamentInsert = {

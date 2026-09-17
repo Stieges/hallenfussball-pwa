@@ -744,3 +744,50 @@ describe('mapProfileUpdateToSupabase', () => {
     ).toEqual({ display_name: 'Max', avatar_url: 'url' });
   });
 });
+
+describe('Tournament-Mapper Round-Trip: Monitore und Sponsoren (L3)', () => {
+  const monitor = {
+    id: 'mon-1', name: 'Haupthalle', defaultSlideDuration: 15, transition: 'fade',
+    transitionDuration: 500, theme: 'dark', performanceMode: 'auto',
+    slides: [
+      { id: 's1', type: 'live', config: { fieldNumber: 1 }, duration: null, order: 0 },
+      { id: 's2', type: 'sponsor', config: { sponsorId: 'spo-1' }, duration: 10, order: 1 },
+    ],
+  };
+  const sponsor = {
+    id: 'spo-1', name: 'Autohaus Muster', tier: 'gold', websiteUrl: 'https://example.com',
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+  };
+
+  it('schreibt monitors und sponsors in das config-JSONB', () => {
+    const base = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    const tournament = { ...base, monitors: [monitor], sponsors: [sponsor] } as typeof base;
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'user-1');
+    const config = tournamentRow.config as Record<string, unknown>;
+    expect(config.monitors).toEqual([monitor]);
+    expect(config.sponsors).toEqual([sponsor]);
+  });
+
+  it('liest monitors und sponsors verlustfrei aus dem config-JSONB zurück', () => {
+    const row = createTournamentRow({ config: { monitors: [monitor], sponsors: [sponsor] } });
+    const tournament = mapTournamentFromSupabase(row, [], []);
+    expect(tournament.monitors).toEqual([monitor]);
+    expect(tournament.sponsors).toEqual([sponsor]);
+    expect(tournament.monitors?.[0].slides).toHaveLength(2);
+  });
+
+  it('überlebt einen vollständigen Round-Trip (to → from)', () => {
+    const base = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    const tournament = { ...base, monitors: [monitor], sponsors: [sponsor] } as typeof base;
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'user-1');
+    const back = mapTournamentFromSupabase(createTournamentRow({ config: tournamentRow.config as never }), [], []);
+    expect(back.monitors).toEqual([monitor]);
+    expect(back.sponsors).toEqual([sponsor]);
+  });
+
+  it('bleibt undefined wenn keine Monitore konfiguriert sind', () => {
+    const tournament = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    expect(tournament.monitors).toBeUndefined();
+    expect(tournament.sponsors).toBeUndefined();
+  });
+});
