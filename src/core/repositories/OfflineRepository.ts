@@ -122,11 +122,17 @@ export class OfflineRepository implements ITournamentRepository {
                 const cloudVersion = cloudData.version ?? 0;
                 const localVersion = localData?.version ?? 0;
 
-                if (cloudVersion > localVersion) {
+                // Zweiter Grund neben einer neueren Version: Vor M1 hat der Mapper `isPublic`
+                // gar nicht gelesen, lokale Kopien tragen dort `undefined`. Bei gleichem
+                // Versionsstand griffe der Refresh sonst nie — und der nächste Voll-Save
+                // schriebe erneut `is_public: false` auf alle Team- und Spielzeilen.
+                const visibilityStale = localData !== null && localData.isPublic !== cloudData.isPublic;
+
+                if (cloudVersion > localVersion || visibilityStale) {
                     await this.localRepo.save(cloudData);
                     if (import.meta.env.DEV) {
                         // eslint-disable-next-line no-console -- Debug logging for background sync updates
-                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}`);
+                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
                     }
                 }
             }
@@ -370,7 +376,18 @@ export class OfflineRepository implements ITournamentRepository {
         if (local.title !== remote.title) { changes.title = local.title; hasChanges = true; }
         if (local.date !== remote.date) { changes.date = local.date; hasChanges = true; }
         if (local.status !== remote.status) { changes.status = local.status; hasChanges = true; }
-        if (local.isPublic !== remote.isPublic) { changes.isPublic = local.isPublic; hasChanges = true; }
+
+        // Beide Seiten normalisieren: Vor M1 gelesene Kopien tragen `undefined`, die Cloud
+        // liefert seit K2 einen echten Boolean. Ein roher Vergleich meldete sonst eine
+        // Phantom-Änderung, deren leerer Payload die Cloud-Version nicht bewegt — während
+        // die lokale Version hochgezählt wird und das Gerät danach keine Cloud-Updates mehr zieht.
+        const localPublic = local.isPublic ?? false;
+        const remotePublic = remote.isPublic ?? false;
+        if (localPublic !== remotePublic) {
+            changes.isPublic = localPublic;
+            hasChanges = true;
+        }
+
         if (local.startTime !== remote.startTime) { changes.startTime = local.startTime; hasChanges = true; }
 
         // Location (deep check or simple JSON)

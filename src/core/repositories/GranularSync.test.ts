@@ -189,4 +189,60 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockSupabase.save).toHaveBeenCalled(); // Should trigger full save
         expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
     });
+
+    // =========================================================================
+    // M1-Fixwelle Fix 2: refreshFromCloudInBackground() muss lokal auch dann
+    // korrigieren, wenn die Version gleich bleibt, aber isPublic abweicht.
+    // Vor M1 hat der Mapper isPublic nie gelesen -> lokale Kopien tragen `undefined`.
+    // Bei gleichem Versionsstand griff der Refresh bisher NIE, und der nächste
+    // Voll-Save schrieb `is_public: false` erneut auf alle Team-/Spielzeilen.
+    // =========================================================================
+    it('Fix 2: refreshFromCloudInBackground schreibt lokal bei gleicher Version, wenn isPublic abweicht (vor M1 gecachte Kopie)', async () => {
+        // isPublic bewusst weggelassen -> undefined, wie bei einer vor M1 gecachten Kopie.
+        const localT = { ...baseTournament, version: 1 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 1 }; // echter Boolean seit K2, GLEICHE Version
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        // Privater Methodenzugriff, da refreshFromCloudInBackground() in get() nur
+        // fire-and-forget (`void ...`) aufgerufen wird und hier isoliert geprüft werden soll.
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).toHaveBeenCalledWith(cloudT);
+    });
+
+    it('Fix 2 (Kontrolle): refreshFromCloudInBackground schreibt NICHT, wenn Version UND isPublic gleich sind', async () => {
+        const localT = { ...baseTournament, isPublic: false, version: 1 };
+        const cloudT = { ...baseTournament, isPublic: false, version: 1 };
+
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(cloudT);
+
+        await (offlineRepo as unknown as { refreshFromCloudInBackground(id: string): Promise<void> })
+            .refreshFromCloudInBackground('t1');
+
+        expect(mockLocal.save).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // M1-Fixwelle Fix 3: getMetadataChanges() (über syncTournamentDelta/syncUp) muss
+    // `isPublic: undefined` (vor M1 gecachte lokale Kopie) und `isPublic: false`
+    // (echter Boolean von der Cloud seit K2) als GLEICH behandeln. Ein roher
+    // Vergleich meldet sonst eine Phantom-Änderung, deren leerer Payload die
+    // Cloud-Version nicht bewegt, während die lokale Version trotzdem hochgezählt
+    // wird — das Gerät verliert danach dauerhaft alle Cloud-Updates.
+    // =========================================================================
+    it('Fix 3: isPublic undefined (lokal) vs. false (Cloud) meldet KEINE Metadaten-Änderung', async () => {
+        const localT = { ...baseTournament, version: 2 }; // isPublic undefined
+        const remoteT = { ...baseTournament, isPublic: false, version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
 });
