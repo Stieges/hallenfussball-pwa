@@ -37,8 +37,6 @@ describe('L5: Kopplung zur Dashboard-Kategorisierung', () => {
   });
   it('nach buildFinishTournamentPatch gilt es als beendet', () => {
     const patched = { ...tournament, ...buildFinishTournamentPatch(tournament) };
-    // Type assertion necessary because spread result is Tournament & Partial<Tournament>
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    expect(isTournamentCompleted(patched as Tournament)).toBe(true);
+    expect(isTournamentCompleted(patched)).toBe(true);
   });
 });
