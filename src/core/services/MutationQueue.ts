@@ -19,13 +19,23 @@ export type MutationType =
     | 'UPDATE_MATCHES'
     | 'UPDATE_TOURNAMENT_METADATA';
 
-const KNOWN_MUTATION_TYPES: readonly MutationType[] = [
-    'SAVE_TOURNAMENT',
-    'DELETE_TOURNAMENT',
-    'UPDATE_MATCH',
-    'UPDATE_MATCHES',
-    'UPDATE_TOURNAMENT_METADATA',
-];
+/**
+ * Load-time allowlist, deliberately a `Record<MutationType, true>` and not a
+ * `readonly MutationType[]`: TypeScript enforces that every key of the
+ * `MutationType` union is present as a property, so adding a member to that
+ * union without updating this object fails compilation. An array gave no
+ * such guarantee — enqueue/execute never load, so a forgotten entry would
+ * work fine online, and only offline (mutation persisted, then rejected as
+ * "unknown" by isKnownType on the next load()) would the gap surface, as a
+ * silently dropped user change.
+ */
+const KNOWN_MUTATION_TYPES: Record<MutationType, true> = {
+    SAVE_TOURNAMENT: true,
+    DELETE_TOURNAMENT: true,
+    UPDATE_MATCH: true,
+    UPDATE_MATCHES: true,
+    UPDATE_TOURNAMENT_METADATA: true,
+};
 
 /**
  * A requested change to be persisted to the cloud.
@@ -64,7 +74,7 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
             // Unknown-type items are rejected at load exactly like schema-invalid
             // ones (see GenericMutationQueue.isKnownType doc) — restores 1:1
             // load-time fidelity with the pre-extraction enum-restricted schema.
-            isKnownType: (type): boolean => (KNOWN_MUTATION_TYPES as readonly string[]).includes(type),
+            isKnownType: (type): boolean => Object.prototype.hasOwnProperty.call(KNOWN_MUTATION_TYPES, type),
 
             /**
              * Get a coalesce key for mutations that can be merged.

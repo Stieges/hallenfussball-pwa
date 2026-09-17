@@ -64,4 +64,8 @@ describe('matchRoute', () => {
   it('matcht /tournament/:id/:tab NIE als tournament, wenn der tab mit "new" beginnt (App.tsx:160 Substring-Guard)', () => {
     expect(matchRoute('/tournament/abc-123/newt')).toBeNull();
   });
+
+  it('matcht /tournament/edit NICHT als tournament (zweisegmentig, endsWith /edit)', () => {
+    expect(matchRoute('/tournament/edit')).toBeNull();
+  });
 });

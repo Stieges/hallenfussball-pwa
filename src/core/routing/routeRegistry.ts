@@ -19,7 +19,17 @@ export type RouteName =
 
 export interface RouteMatch {
   name: RouteName;
-  params: Record<string, string>;
+  /**
+   * Partial by design: `matchRoute` only assigns a key when its capture
+   * group actually matched (see the loop below). For routes with an
+   * optional segment (e.g. admin's `category`, tournament's `tab`),
+   * the corresponding param is genuinely absent at runtime for some
+   * matches of that same route name — `Record<string, string>` claimed
+   * otherwise and let call sites read a `string` that was really
+   * `undefined`. `tsconfig.json` does not set `noUncheckedIndexedAccess`,
+   * so this Partial is what keeps that unsoundness from being invisible.
+   */
+  params: Readonly<Partial<Record<string, string>>>;
 }
 
 interface RouteDef {
@@ -50,17 +60,26 @@ const ROUTES: readonly RouteDef[] = [
   // App.tsx:153 — /^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/
   { name: 'admin', pattern: /^\/tournament\/([a-zA-Z0-9-]+)\/admin(?:\/([a-z-]+))?$/, paramNames: ['tournamentId', 'category'] },
   // App.tsx:159 — /^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/
-  // App.tsx:160 — isTournamentPath UND-verknüpft zusätzlich
-  // !location.pathname.includes('/new') (Substring-Check auf dem GANZEN Pfad,
-  // nicht nur auf einem Segment — z.B. schließt das auch
-  // /tournament/abc-123/newt aus, weil "/newt" mit "/new" beginnt).
-  // wizardEdit/admin-Exklusion übernimmt bereits die First-Match-Wins-Reihenfolge
-  // oben; nur der '/new'-Substring-Fall braucht einen expliziten Guard.
+  // App.tsx:160 — isTournamentPath UND-verknüpft zusätzlich eine
+  // drei-teilige Exklusions-Kaskade:
+  //   !pathname.includes('/new') && !pathname.endsWith('/edit') && !isAdminPath
+  // Klausel 3 (isAdminPath) übernimmt die First-Match-Wins-Reihenfolge oben
+  // (admin ist vor tournament gelistet). Klausel 2 (endsWith('/edit')) wird
+  // für DREI-segmentige Pfade ebenfalls durch die Reihenfolge abgedeckt
+  // (wizardEdit matcht /tournament/:id/edit zuerst) — ABER NICHT für den
+  // zwei-segmentigen Sonderfall /tournament/edit: das endet auf '/edit',
+  // aber wizardEdits Pattern verlangt drei Segmente und matcht hier nicht,
+  // wodurch der Pfad sonst zu tournament mit tournamentId:'edit' durchfiele.
+  // Klausel 1 ('/new'-Substring, auf dem GESAMTEN Pfad, nicht nur einem
+  // Segment — z.B. schließt das auch /tournament/abc-123/newt aus, weil
+  // "/newt" mit "/new" beginnt) hat kein Reihenfolge-Äquivalent und braucht
+  // ebenfalls einen expliziten Guard. Beide verbleibenden Klauseln (1 und 2)
+  // werden daher explizit im Guard reproduziert.
   {
     name: 'tournament',
     pattern: /^\/tournament\/([a-zA-Z0-9-]+)(?:\/([a-z]+))?$/,
     paramNames: ['tournamentId', 'tab'],
-    guard: (pathname) => !pathname.includes('/new'),
+    guard: (pathname) => !pathname.includes('/new') && !pathname.endsWith('/edit'),
   },
 
   // App.tsx:164 — /^\/live\/([A-Za-z0-9]+)$/ (bewusst kein Längen-Limit, siehe

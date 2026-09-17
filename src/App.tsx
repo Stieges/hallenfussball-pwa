@@ -163,9 +163,14 @@ function AppContent() {
   // Check if current path is a tournament path (e.g., /tournament/:id or /tournament/:id/:tab)
   // NOTE: the exclusion cascade that used to live here (former App.tsx:160,
   // `!location.pathname.includes('/new') && !location.pathname.endsWith('/edit') && !isAdminPath`)
-  // is now guaranteed structurally by the registry: first-match-wins ordering
-  // (wizardEdit/admin are matched before tournament) plus the tournament
-  // RouteDef's own '/new'-substring guard — see src/core/routing/routeRegistry.ts.
+  // is guaranteed by the registry through a mix of first-match-wins ordering
+  // (wizardEdit/admin are matched before tournament, covering the '/edit' and
+  // isAdminPath clauses for every path with 3+ segments) and an explicit guard
+  // on the tournament RouteDef that reproduces the remaining '/new'-substring
+  // and '/edit'-suffix clauses — the latter needed because the two-segment
+  // /tournament/edit ends with '/edit' but doesn't match wizardEdit's
+  // three-segment pattern, so ordering alone doesn't cover it. See
+  // src/core/routing/routeRegistry.ts for the full guard and its rationale.
   const isTournamentPath = route?.name === 'tournament';
   const tournamentIdFromUrl = route?.name === 'tournament' ? route.params.tournamentId ?? null : null;
 
@@ -174,7 +179,14 @@ function AppContent() {
 
   // Check if current path is a monitor display path (/display/:tournamentId/:monitorId)
   const isMonitorDisplayPath = route?.name === 'monitorDisplay';
-  const monitorDisplayParamsFromUrl = route?.name === 'monitorDisplay'
+  // Both capture groups on the monitorDisplay RouteDef are mandatory (no
+  // optional segment), so route.params.tournamentId/.monitorId are always
+  // defined whenever route.name === 'monitorDisplay' — but RouteMatch.params
+  // types every value as `string | undefined` (see routeRegistry.ts), so the
+  // truthiness check below is what keeps this object's shape honestly
+  // non-optional without a non-null assertion. It never actually falls
+  // through to null for a real match; behavior is unchanged.
+  const monitorDisplayParamsFromUrl = route?.name === 'monitorDisplay' && route.params.tournamentId && route.params.monitorId
     ? { tournamentId: route.params.tournamentId, monitorId: route.params.monitorId }
     : null;
 
@@ -303,7 +315,11 @@ function AppContent() {
       setLiveShareCode(liveMatch[1].toUpperCase());
       setScreen('live');
     } else if (matchedRoute?.name === 'public') {
-      setPublicTournamentId(matchedRoute.params.tournamentId);
+      // public's tournamentId capture group is mandatory, so this is always
+      // defined for a real match; `?? null` only satisfies setPublicTournamentId's
+      // `string | null` type honestly (RouteMatch.params is now Partial) and
+      // never actually changes what gets set.
+      setPublicTournamentId(matchedRoute.params.tournamentId ?? null);
       setScreen('public');
     } else if (matchedRoute?.name === 'invite') {
       const params = new URLSearchParams(search);
