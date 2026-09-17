@@ -195,10 +195,10 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
     description:
       'Markiert das Turnier als abgeschlossen. Noch laufende Spiele werden gestoppt.',
     consequences: [
-      'Alle laufenden Spiele werden beendet',
+      'Laufende Spiele werden nicht automatisch beendet — beende sie vorher im Live-Cockpit.',
       'Keine weiteren Ergebnisse können eingetragen werden',
       'Tabellen und Platzierungen werden finalisiert',
-      'Das Turnier wird archiviert',
+      'Eine Statistik-Momentaufnahme wird gespeichert',
     ],
     confirmText: 'BEENDEN',
     buttonLabel: 'Turnier beenden',
@@ -206,13 +206,13 @@ export const DANGER_ACTIONS: Record<DangerAction, DangerActionConfig> = {
   },
   archive_tournament: {
     action: 'archive_tournament',
-    title: 'Turnier archivieren',
+    title: 'Turnier abschließen und ins Archiv legen',
     description:
-      'Verschiebt das Turnier ins Archiv. Es wird read-only und kann später wiederhergestellt werden.',
+      'Markiert das Turnier als abgeschlossen. Es erscheint danach unter "Beendete Turniere".',
     consequences: [
-      'Keine Änderungen mehr möglich',
-      'Turnier erscheint im Archiv-Bereich',
-      'Kann jederzeit wiederhergestellt werden',
+      'Turnier gilt als beendet, Tabellen und Platzierungen werden finalisiert',
+      'Eine Statistik-Momentaufnahme wird gespeichert',
+      'Ein separater Archiv-Bereich mit Wiederherstellung ist noch nicht umgesetzt',
     ],
     confirmText: 'ARCHIVIEREN',
     buttonLabel: 'Turnier archivieren',
