@@ -21,6 +21,7 @@ import {
   isMatchActive,
 } from './liveMatchMappers';
 import { OptimisticLockError } from '../errors';
+import { captureFeatureError } from '../../lib/sentry';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
@@ -244,17 +245,23 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
         if (eventsError) {
           console.error('[SupabaseLiveMatchRepository] events insert failed:', eventsError);
-          // Don't throw - match was updated successfully
-        }
-
-        // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
-        // even though MatchEventInsert types it as optional.
-        for (const event of newEvents) {
-          if (event.id) {
-            existingEventIds.add(event.id);
+          // Don't throw - match was updated successfully.
+          // Don't cache the ids either - the insert never happened, so the
+          // next save() must retry these events instead of losing them forever.
+          captureFeatureError(eventsError, 'repository', 'eventsInsert', {
+            matchId: match.id,
+            count: newEvents.length,
+          });
+        } else {
+          // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
+          // even though MatchEventInsert types it as optional.
+          for (const event of newEvents) {
+            if (event.id) {
+              existingEventIds.add(event.id);
+            }
           }
+          this.eventIdsCache.set(match.id, existingEventIds);
         }
-        this.eventIdsCache.set(match.id, existingEventIds);
       }
     } catch (error) {
       // Re-throw OptimisticLockError without logging (expected case)
