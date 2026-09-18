@@ -13,6 +13,7 @@ import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
+import { getEffectiveScore } from '../../utils/matchScore';
 
 // ============================================================================
 // CONSTANTS
@@ -797,9 +798,8 @@ export class MatchExecutionService {
             return match.homeScore === match.awayScore;
         }
 
-        const totalHome = match.homeScore + (match.overtimeScoreA ?? 0);
-        const totalAway = match.awayScore + (match.overtimeScoreB ?? 0);
-        return totalHome === totalAway;
+        const effective = getEffectiveScore(match);
+        return effective.home === effective.away;
     }
 
     private getDecidedBy(match: LiveMatch): FinishResult['decidedBy'] {
@@ -838,13 +838,12 @@ export class MatchExecutionService {
         await this.liveMatchRepo.save(tournamentId, finishedMatch);
 
         // 2. Update Tournament.matches
-        const finalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
-        const finalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
+        const finalScore = getEffectiveScore(match);
 
         await this.tournamentRepo.updateMatch(tournamentId, {
             id: match.id,
-            scoreA: finalHomeScore,
-            scoreB: finalAwayScore,
+            scoreA: finalScore.home,
+            scoreB: finalScore.away,
             matchStatus: 'finished',
             finishedAt: new Date().toISOString(),
             overtimeScoreA: match.overtimeScoreA,

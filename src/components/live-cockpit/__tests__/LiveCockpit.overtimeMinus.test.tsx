@@ -130,3 +130,60 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
     expect(screen.getByTestId('goal-minus-button-home')).toBeDisabled();
   });
 });
+
+describe('LiveCockpit — Effektiver Spielstand (getEffectiveScore)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Golden Goal: homeScore 1 + overtimeScoreA 1 → score-home zeigt "2"', () => {
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 0 }))}
+      />
+    );
+
+    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
+  });
+
+  it('Verlängerung beide Seiten: 1 + 1 : 1 + 2 → score-home zeigt "2", score-away zeigt "3"', () => {
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'overtime', homeScore: 1, awayScore: 1, overtimeScoreA: 1, overtimeScoreB: 2 }))}
+      />
+    );
+
+    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('score-away')).toHaveTextContent('3');
+  });
+
+  it('Regression: reguläre Phase — homeScore 2, awayScore 1 → zeigt "2" und "1" (keine overtime)', () => {
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'regular', homeScore: 2, awayScore: 1 }))}
+      />
+    );
+
+    expect(screen.getByTestId('score-home')).toHaveTextContent('2');
+    expect(screen.getByTestId('score-away')).toHaveTextContent('1');
+  });
+
+  it('Regression: nach „Seiten tauschen" bleibt Spielstand korrekt (Effektivstand)', async () => {
+    const user = userEvent.setup();
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 1, awayScore: 0, overtimeScoreA: 2, overtimeScoreB: 0 }))}
+      />
+    );
+
+    // Vor dem Tausch: score-home zeigt 1+2=3 (Heim-Effektivstand), score-away zeigt 0 (Gast-Effektivstand)
+    expect(screen.getByTestId('score-home')).toHaveTextContent('3');
+    expect(screen.getByTestId('score-away')).toHaveTextContent('0');
+
+    // Seiten tauschen
+    await user.click(screen.getByRole('button', { name: 'Seiten tauschen' }));
+
+    // Nach dem Tausch: Testids ändern sich nicht, aber die visuellen Positionen sind getauscht.
+    // Die Effektivstände bleiben erhalten (sie hängen vom teamSide ab, nicht vom sidesSwapped).
+    expect(screen.getByTestId('score-home')).toHaveTextContent('3');
+    expect(screen.getByTestId('score-away')).toHaveTextContent('0');
+  });
+});

@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
@@ -638,6 +639,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   }
 
   const match = currentMatch;
+  const effectiveScore = getEffectiveScore(match);
   const isFinished = match.status === 'FINISHED';
   const isNotStarted = match.status === 'NOT_STARTED';
   const canUndo = match.events.length > 0 && !isFinished;
@@ -906,7 +908,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <TeamBlock
                 teamName={sidesSwapped ? match.awayTeam.name : match.homeTeam.name}
                 teamLabel={sidesSwapped ? 'Gast' : 'Heim'}
-                score={sidesSwapped ? match.awayScore : match.homeScore}
+                score={sidesSwapped ? effectiveScore.away : effectiveScore.home}
                 fouls={sidesSwapped ? awayFouls : homeFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
@@ -942,7 +944,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <TeamBlock
                 teamName={sidesSwapped ? match.homeTeam.name : match.awayTeam.name}
                 teamLabel={sidesSwapped ? 'Heim' : 'Gast'}
-                score={sidesSwapped ? match.homeScore : match.awayScore}
+                score={sidesSwapped ? effectiveScore.home : effectiveScore.away}
                 fouls={sidesSwapped ? homeFouls : awayFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
@@ -1139,7 +1141,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       {match.awaitingTiebreakerChoice && (
         <TiebreakerBanner
           homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
-          score={match.homeScore + (match.overtimeScoreA ?? 0)} tiebreakerMode={match.tiebreakerMode}
+          score={effectiveScore.home} tiebreakerMode={match.tiebreakerMode}
           overtimeMinutes={Math.round((match.overtimeDurationSeconds ?? 300) / 60)}
           onStartOvertime={onStartOvertime ? handleStartOvertime : undefined}
           onStartGoldenGoal={onStartGoldenGoal ? handleStartGoldenGoal : undefined}
