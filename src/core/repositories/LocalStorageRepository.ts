@@ -224,7 +224,7 @@ export class LocalStorageRepository implements ITournamentRepository {
                 const result = TournamentSchema.safeParse(itemData);
                 if (result.success) {
                     // Hydrate: Convert date strings back to Date objects
-                    return hydrateTournament(result.data);
+                    return this.backfillPublishedAt(hydrateTournament(result.data));
                 }
                 // If validation fails, log + report to Sentry, but return raw item to avoid data loss
                 // Still hydrate to ensure date fields are proper Date objects
@@ -236,7 +236,7 @@ export class LocalStorageRepository implements ITournamentRepository {
                 if (import.meta.env.DEV) {
                     console.warn(`Tournament ${String(itemData.id)} validation failed:`, result.error);
                 }
-                return hydrateTournament(itemData);
+                return this.backfillPublishedAt(hydrateTournament(itemData));
             });
         } catch (e) {
             if (import.meta.env.DEV) {
@@ -244,6 +244,21 @@ export class LocalStorageRepository implements ITournamentRepository {
             }
             return [];
         }
+    }
+
+    /**
+     * Read-Time-Backfill des Freigabe-Markers (Gegenstück zu mapTournamentFromSupabase).
+     *
+     * Lokal gespeicherte Bestandsturniere tragen kein `publishedAt`. Ein Turnier mit
+     * status 'published' gilt als bereits freigegeben — `createdAt` ist die beste
+     * verfügbare Freigabezeit. Damit entwertet der transiente Wizard-Statuswechsel auf
+     * 'draft' (SettingsTab.tsx) ein laufendes Turnier nicht nachträglich.
+     */
+    private backfillPublishedAt(tournament: Tournament): Tournament {
+        if (tournament.publishedAt !== undefined || tournament.status !== 'published') {
+            return tournament;
+        }
+        return { ...tournament, publishedAt: tournament.createdAt };
     }
 
     private async saveList(list: Tournament[]): Promise<void> {

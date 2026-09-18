@@ -450,6 +450,18 @@ export interface Tournament {
   matchCockpitSettings?: MatchCockpitSettings;
 
   // Public View / Sharing (Phase 1)
+  /**
+   * ISO timestamp der ersten Freigabe. Monotoner Freigabe-Marker: gesetzt bleibt gesetzt.
+   *
+   * Bewusst NICHT `status`: `status: 'draft'` ist ein transienter Wizard-Marker —
+   * SettingsTab.tsx setzt ein veröffentlichtes Turnier zum Bearbeiten zurück auf 'draft'
+   * und nur eine In-App-Rückkehr stellt den Status wieder her (App.tsx, originalStatusRef).
+   * Ein Reload mitten in der Bearbeitung ließe ein laufendes Turnier dauerhaft auf 'draft'
+   * stehen — eine Status-Prüfung würde es mitten im Spiel vom Netz nehmen.
+   *
+   * Reist im `config`-JSONB mit (keine eigene DB-Spalte), siehe supabaseMappers.
+   */
+  publishedAt?: string;
   /** Ob das Turnier öffentlich über Share-Link zugänglich ist */
   isPublic?: boolean;
   /** 6-stelliger Share-Code für öffentlichen Zugang (z.B. "ABC123") */

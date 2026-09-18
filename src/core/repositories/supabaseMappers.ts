@@ -388,6 +388,10 @@ interface TournamentConfig {
   // Wizard state
   lastVisitedStep?: number;
 
+  // Freigabe-Marker (ISO). Bewusst im config-JSONB statt als eigene Spalte —
+  // siehe Tournament.publishedAt.
+  publishedAt?: string;
+
   // L3: Monitor-/Sponsoren-Konfiguration. Bewusst JSONB in tournaments.config statt in den
   // verwaisten Tabellen monitors/sponsors — deren type-Enum passt nicht zum Slides-Modell.
   monitors?: unknown[];
@@ -519,6 +523,12 @@ export function mapTournamentFromSupabase(
     isPublic: row.is_public ?? false,
     shareCode: row.share_code ?? undefined,
     shareCodeCreatedAt: row.share_code_created_at ?? undefined,
+    // Read-Time-Backfill: Bestandsturniere tragen kein config.publishedAt. Ein Turnier mit
+    // status 'published' gilt als bereits freigegeben (created_at als Freigabezeit) — sonst
+    // würde der Wizard-Statuswechsel auf 'draft' (SettingsTab.tsx) es nachträglich entwerten.
+    publishedAt:
+      config.publishedAt ??
+      (row.status === 'published' ? (row.created_at ?? undefined) : undefined),
   };
 }
 
@@ -576,6 +586,7 @@ export function mapTournamentToSupabase(
     dfbKeyPattern: tournament.dfbKeyPattern,
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
+    publishedAt: tournament.publishedAt,
   };
 
   const tournamentRow: TournamentInsert = {

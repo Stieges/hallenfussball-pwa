@@ -53,6 +53,21 @@ function stableKey(value: unknown): string {
     });
 }
 
+/**
+ * Meldung, mit der `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
+ * Turnierfreigabe ablehnt — siehe supabase/migrations/20260918_002_make_public_refuses_drafts.sql.
+ */
+const RELEASE_REFUSAL_MARKER = 'has not been released';
+
+/**
+ * Fachliche Ablehnung des Servers, kein Verbindungsproblem: Der lokale Fallback würde das
+ * Turnier lokal öffentlich machen und eine Mutation einreihen, die der Server dauerhaft
+ * ablehnt. Die Meldung wird stattdessen durchgereicht, damit die UI sie anzeigen kann.
+ */
+function isReleaseRefusal(error: unknown): boolean {
+    return error instanceof Error && error.message.includes(RELEASE_REFUSAL_MARKER);
+}
+
 export class OfflineRepository implements ITournamentRepository {
     private _mutationQueue: MutationQueue;
 
@@ -641,6 +656,9 @@ export class OfflineRepository implements ITournamentRepository {
                 return result;
             }
         } catch (error) {
+            if (isReleaseRefusal(error)) {
+                throw error;
+            }
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud makeTournamentPublic failed, using local.', error);
                 if (error instanceof Error) {

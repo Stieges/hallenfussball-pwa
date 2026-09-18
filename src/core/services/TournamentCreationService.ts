@@ -58,7 +58,11 @@ export class TournamentCreationService {
             hideRankingsForPublic: false,
             resultMode: 'goals',
             pointSystem: defaultConfig.defaults.pointSystem,
-            isPublic: true, // Default: Mit Link teilbar
+            // Ein neuer Entwurf ist privat. Ein Entwurf trägt vorläufige Teamnamen und einen
+            // unfertigen Spielplan — er darf erst mit der bewussten Freigabe (publish())
+            // öffentlich erreichbar werden. Der Merge unten ist {...base, ...data}, ein
+            // explizit übergebener Wert eines bestehenden Turniers gewinnt also weiterhin.
+            isPublic: false,
             title: '',
             ageClass: 'U11',
             date: new Date().toISOString().split('T')[0],
@@ -179,6 +183,17 @@ export class TournamentCreationService {
      */
     async publish(data: Partial<Tournament>): Promise<Tournament> {
         const tournament = this.createDraft(data, data.id);
+
+        // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
+        // ruft publish() beim Speichern erneut auf; ohne diesen Guard würde ein bewusst privat
+        // gestelltes Turnier hinter dem Rücken des Veranstalters wieder geteilt.
+        // Geprüft wird `publishedAt`, NICHT `status`: status 'draft' ist ein transienter
+        // Wizard-Marker (SettingsTab.tsx) und sagt nichts über die Freigabe aus.
+        const isFirstRelease = !data.publishedAt;
+        if (isFirstRelease) {
+            tournament.isPublic = true;
+            tournament.publishedAt = new Date().toISOString();
+        }
 
         // Generate share code if public and no share code exists
         if (tournament.isPublic && !tournament.shareCode) {
