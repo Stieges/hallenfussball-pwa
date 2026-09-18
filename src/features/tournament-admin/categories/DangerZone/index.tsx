@@ -12,6 +12,7 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
+import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
 import type { Tournament } from '../../../../types/tournament';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
@@ -300,22 +301,13 @@ export function DangerZoneCategory({
         }
 
         case 'end_tournament':
-          onTournamentUpdate({
-            ...tournament,
-            dashboardStatus: 'finished',
-            updatedAt: now,
-          });
+        case 'archive_tournament': {
+          // L5: dashboardStatus allein ist wirkungslos — utils/tournamentCategories.ts liest status,
+          // manuallyCompleted und Spielergebnisse. Beide Aktionen teilen bewusst die Logik: Die App kennt
+          // keinen Archiv-Zustand (TournamentStatus = 'draft' | 'published'); eigener Zustand = Follow-up (Task 22).
+          onTournamentUpdate({ ...tournament, ...buildFinishTournamentPatch(tournament) });
           break;
-
-        case 'archive_tournament':
-          // Archive by setting dashboardStatus to finished
-          // TODO: Add dedicated archivedAt field when backend supports it
-          onTournamentUpdate({
-            ...tournament,
-            dashboardStatus: 'finished',
-            updatedAt: now,
-          });
-          break;
+        }
 
         case 'delete_tournament':
           onTournamentUpdate({

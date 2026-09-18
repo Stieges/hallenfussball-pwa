@@ -14,6 +14,7 @@ const mockLiveMatchRepo = {
     save: vi.fn(),
     saveAll: vi.fn(),
     delete: vi.fn(),
+    deleteEvent: vi.fn(),
     clear: vi.fn()
 };
 
@@ -157,5 +158,102 @@ describe('MatchExecutionService', () => {
             homeScore: 5,
             awayScore: 3
         }));
+    });
+
+    // Fixwave-Fix (Important): startOvertime setzte overtimeScoreA/B vorher UNBEDINGT auf 0 — ein
+    // zweiter Verlängerungsabschnitt (nach torlos verlängerter erster Verlängerung) warf die dort
+    // bereits erzielten Tore weg. Jetzt wird nur initialisiert, wenn noch unset.
+    describe('startOvertime — Tor-Akkumulation über mehrere Verlängerungsabschnitte (Fixwave)', () => {
+        it('behält bereits vorhandene Verlängerungstore bei einem zweiten Aufruf (kein Reset)', async () => {
+            const matchWithOvertimeGoals = {
+                ...minimalLiveMatch,
+                status: 'PAUSED' as MatchStatus,
+                overtimeScoreA: 1,
+                overtimeScoreB: 1,
+            };
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(matchWithOvertimeGoals);
+
+            const result = await service.startOvertime('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(1);
+            expect(result.overtimeScoreB).toBe(1);
+        });
+
+        it('initialisiert auf 0, wenn noch kein Verlängerungs-Score gesetzt ist', async () => {
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(minimalLiveMatch);
+
+            const result = await service.startOvertime('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(0);
+            expect(result.overtimeScoreB).toBe(0);
+        });
+
+        // startGoldenGoal hat dieselbe Korrektur bekommen, aber in der Fix-Welle keinen eigenen Test.
+        // Die spiegelbildliche Änderung ungetestet zu lassen hiesse, dass genau sie sich unbemerkt
+        // zurückdrehen lässt — und im Finale ist Golden Goal der wahrscheinlichere Weg von beiden.
+        it('startGoldenGoal behält bereits vorhandene Verlängerungstore ebenfalls bei', async () => {
+            const matchWithOvertimeGoals = {
+                ...minimalLiveMatch,
+                status: 'PAUSED' as MatchStatus,
+                overtimeScoreA: 2,
+                overtimeScoreB: 2,
+            };
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(matchWithOvertimeGoals);
+
+            const result = await service.startGoldenGoal('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(2);
+            expect(result.overtimeScoreB).toBe(2);
+        });
+
+        it('startGoldenGoal initialisiert auf 0, wenn noch kein Verlängerungs-Score gesetzt ist', async () => {
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(minimalLiveMatch);
+
+            const result = await service.startGoldenGoal('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(0);
+            expect(result.overtimeScoreB).toBe(0);
+        });
+    });
+
+    // Fixwave-Fix (Critical): abortPenaltyShootout ist das Gegenstück zu startPenaltyShootout — bricht
+    // das Elfmeterschießen ab und zeigt wieder die Tiebreaker-Auswahl (awaitingTiebreakerChoice:true),
+    // OHNE das Spiel zu beenden. Bewusst nicht cancelTiebreaker (das persistiert als Unentschieden).
+    describe('abortPenaltyShootout (Fixwave)', () => {
+        it('setzt awaitingTiebreakerChoice zurück auf true und den Elfmeter-Score auf 0, OHNE das Spiel zu beenden', async () => {
+            const penaltyMatch = {
+                ...minimalLiveMatch,
+                status: 'PAUSED' as MatchStatus,
+                playPhase: 'penalty',
+                penaltyScoreA: 2,
+                penaltyScoreB: 1,
+                awaitingTiebreakerChoice: false,
+            };
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(penaltyMatch);
+
+            const result = await service.abortPenaltyShootout('tour-1', 'match-1');
+
+            expect(result.awaitingTiebreakerChoice).toBe(true);
+            expect(result.penaltyScoreA).toBe(0);
+            expect(result.penaltyScoreB).toBe(0);
+            expect(result.playPhase).toBe('penalty');
+            expect(result.status).not.toBe('FINISHED');
+        });
+
+        it('ruft persistFinalResult NICHT auf (kein tournamentRepo.updateMatch-Aufruf) — anders als cancelTiebreaker', async () => {
+            const penaltyMatch = {
+                ...minimalLiveMatch,
+                status: 'PAUSED' as MatchStatus,
+                playPhase: 'penalty',
+                penaltyScoreA: 2,
+                penaltyScoreB: 1,
+                awaitingTiebreakerChoice: false,
+            };
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(penaltyMatch);
+
+            await service.abortPenaltyShootout('tour-1', 'match-1');
+
+            expect(mockTournamentRepo.get).not.toHaveBeenCalled();
+        });
     });
 });

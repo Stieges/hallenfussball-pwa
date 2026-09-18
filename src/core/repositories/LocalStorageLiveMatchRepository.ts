@@ -120,6 +120,26 @@ export class LocalStorageLiveMatchRepository implements ILiveMatchRepository {
         });
     }
 
+    /** Soft-Delete eines Match-Events: lädt den Match, entfernt das Event aus dem Array, speichert.
+     *  localStorage kennt kein `is_deleted` — hier ist "aus dem Array entfernt" bereits final. */
+    async deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<void> {
+        const lockName = `live-match-${tournamentId}`;
+
+        await this.withLock(lockName, async () => {
+            const all = await this.getAll(tournamentId);
+            const match = all.get(matchId);
+            if (!match) { return; }
+
+            const updatedMatch: LiveMatch = {
+                ...match,
+                events: match.events.filter((e) => e.id !== eventId),
+            };
+
+            all.set(matchId, updatedMatch);
+            await this.saveAll(tournamentId, all);
+        });
+    }
+
     async clear(tournamentId: string): Promise<void> {
         const key = this.getStorageKey(tournamentId);
         localStorage.removeItem(key);

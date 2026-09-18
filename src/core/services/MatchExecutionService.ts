@@ -13,6 +13,7 @@ import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
+import { getEffectiveScore } from '../../utils/matchScore';
 
 // ============================================================================
 // CONSTANTS
@@ -209,8 +210,8 @@ export class MatchExecutionService {
                 if (isOvertime) {
                     updated = {
                         ...match,
-                        overtimeScoreA: (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0),
-                        overtimeScoreB: (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0),
+                        overtimeScoreA: Math.max(0, (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0)),
+                        overtimeScoreB: Math.max(0, (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0)),
                     };
                 } else {
                     updated = {
@@ -245,6 +246,53 @@ export class MatchExecutionService {
                 }
 
                 await this.liveMatchRepo.save(tournamentId, updated);
+                return updated;
+            },
+            (error) => error instanceof OptimisticLockError,
+            { maxRetries: MAX_OPTIMISTIC_LOCK_RETRIES, timeoutMs: 10000, backoffBaseMs: 100 }
+        );
+    }
+
+    /** Löscht ein Match-Event und korrigiert bei GOAL den Spielstand. Erst Spielstand + Array (save),
+     *  dann Soft-Delete — umgekehrt stünde bei einem Fehler ein Spielstand ohne Event in der DB.
+     *  Abweichung vom Brief: MatchEvent.payload verwendet `team`/`delta` (siehe recordGoal oben,
+     *  undoLastEvent unten), nicht `teamId` — der Brief-Sketch ging von einem anderen Payload-Format aus.
+     *  Fixround-Fix (Critical): in overtime/goldenGoal muss overtimeScoreA/B korrigiert werden, nicht
+     *  homeScore/awayScore — siehe recordGoal (Zeile ~205-221) und undoLastEvent (Zeile ~615-630), deren
+     *  Verzweigung hier gespiegelt wird. Abweichend von undoLastEvent wird auch der Overtime-Zweig auf 0
+     *  geflootet (ein negativer Spielstand ist nie sinnvoll).
+     *  Fixround-Fix (Important): wie recordGoal jetzt mit executeWithRetry gegen OptimisticLockError
+     *  abgesichert — sonst bleibt ein Konflikt mit einem zweiten Organisator-Gerät für den Aufrufer
+     *  unsichtbar (siehe LiveCockpit.tsx, fire-and-forget-Aufruf + vorgezogener Erfolgs-Toast). */
+    async deleteEvent(tournamentId: string, matchId: string, eventId: string): Promise<LiveMatch> {
+        return executeWithRetry(
+            async () => {
+                const match = await this.liveMatchRepo.get(tournamentId, matchId);
+                if (!match) { throw new Error(`Match ${matchId} not found`); }
+                const event = match.events.find((e) => e.id === eventId);
+                if (!event) { return match; }
+
+                const isGoal = event.type === 'GOAL';
+                const team = event.payload.team;
+                const delta = event.payload.delta ?? 1;
+                const isOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
+
+                const updated: LiveMatch = isOvertime
+                    ? {
+                        ...match,
+                        events: match.events.filter((e) => e.id !== eventId),
+                        ...(isGoal && team === 'home' ? { overtimeScoreA: Math.max(0, (match.overtimeScoreA ?? 0) - delta) } : {}),
+                        ...(isGoal && team === 'away' ? { overtimeScoreB: Math.max(0, (match.overtimeScoreB ?? 0) - delta) } : {}),
+                    }
+                    : {
+                        ...match,
+                        events: match.events.filter((e) => e.id !== eventId),
+                        ...(isGoal && team === 'home' ? { homeScore: Math.max(0, match.homeScore - delta) } : {}),
+                        ...(isGoal && team === 'away' ? { awayScore: Math.max(0, match.awayScore - delta) } : {}),
+                    };
+
+                await this.liveMatchRepo.save(tournamentId, updated);
+                await this.liveMatchRepo.deleteEvent(tournamentId, matchId, eventId);
                 return updated;
             },
             (error) => error instanceof OptimisticLockError,
@@ -468,8 +516,12 @@ export class MatchExecutionService {
             ...match,
             status: 'RUNNING',
             playPhase: 'overtime',
-            overtimeScoreA: 0,
-            overtimeScoreB: 0,
+            // Fixwave-Fix (Important): nur initialisieren, wenn noch unset — ein zweiter
+            // Verlängerungsabschnitt (nach einem erneut unentschiedenen ersten) akkumuliert die
+            // Tore statt sie zu verwerfen. Sonst gehen bereits erzielte Verlängerungstore verloren,
+            // wenn der Banner nach einer torlos verlängerten Verlängerung erneut erscheint.
+            overtimeScoreA: match.overtimeScoreA ?? 0,
+            overtimeScoreB: match.overtimeScoreB ?? 0,
             overtimeElapsedSeconds: 0,
             timerStartTime: new Date().toISOString(),
             timerElapsedSeconds: 0,
@@ -490,8 +542,9 @@ export class MatchExecutionService {
             ...match,
             status: 'RUNNING',
             playPhase: 'goldenGoal',
-            overtimeScoreA: 0,
-            overtimeScoreB: 0,
+            // Fixwave-Fix (Important): siehe startOvertime — akkumulieren statt restarten.
+            overtimeScoreA: match.overtimeScoreA ?? 0,
+            overtimeScoreB: match.overtimeScoreB ?? 0,
             overtimeElapsedSeconds: 0,
             timerStartTime: new Date().toISOString(),
             timerElapsedSeconds: 0,
@@ -515,6 +568,29 @@ export class MatchExecutionService {
             penaltyScoreA: 0,
             penaltyScoreB: 0,
             awaitingTiebreakerChoice: false,
+        };
+
+        await this.liveMatchRepo.save(tournamentId, updated);
+        return updated;
+    }
+
+    /**
+     * Bricht ein begonnenes Elfmeterschießen ab und stellt die Tiebreaker-Auswahl wieder her.
+     * Bewusst NICHT cancelTiebreaker: das beendet das Spiel als Unentschieden und ist dem
+     * ausdrücklich beschrifteten Banner-Knopf "Als Unentschieden beenden" vorbehalten.
+     * `playPhase` bleibt auf 'penalty' — der Dialog wird über awaitingTiebreakerChoice
+     * geschlossen, damit die Phase nicht geraten werden muss (nach einer Verlängerung wäre
+     * 'regular' falsch und würde das nächste Tor in den falschen Topf schreiben).
+     */
+    async abortPenaltyShootout(tournamentId: string, matchId: string): Promise<LiveMatch> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+
+        const updated: LiveMatch = {
+            ...match,
+            awaitingTiebreakerChoice: true,
+            penaltyScoreA: 0,
+            penaltyScoreB: 0,
         };
 
         await this.liveMatchRepo.save(tournamentId, updated);
@@ -750,9 +826,8 @@ export class MatchExecutionService {
             return match.homeScore === match.awayScore;
         }
 
-        const totalHome = match.homeScore + (match.overtimeScoreA ?? 0);
-        const totalAway = match.awayScore + (match.overtimeScoreB ?? 0);
-        return totalHome === totalAway;
+        const effective = getEffectiveScore(match);
+        return effective.home === effective.away;
     }
 
     private getDecidedBy(match: LiveMatch): FinishResult['decidedBy'] {
@@ -791,13 +866,12 @@ export class MatchExecutionService {
         await this.liveMatchRepo.save(tournamentId, finishedMatch);
 
         // 2. Update Tournament.matches
-        const finalHomeScore = match.homeScore + (match.overtimeScoreA ?? 0);
-        const finalAwayScore = match.awayScore + (match.overtimeScoreB ?? 0);
+        const finalScore = getEffectiveScore(match);
 
         await this.tournamentRepo.updateMatch(tournamentId, {
             id: match.id,
-            scoreA: finalHomeScore,
-            scoreB: finalAwayScore,
+            scoreA: finalScore.home,
+            scoreB: finalScore.away,
             matchStatus: 'finished',
             finishedAt: new Date().toISOString(),
             overtimeScoreA: match.overtimeScoreA,

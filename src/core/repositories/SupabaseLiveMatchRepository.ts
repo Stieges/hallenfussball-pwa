@@ -299,6 +299,12 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
     }
   }
 
+  async deleteEvent(_tournamentId: string, _matchId: string, eventId: string): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) { return; }
+    const { error } = await supabase.from('match_events').update({ is_deleted: true }).eq('id', eventId);
+    if (error) { console.error('[SupabaseLiveMatchRepository] deleteEvent failed:', error); throw error; }
+  }
+
   async clear(tournamentId: string): Promise<void> {
     if (!isSupabaseConfigured || !supabase) {
       return;

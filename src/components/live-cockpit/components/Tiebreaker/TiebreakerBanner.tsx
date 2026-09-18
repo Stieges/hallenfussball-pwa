@@ -184,7 +184,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div style={overlayStyle} role="alertdialog" aria-labelledby="tiebreaker-title">
+    <div style={overlayStyle} role="alertdialog" aria-labelledby="tiebreaker-title" data-testid="tiebreaker-banner">
       <div style={bannerStyle}>
         {/* Warning Header */}
         <div style={headerStyle}>

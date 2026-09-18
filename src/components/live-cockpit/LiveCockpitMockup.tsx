@@ -77,7 +77,7 @@ export const LiveCockpitMockup: React.FC<LiveCockpitProps> = ({
   onStartPenaltyShootout: _onStartPenaltyShootout,
   onRecordPenaltyResult: _onRecordPenaltyResult,
   onForceFinish: _onForceFinish,
-  onCancelTiebreaker: _onCancelTiebreaker,
+  onAbortPenaltyShootout: _onAbortPenaltyShootout,
   // Event tracking handlers (new)
   onTimePenalty,
   onCard,

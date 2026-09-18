@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
@@ -35,6 +36,8 @@ import {
   // Overflow Menu for quick actions + settings link
 
   SettingsDialog,
+  TiebreakerBanner,
+  PenaltyShootoutDialog,
 } from './components';
 import { AudioActivationBanner } from '../match-cockpit/AudioActivationBanner';
 
@@ -44,6 +47,16 @@ import { useToast } from './hooks';
 // ---------------------------------------------------------------------------
 // Main Component
 // ---------------------------------------------------------------------------
+
+// BUG-010/L9: Shared event-type labels (was duplicated in handleEventUpdate + handleEventDelete)
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  GOAL: 'Tor',
+  YELLOW_CARD: 'Gelbe Karte',
+  RED_CARD: 'Rote Karte',
+  TIME_PENALTY: 'Zeitstrafe',
+  SUBSTITUTION: 'Wechsel',
+  FOUL: 'Foul',
+};
 
 // Helper to get cockpit settings with defaults
 function getCockpitSettings(settings: MatchCockpitSettings | undefined): MatchCockpitSettings {
@@ -72,18 +85,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onAdjustTime,
   onLoadNextMatch: _onLoadNextMatch,
   onReopenLastMatch: _onReopenLastMatch,
-  onStartOvertime: _onStartOvertime,
-  onStartGoldenGoal: _onStartGoldenGoal,
-  onStartPenaltyShootout: _onStartPenaltyShootout,
-  onRecordPenaltyResult: _onRecordPenaltyResult,
-  onForceFinish: _onForceFinish,
-  onCancelTiebreaker: _onCancelTiebreaker,
+  onStartOvertime,
+  onStartGoldenGoal,
+  onStartPenaltyShootout,
+  onRecordPenaltyResult,
+  onForceFinish,
+  onAbortPenaltyShootout,
   // Event tracking handlers (new)
   onTimePenalty,
   onCard,
   onSubstitution,
   onFoul,
   onUpdateEvent,
+  onDeleteEvent,
   onUpdateSettings,
 }) => {
   const { t } = useTranslation('cockpit');
@@ -133,6 +147,8 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [sidesSwapped, setSidesSwapped] = useState(false);
   // Settings Dialog
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
+  // L1: Elfmeterschießen-Dialog (Task 11)
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Toast notifications
   const { toasts, showSuccess, showInfo, dismissToast } = useToast();
@@ -299,13 +315,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   const handleMinusHome = useCallback(() => {
-    if (!currentMatch || currentMatch.homeScore <= 0) { return; }
+    if (!currentMatch) { return; }
+    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
+    const relevantScore = isOvertime ? (currentMatch.overtimeScoreA ?? 0) : currentMatch.homeScore;
+    if (relevantScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
     showInfo(t('toast.goalRemoved', { teamName: currentMatch.homeTeam.name }));
   }, [currentMatch, onGoal, showInfo, t]);
 
   const handleMinusAway = useCallback(() => {
-    if (!currentMatch || currentMatch.awayScore <= 0) { return; }
+    if (!currentMatch) { return; }
+    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
+    const relevantScore = isOvertime ? (currentMatch.overtimeScoreB ?? 0) : currentMatch.awayScore;
+    if (relevantScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
     showInfo(t('toast.goalRemoved', { teamName: currentMatch.awayTeam.name }));
   }, [currentMatch, onGoal, showInfo, t]);
@@ -540,15 +562,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       if (!event) { return; }
 
       // Show success toast with event type
-      const eventTypeLabels: Record<string, string> = {
-        GOAL: 'Tor',
-        YELLOW_CARD: 'Gelbe Karte',
-        RED_CARD: 'Rote Karte',
-        TIME_PENALTY: 'Zeitstrafe',
-        SUBSTITUTION: 'Wechsel',
-        FOUL: 'Foul',
-      };
-      const label = eventTypeLabels[event.type] ?? event.type;
+      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
       const playerInfo = updates.playerNumber ? ` (#${updates.playerNumber})` : '';
 
       // Call parent handler to persist update
@@ -562,41 +576,64 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     [currentMatch, showSuccess, showInfo, onUpdateEvent]
   );
 
-  // BUG-010: Handler for deleting events (with score adjustment for GOALs)
+  // L9: Handler for deleting events — persistence + score correction now live in
+  // MatchExecutionService.deleteEvent. No onGoal(-1) here anymore: the service already
+  // corrects the score, so calling onGoal too would decrement it a second time.
   const handleEventDelete = useCallback(
     (eventId: string) => {
       if (!currentMatch) { return; }
       const event = currentMatch.events.find(e => e.id === eventId);
       if (!event) { return; }
-
-      const eventTypeLabels: Record<string, string> = {
-        GOAL: 'Tor',
-        YELLOW_CARD: 'Gelbe Karte',
-        RED_CARD: 'Rote Karte',
-        TIME_PENALTY: 'Zeitstrafe',
-        SUBSTITUTION: 'Wechsel',
-        FOUL: 'Foul',
-      };
-      const label = eventTypeLabels[event.type] ?? event.type;
-
-      // If it's a GOAL event, also decrement the score
-      // match-cockpit format: payload.teamId
-      const eventTeamId = event.payload.teamId;
-      if (event.type === 'GOAL' && eventTeamId) {
-        onGoal(currentMatch.id, eventTeamId, -1);
-        const teamName = eventTeamId === currentMatch.homeTeam.id
-          ? currentMatch.homeTeam.name
-          : currentMatch.awayTeam.name;
-        showInfo(`🗑️ ${label} für ${teamName} gelöscht (Spielstand angepasst)`);
+      const label = EVENT_TYPE_LABELS[event.type] ?? event.type;
+      if (onDeleteEvent) {
+        // L9: Der Service entfernt das Event, korrigiert bei GOAL den Spielstand, setzt is_deleted.
+        onDeleteEvent(currentMatch.id, eventId);
+        showSuccess(`🗑️ ${label} gelöscht`);
       } else {
-        showInfo(`🗑️ ${label} gelöscht`);
+        showInfo(`(Vorschau) ${label} gelöscht — nicht gespeichert`);
       }
-
-      // Note: Full persistence would require parent callback
-      // TODO: Add onDeleteEvent prop to LiveCockpitProps when backend is ready
     },
-    [currentMatch, onGoal, showInfo]
+    [currentMatch, onDeleteEvent, showSuccess, showInfo]
   );
+
+  // L1: Tiebreaker-Handler — leiten die Entscheidung an den Parent weiter (matchId).
+  const handleStartOvertime = useCallback(() => { if (!currentMatch) { return; } onStartOvertime?.(currentMatch.id); }, [currentMatch, onStartOvertime]);
+  const handleStartGoldenGoal = useCallback(() => { if (!currentMatch) { return; } onStartGoldenGoal?.(currentMatch.id); }, [currentMatch, onStartGoldenGoal]);
+  const handleStartPenaltyShootout = useCallback(() => {
+    if (!currentMatch) { return; }
+    onStartPenaltyShootout?.(currentMatch.id);
+    setShowPenaltyDialog(true);
+  }, [currentMatch, onStartPenaltyShootout]);
+  // "Als Unentschieden beenden": MatchExecutionService.cancelTiebreaker persistiert als regulären Ausgang.
+  const handleEndAsDraw = useCallback(() => { if (!currentMatch) { return; } onForceFinish?.(currentMatch.id); }, [currentMatch, onForceFinish]);
+
+  // L1: Elfmeterschießen — der Dialog verwaltet seine Schussliste selbst, wir brauchen nur das Endergebnis.
+  // MatchExecutionService.recordPenaltyResult schreibt penaltyScoreA/B, decidedBy='penalty' (524–541).
+  const handlePenaltyFinish = useCallback((homeScore: number, awayScore: number) => {
+    if (!currentMatch) { return; }
+    onRecordPenaltyResult?.(currentMatch.id, homeScore, awayScore);
+    setShowPenaltyDialog(false);
+  }, [currentMatch, onRecordPenaltyResult]);
+  // Fixwave-Fix (Critical): "Abbrechen" bricht das Elfmeterschießen ab und zeigt wieder das
+  // Tiebreaker-Banner — bewusst NICHT onCancelTiebreaker (beendet das Spiel als Unentschieden,
+  // das ist dem separaten "Als Unentschieden beenden"-Knopf im Banner vorbehalten, siehe handleEndAsDraw).
+  const handlePenaltyCancel = useCallback(() => {
+    if (!currentMatch) { return; }
+    setShowPenaltyDialog(false);
+    onAbortPenaltyShootout?.(currentMatch.id);
+  }, [currentMatch, onAbortPenaltyShootout]);
+
+  // L1: Dialog an die persistierte Phase koppeln (matches.live_state.playPhase über Realtime) —
+  // der Zustand kann von einem anderen Gerät kommen, nicht nur über handleStartPenaltyShootout oben.
+  // Fixwave-Fix (Critical): zusätzlich awaitingTiebreakerChoice prüfen — abortPenaltyShootout setzt
+  // dieses Flag, um den Dialog zu schließen, OHNE playPhase zu ändern (siehe Service-Kommentar).
+  useEffect(() => {
+    setShowPenaltyDialog(
+      currentMatch?.playPhase === 'penalty' &&
+      currentMatch.status !== 'FINISHED' &&
+      !currentMatch.awaitingTiebreakerChoice
+    );
+  }, [currentMatch?.playPhase, currentMatch?.status, currentMatch?.awaitingTiebreakerChoice]);
 
   // ---------------------------------------------------------------------------
   // Early return AFTER all hooks
@@ -611,11 +648,18 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   }
 
   const match = currentMatch;
+  const effectiveScore = getEffectiveScore(match);
   const isFinished = match.status === 'FINISHED';
   const isNotStarted = match.status === 'NOT_STARTED';
   const canUndo = match.events.length > 0 && !isFinished;
-  const canDecrementHome = match.homeScore > 0 && !isFinished;
-  const canDecrementAway = match.awayScore > 0 && !isFinished;
+  // In der Verlängerung zählt die Verlängerungs-Trefferzahl, nicht der reguläre Spielstand.
+  // Sonst ist der "−1"-Knopf genau dann gesperrt, wenn man ihn braucht: Ein 0:0-Finale, das in
+  // die Verlängerung geht, hat homeScore 0 — ein dort irrtümlich erfasstes Tor liesse sich mit
+  // dem Knopf nie zurücknehmen. Umgekehrt stand er bei positivem Regulärstand offen, obwohl es
+  // kein Verlängerungstor zu entfernen gab.
+  const isOvertimePhase = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
+  const canDecrementHome = (isOvertimePhase ? (match.overtimeScoreA ?? 0) : match.homeScore) > 0 && !isFinished;
+  const canDecrementAway = (isOvertimePhase ? (match.overtimeScoreB ?? 0) : match.awayScore) > 0 && !isFinished;
   const isDesktop = !isMobile && !isTablet;
 
   // ---------------------------------------------------------------------------
@@ -873,7 +917,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <TeamBlock
                 teamName={sidesSwapped ? match.awayTeam.name : match.homeTeam.name}
                 teamLabel={sidesSwapped ? 'Gast' : 'Heim'}
-                score={sidesSwapped ? match.awayScore : match.homeScore}
+                score={sidesSwapped ? effectiveScore.away : effectiveScore.home}
                 fouls={sidesSwapped ? awayFouls : homeFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
@@ -909,7 +953,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               <TeamBlock
                 teamName={sidesSwapped ? match.homeTeam.name : match.awayTeam.name}
                 teamLabel={sidesSwapped ? 'Heim' : 'Gast'}
-                score={sidesSwapped ? match.homeScore : match.awayScore}
+                score={sidesSwapped ? effectiveScore.home : effectiveScore.away}
                 fouls={sidesSwapped ? homeFouls : awayFouls}
                 disabled={isFinished || isNotStarted}
                 breakpoint={breakpoint}
@@ -1098,6 +1142,30 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         <AudioActivationBanner
           show={true}
           onActivate={sound.activate}
+        />
+      )}
+
+      {/* L1: Tiebreaker-Banner — MatchExecutionService.finishMatch setzt awaitingTiebreakerChoice,
+          useMatchExecution.handleFinish lädt das Match neu, der Zustand kommt hier an. */}
+      {match.awaitingTiebreakerChoice && (
+        <TiebreakerBanner
+          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
+          score={effectiveScore.home} tiebreakerMode={match.tiebreakerMode}
+          overtimeMinutes={Math.round((match.overtimeDurationSeconds ?? 300) / 60)}
+          onStartOvertime={onStartOvertime ? handleStartOvertime : undefined}
+          onStartGoldenGoal={onStartGoldenGoal ? handleStartGoldenGoal : undefined}
+          onStartPenaltyShootout={onStartPenaltyShootout ? handleStartPenaltyShootout : undefined}
+          onEndAsDraw={onForceFinish ? handleEndAsDraw : undefined}
+        />
+      )}
+
+      {/* L1: Elfmeterschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
+          persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz. */}
+      {showPenaltyDialog && onRecordPenaltyResult && onAbortPenaltyShootout && (
+        <PenaltyShootoutDialog
+          homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
+          onRecordShot={() => { /* Einzelschüsse werden nicht persistiert (Follow-up, Task 22) */ }}
+          onFinish={handlePenaltyFinish} onCancel={handlePenaltyCancel}
         />
       )}
 

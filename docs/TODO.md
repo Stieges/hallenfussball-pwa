@@ -16,12 +16,29 @@
 | ~~Runtime-Alerts dompurify/fflate~~ | – | ✅ Erledigt 2026-09-17 | 11 Alerts via `npm update` (beide nur über jspdf) — Hygiene-PR |
 | ~~Stale Remote-Branches~~ | – | ✅ Gelöscht 2026-09-17 | 17 Stück: 5 Feature-Branches gemergter Squash-PRs + 12 Dependabot-Reste. Remote hält jetzt nur noch `main` |
 | **Leaked-Password-Protection aktivieren** | Niedrig | Offen | Supabase-Advisor-WARN (2026-09-17): `auth_leaked_password_protection` ist deaktiviert. Reiner Dashboard-Schalter (Auth → Policies), prüft Passwörter gegen HaveIBeenPwned |
-| **Oktober-Scope entscheiden** | **Hoch** | Offen | B1 komplett ≈ 4,5–5,5 Wo nach M0 → nicht vor Ende Oktober. Optionen: A) B1-Mini „Zuschauer-Layer" (series + series_id + Serien-Admin + `/serie/:code` mit QR, ≈2–2,5 Wo, Empfehlung) · B) B1 komplett · C) Oktober ohne Serie. Entscheidung Daniel, Details im Restart-Plan 2026-09-17 |
+| ~~Oktober-Scope entscheiden~~ | – | ✅ Entschieden 2026-09-17 | Der HV-Pitch hat noch nicht stattgefunden, der Oktober-Zeitdruck entfällt. Neue Priorität (Daniel, wörtlich): „eine vollständige Turniermanagement-Software für ein Turnier mit allen Monitoren und Features. Auch Publikumssicht." B1 folgt danach als Option A (Zuschauer-Layer). Programm: `docs/superpowers/plans/2026-09-17-einzelturnier-vollstaendig.md` |
 | **Scheduled-Workflows sterben nach 60 Tagen Inaktivität** | Mittel | Offen | GitHub deaktiviert `schedule`-Workflows in **öffentlichen** Repos nach 60 Tagen ohne Repo-Aktivität — und meldet das nicht. Die Juli→September-Lücke war 62 Tage; dass der Drift-Check weiterlief, lag allein an Dependabot-PRs, die als Aktivität zählten. Der Keep-Alive hängt damit an Dependabot. Fällt der aus, stirbt der Keep-Alive still und Supabase pausiert ~7 Tage später. Stärkstes Argument für den Pro-Plan (kein Auto-Pause, kein Keep-Alive nötig) |
 | **`supabase/setup-cli` pinnen** | Niedrig | Offen | `version: latest` im Drift-Check ist flaky: Run `33303138564` (2026-08-30) starb an „Failed to resolve latest Supabase CLI release: rate limit exceeded". Seit der Fail-Loud-Umstellung kostet jeder Flake ein falsches Alarmsignal. Auf konkrete CLI-Version pinnen |
 | **Drift-Check auf Fork-PRs** | Niedrig | Offen | Öffentliches Repo: Fork-PRs bekommen keine Secrets, der Check schlägt seit der Fail-Loud-Umstellung für externe Beiträge rot fehl (vorher grün übersprungen). Kein Merge-Blocker (nicht in den Required Checks). Falls externe Beiträge gewünscht: `if: github.event.pull_request.head.repo.full_name == github.repository` |
 | **PDF-Export ohne Testabdeckung** | Niedrig | Offen | Weder Vitest noch Playwright berühren `src/lib/pdfExporter.ts` / `pdfStatisticsExporter.ts`. Beim dompurify/fflate-Bump gab es deshalb keinen automatischen Nachweis; manueller Smoke musste einspringen |
-| ~~Testabdeckung wird nicht erfasst~~ | – | ✅ Erledigt 2026-09-17 | `npm run test:coverage` (v8), CI lädt `coverage-report` als Artefakt hoch (non-blocking). **Baseline:** Stmts 56.32 % · Branches 46.18 % · Funcs 48.71 % · Lines 57.37 %. Thresholds bewusst entfernt, bis Schwellen aus der Baseline abgeleitet sind. Bekannt lückenlos ungetestet: `LiveViewScreen`, `MonitorDisplayPage`, `LiveCockpit`, `DangerZone`, `ScheduleDisplay` (M1–M3 schließen das) |
+| ~~Testabdeckung wird nicht erfasst~~ | – | ✅ Erledigt 2026-09-17 | `npm run test:coverage` (v8), CI lädt `coverage-report` als Artefakt hoch (non-blocking). **Baseline:** Stmts 56.32 % · Branches 46.18 % · Funcs 48.71 % · Lines 57.37 %. Thresholds bewusst entfernt. **Achtung (M1, 2026-09-18): Diese Baseline ist KEIN stabiler Nenner.** `coverage.all` greift effektiv nicht — gezählt werden nur importierte Dateien. M1 zog mit 38 neuen Tests 22 bisher nie gemessene Dateien in den Nenner, der Prozentsatz fiel dadurch auf 44,07 %, obwohl absolut mehr Zeilen abgedeckt sind. Schwellen aus diesem Wert würden jeden Test bestrafen, der neues Terrain betritt. Reihenfolge: erst `coverage.all: true`, dann messen, dann Schwellen. Bekannt lückenlos ungetestet: `LiveViewScreen`, `MonitorDisplayPage`, `LiveCockpit`, `DangerZone`, `ScheduleDisplay` (M1–M3 schließen das) |
+
+---
+
+## 🟢 Einzelturnier vollständig (M0–M4, gestartet 2026-09-17)
+
+Plan: `docs/superpowers/plans/2026-09-17-einzelturnier-vollstaendig.md` · Ledger: `.superpowers/sdd/2026-09-17-einzelturnier-vollstaendig/progress.md`
+
+| Aufgabe | Priorität | Status | Notizen |
+|---|---|---|---|
+| ~~M0 — Testabdeckung messen~~ | – | ✅ Gemerged als `9472f5d` (PR #184) | Provider, Script, CI-Artefakt, Thresholds geparkt |
+| M1 — Monitore in der Halle | **Hoch** | 🔄 PR #185, Auto-Merge aktiv | K1/K2 (`is_public`-Denormalisierung + Round-Trip), Monitore/Sponsoren im config-JSONB, anonymer Live-Zugang, Cloud-Read der Monitorseite, Wake Lock, Sichtbarkeitshinweis. Suite 995 → 1032 |
+| M2 — Cockpit-Tiebreaker + Turnierabschluss | **Hoch** | 🔄 Gestartet | L1 (Tiebreaker/Elfmeter bedienbar), L5 („Turnier beenden" wirkt), L9 (Ereignis-Löschung persistent) |
+| M3 — Zuschaueransicht | Hoch | 📋 Geplant | L4 (Polling + Anon-Realtime + LIVE-Abzeichen), L6 (`hideScoresForPublic`), L11 (`/live`-E2E), L8 (Admin-QR) |
+| M4 — Aufräumen | Mittel | 📋 Geplant | ~4000 Zeilen toter Code, Follow-ups dokumentieren |
+| **Betriebsanweisung vor dem Turniertag** | **Hoch** | Offen | Sichtbarkeit einmal **umschalten** (privat → „Mit Link teilbar"), nicht nur öffnen und speichern. Nur das Umschalten läuft über `updateTournamentMetadata`/RPC und repariert auch historische `match_events`. Betrifft jedes Turnier, das vor M1 angelegt wurde |
+| F-325: Voll-Save schreibt `is_public: false` bei `undefined` | Mittel | Offen | `supabaseMappers.ts:615`. Schmales Übergangsfenster: vor M1 gecachte Kopie UND lokale Version der Cloud voraus. Schließt sich nach einem erfolgreichen Sync von selbst. Fix wäre, die Spalte bei `undefined` aus den Kindzeilen wegzulassen (Ruling 20) |
+| F-326: `dataSource`-State beim Routenwechsel nicht zurückgesetzt | Niedrig | Offen | `MonitorDisplayPage.tsx:963`. Kein Guard hängt daran |
 
 ---
 

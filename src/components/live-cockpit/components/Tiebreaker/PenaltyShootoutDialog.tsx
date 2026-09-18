@@ -359,6 +359,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="penalty-shootout-title"
+      data-testid="penalty-shootout-dialog"
     >
       {/* Header */}
       <header style={headerStyle}>
