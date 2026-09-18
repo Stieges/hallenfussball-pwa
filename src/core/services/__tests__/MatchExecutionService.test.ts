@@ -187,6 +187,33 @@ describe('MatchExecutionService', () => {
             expect(result.overtimeScoreA).toBe(0);
             expect(result.overtimeScoreB).toBe(0);
         });
+
+        // startGoldenGoal hat dieselbe Korrektur bekommen, aber in der Fix-Welle keinen eigenen Test.
+        // Die spiegelbildliche Änderung ungetestet zu lassen hiesse, dass genau sie sich unbemerkt
+        // zurückdrehen lässt — und im Finale ist Golden Goal der wahrscheinlichere Weg von beiden.
+        it('startGoldenGoal behält bereits vorhandene Verlängerungstore ebenfalls bei', async () => {
+            const matchWithOvertimeGoals = {
+                ...minimalLiveMatch,
+                status: 'PAUSED' as MatchStatus,
+                overtimeScoreA: 2,
+                overtimeScoreB: 2,
+            };
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(matchWithOvertimeGoals);
+
+            const result = await service.startGoldenGoal('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(2);
+            expect(result.overtimeScoreB).toBe(2);
+        });
+
+        it('startGoldenGoal initialisiert auf 0, wenn noch kein Verlängerungs-Score gesetzt ist', async () => {
+            vi.mocked(mockLiveMatchRepo.get).mockResolvedValue(minimalLiveMatch);
+
+            const result = await service.startGoldenGoal('tour-1', 'match-1');
+
+            expect(result.overtimeScoreA).toBe(0);
+            expect(result.overtimeScoreB).toBe(0);
+        });
     });
 
     // Fixwave-Fix (Critical): abortPenaltyShootout ist das Gegenstück zu startPenaltyShootout — bricht
