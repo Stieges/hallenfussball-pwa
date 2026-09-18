@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { OfflineRepository } from '../OfflineRepository';
 import type { LocalStorageRepository } from '../LocalStorageRepository';
 import type { SupabaseRepository } from '../SupabaseRepository';
+import { RepositoryError } from '../../errors';
 
 const cloudMakePublic = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
 const localMakePublic = vi.fn<(id: string) => Promise<{ shareCode: string; createdAt: string } | null>>();
@@ -40,6 +41,18 @@ describe('OfflineRepository.makeTournamentPublic — Freigabe-Ablehnung', () => 
     await expect(createRepository().makeTournamentPublic('t1')).rejects.toThrow(
       /has not been released/
     );
+    expect(localMakePublic).not.toHaveBeenCalled();
+  });
+
+  it('erkennt die Ablehnung am SQLSTATE, auch wenn die Meldung anders lautet', async () => {
+    // Der Vertrag ist der Fehlercode, nicht der Text. Ohne diese Prüfung hinge der Guard an
+    // einer Zeichenkette in einer SQL-Datei: Wird die Meldung dort umformuliert, fiele der
+    // Client STILL in den lokalen Fallback zurück — genau in das Verhalten, das er verhindert.
+    cloudMakePublic.mockRejectedValue(
+      new RepositoryError('makePublic', 'Freigabe abgelehnt', { code: 'PT001' })
+    );
+
+    await expect(createRepository().makeTournamentPublic('t1')).rejects.toThrow(/Freigabe abgelehnt/);
     expect(localMakePublic).not.toHaveBeenCalled();
   });
 

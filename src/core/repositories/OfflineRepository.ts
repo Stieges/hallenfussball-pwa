@@ -3,7 +3,7 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
-import { isAbortError } from '../errors';
+import { isAbortError, RepositoryError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
@@ -54,18 +54,30 @@ function stableKey(value: unknown): string {
 }
 
 /**
- * Meldung, mit der `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
+ * SQLSTATE, mit dem `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
  * Turnierfreigabe ablehnt — siehe supabase/migrations/20260918_002_make_public_refuses_drafts.sql.
  */
+const RELEASE_REFUSAL_CODE = 'PT001';
+
+/** Ältere Fassung der Funktion kannte den eigenen SQLSTATE noch nicht. */
 const RELEASE_REFUSAL_MARKER = 'has not been released';
 
 /**
  * Fachliche Ablehnung des Servers, kein Verbindungsproblem: Der lokale Fallback würde das
  * Turnier lokal öffentlich machen und eine Mutation einreihen, die der Server dauerhaft
- * ablehnt. Die Meldung wird stattdessen durchgereicht, damit die UI sie anzeigen kann.
+ * ablehnt. Die Ablehnung wird stattdessen durchgereicht, damit die UI sie anzeigen kann.
+ *
+ * Primär am SQLSTATE erkannt, nicht am Meldungstext: Ein Textvergleich koppelt den Client an
+ * eine Zeichenkette in einer SQL-Datei, und driftet die, fällt der Guard STILL in den lokalen
+ * Fallback zurück — also genau in das Verhalten, das er verhindern soll. Der Textvergleich
+ * bleibt nur als Rückfall für eine noch nicht migrierte Datenbank.
  */
 function isReleaseRefusal(error: unknown): boolean {
-    return error instanceof Error && error.message.includes(RELEASE_REFUSAL_MARKER);
+    if (!(error instanceof Error)) { return false; }
+    const original = error instanceof RepositoryError ? error.originalError : undefined;
+    const code = (original as { code?: unknown } | undefined)?.code;
+    if (typeof code === 'string' && code === RELEASE_REFUSAL_CODE) { return true; }
+    return error.message.includes(RELEASE_REFUSAL_MARKER);
 }
 
 export class OfflineRepository implements ITournamentRepository {

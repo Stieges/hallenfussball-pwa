@@ -50,7 +50,11 @@ BEGIN
       '{}'::jsonb
     ) ? 'publishedAt'
   ) THEN
-    RAISE EXCEPTION 'Tournament has not been released yet and cannot be made public';
+    -- Eigener SQLSTATE: Der Client unterscheidet daran die fachliche Ablehnung von einem
+    -- Verbindungsfehler. Ein Textvergleich waere die fragilere Kopplung — driftet die
+    -- Meldung, faellt der Client still in den lokalen Fallback zurueck.
+    RAISE EXCEPTION 'Tournament has not been released yet and cannot be made public'
+      USING ERRCODE = 'PT001';
   END IF;
 
   -- Generate unique code with retry logic
