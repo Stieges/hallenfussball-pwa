@@ -63,9 +63,10 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
     );
 
     const minusHome = screen.getByTestId('goal-minus-button-home');
-    // Button bleibt aktiv (canDecrementHome richtet sich nach dem regulären
-    // Spielstand) — die Absicherung muss also im Klick-Handler selbst liegen.
-    expect(minusHome).not.toBeDisabled();
+    // Zwei Absicherungen, bewusst beide: Der Knopf ist gesperrt (es gibt kein
+    // Verlängerungstor zu entfernen), UND der Klick-Handler bliebe wirkungslos,
+    // falls die Sperre je wegfiele.
+    expect(minusHome).toBeDisabled();
     await user.click(minusHome);
 
     expect(onGoal).not.toHaveBeenCalled();
@@ -95,6 +96,25 @@ describe('LiveCockpit — Minus-Button-Guard in der Verlängerung', () => {
     );
 
     await user.click(screen.getByTestId('goal-minus-button-home'));
+
+    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
+  });
+
+  it('PIN: 0:0-Finale in der Verlängerung — "−1" ist bedienbar, obwohl der reguläre Stand 0 ist', async () => {
+    // Der gefährlichere Zwilling des gemeldeten Fehlklicks: So entsteht eine Verlängerung
+    // überhaupt am häufigsten. Mit der alten Sperre (`homeScore > 0`) war der Knopf hier
+    // dauerhaft gesperrt — ein irrtümlich erfasstes Golden Goal war damit nicht zurücknehmbar.
+    const onGoal = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <LiveCockpit
+        {...baseProps(makeMatch({ playPhase: 'goldenGoal', homeScore: 0, overtimeScoreA: 2 }), { onGoal })}
+      />
+    );
+
+    const minusHome = screen.getByTestId('goal-minus-button-home');
+    expect(minusHome).not.toBeDisabled();
+    await user.click(minusHome);
 
     expect(onGoal).toHaveBeenCalledWith('match-1', 'team-a', -1);
   });

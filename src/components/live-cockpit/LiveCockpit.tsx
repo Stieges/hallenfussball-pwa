@@ -641,8 +641,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const isFinished = match.status === 'FINISHED';
   const isNotStarted = match.status === 'NOT_STARTED';
   const canUndo = match.events.length > 0 && !isFinished;
-  const canDecrementHome = match.homeScore > 0 && !isFinished;
-  const canDecrementAway = match.awayScore > 0 && !isFinished;
+  // In der Verlängerung zählt die Verlängerungs-Trefferzahl, nicht der reguläre Spielstand.
+  // Sonst ist der "−1"-Knopf genau dann gesperrt, wenn man ihn braucht: Ein 0:0-Finale, das in
+  // die Verlängerung geht, hat homeScore 0 — ein dort irrtümlich erfasstes Tor liesse sich mit
+  // dem Knopf nie zurücknehmen. Umgekehrt stand er bei positivem Regulärstand offen, obwohl es
+  // kein Verlängerungstor zu entfernen gab.
+  const isOvertimePhase = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
+  const canDecrementHome = (isOvertimePhase ? (match.overtimeScoreA ?? 0) : match.homeScore) > 0 && !isFinished;
+  const canDecrementAway = (isOvertimePhase ? (match.overtimeScoreB ?? 0) : match.awayScore) > 0 && !isFinished;
   const isDesktop = !isMobile && !isTablet;
 
   // ---------------------------------------------------------------------------
