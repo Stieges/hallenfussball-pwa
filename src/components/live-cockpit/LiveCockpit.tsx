@@ -90,7 +90,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onStartPenaltyShootout,
   onRecordPenaltyResult,
   onForceFinish,
-  onCancelTiebreaker,
+  onAbortPenaltyShootout,
   // Event tracking handlers (new)
   onTimePenalty,
   onCard,
@@ -614,17 +614,26 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     onRecordPenaltyResult?.(currentMatch.id, homeScore, awayScore);
     setShowPenaltyDialog(false);
   }, [currentMatch, onRecordPenaltyResult]);
+  // Fixwave-Fix (Critical): "Abbrechen" bricht das Elfmeterschießen ab und zeigt wieder das
+  // Tiebreaker-Banner — bewusst NICHT onCancelTiebreaker (beendet das Spiel als Unentschieden,
+  // das ist dem separaten "Als Unentschieden beenden"-Knopf im Banner vorbehalten, siehe handleEndAsDraw).
   const handlePenaltyCancel = useCallback(() => {
     if (!currentMatch) { return; }
     setShowPenaltyDialog(false);
-    onCancelTiebreaker?.(currentMatch.id);
-  }, [currentMatch, onCancelTiebreaker]);
+    onAbortPenaltyShootout?.(currentMatch.id);
+  }, [currentMatch, onAbortPenaltyShootout]);
 
   // L1: Dialog an die persistierte Phase koppeln (matches.live_state.playPhase über Realtime) —
   // der Zustand kann von einem anderen Gerät kommen, nicht nur über handleStartPenaltyShootout oben.
+  // Fixwave-Fix (Critical): zusätzlich awaitingTiebreakerChoice prüfen — abortPenaltyShootout setzt
+  // dieses Flag, um den Dialog zu schließen, OHNE playPhase zu ändern (siehe Service-Kommentar).
   useEffect(() => {
-    setShowPenaltyDialog(currentMatch?.playPhase === 'penalty' && currentMatch.status !== 'FINISHED');
-  }, [currentMatch?.playPhase, currentMatch?.status]);
+    setShowPenaltyDialog(
+      currentMatch?.playPhase === 'penalty' &&
+      currentMatch.status !== 'FINISHED' &&
+      !currentMatch.awaitingTiebreakerChoice
+    );
+  }, [currentMatch?.playPhase, currentMatch?.status, currentMatch?.awaitingTiebreakerChoice]);
 
   // ---------------------------------------------------------------------------
   // Early return AFTER all hooks
@@ -1152,7 +1161,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
       {/* L1: Elfmeterschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
           persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz. */}
-      {showPenaltyDialog && onRecordPenaltyResult && onCancelTiebreaker && (
+      {showPenaltyDialog && onRecordPenaltyResult && onAbortPenaltyShootout && (
         <PenaltyShootoutDialog
           homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
           onRecordShot={() => { /* Einzelschüsse werden nicht persistiert (Follow-up, Task 22) */ }}

@@ -68,7 +68,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleStartGoldenGoal,
     handleStartPenaltyShootout,
     handleRecordPenaltyResult,
-    handleCancelTiebreaker,
+    handleAbortPenaltyShootout,
     handleUpdateEvent,
     handleDeleteEvent,
   } = useMatchExecution({ tournament, onTournamentUpdate });
@@ -431,7 +431,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           onStartPenaltyShootout={(matchId) => { void handleStartPenaltyShootout(matchId); }}
           onRecordPenaltyResult={(matchId, home, away) => { void handleRecordPenaltyResult(matchId, home, away); }}
           onForceFinish={(matchId) => { void handleForceFinish(matchId); }}
-          onCancelTiebreaker={(matchId) => { void handleCancelTiebreaker(matchId); }}
+          onAbortPenaltyShootout={(matchId) => { void handleAbortPenaltyShootout(matchId); }}
           onUpdateEvent={(matchId, eventId, updates) => { void handleUpdateEvent(matchId, eventId, updates); }}
           onDeleteEvent={(matchId, eventId) => { void handleDeleteEvent(matchId, eventId); }}
           onUpdateSettings={(settings) => { void handleUpdateSettings(settings); }}

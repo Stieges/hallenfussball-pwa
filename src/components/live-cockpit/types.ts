@@ -110,7 +110,10 @@ export interface LiveCockpitProps {
   onStartPenaltyShootout?(matchId: string): void;
   onRecordPenaltyResult?(matchId: string, homeScore: number, awayScore: number): void;
   onForceFinish?(matchId: string): void;
-  onCancelTiebreaker?(matchId: string): void;
+  /** Fixwave-Fix (Critical): bricht ein begonnenes Elfmeterschießen ab und zeigt wieder das
+   *  Tiebreaker-Banner — anders als das entfernte onCancelTiebreaker (siehe service.cancelTiebreaker)
+   *  beendet das NICHT das Spiel als Unentschieden. Dafür ist onForceFinish da. */
+  onAbortPenaltyShootout?(matchId: string): void;
 
   /** Update cockpit settings directly from the view */
   onUpdateSettings?(settings: import('../../types/tournament').MatchCockpitSettings): void;

@@ -6,13 +6,15 @@
  * Verlängerung ist aber `overtimeScoreA`/`overtimeScoreB` maßgeblich. Bei
  * `homeScore: 1` (Tor in der regulären Spielzeit) und `overtimeScoreA: 0` blieb
  * der "−1"-Button aktiv (das Button-`disabled`-Attribut selbst — gesteuert über
- * `canDecrementHome`/`canDecrementAway`, LiveCockpit.tsx ~Zeile 644f. — richtet
- * sich bewusst weiter nach dem regulären Spielstand, siehe Report): ein Klick
+ * `canDecrementHome`/`canDecrementAway`, LiveCockpit.tsx ~Zeile 661f. — richtete
+ * sich vorher unabhängig von der Phase nach dem regulären Spielstand): ein Klick
  * rief `onGoal(..., -1)` auf und setzte (vor dem Floor-Fix in
  * MatchExecutionService.recordGoal) `overtimeScoreA` auf -1 — ein einzelner
- * Fehlklick ohne Löschung/Undo. Der Fix macht den Klick-Handler selbst
- * phasenbewusst, sodass der Klick auf den (weiterhin aktiven) Button in der
- * Verlängerung keine Wirkung mehr hat, wenn kein Verlängerungstor vorhanden ist.
+ * Fehlklick ohne Löschung/Undo. Der Fix (Commit ef5833a) macht sowohl das
+ * `disabled`-Attribut als auch den Klick-Handler selbst phasenbewusst: in der
+ * Verlängerung zählt `overtimeScoreA`/`overtimeScoreB`, nicht `homeScore`/`awayScore`
+ * — der Button ist jetzt gesperrt UND der Klick bliebe zusätzlich wirkungslos,
+ * falls die Sperre je wegfiele.
  *
  * Selektor: TeamBlock/index.tsx setzt `data-testid={`goal-minus-button-${teamSide}`}`
  * (index.tsx:216) — stabil, unabhängig von i18n. Das "−1"-Label selbst ist kein

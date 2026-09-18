@@ -74,7 +74,11 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
 
 describe('LiveCockpit — Elfmeterschießen (L1)', () => {
   beforeEach(() => vi.clearAllMocks());
-  const pen = () => ({ onRecordPenaltyResult: vi.fn(), onCancelTiebreaker: vi.fn() });
+  // Fixwave-Fix (Critical): pen() liefert jetzt onAbortPenaltyShootout statt des entfernten
+  // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe MatchExecutionService.
+  // cancelTiebreaker). onForceFinish ist mit im Bundle, damit die Tests unten beweisen können,
+  // dass Abbrechen/Escape es NICHT auslösen.
+  const pen = () => ({ onRecordPenaltyResult: vi.fn(), onAbortPenaltyShootout: vi.fn(), onForceFinish: vi.fn() });
 
   it('L1: öffnet den Dialog, wenn das Match in der Penalty-Phase ist', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), pen())} />);
@@ -88,10 +92,39 @@ describe('LiveCockpit — Elfmeterschießen (L1)', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', status: 'FINISHED', awaitingTiebreakerChoice: false }), pen())} />);
     expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
   });
-  it('L1: Abbrechen ruft onCancelTiebreaker mit der matchId', async () => {
+
+  // Fixwave-Fix (Critical): vorher pinnte dieser Test (unter dem Namen "Abbrechen ruft
+  // onCancelTiebreaker mit der matchId") den Defekt als gewolltes Verhalten fest — "Abbrechen"
+  // beendete damit unwiderruflich das Finale als Unentschieden. Jetzt beweist er das Gegenteil.
+  it('Fixwave: Abbrechen ruft onAbortPenaltyShootout mit der matchId, NICHT onForceFinish', async () => {
     const h = pen(); const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), h)} />);
     await user.click(screen.getByRole('button', { name: /Abbrechen/i }));
-    expect(h.onCancelTiebreaker).toHaveBeenCalledWith('match-1');
+    expect(h.onAbortPenaltyShootout).toHaveBeenCalledWith('match-1');
+    expect(h.onForceFinish).not.toHaveBeenCalled();
+  });
+
+  it('Fixwave: Escape im Dialog verhält sich wie "Abbrechen" (onAbortPenaltyShootout, NICHT onForceFinish)', async () => {
+    const h = pen(); const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), h)} />);
+    expect(screen.getByTestId('penalty-shootout-dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(h.onAbortPenaltyShootout).toHaveBeenCalledWith('match-1');
+    expect(h.onForceFinish).not.toHaveBeenCalled();
+  });
+
+  // Fixwave-Fix (Critical): der Zustand direkt nach einem Abbruch — abortPenaltyShootout setzt
+  // awaitingTiebreakerChoice:true bei weiterhin playPhase:'penalty'. Der Dialog muss zu- und das
+  // Banner aufgehen, sonst hätte der Organisator nach dem Abbrechen gar keine Handlungsoption mehr.
+  it('Fixwave: awaitingTiebreakerChoice:true + playPhase:penalty (Zustand nach Abbruch) — kein Dialog, Banner sichtbar', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: true }), { ...pen(), ...allTb() })} />);
+    expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
+  });
+
+  // Regression (andere Richtung): der Abort-Fix darf den normalen Öffnen-Pfad nicht kaputt machen.
+  it('Regression: awaitingTiebreakerChoice:false + playPhase:penalty öffnet weiterhin den Dialog', () => {
+    render(<LiveCockpit {...baseProps(makeMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: false }), pen())} />);
+    expect(screen.getByTestId('penalty-shootout-dialog')).toBeInTheDocument();
   });
 });

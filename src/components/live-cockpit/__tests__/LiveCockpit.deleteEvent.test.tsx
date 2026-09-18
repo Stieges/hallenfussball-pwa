@@ -20,7 +20,10 @@ function makeMatch(overrides: Record<string, unknown> = {}) {
     homeTeam: { id: 'team-a', name: 'FC Alpha' }, awayTeam: { id: 'team-b', name: 'SV Beta' },
     homeScore: 1, awayScore: 0, status: 'PAUSED', elapsedSeconds: 30, playPhase: 'regular',
     events: [
-      { id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 30, payload: { teamId: 'team-a' }, scoreAfter: { home: 1, away: 0 } },
+      // Fixwave-Fix (Minor): reales Payload-Format (MatchExecutionService.recordGoal/deleteEvent
+      // schreiben `{ team: 'home'|'away', delta }`, nicht `{ teamId }` — siehe Service-Kommentar
+      // bei deleteEvent). Die Fixture simulierte vorher ein Format, das der Service nie erzeugt.
+      { id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 30, payload: { team: 'home', delta: 1 }, scoreAfter: { home: 1, away: 0 } },
     ],
     ...overrides,
   };
