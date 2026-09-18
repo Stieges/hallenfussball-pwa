@@ -209,8 +209,8 @@ export class MatchExecutionService {
                 if (isOvertime) {
                     updated = {
                         ...match,
-                        overtimeScoreA: (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0),
-                        overtimeScoreB: (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0),
+                        overtimeScoreA: Math.max(0, (match.overtimeScoreA ?? 0) + (team === 'home' ? delta : 0)),
+                        overtimeScoreB: Math.max(0, (match.overtimeScoreB ?? 0) + (team === 'away' ? delta : 0)),
                     };
                 } else {
                     updated = {

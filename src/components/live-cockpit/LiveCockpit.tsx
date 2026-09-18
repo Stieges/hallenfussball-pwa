@@ -314,13 +314,19 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   const handleMinusHome = useCallback(() => {
-    if (!currentMatch || currentMatch.homeScore <= 0) { return; }
+    if (!currentMatch) { return; }
+    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
+    const relevantScore = isOvertime ? (currentMatch.overtimeScoreA ?? 0) : currentMatch.homeScore;
+    if (relevantScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.homeTeam.id, -1);
     showInfo(t('toast.goalRemoved', { teamName: currentMatch.homeTeam.name }));
   }, [currentMatch, onGoal, showInfo, t]);
 
   const handleMinusAway = useCallback(() => {
-    if (!currentMatch || currentMatch.awayScore <= 0) { return; }
+    if (!currentMatch) { return; }
+    const isOvertime = currentMatch.playPhase === 'overtime' || currentMatch.playPhase === 'goldenGoal';
+    const relevantScore = isOvertime ? (currentMatch.overtimeScoreB ?? 0) : currentMatch.awayScore;
+    if (relevantScore <= 0) { return; }
     onGoal(currentMatch.id, currentMatch.awayTeam.id, -1);
     showInfo(t('toast.goalRemoved', { teamName: currentMatch.awayTeam.name }));
   }, [currentMatch, onGoal, showInfo, t]);
