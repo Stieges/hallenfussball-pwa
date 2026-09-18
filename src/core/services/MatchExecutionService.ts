@@ -516,8 +516,12 @@ export class MatchExecutionService {
             ...match,
             status: 'RUNNING',
             playPhase: 'overtime',
-            overtimeScoreA: 0,
-            overtimeScoreB: 0,
+            // Fixwave-Fix (Important): nur initialisieren, wenn noch unset — ein zweiter
+            // Verlängerungsabschnitt (nach einem erneut unentschiedenen ersten) akkumuliert die
+            // Tore statt sie zu verwerfen. Sonst gehen bereits erzielte Verlängerungstore verloren,
+            // wenn der Banner nach einer torlos verlängerten Verlängerung erneut erscheint.
+            overtimeScoreA: match.overtimeScoreA ?? 0,
+            overtimeScoreB: match.overtimeScoreB ?? 0,
             overtimeElapsedSeconds: 0,
             timerStartTime: new Date().toISOString(),
             timerElapsedSeconds: 0,
@@ -538,8 +542,9 @@ export class MatchExecutionService {
             ...match,
             status: 'RUNNING',
             playPhase: 'goldenGoal',
-            overtimeScoreA: 0,
-            overtimeScoreB: 0,
+            // Fixwave-Fix (Important): siehe startOvertime — akkumulieren statt restarten.
+            overtimeScoreA: match.overtimeScoreA ?? 0,
+            overtimeScoreB: match.overtimeScoreB ?? 0,
             overtimeElapsedSeconds: 0,
             timerStartTime: new Date().toISOString(),
             timerElapsedSeconds: 0,
@@ -563,6 +568,29 @@ export class MatchExecutionService {
             penaltyScoreA: 0,
             penaltyScoreB: 0,
             awaitingTiebreakerChoice: false,
+        };
+
+        await this.liveMatchRepo.save(tournamentId, updated);
+        return updated;
+    }
+
+    /**
+     * Bricht ein begonnenes Elfmeterschießen ab und stellt die Tiebreaker-Auswahl wieder her.
+     * Bewusst NICHT cancelTiebreaker: das beendet das Spiel als Unentschieden und ist dem
+     * ausdrücklich beschrifteten Banner-Knopf "Als Unentschieden beenden" vorbehalten.
+     * `playPhase` bleibt auf 'penalty' — der Dialog wird über awaitingTiebreakerChoice
+     * geschlossen, damit die Phase nicht geraten werden muss (nach einer Verlängerung wäre
+     * 'regular' falsch und würde das nächste Tor in den falschen Topf schreiben).
+     */
+    async abortPenaltyShootout(tournamentId: string, matchId: string): Promise<LiveMatch> {
+        const match = await this.liveMatchRepo.get(tournamentId, matchId);
+        if (!match) { throw new Error(`Match ${matchId} not found`); }
+
+        const updated: LiveMatch = {
+            ...match,
+            awaitingTiebreakerChoice: true,
+            penaltyScoreA: 0,
+            penaltyScoreB: 0,
         };
 
         await this.liveMatchRepo.save(tournamentId, updated);

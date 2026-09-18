@@ -84,6 +84,8 @@ export interface UseMatchExecutionReturn {
     handleStartPenaltyShootout: (matchId: string) => Promise<void>;
     handleRecordPenaltyResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
     handleCancelTiebreaker: (matchId: string) => Promise<void>;
+    /** Fixwave-Fix (Critical): bricht ein begonnenes Elfmeterschießen ab, OHNE das Spiel zu beenden — siehe MatchExecutionService.abortPenaltyShootout. */
+    handleAbortPenaltyShootout: (matchId: string) => Promise<void>;
     handleManualEditResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
     handleAdjustTime: (matchId: string, newElapsedSeconds: number) => Promise<void>;
 
@@ -123,7 +125,7 @@ export function useMatchExecution({
     const { liveMatchRepository } = useRepositories();
 
     // QW-003: Toast for optimistic lock conflict feedback
-    const { showInfo } = useToast();
+    const { showInfo, showError } = useToast();
 
     // Repositories and Service (memoized, recreate if repository changes)
     const service = useMemo(() => {
@@ -560,6 +562,31 @@ export function useMatchExecution({
         }
     }, [service, tournament.id, liveMatchRepository, refreshMatchState, showInfo]);
 
+    // Fixwave-Fix (Critical): Gegenstück zu handleStartPenaltyShootout — bricht das Elfmeterschießen
+    // ab und stellt die Tiebreaker-Auswahl wieder her (service.abortPenaltyShootout), OHNE das Spiel
+    // zu beenden. Bewusst NICHT handleCancelTiebreaker: das beendet als Unentschieden und ist dem
+    // Banner-Knopf "Als Unentschieden beenden" (handleForceFinish) vorbehalten.
+    const handleAbortPenaltyShootout = useCallback(async (matchId: string): Promise<void> => {
+        try {
+            await service.abortPenaltyShootout(tournament.id, matchId);
+
+            const match = await liveMatchRepository.get(tournament.id, matchId);
+            if (match) {
+                setLiveMatches(prev => new Map(prev).set(matchId, match));
+            }
+        } catch (error) {
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Abort penalty shootout failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            throw error;
+        }
+    }, [service, tournament.id, liveMatchRepository, refreshMatchState, showInfo]);
+
     const handleManualEditResult = useCallback(async (
         matchId: string,
         homeScore: number,
@@ -638,10 +665,31 @@ export function useMatchExecution({
         setLiveMatches(prev => new Map(prev).set(matchId, updated));
     }, [service, tournament.id]);
 
+    // Fixwave-Fix (Important): war die einzige Mutation ohne catch/refreshMatchState/announceMatchUpdated.
+    // Der Aufruf ist fire-and-forget (ManagementTab.tsx: `void handleDeleteEvent(...)`) und LiveCockpit
+    // zeigt den Erfolgs-Toast bereits VOR Abschluss des Promises — ohne Catch blieb ein nach Retries
+    // fehlgeschlagenes Löschen unsichtbar: das Event stand weiterhin da, obwohl "gelöscht" gemeldet wurde.
     const handleDeleteEvent = useCallback(async (matchId: string, eventId: string): Promise<void> => {
-        const updated = await service.deleteEvent(tournament.id, matchId, eventId);
-        setLiveMatches(prev => new Map(prev).set(matchId, updated));
-    }, [service, tournament.id]);
+        try {
+            const updated = await service.deleteEvent(tournament.id, matchId, eventId);
+            setLiveMatches(prev => new Map(prev).set(matchId, updated));
+            announceMatchUpdated(matchId);
+        } catch (error) {
+            if (error instanceof OptimisticLockError) {
+                if (import.meta.env.DEV) {
+                    console.warn('[useMatchExecution] Delete event failed after retries, refreshing state');
+                }
+                await refreshMatchState(matchId);
+                showInfo('Konflikt erkannt - Daten wurden synchronisiert', { duration: 3000 });
+                return;
+            }
+            if (import.meta.env.DEV) {
+                console.warn('[useMatchExecution] Delete event failed, refreshing state', error);
+            }
+            await refreshMatchState(matchId);
+            showError('Löschen fehlgeschlagen - Ereignis wurde nicht entfernt', { duration: 4000 });
+        }
+    }, [service, tournament.id, refreshMatchState, showInfo, showError, announceMatchUpdated]);
 
     const handleSyncMetadata = useCallback(async (matchId: string): Promise<void> => {
         const match = tournament.matches.find(m => m.id === matchId);
@@ -686,6 +734,7 @@ export function useMatchExecution({
         handleStartPenaltyShootout,
         handleRecordPenaltyResult,
         handleCancelTiebreaker,
+        handleAbortPenaltyShootout,
         handleManualEditResult,
         handleAdjustTime,
         handleSkipMatch,
