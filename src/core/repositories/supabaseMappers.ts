@@ -387,6 +387,11 @@ interface TournamentConfig {
 
   // Wizard state
   lastVisitedStep?: number;
+
+  // L3: Monitor-/Sponsoren-Konfiguration. Bewusst JSONB in tournaments.config statt in den
+  // verwaisten Tabellen monitors/sponsors — deren type-Enum passt nicht zum Slides-Modell.
+  monitors?: unknown[];
+  sponsors?: unknown[];
 }
 
 /**
@@ -505,7 +510,15 @@ export function mapTournamentFromSupabase(
     externalSource: config.externalSource,
     useDFBKeys: config.useDFBKeys,
     dfbKeyPattern: config.dfbKeyPattern,
+    monitors: config.monitors as Tournament['monitors'],
+    sponsors: config.sponsors as Tournament['sponsors'],
     version: row.version ?? undefined,
+    // K2: is_public/share_code müssen rundreisen — sonst sieht mapTournamentToSupabase
+    // immer `undefined`, denormalisiert `false` auf alle Team-/Match-Zeilen (K1), und
+    // OfflineRepository.getMetadataChanges meldet bei jedem Delta-Sync eine Phantom-Änderung.
+    isPublic: row.is_public ?? false,
+    shareCode: row.share_code ?? undefined,
+    shareCodeCreatedAt: row.share_code_created_at ?? undefined,
   };
 }
 
@@ -561,6 +574,8 @@ export function mapTournamentToSupabase(
     sportId: tournament.sportId,
     useDFBKeys: tournament.useDFBKeys,
     dfbKeyPattern: tournament.dfbKeyPattern,
+    monitors: tournament.monitors,
+    sponsors: tournament.sponsors,
   };
 
   const tournamentRow: TournamentInsert = {
@@ -593,18 +608,19 @@ export function mapTournamentToSupabase(
     version: tournament.version ?? null,
   };
 
-  // Map teams with owner_id for RLS denormalization
-  const teamRows = tournament.teams.map((team) =>
-    mapTeamToSupabase(team, tournament.id, ownerId, false)
-  );
+  // K1: is_public muss den echten Sichtbarkeitszustand tragen. SupabaseRepository.save()
+  // nutzt upsert() — für bestehende Zeilen ein UPDATE. Der Trigger sync_owner_from_tournament
+  // ist nur BEFORE INSERT (20260121_002_denormalize_owner.sql:133/139) und greift nicht.
+  // Ein literales `false` hier sperrt anonyme Leser aus einem öffentlichen Turnier aus.
+  const isPublic = tournament.isPublic ?? false;
 
-  // Build team name to ID map for match conversion
+  const teamRows = tournament.teams.map((team) =>
+    mapTeamToSupabase(team, tournament.id, ownerId, isPublic)
+  );
   const teamNameToId = new Map<string, string>();
   tournament.teams.forEach((t) => teamNameToId.set(t.name, t.id));
-
-  // Map matches with owner_id for RLS denormalization
   const matchRows = tournament.matches.map((match) =>
-    mapMatchToSupabase(match, tournament.id, teamNameToId, ownerId, false)
+    mapMatchToSupabase(match, tournament.id, teamNameToId, ownerId, isPublic)
   );
 
   return { tournamentRow, teamRows, matchRows };

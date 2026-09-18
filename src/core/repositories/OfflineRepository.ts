@@ -32,6 +32,27 @@ export interface SyncConflict {
     remoteUser?: string;
 }
 
+/**
+ * Stabiler Vergleichs-Schlüssel für JSON-artige Werte.
+ *
+ * Nötig, weil Postgres `jsonb` die Schlüsselreihenfolge NICHT erhält: ein Objekt, das über
+ * tournaments.config in die Cloud geschrieben und wieder gelesen wird, kommt in interner
+ * Sortierung zurück (Länge, dann lexikografisch), während die lokale Kopie ihre ursprüngliche
+ * Reihenfolge behält. Ein roher JSON.stringify-Vergleich meldet deshalb ab dem ersten
+ * Cloud-Round-Trip bei JEDEM Sync eine Änderung und erzwingt dauerhaft den Voll-Save-Pfad.
+ * Empirisch am Live-Projekt belegt (2026-09-17).
+ */
+function stableKey(value: unknown): string {
+    return JSON.stringify(value, (_k, v: unknown) => {
+        if (v === null || typeof v !== 'object' || Array.isArray(v)) { return v; }
+        const source = v as Record<string, unknown>;
+        return Object.keys(source).sort().reduce<Record<string, unknown>>((acc, key) => {
+            acc[key] = source[key];
+            return acc;
+        }, {});
+    });
+}
+
 export class OfflineRepository implements ITournamentRepository {
     private _mutationQueue: MutationQueue;
 
@@ -101,11 +122,22 @@ export class OfflineRepository implements ITournamentRepository {
                 const cloudVersion = cloudData.version ?? 0;
                 const localVersion = localData?.version ?? 0;
 
-                if (cloudVersion > localVersion) {
+                // Zweiter Grund neben einer neueren Version: Vor M1 hat der Mapper `isPublic`
+                // gar nicht gelesen, lokale Kopien tragen dort `undefined`. Bei gleichem
+                // Versionsstand griffe der Refresh sonst nie — und der nächste Voll-Save
+                // schriebe erneut `is_public: false` auf alle Team- und Spielzeilen.
+                // N3: Nur wenn die Cloud nicht ÄLTER ist. Sonst überschriebe eine offline
+                // vorgenommene Veröffentlichung (lokale Version voraus, Queue noch nicht
+                // abgespielt) sich selbst mit dem älteren Cloud-Stand.
+                const visibilityStale = localData !== null
+                    && localData.isPublic !== cloudData.isPublic
+                    && cloudVersion >= localVersion;
+
+                if (cloudVersion > localVersion || visibilityStale) {
                     await this.localRepo.save(cloudData);
                     if (import.meta.env.DEV) {
                         // eslint-disable-next-line no-console -- Debug logging for background sync updates
-                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}`);
+                        console.log(`[OfflineRepository] Background sync: Updated tournament ${id} from v${localVersion} to v${cloudVersion}${visibilityStale ? ' (isPublic war veraltet)' : ''}`);
                     }
                 }
             }
@@ -333,6 +365,12 @@ export class OfflineRepository implements ITournamentRepository {
         if (JSON.stringify(local.groups) !== JSON.stringify(remote.groups)) {return true;}
         if (JSON.stringify(local.fields) !== JSON.stringify(remote.fields)) {return true;}
 
+        // L3: Monitor-/Sponsoren-Konfiguration liegt im config-JSONB und wird nur vom Voll-Save
+        // transportiert. Ohne diese Prüfung meldet der Delta-Sync "keine Änderung", zieht die
+        // lokale Version herunter und die Änderung erreicht die Cloud nie.
+        if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
+        if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
+
         return false;
     }
 
@@ -343,7 +381,22 @@ export class OfflineRepository implements ITournamentRepository {
         if (local.title !== remote.title) { changes.title = local.title; hasChanges = true; }
         if (local.date !== remote.date) { changes.date = local.date; hasChanges = true; }
         if (local.status !== remote.status) { changes.status = local.status; hasChanges = true; }
-        if (local.isPublic !== remote.isPublic) { changes.isPublic = local.isPublic; hasChanges = true; }
+
+        // Beide Seiten normalisieren: Vor M1 gelesene Kopien tragen `undefined`, die Cloud
+        // liefert seit K2 einen echten Boolean. Ein roher Vergleich meldete sonst eine
+        // Phantom-Änderung, deren leerer Payload die Cloud-Version nicht bewegt — während
+        // die lokale Version hochgezählt wird und das Gerät danach keine Cloud-Updates mehr zieht.
+        // N2: Ein `undefined` ist KEIN "false", sondern "diese Kopie weiß es nicht" — sie
+        // stammt von vor M1, als der Mapper die Spalte nicht las. Würde man es als `false`
+        // hochschreiben, nähme eine veraltete lokale Kopie ein öffentliches Turnier wieder
+        // vom Netz: genau der K1-Schaden, den M1 beseitigt. Nur eine Kopie, die einen
+        // echten Wert trägt, darf die Sichtbarkeit ändern; `get()` heilt die andere.
+        const remotePublic = remote.isPublic ?? false;
+        if (local.isPublic !== undefined && local.isPublic !== remotePublic) {
+            changes.isPublic = local.isPublic;
+            hasChanges = true;
+        }
+
         if (local.startTime !== remote.startTime) { changes.startTime = local.startTime; hasChanges = true; }
 
         // Location (deep check or simple JSON)

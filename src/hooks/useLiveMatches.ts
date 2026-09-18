@@ -172,13 +172,27 @@ function coreToLocalMatch(coreMatch: CoreLiveMatch): LiveMatch {
   };
 }
 
-export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
+export interface UseLiveMatchesOptions {
+  /**
+   * Opt-in für den lesenden Anon-Repo aus dem RepositoryContext. Nur setzen, wenn das Turnier
+   * nachweislich aus der Cloud geladen wurde (lokaler Gast mit zweitem Tab bekäme per RLS nichts,
+   * über localStorage aber alles). Wirkungslos, sobald ein authentifizierter Realtime-Repo existiert.
+   */
+  allowPublicRealtime?: boolean;
+}
+
+export function useLiveMatches(tournamentId: string, options?: UseLiveMatchesOptions): UseLiveMatchesReturn {
   const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
   const [lastGoalEvent, setLastGoalEvent] = useState<GoalEventInfo | null>(null);
   const [lastCardEvent, setLastCardEvent] = useState<CardEventInfo | null>(null);
 
   // Get repository context for Realtime support
-  const { liveMatchRepository, isRealtimeEnabled, supabaseLiveMatchRepo } = useRepositories();
+  const { liveMatchRepository, isRealtimeEnabled, supabaseLiveMatchRepo, publicLiveMatchRepo } = useRepositories();
+  const allowPublicRealtime = options?.allowPublicRealtime ?? false;
+  // Genau EINE Realtime-Quelle. Auth-Repo hat Vorrang; Public-Repo nur, wenn es keinen gibt.
+  const realtimeRepo = isRealtimeEnabled ? supabaseLiveMatchRepo : (allowPublicRealtime ? publicLiveMatchRepo : null);
+  // Lese-Repo für den Initial-Load = dieselbe Quelle wie die Subscription (sonst zwei Wahrheiten).
+  const readRepo = realtimeRepo ?? liveMatchRepository;
 
   // Track seen goal event IDs to avoid duplicate animations
   const seenGoalIds = useRef<Set<string>>(new Set());
@@ -370,7 +384,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       return;
     }
 
-    const matches = await liveMatchRepository.getAll(tournamentId);
+    const matches = await readRepo.getAll(tournamentId);
     const converted = new Map<string, LiveMatch>();
     matches.forEach((match, id) => {
       converted.set(id, coreToLocalMatch(match));
@@ -392,7 +406,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
     }
 
     setLiveMatches(converted);
-  }, [liveMatchRepository, tournamentId, markAllEventsAsSeen, detectGoalEvent, detectCardEvent]);
+  }, [readRepo, tournamentId, markAllEventsAsSeen, detectGoalEvent, detectCardEvent]);
 
   // Realtime subscription handler
   const handleRealtimeChange = useCallback((matchId: string, match: CoreLiveMatch | null) => {
@@ -432,11 +446,11 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
     // Reset initial load flag when tournament changes
     isInitialLoad.current = true;
 
-    if (isRealtimeEnabled && supabaseLiveMatchRepo) {
+    if (realtimeRepo) {
       // Realtime mode: Subscribe to changes
       void loadFromRepository();
 
-      supabaseLiveMatchRepo.subscribe(tournamentId, {
+      realtimeRepo.subscribe(tournamentId, {
         onMatchChange: handleRealtimeChange,
         onError: (error) => {
           console.error('Realtime subscription error:', error);
@@ -462,7 +476,7 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
       }, REALTIME_TIMER_INTERVAL);
 
       return () => {
-        supabaseLiveMatchRepo.unsubscribe(tournamentId);
+        realtimeRepo.unsubscribe(tournamentId);
         clearInterval(timerInterval);
       };
     } else {
@@ -484,7 +498,13 @@ export function useLiveMatches(tournamentId: string): UseLiveMatchesReturn {
         window.removeEventListener('storage', handleStorageChange);
       };
     }
-  }, [tournamentId, storageKey, updateFromStorage, isRealtimeEnabled, supabaseLiveMatchRepo, loadFromRepository, handleRealtimeChange]);
+    // Depend on the resolved `realtimeRepo` object identity, not on `isRealtimeEnabled`/
+    // `supabaseLiveMatchRepo`/`publicLiveMatchRepo` separately: the RepositoryContext rebuilds
+    // `publicLiveMatchRepo` via useMemo([user]) on sign-in, producing a *new* instance. Keying off
+    // the resolved repo means React's cleanup from the *previous* render (closing over the old
+    // repo) runs before the new repo is subscribed — unsubscribing the orphaned instance instead
+    // of leaking its Realtime channel.
+  }, [tournamentId, storageKey, updateFromStorage, realtimeRepo, loadFromRepository, handleRealtimeChange]);
 
   // Derived state
   const runningMatches = useMemo(

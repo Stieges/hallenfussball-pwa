@@ -1,4 +1,6 @@
 /**
+ * @deprecated Seit L2 ohne Importeur. Ersatz: SupabaseRepository/LocalStorageRepository. Löschung in M4 (Task 20).
+ *
  * API Service Layer
  *
  * Abstrahiert die Datenzugriff-Logik. Aktuell verwendet IndexedDB (mit localStorage Fallback),

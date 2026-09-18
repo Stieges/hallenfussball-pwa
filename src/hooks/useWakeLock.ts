@@ -66,6 +66,9 @@ export function useWakeLock(enabled: boolean): UseWakeLockReturn {
       // Listen for release event (e.g., when tab becomes hidden)
       releaseHandlerRef.current = () => {
         setIsLocked(false);
+        // Ohne dieses Zurücksetzen bleibt die Referenz auf ein freigegebenes Lock stehen,
+        // der visibilitychange-Handler hält es für aktiv und fordert nie neu an.
+        wakeLockRef.current = null;
       };
       wakeLockRef.current.addEventListener('release', releaseHandlerRef.current);
     } catch (err) {

@@ -506,6 +506,19 @@ export function MonitorsConfigTab({
           </div>
         )}
 
+        {/* L2-Vorbedingung: Auf fremden Geräten kommt die Anzeige nur an öffentliche Turniere (RLS tournaments_select_v3). */}
+        {monitors.length > 0 && !tournament.isPublic && (
+          <div data-testid="monitor-visibility-warning" style={{
+            marginTop: cssVars.spacing.lg, padding: cssVars.spacing.md,
+            background: cssVars.colors.warningLight, border: `1px solid ${cssVars.colors.warningBorder}`,
+            borderRadius: cssVars.borderRadius.md, fontSize: cssVars.fontSizes.sm, color: cssVars.colors.warning,
+            display: 'flex', gap: cssVars.spacing.sm, alignItems: 'flex-start',
+          }}>
+            <span aria-hidden="true">⚠️</span>
+            <span>{t('monitors.visibilityWarning')}</span>
+          </div>
+        )}
+
         {/* Info Hint */}
         {monitors.length > 0 && (
           <p style={{

@@ -524,6 +524,22 @@ describe('mapTournamentFromSupabase', () => {
     expect(tournament.deletedAt).toBe('2026-01-15T00:00:00Z');
     expect(tournament.completedAt).toBe('2026-01-14T18:00:00Z');
   });
+
+  it('K2: mappt is_public, share_code und share_code_created_at', () => {
+    const row = createTournamentRow({
+      is_public: true, share_code: 'ABC123', share_code_created_at: '2026-02-01T10:00:00Z',
+    });
+    const tournament = mapTournamentFromSupabase(row, [], []);
+    expect(tournament.isPublic).toBe(true);
+    expect(tournament.shareCode).toBe('ABC123');
+    expect(tournament.shareCodeCreatedAt).toBe('2026-02-01T10:00:00Z');
+  });
+
+  it('K2: defaultet isPublic auf false wenn die Spalte null ist', () => {
+    const tournament = mapTournamentFromSupabase(createTournamentRow({ is_public: null }), [], []);
+    expect(tournament.isPublic).toBe(false);
+    expect(tournament.shareCode).toBeUndefined();
+  });
 });
 
 describe('mapTournamentToSupabase', () => {
@@ -583,6 +599,28 @@ describe('mapTournamentToSupabase', () => {
     // Match rows should have team IDs resolved
     expect(result.matchRows[0].team_a_id).toBe('team-a');
     expect(result.matchRows[0].team_b_id).toBe('team-b');
+  });
+
+  it('K1: denormalisiert is_public=true auf Team- und Match-Zeilen eines öffentlichen Turniers', () => {
+    const tournament = mapTournamentFromSupabase(
+      createTournamentRow({ is_public: true }),
+      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
+      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+    );
+    const result = mapTournamentToSupabase(tournament, 'user-1');
+    expect(result.teamRows[0].is_public).toBe(true);
+    expect(result.matchRows[0].is_public).toBe(true);
+  });
+
+  it('K1: denormalisiert is_public=false bei privatem Turnier', () => {
+    const tournament = mapTournamentFromSupabase(
+      createTournamentRow({ is_public: false }),
+      [createTeamRow({ id: 'team-1', name: 'Alpha' })],
+      [createMatchRow({ id: 'match-1', team_a_id: 'team-1' })]
+    );
+    const result = mapTournamentToSupabase(tournament, 'user-1');
+    expect(result.teamRows[0].is_public).toBe(false);
+    expect(result.matchRows[0].is_public).toBe(false);
   });
 });
 
@@ -704,5 +742,60 @@ describe('mapProfileUpdateToSupabase', () => {
     expect(
       mapProfileUpdateToSupabase({ displayName: 'Max', avatarUrl: 'url' })
     ).toEqual({ display_name: 'Max', avatar_url: 'url' });
+  });
+});
+
+describe('Tournament-Mapper Round-Trip: Monitore und Sponsoren (L3)', () => {
+  const monitor = {
+    id: 'mon-1', name: 'Haupthalle', defaultSlideDuration: 15, transition: 'fade',
+    transitionDuration: 500, theme: 'dark' as const, performanceMode: 'auto' as const,
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+    slides: [
+      { id: 's1', type: 'live' as const, config: { fieldId: 'field-1' }, duration: null, order: 0 },
+      { id: 's2', type: 'sponsor' as const, config: { sponsorId: 'spo-1' }, duration: 10, order: 1 },
+    ],
+  };
+  const sponsor = {
+    id: 'spo-1', name: 'Autohaus Muster', tier: 'gold', websiteUrl: 'https://example.com',
+    createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+  };
+
+  it('schreibt monitors und sponsors in das config-JSONB', () => {
+    const base = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    const tournament = { ...base, monitors: [monitor], sponsors: [sponsor] } as typeof base;
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'user-1');
+    const config = tournamentRow.config as Record<string, unknown>;
+    expect(config.monitors).toEqual([monitor]);
+    expect(config.sponsors).toEqual([sponsor]);
+  });
+
+  it('liest monitors und sponsors verlustfrei aus dem config-JSONB zurück', () => {
+    const row = createTournamentRow({ config: { monitors: [monitor], sponsors: [sponsor] } });
+    const tournament = mapTournamentFromSupabase(row, [], []);
+    expect(tournament.monitors).toEqual([monitor]);
+    expect(tournament.sponsors).toEqual([sponsor]);
+    expect(tournament.monitors?.[0].slides).toHaveLength(2);
+  });
+
+  it('überlebt einen vollständigen Round-Trip inklusive JSON-Serialisierung (wie JSONB)', () => {
+    const base = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    const tournament = { ...base, monitors: [monitor], sponsors: [sponsor] } as typeof base;
+
+    const { tournamentRow } = mapTournamentToSupabase(tournament, 'user-1');
+    // Postgres speichert JSONB — was JSON.stringify verwirft (undefined-Felder, Funktionen,
+    // Date-Objekte werden zu Strings), ist nach dem Laden weg. Ohne diese Grenze prüft der
+    // Test nur Objektreferenzen und kann strukturell nicht fehlschlagen.
+    const serialised = JSON.parse(JSON.stringify(tournamentRow.config)) as Record<string, unknown>;
+    const back = mapTournamentFromSupabase(createTournamentRow({ config: serialised as never }), [], []);
+
+    expect(back.monitors).toEqual([monitor]);
+    expect(back.sponsors).toEqual([sponsor]);
+    expect(back.monitors?.[0].slides).toHaveLength(2);
+  });
+
+  it('bleibt undefined wenn keine Monitore konfiguriert sind', () => {
+    const tournament = mapTournamentFromSupabase(createTournamentRow(), [], []);
+    expect(tournament.monitors).toBeUndefined();
+    expect(tournament.sponsors).toBeUndefined();
   });
 });
