@@ -450,6 +450,18 @@ export interface Tournament {
   matchCockpitSettings?: MatchCockpitSettings;
 
   // Public View / Sharing (Phase 1)
+  /**
+   * ISO timestamp der ersten Freigabe. Monotoner Freigabe-Marker: gesetzt bleibt gesetzt.
+   *
+   * Bewusst NICHT `status`: `status: 'draft'` ist ein transienter Wizard-Marker —
+   * SettingsTab.tsx setzt ein veröffentlichtes Turnier zum Bearbeiten zurück auf 'draft'
+   * und nur eine In-App-Rückkehr stellt den Status wieder her (App.tsx, originalStatusRef).
+   * Ein Reload mitten in der Bearbeitung ließe ein laufendes Turnier dauerhaft auf 'draft'
+   * stehen — eine Status-Prüfung würde es mitten im Spiel vom Netz nehmen.
+   *
+   * Reist im `config`-JSONB mit (keine eigene DB-Spalte), siehe supabaseMappers.
+   */
+  publishedAt?: string;
   /** Ob das Turnier öffentlich über Share-Link zugänglich ist */
   isPublic?: boolean;
   /** 6-stelliger Share-Code für öffentlichen Zugang (z.B. "ABC123") */
@@ -690,6 +702,29 @@ export interface RuntimeMatchEvent {
     /** Rückennummern der eingewechselten Spieler */
     playersIn?: number[];
     cardType?: 'YELLOW' | 'RED';
+
+    // -------------------------------------------------------------------------
+    // Draht-Format (wire shape) — so schreibt der MatchExecutionService in den
+    // Speicher (`core/models/LiveMatch.ts#MatchEvent.payload`). Die UI liest
+    // dagegen `teamId` / `teamName` / `direction` / `penaltyDuration` (oben).
+    //
+    // Dass diese drei Felder hier BISHER FEHLTEN, ist genau der Grund, warum
+    // `tsc` zu einem Bug mit vier sichtbaren Symptomen geschwiegen hat: beide
+    // Seiten deklarierten nur optionale Felder, also war jedes `payload.teamId`
+    // auf einem Draht-Event typkorrekt — und zur Laufzeit immer `undefined`
+    // (Foulzähler nach Reload 0, jede Log-Zeile nannte das Gastteam, jede
+    // Zeitstrafe "2 Min"). Deklariert gehören sie, damit die Umrechnung in
+    // `utils/matchEvents.ts#toRuntimeMatchEvent` typgeprüft ist und beide
+    // Formen als das sichtbar sind, was sie sind: zwei Schreibweisen desselben
+    // Ereignisses.
+    // -------------------------------------------------------------------------
+
+    /** Draht-Format: Mannschaftsseite, wird zu `teamId`/`teamName` normalisiert */
+    team?: 'home' | 'away';
+    /** Draht-Format: +1 / −1, wird zu `direction` ('INC' | 'DEC') normalisiert */
+    delta?: number;
+    /** Draht-Format: Strafdauer in Sekunden, wird zu `penaltyDuration` normalisiert */
+    durationSeconds?: number;
   };
   scoreAfter: {
     home: number;

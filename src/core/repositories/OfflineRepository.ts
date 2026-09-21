@@ -3,7 +3,7 @@ import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
-import { isAbortError } from '../errors';
+import { isAbortError, RepositoryError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
 
 // =============================================================================
@@ -51,6 +51,38 @@ function stableKey(value: unknown): string {
             return acc;
         }, {});
     });
+}
+
+/**
+ * SQLSTATE, mit dem `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
+ * Turnierfreigabe ablehnt — siehe supabase/migrations/20260918_002_make_public_refuses_drafts.sql.
+ *
+ * Bewusst NICHT im 'PT'-Namespace (z.B. 'PT001'): PostgREST liest SQLSTATEs der Form PTxyz
+ * als HTTP-Status-Override. 'PT001' waere "HTTP-Status 1" — keine gueltige Response, weder
+ * code noch message kommen beim Client an. 'HF' ist unreserviert und faellt bei PostgREST
+ * auf HTTP 400 zurueck.
+ */
+const RELEASE_REFUSAL_CODE = 'HF001';
+
+/** Ältere Fassung der Funktion kannte den eigenen SQLSTATE noch nicht. */
+const RELEASE_REFUSAL_MARKER = 'has not been released';
+
+/**
+ * Fachliche Ablehnung des Servers, kein Verbindungsproblem: Der lokale Fallback würde das
+ * Turnier lokal öffentlich machen und eine Mutation einreihen, die der Server dauerhaft
+ * ablehnt. Die Ablehnung wird stattdessen durchgereicht, damit die UI sie anzeigen kann.
+ *
+ * Primär am SQLSTATE erkannt, nicht am Meldungstext: Ein Textvergleich koppelt den Client an
+ * eine Zeichenkette in einer SQL-Datei, und driftet die, fällt der Guard STILL in den lokalen
+ * Fallback zurück — also genau in das Verhalten, das er verhindern soll. Der Textvergleich
+ * bleibt nur als Rückfall für eine noch nicht migrierte Datenbank.
+ */
+export function isReleaseRefusal(error: unknown): boolean {
+    if (!(error instanceof Error)) { return false; }
+    const original = error instanceof RepositoryError ? error.originalError : undefined;
+    const code = (original as { code?: unknown } | undefined)?.code;
+    if (typeof code === 'string' && code === RELEASE_REFUSAL_CODE) { return true; }
+    return error.message.includes(RELEASE_REFUSAL_MARKER);
 }
 
 export class OfflineRepository implements ITournamentRepository {
@@ -371,6 +403,32 @@ export class OfflineRepository implements ITournamentRepository {
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
 
+        // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
+        // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders
+        // als title/date/status/startTime/location — KEINE eigene Spalte, die
+        // getMetadataChanges()/updateTournamentMetadata() transportieren könnte. Ohne diese
+        // Prüfung syncte `status` allein über den Metadaten-Delta-Pfad (SupabaseRepository.
+        // updateTournamentMetadata schreibt nur die status-Spalte, rührt config NICHT an):
+        // eine Zeile käme mit status='published' aber ohne config.publishedAt in der Cloud an
+        // — die App hielte das Turnier für freigegeben, make_tournament_public lehnte es
+        // trotzdem ab. Genau die Drift, die dieser Meilenstein beseitigt hat, käme über den
+        // Metadaten-Sync zurück. Mirrort deshalb monitors/sponsors: ein Unterschied erzwingt
+        // den Voll-Save, der config komplett (inkl. publishedAt) schreibt.
+        //
+        // Fix 2 (Review 2026-09-21): NUR wenn der lokale Stand den Wert HAT: Ein Voll-Save
+        // schreibt local -> cloud, kann ein fehlendes publishedAt also gar nicht beschaffen.
+        // Bei `local === undefined` erzwänge die rohe Ungleichheit (local undefined, remote hat
+        // es via Read-Time-Backfill) einen Voll-Save bei JEDEM Sync, für immer: mapTournamentToSupabase
+        // schreibt publishedAt: undefined, JSON.stringify läßt den Key beim Wire-Transport weg,
+        // die Cloud-Spalten bleiben unberührt, der nächste Read backfillt erneut denselben Wert
+        // — die Differenz kommt sofort wieder. Nicht nur Lärm: Der strukturelle Zweig kehrt vor
+        // getMetadataChanges() zurück, also kann is_public NIE korrigiert werden — und ein
+        // Voll-Save stempelt `is_public: local.isPublic ?? false` auf JEDE Team- und Spielzeile
+        // (supabaseMappers.ts mapTeamToSupabase/mapMatchToSupabase). Bei einer veralteten
+        // lokalen Kopie heißt das: anonyme Besucher sehen wiederholt ein Turnier mit null Teams
+        // und null Spielen — exakt der Schaden, den dieser Meilenstein beseitigt hat.
+        if (local.publishedAt !== undefined && local.publishedAt !== remote.publishedAt) {return true;}
+
         return false;
     }
 
@@ -391,8 +449,15 @@ export class OfflineRepository implements ITournamentRepository {
         // hochschreiben, nähme eine veraltete lokale Kopie ein öffentliches Turnier wieder
         // vom Netz: genau der K1-Schaden, den M1 beseitigt. Nur eine Kopie, die einen
         // echten Wert trägt, darf die Sichtbarkeit ändern; `get()` heilt die andere.
+        // Ein lokaler Stand OHNE publishedAt trägt keinen Freigabe-Beleg. Ihn auf `true` zu
+        // schieben weist der Trigger enforce_release_before_public mit HF001 ab — und weil
+        // der Metadaten-Payload ganz-oder-gar-nicht ist, blieben damit auch Titel, Datum und
+        // Ort dieses Turniers ungesynct, bei jedem Versuch aufs Neue und samt Sentry-Meldung.
+        // Dieselbe Asymmetrie wie bei publishedAt in hasStructuralChanges: Nur hochschieben,
+        // was die Gegenseite auch annehmen kann. Ein Cloud-Read heilt den veralteten Stand.
         const remotePublic = remote.isPublic ?? false;
-        if (local.isPublic !== undefined && local.isPublic !== remotePublic) {
+        const wouldPublishUnreleased = local.isPublic === true && local.publishedAt === undefined;
+        if (local.isPublic !== undefined && local.isPublic !== remotePublic && !wouldPublishUnreleased) {
             changes.isPublic = local.isPublic;
             hasChanges = true;
         }
@@ -641,6 +706,9 @@ export class OfflineRepository implements ITournamentRepository {
                 return result;
             }
         } catch (error) {
+            if (isReleaseRefusal(error)) {
+                throw error;
+            }
             if (!isAbortError(error)) {
                 console.warn('OfflineRepository: Cloud makeTournamentPublic failed, using local.', error);
                 if (error instanceof Error) {

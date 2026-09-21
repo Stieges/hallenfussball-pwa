@@ -253,6 +253,41 @@ describe('OfflineRepository - Granular Sync', () => {
     // veraltete lokale Kopie ein öffentliches Turnier wieder vom Netz — exakt der
     // K1-Schaden, dessen Beseitigung dieser Meilenstein ist.
     // =========================================================================
+    // Re-Review PR1: Folge des neuen Triggers enforce_release_before_public. Ein lokaler
+    // Stand mit isPublic=true aber ohne publishedAt (alter createDraft-Default) wuerde vom
+    // Trigger mit HF001 abgewiesen — und weil der Metadaten-Payload ganz-oder-gar-nicht ist,
+    // blieben Titel, Datum und Ort desselben Turniers dann ebenfalls ungesynct.
+    it('schiebt isPublic=true NICHT hoch, wenn der lokale Stand keinen Freigabe-Beleg hat', async () => {
+        const localT = { ...baseTournament, isPublic: true, title: 'Neuer Titel', version: 2 }; // kein publishedAt
+        const remoteT = { ...baseTournament, isPublic: false, title: 'Alter Titel', version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const payload = calls[0]?.[1] as { isPublic?: boolean; title?: string } | undefined;
+        expect(payload).toBeDefined();
+        expect('isPublic' in (payload ?? {})).toBe(false);
+        // Der Titel muss trotzdem durchkommen — genau das wuerde die Ablehnung sonst mitreissen.
+        expect(payload?.title).toBe('Neuer Titel');
+    });
+
+    it('schiebt isPublic=true weiterhin hoch, wenn ein Freigabe-Beleg vorliegt', async () => {
+        const localT = { ...baseTournament, isPublic: true, publishedAt: '2026-01-01T00:00:00.000Z', version: 2 };
+        const remoteT = { ...baseTournament, isPublic: false, publishedAt: '2026-01-01T00:00:00.000Z', version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const payload = calls[0]?.[1] as { isPublic?: boolean } | undefined;
+        expect(payload?.isPublic).toBe(true);
+    });
+
     it('N2: isPublic undefined (lokal) vs. true (Cloud) nimmt das Turnier NICHT vom Netz', async () => {
         const localT = { ...baseTournament, version: 2 }; // isPublic undefined, lokale Version voraus
         const remoteT = { ...baseTournament, isPublic: true, version: 1 };
@@ -287,5 +322,61 @@ describe('OfflineRepository - Granular Sync', () => {
             .refreshFromCloudInBackground('t1');
 
         expect(mockLocal.save).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // Fix 3 (Review 2026-09-18): publishedAt liegt nur im config-JSONB und hat keine eigene
+    // Spalte — anders als title/date/status/startTime/location transportiert
+    // updateTournamentMetadata() es NICHT. Ohne einen erzwungenen Voll-Save käme eine Zeile
+    // mit geänderter Sichtbarkeit aber ohne aktualisiertes config.publishedAt in der Cloud an,
+    // und die Drift, die dieser Meilenstein beseitigt hat (status widerspricht
+    // config.publishedAt), käme über den Metadaten-Sync zurück.
+    // =========================================================================
+    it('Fix 3: erzwingt einen Voll-Save wenn sich publishedAt unterscheidet (lokal gesetzt, remote fehlt)', async () => {
+        const localT = { ...baseTournament, publishedAt: '2026-02-01T10:00:00.000Z', version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, version: 1 } as unknown as Tournament; // kein publishedAt
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).toHaveBeenCalled();
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    it('Fix 3 (Kontrolle): KEIN Voll-Save allein wegen publishedAt, wenn beide Seiten denselben Wert tragen', async () => {
+        const same = '2026-02-01T10:00:00.000Z';
+        const localT = { ...baseTournament, publishedAt: same, version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, publishedAt: same, version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).not.toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // Fix 2 (Review 2026-09-21) — der load-bearende Test: lokal FEHLT publishedAt, die Cloud
+    // hat es (Read-Time-Backfill, siehe supabaseMappers.ts). Ein Voll-Save schreibt local ->
+    // cloud und kann ein fehlendes publishedAt also niemals beschaffen — die rohe
+    // Ungleichheit (`local.publishedAt !== remote.publishedAt`) würde hier einen Voll-Save bei
+    // JEDEM Sync erzwingen, für immer, und jeder davon stempelt `is_public:
+    // local.isPublic ?? false` auf alle Team-/Spielzeilen. Ohne die Fix-2-Bedingung
+    // (`local.publishedAt !== undefined`) schlägt genau dieser Test fehl.
+    // =========================================================================
+    it('Fix 2: KEIN Voll-Save wenn lokal publishedAt fehlt, aber remote es hat (Voll-Save kann es nicht beschaffen)', async () => {
+        const localT = { ...baseTournament, version: 2 } as unknown as Tournament; // kein publishedAt
+        const remoteT = {
+            ...baseTournament,
+            publishedAt: '2026-02-01T10:00:00.000Z',
+            version: 1,
+        } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).not.toHaveBeenCalled();
     });
 });

@@ -281,6 +281,7 @@
     "downloadQr": "QR-Code herunterladen",
     "qrTip": "Tipp: Hänge den QR-Code in der Halle aus, damit Eltern live mitverfolgen können.",
     "privateWarning": "⚠️ Das Turnier ist derzeit privat. Der Link unten funktioniert nur für angemeldete Benutzer. Aktiviere \"Mit Link teilbar\" unten für einen öffentlichen Share-Link.",
+    "draftHint": "Dieser Bereich ist verfügbar, nachdem du dein Turnier veröffentlicht hast. Entwürfe sind nicht öffentlich einsehbar.",
     "localModeInfo": "Lokaler Modus: Share-Codes werden lokal gespeichert und funktionieren nur auf diesem Gerät. Für geräteübergreifendes Teilen ist eine Cloud-Verbindung erforderlich.",
     "enableShareableTip": "Aktiviere \"Mit Link teilbar\" unten, um einen öffentlichen Link mit kurzem Share-Code zu erhalten.",
     "whatVisitorsSee": "Was sehen Besucher im Public View?",
@@ -297,6 +298,7 @@
     "localModeActive": "Lokaler Modus aktiv: Share-Codes werden lokal gespeichert. Für Cloud-Sync und geräteübergreifendes Teilen melde dich an.",
     "shareCodeInfo": "Bei \"Mit Link teilbar\" wird ein 6-stelliger Share-Code generiert (z.B. ABC123). Der Code ist leicht merkbar und tippbar.",
     "errorMakingPublic": "Fehler beim Veröffentlichen des Turniers.",
+    "errorNotReleased": "Das Turnier muss zunächst veröffentlicht werden, um es mit anderen zu teilen.",
     "errorMakingPrivate": "Fehler beim Privatisieren des Turniers.",
     "errorRegeneratingCode": "Fehler beim Generieren des neuen Codes.",
     "saved": "Gespeichert"

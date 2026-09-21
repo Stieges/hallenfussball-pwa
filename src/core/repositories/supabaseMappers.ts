@@ -388,6 +388,10 @@ interface TournamentConfig {
   // Wizard state
   lastVisitedStep?: number;
 
+  // Freigabe-Marker (ISO). Bewusst im config-JSONB statt als eigene Spalte —
+  // siehe Tournament.publishedAt.
+  publishedAt?: string;
+
   // L3: Monitor-/Sponsoren-Konfiguration. Bewusst JSONB in tournaments.config statt in den
   // verwaisten Tabellen monitors/sponsors — deren type-Enum passt nicht zum Slides-Modell.
   monitors?: unknown[];
@@ -519,6 +523,28 @@ export function mapTournamentFromSupabase(
     isPublic: row.is_public ?? false,
     shareCode: row.share_code ?? undefined,
     shareCodeCreatedAt: row.share_code_created_at ?? undefined,
+    // Read-Time-Backfill: Bestandsturniere tragen kein config.publishedAt. Ein Turnier mit
+    // status 'published' gilt als bereits freigegeben (created_at als Freigabezeit) — sonst
+    // würde der Wizard-Statuswechsel auf 'draft' (SettingsTab.tsx) es nachträglich entwerten.
+    //
+    // NUR status, NICHT is_public/share_code (Review 2026-09-21, Fix 1): Beide waren unter dem
+    // alten Code der DEFAULT für JEDES neu angelegte Turnier — createDraft() setzte
+    // isPublic:true, und die Sichtbarkeits-Seite generierte beim Mounten automatisch einen
+    // share_code. Dieser Branch hat beide Defaults entfernt, aber jedes davor angelegte Turnier
+    // trägt die Altwerte noch. Sie als Beleg für "war freigegeben" zu lesen, hätte jeden
+    // Altentwurf beim ersten Read dauerhaft freigegeben — genau der Schaden, den dieser Fix
+    // verhindert.
+    //
+    // Die Erweiterung war für das "stuck-at-draft"-Szenario gedacht (freigegebenes Turnier,
+    // das ein Reload mitten in der Bearbeitung auf status='draft' stehen lässt) und ist dafür
+    // nicht mehr nötig: Migration 20260918_003 hat config.publishedAt für JEDE bereits
+    // veröffentlichte Zeile einmalig materialisiert, und der Wert übersteht den Wizard-Roundtrip
+    // (SettingsTab.tsx spreadet das ganze Tournament-Objekt, der Wizard seedet sein Formular
+    // daraus). Ein solches Turnier trägt config.publishedAt also schon, wenn es hier ankommt,
+    // und durchläuft den Backfill unten gar nicht erst (config.publishedAt ?? … gewinnt sofort).
+    publishedAt:
+      config.publishedAt ??
+      (row.status === 'published' ? (row.created_at ?? undefined) : undefined),
   };
 }
 
@@ -576,6 +602,7 @@ export function mapTournamentToSupabase(
     dfbKeyPattern: tournament.dfbKeyPattern,
     monitors: tournament.monitors,
     sponsors: tournament.sponsors,
+    publishedAt: tournament.publishedAt,
   };
 
   const tournamentRow: TournamentInsert = {

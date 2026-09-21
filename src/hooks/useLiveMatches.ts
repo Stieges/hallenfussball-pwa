@@ -17,6 +17,7 @@ import { STORAGE_KEYS } from '../constants/storage';
 import type { RuntimeMatchEvent } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import type { LiveMatch as CoreLiveMatch } from '../core/models/LiveMatch';
+import { toRuntimeMatchEvents } from '../utils/matchEvents';
 
 // Types - MatchEvent is re-exported from tournament.ts
 export type MatchStatus = 'NOT_STARTED' | 'RUNNING' | 'PAUSED' | 'FINISHED';
@@ -151,21 +152,12 @@ function coreToLocalMatch(coreMatch: CoreLiveMatch): LiveMatch {
     awayScore: coreMatch.awayScore,
     status: coreMatch.status,
     elapsedSeconds: coreMatch.elapsedSeconds,
-    events: coreMatch.events.map(e => ({
-      id: e.id,
-      matchId: e.matchId,
-      timestamp: e.timestampSeconds,
-      type: e.type,
-      scoreAfter: e.scoreAfter,
-      payload: {
-        teamId: e.payload.team === 'home' ? coreMatch.homeTeam.id : coreMatch.awayTeam.id,
-        teamName: e.payload.team === 'home' ? coreMatch.homeTeam.name : coreMatch.awayTeam.name,
-        direction: e.payload.delta === 1 ? 'INC' : e.payload.delta === -1 ? 'DEC' : undefined,
-        delta: e.payload.delta,
-        playerNumber: e.payload.playerNumber,
-        cardType: e.payload.cardType,
-      },
-    })) as unknown as MatchEvent[],
+    // Gemeinsame Normalisierung statt eigener Inline-Umrechnung: die frühere
+    // Variante hier war verlustbehaftet (assists, playersIn/playersOut, toStatus,
+    // durationSeconds/penaltyDuration und das Flag `incomplete` fielen weg) und
+    // schrieb den Zeitstempel unter dem falschen Schlüssel `timestamp` statt
+    // `timestampSeconds` — daher der frühere Doppel-Cast.
+    events: toRuntimeMatchEvents(coreMatch.events, coreMatch.homeTeam, coreMatch.awayTeam),
     timerStartTime: coreMatch.timerStartTime,
     timerPausedAt: coreMatch.timerPausedAt,
     timerElapsedSeconds: coreMatch.timerElapsedSeconds,
