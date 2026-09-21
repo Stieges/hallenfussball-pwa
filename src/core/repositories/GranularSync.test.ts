@@ -253,6 +253,41 @@ describe('OfflineRepository - Granular Sync', () => {
     // veraltete lokale Kopie ein öffentliches Turnier wieder vom Netz — exakt der
     // K1-Schaden, dessen Beseitigung dieser Meilenstein ist.
     // =========================================================================
+    // Re-Review PR1: Folge des neuen Triggers enforce_release_before_public. Ein lokaler
+    // Stand mit isPublic=true aber ohne publishedAt (alter createDraft-Default) wuerde vom
+    // Trigger mit HF001 abgewiesen — und weil der Metadaten-Payload ganz-oder-gar-nicht ist,
+    // blieben Titel, Datum und Ort desselben Turniers dann ebenfalls ungesynct.
+    it('schiebt isPublic=true NICHT hoch, wenn der lokale Stand keinen Freigabe-Beleg hat', async () => {
+        const localT = { ...baseTournament, isPublic: true, title: 'Neuer Titel', version: 2 }; // kein publishedAt
+        const remoteT = { ...baseTournament, isPublic: false, title: 'Alter Titel', version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const payload = calls[0]?.[1] as { isPublic?: boolean; title?: string } | undefined;
+        expect(payload).toBeDefined();
+        expect('isPublic' in (payload ?? {})).toBe(false);
+        // Der Titel muss trotzdem durchkommen — genau das wuerde die Ablehnung sonst mitreissen.
+        expect(payload?.title).toBe('Neuer Titel');
+    });
+
+    it('schiebt isPublic=true weiterhin hoch, wenn ein Freigabe-Beleg vorliegt', async () => {
+        const localT = { ...baseTournament, isPublic: true, publishedAt: '2026-01-01T00:00:00.000Z', version: 2 };
+        const remoteT = { ...baseTournament, isPublic: false, publishedAt: '2026-01-01T00:00:00.000Z', version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        const calls = mockSupabase.updateTournamentMetadata.mock.calls as unknown[][];
+        const payload = calls[0]?.[1] as { isPublic?: boolean } | undefined;
+        expect(payload?.isPublic).toBe(true);
+    });
+
     it('N2: isPublic undefined (lokal) vs. true (Cloud) nimmt das Turnier NICHT vom Netz', async () => {
         const localT = { ...baseTournament, version: 2 }; // isPublic undefined, lokale Version voraus
         const remoteT = { ...baseTournament, isPublic: true, version: 1 };

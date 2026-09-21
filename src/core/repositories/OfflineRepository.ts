@@ -449,8 +449,15 @@ export class OfflineRepository implements ITournamentRepository {
         // hochschreiben, nähme eine veraltete lokale Kopie ein öffentliches Turnier wieder
         // vom Netz: genau der K1-Schaden, den M1 beseitigt. Nur eine Kopie, die einen
         // echten Wert trägt, darf die Sichtbarkeit ändern; `get()` heilt die andere.
+        // Ein lokaler Stand OHNE publishedAt trägt keinen Freigabe-Beleg. Ihn auf `true` zu
+        // schieben weist der Trigger enforce_release_before_public mit HF001 ab — und weil
+        // der Metadaten-Payload ganz-oder-gar-nicht ist, blieben damit auch Titel, Datum und
+        // Ort dieses Turniers ungesynct, bei jedem Versuch aufs Neue und samt Sentry-Meldung.
+        // Dieselbe Asymmetrie wie bei publishedAt in hasStructuralChanges: Nur hochschieben,
+        // was die Gegenseite auch annehmen kann. Ein Cloud-Read heilt den veralteten Stand.
         const remotePublic = remote.isPublic ?? false;
-        if (local.isPublic !== undefined && local.isPublic !== remotePublic) {
+        const wouldPublishUnreleased = local.isPublic === true && local.publishedAt === undefined;
+        if (local.isPublic !== undefined && local.isPublic !== remotePublic && !wouldPublishUnreleased) {
             changes.isPublic = local.isPublic;
             hasChanges = true;
         }
