@@ -13,6 +13,16 @@
  *   --system "<text>"  Optionale System-Instruktion
  *   --max-tokens <n>   Default 8000
  *   --thinking         Qwen-Reasoning AN lassen (Default: reasoning_effort=none bei qwen-*)
+ *   --list-models      Gibt die aktuell freigeschalteten souveränen Modell-IDs aus und
+ *                      beendet sich. Die Freischaltung ändert sich ohne Ankündigung —
+ *                      deshalb wird hier nie eine Liste gepflegt, sondern immer die
+ *                      lebende abgefragt.
+ *   --all              Nur mit --list-models: zeigt auch die nicht-souveränen Modelle.
+ *   --allow-non-sovereign
+ *                      Hebt die Souveränitäts-Sperre für EINEN Aufruf auf. Ohne dieses
+ *                      Flag lehnt das Skript jedes Modell ohne "-sovereign"-Suffix ab.
+ *                      Grund: Vorgabe des Projekts ist, nur EU-souveräne Modelle zu nutzen;
+ *                      eine Vorgabe, die nur in einer Notiz steht, wird irgendwann gebrochen.
  *
  * Konfiguration (Key + baseURL): ~/.claude/models.json, Provider "adesso-ai-hub".
  * Der Key wird niemals ausgegeben.
@@ -27,9 +37,12 @@ function fail(msg) {
   process.exit(1);
 }
 
+/** Souveräne Modelle tragen beim Hub das Suffix "-sovereign". */
+const SOVEREIGN = /-sovereign$/;
+
 // --- Args ---
 const args = process.argv.slice(2);
-const opts = { maxTokens: 8000, thinking: false, system: null, model: null };
+const opts = { maxTokens: 8000, thinking: false, system: null, model: null, listModels: false, all: false, allowNonSovereign: false };
 const positional = [];
 for (let i = 0; i < args.length; i++) {
   switch (args[i]) {
@@ -37,17 +50,29 @@ for (let i = 0; i < args.length; i++) {
     case '--system': opts.system = args[++i]; break;
     case '--max-tokens': opts.maxTokens = Number(args[++i]); break;
     case '--thinking': opts.thinking = true; break;
+    case '--list-models': opts.listModels = true; break;
+    case '--all': opts.all = true; break;
+    case '--allow-non-sovereign': opts.allowNonSovereign = true; break;
     default: positional.push(args[i]);
   }
 }
-if (!opts.model) fail('--model <id> ist Pflicht');
-if (!Number.isFinite(opts.maxTokens) || opts.maxTokens <= 0) fail('--max-tokens muss eine positive Zahl sein');
-
-let prompt = positional.join(' ').trim();
-if (!prompt) {
-  prompt = readFileSync(0, 'utf8').trim(); // stdin
+let prompt = '';
+if (!opts.listModels) {
+  if (!opts.model) fail('--model <id> ist Pflicht');
+  if (!SOVEREIGN.test(opts.model) && !opts.allowNonSovereign) {
+    fail(
+      `"${opts.model}" ist kein souveränes Modell. Projektvorgabe: nur EU-souveräne Modelle ` +
+      '(Suffix "-sovereign"). Verfügbare mit --list-models anzeigen. ' +
+      'Bewusste Ausnahme: --allow-non-sovereign.'
+    );
+  }
+  if (!Number.isFinite(opts.maxTokens) || opts.maxTokens <= 0) fail('--max-tokens muss eine positive Zahl sein');
+  prompt = positional.join(' ').trim();
+  if (!prompt) {
+    prompt = readFileSync(0, 'utf8').trim(); // stdin
+  }
+  if (!prompt) fail('kein Prompt (Argument oder stdin)');
 }
-if (!prompt) fail('kein Prompt (Argument oder stdin)');
 
 // --- Config ---
 let provider;
@@ -58,6 +83,25 @@ try {
   fail(`~/.claude/models.json nicht lesbar: ${e.message}`);
 }
 if (!provider?.baseURL || !provider?.apiKey) fail('Provider "adesso-ai-hub" ohne baseURL/apiKey in ~/.claude/models.json');
+
+// --- Modell-Liste ---
+// Bewusst vor dem Request: Wer wissen will, was es gibt, braucht kein Modell zu nennen.
+if (opts.listModels) {
+  const res = await fetch(`${provider.baseURL.replace(/\/$/, '')}/models`, {
+    headers: { Authorization: `Bearer ${provider.apiKey}` },
+  });
+  if (!res.ok) fail(`HTTP ${res.status} beim Abruf von /models`);
+  const list = await res.json();
+  const all = (list.data ?? []).map((m) => m.id).filter(Boolean).sort();
+  if (all.length === 0) fail('/models lieferte keine Modell-IDs');
+  const ids = opts.all ? all : all.filter((id) => SOVEREIGN.test(id));
+  process.stdout.write(ids.join('\n') + '\n');
+  if (!opts.all) {
+    const hidden = all.length - ids.length;
+    process.stderr.write(`(${ids.length} souverän, ${hidden} weitere ausgeblendet — mit --all sichtbar)\n`);
+  }
+  process.exit(0);
+}
 
 // --- Request ---
 const messages = [];
