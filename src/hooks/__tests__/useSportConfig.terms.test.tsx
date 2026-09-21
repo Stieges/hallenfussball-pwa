@@ -67,9 +67,9 @@ describe('useSportConfig: getFieldName/getGoalName/… leiten an useSportTerms w
     expect(result.current.getTeamName(3)).toBe('Mannschaften');
   });
 
-  it('config.terminology bleibt unverändert erreichbar (bestehende Aufrufstellen lesen direkt daraus)', () => {
+  it('config.terminology trägt nur noch die strukturelle scoreFormat-Aussage, keine deutschen Zeichenketten', () => {
     const { result } = renderHook(() => useSportConfig('football-indoor'), { wrapper });
-    expect(result.current.terminology.periodPlural).toBeDefined();
-    expect(result.current.terminology.goal).toBeDefined();
+    expect(result.current.terminology.scoreFormat).toBe('goals');
+    expect(Object.keys(result.current.terminology)).toEqual(['scoreFormat']);
   });
 });

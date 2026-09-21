@@ -24,20 +24,15 @@ import {
 
 describe('Sport Configuration', () => {
   describe('footballIndoorConfig', () => {
-    it('should have correct id and name', () => {
+    it('should have correct id and icon', () => {
       expect(footballIndoorConfig.id).toBe('football-indoor');
-      expect(footballIndoorConfig.name).toBe('Hallenfußball');
       expect(footballIndoorConfig.icon).toBe('⚽');
     });
 
-    it('should have correct terminology', () => {
+    it('should have correct terminology (nur strukturell, keine deutschen Zeichenketten)', () => {
       const { terminology } = footballIndoorConfig;
-      expect(terminology.field).toBe('Feld');
-      expect(terminology.fieldPlural).toBe('Felder');
-      expect(terminology.goal).toBe('Tor');
-      expect(terminology.goalPlural).toBe('Tore');
-      expect(terminology.goalAnimationText).toBe('TOR!');
       expect(terminology.scoreFormat).toBe('goals');
+      expect(Object.keys(terminology)).toEqual(['scoreFormat']);
     });
 
     it('should have correct defaults', () => {
@@ -94,9 +89,10 @@ describe('Sport Configuration', () => {
       expect(footballOutdoorConfig.rules.overtimeDuration).toBe(10);
     });
 
-    it('should use "Platz" instead of "Feld"', () => {
-      expect(footballOutdoorConfig.terminology.field).toBe('Platz');
-      expect(footballOutdoorConfig.terminology.fieldPlural).toBe('Plätze');
+    it('teilt sich die (rein strukturelle) Terminologie mit football-indoor', () => {
+      // Die sportartabhängige Feld-Bezeichnung ("Platz" vs. "Feld") lebt in
+      // sport.json (terminology.field_football-outdoor_*), nicht mehr hier.
+      expect(footballOutdoorConfig.terminology).toEqual(footballIndoorConfig.terminology);
     });
   });
 
@@ -150,7 +146,7 @@ describe('Sport Configuration', () => {
   describe('Helper functions', () => {
     it('getSportTerminology should return terminology', () => {
       const terminology = getSportTerminology('football-indoor');
-      expect(terminology.goal).toBe('Tor');
+      expect(terminology.scoreFormat).toBe('goals');
     });
 
     it('getSportDefaults should return defaults', () => {

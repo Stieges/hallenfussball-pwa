@@ -494,7 +494,13 @@
     "activate": "Activate criterion",
     "deactivate": "Deactivate criterion",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "criteria": {
+      "points": "Points",
+      "goalDifference": "Goal Difference",
+      "goalsFor": "Goals Scored",
+      "directComparison": "Head-to-Head"
+    }
   },
 
   "options": {

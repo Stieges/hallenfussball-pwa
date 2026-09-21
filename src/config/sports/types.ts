@@ -21,52 +21,16 @@ export type SportId =
 
 /**
  * Sport Terminology
- * Defines sport-specific labels for UI elements
+ *
+ * Strukturelle (nicht-sprachliche) Aussagen zur Sportart. Die sprachlichen
+ * Bezeichnungen (Feld/Tor/Halbzeit/… inkl. Plural- und Sportart-Varianten)
+ * leben ausschließlich in `src/i18n/locales/{de,en}/sport.json` und werden
+ * über `useSportTerms`/`useSportConfig` aufgelöst — nicht hier, damit die
+ * App ohne Code-Änderung übersetzbar bleibt.
  */
 export interface SportTerminology {
-  /** Singular: "Feld" | "Court" | "Spielfläche" */
-  field: string;
-  /** Plural: "Felder" | "Courts" */
-  fieldPlural: string;
-
-  /** Singular: "Tor" | "Korb" | "Punkt" */
-  goal: string;
-  /** Plural: "Tore" | "Körbe" | "Punkte" */
-  goalPlural: string;
-
-  /** Singular: "Halbzeit" | "Viertel" | "Satz" | "Drittel" */
-  period: string;
-  /** Plural: "Halbzeiten" | "Viertel" | "Sätze" */
-  periodPlural: string;
-
-  /** Singular: "Spiel" | "Match" | "Partie" */
-  match: string;
-  /** Plural: "Spiele" | "Matches" */
-  matchPlural: string;
-
-  /** Singular: "Mannschaft" | "Team" */
-  team: string;
-  /** Plural: "Mannschaften" | "Teams" */
-  teamPlural: string;
-
-  /** Singular: "Schiedsrichter" | "Referee" */
-  referee: string;
-  /** Plural: "Schiedsrichter" | "Referees" */
-  refereePlural: string;
-
   /** Score display format */
   scoreFormat: 'goals' | 'sets' | 'points';
-
-  /** "Ergebnis" | "Spielstand" */
-  scoreLabel: string;
-
-  /** Result labels */
-  win: string;
-  loss: string;
-  draw: string;
-
-  /** Goal animation text: "TOR!" | "KORB!" | "PUNKT!" */
-  goalAnimationText: string;
 }
 
 /**
@@ -184,10 +148,13 @@ export interface SportFeatures {
 
 /**
  * Age Class Option
+ *
+ * `label` steht bewusst nicht hier — die Beschriftung ist eine deutsche
+ * Zeichenkette und lebt in `sport.json` (`ageClasses.<value>`). `value` ist
+ * der stabile, sprachneutrale Schlüssel dafür.
  */
 export interface AgeClassOption {
   value: string;
-  label: string;
   minAge?: number;
   maxAge?: number;
 }
@@ -211,10 +178,13 @@ export interface SportConfig {
   /** Unique sport identifier */
   id: SportId;
 
-  /** Display name */
-  name: string;
-
-  /** Emoji icon */
+  /**
+   * Emoji icon
+   *
+   * Kein `name`-Feld hier — der Anzeigename ist eine deutsche Zeichenkette
+   * und lebt in `sport.json` (`name`, kontextabhängig via `name_<sportId>`).
+   * Auflösung über `useSportTerms(sport.id).term('name')`.
+   */
   icon: string;
 
   /** Sport category for grouping */
