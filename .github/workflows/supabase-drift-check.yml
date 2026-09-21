@@ -118,5 +118,9 @@ jobs:
 
       - name: Run structural schema drift check
         env:
+          # Bevorzugt: Direktverbindung als nur-lesende Rolle ci_schema_reader. Sie kann das
+          # Schema vollstaendig dumpen, aber durch RLS keine Daten lesen. Fehlt das Secret,
+          # faellt das Skript auf --linked zurueck, das einen weitreichenderen Token braucht.
+          SUPABASE_DB_READONLY_URL: ${{ secrets.SUPABASE_DB_READONLY_URL }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: ./scripts/db-drift-check.sh

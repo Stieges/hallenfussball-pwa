@@ -196,14 +196,36 @@ LIVE_RAW="$WORKDIR/live_raw.sql"
 if [[ -n "$LIVE_DUMP_OVERRIDE" ]]; then
   echo "Testmodus: verwende $LIVE_DUMP_OVERRIDE anstelle eines echten Live-Dumps."
   cp "$LIVE_DUMP_OVERRIDE" "$LIVE_RAW"
+elif [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  # Bevorzugter Weg: Direktverbindung als nur-lesende Rolle `ci_schema_reader`.
+  #
+  # Warum nicht --linked: Dieser Weg laesst die CLI ueber die Management-API eine temporaere
+  # Anmelderolle anlegen. Mit einem eingeschraenkten Personal Access Token scheitert das an
+  # "403: your account does not have the necessary privileges" — belegt am 2026-09-21. Einen
+  # Token so weit aufzumachen, dass er das darf, waere mehr Recht als der Zweck verlangt.
+  #
+  # Die Rolle kann das Schema vollstaendig dumpen, aber keine Daten lesen: Auf allen Tabellen
+  # ist RLS aktiv, und sie ist weder `anon` noch `authenticated` noch Eigentuemerin, also greift
+  # keine Policy fuer sie. Im Container gegengeprueft — Schema-Dump byte-identisch zum
+  # Superuser-Dump, sichtbare Datenzeilen: null.
+  echo "Live-Schema ueber die nur-lesende Rolle (SUPABASE_DB_READONLY_URL)."
+  (cd "$REPO_ROOT" && supabase db dump --schema public --db-url "$SUPABASE_DB_READONLY_URL" -f "$LIVE_RAW") \
+    >"$WORKDIR/live_dump.log" 2>&1 \
+    || { echo "::error::Konnte Live-Schema nicht dumpen (nur-lesende Rolle):" >&2
+         echo "::error::Faellt hier 'permission denied for table X' auf, ist X neu und die Rolle" >&2
+         echo "::error::hat noch kein Leserecht darauf. Das ist Absicht (kein ALTER DEFAULT" >&2
+         echo "::error::PRIVILEGES) — ein GRANT SELECT nachziehen, bewusst." >&2
+         cat "$WORKDIR/live_dump.log" >&2; exit 1; }
 else
   if [[ -z "${SUPABASE_ACCESS_TOKEN:-}" ]]; then
-    echo "::error::SUPABASE_ACCESS_TOKEN ist nicht gesetzt — der Drift-Check kann das Live-Schema nicht laden." >&2
-    echo "::error::Das ist eine offene Aktion des Repo-Inhabers (Settings → Secrets → Actions →" >&2
-    echo "::error::SUPABASE_ACCESS_TOKEN setzen), KEIN Fehler dieses Skripts. Ein übersprungener" >&2
-    echo "::error::Check darf niemals als grün gelten — deshalb bricht dieses Skript hart ab." >&2
+    echo "::error::Weder SUPABASE_DB_READONLY_URL noch SUPABASE_ACCESS_TOKEN ist gesetzt —" >&2
+    echo "::error::der Drift-Check kann das Live-Schema nicht laden. Das ist eine offene Aktion" >&2
+    echo "::error::des Repo-Inhabers (Settings → Secrets → Actions), KEIN Fehler dieses Skripts." >&2
+    echo "::error::Ein uebersprungener Check darf niemals als gruen gelten — deshalb Abbruch." >&2
     exit 1
   fi
+  echo "Hinweis: SUPABASE_DB_READONLY_URL nicht gesetzt, weiche auf --linked aus."
+  echo "Hinweis: Das braucht einen Token mit weitergehenden Rechten als der Zweck verlangt."
   (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
