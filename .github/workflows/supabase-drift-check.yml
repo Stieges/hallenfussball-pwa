@@ -1,8 +1,15 @@
 name: Supabase Schema Drift Check
 
-# Detects when the live Supabase schema diverges from the committed types.
-# Catches situations where someone runs a migration in the dashboard without
-# regenerating src/types/supabase.ts locally.
+# Zwei unabhängige Prüfungen gegen Drift zwischen Live-Datenbank und Repository:
+#
+# 1. "drift-check" (Typen): vergleicht generierte TypeScript-Typen gegen src/types/supabase.ts.
+#    Erkennt eine geänderte Spalte oder einen geänderten Typ. Erkennt KEINE fehlende Tabelle,
+#    Policy oder Trigger — ein fehlendes Objekt erzeugt keinen Typ-Unterschied.
+# 2. "schema-drift-check" (Schema): vergleicht das tatsächliche Live-Schema gegen die Baseline-
+#    Migration (supabase/migrations/00000000000000_baseline_live_schema.sql) plus alle
+#    Migrationsdateien, die nach ihr hinzugekommen sind — Text UND Katalogzählung
+#    (Tabellen/Spalten/Policies/Funktionen/Trigger/Indizes/RLS). Das schließt genau die Lücke,
+#    die Job 1 nicht sehen kann. Details: scripts/db-drift-check.sh, supabase/migrations/README.md.
 
 on:
   schedule:
@@ -29,7 +36,13 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Fest gepinnt statt "latest": ein "latest"-Lauf ist bereits einmal an einem GitHub-
+          # Rate-Limit gescheitert (Run 33303138564, 2026-08-30, "Failed to resolve latest
+          # Supabase CLI release: rate limit exceeded"). 2.67.1 ist die Version, mit der `supabase
+          # db dump --schema public --linked` und `--db-url` für dieses Projekt lokal geprüft
+          # wurden (siehe .superpowers/sdd/2026-09-21-db-baseline-und-testmuell/task-10-report.md) —
+          # nicht die neueste verfügbare (2.117.0), bewusst die belegt funktionierende.
+          version: 2.67.1
 
       - name: Generate fresh types from live schema
         env:
@@ -51,7 +64,18 @@ jobs:
             echo "::error::No generated types found — previous step must have failed."
             exit 1
           fi
-          if ! diff -u src/types/supabase.ts /tmp/types-live.ts > /tmp/types-diff.txt; then
+          # Die eingecheckte Datei traegt einen handgeschriebenen Kopfkommentar
+          # ("NICHT MANUELL BEARBEITEN"), den der Generator nie ausgibt. Ein roher
+          # Byte-Vergleich ist deshalb per Konstruktion rot — dieser Job konnte nie
+          # gruen werden, was bis zum 2026-09-21 niemandem auffiel, weil er mangels
+          # Secret gar nicht lief. Beide Seiten werden daher um einen fuehrenden
+          # /** ... */-Block bereinigt, bevor verglichen wird.
+          strip_header() {
+            awk 'NR==1 && /^\/\*\*/ {inhdr=1} inhdr {if (/\*\//) {inhdr=0}; next} {print}' "$1"
+          }
+          strip_header src/types/supabase.ts > /tmp/types-committed.norm.ts
+          strip_header /tmp/types-live.ts      > /tmp/types-live.norm.ts
+          if ! diff -u /tmp/types-committed.norm.ts /tmp/types-live.norm.ts > /tmp/types-diff.txt; then
             echo "::error::Supabase schema has drifted from src/types/supabase.ts."
             echo ""
             echo "## Schema drift detected" >> $GITHUB_STEP_SUMMARY
@@ -65,3 +89,38 @@ jobs:
             exit 1
           fi
           echo "No schema drift detected."
+
+  schema-drift-check:
+    name: Compare live schema vs baseline migration (structural)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          # Begründung für die gepinnte Version: siehe Kommentar im Job "drift-check" oben.
+          version: 2.67.1
+
+      - name: Link Supabase project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
+            echo "::error::SUPABASE_ACCESS_TOKEN or SUPABASE_PROJECT_ID secret not set — schema drift check cannot run."
+            echo "::error::Configure both repo secrets (Settings → Secrets → Actions). A skipped check must never be green."
+            exit 1
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Run structural schema drift check
+        env:
+          # Bevorzugt: Direktverbindung als nur-lesende Rolle ci_schema_reader. Sie kann das
+          # Schema vollstaendig dumpen, aber durch RLS keine Daten lesen. Fehlt das Secret,
+          # faellt das Skript auf --linked zurueck, das einen weitreichenderen Token braucht.
+          SUPABASE_DB_READONLY_URL: ${{ secrets.SUPABASE_DB_READONLY_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: ./scripts/db-drift-check.sh
