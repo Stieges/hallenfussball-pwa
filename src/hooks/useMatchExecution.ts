@@ -18,6 +18,7 @@ import { useMultiTabSync } from './useMultiTabSync';
 import { useRepository } from './useRepository';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useToast } from '../components/ui/Toast/ToastContext';
+import { captureFeatureError } from '../lib/sentry';
 
 // ============================================================================
 // TYPES
@@ -122,7 +123,11 @@ export function useMatchExecution({
     const tournamentRepo = useRepository();
 
     // Get live match repository from context (Supabase or localStorage based on auth)
-    const { liveMatchRepository } = useRepositories();
+    const { liveMatchRepository, isRealtimeEnabled, supabaseLiveMatchRepo } = useRepositories();
+
+    // Realtime-Quelle fürs Cockpit: nur der authentifizierte Repo. Anders als useLiveMatches gibt es
+    // hier bewusst KEINEN Public-Fallback — das Cockpit schreibt, ein anonymer Kanal wäre sinnlos.
+    const realtimeRepo = isRealtimeEnabled ? supabaseLiveMatchRepo : null;
 
     // QW-003: Toast for optimistic lock conflict feedback
     const { showInfo, showError } = useToast();
@@ -152,6 +157,12 @@ export function useMatchExecution({
     // Refs
     const tournamentRef = useRef(tournament);
     tournamentRef.current = tournament;
+
+    // Spiegel des Loading-State für die Realtime-Callback-Closure. Der Callback ist `useCallback([])`,
+    // damit das Abo nicht bei jeder Mutation neu aufgebaut wird — er darf `loadingStates` deshalb
+    // nicht direkt lesen (stale closure), sondern nur über diesen Ref.
+    const loadingStatesRef = useRef(loadingStates);
+    loadingStatesRef.current = loadingStates;
 
     // Multi-tab sync
     // H-3 FIX: Extended to include pause, resume, and update events
@@ -198,6 +209,54 @@ export function useMatchExecution({
         };
         void load();
     }, [tournament.id, tournament.matches, service, liveMatchRepository]); // Re-run when tournament matches change (e.g. referee assignment)
+
+    // =========================================================================
+    // REALTIME (Task 14) — mehrere Geräte am selben Turnier
+    // =========================================================================
+
+    /**
+     * Übernimmt einen Push aus der Realtime-Subscription in den lokalen State.
+     *
+     * Zwei Guards, beide tragend:
+     *
+     * 1. `match === null` NICHT als Löschung behandeln. Der Repo schickt `null` sowohl bei DELETE
+     *    als auch, wenn ein UPDATE ein Match inaktiv macht — ein beendetes Spiel landet also hier.
+     *    Das Cockpit braucht beendete Spiele weiterhin (Wiedereröffnen/Korrigieren), deshalb bleibt
+     *    der lokale Eintrag in beiden Fällen stehen.
+     *
+     * 2. Keine laufende eigene Mutation überschreiben. `loadingStates` ist im Hook NICHT pro Match
+     *    gehalten, sondern ein flaches Objekt pro Operationsart (goal/card/finish/undo/start). Eine
+     *    match-genaue Prüfung ist mit dem vorhandenen State also nicht möglich; der engste korrekte
+     *    Guard ist daher: solange IRGENDEINE Mutation läuft, wird kein Push übernommen. Zu grob
+     *    fehlerhaft wäre nur das Gegenteil (Push übernehmen und ein gerade erfasstes Tor verlieren);
+     *    ein verworfener Push kostet nichts, weil der nächste Push bzw. die eigene Antwort den
+     *    Stand ohnehin nachzieht.
+     */
+    const handleRealtimeChange = useCallback((matchId: string, match: LiveMatch | null) => {
+        if (!match) { return; }
+        if (Object.values(loadingStatesRef.current).some(Boolean)) { return; }
+
+        setLiveMatches(prev => new Map(prev).set(matchId, match));
+    }, []);
+
+    useEffect(() => {
+        if (!realtimeRepo || !tournament.id) { return; }
+
+        const tournamentId = tournament.id;
+        realtimeRepo.subscribe(tournamentId, {
+            onMatchChange: handleRealtimeChange,
+            onError: (error) => {
+                captureFeatureError(error, 'hooks', 'cockpitRealtime', { tournamentId });
+            },
+        });
+
+        // `realtimeRepo` steht bewusst in den Dependencies (nicht `isRealtimeEnabled`/
+        // `supabaseLiveMatchRepo` einzeln): so schließt Reacts Cleanup aus dem VORHERIGEN Render
+        // über die alte Repo-Instanz und meldet genau die ab, statt deren Kanal zu verwaisen.
+        return () => {
+            realtimeRepo.unsubscribe(tournamentId);
+        };
+    }, [tournament.id, realtimeRepo, handleRealtimeChange]);
 
     // Timer for display updates (not persistence)
     useEffect(() => {
