@@ -526,9 +526,20 @@ export function mapTournamentFromSupabase(
     // Read-Time-Backfill: Bestandsturniere tragen kein config.publishedAt. Ein Turnier mit
     // status 'published' gilt als bereits freigegeben (created_at als Freigabezeit) — sonst
     // würde der Wizard-Statuswechsel auf 'draft' (SettingsTab.tsx) es nachträglich entwerten.
+    //
+    // status ALLEIN reicht nicht: Genau der Fall, für den publishedAt eingeführt wurde — ein
+    // freigegebenes Turnier, das ein Reload mitten in der Bearbeitung dauerhaft auf 'draft'
+    // stehen lässt (SettingsTab.tsx setzt beim Öffnen des Wizards zurück) — hätte sonst KEIN
+    // Signal für "war schon mal freigegeben". publish() sähe isFirstRelease=true und setzte
+    // isPublic zwangsweise wieder auf true — ein Organisator, der das Turnier bewusst privat
+    // gemacht hat, käme so ungefragt zurück online. is_public/share_code sind deshalb
+    // gleichwertige Belege einer vergangenen Freigabe, unabhängig vom aktuellen (transienten)
+    // status-Wert.
     publishedAt:
       config.publishedAt ??
-      (row.status === 'published' ? (row.created_at ?? undefined) : undefined),
+      ((row.status === 'published' || row.is_public === true || Boolean(row.share_code))
+        ? (row.created_at ?? undefined)
+        : undefined),
   };
 }
 

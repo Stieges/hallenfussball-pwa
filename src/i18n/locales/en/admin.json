@@ -298,6 +298,7 @@
     "localModeActive": "Local mode active: Share codes are stored locally. For cloud sync and cross-device sharing, please log in.",
     "shareCodeInfo": "With \"Shareable with link\", a 6-digit share code is generated (e.g. ABC123). The code is easy to remember and type.",
     "errorMakingPublic": "Error making tournament public.",
+    "errorNotReleased": "The tournament must be published first before it can be shared.",
     "errorMakingPrivate": "Error making tournament private.",
     "errorRegeneratingCode": "Error generating new code.",
     "saved": "Saved"

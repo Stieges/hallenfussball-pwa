@@ -53,8 +53,17 @@ BEGIN
     -- Eigener SQLSTATE: Der Client unterscheidet daran die fachliche Ablehnung von einem
     -- Verbindungsfehler. Ein Textvergleich waere die fragilere Kopplung — driftet die
     -- Meldung, faellt der Client still in den lokalen Fallback zurueck.
+    --
+    -- NICHT 'PT001' (auch keinen anderen Code aus der PT-Namespace): PostgREST interpretiert
+    -- SQLSTATEs der Form PTxyz als HTTP-Status-Override. 'PT001' heisst also "HTTP-Status 1"
+    -- — keine gueltige Status-Zeile. Die Response kommt beim Client dann gar nicht mehr
+    -- intakt an, weder code noch message erreichen ihn, isReleaseRefusal() liefert false,
+    -- und der lokale Fallback teilt den Entwurf trotzdem — exakt das Verhalten, das dieser
+    -- Guard verhindern soll. 'HF' ist weder von Postgres reserviert noch Teil der
+    -- PT-Namespace und faellt bei PostgREST auf den Default (HTTP 400) zurueck, sodass
+    -- code UND message intakt beim Client ankommen.
     RAISE EXCEPTION 'Tournament has not been released yet and cannot be made public'
-      USING ERRCODE = 'PT001';
+      USING ERRCODE = 'HF001';
   END IF;
 
   -- Generate unique code with retry logic

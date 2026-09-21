@@ -61,6 +61,44 @@ describe('supabaseMappers — publishedAt', () => {
     expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBeUndefined();
   });
 
+  // Fix 2 (Review 2026-09-18): status ist nicht das einzige verlässliche Signal. Ein
+  // freigegebenes Turnier, das ein Reload mitten in der Bearbeitung auf status='draft'
+  // stehen lässt, muss trotzdem als "schon mal freigegeben" erkannt werden — sonst sieht
+  // publish() isFirstRelease=true und setzt isPublic zwangsweise wieder auf true, selbst
+  // wenn der Organisator es bewusst privat gemacht hatte.
+  it('Backfill: status "draft" mit is_public=true (stuck-at-draft) erbt trotzdem created_at', () => {
+    const row = createTournamentRow({
+      status: 'draft',
+      is_public: true,
+      config: {},
+      created_at: '2025-11-03T08:30:00Z',
+    });
+
+    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBe('2025-11-03T08:30:00Z');
+  });
+
+  it('Backfill: status "draft" mit share_code (stuck-at-draft) erbt trotzdem created_at', () => {
+    const row = createTournamentRow({
+      status: 'draft',
+      share_code: 'ABC123',
+      config: {},
+      created_at: '2025-11-03T08:30:00Z',
+    });
+
+    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBe('2025-11-03T08:30:00Z');
+  });
+
+  it('Backfill greift NICHT bei status "draft" ohne is_public und ohne share_code (echter Entwurf)', () => {
+    const row = createTournamentRow({
+      status: 'draft',
+      is_public: false,
+      share_code: null,
+      config: {},
+    });
+
+    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBeUndefined();
+  });
+
   it('config.publishedAt schlägt den Backfill', () => {
     const row = createTournamentRow({
       status: 'published',

@@ -56,8 +56,13 @@ function stableKey(value: unknown): string {
 /**
  * SQLSTATE, mit dem `make_tournament_public` eine noch nicht freigegebene (Entwurfs-)
  * Turnierfreigabe ablehnt — siehe supabase/migrations/20260918_002_make_public_refuses_drafts.sql.
+ *
+ * Bewusst NICHT im 'PT'-Namespace (z.B. 'PT001'): PostgREST liest SQLSTATEs der Form PTxyz
+ * als HTTP-Status-Override. 'PT001' waere "HTTP-Status 1" — keine gueltige Response, weder
+ * code noch message kommen beim Client an. 'HF' ist unreserviert und faellt bei PostgREST
+ * auf HTTP 400 zurueck.
  */
-const RELEASE_REFUSAL_CODE = 'PT001';
+const RELEASE_REFUSAL_CODE = 'HF001';
 
 /** Ältere Fassung der Funktion kannte den eigenen SQLSTATE noch nicht. */
 const RELEASE_REFUSAL_MARKER = 'has not been released';
@@ -72,7 +77,7 @@ const RELEASE_REFUSAL_MARKER = 'has not been released';
  * Fallback zurück — also genau in das Verhalten, das er verhindern soll. Der Textvergleich
  * bleibt nur als Rückfall für eine noch nicht migrierte Datenbank.
  */
-function isReleaseRefusal(error: unknown): boolean {
+export function isReleaseRefusal(error: unknown): boolean {
     if (!(error instanceof Error)) { return false; }
     const original = error instanceof RepositoryError ? error.originalError : undefined;
     const code = (original as { code?: unknown } | undefined)?.code;
@@ -397,6 +402,19 @@ export class OfflineRepository implements ITournamentRepository {
         // lokale Version herunter und die Änderung erreicht die Cloud nie.
         if (stableKey(local.monitors) !== stableKey(remote.monitors)) {return true;}
         if (stableKey(local.sponsors) !== stableKey(remote.sponsors)) {return true;}
+
+        // Fix 3 (Review 2026-09-18): publishedAt liegt ebenfalls nur im config-JSONB (siehe
+        // supabase/migrations/20260918_002_make_public_refuses_drafts.sql) und hat — anders
+        // als title/date/status/startTime/location — KEINE eigene Spalte, die
+        // getMetadataChanges()/updateTournamentMetadata() transportieren könnte. Ohne diese
+        // Prüfung syncte `status` allein über den Metadaten-Delta-Pfad (SupabaseRepository.
+        // updateTournamentMetadata schreibt nur die status-Spalte, rührt config NICHT an):
+        // eine Zeile käme mit status='published' aber ohne config.publishedAt in der Cloud an
+        // — die App hielte das Turnier für freigegeben, make_tournament_public lehnte es
+        // trotzdem ab. Genau die Drift, die dieser Meilenstein beseitigt hat, käme über den
+        // Metadaten-Sync zurück. Mirrort deshalb monitors/sponsors: ein Unterschied erzwingt
+        // den Voll-Save, der config komplett (inkl. publishedAt) schreibt.
+        if (local.publishedAt !== remote.publishedAt) {return true;}
 
         return false;
     }

@@ -288,4 +288,36 @@ describe('OfflineRepository - Granular Sync', () => {
 
         expect(mockLocal.save).not.toHaveBeenCalled();
     });
+
+    // =========================================================================
+    // Fix 3 (Review 2026-09-18): publishedAt liegt nur im config-JSONB und hat keine eigene
+    // Spalte — anders als title/date/status/startTime/location transportiert
+    // updateTournamentMetadata() es NICHT. Ohne einen erzwungenen Voll-Save käme eine Zeile
+    // mit geänderter Sichtbarkeit aber ohne aktualisiertes config.publishedAt in der Cloud an,
+    // und die Drift, die dieser Meilenstein beseitigt hat (status widerspricht
+    // config.publishedAt), käme über den Metadaten-Sync zurück.
+    // =========================================================================
+    it('Fix 3: erzwingt einen Voll-Save wenn sich publishedAt unterscheidet (lokal gesetzt, remote fehlt)', async () => {
+        const localT = { ...baseTournament, publishedAt: '2026-02-01T10:00:00.000Z', version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, version: 1 } as unknown as Tournament; // kein publishedAt
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).toHaveBeenCalled();
+        expect(mockSupabase.updateTournamentMetadata).not.toHaveBeenCalled();
+    });
+
+    it('Fix 3 (Kontrolle): KEIN Voll-Save allein wegen publishedAt, wenn beide Seiten denselben Wert tragen', async () => {
+        const same = '2026-02-01T10:00:00.000Z';
+        const localT = { ...baseTournament, publishedAt: same, version: 2 } as unknown as Tournament;
+        const remoteT = { ...baseTournament, publishedAt: same, version: 1 } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).not.toHaveBeenCalled();
+    });
 });

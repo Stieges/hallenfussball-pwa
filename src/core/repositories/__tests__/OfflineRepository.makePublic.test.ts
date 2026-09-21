@@ -48,12 +48,32 @@ describe('OfflineRepository.makeTournamentPublic — Freigabe-Ablehnung', () => 
     // Der Vertrag ist der Fehlercode, nicht der Text. Ohne diese Prüfung hinge der Guard an
     // einer Zeichenkette in einer SQL-Datei: Wird die Meldung dort umformuliert, fiele der
     // Client STILL in den lokalen Fallback zurück — genau in das Verhalten, das er verhindert.
+    //
+    // Code bewusst 'HF001', NICHT 'PT001': Dieser Mock hat früher genau die Annahme codiert,
+    // die er eigentlich prüfen sollte — 'PT001' ist ein SQLSTATE aus PostgRESTs PT-Namespace
+    // (HTTP-Status-Override, hier faktisch "HTTP-Status 1"), der beim echten RPC-Aufruf nie
+    // intakt beim Client ankommt. Der Mock konnte den Fehler also nie fangen. Siehe Test unten.
     cloudMakePublic.mockRejectedValue(
-      new RepositoryError('makePublic', 'Freigabe abgelehnt', { code: 'PT001' })
+      new RepositoryError('makePublic', 'Freigabe abgelehnt', { code: 'HF001' })
     );
 
     await expect(createRepository().makeTournamentPublic('t1')).rejects.toThrow(/Freigabe abgelehnt/);
     expect(localMakePublic).not.toHaveBeenCalled();
+  });
+
+  it('behandelt einen Code aus PostgRESTs PT-Namespace NICHT als Ablehnung (er käme nie intakt an)', async () => {
+    // PostgREST interpretiert SQLSTATEs der Form PTxyz als HTTP-Status-Override. Ein solcher
+    // Code würde die Transportschicht brechen, bevor code/message den Client erreichen —
+    // isReleaseRefusal() darf sich also niemals auf einen PT-Code verlassen. Dieser Test
+    // dokumentiert das, damit niemand versehentlich wieder einen PT-Code einführt.
+    cloudMakePublic.mockRejectedValue(
+      new RepositoryError('makePublic', 'Irgendein anderer Fehler', { code: 'PT001' })
+    );
+
+    const result = await createRepository().makeTournamentPublic('t1');
+
+    expect(result?.shareCode).toBe('LOCAL1');
+    expect(localMakePublic).toHaveBeenCalledWith('t1');
   });
 
   it('nutzt bei einem echten Verbindungsfehler weiterhin den lokalen Fallback', async () => {

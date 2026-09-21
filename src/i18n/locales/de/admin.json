@@ -298,6 +298,7 @@
     "localModeActive": "Lokaler Modus aktiv: Share-Codes werden lokal gespeichert. Für Cloud-Sync und geräteübergreifendes Teilen melde dich an.",
     "shareCodeInfo": "Bei \"Mit Link teilbar\" wird ein 6-stelliger Share-Code generiert (z.B. ABC123). Der Code ist leicht merkbar und tippbar.",
     "errorMakingPublic": "Fehler beim Veröffentlichen des Turniers.",
+    "errorNotReleased": "Das Turnier muss zunächst veröffentlicht werden, um es mit anderen zu teilen.",
     "errorMakingPrivate": "Fehler beim Privatisieren des Turniers.",
     "errorRegeneratingCode": "Fehler beim Generieren des neuen Codes.",
     "saved": "Gespeichert"

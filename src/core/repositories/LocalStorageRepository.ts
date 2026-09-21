@@ -253,9 +253,20 @@ export class LocalStorageRepository implements ITournamentRepository {
      * status 'published' gilt als bereits freigegeben — `createdAt` ist die beste
      * verfügbare Freigabezeit. Damit entwertet der transiente Wizard-Statuswechsel auf
      * 'draft' (SettingsTab.tsx) ein laufendes Turnier nicht nachträglich.
+     *
+     * status ALLEIN reicht nicht: Genau der Fall, für den publishedAt eingeführt wurde — ein
+     * freigegebenes Turnier, das ein Reload mitten in der Bearbeitung dauerhaft auf 'draft'
+     * stehen lässt — hätte sonst KEIN Signal für "war schon mal freigegeben". publish() sähe
+     * isFirstRelease=true und setzte isPublic zwangsweise wieder auf true — ein Organisator,
+     * der das Turnier bewusst privat gemacht hat, käme so ungefragt zurück online. isPublic/
+     * shareCode sind deshalb gleichwertige Belege einer vergangenen Freigabe, unabhängig vom
+     * aktuellen (transienten) status-Wert.
      */
     private backfillPublishedAt(tournament: Tournament): Tournament {
-        if (tournament.publishedAt !== undefined || tournament.status !== 'published') {
+        const wasReleased = tournament.status === 'published'
+            || tournament.isPublic === true
+            || Boolean(tournament.shareCode);
+        if (tournament.publishedAt !== undefined || !wasReleased) {
             return tournament;
         }
         return { ...tournament, publishedAt: tournament.createdAt };

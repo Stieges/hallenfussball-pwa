@@ -17,6 +17,7 @@ import { useRepository } from '../../../../hooks/useRepository';
 import { useToast } from '../../../../components/ui/Toast';
 import { generateLiveUrl, generateTournamentUrl } from '../../../../utils/shareUtils';
 import { isSupabaseConfigured } from '../../../../lib/supabase';
+import { isReleaseRefusal } from '../../../../core/repositories/OfflineRepository';
 
 // =============================================================================
 // PROPS
@@ -211,7 +212,15 @@ export function VisibilityCategory({
   const { showError } = useToast();
 
   // Ein Entwurf ist nicht öffentlich erreichbar — Teilen ist erst nach der Freigabe möglich.
-  const isDraft = tournament.status === 'draft';
+  //
+  // Gate auf publishedAt, NICHT status: status='draft' ist ein transienter Wizard-Marker
+  // (SettingsTab.tsx setzt ein veröffentlichtes Turnier beim Öffnen des Bearbeiten-Wizards
+  // zurück auf 'draft'; ein Reload mitten in der Bearbeitung lässt es dauerhaft dort stehen).
+  // Mit status als Gate verlöre der Organisator mitten im laufenden Turnier den Link/QR-Code
+  // und könnte ihn nicht mehr nachdrucken, obwohl das Turnier nachweislich online ist. Dasselbe
+  // Prädikat wie im Service und in der Datenbankfunktion make_tournament_public — damit stimmen
+  // alle drei Schichten überein.
+  const isDraft = !tournament.publishedAt;
 
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -263,11 +272,16 @@ export function VisibilityCategory({
       }
     } catch (err) {
       console.error('Failed to make tournament public:', err);
-      // Die Meldung des RPC (z.B. die Freigabe-Sperre aus make_tournament_public) muss beim
-      // Nutzer ankommen, nicht nur in der Konsole.
-      const message = err instanceof Error && err.message.length > 0
-        ? err.message
-        : t('visibility.errorMakingPublic');
+      // Die rohe RPC-Meldung ("Tournament has not been released yet...") ist Englisch und darf
+      // nicht ungefiltert vor den Nutzer — sie bleibt nur fürs Error-Reporting (siehe oben,
+      // console.error) erhalten. Die Freigabe-Sperre bekommt einen eigenen deutschen Text;
+      // isReleaseRefusal ist dieselbe Prüfung, mit der OfflineRepository diese Ablehnung von
+      // einem Verbindungsfehler unterscheidet (SQLSTATE HF001, s. Fix 1).
+      const message = isReleaseRefusal(err)
+        ? t('visibility.errorNotReleased')
+        : (err instanceof Error && err.message.length > 0
+          ? err.message
+          : t('visibility.errorMakingPublic'));
       setError(message);
       showError(message);
     } finally {
