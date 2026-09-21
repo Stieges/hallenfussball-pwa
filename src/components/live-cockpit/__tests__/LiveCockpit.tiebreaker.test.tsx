@@ -61,7 +61,9 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
   });
   it('L1: zeigt bei goldenGoal den Golden-Goal-Button statt der Verlängerung', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ tiebreakerMode: 'goldenGoal' }), allTb())} />);
-    expect(screen.getByRole('button', { name: /Golden Goal starten/i })).toBeInTheDocument();
+    // t() ist in Tests gemockt (Passthrough mit Namespace-Präfix, siehe src/test/setup.ts) —
+    // der Button-Text ist daher "sport:phases.goldenGoal starten", nicht der übersetzte Begriff.
+    expect(screen.getByRole('button', { name: /sport:phases\.goldenGoal starten/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Verlängerung starten/i })).not.toBeInTheDocument();
   });
   it('Regression: kein Banner ohne awaitingTiebreakerChoice', () => {

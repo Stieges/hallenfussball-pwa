@@ -9,6 +9,7 @@ import { cssVars } from '../../../design-tokens'
 import { Button } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatTime } from '../utils/matchPanelUtils';
+import sportGlossary from '../../../i18n/glossary.json';
 
 export interface MatchEvent {
   id: string;
@@ -183,7 +184,7 @@ export const EventsList: React.FC<EventsListProps> = ({ events, onUndo, onManual
       return `🟥 Rote Karte ${displayName}${playerInfo}`;
     } else if (event.type === 'TIME_PENALTY') {
       const duration = penaltyDuration ? Math.floor(penaltyDuration / 60) : 2;
-      return `⏱ ${duration} Min Zeitstrafe ${displayName}${playerInfo}`;
+      return `⏱ ${duration} Min ${sportGlossary.terms.timePenalty.de} ${displayName}${playerInfo}`;
     } else if (event.type === 'SUBSTITUTION') {
       if (playersOut?.length || playersIn?.length) {
         const outInfo = playersOut?.map(n => `#${n}`).join(',') ?? '?';

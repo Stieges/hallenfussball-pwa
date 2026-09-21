@@ -32,6 +32,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const isMobile = useIsMobile();
   const { t } = useTranslation('sport');
   const penaltyShootoutTerm = t('events.penaltyShootout');
+  const goldenGoalTerm = t('phases.goldenGoal');
 
   // Determine which phase we're in and what options to show
   const isAfterOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
@@ -87,7 +88,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const getTitle = () => {
     if (isAfterOvertime) {
       return match.playPhase === 'goldenGoal'
-        ? 'Golden Goal ohne Entscheidung!'
+        ? `${goldenGoalTerm} ohne Entscheidung!`
         : 'Verlängerung endet Unentschieden!';
     }
     return 'Unentschieden im Finalspiel!';
@@ -110,7 +111,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
       case 'overtime-then-shootout':
         return `Das Spiel endet unentschieden. Gemäß Turnierregeln folgt jetzt eine ${overtimeMinutes}-minütige Verlängerung.`;
       case 'goldenGoal':
-        return `Das Spiel endet unentschieden. Gemäß Turnierregeln folgt jetzt eine ${overtimeMinutes}-minütige Golden-Goal-Phase.`;
+        return `Das Spiel endet unentschieden. Gemäß Turnierregeln folgt jetzt eine ${overtimeMinutes}-minütige ${goldenGoalTerm}-Phase.`;
       default:
         return 'Das Spiel endet unentschieden. Bitte wählen Sie wie fortgefahren werden soll.';
     }
@@ -206,7 +207,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
               onClick={() => onStartGoldenGoal(match.id)}
               style={{ minHeight: isMobile ? '48px' : 'auto' }}
             >
-              Golden Goal starten ({overtimeMinutes} Min.)
+              {goldenGoalTerm} starten ({overtimeMinutes} Min.)
             </Button>
             <div style={buttonRowStyle}>
               <Button

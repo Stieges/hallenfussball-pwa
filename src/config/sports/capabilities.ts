@@ -18,6 +18,8 @@
  * mit Task 6 aus dieser Kategorie herausgewandert sind, siehe MatchExecutionService.needsTiebreaker).
  */
 
+import sportGlossary from '../../i18n/glossary.json';
+
 export interface UnimplementedCapability {
   /** Punktweg zum Feld in `SportConfig`, z. B. `rules.isSetBased`. */
   field: string;
@@ -154,7 +156,7 @@ export const UNIMPLEMENTED_CAPABILITIES: UnimplementedCapability[] = [
   },
   {
     field: 'rules.hasShootout',
-    requires: 'Verfügbarkeit von Elfmeter-/Siebenmeterschießen als Tiebreaker-Option',
+    requires: `Verfügbarkeit von ${sportGlossary.terms.penalty.de}/${sportGlossary.terms.penaltyShootout.de} als Tiebreaker-Option`,
     missing:
       'Wie hasOvertime: die tatsächlich angebotenen Tiebreaker-Optionen im Cockpit ' +
       '(startOvertime/startGoldenGoal/startPenaltyShootout in MatchExecutionService) hängen nicht ' +

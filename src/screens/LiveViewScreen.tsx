@@ -24,6 +24,7 @@ import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import sportGlossary from '../i18n/glossary.json';
 import { PublicBottomNav, PublicNavTab } from '../components/ui/PublicBottomNav';
 import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
@@ -745,7 +746,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
               style={chipStyle(selectedPhase === 'groupStage')}
               onClick={() => handlePhaseChange('groupStage')}
             >
-              Vorrunde
+              {sportGlossary.terms.groupStage.de}
             </button>
             <button
               style={chipStyle(selectedPhase === 'final')}

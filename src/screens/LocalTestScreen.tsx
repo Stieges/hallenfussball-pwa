@@ -26,6 +26,7 @@ import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
 import { Icons } from '../components/ui/Icons';
 import { ShareDialog } from '../components/dialogs/ShareDialog';
+import sportGlossary from '../i18n/glossary.json';
 
 // localStorage key for "Mein Team" selection
 const getMyTeamStorageKey = () => `live:LOCAL-TEST:myTeam`;
@@ -663,7 +664,7 @@ export const LocalTestScreen: React.FC = () => {
                 style={chipStyle(selectedPhase === 'groupStage')}
                 onClick={() => handlePhaseChange('groupStage')}
               >
-                Vorrunde
+                {sportGlossary.terms.groupStage.de}
               </button>
               <button
                 style={chipStyle(selectedPhase === 'final')}

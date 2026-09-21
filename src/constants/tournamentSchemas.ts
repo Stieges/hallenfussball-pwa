@@ -1,4 +1,5 @@
 import { TournamentSchema, PlacementMatch } from '../types/tournamentSchema';
+import sportGlossary from '../i18n/glossary.json';
 
 /**
  * Shared Placement Match Templates
@@ -39,7 +40,7 @@ export const FOOTBALL_TOURNAMENT_SCHEMA: TournamentSchema = {
     {
       name: 'groupCount',
       type: 'integer',
-      description: 'Anzahl der Gruppen in der Gruppenphase',
+      description: `Anzahl der Gruppen in der ${sportGlossary.terms.groupStage.de}`,
     },
     {
       name: 'totalTeams',

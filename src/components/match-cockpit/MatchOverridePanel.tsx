@@ -10,6 +10,7 @@
 import { CSSProperties, useCallback, useState } from 'react';
 import { cssVars } from '../../design-tokens';
 import type { MatchCockpitOverrides, MatchSoundPreset } from '../../types/tournament';
+import sportGlossary from '../../i18n/glossary.json';
 
 // =============================================================================
 // Types
@@ -206,7 +207,7 @@ export function MatchOverridePanel({
           {/* Golden Goal (finals only) */}
           {isFinalMatch && (
             <OverrideRow
-              label="Golden Goal"
+              label={sportGlossary.terms.goldenGoal.de}
               description="Bei Unentschieden weiter bis Tor"
               isOverridden={overrides.goldenGoalEnabled !== undefined}
               onReset={() => resetOverride('goldenGoalEnabled')}

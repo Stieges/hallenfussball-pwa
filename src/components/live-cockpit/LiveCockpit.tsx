@@ -17,6 +17,7 @@ import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
 import { DEFAULT_MATCH_COCKPIT_SETTINGS } from '../../types/tournament';
+import sportGlossary from '../../i18n/glossary.json';
 
 // Sub-components
 import {
@@ -53,7 +54,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   GOAL: 'Tor',
   YELLOW_CARD: 'Gelbe Karte',
   RED_CARD: 'Rote Karte',
-  TIME_PENALTY: 'Zeitstrafe',
+  TIME_PENALTY: sportGlossary.terms.timePenalty.de,
   SUBSTITUTION: 'Wechsel',
   FOUL: 'Foul',
 };
@@ -495,7 +496,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         durationSeconds,
       });
 
-      showInfo(`${mins} Min Zeitstrafe für ${teamName}${playerInfo}`);
+      showInfo(`${mins} Min ${sportGlossary.terms.timePenalty.de} für ${teamName}${playerInfo}`);
 
       // Add to active penalties (local UI state for countdown)
       const now = new Date();

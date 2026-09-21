@@ -16,6 +16,7 @@ import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandings } from '../../../../utils/calculations';
 import type { Match, Tournament } from '../../../../types/tournament';
 import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
+import sportGlossary from '../../../../i18n/glossary.json';
 
 // =============================================================================
 // PROPS
@@ -560,7 +561,7 @@ export function ExportsCategory({
                   } else if (event.type === 'RED_CARD') {
                     eventTypeLabel = 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
-                    eventTypeLabel = 'Zeitstrafe';
+                    eventTypeLabel = sportGlossary.terms.timePenalty.de;
                     details = `${event.payload.penaltyDuration ?? 120}s`;
                   } else if (event.type === 'SUBSTITUTION') {
                     eventTypeLabel = 'Wechsel';

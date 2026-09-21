@@ -13,6 +13,7 @@
 import { type CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
+import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
 
 interface EventLogBottomSheetProps {
@@ -94,7 +95,7 @@ export function EventLogBottomSheet({
         const duration = event.payload.penaltyDuration
           ? Math.floor(event.payload.penaltyDuration / 60)
           : 2;
-        return `${duration} Min Zeitstrafe ${teamName}${playerInfo}`;
+        return `${duration} Min ${sportGlossary.terms.timePenalty.de} ${teamName}${playerInfo}`;
       }
       case 'SUBSTITUTION': {
         const playersOut = event.payload.playersOut;

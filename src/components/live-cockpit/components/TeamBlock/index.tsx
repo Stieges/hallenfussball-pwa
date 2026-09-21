@@ -8,6 +8,7 @@
 import { type CSSProperties } from 'react';
 import { cssVars } from '../../../../design-tokens'
 import type { Breakpoint } from '../../../../hooks';
+import sportGlossary from '../../../../i18n/glossary.json';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -225,7 +226,7 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
           onClick={onPenalty}
           disabled={disabled}
           type="button"
-          aria-label={`Zeitstrafe für ${teamName}`}
+          aria-label={`${sportGlossary.terms.timePenalty.de} für ${teamName}`}
         >
           ⏱ 2 MIN{!isMobile && ' STRAFE'}
         </button>

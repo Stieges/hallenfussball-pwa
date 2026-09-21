@@ -15,6 +15,7 @@ import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
 import { getEffectiveScore } from '../../utils/matchScore';
 import { getSportConfig } from '../../config/sports';
+import sportGlossary from '../../i18n/glossary.json';
 
 // ============================================================================
 // CONSTANTS
@@ -790,7 +791,7 @@ export class MatchExecutionService {
             id: scheduledMatch.id,
             number: scheduledMatch.matchNumber,
             // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty label should use phase-based fallback
-            phaseLabel: scheduledMatch.label || (scheduledMatch.phase === 'groupStage' ? 'Vorrunde' : 'Finalrunde'),
+            phaseLabel: scheduledMatch.label || (scheduledMatch.phase === 'groupStage' ? sportGlossary.terms.groupStage.de : 'Finalrunde'),
             fieldId: `field-${scheduledMatch.field}`,
             scheduledKickoff: scheduledMatch.startTime.toISOString(),
             durationSeconds,

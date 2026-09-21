@@ -60,6 +60,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   const isMobile = useIsMobile();
   const { t } = useTranslation('sport');
   const penaltyShootoutTerm = t('events.penaltyShootout');
+  const goldenGoalTerm = t('phases.goldenGoal');
 
   // ---------------------------------------------------------------------------
   // Styles
@@ -175,7 +176,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
       case 'overtime-then-shootout':
         return `Gemäß Turnierregeln wird das Spiel durch Verlängerung (${overtimeMinutes} Min.) und ggf. ${penaltyShootoutTerm} entschieden.`;
       case 'goldenGoal':
-        return 'Gemäß Turnierregeln wird das Spiel durch Golden Goal entschieden.';
+        return `Gemäß Turnierregeln wird das Spiel durch ${goldenGoalTerm} entschieden.`;
       case 'shootout':
       default:
         return `Gemäß Turnierregeln wird das Spiel durch ${penaltyShootoutTerm} entschieden.`;
@@ -224,7 +225,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
 
             {tiebreakerMode === 'goldenGoal' && onStartGoldenGoal && (
               <PrimaryButton onClick={onStartGoldenGoal}>
-                ▶️ Golden Goal starten
+                ▶️ {goldenGoalTerm} starten
               </PrimaryButton>
             )}
 

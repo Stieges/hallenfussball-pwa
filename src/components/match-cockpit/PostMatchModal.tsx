@@ -88,7 +88,7 @@ export function PostMatchModal({
       case 'overtime':
         return 'nach Verlängerung';
       case 'goldenGoal':
-        return 'durch Golden Goal';
+        return `durch ${t('phases.goldenGoal')}`;
       case 'penalty':
         return `im ${t('events.penaltyShootout')}`;
       default:

@@ -7,6 +7,7 @@
 
 import { Tournament } from '../../types/tournament';
 import { calculateStandings } from '../../utils/calculations';
+import sportGlossary from '../../i18n/glossary.json';
 
 /**
  * Result of playoff resolution attempt
@@ -195,7 +196,7 @@ export const resolvePlayoffPairings = (
     return {
       wasResolved: false,
       updatedMatches: 0,
-      message: 'Gruppenphase ist noch nicht abgeschlossen',
+      message: `${sportGlossary.terms.groupStage.de} ist noch nicht abgeschlossen`,
       updatedMatchIds: [],
     };
   }
@@ -546,7 +547,7 @@ export const forceReResolvePlayoffs = (
     return {
       wasResolved: false,
       updatedMatches: 0,
-      message: 'Gruppenphase ist noch nicht abgeschlossen',
+      message: `${sportGlossary.terms.groupStage.de} ist noch nicht abgeschlossen`,
       updatedMatchIds: [],
     };
   }
