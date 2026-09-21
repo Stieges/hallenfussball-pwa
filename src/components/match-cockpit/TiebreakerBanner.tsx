@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { Button } from '../ui';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -29,6 +30,8 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
   onForceFinish,
 }) => {
   const isMobile = useIsMobile();
+  const { t } = useTranslation('sport');
+  const penaltyShootoutTerm = t('events.penaltyShootout');
 
   // Determine which phase we're in and what options to show
   const isAfterOvertime = match.playPhase === 'overtime' || match.playPhase === 'goldenGoal';
@@ -98,12 +101,12 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
 
   const getMessage = () => {
     if (isAfterOvertime) {
-      return 'Auch nach der Verlängerung steht es unentschieden. Jetzt geht es ins Elfmeterschießen!';
+      return `Auch nach der Verlängerung steht es unentschieden. Jetzt geht es ins ${penaltyShootoutTerm}!`;
     }
 
     switch (tiebreakerMode) {
       case 'shootout':
-        return 'Das Spiel endet unentschieden. Gemäß Turnierregeln wird jetzt das Strafstoßschießen durchgeführt.';
+        return `Das Spiel endet unentschieden. Gemäß Turnierregeln wird jetzt das ${penaltyShootoutTerm} durchgeführt.`;
       case 'overtime-then-shootout':
         return `Das Spiel endet unentschieden. Gemäß Turnierregeln folgt jetzt eine ${overtimeMinutes}-minütige Verlängerung.`;
       case 'goldenGoal':
@@ -124,7 +127,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
             onClick={() => onStartPenaltyShootout(match.id)}
             style={{ minHeight: isMobile ? '48px' : 'auto' }}
           >
-            Strafstoßschießen starten
+            {penaltyShootoutTerm} starten
           </Button>
           <Button
             variant="secondary"
@@ -149,7 +152,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
               onClick={() => onStartPenaltyShootout(match.id)}
               style={{ minHeight: isMobile ? '48px' : 'auto' }}
             >
-              Strafstoßschießen starten
+              {penaltyShootoutTerm} starten
             </Button>
             <Button
               variant="secondary"
@@ -180,7 +183,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
                 onClick={() => onStartPenaltyShootout(match.id)}
                 style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
               >
-                Direkt zum Elfmeterschießen
+                Direkt zum {penaltyShootoutTerm}
               </Button>
               <Button
                 variant="secondary"
@@ -212,7 +215,7 @@ export const TiebreakerBanner: React.FC<TiebreakerBannerProps> = ({
                 onClick={() => onStartPenaltyShootout(match.id)}
                 style={{ flex: 1, minHeight: isMobile ? '48px' : 'auto' }}
               >
-                Direkt zum Elfmeterschießen
+                Direkt zum {penaltyShootoutTerm}
               </Button>
               <Button
                 variant="secondary"

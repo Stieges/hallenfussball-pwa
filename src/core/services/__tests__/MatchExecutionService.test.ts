@@ -217,7 +217,7 @@ describe('MatchExecutionService', () => {
     });
 
     // Fixwave-Fix (Critical): abortPenaltyShootout ist das Gegenstück zu startPenaltyShootout — bricht
-    // das Elfmeterschießen ab und zeigt wieder die Tiebreaker-Auswahl (awaitingTiebreakerChoice:true),
+    // das Strafstoßschießen ab und zeigt wieder die Tiebreaker-Auswahl (awaitingTiebreakerChoice:true),
     // OHNE das Spiel zu beenden. Bewusst nicht cancelTiebreaker (das persistiert als Unentschieden).
     describe('abortPenaltyShootout (Fixwave)', () => {
         it('setzt awaitingTiebreakerChoice zurück auf true und den Elfmeter-Score auf 0, OHNE das Spiel zu beenden', async () => {

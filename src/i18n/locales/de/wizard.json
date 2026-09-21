@@ -251,9 +251,9 @@
     },
     "tiebreaker": {
       "title": "Bei Unentschieden",
-      "shootout": "Direkt Strafstoßschießen",
+      "shootout": "Direkt $t(sport:events.penaltyShootout)",
       "shootoutHint": "(privates Turnier)",
-      "overtimeThenShootout": "Verlängerung, dann Strafstoßschießen",
+      "overtimeThenShootout": "Verlängerung, dann $t(sport:events.penaltyShootout)",
       "overtimeHint": "(offiziell)",
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal-Zeit:",

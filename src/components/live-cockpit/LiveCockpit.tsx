@@ -147,7 +147,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [sidesSwapped, setSidesSwapped] = useState(false);
   // Settings Dialog
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
-  // L1: Elfmeterschießen-Dialog (Task 11)
+  // L1: Strafstoßschießen-Dialog (Task 11)
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Toast notifications
@@ -607,14 +607,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // "Als Unentschieden beenden": MatchExecutionService.cancelTiebreaker persistiert als regulären Ausgang.
   const handleEndAsDraw = useCallback(() => { if (!currentMatch) { return; } onForceFinish?.(currentMatch.id); }, [currentMatch, onForceFinish]);
 
-  // L1: Elfmeterschießen — der Dialog verwaltet seine Schussliste selbst, wir brauchen nur das Endergebnis.
+  // L1: Strafstoßschießen — der Dialog verwaltet seine Schussliste selbst, wir brauchen nur das Endergebnis.
   // MatchExecutionService.recordPenaltyResult schreibt penaltyScoreA/B, decidedBy='penalty' (524–541).
   const handlePenaltyFinish = useCallback((homeScore: number, awayScore: number) => {
     if (!currentMatch) { return; }
     onRecordPenaltyResult?.(currentMatch.id, homeScore, awayScore);
     setShowPenaltyDialog(false);
   }, [currentMatch, onRecordPenaltyResult]);
-  // Fixwave-Fix (Critical): "Abbrechen" bricht das Elfmeterschießen ab und zeigt wieder das
+  // Fixwave-Fix (Critical): "Abbrechen" bricht das Strafstoßschießen ab und zeigt wieder das
   // Tiebreaker-Banner — bewusst NICHT onCancelTiebreaker (beendet das Spiel als Unentschieden,
   // das ist dem separaten "Als Unentschieden beenden"-Knopf im Banner vorbehalten, siehe handleEndAsDraw).
   const handlePenaltyCancel = useCallback(() => {
@@ -1159,7 +1159,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         />
       )}
 
-      {/* L1: Elfmeterschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
+      {/* L1: Strafstoßschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
           persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz. */}
       {showPenaltyDialog && onRecordPenaltyResult && onAbortPenaltyShootout && (
         <PenaltyShootoutDialog

@@ -8,7 +8,7 @@
     "pause": "PAUSE",
     "overtime": "VERLÄNGERUNG",
     "goldenGoal": "GOLDEN GOAL",
-    "penaltyShootout": "ELFMETERSCHIESSEN",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "live": "LIVE"
   },
   "toast": {
@@ -58,7 +58,7 @@
   "score": {
     "overtime": "Verlängerung",
     "goldenGoal": "Golden Goal",
-    "penaltyShootout": "Elfmeterschießen",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "home": "Heim",
     "away": "Gast",
     "matchTime": "Spielzeit",
@@ -256,11 +256,11 @@
     "cancel": "Abbrechen"
   },
   "penaltyShootout": {
-    "title": "Strafstoßschießen",
+    "title": "$t(sport:events.penaltyShootout)",
     "scoreAfter": "Spielstand nach {{phase}}: {{home}} : {{away}}",
     "phaseOvertime": "Verlängerung",
     "phaseRegular": "regulärer Spielzeit",
-    "needWinner": "Das Elfmeterschießen muss einen Sieger haben!",
+    "needWinner": "Das $t(sport:events.penaltyShootout) muss einen Sieger haben!",
     "confirm": "Ergebnis bestätigen",
     "back": "Zurück"
   },

@@ -85,7 +85,7 @@ export interface UseMatchExecutionReturn {
     handleStartPenaltyShootout: (matchId: string) => Promise<void>;
     handleRecordPenaltyResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
     handleCancelTiebreaker: (matchId: string) => Promise<void>;
-    /** Fixwave-Fix (Critical): bricht ein begonnenes Elfmeterschießen ab, OHNE das Spiel zu beenden — siehe MatchExecutionService.abortPenaltyShootout. */
+    /** Fixwave-Fix (Critical): bricht ein begonnenes Strafstoßschießen ab, OHNE das Spiel zu beenden — siehe MatchExecutionService.abortPenaltyShootout. */
     handleAbortPenaltyShootout: (matchId: string) => Promise<void>;
     handleManualEditResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
     handleAdjustTime: (matchId: string, newElapsedSeconds: number) => Promise<void>;
@@ -621,7 +621,7 @@ export function useMatchExecution({
         }
     }, [service, tournament.id, liveMatchRepository, refreshMatchState, showInfo]);
 
-    // Fixwave-Fix (Critical): Gegenstück zu handleStartPenaltyShootout — bricht das Elfmeterschießen
+    // Fixwave-Fix (Critical): Gegenstück zu handleStartPenaltyShootout — bricht das Strafstoßschießen
     // ab und stellt die Tiebreaker-Auswahl wieder her (service.abortPenaltyShootout), OHNE das Spiel
     // zu beenden. Bewusst NICHT handleCancelTiebreaker: das beendet als Unentschieden und ist dem
     // Banner-Knopf "Als Unentschieden beenden" (handleForceFinish) vorbehalten.

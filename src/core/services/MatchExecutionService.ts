@@ -575,7 +575,7 @@ export class MatchExecutionService {
     }
 
     /**
-     * Bricht ein begonnenes Elfmeterschießen ab und stellt die Tiebreaker-Auswahl wieder her.
+     * Bricht ein begonnenes Strafstoßschießen ab und stellt die Tiebreaker-Auswahl wieder her.
      * Bewusst NICHT cancelTiebreaker: das beendet das Spiel als Unentschieden und ist dem
      * ausdrücklich beschrifteten Banner-Knopf "Als Unentschieden beenden" vorbehalten.
      * `playPhase` bleibt auf 'penalty' — der Dialog wird über awaitingTiebreakerChoice

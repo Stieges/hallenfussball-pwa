@@ -40,11 +40,6 @@
     "trainer": "Trainer",
     "captain": "Kapitän"
   },
-  "field": {
-    "field": "Feld",
-    "fieldWithNumber": "Feld {{number}}",
-    "pitch": "Spielfeld"
-  },
   "tournament": {
     "groupStage": "Gruppenphase",
     "finals": "Finalrunde",
