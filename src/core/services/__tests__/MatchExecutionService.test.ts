@@ -372,5 +372,47 @@ describe('MatchExecutionService', () => {
                 expect.objectContaining({ scoreA: 4, scoreB: 4, matchStatus: 'finished' })
             );
         });
+
+        // Fixrunde 1: die Tests oben setzen canEndInDraw immer explizit — genau wie
+        // initializeMatch es für frisch angelegte Matches tut. Jedes bereits bestehende Match
+        // (aus der DB geladen, vor dieser Änderung angelegt, nach einem Reload) hat das Feld
+        // aber gar nicht gesetzt. Diese beiden Tests decken exakt diesen Rückfall-Pfad ab, den
+        // die Konfigurations-Tests oben NICHT prüfen — siehe Mutationsprobe im Report.
+        it('Rückfall Gruppenphase: canEndInDraw fehlt (Bestandsmatch ohne initializeMatch-Lauf) → Unentschieden wird wie bisher direkt beendet', async () => {
+            const drawnGroupMatchNoFlag: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 1,
+                awayScore: 1,
+                tournamentPhase: 'groupStage',
+                tiebreakerMode: 'shootout',
+                // canEndInDraw bewusst NICHT gesetzt (undefined)
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnGroupMatchNoFlag);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledWith(
+                'tour-1',
+                expect.objectContaining({ scoreA: 1, scoreB: 1, matchStatus: 'finished' })
+            );
+        });
+
+        it('Rückfall Finale: canEndInDraw fehlt (Bestandsmatch ohne initializeMatch-Lauf) → weiter zur tiebreakerMode-Prüfung wie vor Task 6', async () => {
+            const drawnFinalMatchNoFlag: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 2,
+                awayScore: 2,
+                tournamentPhase: 'final',
+                tiebreakerMode: 'shootout',
+                // canEndInDraw bewusst NICHT gesetzt (undefined)
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnFinalMatchNoFlag);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: false, needsTiebreaker: true, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
+        });
     });
 });

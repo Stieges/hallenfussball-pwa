@@ -836,7 +836,10 @@ export class MatchExecutionService {
         if (match.tournamentPhase === 'groupStage') {
             // canEndInDraw === false ist die einzige Abweichung vom bisherigen "immer false" —
             // dann fällt die Prüfung durch zur gemeinsamen Tiebreaker-Logik unten, statt das
-            // Unentschieden stillschweigend als Gruppenergebnis zu akzeptieren.
+            // Unentschieden stillschweigend als Gruppenergebnis zu akzeptieren. `undefined`
+            // (Bestandsmatches ohne initializeMatch-Lauf) wird bewusst wie "darf unentschieden
+            // enden" behandelt — exakt das bisherige Verhalten, abgesichert durch den
+            // "Rückfall Gruppenphase"-Test in MatchExecutionService.test.ts.
             if (match.canEndInDraw !== false) { return false; }
         } else if (match.canEndInDraw === true) {
             // Sport erlaubt Unentschieden im Finale explizit (bei Fußball nie der Fall) — nichts
