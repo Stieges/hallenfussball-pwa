@@ -23,18 +23,61 @@ const hasEnvVars = Boolean(rawSupabaseUrl) && Boolean(rawSupabaseAnonKey);
 // (Prozess-Exit != 0) — ein Abbruch würde `npm test` auf jeder Entwicklermaschine mit
 // produktiven Zugangsdaten rot machen, auch bei völlig unbeteiligter Arbeit. Der Skip ist
 // bewusst LAUT (console.warn), damit er nicht wie in den letzten 8 Monaten unbemerkt bleibt.
+//
+// FAIL-CLOSED (Review-Fixrunde 1, Befund 1): "Die Projekt-Ref ließ sich nicht aus der URL
+// extrahieren" ist NICHT dasselbe wie "das Ziel ist sicher kein Produktionsprojekt". Eine
+// gesetzte, aber nicht auf das bekannte Muster passende URL (z.B. ein versehentlich
+// mitkopiertes Anführungszeichen, eine protokollrelative Schreibweise, oder eine eigene
+// Domain vor demselben Supabase-Projekt) wird deshalb ebenfalls übersprungen — mit einer
+// eigenen, unterscheidbaren Warnung, damit niemand einen "unbekanntes Ziel"-Skip für einen
+// "kein Produktionsziel"-Befund hält.
 const PRODUCTION_SUPABASE_PROJECT_REF = 'amtlqicosscsjnnthvzm';
 
-function extractSupabaseProjectRef(url: string | undefined): string | null {
+// Exportiert für die Mutationsprobe/den parametrisierten Test weiter unten in dieser Datei:
+// Diese Funktion IST der gesamte Schutz. Ein kleines eigenes Modul unter src/core wäre hier
+// unpassend (Guard-Logik ist reines Testinfrastruktur, nicht Produktionscode und hat nichts
+// in core/ zu suchen, siehe .claude/conventions/LAYERING.md) — Export aus der Testdatei reicht.
+export function extractSupabaseProjectRef(url: string | undefined): string | null {
     if (!url) {return null;}
-    const match = /^https?:\/\/([a-z0-9]+)\.supabase\.co/i.exec(url.trim());
+    let normalized = url.trim();
+
+    // Ein mitkopiertes umschließendes Anführungszeichen (z.B. aus einer kopierten .env-Zeile)
+    // darf die Erkennung nicht kaputt machen.
+    if (normalized.length >= 2) {
+        const first = normalized[0];
+        const last = normalized[normalized.length - 1];
+        if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
+            normalized = normalized.slice(1, -1).trim();
+        }
+    }
+
+    // Akzeptiert absolute (https://) und protokollrelative (//) Supabase-Hostnamen, optional
+    // mit Port und Pfad, case-insensitive.
+    const match = /^(?:https?:)?\/\/([a-z0-9-]+)\.supabase\.co(?::\d+)?(?:\/.*)?$/i.exec(normalized);
     return match ? match[1].toLowerCase() : null;
 }
 
-const targetProjectRef = extractSupabaseProjectRef(rawSupabaseUrl);
-const isProductionTarget = targetProjectRef === PRODUCTION_SUPABASE_PROJECT_REF;
+export type SupabaseIntegrationSkipReason = 'production' | 'target-undetermined' | null;
 
-if (hasEnvVars && isProductionTarget) {
+/**
+ * Einzige Entscheidungsstelle dafür, ob der Cloud-Sync-Integrationstest aus
+ * Sicherheitsgründen übersprungen werden muss. `null` bedeutet: kein Sperrgrund gefunden.
+ * Wird sowohl von der Skip-Entscheidung als auch vom parametrisierten Test unten benutzt,
+ * damit Test und Produktionslogik nicht auseinanderlaufen können.
+ */
+export function resolveSupabaseIntegrationSkipReason(url: string | undefined): SupabaseIntegrationSkipReason {
+    if (!url) {return null;}
+    const projectRef = extractSupabaseProjectRef(url);
+    if (projectRef === null) {return 'target-undetermined';}
+    if (projectRef === PRODUCTION_SUPABASE_PROJECT_REF) {return 'production';}
+    return null;
+}
+
+const skipReason = hasEnvVars ? resolveSupabaseIntegrationSkipReason(rawSupabaseUrl) : null;
+const isProductionTarget = skipReason === 'production';
+const targetUndetermined = skipReason === 'target-undetermined';
+
+if (isProductionTarget) {
     console.warn(
         '\n' +
         '🚫🚫🚫 INTEGRATIONSTEST ÜBERSPRUNGEN — Ziel ist die PRODUKTIONSDATENBANK 🚫🚫🚫\n' +
@@ -44,9 +87,20 @@ if (hasEnvVars && isProductionTarget) {
         '   -> Für einen echten Testlauf VITE_SUPABASE_URL in .env.local auf ein\n' +
         '      Test-/Staging-Supabase-Projekt umbiegen.\n'
     );
+} else if (targetUndetermined) {
+    console.warn(
+        '\n' +
+        '⚠️⚠️⚠️ INTEGRATIONSTEST ÜBERSPRUNGEN — Ziel konnte nicht bestimmt werden ⚠️⚠️⚠️\n' +
+        '   VITE_SUPABASE_URL ist gesetzt, passt aber auf kein erkanntes Supabase-URL-Muster\n' +
+        '   (https://<ref>.supabase.co, optional mit Port/Pfad, oder protokollrelativ).\n' +
+        '   Sicherheitshalber wird NICHT angenommen, dass das Ziel kein Produktionsprojekt ist —\n' +
+        '   "Ziel unbekannt" ist kein Beleg für "Ziel ist sicher".\n' +
+        '   -> VITE_SUPABASE_URL in .env.local auf eine reguläre Supabase-Projekt-URL setzen,\n' +
+        '      um diesen Integrationstest auszuführen.\n'
+    );
 }
 
-const runIntegration = (hasEnvVars && !isProductionTarget) ? describe : describe.skip;
+const runIntegration = (hasEnvVars && skipReason === null) ? describe : describe.skip;
 
 runIntegration('Integration: Cloud Sync Verification', () => {
     let offlineRepo: OfflineRepoType;
@@ -59,9 +113,13 @@ runIntegration('Integration: Cloud Sync Verification', () => {
         console.warn('Skipping Cloud Sync Verification: Missing Supabase Environment Variables');
         return;
     }
-    if (isProductionTarget) {
-        // Laute Warnung wurde bereits oben auf Modul-Ebene ausgegeben; hier nur der
-        // sichere Kurzschluss, damit unterhalb keine Live-Requests gegen Produktion gebaut werden.
+    if (skipReason !== null) {
+        // Dies ist KEIN eigener Schutzmechanismus gegen ein falsch-negatives Ziel (dafür ist
+        // ausschließlich resolveSupabaseIntegrationSkipReason()/runIntegration oben zuständig,
+        // siehe Fail-Closed-Kommentar dort). Es ist nur ein zusätzlicher, redundanter
+        // Kurzschluss für den Fall, dass sich Vitests describe.skip-Verhalten künftig ändert
+        // und der Suite-Body trotz Skip ausgeführt wird — die laute Warnung wurde bereits oben
+        // auf Modul-Ebene ausgegeben.
         return;
     }
 
@@ -238,4 +296,64 @@ runIntegration('Integration: Cloud Sync Verification', () => {
 
         console.log('✅ Verified: Data found in Supabase!');
     }, 15000); // 15s timeout
+});
+
+// ---------------------------------------------------------------------------------------------
+// Guard-Tests: laufen IMMER (unabhängig von hasEnvVars), weil sie reine Funktionen ohne
+// Netzwerkzugriff prüfen. Das ist der Schutzmechanismus gegen den Produktions-Vorfall selbst —
+// ein Wächter, der acht Monate unbemerkt kaputt sein konnte, darf nicht ungetestet bleiben.
+// ---------------------------------------------------------------------------------------------
+describe('extractSupabaseProjectRef', () => {
+    it.each([
+        ['literale Produktions-URL', 'https://amtlqicosscsjnnthvzm.supabase.co'],
+        ['mit Port', 'https://amtlqicosscsjnnthvzm.supabase.co:443'],
+        ['mit Pfad', 'https://amtlqicosscsjnnthvzm.supabase.co/rest/v1'],
+        ['in Großschreibung', 'HTTPS://AMTLQICOSSCSJNNTHVZM.SUPABASE.CO'],
+        ['protokollrelativ', '//amtlqicosscsjnnthvzm.supabase.co'],
+        ['mit umschließenden doppelten Anführungszeichen', '"https://amtlqicosscsjnnthvzm.supabase.co"'],
+        ['mit umschließenden einfachen Anführungszeichen', "'https://amtlqicosscsjnnthvzm.supabase.co'"],
+    ])('erkennt die Produktions-Ref bei: %s', (_label, url) => {
+        expect(extractSupabaseProjectRef(url)).toBe('amtlqicosscsjnnthvzm');
+    });
+
+    it('erkennt die Ref eines anderen, nicht-produktiven Projekts korrekt (und nicht als Produktion)', () => {
+        expect(extractSupabaseProjectRef('https://testprojectxyz123.supabase.co')).toBe('testprojectxyz123');
+    });
+
+    it('liefert null, wenn keine URL gesetzt ist', () => {
+        expect(extractSupabaseProjectRef(undefined)).toBeNull();
+    });
+
+    it('liefert null bei einer eigenen Domain vor einem Supabase-Projekt (Ref nicht extrahierbar)', () => {
+        expect(extractSupabaseProjectRef('https://db.meine-eigene-domain.de')).toBeNull();
+    });
+});
+
+describe('resolveSupabaseIntegrationSkipReason', () => {
+    it.each([
+        ['literale Produktions-URL', 'https://amtlqicosscsjnnthvzm.supabase.co'],
+        ['mit Port', 'https://amtlqicosscsjnnthvzm.supabase.co:443'],
+        ['mit Pfad', 'https://amtlqicosscsjnnthvzm.supabase.co/rest/v1'],
+        ['in Großschreibung', 'HTTPS://AMTLQICOSSCSJNNTHVZM.SUPABASE.CO'],
+        ['protokollrelativ', '//amtlqicosscsjnnthvzm.supabase.co'],
+        ['mit umschließendem Anführungszeichen', '"https://amtlqicosscsjnnthvzm.supabase.co"'],
+    ])('sperrt (Grund "production") bei: %s', (_label, url) => {
+        expect(resolveSupabaseIntegrationSkipReason(url)).toBe('production');
+    });
+
+    it('sperrt NICHT bei einer URL auf ein anderes, nicht-produktives Projekt', () => {
+        expect(resolveSupabaseIntegrationSkipReason('https://testprojectxyz123.supabase.co')).toBeNull();
+    });
+
+    it('sperrt NICHT, wenn keine URL gesetzt ist (davon geht ein anderes Gate aus: hasEnvVars)', () => {
+        expect(resolveSupabaseIntegrationSkipReason(undefined)).toBeNull();
+    });
+
+    it('BEFUND 1 (Fail-Closed): sperrt (Grund "target-undetermined"), wenn eine gesetzte URL nicht geparst werden kann', () => {
+        // z.B. eine eigene Domain vor demselben Produktions-Supabase-Projekt — die Projekt-Ref
+        // ist aus dem String nicht erkennbar, darf aber NICHT als "sicher kein Produktionsziel"
+        // gewertet werden.
+        expect(resolveSupabaseIntegrationSkipReason('https://db.meine-eigene-domain.de')).toBe('target-undetermined');
+        expect(resolveSupabaseIntegrationSkipReason('not-a-url-at-all')).toBe('target-undetermined');
+    });
 });
