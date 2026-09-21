@@ -64,7 +64,18 @@ jobs:
             echo "::error::No generated types found — previous step must have failed."
             exit 1
           fi
-          if ! diff -u src/types/supabase.ts /tmp/types-live.ts > /tmp/types-diff.txt; then
+          # Die eingecheckte Datei traegt einen handgeschriebenen Kopfkommentar
+          # ("NICHT MANUELL BEARBEITEN"), den der Generator nie ausgibt. Ein roher
+          # Byte-Vergleich ist deshalb per Konstruktion rot — dieser Job konnte nie
+          # gruen werden, was bis zum 2026-09-21 niemandem auffiel, weil er mangels
+          # Secret gar nicht lief. Beide Seiten werden daher um einen fuehrenden
+          # /** ... */-Block bereinigt, bevor verglichen wird.
+          strip_header() {
+            awk 'NR==1 && /^\/\*\*/ {inhdr=1} inhdr {if (/\*\//) {inhdr=0}; next} {print}' "$1"
+          }
+          strip_header src/types/supabase.ts > /tmp/types-committed.norm.ts
+          strip_header /tmp/types-live.ts      > /tmp/types-live.norm.ts
+          if ! diff -u /tmp/types-committed.norm.ts /tmp/types-live.norm.ts > /tmp/types-diff.txt; then
             echo "::error::Supabase schema has drifted from src/types/supabase.ts."
             echo ""
             echo "## Schema drift detected" >> $GITHUB_STEP_SUMMARY
