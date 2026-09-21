@@ -65,6 +65,18 @@
 --   Sie ist eine reine Ist-Zustands-Momentaufnahme zum Erzeugungszeitpunkt,
 --   keine rekonstruierte Historie.
 --
+-- Maschinenlesbare Markierung für scripts/db-drift-check.sh:
+--   baseline-includes-through: 20260921_001_enforce_release_before_public.sql
+--   Dieser Dateiname ist die letzte Bestandsmigration, deren Wirkung bereits
+--   in der Baseline steckt. Der Drift-Check spielt beim Aufbau der
+--   Vergleichsdatenbank NUR Migrationsdateien nach, deren Name (lexikografisch,
+--   was bei den hier verwendeten YYYYMMDD_NNN-Namen gleich chronologisch ist)
+--   GRÖSSER ist als der Wert hinter diesem Marker — nicht anhand eines fest
+--   verdrahteten Datums oder einer Dateiliste. Wird die Baseline künftig neu
+--   erzeugt, muss dieser Marker auf die dann letzte enthaltene Migration
+--   nachgezogen werden; bis dahin werden alle neuen Migrationsdateien
+--   automatisch erfasst, ohne dass dieses Skript angefasst werden muss.
+--
 -- =============================================================================
 
 
