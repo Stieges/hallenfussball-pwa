@@ -1,0 +1,58 @@
+{
+  "$schema-comment": [
+    "Normatives Terminologie-Glossar. Dies ist die einzige Quelle für verbindliche deutsche Fachbegriffe im Projekt.",
+    "Konsumenten: (1) ESLint-Regel, die verbotene Synonyme im Code markiert, (2) ein Prüfskript, das Vorkommen zählt,",
+    "(3) die Sprachdateien unter src/i18n/locales/**, deren Werte mit 'de' hier übereinstimmen müssen.",
+    "",
+    "Struktur: ein Objekt 'terms', dessen Keys fachliche Begriffs-IDs sind (camelCase, projektintern, NICHT",
+    "zwingend identisch mit i18n-Keys). Jeder Eintrag hat exakt diese Felder:",
+    "  de           string   — bevorzugte deutsche Form. Verbindlich für UI-Text, Code-Kommentare, Docs.",
+    "  en           string   — englische Entsprechung (Referenz, z.B. für Code-Bezeichner, keine UI-Vorgabe).",
+    "  forbidden_de string[] — verbotene deutsche Synonyme. Jedes Vorkommen im UI-Text ist ein Verstoß.",
+    "  reason       string   — Begründung der Wahl, ein Satz, für Menschen (siehe auch docs/GLOSSAR.md).",
+    "  i18nKey      string   — Pfad in src/i18n/locales/de/sport.json (Punktnotation, z.B. 'events.penaltyShootout'),",
+    "                          auf den dieser Begriff zeigt. Der Wert an diesem Pfad MUSS 'de' entsprechen.",
+    "",
+    "Versionierung: additive Änderungen (neue Begriffe) sind unkritisch. Wird ein bestehendes Feld entfernt,",
+    "umbenannt oder sein Typ geändert, betrifft das mindestens drei Konsumenten (ESLint-Regel, Prüfskript,",
+    "Sprachdateien) — vorher mit den entsprechenden Tasks abstimmen.",
+    "Stand: 2026-09-21, Task 1 von .superpowers/sdd/2026-09-21-terminologie-zentral/"
+  ],
+  "terms": {
+    "penaltyShootout": {
+      "de": "Strafstoßschießen",
+      "en": "penalty shootout",
+      "forbidden_de": ["Elfmeterschießen", "Neunmeterschießen", "Siebenmeterschießen"],
+      "reason": "Neutral und regelkonform. 'Elfmeter' ist für die Halle sachlich falsch, 'Neun-/Siebenmeter' legt sich auf eine Distanz fest, die je nach Hallengröße und Altersklasse abweicht.",
+      "i18nKey": "events.penaltyShootout"
+    },
+    "penalty": {
+      "de": "Strafstoß",
+      "en": "penalty",
+      "forbidden_de": ["Elfmeter"],
+      "reason": "Gleiche Begründung wie beim Strafstoßschießen: 'Elfmeter' legt sich auf eine Distanz fest, die in der Halle nicht gilt.",
+      "i18nKey": "events.penalty"
+    },
+    "groupStage": {
+      "de": "Gruppenphase",
+      "en": "group stage",
+      "forbidden_de": ["Vorrunde"],
+      "reason": "sport.json (tournament.groupStage) und die Datenmodell-Bezeichner (z.B. groupPhaseGameDuration) führen bereits 'Gruppenphase'; die UI umzubenennen ist billiger als das Datenmodell.",
+      "i18nKey": "tournament.groupStage"
+    },
+    "goldenGoal": {
+      "de": "Golden Goal",
+      "en": "golden goal",
+      "forbidden_de": ["Golden-Goal"],
+      "reason": "Etablierter englischer Fachbegriff ohne deutsche Entsprechung; Schreibweise ohne Bindestrich vereinheitlicht mit sport.json (phases.goldenGoal).",
+      "i18nKey": "phases.goldenGoal"
+    },
+    "timePenalty": {
+      "de": "Zeitstrafe",
+      "en": "time penalty",
+      "forbidden_de": ["Hinausstellung"],
+      "reason": "Bereits einheitlich verwendet; wird hier festgeschrieben, damit spätere Änderungen nicht unbemerkt davon abweichen.",
+      "i18nKey": "events.timePenalty"
+    }
+  }
+}
