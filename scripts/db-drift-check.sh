@@ -32,7 +32,14 @@
 #      dynamisch aus dem SQL-Text ermittelt (scripts/db_catalog_counts.py) — keine
 #      fest verdrahteten Zahlen, sie ändern sich mit jeder Migration.
 #
-# Beide Seiten werden über `supabase db dump` erzeugt (Live: --linked, Rekonstruiert: --db-url
+# Beide Seiten werden mit DEMSELBEN pg_dump-Binary aus DEMSELBEN Container erzeugt — das ist
+# entscheidend, weil unterschiedliche Dump-Werkzeuge allein durch Formatierung (Quoting,
+# IF NOT EXISTS, Kommentarstil) einen Dauerunterschied erzeugen wuerden, der nichts mit Drift
+# zu tun hat. `supabase db dump` scheidet fuer die Live-Seite aus: Es setzt intern
+# SET ROLE "postgres", was die nur-lesende Rolle zu Recht nicht darf (belegt 2026-09-21).
+#
+# HINWEIS zu --live-dump-file: Die uebergebene Datei muss im pg_dump-Format vorliegen,
+# nicht im Format von `supabase db dump`. (Frueher: Live --linked, Rekonstruiert --db-url
 # gegen einen lokalen Vergleichscontainer) — bewusst DIESELBE CLI-Dump-Pipeline auf beiden Seiten,
 # damit Formatierungsunterschiede (Identifier-Quoting, IF NOT EXISTS, Kommentarstil) gar nicht erst
 # entstehen. Ein roher `pg_dump` direkt aus dem Container sieht spürbar anders aus (TOC-Kommentare,
@@ -177,9 +184,10 @@ done
 RECON_RAW="$WORKDIR/reconstructed_raw.sql"
 DUMP_OK=0
 for attempt in 1 2 3 4 5; do
-  if (cd "$REPO_ROOT" && supabase db dump --schema public \
-    --db-url "postgresql://postgres:postgres@host.docker.internal:${HOST_PORT}/postgres" \
-    -f "$RECON_RAW") >"$WORKDIR/recon_dump.log" 2>&1; then
+  if docker exec -e PGPASSWORD=postgres "$CONTAINER_NAME" \
+    pg_dump -U postgres -h 127.0.0.1 -d postgres \
+    --schema=public --schema-only --no-owner --no-privileges \
+    > "$RECON_RAW" 2>"$WORKDIR/recon_dump.log"; then
     DUMP_OK=1
     break
   fi
@@ -209,8 +217,10 @@ elif [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   # keine Policy fuer sie. Im Container gegengeprueft — Schema-Dump byte-identisch zum
   # Superuser-Dump, sichtbare Datenzeilen: null.
   echo "Live-Schema ueber die nur-lesende Rolle (SUPABASE_DB_READONLY_URL)."
-  (cd "$REPO_ROOT" && supabase db dump --schema public --db-url "$SUPABASE_DB_READONLY_URL" -f "$LIVE_RAW") \
-    >"$WORKDIR/live_dump.log" 2>&1 \
+  docker exec "$CONTAINER_NAME" \
+    pg_dump --dbname="$SUPABASE_DB_READONLY_URL" \
+    --schema=public --schema-only --no-owner --no-privileges \
+    > "$LIVE_RAW" 2>"$WORKDIR/live_dump.log" \
     || { echo "::error::Konnte Live-Schema nicht dumpen (nur-lesende Rolle):" >&2
          echo "::error::Faellt hier 'permission denied for table X' auf, ist X neu und die Rolle" >&2
          echo "::error::hat noch kein Leserecht darauf. Das ist Absicht (kein ALTER DEFAULT" >&2
@@ -233,7 +243,17 @@ fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------
 normalize() {
-  grep -Ev '^(GRANT |REVOKE )' "$1" | grep -Ev 'OWNER TO' | grep -Ev '^ALTER DEFAULT PRIVILEGES'
+  # Neben der Plattform-Boilerplate (GRANT/REVOKE/OWNER TO/DEFAULT PRIVILEGES) faellt hier
+  # auch das pg_dump-eigene Rauschen weg:
+  #   \restrict / \unrestrict tragen bei jedem Lauf ein frisches Zufallstoken,
+  #   die '--'-Kommentarzeilen enthalten Dump-Zeitpunkt und TOC-Eintraege.
+  # Beide wuerden den Vergleich dauerhaft rot faerben, ohne je echten Drift zu zeigen.
+  grep -Ev '^(GRANT |REVOKE )' "$1" \
+    | grep -Ev 'OWNER TO' \
+    | grep -Ev '^ALTER DEFAULT PRIVILEGES' \
+    | grep -Ev '^\\(restrict|unrestrict)' \
+    | grep -Ev '^--' \
+    | grep -Ev '^[[:space:]]*$'
 }
 
 LIVE_FILTERED="$WORKDIR/live_filtered.sql"
