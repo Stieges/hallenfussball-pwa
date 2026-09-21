@@ -5,7 +5,7 @@
  * Provides memoized access to sport terminology, defaults, rules, and features.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   SportId,
   SportConfig,
@@ -19,6 +19,7 @@ import {
   legacySportToSportId,
 } from '../config/sports';
 import { Tournament } from '../types/tournament';
+import { useSportTerms } from './useSportTerms';
 
 interface UseSportConfigReturn {
   /** Full sport configuration */
@@ -61,6 +62,7 @@ interface UseSportConfigReturn {
  */
 export function useSportConfig(sportId: SportId | undefined): UseSportConfigReturn {
   const config = useMemo(() => getSportConfig(sportId), [sportId]);
+  const { term } = useSportTerms(sportId);
 
   const terminology = config.terminology;
   const defaults = config.defaults;
@@ -69,30 +71,33 @@ export function useSportConfig(sportId: SportId | undefined): UseSportConfigRetu
   const ageClasses = config.ageClasses;
   const validation = config.validation;
 
-  // Helper functions for pluralization
-  const getFieldName = useMemo(
-    () => (count?: number) => (count === 1 ? terminology.field : terminology.fieldPlural),
-    [terminology]
+  // Helper functions for pluralization — lösen über useSportTerms gegen
+  // sport.json auf (Kontext = sportId, Fallback auf Basis-Terminologie).
+  // `count ?? 2` erhält das bisherige Verhalten: ohne explizite Angabe wird
+  // die Pluralform geliefert, wie zuvor beim direkten Config-Zugriff.
+  const getFieldName = useCallback(
+    (count?: number) => term('terminology.field', { count: count ?? 2 }),
+    [term]
   );
 
-  const getGoalName = useMemo(
-    () => (count?: number) => (count === 1 ? terminology.goal : terminology.goalPlural),
-    [terminology]
+  const getGoalName = useCallback(
+    (count?: number) => term('terminology.goal', { count: count ?? 2 }),
+    [term]
   );
 
-  const getPeriodName = useMemo(
-    () => (count?: number) => (count === 1 ? terminology.period : terminology.periodPlural),
-    [terminology]
+  const getPeriodName = useCallback(
+    (count?: number) => term('terminology.period', { count: count ?? 2 }),
+    [term]
   );
 
-  const getMatchName = useMemo(
-    () => (count?: number) => (count === 1 ? terminology.match : terminology.matchPlural),
-    [terminology]
+  const getMatchName = useCallback(
+    (count?: number) => term('terminology.match', { count: count ?? 2 }),
+    [term]
   );
 
-  const getTeamName = useMemo(
-    () => (count?: number) => (count === 1 ? terminology.team : terminology.teamPlural),
-    [terminology]
+  const getTeamName = useCallback(
+    (count?: number) => term('terminology.team', { count: count ?? 2 }),
+    [term]
   );
 
   return {
