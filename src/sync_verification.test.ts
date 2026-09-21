@@ -9,8 +9,44 @@ import type { SupabaseRepository as SupabaseRepoType } from './core/repositories
 import type { OfflineRepository as OfflineRepoType } from './core/repositories/OfflineRepository';
 import type { TournamentCreationService as CreationServiceType } from './core/services/TournamentCreationService';
 
-const hasEnvVars = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-const runIntegration = hasEnvVars ? describe : describe.skip;
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const rawSupabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const hasEnvVars = Boolean(rawSupabaseUrl) && Boolean(rawSupabaseAnonKey);
+
+// Harter Riegel gegen Schreiben in die Produktions-DB (siehe Vorfall-Analyse
+// .superpowers/sdd/2026-09-21-db-baseline-und-testmuell/): Dieser Integrationstest legt
+// echte "E2E Verify <Zeitstempel>"-Turniere in der Zieldatenbank an. Ein reines
+// "sind Env-Vars gesetzt?"-Gate reicht nicht, weil lokale .env.local-Dateien (auch auf
+// CI-Runnern, falls dort je gesetzt) häufig auf die PRODUKTIONS-Datenbank zeigen, nicht auf
+// ein Test-Projekt. Deshalb wird zusätzlich die Supabase-Projekt-Ref aus VITE_SUPABASE_URL
+// extrahiert: Zeigt sie auf das Produktionsprojekt, wird übersprungen statt abgebrochen
+// (Prozess-Exit != 0) — ein Abbruch würde `npm test` auf jeder Entwicklermaschine mit
+// produktiven Zugangsdaten rot machen, auch bei völlig unbeteiligter Arbeit. Der Skip ist
+// bewusst LAUT (console.warn), damit er nicht wie in den letzten 8 Monaten unbemerkt bleibt.
+const PRODUCTION_SUPABASE_PROJECT_REF = 'amtlqicosscsjnnthvzm';
+
+function extractSupabaseProjectRef(url: string | undefined): string | null {
+    if (!url) {return null;}
+    const match = /^https?:\/\/([a-z0-9]+)\.supabase\.co/i.exec(url.trim());
+    return match ? match[1].toLowerCase() : null;
+}
+
+const targetProjectRef = extractSupabaseProjectRef(rawSupabaseUrl);
+const isProductionTarget = targetProjectRef === PRODUCTION_SUPABASE_PROJECT_REF;
+
+if (hasEnvVars && isProductionTarget) {
+    console.warn(
+        '\n' +
+        '🚫🚫🚫 INTEGRATIONSTEST ÜBERSPRUNGEN — Ziel ist die PRODUKTIONSDATENBANK 🚫🚫🚫\n' +
+        `   VITE_SUPABASE_URL zeigt auf Projekt-Ref "${PRODUCTION_SUPABASE_PROJECT_REF}" (Produktion).\n` +
+        '   "Integration: Cloud Sync Verification" legt echte Turnier-Datensätze an und darf\n' +
+        '   NIEMALS gegen Produktion laufen (siehe Vorfall: 356+ "E2E Verify"-Testartefakte).\n' +
+        '   -> Für einen echten Testlauf VITE_SUPABASE_URL in .env.local auf ein\n' +
+        '      Test-/Staging-Supabase-Projekt umbiegen.\n'
+    );
+}
+
+const runIntegration = (hasEnvVars && !isProductionTarget) ? describe : describe.skip;
 
 runIntegration('Integration: Cloud Sync Verification', () => {
     let offlineRepo: OfflineRepoType;
@@ -21,6 +57,11 @@ runIntegration('Integration: Cloud Sync Verification', () => {
 
     if (!hasEnvVars) {
         console.warn('Skipping Cloud Sync Verification: Missing Supabase Environment Variables');
+        return;
+    }
+    if (isProductionTarget) {
+        // Laute Warnung wurde bereits oben auf Modul-Ebene ausgegeben; hier nur der
+        // sichere Kurzschluss, damit unterhalb keine Live-Requests gegen Produktion gebaut werden.
         return;
     }
 
