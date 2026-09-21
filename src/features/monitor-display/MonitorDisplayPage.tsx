@@ -1382,6 +1382,7 @@ export function MonitorDisplayPage({
       <GoalAnimation
         goalEvent={lastGoalEvent}
         onAnimationComplete={clearLastGoalEvent}
+        sportId={tournament?.sportId}
       />
 
       {/* Card Animation Overlay */}

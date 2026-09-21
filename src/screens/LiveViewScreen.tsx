@@ -15,6 +15,7 @@
 
 import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
 import { Tournament, Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
@@ -24,7 +25,6 @@ import { GroupTables } from '../components/schedule/GroupTables';
 import { formatDateGerman } from '../utils/locationHelpers';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import sportGlossary from '../i18n/glossary.json';
 import { PublicBottomNav, PublicNavTab } from '../components/ui/PublicBottomNav';
 import { SupabaseRepository } from '../core/repositories/SupabaseRepository';
 import { LocalStorageRepository } from '../core/repositories/LocalStorageRepository';
@@ -41,6 +41,7 @@ export interface LiveViewScreenProps {
 const getMyTeamStorageKey = (shareCode: string) => `live:${shareCode}:myTeam`;
 
 export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => {
+  const { t: tSport } = useTranslation('sport');
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
   const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
@@ -746,7 +747,7 @@ export const LiveViewScreen: React.FC<LiveViewScreenProps> = ({ shareCode }) => 
               style={chipStyle(selectedPhase === 'groupStage')}
               onClick={() => handlePhaseChange('groupStage')}
             >
-              {sportGlossary.terms.groupStage.de}
+              {tSport('tournament.groupStage')}
             </button>
             <button
               style={chipStyle(selectedPhase === 'final')}

@@ -224,6 +224,7 @@ export const MonitorTab: React.FC<MonitorTabProps> = ({
       <GoalAnimation
         goalEvent={lastGoalEvent}
         onAnimationComplete={clearLastGoalEvent}
+        sportId={tournament.sportId}
       />
 
       {/* CARD ANIMATION OVERLAY */}

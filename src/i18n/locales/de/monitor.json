@@ -38,8 +38,5 @@
   "cardAnimation": {
     "redCard": "ROTE KARTE",
     "yellowCard": "GELBE KARTE"
-  },
-  "goalAnimation": {
-    "goal": "TOR!"
   }
 }

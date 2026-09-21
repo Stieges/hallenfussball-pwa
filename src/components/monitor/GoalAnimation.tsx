@@ -14,6 +14,8 @@ import { CSSProperties, useEffect, useState, useRef, useMemo, useCallback } from
 // eslint-disable-next-line local-rules/prefer-css-vars -- confettiColors is an array, not CSS var compatible
 import { cssVars, colors } from '../../design-tokens'
 import { GoalEventInfo } from '../../hooks/useLiveMatches';
+import { useSportTerms } from '../../hooks/useSportTerms';
+import { SportId } from '../../config/sports';
 
 export interface GoalAnimationProps {
   /** Goal event info (null if no goal to show) */
@@ -22,6 +24,8 @@ export interface GoalAnimationProps {
   onAnimationComplete: () => void;
   /** Animation duration in ms (default: 2000) */
   animationDuration?: number;
+  /** Sport of the tournament, resolves the term-of-the-goal text ("TOR!" / "KORB!" / ...) */
+  sportId?: SportId;
 }
 
 // Pre-generate confetti data to avoid recalculation
@@ -43,7 +47,9 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
   goalEvent,
   onAnimationComplete,
   animationDuration = 2000,
+  sportId,
 }) => {
+  const { term } = useSportTerms(sportId);
   const [isVisible, setIsVisible] = useState(false);
   const [currentEvent, setCurrentEvent] = useState<GoalEventInfo | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -186,7 +192,7 @@ export const GoalAnimation: React.FC<GoalAnimationProps> = ({
           className="goal-celebration-box"
         >
           <div className="goal-icon" style={goalIconStyle}>⚽</div>
-          <div style={goalTextStyle}>TOR!</div>
+          <div style={goalTextStyle}>{term('terminology.goalAnimationText')}</div>
           <div style={teamNameStyle}>{currentEvent.teamName}</div>
           <div style={scoreStyle}>
             {currentEvent.newScore.home} : {currentEvent.newScore.away}

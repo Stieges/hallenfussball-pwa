@@ -38,8 +38,5 @@
   "cardAnimation": {
     "redCard": "RED CARD",
     "yellowCard": "YELLOW CARD"
-  },
-  "goalAnimation": {
-    "goal": "GOAL!"
   }
 }

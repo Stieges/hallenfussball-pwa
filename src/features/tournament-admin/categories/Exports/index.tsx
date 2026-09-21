@@ -16,7 +16,6 @@ import { generateFullSchedule } from '../../../../core/generators';
 import { calculateStandings } from '../../../../utils/calculations';
 import type { Match, Tournament } from '../../../../types/tournament';
 import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
-import sportGlossary from '../../../../i18n/glossary.json';
 
 // =============================================================================
 // PROPS
@@ -161,6 +160,7 @@ export function ExportsCategory({
   onTournamentUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
+  const { t: tSport } = useTranslation('sport');
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -561,7 +561,7 @@ export function ExportsCategory({
                   } else if (event.type === 'RED_CARD') {
                     eventTypeLabel = 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
-                    eventTypeLabel = sportGlossary.terms.timePenalty.de;
+                    eventTypeLabel = tSport('events.timePenalty');
                     details = `${event.payload.penaltyDuration ?? 120}s`;
                   } else if (event.type === 'SUBSTITUTION') {
                     eventTypeLabel = 'Wechsel';

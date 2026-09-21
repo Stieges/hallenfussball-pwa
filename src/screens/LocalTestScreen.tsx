@@ -9,6 +9,7 @@
 
 import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
 import { Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
@@ -26,12 +27,12 @@ import { useHaptic } from '../hooks/useHaptic';
 import { BaseThemeSelector } from '../features/settings/components/BaseThemeSelector';
 import { Icons } from '../components/ui/Icons';
 import { ShareDialog } from '../components/dialogs/ShareDialog';
-import sportGlossary from '../i18n/glossary.json';
 
 // localStorage key for "Mein Team" selection
 const getMyTeamStorageKey = () => `live:LOCAL-TEST:myTeam`;
 
 export const LocalTestScreen: React.FC = () => {
+  const { t: tSport } = useTranslation('sport');
   const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
   const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -664,7 +665,7 @@ export const LocalTestScreen: React.FC = () => {
                 style={chipStyle(selectedPhase === 'groupStage')}
                 onClick={() => handlePhaseChange('groupStage')}
               >
-                {sportGlossary.terms.groupStage.de}
+                {tSport('tournament.groupStage')}
               </button>
               <button
                 style={chipStyle(selectedPhase === 'final')}

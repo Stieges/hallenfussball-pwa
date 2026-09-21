@@ -26,6 +26,7 @@ import {
   getMergedFinalRanking,
 } from '../../utils/calculations';
 import { getGroupShortCode } from '../../utils/displayNames';
+import { resolvePlacementCriterionLabel } from '../tournament-creation/components/placementLogicLabels';
 
 interface TabellenTabProps {
   tournament: Tournament;
@@ -41,6 +42,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
   currentStandings,
 }) => {
   const { t } = useTranslation('tournament');
+  const { t: tWizard } = useTranslation('wizard');
   const isMobile = useIsMobile();
   const [viewMode, setViewMode] = useState<ViewMode>('groups');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -374,7 +376,7 @@ export const TabellenTab: React.FC<TabellenTabProps> = ({
               .map((criterion, index) => (
                 <span key={criterion.id}>
                   <strong style={{ color: cssVars.colors.textPrimary }}>
-                    {index + 1}. {criterion.label}
+                    {index + 1}. {resolvePlacementCriterionLabel(tWizard, criterion)}
                   </strong>
                   {index < tournament.placementLogic.filter(c => c.enabled).length - 1 && (
                     <span style={{ margin: '0 4px', color: cssVars.colors.primary }}>→</span>
