@@ -114,6 +114,15 @@ export interface LiveMatch {
     // Tournament Context
     tournamentPhase?: TournamentPhase;
 
+    /**
+     * Ob diese Spielphase laut Sport-Konfiguration mit einem Unentschieden enden darf
+     * (rules.canDrawInGroupPhase / rules.canDrawInFinals, aufgelöst bei initializeMatch).
+     * `undefined` bei älteren/mock-erzeugten Matches wird von needsTiebreaker() wie das
+     * bisherige Default behandelt (Gruppenphase: Unentschieden erlaubt; Finale: über
+     * tiebreakerMode gesteuert) — siehe MatchExecutionService.needsTiebreaker.
+     */
+    canEndInDraw?: boolean;
+
     // Tiebreaker
     playPhase?: PlayPhase;
     tiebreakerMode?: TiebreakerMode;

@@ -29,7 +29,11 @@ export type SportId =
  * App ohne Code-Änderung übersetzbar bleibt.
  */
 export interface SportTerminology {
-  /** Score display format */
+  /**
+   * Score display format.
+   * Reserviert (Task 6, nirgends ausgewertet) — siehe UNIMPLEMENTED_CAPABILITIES in
+   * capabilities.ts. Score-Anzeige ist überall hart auf 'goals' ausgelegt.
+   */
   scoreFormat: 'goals' | 'sets' | 'points';
 }
 
@@ -56,7 +60,12 @@ export interface SportDefaults {
     loss: number;
   };
 
-  /** Whether draws are allowed in group phase */
+  /**
+   * Whether draws are allowed in group phase.
+   * Reserviert (Task 6, nirgends ausgewertet) — Duplikat von `rules.canDrawInGroupPhase`,
+   * das seit Task 6 tatsächlich ausgewertet wird. Siehe UNIMPLEMENTED_CAPABILITIES in
+   * capabilities.ts.
+   */
   allowDraw: boolean;
 
   /** Typical team size (for info display) */
@@ -85,19 +94,31 @@ export type SportTiebreakerMode =
  * Sport Rules
  */
 export interface SportRules {
-  /** Can matches end in draw during group phase? */
+  /**
+   * Can matches end in draw during group phase?
+   * Wirksam seit Task 6: siehe MatchExecutionService.needsTiebreaker/initializeMatch
+   * (LiveMatch.canEndInDraw). Für Fußball immer `true` — unverändertes Verhalten.
+   */
   canDrawInGroupPhase: boolean;
 
-  /** Can matches end in draw during finals? */
+  /**
+   * Can matches end in draw during finals?
+   * Wirksam seit Task 6: siehe MatchExecutionService.needsTiebreaker/initializeMatch
+   * (LiveMatch.canEndInDraw). Für Fußball immer `false` — unverändertes Verhalten.
+   */
   canDrawInFinals: boolean;
 
-  /** Has overtime in finals? */
+  /**
+   * Has overtime in finals?
+   * Reserviert (Task 6, nirgends ausgewertet) — siehe UNIMPLEMENTED_CAPABILITIES in
+   * capabilities.ts. Das tatsächliche Verhalten kommt aus `defaultTiebreaker`.
+   */
   hasOvertime: boolean;
 
-  /** Overtime duration in minutes (if hasOvertime) */
+  /** Overtime duration in minutes (if hasOvertime). Reserviert (Task 6) — siehe capabilities.ts. */
   overtimeDuration?: number;
 
-  /** Has penalty shootout / free throws? */
+  /** Has penalty shootout / free throws? Reserviert (Task 6) — siehe capabilities.ts. */
   hasShootout: boolean;
 
   /** Default tiebreaker mode for finals */
@@ -106,22 +127,30 @@ export interface SportRules {
   /** Default duration for tiebreaker (overtime/golden goal) in minutes */
   defaultTiebreakerDuration?: number;
 
-  /** Is set-based scoring? (e.g., Volleyball) */
+  /**
+   * Is set-based scoring? (e.g., Volleyball)
+   * Reserviert (Task 6, nirgends ausgewertet) — siehe UNIMPLEMENTED_CAPABILITIES in
+   * capabilities.ts. LiveMatch kennt keine Satzverwaltung.
+   */
   isSetBased: boolean;
 
-  /** Sets needed to win (if isSetBased) */
+  /** Sets needed to win (if isSetBased). Reserviert (Task 6) — siehe capabilities.ts. */
   setsToWin?: number;
 
-  /** Points per set (if isSetBased) */
+  /** Points per set (if isSetBased). Reserviert (Task 6) — siehe capabilities.ts. */
   pointsPerSet?: number;
 
-  /** Tiebreak points (if isSetBased, e.g., 15 for volleyball) */
+  /** Tiebreak points (if isSetBased, e.g., 15 for volleyball). Reserviert (Task 6) — siehe capabilities.ts. */
   tiebreakPoints?: number;
 }
 
 /**
  * Sport Features
  * Flags for enabling/disabling sport-specific features
+ *
+ * Alle Felder hier sind reserviert (Task 6, nirgends ausgewertet) — siehe
+ * UNIMPLEMENTED_CAPABILITIES in capabilities.ts. Die zugehörigen Komponenten existieren,
+ * werden aber unabhängig von diesen Flags immer angezeigt.
  */
 export interface SportFeatures {
   /** DFB key patterns available (only football) */

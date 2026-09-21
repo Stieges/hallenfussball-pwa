@@ -14,6 +14,7 @@ import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '
 import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
 import { getEffectiveScore } from '../../utils/matchScore';
+import { getSportConfig } from '../../config/sports';
 
 // ============================================================================
 // CONSTANTS
@@ -773,6 +774,14 @@ export class MatchExecutionService {
         const tiebreakerDuration = tournament.finalsConfig?.tiebreakerDuration ?? 5;
         const durationSeconds = tournament.groupPhaseGameDuration * 60;
 
+        // Task 6 (Ruling 2): ob diese Phase mit Unentschieden enden darf, kommt jetzt aus der
+        // Sport-Konfiguration statt implizit angenommen zu werden. Für Fußball ist
+        // canDrawInGroupPhase immer true und canDrawInFinals immer false — siehe needsTiebreaker().
+        const sportRules = getSportConfig(tournament.sportId).rules;
+        const canEndInDraw = scheduledMatch.phase === 'groupStage'
+            ? sportRules.canDrawInGroupPhase
+            : sportRules.canDrawInFinals;
+
         // Resolve team data
         const homeTeam = tournament.teams.find(t => t.id === scheduledMatch.originalTeamA || t.name === scheduledMatch.homeTeam);
         const awayTeam = tournament.teams.find(t => t.id === scheduledMatch.originalTeamB || t.name === scheduledMatch.awayTeam);
@@ -805,6 +814,7 @@ export class MatchExecutionService {
             elapsedSeconds: 0,
             events: [],
             tournamentPhase: scheduledMatch.phase,
+            canEndInDraw,
             tiebreakerMode,
             overtimeDurationSeconds: tiebreakerDuration * 60,
         };
@@ -818,7 +828,22 @@ export class MatchExecutionService {
     // ==========================================================================
 
     private needsTiebreaker(match: LiveMatch): boolean {
-        if (match.tournamentPhase === 'groupStage') { return false; }
+        // Task 6 (Ruling 2): canEndInDraw kommt aus rules.canDrawInGroupPhase/canDrawInFinals
+        // (siehe initializeMatch). Für Fußball ist es in der Gruppenphase immer `true` und im
+        // Finale immer `false` — die beiden Zweige unten verhalten sich damit exakt wie vorher
+        // (Gruppenphase: sofort false; Finale: weiter zur tiebreakerMode-Prüfung). Nur eine
+        // Sportart, die das Gegenteil konfiguriert, ändert hier tatsächlich etwas.
+        if (match.tournamentPhase === 'groupStage') {
+            // canEndInDraw === false ist die einzige Abweichung vom bisherigen "immer false" —
+            // dann fällt die Prüfung durch zur gemeinsamen Tiebreaker-Logik unten, statt das
+            // Unentschieden stillschweigend als Gruppenergebnis zu akzeptieren.
+            if (match.canEndInDraw !== false) { return false; }
+        } else if (match.canEndInDraw === true) {
+            // Sport erlaubt Unentschieden im Finale explizit (bei Fußball nie der Fall) — nichts
+            // zu klären, das Match darf direkt als Unentschieden beendet werden.
+            return false;
+        }
+
         if (!match.tiebreakerMode) { return false; }
         if (match.playPhase === 'penalty') { return false; }
 
