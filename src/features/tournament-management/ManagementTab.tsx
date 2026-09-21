@@ -20,6 +20,7 @@ import { ConfirmDialog, useConfirmDialog } from '../../components/ui/ConfirmDial
 import { useMatchExecution } from '../../hooks/useMatchExecution';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { canEditResults } from '../auth/utils/permissions';
+import { toRuntimeMatchEvents } from '../../utils/matchEvents';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -358,6 +359,20 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     onTournamentUpdate(updatedTournament);
   }, [tournament, onTournamentUpdate]);
 
+  // Ereignis-Payload EINMAL an der Prop-Grenze normalisieren.
+  // Der MatchExecutionService schreibt `{ team, delta, durationSeconds }`, das
+  // Cockpit liest `{ teamId, teamName, direction, penaltyDuration }`. Ohne diese
+  // Umrechnung blieben Foulzähler nach einem Reload auf 0, jede Zeile im
+  // Ereignis-Log nannte das Gastteam und jede Zeitstrafe las sich als "2 Min".
+  // Die Umrechnung gehört hierher und nicht in die vier Lesestellen im Cockpit.
+  const cockpitMatch = useMemo(() => {
+    if (!currentMatch) { return null; }
+    return {
+      ...currentMatch,
+      events: toRuntimeMatchEvents(currentMatch.events, currentMatch.homeTeam, currentMatch.awayTeam),
+    };
+  }, [currentMatch]);
+
   return (
     <div className={styles.container}>
       {/* FIELD SELECTOR (if multiple fields) */}
@@ -406,7 +421,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
           tournamentId={tournament.id}
           cockpitSettings={tournament.matchCockpitSettings}
           readOnly={!checkCanEditMatch([currentMatch.homeTeam.id, currentMatch.awayTeam.id])}
-          currentMatch={currentMatch}
+          currentMatch={cockpitMatch}
           lastFinishedMatch={lastFinishedMatch}
           upcomingMatches={upcomingMatches}
           highlightNextMatchMinutesBefore={5}

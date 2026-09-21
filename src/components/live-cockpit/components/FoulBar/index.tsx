@@ -92,11 +92,11 @@ export const FoulBar: React.FC<FoulBarProps> = ({
       <div style={containerStyle}>
         <div style={teamStyle}>
           <span>{homeTeamName}</span>
-          <span style={getFoulStyle(homeFouls)}>{homeFouls}</span>
+          <span data-testid="foul-count-home" style={getFoulStyle(homeFouls)}>{homeFouls}</span>
         </div>
         <span style={labelStyle}>{t('foul.display')}</span>
         <div style={teamStyle}>
-          <span style={getFoulStyle(awayFouls)}>{awayFouls}</span>
+          <span data-testid="foul-count-away" style={getFoulStyle(awayFouls)}>{awayFouls}</span>
           <span>{awayTeamName}</span>
         </div>
       </div>
@@ -118,9 +118,9 @@ export const FoulBar: React.FC<FoulBarProps> = ({
   return (
     <div style={inlineStyle}>
       <span style={{ color: cssVars.colors.textSecondary }}>{t('foul.label')}</span>
-      <span style={getFoulStyle(homeFouls)}>{homeFouls}</span>
+      <span data-testid="foul-count-home" style={getFoulStyle(homeFouls)}>{homeFouls}</span>
       <span style={{ color: cssVars.colors.textMuted }}>–</span>
-      <span style={getFoulStyle(awayFouls)}>{awayFouls}</span>
+      <span data-testid="foul-count-away" style={getFoulStyle(awayFouls)}>{awayFouls}</span>
     </div>
   );
 };
