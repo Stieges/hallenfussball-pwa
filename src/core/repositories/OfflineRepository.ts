@@ -414,7 +414,20 @@ export class OfflineRepository implements ITournamentRepository {
         // trotzdem ab. Genau die Drift, die dieser Meilenstein beseitigt hat, käme über den
         // Metadaten-Sync zurück. Mirrort deshalb monitors/sponsors: ein Unterschied erzwingt
         // den Voll-Save, der config komplett (inkl. publishedAt) schreibt.
-        if (local.publishedAt !== remote.publishedAt) {return true;}
+        //
+        // Fix 2 (Review 2026-09-21): NUR wenn der lokale Stand den Wert HAT: Ein Voll-Save
+        // schreibt local -> cloud, kann ein fehlendes publishedAt also gar nicht beschaffen.
+        // Bei `local === undefined` erzwänge die rohe Ungleichheit (local undefined, remote hat
+        // es via Read-Time-Backfill) einen Voll-Save bei JEDEM Sync, für immer: mapTournamentToSupabase
+        // schreibt publishedAt: undefined, JSON.stringify läßt den Key beim Wire-Transport weg,
+        // die Cloud-Spalten bleiben unberührt, der nächste Read backfillt erneut denselben Wert
+        // — die Differenz kommt sofort wieder. Nicht nur Lärm: Der strukturelle Zweig kehrt vor
+        // getMetadataChanges() zurück, also kann is_public NIE korrigiert werden — und ein
+        // Voll-Save stempelt `is_public: local.isPublic ?? false` auf JEDE Team- und Spielzeile
+        // (supabaseMappers.ts mapTeamToSupabase/mapMatchToSupabase). Bei einer veralteten
+        // lokalen Kopie heißt das: anonyme Besucher sehen wiederholt ein Turnier mit null Teams
+        // und null Spielen — exakt der Schaden, den dieser Meilenstein beseitigt hat.
+        if (local.publishedAt !== undefined && local.publishedAt !== remote.publishedAt) {return true;}
 
         return false;
     }

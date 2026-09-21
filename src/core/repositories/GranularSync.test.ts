@@ -320,4 +320,28 @@ describe('OfflineRepository - Granular Sync', () => {
 
         expect(mockSupabase.save).not.toHaveBeenCalled();
     });
+
+    // =========================================================================
+    // Fix 2 (Review 2026-09-21) — der load-bearende Test: lokal FEHLT publishedAt, die Cloud
+    // hat es (Read-Time-Backfill, siehe supabaseMappers.ts). Ein Voll-Save schreibt local ->
+    // cloud und kann ein fehlendes publishedAt also niemals beschaffen — die rohe
+    // Ungleichheit (`local.publishedAt !== remote.publishedAt`) würde hier einen Voll-Save bei
+    // JEDEM Sync erzwingen, für immer, und jeder davon stempelt `is_public:
+    // local.isPublic ?? false` auf alle Team-/Spielzeilen. Ohne die Fix-2-Bedingung
+    // (`local.publishedAt !== undefined`) schlägt genau dieser Test fehl.
+    // =========================================================================
+    it('Fix 2: KEIN Voll-Save wenn lokal publishedAt fehlt, aber remote es hat (Voll-Save kann es nicht beschaffen)', async () => {
+        const localT = { ...baseTournament, version: 2 } as unknown as Tournament; // kein publishedAt
+        const remoteT = {
+            ...baseTournament,
+            publishedAt: '2026-02-01T10:00:00.000Z',
+            version: 1,
+        } as unknown as Tournament;
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        expect(mockSupabase.save).not.toHaveBeenCalled();
+    });
 });

@@ -254,18 +254,24 @@ export class LocalStorageRepository implements ITournamentRepository {
      * verfügbare Freigabezeit. Damit entwertet der transiente Wizard-Statuswechsel auf
      * 'draft' (SettingsTab.tsx) ein laufendes Turnier nicht nachträglich.
      *
-     * status ALLEIN reicht nicht: Genau der Fall, für den publishedAt eingeführt wurde — ein
-     * freigegebenes Turnier, das ein Reload mitten in der Bearbeitung dauerhaft auf 'draft'
-     * stehen lässt — hätte sonst KEIN Signal für "war schon mal freigegeben". publish() sähe
-     * isFirstRelease=true und setzte isPublic zwangsweise wieder auf true — ein Organisator,
-     * der das Turnier bewusst privat gemacht hat, käme so ungefragt zurück online. isPublic/
-     * shareCode sind deshalb gleichwertige Belege einer vergangenen Freigabe, unabhängig vom
-     * aktuellen (transienten) status-Wert.
+     * NUR status, NICHT isPublic/shareCode (Review 2026-09-21, Fix 1): Beide waren unter dem
+     * alten Code der DEFAULT für JEDES neu angelegte Turnier — createDraft() setzte
+     * isPublic:true, und die Sichtbarkeits-Seite generierte beim Mounten automatisch einen
+     * shareCode. Dieser Branch hat beide Defaults entfernt, aber jedes davor angelegte Turnier
+     * trägt die Altwerte noch. Sie als Beleg für "war freigegeben" zu lesen, hätte jeden
+     * Altentwurf beim ersten Laden dauerhaft freigegeben — genau der Schaden, den dieser Fix
+     * verhindert.
+     *
+     * Die Erweiterung war für das "stuck-at-draft"-Szenario gedacht (freigegebenes Turnier,
+     * das ein Reload mitten in der Bearbeitung auf status='draft' stehen lässt) und ist dafür
+     * nicht mehr nötig: Migration 20260918_003 hat config.publishedAt für JEDE bereits
+     * veröffentlichte Zeile einmalig materialisiert, und der Wert übersteht den Wizard-Roundtrip
+     * (SettingsTab.tsx spreadet das ganze Tournament-Objekt, der Wizard seedet sein Formular
+     * daraus). Ein solches Turnier trägt publishedAt also schon, wenn es hier ankommt, und
+     * die Guard-Klausel oben (`tournament.publishedAt !== undefined`) greift zuerst.
      */
     private backfillPublishedAt(tournament: Tournament): Tournament {
-        const wasReleased = tournament.status === 'published'
-            || tournament.isPublic === true
-            || Boolean(tournament.shareCode);
+        const wasReleased = tournament.status === 'published';
         if (tournament.publishedAt !== undefined || !wasReleased) {
             return tournament;
         }

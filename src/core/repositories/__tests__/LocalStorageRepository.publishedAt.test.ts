@@ -50,12 +50,13 @@ describe('LocalStorageRepository — publishedAt-Backfill', () => {
     expect(tournament?.publishedAt).toBeUndefined();
   });
 
-  // Fix 2 (Review 2026-09-18): status ist nicht das einzige verlässliche Signal. Ein
-  // freigegebenes Turnier, das ein Reload mitten in der Bearbeitung auf status='draft'
-  // stehen lässt, muss trotzdem als "schon mal freigegeben" erkannt werden — sonst sieht
-  // publish() isFirstRelease=true und setzt isPublic zwangsweise wieder auf true, selbst
-  // wenn der Organisator es bewusst privat gemacht hatte.
-  it('ein "stuck-at-draft" Turnier mit isPublic=true erbt trotzdem createdAt', async () => {
+  // Fix 1 (Review 2026-09-21): isPublic/shareCode beweisen NICHTS über eine vergangene
+  // Freigabe — beide waren unter dem alten Code der DEFAULT für jedes neu angelegte Turnier
+  // (createDraft() setzte isPublic:true, die Sichtbarkeits-Seite generierte beim Mounten
+  // automatisch eine shareCode). Ein Bestandsentwurf von vor diesem Branch trägt die
+  // Altwerte noch, ohne je freigegeben worden zu sein. Der frühere (breitere) Backfill hätte
+  // ihn hier fälschlich als "released" markiert und beim nächsten Save irreversibel gemacht.
+  it('ein Entwurf mit isPublic=true (alter Default, kein Freigabe-Beleg) bekommt weiterhin kein publishedAt', async () => {
     storageGet.mockResolvedValue([
       {
         id: 't1',
@@ -68,10 +69,10 @@ describe('LocalStorageRepository — publishedAt-Backfill', () => {
 
     const tournament = await new LocalStorageRepository().get('t1');
 
-    expect(tournament?.publishedAt).toBe('2025-11-03T08:30:00.000Z');
+    expect(tournament?.publishedAt).toBeUndefined();
   });
 
-  it('ein "stuck-at-draft" Turnier mit shareCode erbt trotzdem createdAt', async () => {
+  it('ein Entwurf mit shareCode (alter Default, kein Freigabe-Beleg) bekommt weiterhin kein publishedAt', async () => {
     storageGet.mockResolvedValue([
       {
         id: 't1',
@@ -84,7 +85,7 @@ describe('LocalStorageRepository — publishedAt-Backfill', () => {
 
     const tournament = await new LocalStorageRepository().get('t1');
 
-    expect(tournament?.publishedAt).toBe('2025-11-03T08:30:00.000Z');
+    expect(tournament?.publishedAt).toBeUndefined();
   });
 
   it('ein echter Entwurf ohne isPublic und ohne shareCode bekommt weiterhin kein publishedAt', async () => {

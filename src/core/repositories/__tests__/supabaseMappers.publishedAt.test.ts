@@ -61,12 +61,14 @@ describe('supabaseMappers — publishedAt', () => {
     expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBeUndefined();
   });
 
-  // Fix 2 (Review 2026-09-18): status ist nicht das einzige verlässliche Signal. Ein
-  // freigegebenes Turnier, das ein Reload mitten in der Bearbeitung auf status='draft'
-  // stehen lässt, muss trotzdem als "schon mal freigegeben" erkannt werden — sonst sieht
-  // publish() isFirstRelease=true und setzt isPublic zwangsweise wieder auf true, selbst
-  // wenn der Organisator es bewusst privat gemacht hatte.
-  it('Backfill: status "draft" mit is_public=true (stuck-at-draft) erbt trotzdem created_at', () => {
+  // Fix 1 (Review 2026-09-21): is_public/share_code beweisen NICHTS über eine vergangene
+  // Freigabe — beide waren unter dem alten Code der DEFAULT für jedes neu angelegte Turnier
+  // (createDraft() setzte isPublic:true, die Sichtbarkeits-Seite generierte beim Mounten
+  // automatisch einen share_code). Ein Bestandsentwurf von vor diesem Branch trägt die
+  // Altwerte noch, ohne je freigegeben worden zu sein. Der frühere (breitere) Backfill hätte
+  // ihn hier fälschlich als "released" markiert — sobald irgendein Save läuft, wird das
+  // fabrizierte publishedAt persistiert und der Entwurf ist irreversibel "freigegeben".
+  it('Backfill greift NICHT bei status "draft" mit is_public=true (alter Default, kein Freigabe-Beleg)', () => {
     const row = createTournamentRow({
       status: 'draft',
       is_public: true,
@@ -74,10 +76,10 @@ describe('supabaseMappers — publishedAt', () => {
       created_at: '2025-11-03T08:30:00Z',
     });
 
-    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBe('2025-11-03T08:30:00Z');
+    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBeUndefined();
   });
 
-  it('Backfill: status "draft" mit share_code (stuck-at-draft) erbt trotzdem created_at', () => {
+  it('Backfill greift NICHT bei status "draft" mit share_code (alter Default, kein Freigabe-Beleg)', () => {
     const row = createTournamentRow({
       status: 'draft',
       share_code: 'ABC123',
@@ -85,7 +87,7 @@ describe('supabaseMappers — publishedAt', () => {
       created_at: '2025-11-03T08:30:00Z',
     });
 
-    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBe('2025-11-03T08:30:00Z');
+    expect(mapTournamentFromSupabase(row, [], []).publishedAt).toBeUndefined();
   });
 
   it('Backfill greift NICHT bei status "draft" ohne is_public und ohne share_code (echter Entwurf)', () => {
