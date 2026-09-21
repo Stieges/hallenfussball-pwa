@@ -13,14 +13,21 @@
 //
 // Abgrenzung der zu löschenden Turniere — MEHRERE Merkmale, nicht nur das Titelmuster:
 //   1. title LIKE 'E2E Verify %'
-//   2. is_public = false            <- wertvollstes Merkmal: kein einziges Testturnier ist öffentlich,
-//                                       beide echten öffentlichen Turniere sind es. Eine auf is_public
-//                                       beschränkte Löschung kann daher niemandem einen funktionierenden
-//                                       Live-Link entziehen.
+//   2. is_public = false            <- verhindert, dass je ein Turnier mit funktionierendem Live-Link
+//                                       gelöscht wird: kein einziges Testturnier ist öffentlich
+//                                       (gemessen: 0 von 357), beide öffentlichen sind echt.
+//                                       ACHTUNG, hier lag ursprünglich eine Fehleinschätzung im
+//                                       Auftrag an dieses Skript: is_public = false ist KEIN
+//                                       ausreichender Schutz der echten Turniere. Von den vier
+//                                       echten sind nur zwei öffentlich — die beiden anderen sind
+//                                       privat und träfe dieses Merkmal ebenso (359 private Zeilen
+//                                       insgesamt). Schutz leistet erst die Kombination mit 1,
+//                                       abgesichert durch 4.
 //   3. Owner + Zeitraum (informativ geprüft/geloggt, siehe checkInvariants) — die eigentliche Filterung
 //      läuft über 1+2, weil das allein schon exakt die gemessenen 357 Zeilen trifft (siehe Report).
-//   4. Zusätzlich HARTER Ausschluss der 4 echten Turniere per ID (Konstante unten) — auch wenn 1+2 sie
-//      nie träfen, ist das ein zweites, unabhängiges Sicherheitsnetz.
+//   4. HARTER Ausschluss der 4 echten Turniere per ID (Konstante unten). Das ist nach 2 die
+//      eigentliche Sicherung, kein bloßes Extra — wer die ID-Liste entfernt, weil "is_public das
+//      ja abdeckt", löscht zwei echte Turniere.
 //
 // Kaskaden — geprüft in supabase/migrations/00000000000000_baseline_live_schema.sql, nicht angenommen:
 //   - matches.tournament_id            → ON DELETE CASCADE  (trotzdem hier explizit gelöscht, s.u.)
