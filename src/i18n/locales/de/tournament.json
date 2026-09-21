@@ -1,6 +1,6 @@
 {
   "groupStage": {
-    "title": "Vorrunde",
+    "title": "Gruppenphase",
     "scheduleTitle": "Spielplan",
     "noMatches": "Keine Spiele vorhanden",
     "noReferee": "Kein SR",
@@ -361,7 +361,7 @@
     "startAnyway": "Trotzdem starten",
     "runningMatch": "Laufendes Spiel",
     "switch": "Wechseln",
-    "groupStage": "Vorrunde",
+    "groupStage": "Gruppenphase",
     "finalRound": "Finalrunde",
     "existingResultsMessage": "Für dieses Spiel liegen bereits Ergebnisse vor!\n\nAktueller Stand: {{homeScore}}:{{awayScore}}\n\nWenn Sie das Spiel jetzt starten, werden die vorhandenen Ergebnisse gelöscht und durch die Live-Erfassung ersetzt (Start bei 0:0).",
     "matchDetails": "Spiel #{{number}}: {{home}} vs {{away}}",
@@ -643,7 +643,7 @@
   "filter": {
     "filter": "Filter",
     "allPhases": "Alle Phasen",
-    "groupStage": "Vorrunde",
+    "groupStage": "Gruppenphase",
     "finals": "Finalrunde",
     "allGroups": "Alle Gruppen",
     "groupLabel": "Gruppe {{group}}",

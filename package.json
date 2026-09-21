@@ -26,6 +26,7 @@
     "prepare": "husky",
     "analyze": "npm run build && open dist/stats.html",
     "tokens:check": "node scripts/check-design-token-sync.cjs",
+    "terms:check": "node scripts/check-terminology.cjs",
     "findings:extract": "PYTHONPATH=scripts python3 -m findings.extract_findings reviews/ --findings-dir docs/findings",
     "findings:status": "PYTHONPATH=scripts python3 -m findings.findings_status docs/findings/",
     "findings:fix": "PYTHONPATH=scripts python3 -m findings.finding_fix",

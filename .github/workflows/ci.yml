@@ -27,6 +27,9 @@ jobs:
       - name: Check Design Token Sync
         run: npm run tokens:check
 
+      - name: Check Terminology Sync
+        run: npm run terms:check
+
       - name: Run ESLint
         run: npm run lint
 
