@@ -1,0 +1,87 @@
+{
+  "$comment": "Die EINE Quelle für die Rollentabelle der Schreibrechte im Live-Cockpit. Genutzt von scripts/rls-role-matrix.sh (RLS-Beweis gegen echtes Postgres) und vom Vitest-Folgetask (Prüfung von src/features/auth/utils/permissions.ts). Nicht duplizieren — wer die Tabelle ändert, ändert diese Datei, nicht Kopien davon.",
+  "source": ".superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R1-brief.md + Rulings im zugehörigen Report (task-R1-report.md)",
+  "capabilities": {
+    "writeMatchData": "Verbindliche Spieldaten schreiben (Spielstand ändern, Ereignis anlegen) — matches UPDATE, match_events INSERT",
+    "correctEvents": "Ereignisse korrigieren/löschen — match_events UPDATE, match_events DELETE",
+    "tournamentSettings": "Turniereinstellungen ändern — tournaments UPDATE"
+  },
+  "rows": [
+    {
+      "id": "owner",
+      "label": "owner",
+      "role": "owner",
+      "membership": "owner",
+      "authMode": "authenticated",
+      "writeMatchData": true,
+      "correctEvents": true,
+      "tournamentSettings": true
+    },
+    {
+      "id": "owner-anonymous",
+      "label": "owner (anonym angemeldet)",
+      "role": "owner",
+      "membership": "owner",
+      "authMode": "anonymous",
+      "note": "Ruling B: signInAnonymously() erzeugt einen echten auth.users-Eintrag mit is_anonymous=true. Policies gelten TO authenticated, anon und prüfen owner_id = auth.uid() — ein anonym angemeldeter Eigentümer muss exakt dieselben Rechte haben wie ein regulär angemeldeter. Diese Zeile beweist das, statt es nur anzunehmen.",
+      "writeMatchData": true,
+      "correctEvents": true,
+      "tournamentSettings": true
+    },
+    {
+      "id": "co-admin",
+      "label": "co-admin",
+      "role": "co-admin",
+      "membership": "collaborator",
+      "authMode": "authenticated",
+      "writeMatchData": true,
+      "correctEvents": true,
+      "tournamentSettings": true
+    },
+    {
+      "id": "collaborator",
+      "label": "collaborator",
+      "role": "collaborator",
+      "membership": "collaborator",
+      "authMode": "authenticated",
+      "writeMatchData": true,
+      "correctEvents": true,
+      "tournamentSettings": false
+    },
+    {
+      "id": "trainer",
+      "label": "trainer",
+      "role": "trainer",
+      "membership": "collaborator",
+      "authMode": "authenticated",
+      "note": "Daniel: Ein Trainer-Eintrag ist perspektivisch ein Vorschlag, kein verbindlicher Schreibzugriff. Der Vorschlagsweg ist ein getrennter, künftiger Mechanismus (nicht Teil dieser Migration). Heute: keine direkten Schreibrechte.",
+      "writeMatchData": false,
+      "correctEvents": false,
+      "tournamentSettings": false
+    },
+    {
+      "id": "viewer",
+      "label": "viewer",
+      "role": "viewer",
+      "membership": "collaborator",
+      "authMode": "authenticated",
+      "writeMatchData": false,
+      "correctEvents": false,
+      "tournamentSettings": false
+    },
+    {
+      "id": "non-member",
+      "label": "Nicht-Mitglied",
+      "role": null,
+      "membership": "none",
+      "authMode": "authenticated",
+      "writeMatchData": false,
+      "correctEvents": false,
+      "tournamentSettings": false
+    }
+  ],
+  "publicRead": {
+    "description": "Ruling D: R1 ändert ausschließlich INSERT/UPDATE/DELETE-Policies, keine SELECT-Policies. Die Matrix prüft trotzdem stichprobenartig, dass anonymes Lesen (kein JWT, Postgres-Rolle 'anon') eines öffentlichen Turniers (is_public = true) weiter funktioniert — das wurde für Monitore und Public View kürzlich repariert (M1/M2, PRs #185/#186) und eine Policy-Migration ist die naheliegendste Stelle, es versehentlich wieder kaputtzumachen.",
+    "expectCanRead": true
+  }
+}
