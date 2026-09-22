@@ -41,32 +41,47 @@ export const canCreateInvitations = (role: TournamentRole): boolean => {
 // ============================================
 
 /**
- * Kann Ergebnisse für ein Match eingeben
+ * Kann Ergebnisse für ein Match eingeben (verbindlich, d.h. matches/match_events schreiben)
  *
  * - owner, co-admin, collaborator: alle Matches
- * - trainer: nur Matches mit eigenen Teams
+ * - trainer: NEIN — siehe Begründung unten
  * - viewer: keine
  *
+ * Daniels Konzept (task-R1-brief.md / roleMatrix.json, Zeile "trainer"):
+ * „Ein Trainer soll perspektivisch ein Spiel seines Teams eintragen dürfen. Dieser Eintrag
+ * ist aber ein Vorschlag und kann von der Turnierleitung übernommen werden. Der Wert der
+ * Turnierleitung hat immer Vorrang."
+ *
+ * Deshalb schreibt ein Trainer heute NIE direkt in verbindliche Daten (matches/match_events) —
+ * weder in der Datenbank (RLS, R1) noch hier in der UI. Ein Trainer-Eintrag wäre sonst
+ * ununterscheidbar von einem verbindlichen Eintrag der Turnierleitung und könnte deren Wert
+ * überschreiben, statt ihm unterlegen zu sein. Der künftige Vorschlagsweg (Trainer schlägt vor,
+ * Turnierleitung übernimmt) ist ein GETRENNTER, noch zu bauender Mechanismus (eigene Tabelle/
+ * Status, kein direktes UPDATE auf matches/match_events) — nicht Teil dieser Änderung.
+ *
  * @param role - Turnier-Rolle des Users
- * @param userTeamIds - Teams die dem User zugewiesen sind (für Trainer)
- * @param matchTeamIds - Teams die am Match teilnehmen [homeTeamId, awayTeamId]
+ * @param _userTeamIds - Teams die dem User zugewiesen sind (für Trainer). Aktuell UNGENUTZT,
+ *   da Trainer keinen direkten Schreibzugriff mehr haben — bewusst NICHT aus der Signatur
+ *   entfernt (Präfix `_` nur zur Lint-Konformität, siehe `argsIgnorePattern` in eslint.config.js):
+ *   der künftige Vorschlagsweg braucht genau diese Information (welches Team darf der Trainer
+ *   vorschlagen), und Aufrufer (z.B. ManagementTab.checkCanEditMatch) übergeben sie bereits.
+ *   Sie jetzt zu entfernen hieße, sie beim Bau des Vorschlagswegs wieder einzuführen und alle
+ *   Call-Sites erneut anzufassen.
+ * @param _matchTeamIds - Teams die am Match teilnehmen [homeTeamId, awayTeamId]. Ebenfalls
+ *   aktuell ungenutzt (siehe _userTeamIds oben) — der künftige Vorschlagsweg braucht auch
+ *   diese Information, um einen Trainer-Vorschlag dem richtigen Match zuzuordnen.
  */
 export const canEditResults = (
   role: TournamentRole,
-  userTeamIds: string[],
-  matchTeamIds: string[]
+  _userTeamIds: string[],
+  _matchTeamIds: string[]
 ): boolean => {
   // Owner, Co-Admin und Collaborator können alle Ergebnisse eingeben
   if (role === 'owner' || role === 'co-admin' || role === 'collaborator') {
     return true;
   }
 
-  // Trainer kann nur Ergebnisse für eigene Teams eingeben
-  if (role === 'trainer') {
-    return matchTeamIds.some((teamId) => userTeamIds.includes(teamId));
-  }
-
-  // Viewer kann keine Ergebnisse eingeben
+  // Trainer, Viewer und alle übrigen Rollen: kein direkter Schreibzugriff (siehe JSDoc oben).
   return false;
 };
 

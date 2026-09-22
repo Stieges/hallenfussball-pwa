@@ -382,7 +382,15 @@ owner_event_update="$(run_write "$U_OWNER" "UPDATE public.match_events SET is_de
 owner_event_delete="$(run_write "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_MAIN';")"
 echo ""
 echo "=== Dedizierte Prüfung — $MODE_LABEL ==="
-for check in "owner-events-update:$owner_event_update" "owner-events-delete:$owner_event_delete"; do
+# Beschriftung (Review-Befund, task-R2-brief.md): "update"/"delete" suggerierten zwei
+# gleichrangige SQL-Operationen. Tatsächlich ist NUR die erste ("update", is_deleted-Toggle)
+# der Löschpfad, den die App wirklich geht (SupabaseLiveMatchRepository.deleteEvent →
+# .update({ is_deleted: true })) — der zweite ("delete", hartes DELETE FROM) ist eine
+# RLS-Policy, die zwar existiert, aber von der App NIE ausgeführt wird. Vor dieser Umbenennung
+# hätte ein grünes "owner-events-delete" fälschlich suggeriert, "Löschen war nie kaputt" — dabei
+# bewies nur der App-Pfad (Soft-Delete) etwas Relevantes; genau der war vom Trigger-Bug
+# (20260922_002) betroffen. Reine Beschriftungsänderung, keine Logik.
+for check in "owner-events-soft-delete-app-pfad:$owner_event_update" "owner-events-hard-delete-rls-ungenutzt-von-app:$owner_event_delete"; do
   label="${check%%:*}"; got="${check#*:}"
   exp="allowed"
   TOTAL=$((TOTAL + 1))

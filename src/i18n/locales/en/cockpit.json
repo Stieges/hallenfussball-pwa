@@ -292,6 +292,9 @@
     "editResult": "Edit Result",
     "adjustTime": "Adjust Time"
   },
+  "readOnly": {
+    "banner": "View only — you don't have permission to control this match."
+  },
   "extended": {
     "editScoreAria": "Correct score",
     "score": "Score",
