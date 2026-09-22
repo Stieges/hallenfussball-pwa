@@ -188,8 +188,10 @@ BEGIN
      AND OLD.accepted_at IS NULL
      AND NEW.user_id = ( SELECT "auth"."uid"() )
      AND NEW.accepted_at IS NOT NULL
+     AND NEW.id = OLD.id
      AND NEW.tournament_id = OLD.tournament_id
      AND NEW.role = OLD.role
+     AND NEW.created_at IS NOT DISTINCT FROM OLD.created_at
      AND NEW.invite_email IS NOT DISTINCT FROM OLD.invite_email
      AND NEW.invite_code IS NOT DISTINCT FROM OLD.invite_code
      AND NEW.invited_at IS NOT DISTINCT FROM OLD.invited_at
