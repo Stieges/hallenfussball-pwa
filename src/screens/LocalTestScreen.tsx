@@ -9,6 +9,7 @@
 
 import { useState, useEffect, CSSProperties, useCallback, useRef, TouchEvent, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cssVars, layoutHeights } from '../design-tokens';
 import { Standing } from '../types/tournament';
 import { GeneratedSchedule, generateFullSchedule } from '../core/generators';
@@ -31,6 +32,7 @@ import { ShareDialog } from '../components/dialogs/ShareDialog';
 const getMyTeamStorageKey = () => `live:LOCAL-TEST:myTeam`;
 
 export const LocalTestScreen: React.FC = () => {
+  const { t: tSport } = useTranslation('sport');
   const [schedule, setSchedule] = useState<GeneratedSchedule | null>(null);
   const [currentStandings, setCurrentStandings] = useState<Standing[]>([]);
   const [showShareDialog, setShowShareDialog] = useState(false);
@@ -663,7 +665,7 @@ export const LocalTestScreen: React.FC = () => {
                 style={chipStyle(selectedPhase === 'groupStage')}
                 onClick={() => handlePhaseChange('groupStage')}
               >
-                Vorrunde
+                {tSport('tournament.groupStage')}
               </button>
               <button
                 style={chipStyle(selectedPhase === 'final')}

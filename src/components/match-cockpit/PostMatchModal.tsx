@@ -8,6 +8,7 @@
  */
 
 import { CSSProperties, useCallback, useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
@@ -72,6 +73,7 @@ export function PostMatchModal({
   hasNextMatch,
   nextMatchLabel,
 }: PostMatchModalProps): React.ReactNode {
+  const { t } = useTranslation('sport');
   const [countdown, setCountdown] = useState(autoAdvanceSeconds);
   const [isPaused, setIsPaused] = useState(false);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,9 +88,9 @@ export function PostMatchModal({
       case 'overtime':
         return 'nach Verlängerung';
       case 'goldenGoal':
-        return 'durch Golden Goal';
+        return `durch ${t('phases.goldenGoal')}`;
       case 'penalty':
-        return 'im Elfmeterschießen';
+        return `im ${t('events.penaltyShootout')}`;
       default:
         return null;
     }

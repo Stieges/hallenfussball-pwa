@@ -5,6 +5,7 @@ import { Card } from '../../components/ui';
 import { TournamentType, Tournament } from '../../types/tournament';
 import { cssVars } from '../../design-tokens'
 import { SportId, getSportConfig, sportIdToLegacySport } from '../../config/sports';
+import { useSportTerms } from '../../hooks/useSportTerms';
 import { SportSelector } from './components';
 
 interface Step1Props {
@@ -130,6 +131,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
 
   // Get current sport config for info display
   const currentConfig = getSportConfig(currentSportId);
+  const { term } = useSportTerms(currentSportId);
 
   return (
     <Card>
@@ -172,7 +174,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
             </span>
             {currentConfig.defaults.periods > 1 && (
               <span>
-                <strong style={{ color: cssVars.colors.textPrimary }}>{currentConfig.terminology.periodPlural}:</strong>{' '}
+                <strong style={{ color: cssVars.colors.textPrimary }}>{term('terminology.period', { count: 2 })}:</strong>{' '}
                 {currentConfig.defaults.periods}
               </span>
             )}
@@ -196,7 +198,7 @@ export const Step1_SportAndType: React.FC<Step1Props> = ({
             details={[
               `\u2022 ${t('step1.classic.detail1')}`,
               `\u2022 ${t('step1.classic.detail2')}`,
-              `\u2022 ${t('step1.classic.detail3', { goalTerm: currentConfig.terminology.goal })}`,
+              `\u2022 ${t('step1.classic.detail3', { goalTerm: term('terminology.goal', { count: 1 }) })}`,
             ]}
             layout="left"
             testId="wizard-type-classic"

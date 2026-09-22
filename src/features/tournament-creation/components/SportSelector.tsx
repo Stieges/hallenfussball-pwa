@@ -9,6 +9,7 @@ import { CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens'
 import { SportId, SportConfig, getAvailableSports } from '../../../config/sports';
+import { useSportTerms } from '../../../hooks/useSportTerms';
 
 interface SportSelectorProps {
   selectedSportId: SportId | undefined;
@@ -29,6 +30,8 @@ const SportCard: React.FC<SportCardProps> = ({
   onClick,
   disabled = false,
 }) => {
+  const { term } = useSportTerms(sport.id);
+
   const cardStyle: CSSProperties = {
     padding: '24px 20px',
     background: isSelected ? cssVars.colors.primarySelected : cssVars.colors.surfaceDarkMedium,
@@ -49,7 +52,7 @@ const SportCard: React.FC<SportCardProps> = ({
 
     // Periods if > 1
     if (sport.defaults.periods > 1) {
-      parts.push(`${sport.defaults.periods} ${sport.terminology.periodPlural}`);
+      parts.push(`${sport.defaults.periods} ${term('terminology.period', { count: 2 })}`);
     }
 
     return parts.join(' • ');
@@ -84,7 +87,7 @@ const SportCard: React.FC<SportCardProps> = ({
         color: cssVars.colors.textPrimary,
         textTransform: 'uppercase',
       }}>
-        {sport.name}
+        {term('name')}
       </div>
       <div style={{
         fontSize: cssVars.fontSizes.xs,

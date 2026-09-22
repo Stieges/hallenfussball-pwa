@@ -12,6 +12,7 @@
  */
 
 import { useState, useMemo, useCallback, type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import { useIsMobile } from '../../../../hooks/useIsMobile';
 import { useFocusTrap } from '../../../../hooks/useFocusTrap';
@@ -108,6 +109,8 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
   onCancel,
 }) => {
   const isMobile = useIsMobile();
+  const { t } = useTranslation('sport');
+  const penaltyShootoutTerm = t('events.penaltyShootout');
   const [shots, setShots] = useState<PenaltyShot[]>(initialShots);
 
   // Focus trap for accessibility (WCAG 4.1.3)
@@ -365,7 +368,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
       <header style={headerStyle}>
         <span id="penalty-shootout-title" style={titleStyle}>
           <span>⚽</span>
-          <span>Elfmeterschießen</span>
+          <span>{penaltyShootoutTerm}</span>
         </span>
       </header>
 
@@ -400,7 +403,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
         {/* Current Turn Prompt or Decision */}
         {isDecided ? (
           <div style={{ ...promptStyle, background: cssVars.colors.primaryLight, color: cssVars.colors.primary }}>
-            ✓ {homeScore > awayScore ? homeTeamName : awayTeamName} gewinnt das Elfmeterschießen!
+            ✓ {homeScore > awayScore ? homeTeamName : awayTeamName} gewinnt das {penaltyShootoutTerm}!
           </div>
         ) : (
           <>
@@ -457,7 +460,7 @@ export const PenaltyShootoutDialog: React.FC<PenaltyShootoutDialogProps> = ({
             onClick={handleFinish}
             type="button"
           >
-            ✓ Elfmeterschießen beenden
+            ✓ {penaltyShootoutTerm} beenden
           </button>
         )}
       </footer>

@@ -12,6 +12,10 @@ import { footballIndoorConfig, footballOutdoorConfig } from './football';
 export * from './types';
 export { footballIndoorConfig, footballOutdoorConfig };
 
+// Task 6: Felder in SportRules/SportFeatures/SportTerminology/SportDefaults, die deklariert
+// aber nirgends ausgewertet sind — siehe capabilities.ts für die Begründung je Feld.
+export * from './capabilities';
+
 /**
  * Sport Configuration Registry
  * Maps SportId to SportConfig for quick lookup

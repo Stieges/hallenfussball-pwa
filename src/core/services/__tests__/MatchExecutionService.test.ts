@@ -21,6 +21,7 @@ const mockLiveMatchRepo = {
 const mockTournamentRepo = {
     get: vi.fn(),
     save: vi.fn(),
+    updateMatch: vi.fn(),
 };
 
 describe('MatchExecutionService', () => {
@@ -217,7 +218,7 @@ describe('MatchExecutionService', () => {
     });
 
     // Fixwave-Fix (Critical): abortPenaltyShootout ist das Gegenstück zu startPenaltyShootout — bricht
-    // das Elfmeterschießen ab und zeigt wieder die Tiebreaker-Auswahl (awaitingTiebreakerChoice:true),
+    // das Strafstoßschießen ab und zeigt wieder die Tiebreaker-Auswahl (awaitingTiebreakerChoice:true),
     // OHNE das Spiel zu beenden. Bewusst nicht cancelTiebreaker (das persistiert als Unentschieden).
     describe('abortPenaltyShootout (Fixwave)', () => {
         it('setzt awaitingTiebreakerChoice zurück auf true und den Elfmeter-Score auf 0, OHNE das Spiel zu beenden', async () => {
@@ -254,6 +255,164 @@ describe('MatchExecutionService', () => {
             await service.abortPenaltyShootout('tour-1', 'match-1');
 
             expect(mockTournamentRepo.get).not.toHaveBeenCalled();
+        });
+    });
+
+    // Task 6 (Ruling 2): rules.canDrawInGroupPhase/canDrawInFinals waren bisher deklariert, aber
+    // nirgends ausgewertet — nichts prüfte, ob ein Unentschieden in dieser Spielphase überhaupt
+    // zulässig ist. Der Wächter sitzt in needsTiebreaker() (MatchExecutionService.ts) und wird
+    // über LiveMatch.canEndInDraw gespeist, das initializeMatch aus der Sport-Konfiguration
+    // ableitet. Beide Richtungen werden geprüft: er greift, wenn ein Unentschieden nicht erlaubt
+    // ist, und er greift nicht, wo es erlaubt ist — insbesondere nicht bei Fußball.
+    describe('canEndInDraw — Wächter für unzulässige Unentschieden (Task 6)', () => {
+        it('initializeMatch übernimmt canDrawInGroupPhase aus der Sport-Konfiguration (Fußball: true)', async () => {
+            mockLiveMatchRepo.get.mockResolvedValue(null);
+            mockTournamentRepo.get.mockResolvedValue({
+                id: 'tour-1',
+                sportId: 'football-indoor',
+                finalsConfig: { tiebreaker: 'shootout' },
+                teams: [
+                    { id: 'team-a', name: 'Team A' },
+                    { id: 'team-b', name: 'Team B' },
+                ],
+            } as any);
+
+            const result = await service.initializeMatch('tour-1', mockScheduledMatch);
+
+            expect(result.canEndInDraw).toBe(true);
+        });
+
+        it('initializeMatch übernimmt canDrawInFinals aus der Sport-Konfiguration (Fußball: false)', async () => {
+            mockLiveMatchRepo.get.mockResolvedValue(null);
+            mockTournamentRepo.get.mockResolvedValue({
+                id: 'tour-1',
+                sportId: 'football-indoor',
+                finalsConfig: { tiebreaker: 'shootout' },
+                teams: [
+                    { id: 'team-a', name: 'Team A' },
+                    { id: 'team-b', name: 'Team B' },
+                ],
+            } as any);
+
+            const result = await service.initializeMatch('tour-1', { ...mockScheduledMatch, phase: 'final' } as any);
+
+            expect(result.canEndInDraw).toBe(false);
+        });
+
+        it('Fußball-Gruppenspiel: Unentschieden wird wie bisher direkt beendet, kein Tiebreaker verlangt (unverändertes Verhalten)', async () => {
+            const drawnGroupMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 2,
+                awayScore: 2,
+                tournamentPhase: 'groupStage',
+                canEndInDraw: true, // wie von initializeMatch für Fußball gesetzt
+                tiebreakerMode: 'shootout',
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnGroupMatch);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledWith(
+                'tour-1',
+                expect.objectContaining({ scoreA: 2, scoreB: 2, matchStatus: 'finished' })
+            );
+        });
+
+        it('Fußball-Finale: Unentschieden verlangt weiterhin einen Tiebreaker (unverändertes Verhalten)', async () => {
+            const drawnFinalMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 1,
+                awayScore: 1,
+                tournamentPhase: 'final',
+                canEndInDraw: false, // wie von initializeMatch für Fußball gesetzt
+                tiebreakerMode: 'shootout',
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnFinalMatch);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: false, needsTiebreaker: true, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
+        });
+
+        it('greift: Sportart ohne Gruppen-Unentschieden verlangt einen Tiebreaker statt das Match als Unentschieden zu beenden', async () => {
+            const drawnGroupMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 3,
+                awayScore: 3,
+                tournamentPhase: 'groupStage',
+                canEndInDraw: false, // hypothetische Sportart ohne Unentschieden in der Gruppenphase
+                tiebreakerMode: 'shootout',
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnGroupMatch);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: false, needsTiebreaker: true, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
+        });
+
+        it('greift nicht: Sportart mit ausdrücklich erlaubtem Finale-Unentschieden beendet das Match direkt', async () => {
+            const drawnFinalMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 4,
+                awayScore: 4,
+                tournamentPhase: 'final',
+                canEndInDraw: true, // hypothetische Sportart, die Finale-Unentschieden erlaubt
+                tiebreakerMode: 'shootout',
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnFinalMatch);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledWith(
+                'tour-1',
+                expect.objectContaining({ scoreA: 4, scoreB: 4, matchStatus: 'finished' })
+            );
+        });
+
+        // Fixrunde 1: die Tests oben setzen canEndInDraw immer explizit — genau wie
+        // initializeMatch es für frisch angelegte Matches tut. Jedes bereits bestehende Match
+        // (aus der DB geladen, vor dieser Änderung angelegt, nach einem Reload) hat das Feld
+        // aber gar nicht gesetzt. Diese beiden Tests decken exakt diesen Rückfall-Pfad ab, den
+        // die Konfigurations-Tests oben NICHT prüfen — siehe Mutationsprobe im Report.
+        it('Rückfall Gruppenphase: canEndInDraw fehlt (Bestandsmatch ohne initializeMatch-Lauf) → Unentschieden wird wie bisher direkt beendet', async () => {
+            const drawnGroupMatchNoFlag: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 1,
+                awayScore: 1,
+                tournamentPhase: 'groupStage',
+                tiebreakerMode: 'shootout',
+                // canEndInDraw bewusst NICHT gesetzt (undefined)
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnGroupMatchNoFlag);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledWith(
+                'tour-1',
+                expect.objectContaining({ scoreA: 1, scoreB: 1, matchStatus: 'finished' })
+            );
+        });
+
+        it('Rückfall Finale: canEndInDraw fehlt (Bestandsmatch ohne initializeMatch-Lauf) → weiter zur tiebreakerMode-Prüfung wie vor Task 6', async () => {
+            const drawnFinalMatchNoFlag: LiveMatch = {
+                ...minimalLiveMatch,
+                homeScore: 2,
+                awayScore: 2,
+                tournamentPhase: 'final',
+                tiebreakerMode: 'shootout',
+                // canEndInDraw bewusst NICHT gesetzt (undefined)
+            };
+            mockLiveMatchRepo.get.mockResolvedValue(drawnFinalMatchNoFlag);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: false, needsTiebreaker: true, decidedBy: 'regular' });
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
         });
     });
 });

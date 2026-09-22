@@ -18,6 +18,7 @@ import { cssVars } from '../../../../design-tokens'
 import { useFocusTrap } from '../../../../hooks';
 import type { EditableMatchEvent } from '../../../../types/tournament';
 import moduleStyles from '../../LiveCockpit.module.css';
+import sportGlossary from '../../../../i18n/glossary.json';
 
 interface Team {
   id: string;
@@ -106,7 +107,7 @@ export function EventEditDialog({
       case 'GOAL': return 'Tor';
       case 'YELLOW_CARD': return 'Gelbe Karte';
       case 'RED_CARD': return 'Rote Karte';
-      case 'TIME_PENALTY': return 'Zeitstrafe';
+      case 'TIME_PENALTY': return sportGlossary.terms.timePenalty.de;
       case 'SUBSTITUTION': return 'Auswechslung';
       case 'FOUL': return 'Foul';
       default: return 'Ereignis';

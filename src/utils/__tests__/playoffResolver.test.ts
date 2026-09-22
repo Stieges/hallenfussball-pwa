@@ -871,7 +871,7 @@ describe('Playoff Resolver - DEF-003 Fix', () => {
      * Test: Keine Auflösung bei Unentschieden
      *
      * Edge Case: Im K.O.-System kann es bei Unentschieden keinen
-     * automatischen Sieger geben (Elfmeterschießen etc. nicht abgebildet)
+     * automatischen Sieger geben (Strafstoßschießen etc. nicht abgebildet)
      */
     it('does not resolve bracket when semifinal ended in a draw', () => {
       const teams: Team[] = [

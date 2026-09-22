@@ -8,7 +8,7 @@
     "pause": "PAUSE",
     "overtime": "OVERTIME",
     "goldenGoal": "GOLDEN GOAL",
-    "penaltyShootout": "PENALTY SHOOTOUT",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "live": "LIVE"
   },
   "toast": {
@@ -58,7 +58,7 @@
   "score": {
     "overtime": "Overtime",
     "goldenGoal": "Golden Goal",
-    "penaltyShootout": "Penalty Shootout",
+    "penaltyShootout": "$t(sport:events.penaltyShootout)",
     "home": "Home",
     "away": "Away",
     "matchTime": "Match Time",
@@ -256,11 +256,11 @@
     "cancel": "Cancel"
   },
   "penaltyShootout": {
-    "title": "Penalty Shootout",
+    "title": "$t(sport:events.penaltyShootout)",
     "scoreAfter": "Score after {{phase}}: {{home}} : {{away}}",
     "phaseOvertime": "overtime",
     "phaseRegular": "regular time",
-    "needWinner": "Penalty shootout must have a winner!",
+    "needWinner": "$t(sport:events.penaltyShootout) must have a winner!",
     "confirm": "Confirm result",
     "back": "Back"
   },

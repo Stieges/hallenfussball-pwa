@@ -20,12 +20,14 @@ import {
 } from '../types/tournament';
 import { generateUniqueId } from './idGenerator';
 
-// Default placement criteria (same as in TournamentCreationScreen)
+// Default placement criteria (same as in TournamentCreationService).
+// Keine `label`-Strings: die Anzeige löst über `id` gegen i18n auf
+// (`wizard.json` → `placementLogic.criteria.<id>`).
 const DEFAULT_PLACEMENT_CRITERIA: PlacementCriterion[] = [
-  { id: 'points', label: 'Punkte', enabled: true },
-  { id: 'goalDifference', label: 'Tordifferenz', enabled: true },
-  { id: 'goalsFor', label: 'Erzielte Tore', enabled: true },
-  { id: 'directComparison', label: 'Direkter Vergleich', enabled: false },
+  { id: 'points', enabled: true },
+  { id: 'goalDifference', enabled: true },
+  { id: 'goalsFor', enabled: true },
+  { id: 'directComparison', enabled: false },
 ];
 
 /**

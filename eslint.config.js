@@ -8,6 +8,7 @@ import globals from 'globals';
 import preferCssVars from './eslint-rules/prefer-css-vars.cjs';
 import noHardcodedFontStyles from './eslint-rules/no-hardcoded-font-styles.cjs';
 import noTokenInLogs from './eslint-rules/no-token-in-logs.cjs';
+import noHardcodedSportTerms from './eslint-rules/no-hardcoded-sport-terms.cjs';
 
 const localRulesPlugin = {
   meta: { name: 'local-rules' },
@@ -15,6 +16,12 @@ const localRulesPlugin = {
     'prefer-css-vars': preferCssVars,
     'no-hardcoded-font-styles': noHardcodedFontStyles,
     'no-token-in-logs': noTokenInLogs,
+    // Ein Regel-Objekt, zweimal registriert: ESLint erlaubt keine gemischte
+    // Severity innerhalb einer Config-Zeile. 'forbidden' (error) und
+    // 'preferred' (warn) sind Modi derselben Implementierung, siehe
+    // eslint-rules/no-hardcoded-sport-terms.cjs (Kopfkommentar).
+    'no-hardcoded-sport-terms': noHardcodedSportTerms,
+    'no-hardcoded-sport-terms-preferred': noHardcodedSportTerms,
   },
 };
 
@@ -116,6 +123,12 @@ export default tseslint.config(
       // Identifiern (token, jwt, password, secret, credential) via console.*.
       // Siehe eslint-rules/no-token-in-logs.cjs für Begründung und Beispiele.
       'local-rules/no-token-in-logs': 'error',
+
+      // Terminologie-Guardrail (Task 8, 2026-09-21): erzwingt src/i18n/glossary.json
+      // als einzige Quelle für Sport-Fachbegriffe. error für verbotene Synonyme,
+      // warn für die bevorzugte Form selbst (siehe eslint-rules/no-hardcoded-sport-terms.cjs).
+      'local-rules/no-hardcoded-sport-terms': ['error', 'forbidden'],
+      'local-rules/no-hardcoded-sport-terms-preferred': ['warn', 'preferred'],
 
       // New rules in typescript-eslint v8 - temporarily disabled for migration
       '@typescript-eslint/prefer-regexp-exec': 'off',

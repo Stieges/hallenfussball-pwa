@@ -43,6 +43,7 @@ import type { LiveMatch } from '../../hooks/useLiveMatches';
 import { GoalAnimation, CardAnimation, LiveMatchDisplay } from '../../components/monitor';
 import { generateTournamentUrl } from '../../utils/shareUtils';
 import { QRCodeSVG } from 'qrcode.react';
+import sportGlossary from '../../i18n/glossary.json';
 import { usePixelShift } from '../../hooks/usePixelShift';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -255,7 +256,7 @@ function toLiveMatch(match: Match, teams: Team[], tournament: Tournament): LiveM
   return {
     id: match.id,
     number: match.matchNumber ?? match.round,
-    phaseLabel: match.label ?? match.phase ?? 'Gruppenphase',
+    phaseLabel: match.label ?? match.phase ?? sportGlossary.terms.groupStage.de,
     fieldId: `field-${match.field}`,
     field: match.field,
     scheduledKickoff: match.scheduledTime ? new Date(match.scheduledTime).toISOString() : '',
@@ -1381,6 +1382,7 @@ export function MonitorDisplayPage({
       <GoalAnimation
         goalEvent={lastGoalEvent}
         onAnimationComplete={clearLastGoalEvent}
+        sportId={tournament?.sportId}
       />
 
       {/* Card Animation Overlay */}

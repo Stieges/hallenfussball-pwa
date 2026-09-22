@@ -251,9 +251,9 @@
     },
     "tiebreaker": {
       "title": "In Case of Draw",
-      "shootout": "Directly to penalty shootout",
+      "shootout": "Directly to $t(sport:events.penaltyShootout)",
       "shootoutHint": "(private tournament)",
-      "overtimeThenShootout": "Extra time, then penalty shootout",
+      "overtimeThenShootout": "Extra time, then $t(sport:events.penaltyShootout)",
       "overtimeHint": "(official)",
       "goldenGoal": "Golden Goal",
       "goldenGoalDuration": "Golden Goal time:",
@@ -494,7 +494,13 @@
     "activate": "Activate criterion",
     "deactivate": "Deactivate criterion",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "criteria": {
+      "points": "Points",
+      "goalDifference": "Goal Difference",
+      "goalsFor": "Goals Scored",
+      "directComparison": "Head-to-Head"
+    }
   },
 
   "options": {

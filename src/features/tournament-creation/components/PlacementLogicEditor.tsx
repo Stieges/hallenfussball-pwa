@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../../components/ui';
 import { cssVars } from '../../../design-tokens'
 import { PlacementCriterion } from '../../../types/tournament';
+import { resolvePlacementCriterionLabel } from './placementLogicLabels';
 
 interface PlacementLogicEditorProps {
   placementLogic: PlacementCriterion[];
@@ -52,6 +53,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
     transition,
     isDragging,
   } = useSortable({ id: criterion.id });
+  const label = resolvePlacementCriterionLabel(t, criterion);
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -115,7 +117,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
   return (
     <div ref={setNodeRef} style={style}>
-      <div style={itemStyle} role="listitem" aria-label={t('placementLogic.itemAriaLabel', { label: criterion.label, position: index + 1, total: totalItems })}>
+      <div style={itemStyle} role="listitem" aria-label={t('placementLogic.itemAriaLabel', { label, position: index + 1, total: totalItems })}>
         {/* Drag Handle */}
         <div
           {...attributes}
@@ -179,7 +181,7 @@ const SortableItem: React.FC<SortableItemProps> = ({
 
         {/* Label */}
         <span style={{ flex: 1, color: cssVars.colors.textPrimary, fontSize: cssVars.fontSizes.md }}>
-          {criterion.label}
+          {label}
         </span>
 
         {/* Toggle Button */}

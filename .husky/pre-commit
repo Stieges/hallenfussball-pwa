@@ -53,5 +53,27 @@ if git diff --cached --name-only | grep -qE "src/design-tokens/|src/styles/globa
   echo ""
 fi
 
+# Check for terminology changes that need sync verification
+if git diff --cached --name-only | grep -qE "src/i18n/"; then
+  echo ""
+  echo "🈯 TERMINOLOGIE-DATEIEN GEÄNDERT"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+  echo "Prüfe Terminologie-Konsistenz..."
+  if ! npm run terms:check; then
+    echo ""
+    echo "❌ Terminology Check fehlgeschlagen!"
+    echo "   Stelle sicher, dass:"
+    echo "   - alle Sprachdateien dieselben Schlüssel haben (Schlüssel-Parität)"
+    echo "   - kein verbotenes Synonym aus glossary.json in einem Locale-Wert steht"
+    echo "   - jeder Glossar-Eintrag seinen Schlüssel in sport.json hat"
+    echo ""
+    exit 1
+  fi
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
+
 npx lint-staged
 npm run test -- --run

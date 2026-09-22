@@ -160,6 +160,7 @@ export function ExportsCategory({
   onTournamentUpdate,
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
+  const { t: tSport } = useTranslation('sport');
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -560,7 +561,7 @@ export function ExportsCategory({
                   } else if (event.type === 'RED_CARD') {
                     eventTypeLabel = 'Rote Karte';
                   } else if (event.type === 'TIME_PENALTY') {
-                    eventTypeLabel = 'Zeitstrafe';
+                    eventTypeLabel = tSport('events.timePenalty');
                     details = `${event.payload.penaltyDuration ?? 120}s`;
                   } else if (event.type === 'SUBSTITUTION') {
                     eventTypeLabel = 'Wechsel';

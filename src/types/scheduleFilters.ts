@@ -8,6 +8,7 @@
  */
 
 import { MatchStatus } from './tournament';
+import sportGlossary from '../i18n/glossary.json';
 
 /**
  * Filter state for schedule view
@@ -76,6 +77,6 @@ export interface PhaseOption {
  */
 export const PHASE_OPTIONS: PhaseOption[] = [
   { value: null, label: 'Alle Phasen' },
-  { value: 'groupStage', label: 'Vorrunde' },
+  { value: 'groupStage', label: sportGlossary.terms.groupStage.de },
   { value: 'finals', label: 'Finalrunde' },
 ];

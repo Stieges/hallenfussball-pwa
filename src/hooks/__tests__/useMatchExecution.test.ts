@@ -2,7 +2,7 @@
  * useMatchExecution — Fixwave (2026-09-18)
  *
  * FIX 1 (Critical): handleAbortPenaltyShootout — Gegenstück zu handleStartPenaltyShootout, bricht
- * ein begonnenes Elfmeterschießen ab (service.abortPenaltyShootout), OHNE das Spiel zu beenden.
+ * ein begonnenes Strafstoßschießen ab (service.abortPenaltyShootout), OHNE das Spiel zu beenden.
  *
  * FIX 2 (Important): handleDeleteEvent war der einzige Mutation-Handler ohne catch/refreshMatchState/
  * announceMatchUpdated. Der Aufruf ist fire-and-forget (ManagementTab.tsx: `void handleDeleteEvent(...)`)

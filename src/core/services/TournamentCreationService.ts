@@ -33,11 +33,16 @@ export class TournamentCreationService {
             breakBetweenPhases: 5,
             gamePeriods: defaultConfig.defaults.periods,
             halftimeBreak: defaultConfig.defaults.periodBreak,
+            // Keine `label`-Strings hier: core/ darf kein React importieren (useSportTerms
+            // ist ein Hook) und deutsche Komposita ("Tor" + "differenz") übersetzen sich
+            // ohnehin nicht. Die Anzeige löst über `id` gegen i18n auf
+            // (`wizard.json` → `placementLogic.criteria.<id>`), mit Rückfall auf `label`
+            // für bereits gespeicherte Turniere ohne passenden Schlüssel.
             placementLogic: [
-                { id: 'points', label: 'Punkte', enabled: true },
-                { id: 'goalDifference', label: `${defaultConfig.terminology.goal}differenz`, enabled: true },
-                { id: 'goalsFor', label: `Erzielte ${defaultConfig.terminology.goalPlural}`, enabled: true },
-                { id: 'directComparison', label: 'Direkter Vergleich', enabled: false },
+                { id: 'points', enabled: true },
+                { id: 'goalDifference', enabled: true },
+                { id: 'goalsFor', enabled: true },
+                { id: 'directComparison', enabled: false },
             ],
             finals: {
                 final: false,

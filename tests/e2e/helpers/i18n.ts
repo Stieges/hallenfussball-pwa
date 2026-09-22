@@ -5,6 +5,11 @@
  * This ensures E2E tests always use the same text as the app,
  * so tests won't break when translations change.
  *
+ * Resolves i18next-style nesting ($t(namespace:key.path)) the same way the
+ * app's i18next runtime does, so values that delegate to a shared term (e.g.
+ * sport.json's terminology glossary) resolve to the final display string
+ * instead of the raw "$t(...)" placeholder.
+ *
  * Usage:
  *   import { t } from './helpers/i18n';
  *
@@ -59,6 +64,39 @@ function getNestedValue(obj: TranslationMap, keyPath: string): string | undefine
   return typeof current === 'string' ? current : undefined;
 }
 
+// Matches i18next's nesting syntax, e.g. "$t(sport:events.penaltyShootout)".
+// See src/i18n/index.ts — nesting uses i18next's default $t(ns:key) prefix/suffix,
+// no plugin required at runtime, but this standalone helper reads raw JSON and
+// must resolve it itself to stay text-stable with the app.
+const NESTING_PATTERN = /\$t\(([^):]+):([^)]+)\)/g;
+
+/**
+ * Resolve i18next-style nested references ($t(namespace:key.path)) within a
+ * translated string by recursively looking up the referenced key.
+ *
+ * @param value - Raw translation value, possibly containing $t(...) references
+ * @param depth - Recursion guard against circular references
+ */
+function resolveNesting(value: string, depth = 0): string {
+  if (depth > 5) {
+    throw new Error(`[i18n] Nesting too deep (possible circular $t() reference) resolving "${value}"`);
+  }
+
+  if (!NESTING_PATTERN.test(value)) {
+    return value;
+  }
+  NESTING_PATTERN.lastIndex = 0;
+
+  return value.replace(NESTING_PATTERN, (_match, ns: string, keyPath: string) => {
+    const translations = loadNamespace(ns);
+    const resolved = getNestedValue(translations, keyPath);
+    if (resolved === undefined) {
+      throw new Error(`[i18n] Nested key "${keyPath}" not found in namespace "${ns}"`);
+    }
+    return resolveNesting(resolved, depth + 1);
+  });
+}
+
 /**
  * Translate a key with optional interpolation.
  *
@@ -88,12 +126,14 @@ export function t(key: string, params?: Record<string, string>): string {
     throw new Error(`[i18n] Key "${keyPath}" not found in namespace "${ns}"`);
   }
 
+  const resolved = resolveNesting(value);
+
   if (!params) {
-    return value;
+    return resolved;
   }
 
   // Replace {{param}} placeholders
-  return value.replace(/\{\{(\w+)\}\}/g, (_, paramName: string) => {
+  return resolved.replace(/\{\{(\w+)\}\}/g, (_, paramName: string) => {
     return params[paramName] ?? `{{${paramName}}}`;
   });
 }

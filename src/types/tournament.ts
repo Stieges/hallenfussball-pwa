@@ -133,7 +133,17 @@ export interface LocationDetails {
 
 export interface PlacementCriterion {
   id: string;
-  label: string;
+  /**
+   * Historische Beschriftung, wie sie zur Anlagezeit persistiert wurde.
+   *
+   * Neu erzeugte Kriterien setzen dieses Feld nicht mehr — die Anzeige löst
+   * über `id` gegen den i18n-Namespace `wizard` (`placementLogic.criteria.<id>`)
+   * auf. `label` bleibt als Rückfall erhalten, damit bereits gespeicherte
+   * Turniere (deren `id` z.B. durch einen Import nicht zu einem i18n-Schlüssel
+   * passt) weiterhin lesbar sind — Entfernen würde bestehende Produktionsdaten
+   * brechen.
+   */
+  label?: string;
   enabled: boolean;
 }
 

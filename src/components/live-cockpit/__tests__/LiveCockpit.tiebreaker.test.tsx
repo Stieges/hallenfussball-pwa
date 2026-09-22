@@ -45,10 +45,12 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
     await user.click(screen.getByRole('button', { name: /Verlängerung starten/i }));
     expect(h.onStartOvertime).toHaveBeenCalledWith('match-1');
   });
-  it('L1: ruft onStartPenaltyShootout über "Direkt zum Elfmeterschießen"', async () => {
+  it('L1: ruft onStartPenaltyShootout über "Direkt zum Strafstoßschießen"', async () => {
     const h = allTb(); const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch(), h)} />);
-    await user.click(screen.getByRole('button', { name: /Direkt zum Elfmeterschießen/i }));
+    // t() ist in Tests gemockt (Passthrough mit Namespace-Präfix, siehe src/test/setup.ts) —
+    // der Button-Text ist daher "Direkt zum sport:events.penaltyShootout", nicht der übersetzte Begriff.
+    await user.click(screen.getByRole('button', { name: /Direkt zum sport:events\.penaltyShootout/i }));
     expect(h.onStartPenaltyShootout).toHaveBeenCalledWith('match-1');
   });
   it('L1: ruft onForceFinish über "Als Unentschieden beenden"', async () => {
@@ -59,7 +61,9 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
   });
   it('L1: zeigt bei goldenGoal den Golden-Goal-Button statt der Verlängerung', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ tiebreakerMode: 'goldenGoal' }), allTb())} />);
-    expect(screen.getByRole('button', { name: /Golden Goal starten/i })).toBeInTheDocument();
+    // t() ist in Tests gemockt (Passthrough mit Namespace-Präfix, siehe src/test/setup.ts) —
+    // der Button-Text ist daher "sport:phases.goldenGoal starten", nicht der übersetzte Begriff.
+    expect(screen.getByRole('button', { name: /sport:phases\.goldenGoal starten/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Verlängerung starten/i })).not.toBeInTheDocument();
   });
   it('Regression: kein Banner ohne awaitingTiebreakerChoice', () => {
@@ -72,7 +76,7 @@ describe('LiveCockpit — Tiebreaker (L1)', () => {
   });
 });
 
-describe('LiveCockpit — Elfmeterschießen (L1)', () => {
+describe('LiveCockpit — Strafstoßschießen (L1)', () => {
   beforeEach(() => vi.clearAllMocks());
   // Fixwave-Fix (Critical): pen() liefert jetzt onAbortPenaltyShootout statt des entfernten
   // onCancelTiebreaker (das beendete das Spiel als Unentschieden — siehe MatchExecutionService.

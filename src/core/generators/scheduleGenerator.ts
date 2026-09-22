@@ -18,6 +18,7 @@ import {
 import { getUniqueGroups } from '../../utils/groupHelpers'
 import { assignReferees } from './refereeAssigner'
 import { GroupSizeInfo } from './playoffGenerator'
+import sportGlossary from '../../i18n/glossary.json'
 
 // Re-export types for backwards compatibility
 export type { ScheduledMatch, SchedulePhase, GeneratedSchedule } from './scheduleTypes'
@@ -423,7 +424,7 @@ function createPhases(allMatches: ScheduledMatch[], groupStageCount: number): Sc
   if (groupStageMatches.length > 0) {
     phases.push({
       name: 'groupStage',
-      label: 'Gruppenphase',
+      label: sportGlossary.terms.groupStage.de,
       matches: groupStageMatches,
       startTime: groupStageMatches[0].startTime,
       endTime: groupStageMatches[groupStageMatches.length - 1].endTime,
