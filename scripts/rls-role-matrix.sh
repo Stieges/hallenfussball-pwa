@@ -30,15 +30,25 @@
 # bleiben (der Trigger wird deshalb NICHT mehr deaktiviert, anders als in der ersten Fassung
 # dieses Skripts).
 #
+# Fixrunde 2: Abschluss-Review von R1 fand zwei kritische Lücken — eine davon (K1) hatte
+# 20260922_001 selbst geöffnet. 20260922_003 härtet: protect_owner_id() (BEFORE UPDATE auf
+# jeder Tabelle mit owner_id-Spalte — hält den alten Wert fest, wenn eine App-Rolle
+# owner_id per UPDATE ändern will) und protect_collaborator_row() (BEFORE UPDATE auf
+# tournament_collaborators — Nicht-Eigentümer dürfen ausschließlich ihre eigene, offene
+# Einladung annehmen, sonst Ablehnung). Details, Ursache und der Beleg für beide Lücken im
+# Kopfkommentar der Migration und im Report, Abschnitt "Fixrunde 2".
+#
 # Nutzung:
-#   scripts/rls-role-matrix.sh                 # Baseline + beide Migrationen ("nachher")
-#   scripts/rls-role-matrix.sh --baseline-only  # nur Baseline ("vorher") — für die Gegenprobe
-#                                                # gegen den alten Stand. Abweichungen von der
-#                                                # Rollentabelle sind hier ERWARTET (siehe
-#                                                # Einordnung im Report) und führen NICHT
-#                                                # zu einem Fehlschlag dieses Skripts — es misst,
-#                                                # es urteilt nicht. Die Interpretation steht im
-#                                                # Report.
+#   scripts/rls-role-matrix.sh                    # Baseline + alle drei Migrationen ("nachher")
+#   scripts/rls-role-matrix.sh --baseline-only     # nur Baseline ("vorher", R1-Gegenprobe) —
+#                                                   # Abweichungen von der Rollentabelle sind
+#                                                   # hier ERWARTET (siehe Report) und führen
+#                                                   # NICHT zu einem Fehlschlag dieses Skripts —
+#                                                   # es misst, es urteilt nicht.
+#   scripts/rls-role-matrix.sh --without-hardening # Baseline + 001 + 002, OHNE 003
+#                                                   # ("vorher", Fixrunde-2-Gegenprobe) — die
+#                                                   # K1/K2-Angriffszeilen müssen hier GELINGEN,
+#                                                   # sonst misst der Harness sie nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -53,14 +63,21 @@ MIGRATION_FILES=(
   "$MIGRATIONS_DIR/20260922_001_role_based_write_policies.sql"
   "$MIGRATIONS_DIR/20260922_002_fix_match_event_version_trigger.sql"
 )
+HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
 ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
+WITH_HARDENING=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --baseline-only)
       WITH_MIGRATION=0
+      WITH_HARDENING=0
+      shift
+      ;;
+    --without-hardening)
+      WITH_HARDENING=0
       shift
       ;;
     -h|--help)
@@ -80,6 +97,7 @@ command -v jq >/dev/null 2>&1 || { echo "::error::jq wird benötigt." >&2; exit 
 for f in "${MIGRATION_FILES[@]}"; do
   [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
 done
+[[ -f "$HARDENING_FILE" ]] || { echo "::error::Migration fehlt: $HARDENING_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -128,9 +146,19 @@ if [[ "$WITH_MIGRATION" -eq 1 ]]; then
     echo "Migration einspielen: $(basename "$f")" >&2
     psql_stdin < "$f"
   done
-  MODE_LABEL="nachher (Baseline + beide Migrationen)"
+fi
+
+if [[ "$WITH_HARDENING" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$HARDENING_FILE")" >&2
+  psql_stdin < "$HARDENING_FILE"
+fi
+
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
+  MODE_LABEL="nachher (Baseline + alle drei Migrationen)"
+elif [[ "$WITH_MIGRATION" -eq 1 ]]; then
+  MODE_LABEL="vorher/Fixrunde-2-Gegenprobe (Baseline + 001 + 002, ohne 003)"
 else
-  MODE_LABEL="vorher (nur Baseline)"
+  MODE_LABEL="vorher/R1-Gegenprobe (nur Baseline)"
 fi
 
 # --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS ----------------------
@@ -159,6 +187,9 @@ U_TRAINER="$(uuid_for user:trainer)"
 U_VIEWER="$(uuid_for user:viewer)"
 U_NONMEMBER="$(uuid_for user:non-member)"
 U_PUBLIC_OWNER="$(uuid_for user:public-owner)"
+U_INVITEE="$(uuid_for user:invitee)"
+INVITEE_EMAIL="invitee@rls-matrix.test"
+C_PENDING_INVITE="$(uuid_for collaborator:pending-invite)"
 
 T_MAIN="$(uuid_for tournament:main)"
 T_ANON="$(uuid_for tournament:anon)"
@@ -192,7 +223,8 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_TRAINER', 'authenticated', 'authenticated', 'trainer@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_VIEWER', 'authenticated', 'authenticated', 'viewer@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_NONMEMBER', 'authenticated', 'authenticated', 'nonmember@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '$U_PUBLIC_OWNER', 'authenticated', 'authenticated', 'public-owner@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+  ('00000000-0000-0000-0000-000000000000', '$U_PUBLIC_OWNER', 'authenticated', 'authenticated', 'public-owner@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_INVITEE', 'authenticated', 'authenticated', '$INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
 
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration)
 VALUES
@@ -210,6 +242,14 @@ VALUES
   ('$T_MAIN', '$U_TRAINER', 'trainer', now()),
   ('$T_MAIN', '$U_VIEWER', 'viewer', now());
   -- Nicht-Mitglied ($U_NONMEMBER) bekommt bewusst KEINE Zeile.
+
+-- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
+-- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
+-- accepted_at NULL, use_count 0. Wird von "eingeladener nimmt Einladung an" beansprucht.
+INSERT INTO public.tournament_collaborators
+  (id, tournament_id, user_id, invite_code, invite_email, role, accepted_at, use_count, max_uses)
+VALUES
+  ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', NULL, 0, 5);
 
 INSERT INTO public.matches (id, tournament_id, round, field)
 VALUES
@@ -234,6 +274,33 @@ VALUES
 COMMIT;
 SQL
 
+# Fixrunde 2 / K1-Beleg "Eigentümer-Übertragung über die SECURITY-DEFINER-Funktion muss
+# funktionieren": Die tatsächliche Produktionsfunktion merge_user_data() (Baseline ab Zeile
+# ~453) ist unabhängig von K1/K2 bereits kaputt — sie referenziert eine Tabelle
+# "tournament_members", die es nicht gibt (vermutlich eine Altlast vor der Umbenennung zu
+# tournament_collaborators). Empirisch im Container bestätigt: SELECT merge_user_data(...)
+# schlägt mit "relation tournament_members does not exist" fehl, SOBALD der Quellnutzer
+# tatsächlich ein Turnier besitzt — genau der Fall, um den es hier geht —, und die
+# EXCEPTION-WHEN-OTHERS-Klausel der Funktion re-raised den Fehler, wodurch die gesamte
+# Funktion (inklusive der zuvor erfolgreichen UPDATE ... SET owner_id-Schritte) zurückrollt.
+# Nicht Gegenstand dieser Migration (siehe Report). Um TROTZDEM zu belegen, dass K1s
+# current_user-Ausnahme für SECURITY-DEFINER-Aufrufe funktioniert, baut dieses Skript NUR
+# hier im Wegwerf-Container eine originalgetreue Kopie der relevanten Anweisung
+# (UPDATE tournaments SET owner_id = ... — Baseline Zeile 456) nach: gleicher Mechanismus
+# (SECURITY DEFINER, Eigentümer postgres wie jede per Migration angelegte Funktion), ohne
+# den unabhängigen tournament_members-Bug. Diese Funktion ist NICHT Teil der committeten
+# Migration.
+psql_stdin <<'SQL'
+CREATE OR REPLACE FUNCTION public.repro_security_definer_owner_transfer(p_tournament_id uuid, p_new_owner uuid) RETURNS void
+  LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO 'public', 'pg_temp'
+  AS $$
+BEGIN
+  UPDATE tournaments SET owner_id = p_new_owner WHERE id = p_tournament_id;
+END;
+$$;
+SQL
+
 # --- 6. Pro Zeile die Schreibversuche ausführen ---------------------------------------
 # Jeder Versuch läuft in einer eigenen Transaktion, die NIE committet wird (die psql-Session
 # endet ohne COMMIT und rollt implizit zurück) — der Container bleibt zwischen den Zeilen
@@ -248,9 +315,15 @@ SQL
 # Ergebnis. Stattdessen wird ohne RETURNING gearbeitet und der psql-Befehls-Tag
 # ("INSERT 0 1" / "UPDATE 1" / "UPDATE 0" / "DELETE 1" / "DELETE 0") ausgewertet — das misst
 # exakt die INSERT/UPDATE/DELETE-Policy, nichts sonst.
+# $3 (optional): E-Mail-Claim. Fixrunde 2 / K2 braucht ihn für den echten Einladungs-Annahme-
+# Pfad — vor dem Annehmen ist eine offene Einladung nicht über user_id sichtbar (der ist noch
+# NULL), sondern über collaborators_update_v3s "invite_email = auth.email()"-Zweig. auth.email()
+# liest request.jwt.claim.email (leerer GUC ohne diesen Parameter, wie auth.uid() bei sub).
 run_write() {
-  local user_id="$1" sql="$2"
+  local user_id="$1" sql="$2" email_claim="${3:-}"
   local out ec
+  local email_line=""
+  [[ -n "$email_claim" ]] && email_line="SET LOCAL request.jwt.claim.email = '$email_claim';"
   set +e
   # Kein -q hier (anders als bei psql_stdin): -q unterdrückt auch die Befehls-Tags
   # ("UPDATE 1" etc.), auf die dieses Skript angewiesen ist — mit -q wäre die Ausgabe
@@ -259,6 +332,7 @@ run_write() {
 BEGIN;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = '$user_id';
+$email_line
 $sql
 SQL
 )"
@@ -289,6 +363,36 @@ SQL
     echo "denied"
   else
     echo "allowed"
+  fi
+}
+
+# Fixrunde 2 / K1: run_write() allein reicht nicht, um "owner_id wurde still beibehalten" zu
+# messen — dafür muss der tatsächlich GESPEICHERTE Wert gelesen werden, nicht nur ob die
+# Anweisung eine Zeile traf. Führt UPDATE und eine anschließende SELECT in DERSELBEN,
+# nie committeten Transaktion/Rolle aus und gibt den gelesenen Wert zurück (oder "ERROR:..."
+# bei einer Exception). -tA unterdrückt dabei die UPDATE-Befehls-Tags (wie in Fixrunde 1
+# festgestellt) — genau das ist hier erwünscht, übrig bleibt nur das SELECT-Ergebnis.
+# Nur für tournaments/matches genutzt, deren SELECT-Policies bereits einen
+# Mitarbeiter-Zweig haben (matches_select_v3 seit der Baseline, tournaments_select_v3
+# ebenso) — das RETURNING/SELECT-Policy-Problem aus Fixrunde 1 gilt hier nicht.
+run_write_then_select() {
+  local user_id="$1" update_sql="$2" select_sql="$3"
+  local out ec
+  set +e
+  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$user_id';
+$update_sql
+$select_sql
+SQL
+)"
+  ec=$?
+  set -e
+  if [[ $ec -ne 0 ]]; then
+    echo "ERROR:$out"
+  else
+    echo "$out"
   fi
 }
 
@@ -402,6 +506,105 @@ for check in "owner-events-soft-delete-app-pfad:$owner_event_update" "owner-even
   fi
 done
 
+# --- 7b. Fixrunde 2 — K1 (owner_id-Schutz) und K2 (Mitarbeiter-Zeilen-Schutz) --------------
+# Sieben Zeilen, wie vom Controller verlangt, jede mit einem von WITH_HARDENING abhängigen
+# erwarteten Ergebnis: mit 20260922_003 ("nachher") müssen die drei Angriffszeilen
+# (K1 x2, K2 x2) blockiert sein und alle drei legitimen Zeilen weiter gelingen; OHNE
+# 20260922_003, aber MIT 001+002 ("--without-hardening", die Fixrunde-2-Gegenprobe) müssen
+# dieselben Angriffszeilen GELINGEN — sonst beweist der Harness die Lücke nicht, die er
+# beweisen soll.
+#
+# Nur wenn WITH_MIGRATION=1 (001+002 sind live): K1 setzt voraus, dass ein co-admin
+# tournaments überhaupt per UPDATE erreichen kann — das ist erst seit 001 der Fall (vorher
+# tote Bedingung role='admin', Bug 3 aus R1). Unter reiner --baseline-only würde der
+# UPDATE-Versuch schon an dieser UNABHÄNGIGEN, längst bekannten Lücke scheitern (0 Zeilen),
+# nicht an K1 — das wäre kein Beleg für irgendetwas, nur Rauschen in der R1-Gegenprobe.
+k1k2_mark_value() {
+  local label="$1" got="$2" exp="$3"
+  TOTAL=$((TOTAL + 1))
+  if [[ "$got" == "$exp" ]]; then
+    echo "$label: $got"
+  else
+    echo "$label: ${got}!=${exp}"
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+}
+
+if [[ "$WITH_MIGRATION" -ne 1 ]]; then
+  echo ""
+  echo "=== Fixrunde 2 — K1/K2 — übersprungen (WITH_MIGRATION=0, siehe Kommentar oben) ==="
+else
+  if [[ "$WITH_HARDENING" -eq 1 ]]; then
+    exp_k1_tournament="$U_OWNER"      # owner_id bleibt der Eigentümer, Co-Admin-Hijack blockiert
+    exp_k1_matches="$U_OWNER"
+    exp_k2_role_escalation="denied"
+    exp_k2_tournament_hijack="denied"
+  else
+    exp_k1_tournament="$U_COADMIN"    # Hijack gelingt — das IST die Lücke, die K1 schließt
+    exp_k1_matches="$U_COADMIN"
+    exp_k2_role_escalation="allowed"
+    exp_k2_tournament_hijack="allowed"
+  fi
+  # Von der Härtung unberührt, in beiden Modi gleich:
+  exp_k1_secdef="$U_COADMIN"          # SECURITY-DEFINER-Übertragung funktioniert immer
+  exp_k2_accept="allowed"             # Einladung annehmen ist immer legitim
+  exp_k2_owner_role="allowed"         # Eigentümer verwaltet Mitarbeiter immer
+
+  # K1-1: Co-Admin speichert tournaments (wie der optimistic-locking Save-Pfad in
+  # SupabaseRepository.save(), Zeilen 203-208) mit owner_id = sich selbst im Payload.
+  k1_tournament_owner_id="$(run_write_then_select "$U_COADMIN" \
+    "UPDATE public.tournaments SET owner_id = '$U_COADMIN', location_name = 'K1 Test' WHERE id = '$T_MAIN';" \
+    "SELECT owner_id FROM public.tournaments WHERE id = '$T_MAIN';")"
+
+  # K1-2: Mitarbeiter setzt owner_id auf matches per direktem UPDATE (kein Upsert, kein
+  # *_sync_owner-Trigger beteiligt — der läuft nur BEFORE INSERT).
+  k1_matches_owner_id="$(run_write_then_select "$U_COADMIN" \
+    "UPDATE public.matches SET owner_id = '$U_COADMIN', score_a = score_a + 1 WHERE id = '$M_MAIN';" \
+    "SELECT owner_id FROM public.matches WHERE id = '$M_MAIN';")"
+
+  # K1-3: Eigentümer-Übertragung über eine SECURITY-DEFINER-Funktion (Nachbau, siehe Fixtures-
+  # Kommentar oben) — current_user ist innerhalb der Funktion der Funktionseigentümer
+  # (postgres), nicht authenticated/anon, protect_owner_id() darf hier NICHT eingreifen.
+  # DO-Block statt "SELECT fn(...)": Eine void-Funktion per SELECT aufgerufen liefert in -tA
+  # trotzdem eine (leere) Ergebniszeile zurück und hängt sich als zusätzliche Zeile vor das
+  # eigentliche SELECT-Ergebnis (beobachtet: "\n<uuid>" statt "<uuid>", fälschlich als
+  # Abweichung gewertet). DO liefert nie Zeilen.
+  k1_secdef_owner_id="$(run_write_then_select "$U_COADMIN" \
+    "DO \$\$ BEGIN PERFORM public.repro_security_definer_owner_transfer('$T_MAIN', '$U_COADMIN'); END \$\$;" \
+    "SELECT owner_id FROM public.tournaments WHERE id = '$T_MAIN';")"
+
+  # K2-1: viewer setzt die eigene role auf co-admin (Rechte-Eskalation).
+  k2_role_escalation="$(run_write "$U_VIEWER" \
+    "UPDATE public.tournament_collaborators SET role = 'co-admin' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_VIEWER';")"
+
+  # K2-2: co-admin hängt die eigene Zeile auf ein fremdes Turnier um (T_ANON, Eigentümer
+  # U_OWNER_ANON — ein voellig anderer Nutzer als U_OWNER).
+  k2_tournament_hijack="$(run_write "$U_COADMIN" \
+    "UPDATE public.tournament_collaborators SET tournament_id = '$T_ANON' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_COADMIN';")"
+
+  # K2-3: Eingeladener nimmt die Einladung an — exakt das Spaltenmuster der App
+  # (invitationService.ts#acceptInvitation): user_id, accepted_at, use_count. Der
+  # E-Mail-Claim ist nötig, damit die BESTEHENDE (unveränderte) collaborators_update_v3
+  # die noch nicht beanspruchte Zeile überhaupt sichtbar macht (invite_email = auth.email()).
+  k2_accept_invitation="$(run_write "$U_INVITEE" \
+    "UPDATE public.tournament_collaborators SET user_id = '$U_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_PENDING_INVITE';" \
+    "$INVITEE_EMAIL")"
+
+  # K2-4: Eigentümer ändert die Rolle eines Mitarbeiters (bestehende, legitime Verwaltung).
+  k2_owner_changes_role="$(run_write "$U_OWNER" \
+    "UPDATE public.tournament_collaborators SET role = 'collaborator' WHERE tournament_id = '$T_MAIN' AND user_id = '$U_VIEWER';")"
+
+  echo ""
+  echo "=== Fixrunde 2 — K1/K2 — $MODE_LABEL ==="
+  k1k2_mark_value "k1-tournament-owner-id-nach-coadmin-save   " "$k1_tournament_owner_id" "$exp_k1_tournament"
+  k1k2_mark_value "k1-matches-owner-id-nach-direktem-update   " "$k1_matches_owner_id" "$exp_k1_matches"
+  k1k2_mark_value "k1-security-definer-transfer-owner-id      " "$k1_secdef_owner_id" "$exp_k1_secdef"
+  k1k2_mark_value "k2-viewer-rollen-eskalation                " "$k2_role_escalation" "$exp_k2_role_escalation"
+  k1k2_mark_value "k2-coadmin-turnier-umhaengen                " "$k2_tournament_hijack" "$exp_k2_tournament_hijack"
+  k1k2_mark_value "k2-einladung-annehmen                       " "$k2_accept_invitation" "$exp_k2_accept"
+  k1k2_mark_value "k2-eigentuemer-aendert-mitarbeiter-rolle    " "$k2_owner_changes_role" "$exp_k2_owner_role"
+fi
+
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
@@ -416,4 +619,4 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung und Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung und Public-Read-Stichprobe) ==="
