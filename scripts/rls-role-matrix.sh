@@ -16,18 +16,26 @@
 # ein RLS-Fehler durch die WITH-CHECK-Klausel — beides zählt als "verweigert"). Bewusst KEIN
 # RETURNING (Begründung bei run_write() weiter unten).
 #
-# Lese-Policies fasst dieses Skript nicht an (R1 ändert nur INSERT/UPDATE/DELETE), prüft aber
-# stichprobenartig, dass anonymes Lesen (kein JWT, Postgres-Rolle `anon`) eines öffentlichen
-# Turniers weiter funktioniert (Ruling D) — das wurde für Monitore/Public View kürzlich
-# mühsam repariert (PRs #185/#186), und eine Policy-Migration ist die naheliegendste Stelle,
-# es versehentlich wieder kaputtzumachen.
+# Fixrunde 1: 20260922_001 ändert inzwischen auch EINE Lese-Policy (match_events_select_v3 —
+# fehlender Mitarbeiter-Zweig, siehe Kopfkommentar der Migration) und 20260922_002 repariert
+# einen unabhängigen Trigger-Bug (increment_match_event_version referenziert eine nicht
+# existierende match_events.updated_at-Spalte, jedes UPDATE auf match_events scheiterte
+# dadurch, auch für den Eigentümer). Dieses Skript prüft stichprobenartig, dass anonymes Lesen
+# (kein JWT, Postgres-Rolle `anon`) eines öffentlichen Turniers (inkl. seiner match_events)
+# weiter funktioniert — das wurde für Monitore/Public View kürzlich mühsam repariert
+# (PRs #185/#186), und eine Policy-Migration ist die naheliegendste Stelle, es versehentlich
+# wieder kaputtzumachen. Zusätzlich testet es explizit "Eigentümer bearbeitet/löscht ein
+# Ereignis" als eigene, vom Rollen-Loop unabhängige Zeilen — das ist genau der Fall, den der
+# kaputte Trigger vorher rot gefärbt hätte, und eine künftige Regression darauf muss sichtbar
+# bleiben (der Trigger wird deshalb NICHT mehr deaktiviert, anders als in der ersten Fassung
+# dieses Skripts).
 #
 # Nutzung:
-#   scripts/rls-role-matrix.sh                 # Baseline + neue Migration ("nachher")
+#   scripts/rls-role-matrix.sh                 # Baseline + beide Migrationen ("nachher")
 #   scripts/rls-role-matrix.sh --baseline-only  # nur Baseline ("vorher") — für die Gegenprobe
 #                                                # gegen den alten Stand. Abweichungen von der
-#                                                # Rollentabelle sind hier ERWARTET (drei Stück,
-#                                                # siehe Einordnung im Report) und führen NICHT
+#                                                # Rollentabelle sind hier ERWARTET (siehe
+#                                                # Einordnung im Report) und führen NICHT
 #                                                # zu einem Fehlschlag dieses Skripts — es misst,
 #                                                # es urteilt nicht. Die Interpretation steht im
 #                                                # Report.
@@ -41,7 +49,10 @@ POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # muss zur Live-Postgres-Version p
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
-MIGRATION_FILE="$MIGRATIONS_DIR/20260922_001_role_based_write_policies.sql"
+MIGRATION_FILES=(
+  "$MIGRATIONS_DIR/20260922_001_role_based_write_policies.sql"
+  "$MIGRATIONS_DIR/20260922_002_fix_match_event_version_trigger.sql"
+)
 ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
@@ -66,7 +77,9 @@ done
 command -v jq >/dev/null 2>&1 || { echo "::error::jq wird benötigt." >&2; exit 1; }
 [[ -f "$ROLE_MATRIX_FILE" ]] || { echo "::error::Rollentabelle fehlt: $ROLE_MATRIX_FILE" >&2; exit 1; }
 [[ -f "$BASELINE_FILE" ]] || { echo "::error::Baseline fehlt: $BASELINE_FILE" >&2; exit 1; }
-[[ -f "$MIGRATION_FILE" ]] || { echo "::error::Migration fehlt: $MIGRATION_FILE" >&2; exit 1; }
+for f in "${MIGRATION_FILES[@]}"; do
+  [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
+done
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -111,9 +124,11 @@ echo "Baseline einspielen..." >&2
 psql_stdin < "$BASELINE_FILE"
 
 if [[ "$WITH_MIGRATION" -eq 1 ]]; then
-  echo "Migration einspielen: $(basename "$MIGRATION_FILE")" >&2
-  psql_stdin < "$MIGRATION_FILE"
-  MODE_LABEL="nachher (Baseline + Migration)"
+  for f in "${MIGRATION_FILES[@]}"; do
+    echo "Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
+  MODE_LABEL="nachher (Baseline + beide Migrationen)"
 else
   MODE_LABEL="vorher (nur Baseline)"
 fi
@@ -155,6 +170,7 @@ M_PUBLIC="$(uuid_for match:public)"
 
 E_MAIN="$(uuid_for event:main)"
 E_ANON="$(uuid_for event:anon)"
+E_PUBLIC="$(uuid_for event:public)"
 
 # --- 5. Fixtures anlegen (als Superuser postgres — umgeht RLS, Trigger feuern trotzdem) ----
 echo "Fixtures anlegen..." >&2
@@ -204,16 +220,16 @@ VALUES
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
   ('$E_MAIN', '$M_MAIN', 'GOAL', 10, 0, 0),
-  ('$E_ANON', '$M_ANON', 'GOAL', 10, 0, 0);
+  ('$E_ANON', '$M_ANON', 'GOAL', 10, 0, 0),
+  ('$E_PUBLIC', '$M_PUBLIC', 'GOAL', 10, 0, 0);
 
--- Nebenbefund (nicht Teil von R1, siehe Report): match_event_version_trigger
--- (increment_match_event_version) setzt "NEW.updated_at := NOW()", aber match_events hat
--- KEINE updated_at-Spalte — jedes UPDATE auf match_events schlägt deshalb IMMER fehl,
--- unabhängig von RLS/Rolle, auch für den Eigentümer. Das ist ein eigenständiger,
--- vorbestehender Fehler in der Baseline (= Live-Schema), nicht Gegenstand dieser Migration.
--- Für eine saubere RLS-Messung wird der Trigger hier deaktiviert, damit dieses Skript
--- ausschließlich die Policies misst, die R1 ändert — nicht diesen unabhängigen Bug.
-ALTER TABLE public.match_events DISABLE TRIGGER match_event_version_trigger;
+-- KEIN "ALTER TABLE ... DISABLE TRIGGER match_event_version_trigger" hier (Fixrunde 1,
+-- anders als in der ersten Fassung dieses Skripts): 20260922_002 repariert den Trigger
+-- (increment_match_event_version referenzierte NEW.updated_at, eine Spalte, die
+-- match_events nicht hat — jedes UPDATE scheiterte, auch für den Eigentümer). Der Trigger
+-- bleibt jetzt AKTIV, damit eine künftige Regression dieses Bugs von der Matrix erkannt
+-- wird (siehe die dedizierten "owner-events-update/-delete"-Prüfungen weiter unten) statt
+-- stillschweigend übersprungen zu werden.
 
 COMMIT;
 SQL
@@ -222,17 +238,16 @@ SQL
 # Jeder Versuch läuft in einer eigenen Transaktion, die NIE committet wird (die psql-Session
 # endet ohne COMMIT und rollt implizit zurück) — der Container bleibt zwischen den Zeilen
 # unverändert, jede Zeile testet gegen denselben Ausgangszustand.
-# WICHTIG: Kein RETURNING in den SQL-Schnipseln, die hier durchgereicht werden. Grund:
-# match_events_select_v3 (eine Lese-Policy — von R1 bewusst NICHT angefasst, Ruling D) hat
-# KEINEN Rollenzweig, nur "is_public OR owner_id = auth.uid()". Ein INSERT/UPDATE/DELETE
-# ... RETURNING auf match_events prüft implizit auch, ob die betroffene Zeile per
-# SELECT-Policy sichtbar wäre — für einen co-admin/collaborator, der NICHT Eigentümer ist,
-# wäre sie das nicht, und Postgres wirft dafür DIESELBE Fehlermeldung ("new row violates
-# row-level security policy"), obwohl die INSERT/UPDATE/DELETE-Policy (die R1 tatsächlich
-# ändert) den Zugriff erlaubt hätte. Das verfälschte eine frühere Version dieses Skripts
-# (co-admin/collaborator zeigten fälschlich "denied"). Stattdessen wird ohne RETURNING
-# gearbeitet und der psql-Befehls-Tag ("INSERT 0 1" / "UPDATE 1" / "UPDATE 0" / "DELETE 1" /
-# "DELETE 0") ausgewertet — das misst exakt die INSERT/UPDATE/DELETE-Policy, nichts sonst.
+# WICHTIG: Kein RETURNING in den SQL-Schnipseln, die hier durchgereicht werden. Grund (in der
+# ersten Fassung dieses Skripts entdeckt, als match_events_select_v3 noch keinen
+# Mitarbeiter-Zweig hatte, und seither als Prinzip beibehalten): ein INSERT/UPDATE/DELETE
+# ... RETURNING prüft implizit auch, ob die betroffene Zeile per SELECT-Policy sichtbar wäre.
+# Ist sie das nicht, wirft Postgres DIESELBE Fehlermeldung ("new row violates row-level
+# security policy") wie eine echte Verweigerung durch die INSERT/UPDATE/DELETE-Policy selbst —
+# RETURNING vermischt also zwei unterschiedliche Policies zu einem nicht unterscheidbaren
+# Ergebnis. Stattdessen wird ohne RETURNING gearbeitet und der psql-Befehls-Tag
+# ("INSERT 0 1" / "UPDATE 1" / "UPDATE 0" / "DELETE 1" / "DELETE 0") ausgewertet — das misst
+# exakt die INSERT/UPDATE/DELETE-Policy, nichts sonst.
 run_write() {
   local user_id="$1" sql="$2"
   local out ec
@@ -357,16 +372,40 @@ while IFS= read -r row; do
   printf '%-16s | %-14s | %-18s | %-18s\n' "$id" "$m_write" "$m_correct" "$m_settings"
 done < <(jq -c '.rows[]' "$ROLE_MATRIX_FILE")
 
-# --- 7. Stichprobe: anonymes Lesen eines öffentlichen Turniers (Ruling D) -------------
+# --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
+# Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
+# eingerechnet). Eigene, klar beschriftete Zeilen, damit eine Wiederkehr des
+# Trigger-Bugs (20260922_002) nicht in einer zusammengefassten Zelle verschwindet — genau
+# das wäre mit dem alten, kaputten Trigger hier "denied" gewesen, für den EIGENTÜMER, ganz
+# ohne RLS-Beteiligung.
+owner_event_update="$(run_write "$U_OWNER" "UPDATE public.match_events SET is_deleted = NOT is_deleted WHERE id = '$E_MAIN';")"
+owner_event_delete="$(run_write "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_MAIN';")"
+echo ""
+echo "=== Dedizierte Prüfung — $MODE_LABEL ==="
+for check in "owner-events-update:$owner_event_update" "owner-events-delete:$owner_event_delete"; do
+  label="${check%%:*}"; got="${check#*:}"
+  exp="allowed"
+  TOTAL=$((TOTAL + 1))
+  if [[ "$got" == "$exp" ]]; then
+    echo "$label: $got"
+  else
+    echo "$label: ${got}!=${exp}"
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+done
+
+# --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
 pub_match="$(run_read_as_anon "SELECT id FROM public.matches WHERE id = '$M_PUBLIC';")"
-pub_got="$([[ "$pub_tournament" == "allowed" && "$pub_match" == "allowed" ]] && echo true || echo false)"
+pub_event="$(run_read_as_anon "SELECT id FROM public.match_events WHERE id = '$E_PUBLIC';")"
+pub_got="$([[ "$pub_tournament" == "allowed" && "$pub_match" == "allowed" && "$pub_event" == "allowed" ]] && echo true || echo false)"
 echo ""
-echo "Stichprobe — anonymes Lesen eines öffentlichen Turniers: erwartet=$pub_expect, gemessen=$pub_got (tournaments=$pub_tournament, matches=$pub_match)"
+echo "Stichprobe — anonymes Lesen eines öffentlichen Turniers: erwartet=$pub_expect, gemessen=$pub_got (tournaments=$pub_tournament, matches=$pub_match, match_events=$pub_event)"
+TOTAL=$((TOTAL + 1))
 if [[ "$pub_got" != "$pub_expect" ]]; then
   MISMATCHES=$((MISMATCHES + 1))
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $((TOTAL + 1)) geprüften Zellen inkl. Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung und Public-Read-Stichprobe) ==="

@@ -29,7 +29,7 @@
 --      trainer, collaborator, viewer) — die Bedingung traf nie zu. Ein co-admin konnte
 --      Turniereinstellungen nie über diesen Pfad ändern.
 --
--- Was jetzt gilt: Alle vier Policies bekommen denselben Rollenfilter
+-- Was jetzt gilt: Alle vier Schreib-Policies bekommen denselben Rollenfilter
 -- "tc.role IN ('co-admin', 'collaborator')" für Spieldaten/Ereigniskorrektur bzw.
 -- "tc.role = 'co-admin'" für Turniereinstellungen — zusätzlich zur (unveränderten)
 -- Eigentümerprüfung "owner_id = auth.uid()", die für angemeldete UND anonym angemeldete
@@ -55,9 +55,24 @@
 -- SupabaseLiveMatchRepository), die ausschließlich matches, match_events und tournaments
 -- beschreiben.
 --
--- Lese-Policies (SELECT) werden NICHT angefasst — nur INSERT/UPDATE/DELETE. Der Beweis
--- (scripts/rls-role-matrix.sh) prüft trotzdem stichprobenartig, dass anonymes Lesen eines
--- öffentlichen Turniers (is_public = true) weiter funktioniert.
+-- FIXRUNDE 1 — warum diese Schreibrechte-Migration auch eine Lese-Policy ändert:
+-- Die erste Fassung dieser Migration ließ match_events_select_v3 bewusst unangetastet
+-- (Ruling D des Controllers: "Lese-Policies werden NICHT angefasst"). Der RLS-Harness
+-- (scripts/rls-role-matrix.sh) bewies daraufhin, dass genau das die match_events-Korrektur
+-- durch Helfer weiter blockiert hätte: PostgreSQL verlangt für UPDATE und DELETE
+-- zusätzlich zur greifenden UPDATE/DELETE-Policy, dass die Zeile auch durch mindestens
+-- eine SELECT-Policy sichtbar ist (die Zeile muss "gesehen" werden, um sie zu
+-- targetieren) — unabhängig davon, ob RETURNING verwendet wird. match_events_select_v3
+-- lautete bislang nur "(is_public = true) OR (auth.uid() = owner_id)" — KEIN
+-- Mitarbeiter-Zweig, anders als matches_select_v3, das für dieselben Mitarbeiter
+-- bereits eine EXISTS-Klausel auf tournament_collaborators hat (unverändert seit der
+-- Baseline, kein Rollenfilter dort — Lesen ist für jeden akzeptierten Mitarbeiter offen,
+-- nur Schreiben wird rollengefiltert). Der Controller hat das geprüft und Ruling D
+-- korrigiert: Es sollte das anonyme Lesen ÖFFENTLICHER Turniere schützen (kürzlich für
+-- Monitore/Public View repariert), nicht die Sichtbarkeit für angemeldete Mitarbeiter
+-- einfrieren. Der Fix unten ist rein additiv (spiegelt exakt matches_select_v3, lässt
+-- is_public unberührt) und wird vom selben Harness bewiesen: Die anonyme
+-- Public-Read-Stichprobe bleibt vorher wie nachher true.
 --
 -- Alte Policies werden ERSETZT (DROP POLICY IF EXISTS + CREATE POLICY unter demselben
 -- Namen), nicht danebengestellt: Mehrere Policies derselben FOR-Klausel auf derselben
@@ -204,6 +219,36 @@ CREATE POLICY "tournaments_update_v3" ON "public"."tournaments"
       WHERE "tc"."tournament_id" = "tournaments"."id"
         AND "tc"."user_id" = ( SELECT "auth"."uid"() )
         AND "tc"."role" = 'co-admin'
+        AND "tc"."accepted_at" IS NOT NULL
+    ))
+  );
+
+
+-- ============================================================================
+-- match_events: SELECT — fehlenden Mitarbeiter-Zweig ergänzt (Fixrunde 1)
+--
+-- War: (is_public = true) OR (auth.uid() = owner_id) — jeder akzeptierte Mitarbeiter,
+-- der laut matches_select_v3 die Partie sehen darf, konnte deren Ereignisse nicht lesen.
+-- Das ist keine neue Berechtigung, sondern schließt eine Baseline-Inkonsistenz: dieselbe
+-- EXISTS-Klausel, die matches_select_v3 bereits hat, bewusst OHNE Rollenfilter (Lesen ist
+-- für jeden akzeptierten Mitarbeiter offen, nur Schreiben wird oben rollengefiltert).
+-- is_public bleibt unverändert — die anonyme Public-Read-Stichprobe des Harnesses prüft
+-- das explizit.
+-- ============================================================================
+
+DROP POLICY IF EXISTS "match_events_select_v3" ON "public"."match_events";
+
+CREATE POLICY "match_events_select_v3" ON "public"."match_events"
+  FOR SELECT TO "authenticated", "anon"
+  USING (
+    ("is_public" = true)
+    OR (( SELECT "auth"."uid"() ) = "owner_id")
+    OR (EXISTS (
+      SELECT 1
+      FROM "public"."matches" "m"
+      JOIN "public"."tournament_collaborators" "tc" ON "tc"."tournament_id" = "m"."tournament_id"
+      WHERE "m"."id" = "match_events"."match_id"
+        AND "tc"."user_id" = ( SELECT "auth"."uid"() )
         AND "tc"."accepted_at" IS NOT NULL
     ))
   );
