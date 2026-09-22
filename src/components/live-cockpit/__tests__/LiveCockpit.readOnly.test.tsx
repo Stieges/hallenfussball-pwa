@@ -72,10 +72,24 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
   });
 
   it('readOnly=true: Timer-Klick öffnet den Zeit-Dialog NICHT', async () => {
+    // Fixrunde 1 (Coordinator-Gegenprobe): die ursprüngliche Fassung suchte
+    // `screen.queryByText('timeAdjust.title')` — unter dem i18next-Passthrough-Mock
+    // (src/test/setup.ts) liefert t() aber `cockpit:timeAdjust.title` (Namespace-Präfix,
+    // siehe TimeAdjustDialog.tsx:105 `t('timeAdjust.title')` unter useTranslation('cockpit')).
+    // Die Query fand deshalb NIE etwas — weder offen noch geschlossen — und der Test bestand
+    // unabhängig davon, ob der Dialog aufging. Jetzt über role="dialog" geprüft
+    // (TimeAdjustDialog.tsx:100-102), das nur bei isOpen=true gerendert wird.
     const user = userEvent.setup();
     render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
     await user.click(screen.getByTestId('match-timer-display'));
-    expect(screen.queryByText('timeAdjust.title')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'cockpit:timeAdjust.title' })).not.toBeInTheDocument();
+  });
+
+  it('readOnly=false: Timer-Klick öffnet den Zeit-Dialog — Verhalten wie vorher', async () => {
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+    await user.click(screen.getByTestId('match-timer-display'));
+    expect(screen.getByRole('dialog', { name: 'cockpit:timeAdjust.title' })).toBeInTheDocument();
   });
 
   it('readOnly=true: Sidebar zeigt keinen Bearbeiten-Button für Ereignisse', () => {
@@ -97,5 +111,87 @@ describe('LiveCockpit — readOnly sperrt die Bedienung (Task R2)', () => {
     render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
     expect(screen.getByTestId('goal-button-home')).toBeDisabled();
     expect(screen.queryByTestId('cockpit-readonly-banner')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Fixrunde 1 (Coordinator-Gegenprobe): die vier Tiebreaker-Handler
+ * (LiveCockpit.tsx:1188-1191, `onStartOvertime`/`onStartGoldenGoal`/`onStartPenaltyShootout`/
+ * `onEndAsDraw` jeweils `&& !isLocked`) hatten keinen Test, der readOnly UND
+ * awaitingTiebreakerChoice kombinierte — die Mutationsprobe "alle vier `&& !isLocked` entfernt"
+ * lief mit dem ursprünglichen Report noch grün durch. Jeder der vier Handler wird hier EINZELN
+ * geprüft (nicht stellvertretend durch einen), in beiden Richtungen. Match-Fixture nach dem
+ * Muster von LiveCockpit.tiebreaker.test.tsx (awaitingTiebreakerChoice, tiebreakerMode).
+ */
+function makeTiebreakerMatch(overrides: Record<string, unknown> = {}) {
+  return makeMatch({
+    homeScore: 2, awayScore: 2, status: 'PAUSED', elapsedSeconds: 600,
+    tiebreakerMode: 'overtime-then-shootout', overtimeDurationSeconds: 300,
+    awaitingTiebreakerChoice: true, playPhase: 'regular',
+    ...overrides,
+  });
+}
+
+describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixrunde 1)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('onStartOvertime: gesperrt ⇒ "Verlängerung starten" ist nicht vorhanden; entsperrt ⇒ Klick ruft onStartOvertime(matchId) auf', async () => {
+    const onStartOvertime = vi.fn();
+    const match = makeTiebreakerMatch({ tiebreakerMode: 'overtime-then-shootout' });
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartOvertime })} readOnly />);
+    expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Verlängerung starten/i })).not.toBeInTheDocument();
+    unmount();
+
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(match, { onStartOvertime })} />);
+    await user.click(screen.getByRole('button', { name: /Verlängerung starten/i }));
+    expect(onStartOvertime).toHaveBeenCalledWith('match-1');
+  });
+
+  it('onStartGoldenGoal: gesperrt ⇒ Golden-Goal-Button ist nicht vorhanden; entsperrt ⇒ Klick ruft onStartGoldenGoal(matchId) auf', async () => {
+    const onStartGoldenGoal = vi.fn();
+    const match = makeTiebreakerMatch({ tiebreakerMode: 'goldenGoal' });
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartGoldenGoal })} readOnly />);
+    expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sport:phases\.goldenGoal starten/i })).not.toBeInTheDocument();
+    unmount();
+
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(match, { onStartGoldenGoal })} />);
+    await user.click(screen.getByRole('button', { name: /sport:phases\.goldenGoal starten/i }));
+    expect(onStartGoldenGoal).toHaveBeenCalledWith('match-1');
+  });
+
+  it('onStartPenaltyShootout: gesperrt ⇒ Strafstoßschießen-Button ist nicht vorhanden; entsperrt ⇒ Klick ruft onStartPenaltyShootout(matchId) auf', async () => {
+    const onStartPenaltyShootout = vi.fn();
+    const match = makeTiebreakerMatch({ tiebreakerMode: 'shootout' });
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onStartPenaltyShootout })} readOnly />);
+    expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sport:events\.penaltyShootout starten/i })).not.toBeInTheDocument();
+    unmount();
+
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(match, { onStartPenaltyShootout })} />);
+    await user.click(screen.getByRole('button', { name: /sport:events\.penaltyShootout starten/i }));
+    expect(onStartPenaltyShootout).toHaveBeenCalledWith('match-1');
+  });
+
+  it('onForceFinish ("Als Unentschieden beenden"): gesperrt ⇒ Button ist nicht vorhanden; entsperrt ⇒ Klick ruft onForceFinish(matchId) auf', async () => {
+    const onForceFinish = vi.fn();
+    const match = makeTiebreakerMatch();
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onForceFinish })} readOnly />);
+    expect(screen.getByTestId('tiebreaker-banner')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Als Unentschieden beenden/i })).not.toBeInTheDocument();
+    unmount();
+
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(match, { onForceFinish })} />);
+    await user.click(screen.getByRole('button', { name: /Als Unentschieden beenden/i }));
+    expect(onForceFinish).toHaveBeenCalledWith('match-1');
   });
 });
