@@ -1029,13 +1029,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               breakpoint={breakpoint}
               // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Halbzeit/Beenden, wenn
               // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
+              // Settings/Event-Log sind davon NICHT betroffen (GameControls sperrt sie nie über
+              // `disabled` — siehe dort). Fixrunde 3 (Review-Befund M): der Settings-Button öffnet
+              // sich deshalb jetzt auch unter readOnly immer, `SettingsDialog` sperrt stattdessen
+              // die Eingaben selbst (siehe `readOnly`-Prop dort unten).
               disabled={isLocked}
-              // Task R2 Fixrunde 2 (M2/Regel 2): Einstellungen nur bei echter readOnly-Sperre,
-              // NICHT bei bloß beendetem Spiel — vor R2 (235d947) war dieser Button nie durch
-              // isFinished gesperrt, das muss bei readOnly=false so bleiben (Rule 1). Unter
-              // readOnly bleibt er gesperrt, weil SettingsDialog ausschließlich schreibt (Rule 2,
-              // siehe Report).
-              settingsDisabled={readOnly}
             />
           </div>
 
@@ -1184,6 +1182,11 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         }}
         tournamentId={tournamentId}
         onTestSound={() => void sound.play()}
+        // Task R2 Fixrunde 3 (Review-Befund M): `readOnly` (nicht `isLocked`) — Settings zeigen
+        // echte, synchronisierte Werte (Regel 2: "ansehen bleibt erlaubt"), der Dialog bleibt also
+        // auch bei bloß beendetem Spiel (Rule 1, readOnly=false) voll bedienbar. Nur bei echter
+        // readOnly-Sperre werden die Eingaben deaktiviert (SettingsDialog → MatchCockpitSettingsPanel).
+        readOnly={readOnly}
       />
 
       {/* Audio Activation Banner - required for browser autoplay policy */}

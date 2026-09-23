@@ -31,15 +31,12 @@ export interface GameControlsProps {
   breakpoint?: Breakpoint;
   /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
    *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
-   *  Fixrunde 2 (M2): does NOT cover Settings or Event-Log anymore — see `settingsDisabled` and
-   *  the Event-Log button below, both had no `disabled` at all before R2 (commit 235d947) and
-   *  must stay that way when the game is merely finished (Rule 1 in task-R2-fix2-brief.md). */
+   *  Fixrunde 2/3 (M2, Review-Befund M): does NOT cover Settings or Event-Log — both had no
+   *  `disabled` at all before R2 (commit 235d947) and must stay that way, auch unter readOnly.
+   *  Settings zeigt echte, synchronisierte Werte (kein Lokalzustand) — Regel 2 erlaubt "ansehen",
+   *  also öffnet sich der Dialog immer; die Eingaben darin sperrt stattdessen
+   *  MatchCockpitSettingsPanel selbst über ein natives `<fieldset disabled>` (siehe dort). */
   disabled?: boolean;
-  /** Task R2 Fixrunde 2 (M2/Regel 2): separate lock for the Settings button — readOnly only,
-   *  NOT `isFinished`. Before R2 (235d947) this button was never disabled by match status; a
-   *  finished match must stay exactly as bedienbar as before. Under readOnly it stays locked
-   *  because SettingsDialog only writes (see report, Regel 2). */
-  settingsDisabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +57,6 @@ export const GameControls: React.FC<GameControlsProps> = ({
   canUndo = false,
   breakpoint = 'desktop',
   disabled = false,
-  settingsDisabled = false,
 }) => {
   const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
@@ -123,18 +119,11 @@ export const GameControls: React.FC<GameControlsProps> = ({
     cursor: disabled || !canUndo ? 'not-allowed' : 'pointer',
   };
 
-  // Task R2 Fixrunde 2 (M2): Settings has its OWN lock (settingsDisabled = readOnly), not the
-  // general `disabled` (readOnly || isFinished) — see settingsDisabled doc comment above.
-  const btnSettingsStyle: CSSProperties = {
-    ...btnStyle,
-    cursor: settingsDisabled ? 'not-allowed' : 'pointer',
-    opacity: settingsDisabled ? 0.5 : 1,
-  };
-
-  // Task R2 Fixrunde 2 (M2/Regel 2): Event-Log button is NEVER locked by `disabled` — opening it
-  // to read stays allowed under readOnly and when the match is finished (see doc comment above).
-  // Only editing inside the sheet is gated (LiveCockpit.tsx onEventEdit).
-  const btnEventLogStyle: CSSProperties = {
+  // Task R2 Fixrunde 2/3 (M2, Review-Befund M): Settings- und Event-Log-Button sind NIE über
+  // `disabled` gesperrt — öffnen/ansehen bleibt immer erlaubt (siehe `disabled`-Doc-Kommentar
+  // oben). Für Settings sperrt stattdessen MatchCockpitSettingsPanel selbst die Eingaben unter
+  // readOnly (natives <fieldset disabled>, Regel 2: "ansehen bleibt erlaubt").
+  const btnNeverLockedStyle: CSSProperties = {
     ...btnStyle,
     cursor: 'pointer',
     opacity: 1,
@@ -234,12 +223,13 @@ export const GameControls: React.FC<GameControlsProps> = ({
         🏁 {!isMobile && 'Beenden'}
       </button>
 
-      {/* Settings — Task R2 Fixrunde 2 (M2): eigene Sperre (settingsDisabled), siehe Doc-Kommentar. */}
+      {/* Settings — Task R2 Fixrunde 2/3 (M2, Review-Befund M): nie über `disabled` gesperrt, der
+          Dialog öffnet sich immer (Regel 2: Settings zeigt echte Werte, "ansehen" bleibt
+          erlaubt); die Eingaben sperrt MatchCockpitSettingsPanel selbst unter readOnly. */}
       {onSettings && (
         <button
-          style={btnSettingsStyle}
+          style={btnNeverLockedStyle}
           onClick={onSettings}
-          disabled={settingsDisabled}
           type="button"
           aria-label="Einstellungen"
         >
@@ -251,7 +241,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
           nie über `disabled` gesperrt — öffnen zum Lesen bleibt immer erlaubt. */}
       {isMobile && onEventLog && (
         <button
-          style={btnEventLogStyle}
+          style={btnNeverLockedStyle}
           onClick={onEventLog}
           type="button"
           aria-label="Ereignisprotokoll anzeigen"

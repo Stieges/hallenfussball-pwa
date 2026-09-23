@@ -311,15 +311,32 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     expect(onUndoLastEvent).toHaveBeenCalledWith('match-1');
   });
 
-  it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled', () => {
+  it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled + Klick tauscht die Teams tatsächlich', async () => {
+    // Review-Befund (Fixrunde 3, niedrig): nicht nur `disabled` prüfen, sondern wie die
+    // Nachbartests den tatsächlichen Effekt. team-name-{home|away} bleibt inhaltlich konstant
+    // (die testid folgt dem `side`-Prop, das beim Tausch mitwandert) — was sich ändert, ist die
+    // DOM-REIHENFOLGE der beiden Blöcke (links/rechts). Das prüfen wir hier.
     const match = makeMatch({ status: 'PAUSED' });
+    const user = userEvent.setup();
 
     const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
     expect(screen.getByRole('button', { name: 'Seiten tauschen' })).toBeDisabled();
     unmount();
 
-    render(<LiveCockpit {...baseProps(match)} />);
-    expect(screen.getByRole('button', { name: 'Seiten tauschen' })).not.toBeDisabled();
+    const { container } = render(<LiveCockpit {...baseProps(match)} />);
+    const switchButton = screen.getByRole('button', { name: 'Seiten tauschen' });
+    expect(switchButton).not.toBeDisabled();
+
+    const before = container.querySelectorAll('[data-testid^="team-name-"]');
+    expect(before).toHaveLength(2);
+    expect(before[0]).toHaveAttribute('data-testid', 'team-name-home');
+    expect(before[1]).toHaveAttribute('data-testid', 'team-name-away');
+
+    await user.click(switchButton);
+
+    const after = container.querySelectorAll('[data-testid^="team-name-"]');
+    expect(after[0]).toHaveAttribute('data-testid', 'team-name-away');
+    expect(after[1]).toHaveAttribute('data-testid', 'team-name-home');
   });
 
   it('Halbzeit: readOnly=true disabled + Klick setzt die Fouls NICHT zurück; readOnly=false enabled + Klick setzt sie zurück', async () => {
@@ -345,22 +362,38 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
   });
 
-  it('Einstellungen: readOnly=true disabled + Klick öffnet den Dialog NICHT; readOnly=false enabled + Klick öffnet ihn', async () => {
+  it('Einstellungen: readOnly=true öffnet den Dialog trotzdem, Eingaben sind disabled und lösen keinen Callback aus; readOnly=false alles wie vorher', async () => {
+    // Review-Befund (Fixrunde 3, mittel): MatchCockpitSettingsPanel zeigt echte, synchronisierte
+    // Werte (kein Lokalzustand wie beim Strafstoßschießen) — fällt NICHT unter "ausschließlich
+    // schreibend". Regel 2: "Einstellungen ansehen, falls der Dialog etwas anzeigt" gilt hier
+    // wörtlich. Der Button öffnet den Dialog deshalb IMMER; gesperrt werden nur die Eingaben
+    // darin (natives <fieldset disabled> in MatchCockpitSettingsPanel).
+    const onUpdateSettings = vi.fn();
     const match = makeMatch({ status: 'PAUSED' });
     const user = userEvent.setup();
 
-    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUpdateSettings })} readOnly />);
     const settingsButtonLocked = screen.getByRole('button', { name: 'Einstellungen' });
-    expect(settingsButtonLocked).toBeDisabled();
+    expect(settingsButtonLocked).not.toBeDisabled();
     await user.click(settingsButtonLocked);
-    expect(screen.queryByText('Cockpit Einstellungen')).not.toBeInTheDocument();
+    expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
+
+    const vibrationToggleLocked = screen.getByRole('switch', { name: 'cockpit:settings.enableVibration' });
+    expect(vibrationToggleLocked).toBeDisabled();
+    await user.click(vibrationToggleLocked);
+    expect(onUpdateSettings).not.toHaveBeenCalled();
     unmount();
 
-    render(<LiveCockpit {...baseProps(match)} />);
+    render(<LiveCockpit {...baseProps(match, { onUpdateSettings })} />);
     const settingsButtonUnlocked = screen.getByRole('button', { name: 'Einstellungen' });
     expect(settingsButtonUnlocked).not.toBeDisabled();
     await user.click(settingsButtonUnlocked);
     expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
+
+    const vibrationToggleUnlocked = screen.getByRole('switch', { name: 'cockpit:settings.enableVibration' });
+    expect(vibrationToggleUnlocked).not.toBeDisabled();
+    await user.click(vibrationToggleUnlocked);
+    expect(onUpdateSettings).toHaveBeenCalled();
   });
 
   it('Ereignisprotokoll (mobil): bleibt unter readOnly bedienbar — öffnen erlaubt (Regel 2)', async () => {

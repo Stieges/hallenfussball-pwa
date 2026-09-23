@@ -47,6 +47,11 @@ export interface MatchCockpitSettingsPanelProps {
   tournamentId: string;
   /** Callback to test sound playback */
   onTestSound?: () => void;
+  /** Task R2 Fixrunde 3 (Review-Befund M/Regel 2): die Settings zeigen echte, synchronisierte
+   *  Werte (kein Lokalzustand wie beim Strafstoßschießen) — "Ansehen bleibt erlaubt" gilt also
+   *  wörtlich. Unter readOnly bleibt das Panel sichtbar, alle Eingaben werden aber über ein
+   *  natives `<fieldset disabled>` gesperrt (kein einzelner Callback mehr auslösbar). */
+  readOnly?: boolean;
 }
 
 // =============================================================================
@@ -64,6 +69,7 @@ export function MatchCockpitSettingsPanel({
   onChange,
   tournamentId,
   onTestSound,
+  readOnly = false,
 }: MatchCockpitSettingsPanelProps): React.ReactNode {
   const { t } = useTranslation('cockpit');
   const [isUploading, setIsUploading] = useState(false);
@@ -166,7 +172,11 @@ export function MatchCockpitSettingsPanel({
     : 'none';
 
   return (
-    <div style={styles.container}>
+    // Task R2 Fixrunde 3: natives <fieldset disabled> statt <div> — deaktiviert jedes Formular-
+    // Element darunter (select/input/button, inkl. der Toggle-Buttons) ohne jede Stelle einzeln
+    // zu verdrahten. `styles.container` setzt border/margin/padding/minWidth zurück, damit das
+    // Fieldset optisch identisch zum vorherigen <div> bleibt.
+    <fieldset disabled={readOnly} style={styles.container}>
       {/* Timer Section */}
       <section style={styles.section}>
         <h3 style={styles.sectionTitle}>{t('settings.timer')}</h3>
@@ -363,7 +373,7 @@ export function MatchCockpitSettingsPanel({
           </SettingRow>
         )}
       </section>
-    </div>
+    </fieldset>
   );
 }
 
@@ -431,6 +441,13 @@ const styles: Record<string, CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: cssVars.spacing.lg,
+    // Task R2 Fixrunde 3: Reset der nativen <fieldset>-Default-Styles (Browser setzen sonst
+    // border/padding/margin/min-width auf das Element) — hält das Panel optisch identisch zum
+    // vorherigen <div>.
+    border: 'none',
+    margin: 0,
+    padding: 0,
+    minWidth: 0,
   },
   section: {
     background: cssVars.colors.surface,

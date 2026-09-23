@@ -11,6 +11,10 @@ interface SettingsDialogProps {
     onChange: (settings: MatchCockpitSettings) => void;
     tournamentId: string;
     onTestSound?: () => void;
+    /** Task R2 Fixrunde 3 (Review-Befund M): durchgereicht an MatchCockpitSettingsPanel — der
+     *  Dialog öffnet sich unter readOnly weiterhin (Ansehen erlaubt, Regel 2), nur die Eingaben
+     *  darin werden gesperrt. */
+    readOnly?: boolean;
 }
 
 export function SettingsDialog({
@@ -20,6 +24,7 @@ export function SettingsDialog({
     onChange,
     tournamentId,
     onTestSound,
+    readOnly = false,
 }: SettingsDialogProps) {
     // WCAG 4.1.3: Focus trap for accessibility
     const focusTrap = useFocusTrap({
@@ -122,6 +127,7 @@ export function SettingsDialog({
                         onChange={onChange}
                         tournamentId={tournamentId}
                         onTestSound={onTestSound}
+                        readOnly={readOnly}
                     />
                 </div>
 
