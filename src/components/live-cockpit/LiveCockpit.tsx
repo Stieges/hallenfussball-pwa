@@ -889,7 +889,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         {/* Task R2: Read-Only-Banner — nur bei fehlender Berechtigung (readOnly), nicht bei
             beendetem Spiel allein. */}
         {readOnly && (
-          <div style={readOnlyBannerStyle} data-testid="cockpit-readonly-banner">
+          <div style={readOnlyBannerStyle} data-testid="cockpit-readonly-banner" role="status">
             {t('readOnly.banner')}
           </div>
         )}
@@ -930,6 +930,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
                 onClick={() => !isLocked && setShowTimeAdjustDialog(true)}
                 role="button"
                 tabIndex={0}
+                aria-disabled={isLocked}
                 data-testid="match-timer-display"
               >
                 {formatTime(displaySeconds)}
@@ -1026,8 +1027,15 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               onEventLog={() => setShowEventLogBottomSheet(true)}
               canUndo={canUndo}
               breakpoint={breakpoint}
-              // Task R2: sperrt alle Knöpfe unabhängig vom Match-Status, wenn readOnly/finished.
+              // Task R2: sperrt Rückgängig/Start-Pause/Zeit/Seiten/Halbzeit/Beenden, wenn
+              // readOnly/finished — unverändert gegenüber 235d947 (dort schon isFinished-gesperrt).
               disabled={isLocked}
+              // Task R2 Fixrunde 2 (M2/Regel 2): Einstellungen nur bei echter readOnly-Sperre,
+              // NICHT bei bloß beendetem Spiel — vor R2 (235d947) war dieser Button nie durch
+              // isFinished gesperrt, das muss bei readOnly=false so bleiben (Rule 1). Unter
+              // readOnly bleibt er gesperrt, weil SettingsDialog ausschließlich schreibt (Rule 2,
+              // siehe Report).
+              settingsDisabled={readOnly}
             />
           </div>
 
@@ -1040,9 +1048,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               awayTeamName={match.awayTeam.name}
               homeTeamId={match.homeTeam.id}
               awayTeamId={match.awayTeam.id}
-              // BUG-010: Enable event editing — Task R2: gesperrt, wenn isLocked (undefined blendet
-              // den Bearbeiten-Button in Sidebar komplett aus, siehe Sidebar/index.tsx canEdit).
-              onEventEdit={isLocked ? undefined : handleEventEdit}
+              // BUG-010: Enable event editing — Task R2 Fixrunde 2 (M2/Rule 1): gesperrt NUR bei
+              // echter readOnly-Sperre, nicht bei isFinished allein. Vor R2 (235d947) war dieser
+              // Button nie durch isFinished gesperrt (Bearbeiten nach Spielende war immer
+              // möglich) — `isLocked` hätte das für readOnly=false+isFinished neu gesperrt, eine
+              // Regression gegen Rule 1. `undefined` blendet den Bearbeiten-Button in Sidebar
+              // komplett aus, siehe Sidebar/index.tsx canEdit.
+              onEventEdit={readOnly ? undefined : handleEventEdit}
             />
           )}
         </div>
@@ -1145,7 +1157,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         awayTeamName={match.awayTeam.name}
         homeTeamId={match.homeTeam.id}
         awayTeamId={match.awayTeam.id}
-        onEventEdit={(event) => {
+        // Task R2 Fixrunde 2 (H1b/Rule 2): gesperrt NUR bei readOnly, nicht bei isFinished allein
+        // (dasselbe Rule-1-Argument wie bei Sidebar.onEventEdit oben — vor R2 war dieser Handler
+        // gar nicht gegen isFinished/isLocked gesperrt). Öffnen und Lesen des Sheets bleibt über
+        // den "Ereignisprotokoll"-Knopf in GameControls immer erlaubt (siehe dort); nur das
+        // Bearbeiten selbst ist ein Schreib-Callback und wird unter readOnly zu `undefined`
+        // (EventLogBottomSheet blendet den "Bearbeiten"-Knopf dann komplett aus).
+        onEventEdit={readOnly ? undefined : (event) => {
           setShowEventLogBottomSheet(false);
           // M-1 FIX: Store only event ID for fresh data lookup
           setEditingEventId(event.id);
@@ -1193,8 +1211,18 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       )}
 
       {/* L1: Strafstoßschießen. onRecordShot ist vom Dialog gefordert, Einzelschüsse werden derzeit nicht
-          persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz. */}
-      {showPenaltyDialog && onRecordPenaltyResult && onAbortPenaltyShootout && (
+          persistiert — der Service kennt nur das Endergebnis. Bewusst No-op statt Scheinpersistenz.
+          Task R2 Fixrunde 2 (H1): `!readOnly` — der Dialog öffnet sich automatisch per Effekt
+          (oben, an `playPhase === 'penalty'` gekoppelt), auch wenn playPhase über Realtime von
+          einem anderen Gerät kommt. Unter readOnly wird er GAR NICHT gerendert (statt rein
+          lesend): sein Schuss-Stand ist reiner Lokalzustand (`useState` im Dialog selbst, siehe
+          PenaltyShootoutDialog.tsx `initialShots`/`shots`), nicht mit anderen Geräten
+          synchronisiert — eine "Lese"-Ansicht würde einem readOnly-Betrachter einen leeren,
+          irreführenden Schuss-Stand zeigen statt des echten (der nur auf dem bedienenden Gerät
+          existiert), und jede Aktion im Dialog (TOR/DANEBEN/Korrigieren/Beenden/Abbrechen) ist
+          ein Schreib-Callback — Regel 2 erlaubt, einen ausschließlich schreibenden Dialog unter
+          readOnly gesperrt zu lassen. Siehe Report für die volle Begründung. */}
+      {showPenaltyDialog && !readOnly && onRecordPenaltyResult && onAbortPenaltyShootout && (
         <PenaltyShootoutDialog
           homeTeamName={match.homeTeam.name} awayTeamName={match.awayTeam.name}
           onRecordShot={() => { /* Einzelschüsse werden nicht persistiert (Follow-up, Task 22) */ }}

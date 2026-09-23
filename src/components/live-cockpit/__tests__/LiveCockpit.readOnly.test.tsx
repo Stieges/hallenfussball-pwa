@@ -10,7 +10,7 @@
  * ein beendetes Spiel braucht keine "du hast keine Berechtigung"-Erklärung (siehe Kommentar
  * in LiveCockpit.tsx bei `isLocked`).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
@@ -193,5 +193,275 @@ describe('LiveCockpit — readOnly sperrt die Tiebreaker-Aktionen (Task R2, Fixr
     render(<LiveCockpit {...baseProps(match, { onForceFinish })} />);
     await user.click(screen.getByRole('button', { name: /Als Unentschieden beenden/i }));
     expect(onForceFinish).toHaveBeenCalledWith('match-1');
+  });
+});
+
+/**
+ * Fixrunde 2 (task-R2-fix2-brief.md) — Abschluss-Review von Fixrunde 1 fand weitere Lücken:
+ * H1 (PenaltyShootoutDialog ungesperrt), H1b (mobiles EventLogBottomSheet ungesperrt), M1
+ * (mehrere Sperren ohne eigenen Test), M2 (Regression gegen 235d947 bei beendeten Spielen:
+ * Einstellungen/Ereignisprotokoll waren dort NIE durch isFinished gesperrt).
+ *
+ * Helper für mobile Breakpoint: useBreakpoint() misst window.innerWidth beim Mount (siehe
+ * src/hooks/useBreakpoint.ts, `handleResize()` wird synchron im ersten Effect-Lauf aufgerufen).
+ * window.innerWidth VOR dem render() setzen genügt, RTL flusht den Mount-Effect in act().
+ */
+function setMobileViewport() {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 });
+}
+function setDesktopViewport() {
+  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1280 });
+}
+
+describe('LiveCockpit — Fixrunde 2 (H1): PenaltyShootoutDialog ehrt readOnly', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function makePenaltyMatch(overrides: Record<string, unknown> = {}) {
+    return makeMatch({
+      status: 'PAUSED', playPhase: 'penalty', awaitingTiebreakerChoice: false,
+      homeScore: 2, awayScore: 2,
+      ...overrides,
+    });
+  }
+
+  it('readOnly=true: der Dialog wird NICHT gerendert, obwohl playPhase=penalty (z.B. via Realtime von einem anderen Gerät)', () => {
+    const onRecordPenaltyResult = vi.fn();
+    const onAbortPenaltyShootout = vi.fn();
+    render(
+      <LiveCockpit {...baseProps(makePenaltyMatch(), { onRecordPenaltyResult, onAbortPenaltyShootout })} readOnly />
+    );
+    expect(screen.queryByTestId('penalty-shootout-dialog')).not.toBeInTheDocument();
+  });
+
+  it('readOnly=false: der Dialog öffnet sich automatisch — Verhalten wie vorher (Regel 3)', () => {
+    const onRecordPenaltyResult = vi.fn();
+    const onAbortPenaltyShootout = vi.fn();
+    render(
+      <LiveCockpit {...baseProps(makePenaltyMatch(), { onRecordPenaltyResult, onAbortPenaltyShootout })} />
+    );
+    expect(screen.getByTestId('penalty-shootout-dialog')).toBeInTheDocument();
+  });
+});
+
+describe('LiveCockpit — Fixrunde 2 (H1b/M1): Mobiles Ereignisprotokoll-Sheet', () => {
+  beforeEach(() => { vi.clearAllMocks(); setMobileViewport(); });
+  afterEach(() => setDesktopViewport());
+
+  function matchWithEvent(overrides: Record<string, unknown> = {}) {
+    return makeMatch({
+      status: 'PAUSED',
+      events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 30, payload: { teamId: 'team-a' }, scoreAfter: { home: 1, away: 0 } }],
+      ...overrides,
+    });
+  }
+
+  it('readOnly=true: Ereignisprotokoll-Knopf bleibt bedienbar (Regel 2: öffnen/lesen erlaubt) — Sheet zeigt KEINEN Bearbeiten-Knopf', async () => {
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(matchWithEvent())} readOnly />);
+
+    const eventLogButton = screen.getByTestId('match-event-log-button');
+    expect(eventLogButton).not.toBeDisabled();
+
+    await user.click(eventLogButton);
+    // Sheet ist offen und zeigt das Ereignis (Lesen bleibt erlaubt) ...
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    // ... aber ohne Bearbeiten-Knopf (H1b: onEventEdit war vorher ungesperrt). Exakter Text statt
+    // getByRole-Namensregex: GameControls' "Zeit bearbeiten"-Knopf matcht /bearbeiten/i ebenfalls.
+    expect(screen.queryByText('✏️ Bearbeiten')).not.toBeInTheDocument();
+  });
+
+  it('readOnly=false: Sheet zeigt den Bearbeiten-Knopf, Klick öffnet den Bearbeiten-Dialog — Verhalten wie vorher', async () => {
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(matchWithEvent())} />);
+
+    await user.click(screen.getByTestId('match-event-log-button'));
+    const editButton = screen.getByText('✏️ Bearbeiten');
+    expect(editButton).toBeInTheDocument();
+
+    await user.click(editButton);
+    // Sheet schließt sich, EventEditDialog öffnet sich (LiveCockpit.tsx onEventEdit-Handler) —
+    // einziger offener Dialog an dieser Stelle.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/bearbeiten/i, { selector: 'h2' })).toBeInTheDocument();
+  });
+});
+
+describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter readOnly', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Rückgängig: readOnly=true disabled + Klick ruft onUndoLastEvent NICHT auf; readOnly=false enabled + Klick ruft es auf', async () => {
+    const onUndoLastEvent = vi.fn();
+    const match = makeMatch({
+      status: 'PAUSED',
+      events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 10, payload: { teamId: 'team-a' }, scoreAfter: { home: 1, away: 0 } }],
+    });
+    const user = userEvent.setup();
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} readOnly />);
+    const undoButtonLocked = screen.getByTestId('match-undo-button');
+    expect(undoButtonLocked).toBeDisabled();
+    await user.click(undoButtonLocked);
+    expect(onUndoLastEvent).not.toHaveBeenCalled();
+    unmount();
+
+    render(<LiveCockpit {...baseProps(match, { onUndoLastEvent })} />);
+    const undoButtonUnlocked = screen.getByTestId('match-undo-button');
+    expect(undoButtonUnlocked).not.toBeDisabled();
+    await user.click(undoButtonUnlocked);
+    expect(onUndoLastEvent).toHaveBeenCalledWith('match-1');
+  });
+
+  it('Seitenwechsel: readOnly=true disabled; readOnly=false enabled', () => {
+    const match = makeMatch({ status: 'PAUSED' });
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
+    expect(screen.getByRole('button', { name: 'Seiten tauschen' })).toBeDisabled();
+    unmount();
+
+    render(<LiveCockpit {...baseProps(match)} />);
+    expect(screen.getByRole('button', { name: 'Seiten tauschen' })).not.toBeDisabled();
+  });
+
+  it('Halbzeit: readOnly=true disabled + Klick setzt die Fouls NICHT zurück; readOnly=false enabled + Klick setzt sie zurück', async () => {
+    const match = makeMatch({
+      status: 'PAUSED',
+      events: [{ id: 'f1', matchId: 'match-1', type: 'FOUL', timestampSeconds: 5, payload: { teamId: 'team-a' } }],
+    });
+    const user = userEvent.setup();
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    const halfTimeButtonLocked = screen.getByRole('button', { name: 'Halbzeit' });
+    expect(halfTimeButtonLocked).toBeDisabled();
+    await user.click(halfTimeButtonLocked);
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    unmount();
+
+    render(<LiveCockpit {...baseProps(match)} />);
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
+    const halfTimeButtonUnlocked = screen.getByRole('button', { name: 'Halbzeit' });
+    expect(halfTimeButtonUnlocked).not.toBeDisabled();
+    await user.click(halfTimeButtonUnlocked);
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
+  });
+
+  it('Einstellungen: readOnly=true disabled + Klick öffnet den Dialog NICHT; readOnly=false enabled + Klick öffnet ihn', async () => {
+    const match = makeMatch({ status: 'PAUSED' });
+    const user = userEvent.setup();
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match)} readOnly />);
+    const settingsButtonLocked = screen.getByRole('button', { name: 'Einstellungen' });
+    expect(settingsButtonLocked).toBeDisabled();
+    await user.click(settingsButtonLocked);
+    expect(screen.queryByText('Cockpit Einstellungen')).not.toBeInTheDocument();
+    unmount();
+
+    render(<LiveCockpit {...baseProps(match)} />);
+    const settingsButtonUnlocked = screen.getByRole('button', { name: 'Einstellungen' });
+    expect(settingsButtonUnlocked).not.toBeDisabled();
+    await user.click(settingsButtonUnlocked);
+    expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
+  });
+
+  it('Ereignisprotokoll (mobil): bleibt unter readOnly bedienbar — öffnen erlaubt (Regel 2)', async () => {
+    setMobileViewport();
+    const match = makeMatch({ status: 'PAUSED' });
+    const user = userEvent.setup();
+
+    render(<LiveCockpit {...baseProps(match)} readOnly />);
+    const eventLogButton = screen.getByTestId('match-event-log-button');
+    expect(eventLogButton).not.toBeDisabled();
+    await user.click(eventLogButton);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    setDesktopViewport();
+  });
+});
+
+describe('LiveCockpit — Fixrunde 2 (M1): Tor-Knopf des Gast-Teams (TeamBlock rechts)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('readOnly=true: goal-button-away ist disabled, Klick ruft onGoal NICHT auf; readOnly=false: enabled, Klick ruft es auf', async () => {
+    const onGoal = vi.fn();
+    const match = makeMatch();
+    const user = userEvent.setup();
+
+    const { unmount } = render(<LiveCockpit {...baseProps(match, { onGoal })} readOnly />);
+    const goalButtonLocked = screen.getByTestId('goal-button-away');
+    expect(goalButtonLocked).toBeDisabled();
+    await user.click(goalButtonLocked);
+    expect(onGoal).not.toHaveBeenCalled();
+    unmount();
+
+    render(<LiveCockpit {...baseProps(match, { onGoal })} />);
+    const goalButtonUnlocked = screen.getByTestId('goal-button-away');
+    expect(goalButtonUnlocked).not.toBeDisabled();
+    await user.click(goalButtonUnlocked);
+    // goal-button-away öffnet erst den GoalScorerDialog (Torschütze erfassen); onGoal wird erst
+    // beim Bestätigen/Überspringen aufgerufen (handleGoalConfirm → onGoal), siehe LiveCockpit.tsx.
+    await user.click(screen.getByTestId('dialog-skip-button'));
+    expect(onGoal).toHaveBeenCalledWith('match-1', 'team-b', 1, expect.anything());
+  });
+});
+
+/**
+ * M2 (Regel 1): bei beendeten Spielen (readOnly=false, isFinished) muss die Bedienung exakt wie
+ * auf Commit 235d947 sein. Dort waren Einstellungen, Ereignisprotokoll (mobil) und der
+ * Bearbeiten-Button in der Sidebar NIE durch isFinished gesperrt (siehe
+ * `git show 235d947:src/components/live-cockpit/components/GameControls/index.tsx` — kein
+ * `disabled`-Attribut an diesen beiden Buttons; `git show 235d947:.../LiveCockpit.tsx` —
+ * `onEventEdit={handleEventEdit}` unbedingt).
+ */
+describe('LiveCockpit — Fixrunde 2 (M2): beendetes Spiel + readOnly=false — wie vor R2 (235d947)', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Einstellungen bleiben bedienbar', async () => {
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
+    const settingsButton = screen.getByRole('button', { name: 'Einstellungen' });
+    expect(settingsButton).not.toBeDisabled();
+    await user.click(settingsButton);
+    expect(screen.getByText('Cockpit Einstellungen')).toBeInTheDocument();
+  });
+
+  it('Ereignisprotokoll (mobil) bleibt bedienbar', async () => {
+    setMobileViewport();
+    const user = userEvent.setup();
+    render(<LiveCockpit {...baseProps(makeMatch({ status: 'FINISHED' }))} />);
+    const eventLogButton = screen.getByTestId('match-event-log-button');
+    expect(eventLogButton).not.toBeDisabled();
+    await user.click(eventLogButton);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    setDesktopViewport();
+  });
+
+  it('Sidebar zeigt weiterhin den Bearbeiten-Button für Ereignisse (Desktop)', () => {
+    const match = makeMatch({
+      status: 'FINISHED',
+      events: [{ id: 'e1', matchId: 'match-1', type: 'GOAL', timestampSeconds: 30, payload: { team: 'home', delta: 1 }, scoreAfter: { home: 1, away: 0 } }],
+    });
+    render(<LiveCockpit {...baseProps(match)} />);
+    expect(screen.getByTitle('cockpit:sidebar.edit')).toBeInTheDocument();
+  });
+});
+
+/**
+ * L2: Banner bekommt role="status" (Screenreader kündigt es als Statusmeldung an), der Timer
+ * bekommt unter Sperre aria-disabled="true".
+ */
+describe('LiveCockpit — Fixrunde 2 (L2): ARIA-Attribute', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('Banner hat role="status"', () => {
+    render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+    expect(screen.getByTestId('cockpit-readonly-banner')).toHaveAttribute('role', 'status');
+  });
+
+  it('Timer hat aria-disabled="true" unter Sperre (readOnly), "false" wenn entsperrt', () => {
+    const { unmount } = render(<LiveCockpit {...baseProps(makeMatch())} readOnly />);
+    expect(screen.getByTestId('match-timer-display')).toHaveAttribute('aria-disabled', 'true');
+    unmount();
+
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+    expect(screen.getByTestId('match-timer-display')).toHaveAttribute('aria-disabled', 'false');
   });
 });

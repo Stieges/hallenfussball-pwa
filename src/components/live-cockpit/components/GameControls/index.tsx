@@ -29,9 +29,17 @@ export interface GameControlsProps {
   onEventLog?: () => void;
   canUndo?: boolean;
   breakpoint?: Breakpoint;
-  /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables every button here,
-   *  regardless of match status. Native `disabled` on each <button>, not just visual. */
+  /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
+   *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
+   *  Fixrunde 2 (M2): does NOT cover Settings or Event-Log anymore — see `settingsDisabled` and
+   *  the Event-Log button below, both had no `disabled` at all before R2 (commit 235d947) and
+   *  must stay that way when the game is merely finished (Rule 1 in task-R2-fix2-brief.md). */
   disabled?: boolean;
+  /** Task R2 Fixrunde 2 (M2/Regel 2): separate lock for the Settings button — readOnly only,
+   *  NOT `isFinished`. Before R2 (235d947) this button was never disabled by match status; a
+   *  finished match must stay exactly as bedienbar as before. Under readOnly it stays locked
+   *  because SettingsDialog only writes (see report, Regel 2). */
+  settingsDisabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +60,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   canUndo = false,
   breakpoint = 'desktop',
   disabled = false,
+  settingsDisabled = false,
 }) => {
   const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
@@ -112,6 +121,23 @@ export const GameControls: React.FC<GameControlsProps> = ({
     background: 'transparent',
     opacity: disabled || !canUndo ? 0.5 : 1,
     cursor: disabled || !canUndo ? 'not-allowed' : 'pointer',
+  };
+
+  // Task R2 Fixrunde 2 (M2): Settings has its OWN lock (settingsDisabled = readOnly), not the
+  // general `disabled` (readOnly || isFinished) — see settingsDisabled doc comment above.
+  const btnSettingsStyle: CSSProperties = {
+    ...btnStyle,
+    cursor: settingsDisabled ? 'not-allowed' : 'pointer',
+    opacity: settingsDisabled ? 0.5 : 1,
+  };
+
+  // Task R2 Fixrunde 2 (M2/Regel 2): Event-Log button is NEVER locked by `disabled` — opening it
+  // to read stays allowed under readOnly and when the match is finished (see doc comment above).
+  // Only editing inside the sheet is gated (LiveCockpit.tsx onEventEdit).
+  const btnEventLogStyle: CSSProperties = {
+    ...btnStyle,
+    cursor: 'pointer',
+    opacity: 1,
   };
 
   // Main button label
@@ -208,12 +234,12 @@ export const GameControls: React.FC<GameControlsProps> = ({
         🏁 {!isMobile && 'Beenden'}
       </button>
 
-      {/* Settings */}
+      {/* Settings — Task R2 Fixrunde 2 (M2): eigene Sperre (settingsDisabled), siehe Doc-Kommentar. */}
       {onSettings && (
         <button
-          style={btnStyle}
+          style={btnSettingsStyle}
           onClick={onSettings}
-          disabled={disabled}
+          disabled={settingsDisabled}
           type="button"
           aria-label="Einstellungen"
         >
@@ -221,12 +247,12 @@ export const GameControls: React.FC<GameControlsProps> = ({
         </button>
       )}
 
-      {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar) */}
+      {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar). Task R2 Fixrunde 2 (M2/Regel 2):
+          nie über `disabled` gesperrt — öffnen zum Lesen bleibt immer erlaubt. */}
       {isMobile && onEventLog && (
         <button
-          style={btnStyle}
+          style={btnEventLogStyle}
           onClick={onEventLog}
-          disabled={disabled}
           type="button"
           aria-label="Ereignisprotokoll anzeigen"
           data-testid="match-event-log-button"

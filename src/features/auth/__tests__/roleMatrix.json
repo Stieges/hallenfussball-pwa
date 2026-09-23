@@ -81,7 +81,7 @@
     }
   ],
   "publicRead": {
-    "description": "Ruling D: R1 ändert ausschließlich INSERT/UPDATE/DELETE-Policies, keine SELECT-Policies. Die Matrix prüft trotzdem stichprobenartig, dass anonymes Lesen (kein JWT, Postgres-Rolle 'anon') eines öffentlichen Turniers (is_public = true) weiter funktioniert — das wurde für Monitore und Public View kürzlich repariert (M1/M2, PRs #185/#186) und eine Policy-Migration ist die naheliegendste Stelle, es versehentlich wieder kaputtzumachen.",
+    "description": "Ruling D (Stand Fixrunde 2): R1 (20260922_001) änderte primär INSERT/UPDATE/DELETE-Policies, korrigierte im selben Zug aber auch eine Lese-Policy (match_events_select_v3 — fehlender Mitarbeiter-Zweig, siehe scripts/rls-role-matrix.sh Kopfkommentar). 20260922_002 behob einen unabhängigen Trigger-Bug, 20260922_003 (Fixrunde 2) härtete zusätzlich owner_id- und Mitarbeiter-Zeilen-Schutz (K1/K2). Die Matrix prüft trotzdem stichprobenartig, dass anonymes Lesen (kein JWT, Postgres-Rolle 'anon') eines öffentlichen Turniers (is_public = true) weiter funktioniert — das wurde für Monitore und Public View kürzlich repariert (M1/M2, PRs #185/#186) und eine Policy-Migration ist die naheliegendste Stelle, es versehentlich wieder kaputtzumachen.",
     "expectCanRead": true
   }
 }

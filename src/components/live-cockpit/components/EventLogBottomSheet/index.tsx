@@ -24,7 +24,10 @@ interface EventLogBottomSheetProps {
   awayTeamName: string;
   homeTeamId: string;
   awayTeamId: string;
-  onEventEdit: (event: RuntimeMatchEvent) => void;
+  /** Task R2 Fixrunde 2 (H1b): optional — wenn kein Handler übergeben wird (readOnly), blendet
+   *  die Komponente den "Bearbeiten"-Knopf komplett aus (gleiches Muster wie Sidebar/index.tsx
+   *  `canEdit = !!onEventEdit`). Das Sheet selbst bleibt immer les-/öffenbar (Regel 2). */
+  onEventEdit?: (event: RuntimeMatchEvent) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,7 +234,7 @@ export function EventLogBottomSheet({
                   {event.incomplete && <span style={incompleteStyle}>⚠️</span>}
                 </span>
               </div>
-              {isEditable(event) && (
+              {isEditable(event) && onEventEdit && (
                 <button
                   style={editButtonStyle}
                   onClick={() => onEventEdit(event)}
