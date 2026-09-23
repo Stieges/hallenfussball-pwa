@@ -38,17 +38,34 @@
 # Einladung annehmen, sonst Ablehnung). Details, Ursache und der Beleg für beide Lücken im
 # Kopfkommentar der Migration und im Report, Abschnitt "Fixrunde 2".
 #
+# Fixrunde 3: Abschluss-Review von R2 fand K3 (LIVE, kritisch) — 003 prüfte in
+# protect_collaborator_row nur OLD.tournament_id, nie NEW, ein Eigentümer konnte seine eigene
+# Mitarbeiterzeile deshalb auf ein fremdes Turnier umhängen und sich so zum Co-Admin machen,
+# ganz ohne Einladung. Dazu H5 (älter als der Branch): dieselbe Klasse Lücke bei
+# matches/teams/match_events/tournament_id bzw. match_id. 20260923_001 schließt beide über
+# einen Parent-Schlüssel-Schutz (protect_collaborator_row erweitert, protect_parent_keys()
+# neu) plus zwei Präzisierungen (L5: use_count/accepted_at im Annahme-Zweig). Details im
+# Kopfkommentar der Migration und im Report, Abschnitt "Fixrunde 3".
+#
+# L4: Der Default-Modus dieses Skripts endet jetzt mit Exit 1, wenn MISMATCHES > 0 ist (siehe
+# Skriptende) — vorher endete es immer mit Exit 0 ("misst, urteilt nicht"), das reichte als
+# CI-Gate nicht. Die Gegenprobe-Modi bleiben bei Exit 0, sie sollen Abweichungen zeigen dürfen.
+#
 # Nutzung:
-#   scripts/rls-role-matrix.sh                    # Baseline + alle drei Migrationen ("nachher")
+#   scripts/rls-role-matrix.sh                    # Baseline + alle vier Migrationen ("nachher")
 #   scripts/rls-role-matrix.sh --baseline-only     # nur Baseline ("vorher", R1-Gegenprobe) —
 #                                                   # Abweichungen von der Rollentabelle sind
 #                                                   # hier ERWARTET (siehe Report) und führen
 #                                                   # NICHT zu einem Fehlschlag dieses Skripts —
 #                                                   # es misst, es urteilt nicht.
-#   scripts/rls-role-matrix.sh --without-hardening # Baseline + 001 + 002, OHNE 003
-#                                                   # ("vorher", Fixrunde-2-Gegenprobe) — die
+#   scripts/rls-role-matrix.sh --without-hardening # Baseline + 001 + 002, OHNE 003 (und damit
+#                                                   # ohne 004, das auf 003 aufbaut) — die
 #                                                   # K1/K2-Angriffszeilen müssen hier GELINGEN,
 #                                                   # sonst misst der Harness sie nicht.
+#   scripts/rls-role-matrix.sh --without-004       # Baseline + 001 + 002 + 003, OHNE 004
+#                                                   # ("vorher", Fixrunde-3-Gegenprobe) — die
+#                                                   # K3/H5/L5-Angriffszeilen müssen hier
+#                                                   # GELINGEN, sonst misst der Harness sie nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -64,20 +81,28 @@ MIGRATION_FILES=(
   "$MIGRATIONS_DIR/20260922_002_fix_match_event_version_trigger.sql"
 )
 HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
+PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
 ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
 WITH_HARDENING=1
+WITH_PARENT_KEYS=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --baseline-only)
       WITH_MIGRATION=0
       WITH_HARDENING=0
+      WITH_PARENT_KEYS=0
       shift
       ;;
     --without-hardening)
       WITH_HARDENING=0
+      WITH_PARENT_KEYS=0
+      shift
+      ;;
+    --without-004)
+      WITH_PARENT_KEYS=0
       shift
       ;;
     -h|--help)
@@ -98,6 +123,7 @@ for f in "${MIGRATION_FILES[@]}"; do
   [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
 done
 [[ -f "$HARDENING_FILE" ]] || { echo "::error::Migration fehlt: $HARDENING_FILE" >&2; exit 1; }
+[[ -f "$PARENT_KEYS_FILE" ]] || { echo "::error::Migration fehlt: $PARENT_KEYS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -153,8 +179,15 @@ if [[ "$WITH_HARDENING" -eq 1 ]]; then
   psql_stdin < "$HARDENING_FILE"
 fi
 
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
-  MODE_LABEL="nachher (Baseline + alle drei Migrationen)"
+if [[ "$WITH_PARENT_KEYS" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$PARENT_KEYS_FILE")" >&2
+  psql_stdin < "$PARENT_KEYS_FILE"
+fi
+
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
+  MODE_LABEL="nachher (Baseline + alle vier Migrationen)"
+elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
+  MODE_LABEL="vorher/Fixrunde-3-Gegenprobe (Baseline + 001 + 002 + 003, ohne 004)"
 elif [[ "$WITH_MIGRATION" -eq 1 ]]; then
   MODE_LABEL="vorher/Fixrunde-2-Gegenprobe (Baseline + 001 + 002, ohne 003)"
 else
@@ -198,6 +231,8 @@ T_PUBLIC="$(uuid_for tournament:public)"
 M_MAIN="$(uuid_for match:main)"
 M_ANON="$(uuid_for match:anon)"
 M_PUBLIC="$(uuid_for match:public)"
+
+TEAM_MAIN="$(uuid_for team:main)"
 
 E_MAIN="$(uuid_for event:main)"
 E_ANON="$(uuid_for event:anon)"
@@ -256,6 +291,14 @@ VALUES
   ('$M_MAIN', '$T_MAIN', 1, 1),
   ('$M_ANON', '$T_ANON', 1, 1),
   ('$M_PUBLIC', '$T_PUBLIC', 1, 1);
+
+-- Fixrunde 3 (K3/H5-Beweise, 20260923_001): ein Team im Haupt-Turnier, damit der
+-- Eigentuemer-Upsert-Regressionscheck und der H5-Team-Angriff eine echte Zeile zum Umhaengen
+-- haben. owner_id wird vom BEFORE-INSERT-Trigger teams_sync_owner aus tournaments.owner_id
+-- abgeleitet (Baseline-Trigger, laeuft in JEDEM Modus, unabhaengig von 001/002/003/004).
+INSERT INTO public.teams (id, tournament_id, name)
+VALUES
+  ('$TEAM_MAIN', '$T_MAIN', 'RLS Matrix Team');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -605,6 +648,94 @@ else
   k1k2_mark_value "k2-eigentuemer-aendert-mitarbeiter-rolle    " "$k2_owner_changes_role" "$exp_k2_owner_role"
 fi
 
+# --- 7c. Fixrunde 3 — K3 (Parent-Schlüssel tournament_collaborators) und H5 (Parent-Schlüssel
+# matches/teams/match_events) sowie L5-Präzisierung (use_count). Neun Zeilen, wie vom
+# Controller verlangt (task-R3-brief.md). Nur sinnvoll mit mindestens 001+002+003 eingespielt —
+# dieselbe Voraussetzung wie 7b, deshalb dieselbe Bedingung und (wo dort definiert) dieselbe
+# k1k2_mark_value()-Hilfsfunktion (sie ist eine plain bash-Funktion, keine Block-lokale — einmal
+# in 7b definiert, bleibt sie für den Rest des Skripts aufrufbar).
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
+  if [[ "$WITH_PARENT_KEYS" -eq 1 ]]; then
+    exp_k3_hijack="denied"
+    exp_k3_followup="denied"
+    exp_h5_match="denied"
+    exp_h5_team="denied"
+    exp_h5_event="denied"
+    exp_l5_bad="denied"
+  else
+    exp_k3_hijack="allowed"
+    exp_k3_followup="allowed"
+    exp_h5_match="allowed"
+    exp_h5_team="allowed"
+    exp_h5_event="allowed"
+    exp_l5_bad="allowed"
+  fi
+  # Immer gleich, in beiden Modi (Regression — die neuen Trigger duerfen legitime Pfade nicht
+  # anfassen):
+  exp_l5_good="allowed"
+  exp_owner_upsert="allowed"
+  exp_owner_role_change="allowed"
+
+  # K3: U_OWNER_ANON (Eigentümer von T_ANON) hängt die eigene Mitarbeiterzeile auf T_MAIN um
+  # (Eigentümer von T_MAIN ist U_OWNER, ein anderer Nutzer). Genau Sonde P1 des
+  # Abschluss-Reviewers, hier als Harness-Zeile. INSERT + Hijack-UPDATE in EINER Transaktion —
+  # bricht die Exception im nachher-Modus die Transaktion ab (ON_ERROR_STOP=1, run_write() liest
+  # das als "denied"), bestätigen im ohne-004-Modus beide Befehls-Tags "allowed".
+  k3_hijack="$(run_write "$U_OWNER_ANON" "
+    INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
+    UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
+  ")"
+
+  # K3-Folge: dieselbe Sequenz, plus der eigentliche Übernahme-Schritt (UPDATE tournaments).
+  # Eigene Zeile statt Wiederverwendung von k3_hijack, weil jeder run_write()-Aufruf in einer
+  # eigenen, isolierten Transaktion läuft (Fixtures bleiben zwischen Zeilen unverändert).
+  k3_followup="$(run_write "$U_OWNER_ANON" "
+    INSERT INTO public.tournament_collaborators (tournament_id,user_id,role,accepted_at) VALUES ('$T_ANON','$U_OWNER_ANON','co-admin',now());
+    UPDATE public.tournament_collaborators SET tournament_id='$T_MAIN' WHERE tournament_id='$T_ANON' AND user_id='$U_OWNER_ANON';
+    UPDATE public.tournaments SET location_name='RLS K3 Test' WHERE id='$T_MAIN';
+  ")"
+
+  # H5: U_OWNER (Eigentümer von T_MAIN) hängt eigene matches/teams/match_events-Zeilen in T_ANON
+  # (Eigentümer U_OWNER_ANON) um. Sonde P5 des Reviewers.
+  h5_match="$(run_write "$U_OWNER" "UPDATE public.matches SET tournament_id='$T_ANON' WHERE id='$M_MAIN';")"
+  h5_team="$(run_write "$U_OWNER" "UPDATE public.teams SET tournament_id='$T_ANON' WHERE id='$TEAM_MAIN';")"
+  h5_event="$(run_write "$U_OWNER" "UPDATE public.match_events SET match_id='$M_ANON' WHERE id='$E_MAIN';")"
+
+  # L5: Einladung annehmen — einmal mit korrektem use_count+1 (muss IMMER gelingen), einmal mit
+  # unverändertem use_count (darf NUR ohne 004 gelingen — die Präzisierung aus Punkt 1 des
+  # Briefs). $INVITEE_EMAIL-Claim nötig, damit die noch nicht beanspruchte Zeile überhaupt
+  # sichtbar ist (invite_email-Zweig von USING).
+  l5_good="$(run_write "$U_INVITEE" \
+    "UPDATE public.tournament_collaborators SET user_id='$U_INVITEE', accepted_at=now(), use_count=use_count+1 WHERE id='$C_PENDING_INVITE';" \
+    "$INVITEE_EMAIL")"
+  l5_bad="$(run_write "$U_INVITEE" \
+    "UPDATE public.tournament_collaborators SET user_id='$U_INVITEE', accepted_at=now(), use_count=use_count WHERE id='$C_PENDING_INVITE';" \
+    "$INVITEE_EMAIL")"
+
+  # Regression: Eigentümer-Upsert (App-Pfad SupabaseRepository.save(), gleiches Muster wie Sonde
+  # P3a/P3b) und Eigentümer ändert eine Mitarbeiter-Rolle müssen in BEIDEN Modi weiter gelingen.
+  owner_upsert="$(run_write "$U_OWNER" "
+    INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (upsert)','$U_OWNER') ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name;
+    INSERT INTO public.matches (id,tournament_id,round,field,owner_id) VALUES ('$M_MAIN','$T_MAIN',1,2,'$U_OWNER') ON CONFLICT (id) DO UPDATE SET field=EXCLUDED.field;
+  ")"
+  owner_role_change="$(run_write "$U_OWNER" "UPDATE public.tournament_collaborators SET role='trainer' WHERE tournament_id='$T_MAIN' AND user_id='$U_VIEWER';")"
+
+  echo ""
+  echo "=== Fixrunde 3 — K3/H5/L5 — $MODE_LABEL ==="
+  k1k2_mark_value "k3-eigentuemer-haengt-eigene-zeile-auf-fremdes-turnier   " "$k3_hijack" "$exp_k3_hijack"
+  k1k2_mark_value "k3-folge-update-tournaments-nach-hijack                 " "$k3_followup" "$exp_k3_followup"
+  k1k2_mark_value "h5-eigentuemer-haengt-eigenes-match-um                  " "$h5_match" "$exp_h5_match"
+  k1k2_mark_value "h5-eigentuemer-haengt-eigenes-team-um                   " "$h5_team" "$exp_h5_team"
+  k1k2_mark_value "h5-eigentuemer-haengt-eigenes-ereignis-um               " "$h5_event" "$exp_h5_event"
+  k1k2_mark_value "l5-annahme-mit-use-count-plus-1                        " "$l5_good" "$exp_l5_good"
+  k1k2_mark_value "l5-annahme-mit-use-count-unveraendert                  " "$l5_bad" "$exp_l5_bad"
+  k1k2_mark_value "regression-eigentuemer-upsert-teams-matches            " "$owner_upsert" "$exp_owner_upsert"
+  k1k2_mark_value "regression-eigentuemer-aendert-mitarbeiter-rolle       " "$owner_role_change" "$exp_owner_role_change"
+else
+  echo ""
+  echo "=== Fixrunde 3 — K3/H5/L5 — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0, siehe Kommentar oben) ==="
+fi
+
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
@@ -619,4 +750,15 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung und Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung und Public-Read-Stichprobe) ==="
+
+# --- 9. L4: CI-Gate im Default-Modus ("nachher", alle vier Migrationen) -------------------
+# Vorher endete dieses Skript immer mit Exit 0 ("misst, urteilt nicht") — das reicht als
+# CI-Gate nicht (final-review.md, L4). Ab jetzt: im vollen Default-Modus (Baseline + 001 + 002
+# + 003 + 004) beendet eine Abweichung von der Rollentabelle den Lauf mit Exit 1. Die
+# Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004) sollen Abweichungen
+# zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es bei Exit 0.
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+  echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
+  exit 1
+fi
