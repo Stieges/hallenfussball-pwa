@@ -361,8 +361,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   }, [currentMatch, onFinish, showInfo, cockpitSettings.soundEnabled, cockpitSettings.hapticEnabled, sound]);
 
   // Auto-Finish Logic (Moved safely after handleFinish declaration)
+  // R4/H3: readOnly darf auch automatisch nichts beenden — sonst beendet das Gerät eines
+  // Viewers/Trainers das Spiel selbst, die DB lehnt ab, der Eintrag landet in der
+  // Dead-Letter-Queue und der lokale Stand weicht ab (final-review.md H3).
   useEffect(() => {
     if (
+      !readOnly &&
       cockpitSettings.autoFinishEnabled &&
       currentMatch?.status === 'RUNNING' &&
       isOvertime
@@ -371,6 +375,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
       handleFinish();
     }
   }, [
+    readOnly,
     cockpitSettings.autoFinishEnabled,
     currentMatch?.status,
     isOvertime,

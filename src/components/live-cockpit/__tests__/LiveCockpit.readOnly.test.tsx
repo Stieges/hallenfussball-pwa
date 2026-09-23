@@ -11,6 +11,7 @@
  * in LiveCockpit.tsx bei `isLocked`).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useCallback, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LiveCockpit } from '../LiveCockpit';
@@ -496,5 +497,65 @@ describe('LiveCockpit — Fixrunde 2 (L2): ARIA-Attribute', () => {
 
     render(<LiveCockpit {...baseProps(makeMatch())} />);
     expect(screen.getByTestId('match-timer-display')).toHaveAttribute('aria-disabled', 'false');
+  });
+});
+
+/**
+ * Fixrunde 4 (Task R4, H3): Auto-Finish ignorierte `readOnly` vollständig — der Effekt
+ * (LiveCockpit.tsx, "Auto-Finish Logic") rief handleFinish() auf, sobald autoFinishEnabled
+ * (Standard: true, DEFAULT_MATCH_COCKPIT_SETTINGS) && status === 'RUNNING' && isOvertime,
+ * unabhängig vom Bearbeitungsrecht. Auf dem Gerät eines Viewers/Trainers hätte das Cockpit so
+ * automatisch ein laufendes Spiel beendet: lokal (Offline-first) beendet, die DB lehnt den
+ * Mutationsqueue-Eintrag für trainer/viewer ab (RLS), der Eintrag landet still in der
+ * Dead-Letter-Queue, der lokale Stand weicht ab (final-review.md H3, bewiesen mit einem
+ * temporären, danach gelöschten Test: readOnly=true → onFinish trotzdem 1×).
+ *
+ * `isOvertime` kommt aus useMatchTimerExtended(timerElapsedSeconds, ..., durationSeconds, ...) —
+ * ohne timerStartTime berechnet sich `elapsedSeconds` synchron aus `timerElapsedSeconds` (kein
+ * RAF-Loop, kein Timer-Mock nötig): timerElapsedSeconds > durationSeconds ⇒ isOvertime bereits
+ * beim ersten Render.
+ *
+ * Test-Harness statt direktem `onFinish: vi.fn()`: Ein reiner No-Op-Mock lässt `currentMatch`
+ * für immer auf `status: 'RUNNING'` stehen — die Guard-Bedingung des Effekts bliebe unter
+ * readOnly=false dauerhaft erfüllt, und weil `useMatchSound` (siehe Mock oben) bei jedem Render
+ * ein frisches Objekt liefert, bekommt `handleFinish` bei jedem Render eine neue Identität, die
+ * Effekt-Abhängigkeitsliste ändert sich erneut, der Effekt feuert erneut — Endlosschleife
+ * (verifiziert: der naive Aufbau ohne Harness hängt sich in `act()` auf, siehe Task-R4-Report).
+ * Die Harness bildet nach, was in der echten App passiert (`onFinish` beendet das Spiel, der
+ * Status wechselt weg von `RUNNING`): Nach dem ersten Aufruf kippt `status` auf `FINISHED`,
+ * die Guard-Bedingung wird falsch, die Schleife bricht kontrolliert nach einem Aufruf ab.
+ */
+function makeOvertimeMatch(overrides: Record<string, unknown> = {}) {
+  return makeMatch({
+    status: 'RUNNING',
+    durationSeconds: 600,
+    timerElapsedSeconds: 700, // > durationSeconds ⇒ isOvertime
+    ...overrides,
+  });
+}
+
+function OvertimeAutoFinishHarness({ readOnly, onFinishSpy }: { readOnly: boolean; onFinishSpy: (matchId: string) => void }) {
+  const [match, setMatch] = useState(() => makeOvertimeMatch());
+  const handleFinish = useCallback((matchId: string) => {
+    onFinishSpy(matchId);
+    setMatch((prev) => ({ ...prev, status: 'FINISHED' }));
+  }, [onFinishSpy]);
+  return <LiveCockpit {...baseProps(match, { onFinish: handleFinish })} readOnly={readOnly} />;
+}
+
+describe('LiveCockpit — Fixrunde 4 (H3, Task R4): Auto-Finish ehrt readOnly', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('readOnly=true: autoFinishEnabled (Standard) + RUNNING + Spielzeit überschritten ⇒ onFinish wird NICHT automatisch aufgerufen', () => {
+    const onFinishSpy = vi.fn();
+    render(<OvertimeAutoFinishHarness readOnly onFinishSpy={onFinishSpy} />);
+    expect(onFinishSpy).not.toHaveBeenCalled();
+  });
+
+  it('readOnly=false: dieselbe Situation ⇒ onFinish wird automatisch 1× aufgerufen — Kontrolle, Verhalten wie vorher', () => {
+    const onFinishSpy = vi.fn();
+    render(<OvertimeAutoFinishHarness readOnly={false} onFinishSpy={onFinishSpy} />);
+    expect(onFinishSpy).toHaveBeenCalledTimes(1);
+    expect(onFinishSpy).toHaveBeenCalledWith('match-1');
   });
 });
