@@ -84,9 +84,17 @@ export default defineConfig({
         'src/main.tsx',
         'src/vite-env.d.ts',
       ],
-      // Thresholds bewusst NICHT gesetzt (M0, 2026-09-17): Es gibt noch keine Baseline.
-      // Erst messen, dann Schwellen — sonst blockiert ein Wert, den nie jemand gemessen hat.
-      // Wiedereinführen, sobald docs/TODO.md eine gemessene Baseline nennt.
+      // Untergrenze aus gemessener Baseline (T7b, 2026-09-24, `npm run test:coverage`):
+      // Statements 42.89 %, Branches 35.36 %, Functions 35.53 %, Lines 43.79 %.
+      // Je Wert auf ganze Prozent abgerundet und 1 Punkt darunter, damit normales
+      // Messrauschen die CI nicht bricht. Absichtlich niedrig (keine Zielmarke) —
+      // schützt nur vor Regression unter das heute gemessene Niveau.
+      thresholds: {
+        statements: 41,
+        branches: 34,
+        functions: 34,
+        lines: 42,
+      },
     },
   },
 })
