@@ -13,6 +13,8 @@ import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
+import { useTournamentMembers } from '../../../auth/hooks/useTournamentMembers';
+import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
@@ -219,13 +221,22 @@ const styles = {
 // =============================================================================
 
 export function DangerZoneCategory({
+  tournamentId,
   tournament,
   onTournamentUpdate,
 }: DangerZoneCategoryProps) {
   const { t } = useTranslation('admin');
+  const { myMembership } = useTournamentMembers(tournamentId);
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // R7: Das Löschen des Turniers hatte keine Rollensperre in der UI -- die DB lässt seit
+  // R5b (protect_deleted_at → has_tournament_permission(..., 'deleteTournament')) nur den
+  // Eigentümer löschen. Gleiches UI-Muster wie TeamHelpers/MemberList (R5/N4): der
+  // Löschen-Bereich wird für alle anderen Rollen komplett ausgeblendet, nicht nur
+  // deaktiviert -- konsistent mit canManageMembers in TeamHelpers/index.tsx.
+  const canDelete = myMembership ? canDeleteTournament(myMembership.role) : false;
 
   const handleOpenDialog = useCallback((action: DangerAction) => {
     const config = DANGER_ACTIONS[action];
@@ -409,8 +420,8 @@ export function DangerZoneCategory({
       {/* Archive Tournament (Warning) */}
       {renderActionCard('archive_tournament')}
 
-      {/* Delete Tournament (Danger) */}
-      {renderActionCard('delete_tournament')}
+      {/* Delete Tournament (Danger) — R7: nur für den Eigentümer sichtbar, siehe canDelete oben */}
+      {canDelete && renderActionCard('delete_tournament')}
 
       {/* Confirmation Dialog */}
       <Dialog

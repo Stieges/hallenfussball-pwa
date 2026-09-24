@@ -2,9 +2,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DangerZoneCategory } from '../index';
 import { isTournamentCompleted } from '../../../../../utils/tournamentCategories';
 import type { Tournament } from '../../../../../types/tournament';
+
+// R7: DangerZoneCategory ruft seit der Löschen-Rollensperre useTournamentMembers() auf, das
+// intern useAuth() braucht (AuthProvider-Kontext). Dieser Test prüft "Turnier beenden"/
+// "Turnier archivieren" (kein Rollen-Gate), nicht "Turnier löschen" -- die Rolle 'owner' hält
+// den bestehenden Testinhalt unverändert wahr (der Eigentümer sieht ohnehin alle Aktionen).
+vi.mock('../../../../auth/hooks/useTournamentMembers', () => ({
+  useTournamentMembers: () => ({
+    myMembership: {
+      id: 'membership-1', userId: 'user-1', tournamentId: 't1', role: 'owner',
+      teamIds: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
+    },
+  }),
+}));
+
+import { DangerZoneCategory } from '../index';
 
 const tournament = {
   id: 't1', title: 'Test-Turnier', status: 'published',

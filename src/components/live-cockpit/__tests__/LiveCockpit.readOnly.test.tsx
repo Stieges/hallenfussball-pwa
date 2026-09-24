@@ -559,3 +559,47 @@ describe('LiveCockpit — Fixrunde 4 (H3, Task R4): Auto-Finish ehrt readOnly', 
     expect(onFinishSpy).toHaveBeenCalledWith('match-1');
   });
 });
+
+/**
+ * Task R7 (aus task-R4-review.md, Befund M1): die beiden Fixrunde-4-Tests oben sind je ein
+ * frisches `render` mit fest gesetztem `readOnly` — React führt den Effekt bei JEDEM Mount
+ * einmal aus, unabhängig von der Abhängigkeitsliste. Sie beweisen daher nur, dass die Bedingung
+ * `!readOnly && …` beim ERSTEN Rendern korrekt ausgewertet wird, nicht dass `readOnly` selbst in
+ * der Abhängigkeitsliste steht. Die beiden Fälle hier nutzen `rerender` auf derselben
+ * Komponenteninstanz, um den dynamischen Wechsel während eines laufenden, überzogenen Spiels zu
+ * beweisen — genau das Szenario, das ein zweites Gerät per Realtime auslösen kann (Rollenwechsel
+ * durch den Eigentümer, während das Cockpit auf einem anderen Gerät offen bleibt).
+ */
+describe('LiveCockpit — Fixrunde R7 (Task R4-Review M1): readOnly wechselt dynamisch während eines überzogenen Spiels', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('true → false: onFinish feuert beim Mount mit readOnly=true nicht, nach dem Wechsel auf readOnly=false genau 1×', () => {
+    const onFinishSpy = vi.fn();
+    const { rerender } = render(<OvertimeAutoFinishHarness readOnly onFinishSpy={onFinishSpy} />);
+    expect(onFinishSpy).not.toHaveBeenCalled();
+
+    rerender(<OvertimeAutoFinishHarness readOnly={false} onFinishSpy={onFinishSpy} />);
+
+    expect(onFinishSpy).toHaveBeenCalledTimes(1);
+    expect(onFinishSpy).toHaveBeenCalledWith('match-1');
+  });
+
+  it('false → true, bevor die Spielzeit abläuft: onFinish feuert nicht, auch nicht sobald das Spiel danach überzieht', () => {
+    const onFinishSpy = vi.fn();
+    const notYetOvertime = makeMatch({ status: 'RUNNING', durationSeconds: 600, timerElapsedSeconds: 300 });
+
+    const { rerender } = render(
+      <LiveCockpit {...baseProps(notYetOvertime, { onFinish: onFinishSpy })} readOnly={false} />
+    );
+    expect(onFinishSpy).not.toHaveBeenCalled();
+
+    // readOnly wechselt auf true, WÄHREND die Spielzeit noch nicht abgelaufen ist.
+    rerender(<LiveCockpit {...baseProps(notYetOvertime, { onFinish: onFinishSpy })} readOnly />);
+    expect(onFinishSpy).not.toHaveBeenCalled();
+
+    // Jetzt läuft die Zeit ab (isOvertime wird true) — readOnly ist zu diesem Zeitpunkt
+    // bereits true, der Guard muss also weiterhin verhindern, dass onFinish feuert.
+    rerender(<LiveCockpit {...baseProps(makeOvertimeMatch(), { onFinish: onFinishSpy })} readOnly />);
+    expect(onFinishSpy).not.toHaveBeenCalled();
+  });
+});

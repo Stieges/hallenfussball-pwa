@@ -984,6 +984,10 @@ export type Database = {
         Args: { p_permission: string; p_tournament_id: string }
         Returns: boolean
       }
+      is_active_tournament_member: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       is_anonymous_user: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }

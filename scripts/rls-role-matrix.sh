@@ -119,6 +119,18 @@
 #                                                   # Teams/Spiele scheitert still statt zu
 #                                                   # gelingen), sonst misst der Harness die
 #                                                   # R5/R5b-Lücken nicht.
+#   scripts/rls-role-matrix.sh --without-r7        # Alles bis 20260924_002, OHNE 20260924_003
+#                                                   # (R7: is_active_tournament_member() +
+#                                                   # declined_at/expires_at) — ein widerrufenes
+#                                                   # Mitglied muss hier weiterhin
+#                                                   # matches/teams/match_events/tournaments und
+#                                                   # das Profil des Eigentümers lesen dürfen, und
+#                                                   # eine widerrufene/abgelaufene Einladung muss
+#                                                   # sich hier annehmen lassen (der "vorher"-
+#                                                   # Zustand, F4 aus task-R3-review.md und der
+#                                                   # Follow-up aus task-R5b-report.md "Fixrunde
+#                                                   # 1", M3), sonst misst der Harness die R7-
+#                                                   # Lücken nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -138,6 +150,7 @@ PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
 MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
 PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
 CENTRAL_PERMISSIONS_FILE="$MIGRATIONS_DIR/20260924_002_central_role_permissions.sql"
+DECLINED_EXPIRED_FILE="$MIGRATIONS_DIR/20260924_003_declined_and_expired.sql"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
@@ -145,6 +158,7 @@ WITH_HARDENING=1
 WITH_PARENT_KEYS=1
 WITH_R6=1
 WITH_R5=1
+WITH_R7=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -154,6 +168,7 @@ while [[ $# -gt 0 ]]; do
       WITH_PARENT_KEYS=0
       WITH_R6=0
       WITH_R5=0
+      WITH_R7=0
       shift
       ;;
     --without-hardening)
@@ -171,6 +186,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-r5)
       WITH_R5=0
+      shift
+      ;;
+    --without-r7)
+      WITH_R7=0
       shift
       ;;
     -h|--help)
@@ -195,6 +214,7 @@ done
 [[ -f "$MERGE_RESTRICT_FILE" ]] || { echo "::error::Migration fehlt: $MERGE_RESTRICT_FILE" >&2; exit 1; }
 [[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
 [[ -f "$CENTRAL_PERMISSIONS_FILE" ]] || { echo "::error::Migration fehlt: $CENTRAL_PERMISSIONS_FILE" >&2; exit 1; }
+[[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -307,8 +327,19 @@ if [[ "$WITH_R5" -eq 1 ]]; then
   psql_stdin < "$CENTRAL_PERMISSIONS_FILE"
 fi
 
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
-  MODE_LABEL="nachher (Baseline + alle sieben Migrationen)"
+# R7 (task-R7-brief.md): is_active_tournament_member() + declined_at/expires_at in den
+# Lese-Policies, profile_visible_to_viewer() und protect_collaborator_row(). Unabhängig von
+# WITH_R5/WITH_R6 anwendbar (referenziert weder role_permissions/has_tournament_permission noch
+# etwas aus 20260924_001) -- eigener Schalter, wie die anderen Migrationen auch.
+if [[ "$WITH_R7" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$DECLINED_EXPIRED_FILE")" >&2
+  psql_stdin < "$DECLINED_EXPIRED_FILE"
+fi
+
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
+  MODE_LABEL="nachher (Baseline + alle acht Migrationen)"
+elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
+  MODE_LABEL="vorher/R7-Gegenprobe (Baseline + 001..20260924_002, ohne R7)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 ]]; then
   MODE_LABEL="vorher/R5-Gegenprobe (Baseline + 001..20260924_001, ohne R5)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
@@ -359,6 +390,19 @@ U_PUBLIC_OWNER="$(uuid_for user:public-owner)"
 U_INVITEE="$(uuid_for user:invitee)"
 INVITEE_EMAIL="invitee@rls-matrix.test"
 C_PENDING_INVITE="$(uuid_for collaborator:pending-invite)"
+
+# R7 (task-R7-brief.md, F4 aus task-R3-review.md): zwei weitere offene Einladungen -- eine vom
+# Eigentümer widerrufene (declined_at gesetzt, NIE angenommen -- der F4-Fall, nicht zu
+# verwechseln mit C_DECLINED_COADMIN oben, das eine bereits ANGENOMMENE, dann widerrufene
+# Mitgliedschaft ist) und eine abgelaufene (expires_at in der Vergangenheit). Je ein eigener
+# Nutzer/E-Mail-Claim, damit run_write() dieselbe invite_email-Annahme-Mechanik wie
+# k2_accept_invitation (oben) nachbilden kann.
+U_DECLINED_INVITEE="$(uuid_for user:declined-invitee)"
+DECLINED_INVITEE_EMAIL="declined-invitee@rls-matrix.test"
+C_DECLINED_INVITE="$(uuid_for collaborator:declined-invite)"
+U_EXPIRED_INVITEE="$(uuid_for user:expired-invitee)"
+EXPIRED_INVITEE_EMAIL="expired-invitee@rls-matrix.test"
+C_EXPIRED_INVITE="$(uuid_for collaborator:expired-invite)"
 
 # R5b-Fixrunde 1 (task-R5b-review.md, M1/M3): zwei weitere Identitäten für die Vollmatrix.
 # U_PENDING hat eine ECHTE co-admin-Zeile mit user_id gesetzt, aber accepted_at IS NULL -- die
@@ -440,7 +484,9 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_INVITEE', 'authenticated', 'authenticated', '$INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_PENDING', 'authenticated', 'authenticated', 'open-invitation@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_DECLINED', 'authenticated', 'authenticated', 'declined-membership@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '$U_DUMMY_ANON_MEMBER', 'authenticated', 'authenticated', 'dummy-anon-member@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+  ('00000000-0000-0000-0000-000000000000', '$U_DUMMY_ANON_MEMBER', 'authenticated', 'authenticated', 'dummy-anon-member@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_DECLINED_INVITEE', 'authenticated', 'authenticated', '$DECLINED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_EXPIRED_INVITEE', 'authenticated', 'authenticated', '$EXPIRED_INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
 
 -- R5 (M4-Beweis "Co-Admin veröffentlicht"): T_MAIN bekommt von Anfang an einen publishedAt-
 -- Marker im config (is_public bleibt false) -- enforce_release_before_public (20260921_001,
@@ -494,6 +540,22 @@ INSERT INTO public.tournament_collaborators
   (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, use_count, max_uses)
 VALUES
   ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', '$U_OWNER', NULL, 0, 5);
+
+-- R7 (F4, task-R3-review.md): offene Einladung, die der Eigentümer per deactivateInvitation()
+-- widerrufen hat, BEVOR sie je angenommen wurde -- declined_at gesetzt, accepted_at bleibt NULL.
+-- Erwartet (R7): die Annahme darf nicht mehr gelingen.
+INSERT INTO public.tournament_collaborators
+  (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, declined_at, use_count, max_uses)
+VALUES
+  ('$C_DECLINED_INVITE', '$T_MAIN', NULL, 'RLSDECLINEDCODE', '$DECLINED_INVITEE_EMAIL', 'viewer', '$U_OWNER', NULL, now(), 0, 5);
+
+-- R7 (F4, task-R3-review.md): offene Einladung mit expires_at in der Vergangenheit -- nie
+-- angenommen, nie widerrufen, einfach abgelaufen. Erwartet (R7): die Annahme darf nicht mehr
+-- gelingen.
+INSERT INTO public.tournament_collaborators
+  (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, expires_at, use_count, max_uses)
+VALUES
+  ('$C_EXPIRED_INVITE', '$T_MAIN', NULL, 'RLSEXPIREDCODE', '$EXPIRED_INVITEE_EMAIL', 'viewer', '$U_OWNER', NULL, now() - interval '7 days', 0, 5);
 
 INSERT INTO public.matches (id, tournament_id, round, field)
 VALUES
@@ -1508,6 +1570,69 @@ k1k2_mark_value "m1-mitglied-sieht-eigentuemer               " "$r6_member_sees_
 k1k2_mark_value "k-angriff-invited-by-gefaelscht-opfer-verdeckt" "$r6_attack_fake_invited_by" "$exp_r6_attack_fake_invited_by"
 k1k2_mark_value "k-angriff-zwangsmitgliedschaft-opfer-verdeckt" "$r6_attack_forced_membership" "$exp_r6_attack_forced_membership"
 
+# --- 7e. R7 (task-R7-brief.md) — widerrufene/abgelaufene Mitgliedschaft und Einladungen -----
+# Nutzt U_DECLINED (accepted_at UND declined_at gesetzt auf T_MAIN, bereits von R5b-Fixrunde-1
+# angelegt, siehe C_DECLINED_COADMIN oben) für die Lese-Zeilen und zwei neue Einladungs-
+# Fixturen (C_DECLINED_INVITE/C_EXPIRED_INVITE, siehe Fixtures-Block) für die Annahme-Zeilen.
+# Läuft IMMER (unabhängig von WITH_MIGRATION/HARDENING/PARENT_KEYS/R6/R5) — R7 ist orthogonal zu
+# allen vorherigen Fixrunden, nur von WITH_R7 selbst abhängig.
+if [[ "$WITH_R7" -eq 1 ]]; then
+  exp_r7_declined="denied"
+  exp_r7_declined_profile="denied"
+  exp_r7_accept_declined="denied"
+  exp_r7_accept_expired="denied"
+else
+  exp_r7_declined="allowed"
+  exp_r7_declined_profile="allowed"
+  exp_r7_accept_declined="allowed"
+  exp_r7_accept_expired="allowed"
+fi
+# Von R7 unberührt, in beiden Modi gleich: aktive Mitgliedschaft liest weiter, eine gültige
+# Einladung lässt sich weiter annehmen, ein Nicht-Mitglied liest ein öffentliches Turnier weiter.
+exp_r7_active="allowed"
+exp_r7_accept_valid="allowed"
+exp_r7_public_nonmember="allowed"
+
+r7_declined_tournaments="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.tournaments WHERE id = '$T_MAIN';")"
+r7_declined_matches="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.matches WHERE id = '$M_MAIN';")"
+r7_declined_teams="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.teams WHERE id = '$TEAM_MAIN';")"
+r7_declined_match_events="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.match_events WHERE id = '$E_MAIN';")"
+
+r7_active_tournaments="$(run_select_as authenticated "$U_COLLAB" "SELECT id FROM public.tournaments WHERE id = '$T_MAIN';")"
+r7_active_matches="$(run_select_as authenticated "$U_COLLAB" "SELECT id FROM public.matches WHERE id = '$M_MAIN';")"
+r7_active_teams="$(run_select_as authenticated "$U_COLLAB" "SELECT id FROM public.teams WHERE id = '$TEAM_MAIN';")"
+r7_active_match_events="$(run_select_as authenticated "$U_COLLAB" "SELECT id FROM public.match_events WHERE id = '$E_MAIN';")"
+r7_active_got="$([[ "$r7_active_tournaments" == "allowed" && "$r7_active_matches" == "allowed" && "$r7_active_teams" == "allowed" && "$r7_active_match_events" == "allowed" ]] && echo "allowed" || echo "denied")"
+
+r7_declined_sees_owner_profile="$(run_select_as authenticated "$U_DECLINED" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';")"
+
+r7_nonmember_reads_public="$(run_select_as authenticated "$U_NONMEMBER" "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
+
+# Annahme-Sonden: exakt derselbe Update-Pfad wie k2_accept_invitation oben
+# (invitationService.ts#acceptInvitation), je eigene, nie committete Transaktion (run_write()).
+r7_accept_declined_invite="$(run_write "$U_DECLINED_INVITEE" \
+  "UPDATE public.tournament_collaborators SET user_id = '$U_DECLINED_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_DECLINED_INVITE';" \
+  "$DECLINED_INVITEE_EMAIL")"
+r7_accept_expired_invite="$(run_write "$U_EXPIRED_INVITEE" \
+  "UPDATE public.tournament_collaborators SET user_id = '$U_EXPIRED_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_EXPIRED_INVITE';" \
+  "$EXPIRED_INVITEE_EMAIL")"
+r7_accept_valid_invite="$(run_write "$U_INVITEE" \
+  "UPDATE public.tournament_collaborators SET user_id = '$U_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_PENDING_INVITE';" \
+  "$INVITEE_EMAIL")"
+
+echo ""
+echo "=== R7 — Widerrufene/abgelaufene Mitgliedschaft und Einladungen (task-R7-brief.md) — $MODE_LABEL ==="
+k1k2_mark_value "widerrufenes-mitglied-liest-tournaments    " "$r7_declined_tournaments" "$exp_r7_declined"
+k1k2_mark_value "widerrufenes-mitglied-liest-matches        " "$r7_declined_matches" "$exp_r7_declined"
+k1k2_mark_value "widerrufenes-mitglied-liest-teams          " "$r7_declined_teams" "$exp_r7_declined"
+k1k2_mark_value "widerrufenes-mitglied-liest-match_events   " "$r7_declined_match_events" "$exp_r7_declined"
+k1k2_mark_value "aktives-mitglied-liest-dasselbe            " "$r7_active_got" "$exp_r7_active"
+k1k2_mark_value "widerrufenes-mitglied-sieht-eigentuemer-profil" "$r7_declined_sees_owner_profile" "$exp_r7_declined_profile"
+k1k2_mark_value "nicht-mitglied-liest-oeffentliches-turnier " "$r7_nonmember_reads_public" "$exp_r7_public_nonmember"
+k1k2_mark_value "annahme-widerrufene-einladung              " "$r7_accept_declined_invite" "$exp_r7_accept_declined"
+k1k2_mark_value "annahme-abgelaufene-einladung              " "$r7_accept_expired_invite" "$exp_r7_accept_expired"
+k1k2_mark_value "annahme-gueltige-einladung                 " "$r7_accept_valid_invite" "$exp_r7_accept_valid"
+
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 # R5b: fest im Skript verankert (nicht mehr in der JSON) -- das ist kein "Recht" aus der
 # Rechtetabelle (rolePermissions.json enthält nur Schreibrechte je Rolle), sondern eine
@@ -1526,7 +1651,7 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5b (H4/M3/M4/M5, R5-H1, N4, manageMembers), R6 (F3/F7) und Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5b (H4/M3/M4/M5, R5-H1, N4, manageMembers), R6 (F3/F7), R7 (declined_at/expires_at) und Public-Read-Stichprobe) ==="
 
 # --- 9. L4: CI-Gate im Default-Modus ("nachher", alle Migrationen) ------------------------
 # Vorher endete dieses Skript immer mit Exit 0 ("misst, urteilt nicht") — das reicht als
@@ -1535,7 +1660,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
