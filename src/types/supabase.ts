@@ -2,7 +2,7 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-21
+ * Letzte Regeneration: 2026-09-24
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -449,6 +449,21 @@ export type Database = {
           preferences?: Json | null
           role?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          permission: string
+          role: string
+        }
+        Insert: {
+          permission: string
+          role: string
+        }
+        Update: {
+          permission?: string
+          role?: string
         }
         Relationships: []
       }
@@ -961,9 +976,18 @@ export type Database = {
     }
     Functions: {
       anonymous_tournament_limit: { Args: never; Returns: number }
+      auth_provider_for_email: { Args: { p_email: string }; Returns: string }
       can_create_tournament: { Args: never; Returns: Json }
       count_active_tournaments: { Args: { user_id: string }; Returns: number }
       generate_share_code: { Args: never; Returns: string }
+      has_tournament_permission: {
+        Args: { p_permission: string; p_tournament_id: string }
+        Returns: boolean
+      }
+      is_active_tournament_member: {
+        Args: { p_tournament_id: string }
+        Returns: boolean
+      }
       is_anonymous_user: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }
@@ -991,6 +1015,10 @@ export type Database = {
       merge_user_data: {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
+      }
+      profile_visible_to_viewer: {
+        Args: { p_profile_id: string }
+        Returns: boolean
       }
       record_monitor_heartbeat: {
         Args: {

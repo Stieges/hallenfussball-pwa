@@ -29,6 +29,14 @@ export interface GameControlsProps {
   onEventLog?: () => void;
   canUndo?: boolean;
   breakpoint?: Breakpoint;
+  /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
+   *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
+   *  Fixrunde 2/3 (M2, Review-Befund M): does NOT cover Settings or Event-Log — both had no
+   *  `disabled` at all before R2 (commit 235d947) and must stay that way, auch unter readOnly.
+   *  Settings zeigt echte, synchronisierte Werte (kein Lokalzustand) — Regel 2 erlaubt "ansehen",
+   *  also öffnet sich der Dialog immer; die Eingaben darin sperrt stattdessen
+   *  MatchCockpitSettingsPanel selbst über ein natives `<fieldset disabled>` (siehe dort). */
+  disabled?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -48,6 +56,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onEventLog,
   canUndo = false,
   breakpoint = 'desktop',
+  disabled = false,
 }) => {
   const { t } = useTranslation('cockpit');
   const isMobile = breakpoint === 'mobile';
@@ -75,13 +84,14 @@ export const GameControls: React.FC<GameControlsProps> = ({
     minHeight: '44px', // WCAG Touch Target
     fontSize: cssVars.fontSizes.sm,
     fontWeight: cssVars.fontWeights.semibold,
-    cursor: 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: cssVars.spacing.xs,
     background: 'transparent',
     color: cssVars.colors.textPrimary,
+    opacity: disabled ? 0.5 : 1,
     transition: 'all 0.15s',
   };
 
@@ -105,8 +115,18 @@ export const GameControls: React.FC<GameControlsProps> = ({
   const btnUndoStyle: CSSProperties = {
     ...btnStyle,
     background: 'transparent',
-    opacity: canUndo ? 1 : 0.5,
-    cursor: canUndo ? 'pointer' : 'not-allowed',
+    opacity: disabled || !canUndo ? 0.5 : 1,
+    cursor: disabled || !canUndo ? 'not-allowed' : 'pointer',
+  };
+
+  // Task R2 Fixrunde 2/3 (M2, Review-Befund M): Settings- und Event-Log-Button sind NIE über
+  // `disabled` gesperrt — öffnen/ansehen bleibt immer erlaubt (siehe `disabled`-Doc-Kommentar
+  // oben). Für Settings sperrt stattdessen MatchCockpitSettingsPanel selbst die Eingaben unter
+  // readOnly (natives <fieldset disabled>, Regel 2: "ansehen bleibt erlaubt").
+  const btnNeverLockedStyle: CSSProperties = {
+    ...btnStyle,
+    cursor: 'pointer',
+    opacity: 1,
   };
 
   // Main button label
@@ -136,7 +156,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
         <button
           style={btnUndoStyle}
           onClick={onUndo}
-          disabled={!canUndo}
+          disabled={disabled || !canUndo}
           type="button"
           aria-label="Rückgängig"
           data-testid="match-undo-button"
@@ -149,7 +169,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       <button
         style={btnStartStyle}
         onClick={handleMainButtonClick}
-        disabled={isFinished}
+        disabled={disabled || isFinished}
         type="button"
         aria-label={isRunning ? 'Pausieren' : 'Starten'}
         data-testid={isRunning ? 'match-pause-button' : 'match-start-button'}
@@ -161,7 +181,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       <button
         style={btnStyle}
         onClick={onEditTime}
-        disabled={isFinished}
+        disabled={disabled || isFinished}
         type="button"
         aria-label="Zeit bearbeiten"
         data-testid="match-edit-time-button"
@@ -173,7 +193,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       <button
         style={btnStyle}
         onClick={onSwitchSides}
-        disabled={isFinished}
+        disabled={disabled || isFinished}
         type="button"
         aria-label="Seiten tauschen"
       >
@@ -184,7 +204,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       <button
         style={btnStyle}
         onClick={onHalfTime}
-        disabled={isFinished}
+        disabled={disabled || isFinished}
         type="button"
         aria-label="Halbzeit"
       >
@@ -195,7 +215,7 @@ export const GameControls: React.FC<GameControlsProps> = ({
       <button
         style={btnEndStyle}
         onClick={onFinish}
-        disabled={isFinished || isNotStarted}
+        disabled={disabled || isFinished || isNotStarted}
         type="button"
         aria-label="Spiel beenden"
         data-testid="match-finish-button"
@@ -203,10 +223,12 @@ export const GameControls: React.FC<GameControlsProps> = ({
         🏁 {!isMobile && 'Beenden'}
       </button>
 
-      {/* Settings */}
+      {/* Settings — Task R2 Fixrunde 2/3 (M2, Review-Befund M): nie über `disabled` gesperrt, der
+          Dialog öffnet sich immer (Regel 2: Settings zeigt echte Werte, "ansehen" bleibt
+          erlaubt); die Eingaben sperrt MatchCockpitSettingsPanel selbst unter readOnly. */}
       {onSettings && (
         <button
-          style={btnStyle}
+          style={btnNeverLockedStyle}
           onClick={onSettings}
           type="button"
           aria-label="Einstellungen"
@@ -215,10 +237,11 @@ export const GameControls: React.FC<GameControlsProps> = ({
         </button>
       )}
 
-      {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar) */}
+      {/* BUG-002: Event Log - Mobile only (Desktop has Sidebar). Task R2 Fixrunde 2 (M2/Regel 2):
+          nie über `disabled` gesperrt — öffnen zum Lesen bleibt immer erlaubt. */}
       {isMobile && onEventLog && (
         <button
-          style={btnStyle}
+          style={btnNeverLockedStyle}
           onClick={onEventLog}
           type="button"
           aria-label="Ereignisprotokoll anzeigen"

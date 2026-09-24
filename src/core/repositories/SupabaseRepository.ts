@@ -253,18 +253,34 @@ export class SupabaseRepository implements ITournamentRepository {
     const newTeamIds = new Set(teamRows.map((t) => t.id));
 
     // Delete teams that are no longer in the tournament
+    //
+    // R5b/R5-H1 (.superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R5b-brief.md): teams_delete_v2
+    // (DB) allows this only for callers with the 'restructure' permission (owner/co-admin) -- a
+    // caller WITHOUT it (e.g. a collaborator, who never has 'restructure') hits 0 matching rows,
+    // NOT an error. Before this fix the mismatch was silently swallowed: the app believed the
+    // delete had happened, left stale rows in the cloud, and the schedule ended up duplicated
+    // once the subsequent upsert (INSERT ... ON CONFLICT DO UPDATE) succeeded for that same
+    // caller. Counting the actually-deleted rows and throwing on a mismatch converts this into a
+    // loud error that reaches the existing MutationQueue retry/dead-letter path instead.
     const teamsToDelete = [...existingTeamIds].filter(
       (id) => !newTeamIds.has(id)
     );
     if (teamsToDelete.length > 0) {
-      const { error: deleteError } = await getSupabase()
+      const { data: deletedTeams, error: deleteError } = await getSupabase()
         .from('teams')
         .delete()
-        .in('id', teamsToDelete);
+        .in('id', teamsToDelete)
+        .select('id');
 
       if (deleteError) {
         console.error('Failed to delete teams:', deleteError);
-        // Continue anyway - teams might have match references
+        throw new RepositoryError('saveTeams', deleteError.message, deleteError);
+      }
+
+      if ((deletedTeams?.length ?? 0) !== teamsToDelete.length) {
+        const message = `Expected to delete ${teamsToDelete.length} team(s), but only ${deletedTeams?.length ?? 0} were actually deleted (permission denied for the rest).`;
+        console.error(message);
+        throw new RepositoryError('saveTeams', message);
       }
     }
 
@@ -289,19 +305,27 @@ export class SupabaseRepository implements ITournamentRepository {
     const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
     const newMatchIds = new Set(matchRows.map((m) => m.id));
 
-    // Delete matches that are no longer in the tournament
+    // Delete matches that are no longer in the tournament (R5b/R5-H1, same reasoning as teams
+    // above -- matches_delete_v2 gates on 'restructure' too).
     const matchesToDelete = [...existingMatchIds].filter(
       (id) => !newMatchIds.has(id)
     );
     if (matchesToDelete.length > 0) {
-      const { error: deleteError } = await getSupabase()
+      const { data: deletedMatches, error: deleteError } = await getSupabase()
         .from('matches')
         .delete()
-        .in('id', matchesToDelete);
+        .in('id', matchesToDelete)
+        .select('id');
 
       if (deleteError) {
         console.error('Failed to delete matches:', deleteError);
-        // Continue anyway
+        throw new RepositoryError('saveMatches', deleteError.message, deleteError);
+      }
+
+      if ((deletedMatches?.length ?? 0) !== matchesToDelete.length) {
+        const message = `Expected to delete ${matchesToDelete.length} match(es), but only ${deletedMatches?.length ?? 0} were actually deleted (permission denied for the rest).`;
+        console.error(message);
+        throw new RepositoryError('saveMatches', message);
       }
     }
 

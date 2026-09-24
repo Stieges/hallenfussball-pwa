@@ -41,20 +41,16 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
   }
 
   try {
-    // Query the profiles table for auth_provider
-    // This column is set by the handle_new_user trigger
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('auth_provider')
-      .eq('email', email.toLowerCase().trim())
-      .single();
+    // R6 (task-R6-brief.md, F3): profiles.email ist für anon/authenticated nicht mehr per
+    // SELECT lesbar/filterbar (20260924_001_restrict_profiles.sql). Die Suche nach dem
+    // auth_provider einer E-Mail-Adresse läuft deshalb über die SECURITY-DEFINER-RPC
+    // auth_provider_for_email, die intern per E-Mail sucht, aber nie die E-Mail-Adresse selbst
+    // zurückgibt — nur den auth_provider (oder NULL, wenn kein Konto existiert).
+    const { data, error } = await supabase.rpc('auth_provider_for_email', {
+      p_email: email.toLowerCase().trim(),
+    });
 
     if (error) {
-      // PGRST116 = no rows found - user doesn't exist
-      if (error.code === 'PGRST116') {
-        return { isOAuthOnly: false, provider: 'unknown', error: 'User not found' };
-      }
-
       if (import.meta.env.DEV) { console.error('[authHelpers] checkOAuthOnlyUser error:', error); }
 
       // Handle network errors specifically
@@ -65,7 +61,16 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
       return { isOAuthOnly: false, provider: 'unknown', error: error.message };
     }
 
-    const provider = (data.auth_provider ?? 'email') as AuthProvider;
+    if (data === null) {
+      // Keine Zeile zu dieser Adresse - Nutzer existiert nicht
+      return { isOAuthOnly: false, provider: 'unknown', error: 'User not found' };
+    }
+
+    // R6 Fixrunde 1 (L3): Die RPC liefert seit 20260924_001 immer coalesce(auth_provider,
+    // 'email') - ein NULL-Provider (z.B. sehr alte/manuell veränderte Zeilen) wird serverseitig
+    // schon zu 'email' normalisiert. Ein zusätzliches "?? 'email'" hier wäre toter Code, da
+    // `data` nach der Null-Prüfung oben nie mehr null/undefined sein kann.
+    const provider = data as AuthProvider;
 
     // OAuth-only if provider is NOT 'email'
     const isOAuthOnly = provider !== 'email' && provider !== 'unknown';

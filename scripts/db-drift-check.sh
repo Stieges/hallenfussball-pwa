@@ -26,11 +26,15 @@
 # werden muss — nur wenn die Baseline selbst neu erzeugt wird, muss der Marker in ihr
 # nachgezogen werden.
 #
-# Vergleich läuft auf zwei Beinen (beide müssen grün sein):
+# Vergleich läuft auf zwei Beinen (beide müssen grün sein), plus einer optionalen Rechte-
+# Assertion, die nur läuft, wenn SUPABASE_DB_READONLY_URL gesetzt ist:
 #   1. Normalisierter Textdiff des Schemas.
 #   2. Katalogzählung (Tabellen/Spalten/Policies/Funktionen/Trigger/Indizes/RLS-Tabellen),
 #      dynamisch aus dem SQL-Text ermittelt (scripts/db_catalog_counts.py) — keine
 #      fest verdrahteten Zahlen, sie ändern sich mit jeder Migration.
+#   3. Rechte-Assertion (R6, scripts/db_privilege_assertions.sql): feste Liste von Spalten-/
+#      Funktionsrechten, live per has_column_privilege()/has_function_privilege() geprüft — die
+#      GRANT/REVOKE-Anweisungen, die Beine 1+2 wegen --no-privileges nie sehen.
 #
 # Beide Seiten werden mit DEMSELBEN pg_dump-Binary aus DEMSELBEN Container erzeugt — das ist
 # entscheidend, weil unterschiedliche Dump-Werkzeuge allein durch Formatierung (Quoting,
@@ -168,6 +172,14 @@ for _ in $(seq 1 30); do
 done
 
 docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$BASELINE_FILE"
+
+# R5b-Fixrunde 1 (M2): Der frühere Nachbau der Rolle ci_schema_reader hier ist ENTFALLEN --
+# 20260924_002_central_role_permissions.sql legt sie jetzt selbst bedingt an (Abschnitt 0 der
+# Migration, NOLOGIN, DO-Block mit pg_roles-Abfrage) -- dieser interne Vergleichs-Container
+# verbindet sich ohnehin nie ALS ci_schema_reader (das passiert nur bei einer externen
+# SUPABASE_DB_READONLY_URL, siehe unten), er braucht die Rolle nur, damit die Migration
+# GRANT/CREATE POLICY ... TO "ci_schema_reader" einspielen kann.
+
 for f in "${NEWER_MIGRATIONS[@]:-}"; do
   [[ -z "$f" ]] && continue
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$f"
@@ -239,6 +251,144 @@ else
   (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
+fi
+
+# --- 4b. Live-Rechte-Assertion (R6) -------------------------------------------------------
+# GRANT/REVOKE-Anweisungen sind fuer den Textdiff und die Katalogzaehlung unten unsichtbar
+# (beide Dumps laufen mit --no-privileges, siehe Kopfkommentar). Ein Live-GRANT SELECT ON
+# profiles TO anon (die Lücke, die 20260924_001_restrict_profiles.sql schliesst) würde vom
+# Rest dieses Skripts NIE bemerkt. scripts/db_privilege_assertions.sql prüft deshalb live,
+# über has_column_privilege()/has_function_privilege(), eine feste Liste von Spalten- und
+# Funktionsrechten (Details und Positivkontrollen im Kopfkommentar dieser Datei).
+#
+# Nur mit SUPABASE_DB_READONLY_URL moeglich (derselbe Verbindungsweg wie Schritt 4 oben) — die
+# rein CLI-basierte --linked-Alternative liefert keine Connection-URL, gegen die sich beliebiges
+# SQL ausfuehren liesse. Kein Ausführen ohne diese Variable heisst NICHT automatisch grün: das
+# Skript macht die Lücke im Log sichtbar, statt sie stillschweigend zu überspringen, faellt aber
+# (anders als der Rest des Skripts) nicht deswegen mit Exit 1 — das waere ein Rueckschritt fuer
+# den bestehenden --linked-Fallback-Pfad, der diese Variable nie gesetzt hat.
+# Fixrunde 1 (task-R6-review.md, L2, Befund 1): Der reine "keine Zeile endet auf |f"-Check
+# unten wäre vakuum-grün für eine geleerte oder auf Kommentare gekürzte
+# db_privilege_assertions.sql (0 Zeilen Ausgabe, kein "|f" zu finden). Diese feste Namensliste
+# erzwingt zusätzlich, dass GENAU diese Prüfungen (nicht mehr, nicht weniger) tatsächlich
+# gelaufen sind — jede fehlende oder unerwartete Zeile ist ein eigener Fehler, unabhängig vom
+# "|f"-Check. Muss 1:1 zu den Zeilen in scripts/db_privilege_assertions.sql passen.
+PRIVILEGE_ASSERTION_NAMES=(
+  "anon-no-insert-profiles"
+  "authenticated-no-insert-profiles"
+  "anon-no-delete-profiles"
+  "authenticated-no-delete-profiles"
+  "anon-no-truncate-profiles"
+  "authenticated-no-truncate-profiles"
+  "anon-no-maintain-profiles"
+  "authenticated-no-maintain-profiles"
+  "anon-no-select-profiles-email"
+  "authenticated-no-select-profiles-email"
+  "anon-no-select-profiles-auth-provider"
+  "authenticated-no-select-profiles-auth-provider"
+  "anon-no-select-profiles-preferences"
+  "authenticated-no-select-profiles-preferences"
+  "anon-no-select-profiles-display-name"
+  "authenticated-no-update-profiles-role"
+  "authenticated-no-update-profiles-email"
+  "authenticated-no-update-profiles-auth-provider"
+  "anon-no-execute-merge-user-data"
+  "authenticated-no-execute-merge-user-data"
+  "anon-no-select-role-permissions"
+  "authenticated-no-insert-role-permissions"
+  "authenticated-no-update-role-permissions"
+  "authenticated-no-delete-role-permissions"
+  "positive-authenticated-select-display-name"
+  "positive-anon-execute-auth-provider-for-email"
+  "positive-authenticated-select-role-permissions"
+  "positive-ci-schema-reader-select-role-permissions"
+  "positive-anon-execute-is-active-tournament-member"
+  "positive-anon-execute-has-tournament-permission"
+)
+
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Rechte-Assertion (R6, live über SUPABASE_DB_READONLY_URL) ---"
+  PRIV_OUT="$WORKDIR/privilege_assertions.out"
+  if ! { cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -v ON_ERROR_STOP=1 \
+    > "$PRIV_OUT" 2>&1; then
+    echo "::error::Rechte-Assertion konnte nicht ausgeführt werden (siehe Ausgabe):" >&2
+    cat "$PRIV_OUT" >&2
+    exit 1
+  fi
+  cat "$PRIV_OUT"
+
+  PRIV_ASSERTION_FAILED=0
+
+  # 1. Namensliste: jeder erwartete Name muss GENAU EINMAL vorkommen.
+  for expected_name in "${PRIVILEGE_ASSERTION_NAMES[@]}"; do
+    occurrences="$(grep -cE "^${expected_name}\|" "$PRIV_OUT" || true)"
+    if [[ "$occurrences" -ne 1 ]]; then
+      echo "::error::Rechte-Assertion unvollständig — '$expected_name' kommt ${occurrences}x vor (erwartet: 1). Datei geleert/gekürzt?" >&2
+      PRIV_ASSERTION_FAILED=1
+    fi
+  done
+
+  # 2. Keine unerwarteten Zeilen (z.B. Tippfehler, der eine Prüfung verdoppelt statt zu ersetzen).
+  actual_line_count="$(grep -cE '^[a-z0-9-]+\|[tf]$' "$PRIV_OUT" || true)"
+  expected_line_count="${#PRIVILEGE_ASSERTION_NAMES[@]}"
+  if [[ "$actual_line_count" -ne "$expected_line_count" ]]; then
+    echo "::error::Rechte-Assertion hat $actual_line_count Zeile(n), erwartet genau $expected_line_count." >&2
+    PRIV_ASSERTION_FAILED=1
+  fi
+
+  # 3. Jede Zeile muss 't' sein.
+  if grep -qE '\|f$' "$PRIV_OUT"; then
+    echo "::error::Rechte-Assertion fehlgeschlagen — mindestens eine Zeile ist 'f':" >&2
+    grep -E '\|f$' "$PRIV_OUT" | while IFS='|' read -r failed_name _; do
+      echo "::error::  $failed_name" >&2
+    done
+    PRIV_ASSERTION_FAILED=1
+  fi
+
+  if [[ "$PRIV_ASSERTION_FAILED" -ne 0 ]]; then
+    exit 1
+  fi
+  echo "Rechte-Assertion grün: alle $expected_line_count erwarteten Zeilen vorhanden und wie erwartet."
+else
+  echo ""
+  echo "Rechte-Assertion (R6) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4c. R5b (task-R5b-brief.md, Abschnitt 4): role_permissions-Inhalt vs. rolePermissions.json --
+# Textdiff und Katalogzählung unten laufen mit --no-privileges UND vergleichen nur die SCHEMA-
+# Definition (Spalten, Constraints) der Tabelle role_permissions, NIE ihren Zeileninhalt (kein
+# Dump-Werkzeug hier zieht Daten). Eine live geänderte Zeile in role_permissions (z.B. per
+# Hand im SQL-Editor, an rolePermissions.json vorbei) würde von beiden Beinen NIE bemerkt. Dieser
+# Abschnitt vergleicht deshalb den tatsächlichen INHALT der Tabelle -- über dieselbe nur-lesende
+# Rolle wie die Rechte-Assertion oben (ci_schema_reader braucht dafür die eigene Policy
+# "role_permissions_select_ci_schema_reader", siehe Migrationskommentar; die Positivkontrolle
+# "positive-ci-schema-reader-select-role-permissions" oben belegt nur den GRANT, RLS könnte den
+# Zeileninhalt trotzdem auf 0 filtern -- das würde hier als "0 Zeilen" sichtbar UND als Diff
+# gegen die JSON rot, nicht stillschweigend als Erfolg gewertet).
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Gleichlauf role_permissions (DB, live) vs. rolePermissions.json ---"
+  DB_ROLE_PERMISSIONS_LIVE="$(docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT role || '|' || permission FROM public.role_permissions ORDER BY role, permission;" \
+    2>"$WORKDIR/role_permissions_live.log" | sort)" \
+    || { echo "::error::Konnte public.role_permissions nicht live lesen (ci_schema_reader):" >&2
+         cat "$WORKDIR/role_permissions_live.log" >&2; exit 1; }
+  JSON_ROLE_PERMISSIONS="$(jq -r '.roles | to_entries[] | .key as $role | .value[] | $role + "|" + .' \
+    "$REPO_ROOT/src/features/auth/permissions/rolePermissions.json" | sort)"
+  if [[ "$DB_ROLE_PERMISSIONS_LIVE" == "$JSON_ROLE_PERMISSIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_ROLE_PERMISSIONS" | tr -d ' ')"
+    echo "Gleichlauf grün: role_permissions (live) und rolePermissions.json stimmen überein ($ROW_COUNT Zeilen)."
+  else
+    echo "::error::role_permissions (live) weicht von rolePermissions.json ab:" >&2
+    echo "### Diff (links: rolePermissions.json, rechts: DB live)" >&2
+    diff <(echo "$JSON_ROLE_PERMISSIONS") <(echo "$DB_ROLE_PERMISSIONS_LIVE") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------

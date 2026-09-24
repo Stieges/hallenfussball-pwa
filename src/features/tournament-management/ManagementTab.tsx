@@ -110,7 +110,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     if (initialMatchId) {
       // Check if there's a running match that needs to be ended
       const runningMatch = hasRunningMatch();
-      if (runningMatch && runningMatch.id !== initialMatchId) {
+      // R4/H3: initialMatchId kommt aus dem URL-Query-Parameter `matchId` (ungeprüfter Input) —
+      // dieser automatische handleFinish() darf nur laufen, wenn der Nutzer das LAUFENDE Spiel
+      // bearbeiten darf. "User already confirmed in ScheduleTab" gilt nur für den Normalfall über
+      // die UI; per direktem URL-Aufruf ist das nicht garantiert.
+      if (
+        runningMatch &&
+        runningMatch.id !== initialMatchId &&
+        checkCanEditMatch([runningMatch.homeTeam.id, runningMatch.awayTeam.id])
+      ) {
         // End the running match first - user already confirmed in ScheduleTab
         void handleFinish(runningMatch.id);
       }
@@ -125,7 +133,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       // Consume the initial match ID
       onInitialMatchConsumed?.();
     }
-  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, hasRunningMatch, handleFinish]);
+  }, [initialMatchId, schedule.allMatches, onInitialMatchConsumed, hasRunningMatch, handleFinish, checkCanEditMatch]);
 
   // Helper: Check if a team reference is a placeholder (not a real team ID)
   const isPlaceholder = useCallback((teamRef: string): boolean => {
@@ -296,6 +304,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     const runningMatch = hasRunningMatch();
 
     if (runningMatch && runningMatch.id !== newMatchId) {
+      // R4/H3: Die Berechtigung gilt für das LAUFENDE Spiel, nicht für das neu gewählte — darf
+      // der Nutzer das laufende Spiel nicht bearbeiten, gibt es weder Dialog noch handleFinish,
+      // nur den Wechsel der Auswahl.
+      if (!checkCanEditMatch([runningMatch.homeTeam.id, runningMatch.awayTeam.id])) {
+        setSelectedMatchId(newMatchId);
+        return;
+      }
+
       const confirmed = await switchMatchDialog.confirm({
         message: t('management.switchMatchMessage', { number: runningMatch.number, home: runningMatch.homeTeam.name, away: runningMatch.awayTeam.name, homeScore: runningMatch.homeScore, awayScore: runningMatch.awayScore }),
         confirmText: t('management.endAndSwitch'),
@@ -307,7 +323,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     }
 
     setSelectedMatchId(newMatchId);
-  }, [hasRunningMatch, handleFinish, switchMatchDialog, t]);
+  }, [hasRunningMatch, handleFinish, switchMatchDialog, t, checkCanEditMatch]);
 
   // Handler: Load next match on current field
   // BUG-FIX: Improved logic - find next unplayed match on current field

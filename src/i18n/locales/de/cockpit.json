@@ -292,6 +292,9 @@
     "editResult": "Ergebnis bearbeiten",
     "adjustTime": "Zeit anpassen"
   },
+  "readOnly": {
+    "banner": "Nur Ansicht — du hast keine Berechtigung, dieses Spiel zu bedienen."
+  },
   "extended": {
     "editScoreAria": "Ergebnis korrigieren",
     "score": "Ergebnis",
