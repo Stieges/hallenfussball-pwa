@@ -28,19 +28,13 @@ set -eu
 LOCAL_TERMS_FILE="${FORBIDDEN_TERMS_FILE:-.claude/local/forbidden-terms.txt}"
 IS_CI="${CI:-}"
 
-# Ausnahmeliste. Zwei Gruppen (siehe
+# Ausnahmeliste: genau die zwei Dateien mit Daniels eigenen, noch nicht
+# committeten Änderungen (siehe
 # .superpowers/sdd/2026-09-24-llm-gateway/task-G2-G4-report.md, lokal und
-# gitignored, für den vollen Hintergrund):
-#   1. Dauerhaft aus G3 ausgenommen: Env-Var-Dokumentation, Kommentare/Ignore-
-#      Muster für ein separates, bereits lokal ausgeschlossenes Verzeichnis,
-#      sowie historische/archivierte Doku. Nicht Teil dieses Auftrags.
-#   2. Temporär ausgenommen, bis Daniels eigene unkommittete Änderungen
-#      eingecheckt sind: .claude/commands/coherence-review.md, docs/TODO.md.
-# Diese Datei hier nennt selbst keine Anbieter-Begriffe.
+# gitignored, für den vollen Hintergrund). Temporär, bis diese Änderungen
+# eingecheckt sind. Diese Datei hier nennt selbst keine Anbieter-Begriffe.
 is_exempt() {
   case "$1" in
-    ".env.example"|".gitignore"|"eslint.config.js") return 0 ;;
-    "docs/analysis/"*|"docs/archive/"*|"docs/findings/"*|"docs/user-stories/"*) return 0 ;;
     ".claude/commands/coherence-review.md"|"docs/TODO.md") return 0 ;;
     *) return 1 ;;
   esac

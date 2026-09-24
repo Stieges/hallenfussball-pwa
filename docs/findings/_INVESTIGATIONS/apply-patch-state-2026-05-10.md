@@ -13,7 +13,7 @@ Aus `.claude/logs/finding-fixes.jsonl` (gefiltert auf F-243):
  "fallback_used":false,"tool_call_errors":2,"planned_changes_count":0}
 
 // Run 2 (mit override model_routing=qwen-3.5-122b-sovereign)
-{"model":"qwen3-coder-480b","provider":"aihub","fix_applied":false,
+{"model":"qwen3-coder-480b","provider":"llm-gateway","fix_applied":false,
  "fallback_used":true,"tool_call_errors":0,
  "planned_changes_count":5,"patch_errors_count":1}
 ```
