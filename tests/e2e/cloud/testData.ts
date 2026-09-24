@@ -106,6 +106,15 @@ export const E2E_STRANGER_CUP_TITLE = 'Fremd-Cup';
 /** Fester Share-Code des Public-Cup (Nachweis 3: anonymer Zugriff per Share-Code). */
 export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
 
+/**
+ * Fester Monitor des Public-Cup (`scripts/e2e-seed.ts`, Abschnitt "Public-Cup"). Task T4
+ * (`two-devices.cloud.spec.ts`) braucht die Monitor-Route `/display/:tournamentId/:monitorId`
+ * mit einem `live`-Slide, um "kein Neuladen" für einen anonymen Zuschauer belegen zu können —
+ * der bereits vorhandene Seed-Monitor hatte `slides: []` (T2), das zeigt nur den
+ * "keine Slides konfiguriert"-Screen, nie ein laufendes Spiel. Einzige Änderung: ein Slide.
+ */
+export const E2E_PUBLIC_CUP_MONITOR_ID = e2eUuid('monitor:public-cup:1');
+
 /** Team-Namen des Live-Cup: 8 Teams (A–H), erste Hälfte Gruppe A, zweite Hälfte Gruppe B. */
 export const E2E_LIVE_CUP_TEAM_NAMES = [
   'Team A',

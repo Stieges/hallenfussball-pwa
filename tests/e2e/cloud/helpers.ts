@@ -63,6 +63,21 @@ export async function loginAsRole(page: Page, userKey: Exclude<E2EUserKey, 'goog
   await expect(page.locator('[data-testid="auth-avatar-button"]')).toBeVisible({ timeout: 15000 });
 }
 
+/**
+ * Meldet den aktuell angemeldeten Nutzer über die Oberfläche ab (Avatar-Menü,
+ * `auth-avatar-button` → `auth-logout-button`, siehe `src/components/layout/AuthSection.tsx`).
+ * Wartet danach auf ein "abgemeldet"-Merkmal -- Desktop zeigt `auth-login-button`, Mobile
+ * `auth-mobile-button` (gleiche Unterscheidung wie `gotoLogin()` oben).
+ */
+export async function logoutViaUi(page: Page): Promise<void> {
+  await page.locator('[data-testid="auth-avatar-button"]').click();
+  await page.locator('[data-testid="auth-logout-button"]').click();
+
+  const desktopLoginButton = page.locator('[data-testid="auth-login-button"]');
+  const mobileAuthButton = page.locator('[data-testid="auth-mobile-button"]');
+  await expect(desktopLoginButton.or(mobileAuthButton)).toBeVisible({ timeout: 10000 });
+}
+
 // =============================================================================
 // SYNC-STATUS (Brief Abschnitt 3)
 // =============================================================================
@@ -96,4 +111,35 @@ export async function waitForSync(page: Page, options: WaitForSyncOptions = {}):
       `(data-state="${state}", data-pending="${pending}").`
     );
   }
+}
+
+// =============================================================================
+// LIVE-COCKPIT (Task T4: two-devices.cloud.spec.ts, offline.cloud.spec.ts)
+// =============================================================================
+
+/**
+ * Stellt sicher, dass das aktuell im Cockpit gewählte Spiel läuft -- klickt
+ * `match-start-button`, falls das Spiel noch nicht gestartet ist (`match-pause-button` noch
+ * nicht sichtbar). Kein Effekt, wenn schon ein Spiel läuft. `page` muss bereits auf der
+ * Live-Cockpit-Seite eines Turniers mit Schreibrecht sein (owner/coadmin/helper).
+ */
+export async function ensureMatchRunning(page: Page): Promise<void> {
+  await expect(page.locator('[data-testid="match-status-badge"]')).toBeVisible({ timeout: 15000 });
+  const startButton = page.locator('[data-testid="match-start-button"]');
+  if (await startButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await startButton.click();
+  }
+  await expect(page.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+}
+
+/**
+ * Trägt ein Tor für `side` ein: klickt `goal-button-{side}`, überspringt den
+ * Torschützen-Dialog (`dialog-skip-button`, siehe `GoalScorerDialog.tsx`) -- der Test braucht
+ * nur den Zähler, keinen Spieler.
+ */
+export async function enterGoal(page: Page, side: 'home' | 'away'): Promise<void> {
+  await page.locator(`[data-testid="goal-button-${side}"]`).click();
+  const skipButton = page.locator('[data-testid="dialog-skip-button"]');
+  await expect(skipButton).toBeVisible({ timeout: 5000 });
+  await skipButton.click();
 }

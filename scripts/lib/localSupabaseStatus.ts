@@ -18,6 +18,14 @@ export interface LocalSupabaseStatus {
   serviceRoleKey: string;
   anonKey: string;
   jwtSecret: string;
+  /**
+   * HTTP-Basis-URL der Mailpit-Weboberfläche/-API des lokalen Stacks (Task T4,
+   * `.superpowers/sdd/2026-09-24-testumgebung/task-T4-brief.md`, `auth.cloud.spec.ts`:
+   * "Abfrage über die Mailpit/Inbucket-HTTP-API des lokalen Stacks, Port per `supabase status`").
+   * Mailpits HTTP-API läuft unter derselben Basis-URL wie die Weboberfläche
+   * (`GET {mailpitUrl}/api/v1/messages`, geprüft gegen den lokalen Stack).
+   */
+  mailpitUrl: string;
 }
 
 /**
@@ -36,15 +44,17 @@ export function getLocalSupabaseStatus(): LocalSupabaseStatus {
   const serviceRoleKey = status.SERVICE_ROLE_KEY;
   const anonKey = status.ANON_KEY;
   const jwtSecret = status.JWT_SECRET;
+  const mailpitUrl = status.MAILPIT_URL;
   if (
     typeof url !== 'string' ||
     typeof serviceRoleKey !== 'string' ||
     typeof anonKey !== 'string' ||
-    typeof jwtSecret !== 'string'
+    typeof jwtSecret !== 'string' ||
+    typeof mailpitUrl !== 'string'
   ) {
     throw new Error(
-      '`supabase status -o json` enthält nicht alle erwarteten Felder (API_URL/SERVICE_ROLE_KEY/ANON_KEY/JWT_SECRET).'
+      '`supabase status -o json` enthält nicht alle erwarteten Felder (API_URL/SERVICE_ROLE_KEY/ANON_KEY/JWT_SECRET/MAILPIT_URL).'
     );
   }
-  return { url, serviceRoleKey, anonKey, jwtSecret };
+  return { url, serviceRoleKey, anonKey, jwtSecret, mailpitUrl };
 }

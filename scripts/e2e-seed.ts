@@ -60,6 +60,7 @@ import {
   E2E_DRAFT_CUP_TITLE,
   E2E_STRANGER_CUP_TITLE,
   E2E_PUBLIC_CUP_SHARE_CODE,
+  E2E_PUBLIC_CUP_MONITOR_ID,
   E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
@@ -550,14 +551,27 @@ async function main(): Promise<void> {
     teams: publicCupTeams,
     monitors: [
       {
-        id: e2eUuid('monitor:public-cup:1'),
+        id: E2E_PUBLIC_CUP_MONITOR_ID,
         name: 'Haupthalle Eingang',
         defaultSlideDuration: 15,
         transition: 'fade',
         transitionDuration: 500,
         theme: 'dark',
         performanceMode: 'auto',
-        slides: [],
+        // Task T4 (two-devices.cloud.spec.ts): ein `live`-Slide auf Feld 1 -- ohne das zeigt
+        // die Monitor-Route (`/display/:tournamentId/:monitorId`) nur den "keine Slides
+        // konfiguriert"-Screen und nie das laufende Spiel, das der Test dort ohne Neuladen
+        // erwartet zu sehen. `tests/e2e/cloud/testData.ts#E2E_PUBLIC_CUP_MONITOR_ID` ist die
+        // einzige Quelle für die ID.
+        slides: [
+          {
+            id: e2eUuid('monitor:public-cup:1:slide:live-field-1'),
+            type: 'live',
+            config: { fieldId: 'field-1' },
+            duration: null,
+            order: 0,
+          },
+        ],
         createdAt: nowIso,
         updatedAt: nowIso,
       },
