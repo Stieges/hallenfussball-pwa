@@ -2,7 +2,7 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-21
+ * Letzte Regeneration: 2026-09-24
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -961,7 +961,7 @@ export type Database = {
     }
     Functions: {
       anonymous_tournament_limit: { Args: never; Returns: number }
-      auth_provider_for_email: { Args: { p_email: string }; Returns: string | null }
+      auth_provider_for_email: { Args: { p_email: string }; Returns: string }
       can_create_tournament: { Args: never; Returns: Json }
       count_active_tournaments: { Args: { user_id: string }; Returns: number }
       generate_share_code: { Args: never; Returns: string }
@@ -993,7 +993,10 @@ export type Database = {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
       }
-      profile_visible_to_viewer: { Args: { p_profile_id: string }; Returns: boolean }
+      profile_visible_to_viewer: {
+        Args: { p_profile_id: string }
+        Returns: boolean
+      }
       record_monitor_heartbeat: {
         Args: {
           p_cache_status?: string
