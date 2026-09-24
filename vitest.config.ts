@@ -45,10 +45,13 @@ export default defineConfig({
   test: {
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    // Vitest 5 changed the default to true (auto-clears mock.calls/results
-    // before each test). Pinned to the pre-5.0 default so test behaviour
-    // does not shift silently with this upgrade (T7, siehe Migration Guide).
-    clearMocks: false,
+    // Vitest 5 Default (true): Mock-Aufrufe/-Ergebnisse werden vor jedem Test
+    // automatisch geleert (mock.calls/results), nicht aber Implementierungen
+    // (mockRestore bleibt aus). Verhindert Mock-Leck zwischen Tests innerhalb
+    // derselben Datei. Alle 1406 Tests liefen bereits vorher unabhängig vom
+    // Wert dieser Einstellung grün — keine Datei war auf übrig gebliebenen
+    // Mock-Zustand angewiesen (T7b, 2026-09-24, dreifach verifiziert).
+    clearMocks: true,
     // Zwei Projekte: node-Tests laufen ohne jsdom-Overhead (siehe T7b-Report für
     // die Messung), DOM-Tests (Komponenten, Hooks mit window/document/
     // localStorage/IndexedDB) bleiben in jsdom mit eigenem, zusätzlichem Setup.
