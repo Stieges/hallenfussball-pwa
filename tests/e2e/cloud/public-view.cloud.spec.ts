@@ -87,8 +87,12 @@ test.describe('Public-View', () => {
     await expect(page.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
     // Ergebnisse: der Seed markiert zwei Public-Cup-Spiele als 2:0 beendet (scripts/e2e-seed.ts,
-    // "einige Ergebnisse") -- mindestens EIN "2:0" muss irgendwo auf der Seite stehen.
-    await expect(page.getByText('2:0').first()).toBeVisible({ timeout: 15000 });
+    // "einige Ergebnisse") -- mindestens EIN "2:0" muss irgendwo SICHTBAR auf der Seite stehen.
+    // `.first()` allein reicht nicht: wie beim Turniernamen (siehe oben, smoke.spec.ts) liegen je
+    // Breakpoint mehrere Kopien im DOM, nur eine ist per CSS sichtbar -- unter cloud-mobile war
+    // ausgerechnet die per DOM-Reihenfolge erste ausgeblendet (beobachtet, siehe Report). Der
+    // `:visible`-Filter wählt zuverlässig eine tatsächlich sichtbare Kopie.
+    await expect(page.getByText('2:0').filter({ visible: true }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Entwurf-Cup und Live-Cup (privat) sind per Direktlink nicht erreichbar', async ({ page }) => {
