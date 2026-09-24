@@ -104,6 +104,67 @@
 -- separat, ebenso ein mögliches Bereinigen bestehender Profile). L4 (Harness-Sonden unterscheiden
 -- "verweigert" nicht von "leer") und der unabhängige Befund zu "teams.contact_email"/
 -- "contact_phone" sind laut Controller geparkt, nicht Teil dieser Fixrunde.
+--
+-- ═══════════════════════════════════════════════════════════════════════════════════════════
+-- FIXRUNDE 2 (Controller-Prüfung, Ruling K): Zeilen-Fälschung über ein SELBST kontrolliertes
+-- Turnier heben "profile_visible_to_viewer" aus Fixrunde 1 aus
+-- ═══════════════════════════════════════════════════════════════════════════════════════════
+--
+-- Befund: dasselbe Muster wie K1/K2/K3 in 20260922_003/20260923_001 — der Eigentümer eines
+-- ANDEREN (eigenen) Datensatzes als Angreifer. "collaborators_insert_v3" verlangt nur
+-- "user_owns_tournament(tournament_id)" — ein Angreifer mit eigenem Turnier T_A darf dort JEDE
+-- Zeile einfügen, mit beliebigem "invited_by" oder beliebigem "user_id". Fixrunde-1-Regel (ii)
+-- prüfte nur "tc.invited_by = p_profile_id AND (tc.user_id = auth.uid() OR tc.invite_email =
+-- auth.email())" — OHNE zu prüfen, ob "tc" überhaupt in einem Turnier VON p_profile_id liegt.
+-- Ein Angreifer konnte deshalb in T_A (eigenes Turnier) eine Zeile "(T_A, invited_by = Opfer,
+-- user_id = ich)" einfügen und damit das Profil des Opfers sichtbar machen — das Opfer hat T_A
+-- nie gesehen, geschweige denn jemanden eingeladen. Regel (iii) hatte dasselbe Problem in die
+-- andere Richtung: "(T_A, user_id = Opfer, accepted_at = now())" — eine erzwungene
+-- "Mitgliedschaft", der das Opfer nie zugestimmt hat. Opfer-UUIDs sind dabei kein Hindernis:
+-- "tournaments.owner_id" ist bei öffentlichen Turnieren ohnehin lesbar
+-- ("tournaments_select_v3", "is_public = true").
+--
+-- Ruling K: Sichtbarkeit darf NUR aus Zeilen folgen, die das OPFER selbst kontrolliert oder die
+-- in einem Turnier DES OPFERS liegen — nie aus einem Turnier des Angreifers. Regeln (ii)–(iv) aus
+-- Fixrunde 1 werden deshalb durch eine einzige, engere Regel (b) ersetzt:
+--   EXISTS tc JOIN tournaments t
+--     WHERE t.owner_id = p_profile_id
+--       AND (tc.user_id = auth.uid() OR tc.invite_email = auth.email())
+-- Warum das die alte (ii) ersetzt, ohne "invited_by" zu prüfen: "invited_by" ist in der App IMMER
+-- der tatsächliche Eigentümer. Beleg — "createInvitation" (invitationService.ts:184) setzt
+-- "invitedBy: options.createdBy", und der Aufrufer (useInvitation.ts:128) setzt
+-- "createdBy: user.id" auf den GERADE ANGEMELDETEN Nutzer. Der einzige Schreibpfad für
+-- "invited_by" ist "mapInvitationInsertToSupabase" (supabaseMappers.ts), verwendet ausschließlich
+-- vom INSERT in "createInvitation" — und dieser INSERT scheitert an "collaborators_insert_v3"
+-- (WITH CHECK "user_owns_tournament(tournament_id)"), außer der Aufrufer ist der TATSÄCHLICHE
+-- Eigentümer. Jede live existierende Zeile mit gesetztem "invited_by" hat also zwangsläufig
+-- "invited_by = tournaments.owner_id" — die neue Regel prüft diese Tatsache direkt über
+-- "t.owner_id", ohne sich auf die (grundsätzlich fälschbare) Spalte "invited_by" zu verlassen.
+-- Warum ein Angreifer sich damit nur noch selbst freischaltet: "collaborators_insert_v3" lässt
+-- ihn nur in TURNIEREN EINFÜGEN, DIE ER SELBST BESITZT — für "t.owner_id = p_profile_id" (Opfer)
+-- müsste die eingefügte Zeile in einem Turnier DES OPFERS liegen, das kann der Angreifer nicht
+-- (er besitzt es nicht, "user_owns_tournament" scheitert). Eine Zeile in T_A (Angreifer-Turnier)
+-- erfüllt "t.owner_id = p_profile_id" nur für "p_profile_id = Angreifer" — er macht also
+-- höchstens sich selbst sichtbar (für wen auch immer er als "user_id"/"invite_email" einträgt),
+-- nie das Opfer. Ein Umhängen bestehender Zeilen in ein fremdes Turnier ist durch
+-- "protect_parent_keys()" (20260923_001, K3/H5) bereits verhindert.
+--
+-- Alte Regel (iii) "Eigentümer sieht Mitglied" ENTFÄLLT ersatzlos (nicht durch (b) abgedeckt,
+-- absichtlich): Kein App-Pfad braucht sie. Beleg — "useTournamentMembers.ts:89" lädt Mitglieder-
+-- Namen über "getUserById(membership.userId)" aus "authHelpers.ts", einer ausdrücklich als
+-- "@deprecated"/"BC for localStorage users" markierten Funktion, die NUR den lokalen
+-- "localStorage"-Legacy-Speicher liest (nie "profiles"/Supabase). Eine Grep-Suche über alle
+-- ".from('profiles')"-Aufrufe im gesamten Frontend (5 Stellen, siehe Zugriffstabelle oben und
+-- Fixrunde-1-Kommentar) bestätigt: keine davon liest Mitgliedernamen für einen Eigentümer. Sollte
+-- künftig ein Pfad entstehen, der Mitgliedernamen aus "profiles" lesen will, braucht er eine
+-- eigene, engere Regel (z.B. nur für den EIGENEN Eigentümer-Kontext, nicht generisch) — kein
+-- Wiedereinsetzen der alten Regel (iii) ohne erneute Prüfung.
+--
+-- "Eingeladener sieht Einladenden VOR Annahme" bleibt funktionsfähig: "tc.invite_email =
+-- auth.email()" greift unabhängig von "accepted_at" (die Zeile existiert bereits ab dem Anlegen
+-- der Einladung, "user_id" ist zu dem Zeitpunkt NULL). "NACH Annahme" ebenso: "tc.user_id =
+-- auth.uid()" greift, sobald "acceptInvitation" (protect_collaborator_row-geschützt) den echten
+-- Nutzer einträgt.
 
 REVOKE ALL ON "public"."profiles" FROM "anon", "authenticated";
 
@@ -117,7 +178,8 @@ GRANT SELECT ("id", "display_name", "avatar_url", "role") ON "public"."profiles"
 -- Wegwerf-Container bestätigt (siehe Report).
 GRANT UPDATE ("display_name", "avatar_url") ON "public"."profiles" TO "authenticated";
 
--- Ersetzt "profiles_select_all" (USING true) — siehe Fixrunde-1-Kommentar oben (M1).
+-- Ersetzt "profiles_select_all" (USING true) — siehe Fixrunde-1-Kommentar oben (M1), Regeln
+-- (ii)-(iv) durch Fixrunde 2 (Ruling K) auf eine einzige, fälschungssichere Regel (b) verengt.
 CREATE OR REPLACE FUNCTION "public"."profile_visible_to_viewer"("p_profile_id" "uuid") RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_temp'
@@ -126,29 +188,20 @@ CREATE OR REPLACE FUNCTION "public"."profile_visible_to_viewer"("p_profile_id" "
   -- tournament_collaborators/tournaments beim Auswerten dieser Funktion erneut angewendet
   -- werden (Stil von "user_owns_tournament").
   SELECT
-    -- (i) die eigene Zeile
+    -- (a) die eigene Zeile
     p_profile_id = auth.uid()
-    -- (ii) die Person hat mich eingeladen (angenommen ODER noch offen per invite_email)
-    OR EXISTS (
-      SELECT 1 FROM tournament_collaborators tc
-      WHERE tc.invited_by = p_profile_id
-        AND (tc.user_id = auth.uid() OR tc.invite_email = auth.email())
-    )
-    -- (iii) die Person ist akzeptiertes Mitglied in einem Turnier, das mir gehört
-    OR EXISTS (
-      SELECT 1 FROM tournament_collaborators tc
-      JOIN tournaments t ON t.id = tc.tournament_id
-      WHERE tc.user_id = p_profile_id
-        AND tc.accepted_at IS NOT NULL
-        AND t.owner_id = auth.uid()
-    )
-    -- (iv) die Person ist Eigentümer eines Turniers, in dem ich akzeptiertes Mitglied bin
+    -- (b) p_profile_id ist EIGENTÜMER eines Turniers, in dem eine echte Mitarbeiter-/
+    -- Einladungszeile MICH adressiert — angenommen (user_id) ODER noch offen (invite_email).
+    -- Deckt "Eingeladener sieht Einladenden" (vor UND nach Annahme) und "Mitglied sieht
+    -- Eigentümer" in EINER Regel ab, ohne die fälschbare Spalte "invited_by" zu prüfen (siehe
+    -- Fixrunde-2-Kommentar oben, Ruling K). "collaborators_insert_v3" lässt einen Angreifer nur
+    -- in EIGENEN Turnieren einfügen — für "t.owner_id = p_profile_id" (Opfer) bräuchte es eine
+    -- Zeile in einem Turnier DES OPFERS, die der Angreifer nicht anlegen kann.
     OR EXISTS (
       SELECT 1 FROM tournament_collaborators tc
       JOIN tournaments t ON t.id = tc.tournament_id
       WHERE t.owner_id = p_profile_id
-        AND tc.user_id = auth.uid()
-        AND tc.accepted_at IS NOT NULL
+        AND (tc.user_id = auth.uid() OR tc.invite_email = auth.email())
     );
 $$;
 

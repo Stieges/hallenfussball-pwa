@@ -881,15 +881,23 @@ if [[ "$WITH_R6" -eq 1 ]]; then
   exp_r6_auth_update_display_name="allowed"
   exp_r6_rpc_known="email"
   exp_r6_rpc_unknown="NULL"
-  # Fixrunde 1 (M1): profiles_select_all (USING true) → profiles_select_related. Nur noch (i)
-  # eigenes Profil, (ii) Einladender einer mich betreffenden Einladung, (iii) Mitglied eines mir
-  # gehörenden Turniers, (iv) Eigentümer eines Turniers, in dem ich akzeptiertes Mitglied bin.
+  # Fixrunde 1 (M1): profiles_select_all (USING true) → profiles_select_related.
   exp_r6_own_profile="allowed"
   exp_r6_stranger_sees_member="denied"
   exp_r6_invitee_sees_inviter_pending="allowed"
   exp_r6_invitee_sees_inviter_accepted="allowed"
-  exp_r6_owner_sees_member="allowed"
+  # Fixrunde 2 (Ruling K): Regel (iii) "Eigentümer sieht Mitglied" ENTFÄLLT ersatzlos — kein
+  # App-Pfad braucht sie (useTournamentMembers.ts liest Mitgliedernamen über das deprecated
+  # localStorage-getUserById, nie über profiles). Deshalb jetzt "denied", nicht mehr "allowed"
+  # wie nach Fixrunde 1.
+  exp_r6_owner_sees_member="denied"
   exp_r6_member_sees_owner="allowed"
+  # Fixrunde 2 (Ruling K): Ein Angreifer mit EIGENEM Turnier (collaborators_insert_v3 verlangt
+  # nur user_owns_tournament) darf dort beliebige invited_by/user_id-Werte einfügen —
+  # Fixrunde-1-Regel (ii) prüfte nicht, ob die Zeile in einem Turnier DES OPFERS liegt. Beide
+  # Angriffe müssen jetzt ins Leere laufen.
+  exp_r6_attack_fake_invited_by="denied"
+  exp_r6_attack_forced_membership="denied"
 else
   exp_r6_anon_email="allowed"
   exp_r6_auth_foreign_email="allowed"
@@ -901,13 +909,17 @@ else
   exp_r6_rpc_known="Funktion fehlt"
   exp_r6_rpc_unknown="Funktion fehlt"
   # Vorher (profiles_select_all USING true): JEDE authenticated Person sieht JEDES Profil —
-  # das IST die Lücke, die M1 schließt.
+  # das IST die Lücke, die M1 schließt. Auch die beiden Ruling-K-Angriffszeilen sind hier
+  # "allowed" — nicht weil der jeweilige INSERT etwas bewirkt, sondern weil VOR R6 ohnehin
+  # jedes Profil für jeden sichtbar ist (dieselbe Lücke, aus der Warte von Ruling K gemessen).
   exp_r6_own_profile="allowed"
   exp_r6_stranger_sees_member="allowed"
   exp_r6_invitee_sees_inviter_pending="allowed"
   exp_r6_invitee_sees_inviter_accepted="allowed"
   exp_r6_owner_sees_member="allowed"
   exp_r6_member_sees_owner="allowed"
+  exp_r6_attack_fake_invited_by="allowed"
+  exp_r6_attack_forced_membership="allowed"
 fi
 exp_r6_handle_new_user="Profil angelegt"
 
@@ -954,6 +966,47 @@ else
   r6_invitee_sees_inviter_accepted="allowed"
 fi
 
+# Fixrunde 2 (Ruling K) — zwei Angriffszeilen. U_PUBLIC_OWNER besitzt T_PUBLIC (eigenes Turnier,
+# "collaborators_insert_v3" lässt ihn dort per user_owns_tournament(T_PUBLIC) einfügen) und
+# versucht, über eine dort selbst eingefügte Zeile das Profil von U_OWNER (kein Bezug zu
+# U_PUBLIC_OWNER/T_PUBLIC) sichtbar zu machen. INSERT + SELECT in EINER, nie committeten
+# Transaktion (Muster wie oben bei "nach Annahme").
+set +e
+r6_attack_fake_invited_by_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_PUBLIC_OWNER';
+INSERT INTO public.tournament_collaborators (tournament_id, user_id, invited_by, role, accepted_at)
+VALUES ('$T_PUBLIC', '$U_PUBLIC_OWNER', '$U_OWNER', 'collaborator', now());
+SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';
+SQL
+)"
+r6_attack_fake_invited_by_ec=$?
+set -e
+if [[ "$r6_attack_fake_invited_by_ec" -ne 0 || -z "$r6_attack_fake_invited_by_out" ]]; then
+  r6_attack_fake_invited_by="denied"
+else
+  r6_attack_fake_invited_by="allowed"
+fi
+
+set +e
+r6_attack_forced_membership_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_PUBLIC_OWNER';
+INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at)
+VALUES ('$T_PUBLIC', '$U_OWNER', 'collaborator', now());
+SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';
+SQL
+)"
+r6_attack_forced_membership_ec=$?
+set -e
+if [[ "$r6_attack_forced_membership_ec" -ne 0 || -z "$r6_attack_forced_membership_out" ]]; then
+  r6_attack_forced_membership="denied"
+else
+  r6_attack_forced_membership="allowed"
+fi
+
 # Regression, unabhängig von WITH_R6: Insert in auth.users muss weiterhin ein Profil anlegen
 # (der Testaufbau-Trigger aus Schritt 2, plus handle_new_user() selbst — R6 rührt an keinem von
 # beiden). Eigene Transaktion, eigener frischer User (nie committet, siehe Kopfkommentar zu
@@ -985,8 +1038,10 @@ k1k2_mark_value "m1-eigenes-profil-bleibt-lesbar-authcontext " "$r6_own_profile"
 k1k2_mark_value "m1-fremder-sieht-kein-fremdes-profil        " "$r6_stranger_sees_member" "$exp_r6_stranger_sees_member"
 k1k2_mark_value "m1-eingeladener-sieht-einladenden-vor-annahme" "$r6_invitee_sees_inviter_pending" "$exp_r6_invitee_sees_inviter_pending"
 k1k2_mark_value "m1-eingeladener-sieht-einladenden-nach-annahme" "$r6_invitee_sees_inviter_accepted" "$exp_r6_invitee_sees_inviter_accepted"
-k1k2_mark_value "m1-eigentuemer-sieht-mitglied               " "$r6_owner_sees_member" "$exp_r6_owner_sees_member"
+k1k2_mark_value "m1-eigentuemer-sieht-mitglied-entfaellt-k2  " "$r6_owner_sees_member" "$exp_r6_owner_sees_member"
 k1k2_mark_value "m1-mitglied-sieht-eigentuemer               " "$r6_member_sees_owner" "$exp_r6_member_sees_owner"
+k1k2_mark_value "k-angriff-invited-by-gefaelscht-opfer-verdeckt" "$r6_attack_fake_invited_by" "$exp_r6_attack_fake_invited_by"
+k1k2_mark_value "k-angriff-zwangsmitgliedschaft-opfer-verdeckt" "$r6_attack_forced_membership" "$exp_r6_attack_forced_membership"
 
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
