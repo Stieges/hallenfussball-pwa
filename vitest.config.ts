@@ -20,6 +20,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Vitest 5 changed the default to true (auto-clears mock.calls/results
+    // before each test). Pinned to the pre-5.0 default so test behaviour
+    // does not shift silently with this upgrade (T7, siehe Migration Guide).
+    clearMocks: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
