@@ -64,6 +64,9 @@ describe('checkEmailExists (RPC auth_provider_for_email)', () => {
   });
 
   it('liefert false, wenn die RPC NULL zurückgibt (kein Konto zu dieser Adresse)', async () => {
+    // R6 Fixrunde 1 (L3): Die RPC liefert seit 20260924_001 serverseitig
+    // "coalesce(auth_provider, 'email')" — NULL bedeutet dadurch eindeutig "keine Zeile",
+    // nie mehr "Zeile mit NULL-auth_provider" (vorher nicht unterscheidbar).
     rpcMock.mockResolvedValue({ data: null, error: null });
 
     await expect(checkEmailExists('unbekannt@example.com')).resolves.toBe(false);

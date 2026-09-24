@@ -66,7 +66,11 @@ export async function checkOAuthOnlyUser(email: string): Promise<OAuthCheckResul
       return { isOAuthOnly: false, provider: 'unknown', error: 'User not found' };
     }
 
-    const provider = (data ?? 'email') as AuthProvider;
+    // R6 Fixrunde 1 (L3): Die RPC liefert seit 20260924_001 immer coalesce(auth_provider,
+    // 'email') - ein NULL-Provider (z.B. sehr alte/manuell veränderte Zeilen) wird serverseitig
+    // schon zu 'email' normalisiert. Ein zusätzliches "?? 'email'" hier wäre toter Code, da
+    // `data` nach der Null-Prüfung oben nie mehr null/undefined sein kann.
+    const provider = data as AuthProvider;
 
     // OAuth-only if provider is NOT 'email'
     const isOAuthOnly = provider !== 'email' && provider !== 'unknown';

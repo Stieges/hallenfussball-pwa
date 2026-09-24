@@ -354,10 +354,13 @@ VALUES
 -- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
 -- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
 -- accepted_at NULL, use_count 0. Wird von "eingeladener nimmt Einladung an" beansprucht.
+-- Fixrunde 1 (R6, M1): "invited_by" = U_OWNER ergänzt (vorher nicht gesetzt) — wird von den
+-- neuen R6-Zeilen "Eingeladener sieht Einladenden vor/nach Annahme" gebraucht
+-- (profile_visible_to_viewer()-Regel (ii)). Ändert an K2/L5 nichts, die lesen die Spalte nicht.
 INSERT INTO public.tournament_collaborators
-  (id, tournament_id, user_id, invite_code, invite_email, role, accepted_at, use_count, max_uses)
+  (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, use_count, max_uses)
 VALUES
-  ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', NULL, 0, 5);
+  ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', '$U_OWNER', NULL, 0, 5);
 
 INSERT INTO public.matches (id, tournament_id, round, field)
 VALUES
@@ -815,15 +818,17 @@ fi
 # U_OWNER (Profil existiert dank des in Schritt 2 nachgebauten on_auth_user_created-Triggers,
 # E-Mail 'owner@rls-matrix.test', auth_provider 'email') und U_COADMIN als "fremder" Leser.
 run_select_as() {
-  local role="$1" user_id="$2" sql="$3"
+  local role="$1" user_id="$2" sql="$3" email_claim="${4:-}"
   local out ec
-  local sub_line=""
+  local sub_line="" email_line=""
   [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id';"
+  [[ -n "$email_claim" ]] && email_line="SET LOCAL request.jwt.claim.email = '$email_claim';"
   set +e
   out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
 BEGIN;
 SET LOCAL ROLE $role;
 $sub_line
+$email_line
 $sql
 SQL
 )"
@@ -868,12 +873,23 @@ if [[ "$WITH_R6" -eq 1 ]]; then
   exp_r6_anon_email="denied"
   exp_r6_auth_foreign_email="denied"
   exp_r6_auth_own_email="denied"
-  exp_r6_anon_id_name="allowed"
+  # Fixrunde 1 (M1): anon verliert JEDES Recht auf profiles (vorher: id/display_name/avatar_url
+  # erlaubt). Beleg im Report, dass kein funktionierender App-Pfad das braucht.
+  exp_r6_anon_id_name="denied"
   exp_r6_anon_filter_email="denied"
   exp_r6_auth_update_role="denied"
   exp_r6_auth_update_display_name="allowed"
   exp_r6_rpc_known="email"
   exp_r6_rpc_unknown="NULL"
+  # Fixrunde 1 (M1): profiles_select_all (USING true) → profiles_select_related. Nur noch (i)
+  # eigenes Profil, (ii) Einladender einer mich betreffenden Einladung, (iii) Mitglied eines mir
+  # gehörenden Turniers, (iv) Eigentümer eines Turniers, in dem ich akzeptiertes Mitglied bin.
+  exp_r6_own_profile="allowed"
+  exp_r6_stranger_sees_member="denied"
+  exp_r6_invitee_sees_inviter_pending="allowed"
+  exp_r6_invitee_sees_inviter_accepted="allowed"
+  exp_r6_owner_sees_member="allowed"
+  exp_r6_member_sees_owner="allowed"
 else
   exp_r6_anon_email="allowed"
   exp_r6_auth_foreign_email="allowed"
@@ -884,6 +900,14 @@ else
   exp_r6_auth_update_display_name="allowed"
   exp_r6_rpc_known="Funktion fehlt"
   exp_r6_rpc_unknown="Funktion fehlt"
+  # Vorher (profiles_select_all USING true): JEDE authenticated Person sieht JEDES Profil —
+  # das IST die Lücke, die M1 schließt.
+  exp_r6_own_profile="allowed"
+  exp_r6_stranger_sees_member="allowed"
+  exp_r6_invitee_sees_inviter_pending="allowed"
+  exp_r6_invitee_sees_inviter_accepted="allowed"
+  exp_r6_owner_sees_member="allowed"
+  exp_r6_member_sees_owner="allowed"
 fi
 exp_r6_handle_new_user="Profil angelegt"
 
@@ -896,6 +920,39 @@ r6_auth_update_role="$(run_write "$U_OWNER" "UPDATE public.profiles SET role = '
 r6_auth_update_display_name="$(run_write "$U_OWNER" "UPDATE public.profiles SET display_name = 'RLS Matrix Owner' WHERE id = '$U_OWNER';")"
 r6_rpc_known="$(run_rpc_value "SELECT public.auth_provider_for_email('owner@rls-matrix.test');")"
 r6_rpc_unknown="$(run_rpc_value "SELECT public.auth_provider_for_email('nobody-r6@rls-matrix.test');")"
+
+# M1-Zeilen (Fixrunde 1): "Das eigene Profil bleibt lesbar" nutzt exakt AuthContext.tsx#fetchProfile
+# (display_name, avatar_url, role, eigene id). Alle anderen nutzen bestehende Fixtures: U_NONMEMBER
+# hat KEINE Zeile in tournament_collaborators (kein Bezug zu irgendwem); U_VIEWER ist akzeptiertes
+# Mitglied von T_MAIN (Eigentümer U_OWNER); C_PENDING_INVITE/U_INVITEE für Regel (ii).
+r6_own_profile="$(run_select_as authenticated "$U_OWNER" "SELECT display_name, avatar_url, role FROM public.profiles WHERE id = '$U_OWNER';")"
+r6_stranger_sees_member="$(run_select_as authenticated "$U_NONMEMBER" "SELECT display_name FROM public.profiles WHERE id = '$U_VIEWER';")"
+r6_invitee_sees_inviter_pending="$(run_select_as authenticated "$U_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$INVITEE_EMAIL")"
+r6_owner_sees_member="$(run_select_as authenticated "$U_OWNER" "SELECT display_name FROM public.profiles WHERE id = '$U_VIEWER';")"
+r6_member_sees_owner="$(run_select_as authenticated "$U_VIEWER" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';")"
+
+# "nach Annahme" kann keine Fixture sein (die Annahme selbst ist die Zustandsänderung) — Annahme
+# und Sichtbarkeitsprüfung laufen deshalb in DERSELBEN, nie committeten Transaktion (Muster wie
+# run_write_then_select() weiter oben), damit die Fixtures für andere Zeilen unverändert bleiben.
+# set +e/-e wie in den run_*()-Helfern: eine scheiternde Anweisung hier darf den Lauf nicht per
+# "set -e" sofort abbrechen, sie soll als "denied" gewertet werden.
+set +e
+r6_invitee_accept_and_read_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_INVITEE';
+SET LOCAL request.jwt.claim.email = '$INVITEE_EMAIL';
+UPDATE public.tournament_collaborators SET user_id = '$U_INVITEE', accepted_at = now(), use_count = use_count + 1 WHERE id = '$C_PENDING_INVITE';
+SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';
+SQL
+)"
+r6_invitee_accept_and_read_ec=$?
+set -e
+if [[ "$r6_invitee_accept_and_read_ec" -ne 0 || -z "$r6_invitee_accept_and_read_out" ]]; then
+  r6_invitee_sees_inviter_accepted="denied"
+else
+  r6_invitee_sees_inviter_accepted="allowed"
+fi
 
 # Regression, unabhängig von WITH_R6: Insert in auth.users muss weiterhin ein Profil anlegen
 # (der Testaufbau-Trigger aus Schritt 2, plus handle_new_user() selbst — R6 rührt an keinem von
@@ -924,6 +981,12 @@ k1k2_mark_value "authenticated-update-display-name-eigenes  " "$r6_auth_update_d
 k1k2_mark_value "anon-rpc-auth-provider-for-email-bekannt   " "$r6_rpc_known" "$exp_r6_rpc_known"
 k1k2_mark_value "anon-rpc-auth-provider-for-email-unbekannt " "$r6_rpc_unknown" "$exp_r6_rpc_unknown"
 k1k2_mark_value "regression-handle-new-user-legt-profil-an  " "$r6_handle_new_user" "$exp_r6_handle_new_user"
+k1k2_mark_value "m1-eigenes-profil-bleibt-lesbar-authcontext " "$r6_own_profile" "$exp_r6_own_profile"
+k1k2_mark_value "m1-fremder-sieht-kein-fremdes-profil        " "$r6_stranger_sees_member" "$exp_r6_stranger_sees_member"
+k1k2_mark_value "m1-eingeladener-sieht-einladenden-vor-annahme" "$r6_invitee_sees_inviter_pending" "$exp_r6_invitee_sees_inviter_pending"
+k1k2_mark_value "m1-eingeladener-sieht-einladenden-nach-annahme" "$r6_invitee_sees_inviter_accepted" "$exp_r6_invitee_sees_inviter_accepted"
+k1k2_mark_value "m1-eigentuemer-sieht-mitglied               " "$r6_owner_sees_member" "$exp_r6_owner_sees_member"
+k1k2_mark_value "m1-mitglied-sieht-eigentuemer               " "$r6_member_sees_owner" "$exp_r6_member_sees_owner"
 
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"

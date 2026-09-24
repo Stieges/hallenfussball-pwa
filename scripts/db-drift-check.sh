@@ -259,6 +259,37 @@ fi
 # Skript macht die Lücke im Log sichtbar, statt sie stillschweigend zu überspringen, faellt aber
 # (anders als der Rest des Skripts) nicht deswegen mit Exit 1 — das waere ein Rueckschritt fuer
 # den bestehenden --linked-Fallback-Pfad, der diese Variable nie gesetzt hat.
+# Fixrunde 1 (task-R6-review.md, L2, Befund 1): Der reine "keine Zeile endet auf |f"-Check
+# unten wäre vakuum-grün für eine geleerte oder auf Kommentare gekürzte
+# db_privilege_assertions.sql (0 Zeilen Ausgabe, kein "|f" zu finden). Diese feste Namensliste
+# erzwingt zusätzlich, dass GENAU diese Prüfungen (nicht mehr, nicht weniger) tatsächlich
+# gelaufen sind — jede fehlende oder unerwartete Zeile ist ein eigener Fehler, unabhängig vom
+# "|f"-Check. Muss 1:1 zu den Zeilen in scripts/db_privilege_assertions.sql passen.
+PRIVILEGE_ASSERTION_NAMES=(
+  "anon-no-insert-profiles"
+  "authenticated-no-insert-profiles"
+  "anon-no-delete-profiles"
+  "authenticated-no-delete-profiles"
+  "anon-no-truncate-profiles"
+  "authenticated-no-truncate-profiles"
+  "anon-no-maintain-profiles"
+  "authenticated-no-maintain-profiles"
+  "anon-no-select-profiles-email"
+  "authenticated-no-select-profiles-email"
+  "anon-no-select-profiles-auth-provider"
+  "authenticated-no-select-profiles-auth-provider"
+  "anon-no-select-profiles-preferences"
+  "authenticated-no-select-profiles-preferences"
+  "anon-no-select-profiles-display-name"
+  "authenticated-no-update-profiles-role"
+  "authenticated-no-update-profiles-email"
+  "authenticated-no-update-profiles-auth-provider"
+  "anon-no-execute-merge-user-data"
+  "authenticated-no-execute-merge-user-data"
+  "positive-authenticated-select-display-name"
+  "positive-anon-execute-auth-provider-for-email"
+)
+
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo ""
   echo "--- Rechte-Assertion (R6, live über SUPABASE_DB_READONLY_URL) ---"
@@ -271,14 +302,39 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
     exit 1
   fi
   cat "$PRIV_OUT"
+
+  PRIV_ASSERTION_FAILED=0
+
+  # 1. Namensliste: jeder erwartete Name muss GENAU EINMAL vorkommen.
+  for expected_name in "${PRIVILEGE_ASSERTION_NAMES[@]}"; do
+    occurrences="$(grep -cE "^${expected_name}\|" "$PRIV_OUT" || true)"
+    if [[ "$occurrences" -ne 1 ]]; then
+      echo "::error::Rechte-Assertion unvollständig — '$expected_name' kommt ${occurrences}x vor (erwartet: 1). Datei geleert/gekürzt?" >&2
+      PRIV_ASSERTION_FAILED=1
+    fi
+  done
+
+  # 2. Keine unerwarteten Zeilen (z.B. Tippfehler, der eine Prüfung verdoppelt statt zu ersetzen).
+  actual_line_count="$(grep -cE '^[a-z0-9-]+\|[tf]$' "$PRIV_OUT" || true)"
+  expected_line_count="${#PRIVILEGE_ASSERTION_NAMES[@]}"
+  if [[ "$actual_line_count" -ne "$expected_line_count" ]]; then
+    echo "::error::Rechte-Assertion hat $actual_line_count Zeile(n), erwartet genau $expected_line_count." >&2
+    PRIV_ASSERTION_FAILED=1
+  fi
+
+  # 3. Jede Zeile muss 't' sein.
   if grep -qE '\|f$' "$PRIV_OUT"; then
     echo "::error::Rechte-Assertion fehlgeschlagen — mindestens eine Zeile ist 'f':" >&2
     grep -E '\|f$' "$PRIV_OUT" | while IFS='|' read -r failed_name _; do
       echo "::error::  $failed_name" >&2
     done
+    PRIV_ASSERTION_FAILED=1
+  fi
+
+  if [[ "$PRIV_ASSERTION_FAILED" -ne 0 ]]; then
     exit 1
   fi
-  echo "Rechte-Assertion grün: alle geprüften Spalten-/Funktionsrechte wie erwartet."
+  echo "Rechte-Assertion grün: alle $expected_line_count erwarteten Zeilen vorhanden und wie erwartet."
 else
   echo ""
   echo "Rechte-Assertion (R6) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2

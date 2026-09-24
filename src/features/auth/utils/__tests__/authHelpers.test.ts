@@ -51,6 +51,12 @@ describe('checkOAuthOnlyUser (RPC auth_provider_for_email)', () => {
   });
 
   it('meldet isOAuthOnly=false, wenn die RPC NULL liefert (kein Konto zu dieser Adresse)', async () => {
+    // R6 Fixrunde 1 (L3): Seit 20260924_001 liefert die RPC serverseitig
+    // "coalesce(auth_provider, 'email')" statt der rohen Spalte. NULL bedeutet dadurch
+    // eindeutig "keine Zeile zu dieser Adresse" — ein Profil MIT NULL-auth_provider (z.B. sehr
+    // alte/manuell veränderte Zeilen) würde vor dem Fix hier fälschlich als "nicht existent"
+    // erscheinen, jetzt liefert die RPC dafür 'email'. Aus Sicht dieses Mocks (er simuliert die
+    // bereits normalisierte Rückgabe der RPC) ändert sich am erwarteten Verhalten nichts.
     rpcMock.mockResolvedValue({ data: null, error: null });
 
     const result = await checkOAuthOnlyUser('unbekannt@example.com');

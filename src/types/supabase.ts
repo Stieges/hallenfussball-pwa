@@ -993,6 +993,7 @@ export type Database = {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
       }
+      profile_visible_to_viewer: { Args: { p_profile_id: string }; Returns: boolean }
       record_monitor_heartbeat: {
         Args: {
           p_cache_status?: string
