@@ -30,10 +30,14 @@ export const canDeleteTournament = (role: TournamentRole): boolean => {
 
 /**
  * Kann Einladungen erstellen
- * Erlaubt: owner, co-admin
+ *
+ * Erlaubt: NUR owner (R5/M6: DB verlangt für tournament_collaborators-INSERT
+ * user_owns_tournament() -- ein Co-Admin trifft dort 0 Zeilen, egal was die UI anbietet).
+ * Vorher fälschlich owner+co-admin (dieselbe Grenze wie canManageTournament) -- das war eine
+ * UI↔DB-Lücke, siehe final-review.md Abschnitt M6.
  */
 export const canCreateInvitations = (role: TournamentRole): boolean => {
-  return role === 'owner' || role === 'co-admin';
+  return role === 'owner';
 };
 
 // ============================================
@@ -99,10 +103,13 @@ export const canEditSchedule = (role: TournamentRole): boolean => {
 
 /**
  * Kann alle Teams bearbeiten (Namen, Logo, etc.)
- * Erlaubt: owner, co-admin
+ *
+ * Erlaubt: owner, co-admin, collaborator (R5/M3: teams_update_v3 lässt seit 20260924_002 auch
+ * collaborator zu -- SupabaseRepository.save() schreibt Teams bei jedem Speichern mit, ein
+ * Collaborator darf dabei nicht scheitern). Trainer/viewer: nein.
  */
 export const canEditAllTeams = (role: TournamentRole): boolean => {
-  return role === 'owner' || role === 'co-admin';
+  return role === 'owner' || role === 'co-admin' || role === 'collaborator';
 };
 
 /**
@@ -149,8 +156,14 @@ export const canEditTeamMetadata = (role: TournamentRole): boolean => {
 /**
  * Kann Mitglieder-Rollen ändern
  *
- * - owner: kann alle ändern (außer sich selbst)
- * - co-admin: kann ändern (außer owner und co-admin → owner)
+ * Erlaubt: NUR owner, und auch der nicht für sich selbst (kein Downgrade/Upgrade der eigenen
+ * Owner-Rolle über diesen Pfad -- dafür gibt es canTransferOwnership).
+ *
+ * R5/M6: Vorher durfte auch co-admin ändern (außer owner/co-admin) -- das widersprach der DB:
+ * collaborators_insert_v3 verlangt user_owns_tournament(), das UPDATE
+ * (protect_collaborator_row(), 20260922_003/20260923_001) lässt einen Nicht-Eigentümer
+ * ausschließlich die eigene offene Einladung annehmen, niemals role. Ein Co-Admin, der laut UI
+ * eine Rolle ändern durfte, traf in der DB still 0 Zeilen (final-review.md, Abschnitt M6).
  *
  * @param myRole - Eigene Turnier-Rolle
  * @param targetRole - Aktuelle Rolle des Ziel-Users
@@ -159,19 +172,12 @@ export const canChangeRole = (
   myRole: TournamentRole,
   targetRole: TournamentRole
 ): boolean => {
-  // Viewer, Collaborator, Trainer können keine Rollen ändern
-  if (myRole !== 'owner' && myRole !== 'co-admin') {
+  if (myRole !== 'owner') {
     return false;
   }
 
   // Owner kann alle ändern außer sich selbst (owner)
-  if (myRole === 'owner') {
-    return targetRole !== 'owner';
-  }
-
-  // Co-Admin kann keine Änderungen an Owner oder anderen Co-Admins machen
-  // An diesem Punkt ist myRole garantiert 'co-admin' (andere wurden oben ausgefiltert)
-  return targetRole !== 'owner' && targetRole !== 'co-admin';
+  return targetRole !== 'owner';
 };
 
 /**
@@ -186,7 +192,10 @@ export const canSetRoleTo = (
   targetCurrentRole: TournamentRole,
   newRole: TournamentRole
 ): boolean => {
-  // Erst prüfen ob überhaupt Änderung erlaubt
+  // Erst prüfen ob überhaupt Änderung erlaubt (R5/M6: canChangeRole ist jetzt owner-only,
+  // "newRole === 'co-admin' && myRole !== 'owner'" unten ist seitdem unerreichbar, bleibt aber
+  // als explizite Dokumentation der Regel stehen statt sie stillschweigend nur über
+  // canChangeRole mitzuvererben).
   if (!canChangeRole(myRole, targetCurrentRole)) {
     return false;
   }
@@ -207,8 +216,7 @@ export const canSetRoleTo = (
 /**
  * Kann ein Mitglied entfernen
  *
- * - owner: kann alle entfernen außer sich selbst
- * - co-admin: kann entfernen außer owner und co-admins
+ * Erlaubt: NUR owner (R5/M6, dieselbe Grenze wie canChangeRole -- siehe dort).
  */
 export const canRemoveMember = (
   myRole: TournamentRole,
@@ -300,16 +308,16 @@ export const isGuest = (globalRole: GlobalRole): boolean => {
 /**
  * Gibt alle Rollen zurück die ein User vergeben kann
  *
+ * R5/M6: NUR owner darf überhaupt Rollen vergeben (siehe canChangeRole) -- ein co-admin gehört
+ * seit dieser Migration NICHT mehr dazu, sonst würde diese Funktion Rollen als "vergebbar"
+ * ausweisen, die canChangeRole/canSetRoleTo für denselben Aufrufer bereits verweigern.
+ *
  * @param myRole - Eigene Turnier-Rolle
  * @returns Array von vergabbaren Rollen
  */
 export const getAssignableRoles = (myRole: TournamentRole): TournamentRole[] => {
   if (myRole === 'owner') {
     return ['co-admin', 'trainer', 'collaborator', 'viewer'];
-  }
-
-  if (myRole === 'co-admin') {
-    return ['trainer', 'collaborator', 'viewer'];
   }
 
   return [];

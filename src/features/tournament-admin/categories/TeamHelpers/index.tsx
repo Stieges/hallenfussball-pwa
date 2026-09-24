@@ -18,6 +18,7 @@ import { useTournamentMembers } from '../../../auth/hooks/useTournamentMembers';
 import { useInvitation } from '../../../auth/hooks/useInvitation';
 import type { Invitation } from '../../../auth/types/auth.types';
 import { useAuth } from '../../../auth/hooks/useAuth';
+import { canCreateInvitations } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
 
 // =============================================================================
@@ -49,8 +50,9 @@ export function TeamHelpersCategory({
   const [copySuccess, setCopySuccess] = useState(false);
   const [activeInvitations, setActiveInvitations] = useState<Invitation[]>([]);
 
-  // Permission check: Can manage members?
-  const canManageMembers = myMembership?.role === 'owner' || myMembership?.role === 'co-admin';
+  // Permission check: Can manage members? (R5/M6: nur owner -- DB verlangt für
+  // tournament_collaborators-INSERT user_owns_tournament(), siehe permissions.ts#canCreateInvitations)
+  const canManageMembers = myMembership ? canCreateInvitations(myMembership.role) : false;
 
   // Load active invitations
   useEffect(() => {

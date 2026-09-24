@@ -17,7 +17,15 @@
  * DIESER Test sichtbar, dass permissions.ts dann eine zweite Funktion braucht.
  */
 import { describe, it, expect } from 'vitest';
-import { canEditResults, canManageTournament, canCreateInvitations } from '../permissions';
+import {
+  canEditResults,
+  canManageTournament,
+  canCreateInvitations,
+  canEditAllTeams,
+  canDeleteTournament,
+  canChangeRole,
+  canRemoveMember,
+} from '../permissions';
 import type { TournamentRole } from '../../types/auth.types';
 import roleMatrixJson from '../../__tests__/roleMatrix.json';
 
@@ -31,7 +39,18 @@ interface RoleMatrixRow {
   writeMatchData: boolean;
   correctEvents: boolean;
   tournamentSettings: boolean;
+  teams: boolean;
+  deleteTournament: boolean;
+  manageMembers: boolean;
 }
+
+// Fixture für canChangeRole/canRemoveMember (manageMembers-Spalte): beide nehmen eine
+// Ziel-Rolle als zweiten Parameter. 'viewer' ist ein Ziel, das JEDE myRole grundsätzlich
+// ändern/entfernen dürfte, wenn sie überhaupt Mitglieder verwalten darf (canChangeRole lehnt
+// nur beim Ziel 'owner' zusätzlich ab, unabhängig von myRole) — die Spalte misst also wirklich
+// "darf diese Rolle überhaupt Mitglieder verwalten", nicht eine Sonderregel für ein bestimmtes
+// Ziel.
+const MANAGE_MEMBERS_TARGET_ROLE: TournamentRole = 'viewer';
 
 interface RoleMatrixFile {
   rows: RoleMatrixRow[];
@@ -95,13 +114,69 @@ describe('permissions.ts — Rollentabelle (roleMatrix.json)', () => {
   );
 
   it.each(roleMatrix.rows)(
-    'canCreateInvitations($#) folgt tournamentSettings für Zeile "$id" (dieselbe owner/co-admin-Grenze)',
+    'canEditAllTeams($#) folgt teams für Zeile "$id"',
     (row) => {
       if (row.role === null) {
-        expect(row.tournamentSettings).toBe(false);
+        expect(row.teams).toBe(false);
         return;
       }
-      expect(canCreateInvitations(row.role), `Zeile "${row.id}"`).toBe(row.tournamentSettings);
+      expect(canEditAllTeams(row.role), `Zeile "${row.id}"`).toBe(row.teams);
+    }
+  );
+
+  it.each(roleMatrix.rows)(
+    'canDeleteTournament($#) folgt deleteTournament für Zeile "$id"',
+    (row) => {
+      if (row.role === null) {
+        expect(row.deleteTournament).toBe(false);
+        return;
+      }
+      expect(canDeleteTournament(row.role), `Zeile "${row.id}"`).toBe(row.deleteTournament);
+    }
+  );
+
+  // R5/M6: canCreateInvitations war vorher fälschlich an tournamentSettings gebunden (dieselbe
+  // owner/co-admin-Grenze wie canManageTournament) — das behauptete eine UI↔DB-Übereinstimmung,
+  // die der Harness nie geprüft hat (final-review.md, Abschnitt M6: collaborators_insert_v3
+  // verlangt user_owns_tournament(), ein Co-Admin trifft dort 0 Zeilen). Jetzt gegen die neue,
+  // eigene Spalte manageMembers geprüft — zusammen mit canChangeRole/canRemoveMember, die
+  // dieselbe owner-only-Grenze durchsetzen.
+  it.each(roleMatrix.rows)(
+    'canCreateInvitations($#) folgt manageMembers für Zeile "$id"',
+    (row) => {
+      if (row.role === null) {
+        expect(row.manageMembers).toBe(false);
+        return;
+      }
+      expect(canCreateInvitations(row.role), `Zeile "${row.id}"`).toBe(row.manageMembers);
+    }
+  );
+
+  it.each(roleMatrix.rows)(
+    'canChangeRole($#, viewer) folgt manageMembers für Zeile "$id"',
+    (row) => {
+      if (row.role === null) {
+        expect(row.manageMembers).toBe(false);
+        return;
+      }
+      expect(
+        canChangeRole(row.role, MANAGE_MEMBERS_TARGET_ROLE),
+        `Zeile "${row.id}"`
+      ).toBe(row.manageMembers);
+    }
+  );
+
+  it.each(roleMatrix.rows)(
+    'canRemoveMember($#, viewer) folgt manageMembers für Zeile "$id"',
+    (row) => {
+      if (row.role === null) {
+        expect(row.manageMembers).toBe(false);
+        return;
+      }
+      expect(
+        canRemoveMember(row.role, MANAGE_MEMBERS_TARGET_ROLE),
+        `Zeile "${row.id}"`
+      ).toBe(row.manageMembers);
     }
   );
 

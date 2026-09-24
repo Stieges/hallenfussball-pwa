@@ -74,8 +74,18 @@
 # bestehenden Nachbau von repro_security_definer_owner_transfer() weiter unten für ein
 # vergleichbares Cross-Schema-Problem. Kein Teil irgendeiner committeten Migration.
 #
+# R5 (task-R5-brief.md): 20260924_002_coadmin_complete.sql schließt vier DB-Befunde aus dem
+# Abschluss-Review von R2/R3 (final-review.md, Abschnitte H4/M3/M4/M5): H4 (Co-Admin-Upsert auf
+# teams/matches scheitert halb -- teams_insert_v2/matches_insert_v2 bekommen einen Co-Admin-
+# Zweig), M3 (teams_update_v3 bekommt denselben Rollenfilter wie matches_update_v3: nur
+# co-admin/collaborator), M4 (cascade_tournament_visibility() wird SECURITY DEFINER, damit
+# sponsors/monitors einem Co-Admin-Publish folgen) und M5 (neuer BEFORE-UPDATE-Trigger
+# protect_deleted_at: tournaments.deleted_at nur für den Eigentümer änderbar, IS DISTINCT FROM
+# schützt den Normalfall "Co-Admin speichert mit unverändertem deleted_at"). Orthogonal zu R6
+# (profiles) -- läuft unabhängig von WITH_R6.
+#
 # Nutzung:
-#   scripts/rls-role-matrix.sh                    # Baseline + alle fünf Migrationen ("nachher")
+#   scripts/rls-role-matrix.sh                    # Baseline + alle sieben Migrationen ("nachher")
 #   scripts/rls-role-matrix.sh --baseline-only     # nur Baseline ("vorher", R1-Gegenprobe) —
 #                                                   # Abweichungen von der Rollentabelle sind
 #                                                   # hier ERWARTET (siehe Report) und führen
@@ -89,12 +99,20 @@
 #                                                   # ("vorher", Fixrunde-3-Gegenprobe) — die
 #                                                   # K3/H5/L5-Angriffszeilen müssen hier
 #                                                   # GELINGEN, sonst misst der Harness sie nicht.
-#   scripts/rls-role-matrix.sh --without-r6        # Alles bis 20260923_002 (R5), OHNE
+#   scripts/rls-role-matrix.sh --without-r6        # Alles bis 20260923_002, OHNE
 #                                                   # 20260924_001 (R6) — die Profile-Zeilen
 #                                                   # müssen hier den "vorher"-Zustand zeigen
 #                                                   # (E-Mail lesbar, Rolle selbst änderbar, RPC
 #                                                   # fehlt), sonst misst der Harness die R6-Lücke
 #                                                   # nicht.
+#   scripts/rls-role-matrix.sh --without-r5        # Alles bis 20260924_001, OHNE 20260924_002
+#                                                   # (R5) — die H4/M3/M4/M5-Zeilen müssen hier
+#                                                   # den "vorher"-Zustand zeigen (Co-Admin-Upsert
+#                                                   # auf teams/matches scheitert, viewer/trainer
+#                                                   # dürfen Teams ändern, sponsors/monitors
+#                                                   # bleiben nach Co-Admin-Publish unsichtbar,
+#                                                   # Co-Admin darf deleted_at setzen), sonst
+#                                                   # misst der Harness die R5-Lücken nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -113,12 +131,14 @@ HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
 PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
 MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
 PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
+COADMIN_COMPLETE_FILE="$MIGRATIONS_DIR/20260924_002_coadmin_complete.sql"
 ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
 WITH_HARDENING=1
 WITH_PARENT_KEYS=1
 WITH_R6=1
+WITH_R5=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -127,6 +147,7 @@ while [[ $# -gt 0 ]]; do
       WITH_HARDENING=0
       WITH_PARENT_KEYS=0
       WITH_R6=0
+      WITH_R5=0
       shift
       ;;
     --without-hardening)
@@ -140,6 +161,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-r6)
       WITH_R6=0
+      shift
+      ;;
+    --without-r5)
+      WITH_R5=0
       shift
       ;;
     -h|--help)
@@ -163,6 +188,7 @@ done
 [[ -f "$PARENT_KEYS_FILE" ]] || { echo "::error::Migration fehlt: $PARENT_KEYS_FILE" >&2; exit 1; }
 [[ -f "$MERGE_RESTRICT_FILE" ]] || { echo "::error::Migration fehlt: $MERGE_RESTRICT_FILE" >&2; exit 1; }
 [[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
+[[ -f "$COADMIN_COMPLETE_FILE" ]] || { echo "::error::Migration fehlt: $COADMIN_COMPLETE_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -255,8 +281,19 @@ if [[ "$WITH_R6" -eq 1 ]]; then
   psql_stdin < "$PROFILES_FILE"
 fi
 
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 ]]; then
-  MODE_LABEL="nachher (Baseline + alle sechs Migrationen)"
+# R5 (task-R5-brief.md): H4 (Co-Admin-INSERT-Zweig auf teams/matches), M3 (Teams-Rollenfilter),
+# M4 (cascade_tournament_visibility SECURITY DEFINER), M5 (deleted_at nur Eigentümer). Orthogonal
+# zu R6 (profiles) -- läuft unabhängig von WITH_R6, nur von WITH_MIGRATION/HARDENING/
+# PARENT_KEYS abhängig (siehe --baseline-only oben, das WITH_R5 mit auf 0 setzt).
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$COADMIN_COMPLETE_FILE")" >&2
+  psql_stdin < "$COADMIN_COMPLETE_FILE"
+fi
+
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
+  MODE_LABEL="nachher (Baseline + alle sieben Migrationen)"
+elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 ]]; then
+  MODE_LABEL="vorher/R5-Gegenprobe (Baseline + 001..20260924_001, ohne R5)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
   MODE_LABEL="vorher/R6-Gegenprobe (Baseline + 001..002-restrict, ohne R6)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
@@ -306,6 +343,14 @@ M_ANON="$(uuid_for match:anon)"
 M_PUBLIC="$(uuid_for match:public)"
 
 TEAM_MAIN="$(uuid_for team:main)"
+# R5 (H4/M4-Beweise): TEAM_NEW existiert VOR dem jeweiligen Probe-Lauf noch nicht (INSERT-Zweig
+# von teams_insert_v2), TEAM_ATTACK wird vom Co-Admin von T_MAIN gezielt gegen das FREMDE T_ANON
+# versucht (K3-Lehre: der neue Co-Admin-INSERT-Zweig darf keinen Weg in ein fremdes Turnier
+# öffnen).
+TEAM_NEW="$(uuid_for team:coadmin-insert)"
+TEAM_ATTACK="$(uuid_for team:coadmin-attack-foreign-tournament)"
+SPONSOR_MAIN="$(uuid_for sponsor:main)"
+MONITOR_MAIN="$(uuid_for monitor:main)"
 
 E_MAIN="$(uuid_for event:main)"
 E_ANON="$(uuid_for event:anon)"
@@ -334,10 +379,15 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_PUBLIC_OWNER', 'authenticated', 'authenticated', 'public-owner@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_INVITEE', 'authenticated', 'authenticated', '$INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
 
-INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration)
+-- R5 (M4-Beweis "Co-Admin veröffentlicht"): T_MAIN bekommt von Anfang an einen publishedAt-
+-- Marker im config (is_public bleibt false) -- enforce_release_before_public (20260921_001,
+-- SECURITY DEFINER, unverändert seit R1) verlangt genau das, BEVOR is_public auf true wechseln
+-- darf. Ohne diesen Marker würde der spätere Co-Admin-Publish-Versuch schon an dieser
+-- unabhängigen, älteren Regel scheitern, nicht an M4 -- das wäre kein Beleg für irgendetwas.
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
 VALUES
-  ('$T_MAIN', '$U_OWNER', 'RLS Matrix — main', '2026-09-22', 8, 15),
-  ('$T_ANON', '$U_OWNER_ANON', 'RLS Matrix — anon owner', '2026-09-22', 8, 15);
+  ('$T_MAIN', '$U_OWNER', 'RLS Matrix — main', '2026-09-22', 8, 15, '{"publishedAt":"2026-09-22T00:00:00.000Z"}'::jsonb),
+  ('$T_ANON', '$U_OWNER_ANON', 'RLS Matrix — anon owner', '2026-09-22', 8, 15, '{}'::jsonb);
 
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, is_public, config)
 VALUES
@@ -375,6 +425,17 @@ VALUES
 INSERT INTO public.teams (id, tournament_id, name)
 VALUES
   ('$TEAM_MAIN', '$T_MAIN', 'RLS Matrix Team');
+
+-- R5 (M4-Beweis): sponsors/monitors_sync_owner (Baseline, BEFORE INSERT) leiten owner_id UND
+-- is_public von tournaments ab -- beide Zeilen starten also mit is_public=false (T_MAIN ist bei
+-- den Fixtures noch nicht veröffentlicht), owner_id=$U_OWNER.
+INSERT INTO public.sponsors (id, tournament_id, name)
+VALUES
+  ('$SPONSOR_MAIN', '$T_MAIN', 'RLS Matrix Sponsor');
+
+INSERT INTO public.monitors (id, tournament_id, name)
+VALUES
+  ('$MONITOR_MAIN', '$T_MAIN', 'RLS Matrix Monitor');
 
 INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
 VALUES
@@ -812,6 +873,137 @@ else
   echo "=== Fixrunde 3 — K3/H5/L5 — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0, siehe Kommentar oben) ==="
 fi
 
+# --- 7c2. R5 (task-R5-brief.md) — H4 (Co-Admin-Upsert teams/matches), M3 (Teams-Rollenfilter),
+# M4 (Kaskade folgt Co-Admin-Publish), M5 (deleted_at nur Eigentümer), plus K3-Lehre (der neue
+# Co-Admin-INSERT-Zweig darf keinen Weg in ein fremdes Turnier öffnen). Dreizehn Zeilen. Nur
+# sinnvoll mit mindestens 001+003+20260923_001 eingespielt (dieselbe Voraussetzung wie 7c: teams_
+# update_v3 spiegelt den Rollenfilter, den 001 für matches_update_v3 eingeführt hat, und die
+# tournamentSettings-Fähigkeit eines Co-Admin — Voraussetzung für die H4/M5-Zeilen — kommt
+# ebenfalls erst mit 001).
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
+  if [[ "$WITH_R5" -eq 1 ]]; then
+    exp_h4_team_upsert="allowed"
+    exp_h4_match_upsert="allowed"
+    exp_h4_new_team_owner="$U_OWNER"
+    exp_m3_collab_upsert="denied"
+    exp_m3_viewer_update="denied"
+    exp_m3_trainer_update="denied"
+    exp_m5_coadmin_sets_deleted_at="denied"
+    exp_m4_sponsor_public="t"
+    exp_m4_monitor_public="t"
+    exp_k3_lehre_foreign_insert="denied"
+  else
+    exp_h4_team_upsert="denied"
+    exp_h4_match_upsert="denied"
+    exp_h4_new_team_owner="denied"
+    exp_m3_collab_upsert="denied" # H4-Baseline: teams_insert_v2 war IMMER schon owner-only,
+                                   # unabhängig von R5 (collaborator war da nie zugelassen).
+    exp_m3_viewer_update="allowed"  # Baseline-Bug (M3): teams_update_v3 hatte KEINEN Rollenfilter.
+    exp_m3_trainer_update="allowed"
+    exp_m5_coadmin_sets_deleted_at="allowed" # tournaments_update_v3 (001) lässt Co-Admin schon
+                                              # ALLE Spalten schreiben, ohne R5 auch deleted_at.
+    exp_m4_sponsor_public="f"
+    exp_m4_monitor_public="f"
+    exp_k3_lehre_foreign_insert="denied" # unverändert: schon die Baseline-Owner-Prüfung lehnt ab.
+  fi
+  # Regressionen, in BEIDEN Modi gleich (M3 lässt collaborator UPDATE unverändert zu — das war
+  # schon vor R5 so, siehe Baseline-Bug oben):
+  exp_m3_collab_update="allowed"
+  exp_m5_coadmin_unchanged_deleted_at="allowed"
+  exp_m5_owner_sets_deleted_at="allowed"
+
+  # H4-1/H4-2: Co-Admin upserted eine BESTEHENDE teams-/matches-Zeile, exakt das Muster von
+  # SupabaseRepository.save() ("INSERT ... ON CONFLICT (id) DO UPDATE") — nicht nur ein reines
+  # UPDATE, siehe Kopfkommentar dieses Skripts ("Sonden bilden den echten App-Pfad nach").
+  h4_team_upsert="$(run_write "$U_COADMIN" \
+    "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (coadmin upsert)') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
+  h4_match_upsert="$(run_write "$U_COADMIN" \
+    "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$M_MAIN','$T_MAIN',1,1) ON CONFLICT (id) DO UPDATE SET field = EXCLUDED.field;")"
+
+  # H4-3: Co-Admin legt ein NEUES Team an (reiner INSERT-Zweig, TEAM_NEW existiert vorher nicht)
+  # und der tatsächlich gespeicherte owner_id-Wert wird gelesen — teams_select_v3 hat einen
+  # Mitarbeiter-Zweig, der Co-Admin kann die eigene neue Zeile also direkt lesen (anders als bei
+  # sponsors/monitors weiter unten). ERROR:... (Transaktion abgebrochen, INSERT verweigert) wird
+  # auf "denied" normalisiert, damit derselbe erwartete Wert in beiden Modi vergleichbar ist.
+  h4_new_team_owner="$(run_write_then_select "$U_COADMIN" \
+    "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_NEW','$T_MAIN','RLS Matrix Team (coadmin insert)') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;" \
+    "SELECT owner_id FROM public.teams WHERE id = '$TEAM_NEW';")"
+  [[ "$h4_new_team_owner" == ERROR:* ]] && h4_new_team_owner="denied"
+
+  # M3: collaborator upserted TEAM_MAIN (trifft den INSERT-Zweig von teams_insert_v2 — der lässt
+  # NUR co-admin zu, collaborator bleibt hier in BEIDEN Modi verweigert) vs. collaborator UPDATEt
+  # TEAM_MAIN rein (kein ON CONFLICT — trifft nur teams_update_v3, das M3 rollenfiltert).
+  m3_collab_upsert="$(run_write "$U_COLLAB" \
+    "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_MAIN','$T_MAIN','RLS Matrix Team (collab upsert)') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
+  m3_collab_update="$(run_write "$U_COLLAB" "UPDATE public.teams SET name = 'RLS Matrix Team (collab update)' WHERE id = '$TEAM_MAIN';")"
+  m3_viewer_update="$(run_write "$U_VIEWER" "UPDATE public.teams SET name = 'RLS Matrix Team (viewer update)' WHERE id = '$TEAM_MAIN';")"
+  m3_trainer_update="$(run_write "$U_TRAINER" "UPDATE public.teams SET name = 'RLS Matrix Team (trainer update)' WHERE id = '$TEAM_MAIN';")"
+
+  # M5: Co-Admin setzt deleted_at (echte Änderung, NULL -> now()) vs. Co-Admin speichert mit
+  # UNVERÄNDERTEM deleted_at (NULL -> NULL, wie mapTournamentToSupabase es bei jedem save()
+  # ungefragt mitschickt) vs. Eigentümer setzt deleted_at (muss immer gelingen).
+  m5_coadmin_sets_deleted_at="$(run_write "$U_COADMIN" "UPDATE public.tournaments SET deleted_at = now() WHERE id = '$T_MAIN';")"
+  m5_coadmin_unchanged_deleted_at="$(run_write "$U_COADMIN" "UPDATE public.tournaments SET deleted_at = NULL, location_name = 'RLS Matrix R5 unchanged' WHERE id = '$T_MAIN';")"
+  m5_owner_sets_deleted_at="$(run_write "$U_OWNER" "UPDATE public.tournaments SET deleted_at = now() WHERE id = '$T_MAIN';")"
+
+  # M4: Co-Admin veröffentlicht T_MAIN, danach RESET ROLE (zurück auf den Superuser der Session)
+  # und Lesen des TATSÄCHLICH gespeicherten is_public-Werts von sponsors/monitors —
+  # sponsors_select_v3/monitors_select_v3 haben KEINEN Mitarbeiter-Zweig (nur owner_id=self ODER
+  # is_public=true), ein Co-Admin könnte den Erfolg der Kaskade über die eigene Rolle also gar
+  # nicht zuverlässig beobachten. RESET ROLE ist Standard-Postgres (setzt für den Rest der
+  # Transaktion auf die Session-Authorization zurück, hier "postgres", Superuser, umgeht RLS
+  # vollständig) — dasselbe current_user/session_user-Prinzip, das 003/20260923_001 bereits für
+  # SECURITY-DEFINER-Funktionen dokumentieren, hier nur ohne eigene Funktion. Nie committet (wie
+  # jeder andere Versuch in diesem Skript) — T_MAIN bleibt für nachfolgende Zeilen unveröffentlicht.
+  set +e
+  m4_publish_out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = '$U_COADMIN';
+UPDATE public.tournaments SET is_public = true WHERE id = '$T_MAIN';
+RESET ROLE;
+SELECT is_public FROM public.sponsors WHERE id = '$SPONSOR_MAIN';
+SELECT is_public FROM public.monitors WHERE id = '$MONITOR_MAIN';
+SQL
+)"
+  m4_publish_ec=$?
+  set -e
+  if [[ "$m4_publish_ec" -ne 0 ]]; then
+    m4_sponsor_public="ERROR:$m4_publish_out"
+    m4_monitor_public="ERROR:$m4_publish_out"
+  else
+    m4_sponsor_public="$(sed -n '1p' <<<"$m4_publish_out")"
+    m4_monitor_public="$(sed -n '2p' <<<"$m4_publish_out")"
+  fi
+
+  # K3-Lehre: U_COADMIN ist legitimer Co-Admin von T_MAIN — versucht, über GENAU diese Rolle
+  # eine NEUE Team-Zeile mit tournament_id = T_ANON (fremd, U_COADMIN hat dort KEINE Mitgliedschaft)
+  # anzulegen. Prüft direkt, ob die EXISTS-Klausel des neuen Co-Admin-Zweigs korrekt an
+  # NEW.tournament_id bindet (teams.tournament_id in der WITH-CHECK-Subquery ist die Spalte der
+  # einzufügenden Zeile, nicht T_MAIN) — muss in BEIDEN Modi scheitern.
+  k3_lehre_foreign_insert="$(run_write "$U_COADMIN" \
+    "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_ATTACK','$T_ANON','RLS Matrix Team (foreign insert attempt)');")"
+
+  echo ""
+  echo "=== R5 — Co-Admin vollständig, Teams, Löschen, Mitgliederverwaltung — $MODE_LABEL ==="
+  k1k2_mark_value "h4-coadmin-upsert-bestehendes-team                     " "$h4_team_upsert" "$exp_h4_team_upsert"
+  k1k2_mark_value "h4-coadmin-upsert-bestehendes-match                    " "$h4_match_upsert" "$exp_h4_match_upsert"
+  k1k2_mark_value "h4-coadmin-insert-neues-team-owner-id                  " "$h4_new_team_owner" "$exp_h4_new_team_owner"
+  k1k2_mark_value "m3-collaborator-upsert-team-insert-zweig-nur-coadmin   " "$m3_collab_upsert" "$exp_m3_collab_upsert"
+  k1k2_mark_value "regression-m3-collaborator-update-team                 " "$m3_collab_update" "$exp_m3_collab_update"
+  k1k2_mark_value "m3-viewer-update-team                                  " "$m3_viewer_update" "$exp_m3_viewer_update"
+  k1k2_mark_value "m3-trainer-update-team                                 " "$m3_trainer_update" "$exp_m3_trainer_update"
+  k1k2_mark_value "m5-coadmin-setzt-deleted-at                            " "$m5_coadmin_sets_deleted_at" "$exp_m5_coadmin_sets_deleted_at"
+  k1k2_mark_value "m5-coadmin-speichert-unveraendertes-deleted-at         " "$m5_coadmin_unchanged_deleted_at" "$exp_m5_coadmin_unchanged_deleted_at"
+  k1k2_mark_value "m5-eigentuemer-setzt-deleted-at                        " "$m5_owner_sets_deleted_at" "$exp_m5_owner_sets_deleted_at"
+  k1k2_mark_value "m4-coadmin-publish-sponsors-is-public                  " "$m4_sponsor_public" "$exp_m4_sponsor_public"
+  k1k2_mark_value "m4-coadmin-publish-monitors-is-public                  " "$m4_monitor_public" "$exp_m4_monitor_public"
+  k1k2_mark_value "k3-lehre-coadmin-insert-team-in-fremdes-turnier        " "$k3_lehre_foreign_insert" "$exp_k3_lehre_foreign_insert"
+else
+  echo ""
+  echo "=== R5 — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0 oder WITH_PARENT_KEYS=0, siehe Kommentar oben) ==="
+fi
+
 # --- 7d. R6 (task-R6-brief.md) — F3 (E-Mail-Adressen öffentlich lesbar) und F7 (Rolle selbst
 # änderbar). Läuft IMMER (unabhängig von WITH_MIGRATION/WITH_HARDENING/WITH_PARENT_KEYS) — die
 # Profile-Rechte sind orthogonal zur Tournament-/Collaborator-Härtung der Fixrunden 1-3. Nutzt
@@ -1057,7 +1249,7 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung und Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5 (H4/M3/M4/M5), R6 (F3/F7) und Public-Read-Stichprobe) ==="
 
 # --- 9. L4: CI-Gate im Default-Modus ("nachher", alle Migrationen) ------------------------
 # Vorher endete dieses Skript immer mit Exit 0 ("misst, urteilt nicht") — das reicht als
@@ -1066,7 +1258,7 @@ echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Ro
 # Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
 # Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
 # bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi

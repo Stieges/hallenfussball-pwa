@@ -4,7 +4,10 @@
   "capabilities": {
     "writeMatchData": "Verbindliche Spieldaten schreiben (Spielstand ändern, Ereignis anlegen) — matches UPDATE, match_events INSERT",
     "correctEvents": "Ereignisse korrigieren/löschen — match_events UPDATE, match_events DELETE",
-    "tournamentSettings": "Turniereinstellungen ändern — tournaments UPDATE"
+    "tournamentSettings": "Turniereinstellungen ändern — tournaments UPDATE",
+    "teams": "Bestehende Teams ändern (Name, Logo) — teams UPDATE. R5/M3: collaborator per Ausnahme erlaubt (siehe task-R5-brief.md), NICHT dasselbe wie Teams ANLEGEN (dafür bleibt es bei tournamentSettings/co-admin, H4).",
+    "deleteTournament": "Turnier löschen (Soft-Delete) — tournaments.deleted_at UPDATE. R5/M5: nur owner, auch für co-admin blockiert (vorher nur UI-Behauptung, jetzt per DB-Trigger erzwungen).",
+    "manageMembers": "Mitarbeiter verwalten — Einladungen erstellen, Rollen ändern, Mitglieder entfernen. R5/M6: nur owner (DB verlangt für tournament_collaborators-Schreibzugriffe durchgehend user_owns_tournament())."
   },
   "rows": [
     {
@@ -15,7 +18,10 @@
       "authMode": "authenticated",
       "writeMatchData": true,
       "correctEvents": true,
-      "tournamentSettings": true
+      "tournamentSettings": true,
+      "teams": true,
+      "deleteTournament": true,
+      "manageMembers": true
     },
     {
       "id": "owner-anonymous",
@@ -26,7 +32,10 @@
       "note": "Ruling B: signInAnonymously() erzeugt einen echten auth.users-Eintrag mit is_anonymous=true. Policies gelten TO authenticated, anon und prüfen owner_id = auth.uid() — ein anonym angemeldeter Eigentümer muss exakt dieselben Rechte haben wie ein regulär angemeldeter. Diese Zeile beweist das, statt es nur anzunehmen.",
       "writeMatchData": true,
       "correctEvents": true,
-      "tournamentSettings": true
+      "tournamentSettings": true,
+      "teams": true,
+      "deleteTournament": true,
+      "manageMembers": true
     },
     {
       "id": "co-admin",
@@ -36,7 +45,10 @@
       "authMode": "authenticated",
       "writeMatchData": true,
       "correctEvents": true,
-      "tournamentSettings": true
+      "tournamentSettings": true,
+      "teams": true,
+      "deleteTournament": false,
+      "manageMembers": false
     },
     {
       "id": "collaborator",
@@ -46,7 +58,10 @@
       "authMode": "authenticated",
       "writeMatchData": true,
       "correctEvents": true,
-      "tournamentSettings": false
+      "tournamentSettings": false,
+      "teams": true,
+      "deleteTournament": false,
+      "manageMembers": false
     },
     {
       "id": "trainer",
@@ -57,7 +72,10 @@
       "note": "Daniel: Ein Trainer-Eintrag ist perspektivisch ein Vorschlag, kein verbindlicher Schreibzugriff. Der Vorschlagsweg ist ein getrennter, künftiger Mechanismus (nicht Teil dieser Migration). Heute: keine direkten Schreibrechte.",
       "writeMatchData": false,
       "correctEvents": false,
-      "tournamentSettings": false
+      "tournamentSettings": false,
+      "teams": false,
+      "deleteTournament": false,
+      "manageMembers": false
     },
     {
       "id": "viewer",
@@ -67,7 +85,10 @@
       "authMode": "authenticated",
       "writeMatchData": false,
       "correctEvents": false,
-      "tournamentSettings": false
+      "tournamentSettings": false,
+      "teams": false,
+      "deleteTournament": false,
+      "manageMembers": false
     },
     {
       "id": "non-member",
@@ -77,7 +98,10 @@
       "authMode": "authenticated",
       "writeMatchData": false,
       "correctEvents": false,
-      "tournamentSettings": false
+      "tournamentSettings": false,
+      "teams": false,
+      "deleteTournament": false,
+      "manageMembers": false
     }
   ],
   "publicRead": {

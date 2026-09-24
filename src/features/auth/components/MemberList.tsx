@@ -13,6 +13,7 @@ import { RoleBadge } from './RoleBadge';
 import { useTournamentMembers } from '../hooks/useTournamentMembers';
 import type { TournamentRole } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
+import { canCreateInvitations } from '../utils/permissions';
 
 interface MemberListProps {
   /** Turnier-ID */
@@ -66,7 +67,9 @@ export const MemberList: React.FC<MemberListProps> = ({
     }
   };
 
-  const canManageMembers = myMembership?.role === 'owner' || myMembership?.role === 'co-admin';
+  // R5/M6: nur owner -- DB verlangt für tournament_collaborators-INSERT user_owns_tournament(),
+  // siehe permissions.ts#canCreateInvitations.
+  const canManageMembers = myMembership ? canCreateInvitations(myMembership.role) : false;
 
   return (
     <div style={styles.container}>
