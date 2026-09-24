@@ -389,6 +389,7 @@ export function DangerZoneCategory({
         </ul>
 
         <button
+          data-testid={action === 'delete_tournament' ? 'danger-zone-delete' : undefined}
           style={{
             ...styles.button,
             ...(isDanger ? styles.buttonDanger : styles.buttonWarning),

@@ -86,7 +86,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
   // Loading state
   if (state === 'loading') {
     return (
-      <div style={styles.container}>
+      <div data-testid="invite-accept-screen" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.loadingSpinner} />
           <p style={styles.loadingText}>Einladung wird geprüft...</p>
@@ -98,7 +98,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
   // Invalid invitation
   if (state === 'invalid') {
     return (
-      <div style={styles.container}>
+      <div data-testid="invite-accept-screen" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.errorIcon}>!</div>
           <h2 style={styles.title}>Einladung ungültig</h2>
@@ -114,7 +114,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
   // Success state
   if (state === 'success') {
     return (
-      <div style={styles.container}>
+      <div data-testid="invite-accept-screen" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.successIcon}>&#10003;</div>
           <h2 style={styles.title}>Willkommen!</h2>
@@ -130,7 +130,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
   // Error state
   if (state === 'error') {
     return (
-      <div style={styles.container}>
+      <div data-testid="invite-accept-screen" style={styles.container}>
         <div style={styles.card}>
           <div style={styles.errorIcon}>!</div>
           <h2 style={styles.title}>Fehler</h2>
@@ -147,7 +147,7 @@ export const InviteAcceptScreen: React.FC<InviteAcceptScreenProps> = ({
   const roleInfo = invitation ? ROLE_LABELS[invitation.role] : null;
 
   return (
-    <div style={styles.container}>
+    <div data-testid="invite-accept-screen" style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>Einladung zum Turnier</h2>
 

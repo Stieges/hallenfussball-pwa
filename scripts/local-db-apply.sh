@@ -70,6 +70,26 @@ psql_stdin() {
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q "$@"
 }
 
+psql_scalar() {
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -qtA -c "$1"
+}
+
+# --- 1b. Idempotenz (Task T3, Vorspann): "test:env:up" nach einem bereits laufenden Stack -----
+# `supabase start` ist selbst idempotent (No-Op, wenn der Stack schon läuft und dabei sein
+# eingespieltes Schema aus dem Docker-Volume behält) — ohne diese Prüfung würde dieses Skript
+# danach versuchen, die Baseline ein zweites Mal auf ein bereits vollständiges Schema
+# einzuspielen und an Policy-/PK-Kollisionen scheitern ("multiple primary keys for table
+# match_corrections"). Erkennungsmerkmal: existiert public.tournaments schon (eine Tabelle aus
+# der Baseline, kein Migrations-Artefakt), ist das Schema vollständig eingespielt — dann NICHT
+# erneut einspielen, nur Status melden. `supabase db reset --local` (test:env:reset) räumt die
+# DB vorher leer, dort greift dieser Zweig nicht.
+SCHEMA_EXISTS="$(psql_scalar "SELECT to_regclass('public.tournaments') IS NOT NULL;" 2>/dev/null || echo f)"
+if [[ "$SCHEMA_EXISTS" == "t" ]]; then
+  echo "Schema bereits vorhanden (public.tournaments existiert) — Einspielen übersprungen." >&2
+  echo "Für ein sauberes Neu-Einspielen: npm run test:env:reset" >&2
+  exit 0
+fi
+
 # --- 2. Baseline + neuere Migrationen einspielen, in dieser Reihenfolge ---------------------
 echo "Container: $CONTAINER_NAME" >&2
 echo "Baseline einspielen: $(basename "$BASELINE_FILE")" >&2

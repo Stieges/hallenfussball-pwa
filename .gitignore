@@ -59,6 +59,8 @@ reviews/
 test-results/
 test-reports/
 playwright-report/
+# Playwright cloud-setup storageStates (echte, wenn auch nur lokale Test-Sessions) — Task T3
+playwright/.auth/
 
 # Vercel
 .vercel/

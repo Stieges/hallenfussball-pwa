@@ -75,6 +75,7 @@ export const InviteDialog: React.FC<InviteDialogProps> = ({
     <div style={styles.overlay} onClick={onClose}>
       <div
         ref={focusTrap.containerRef}
+        data-testid="invite-dialog"
         style={styles.dialog}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

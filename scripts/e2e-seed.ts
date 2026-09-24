@@ -39,11 +39,11 @@
  *   - Google-Provider (`app_metadata.provider`): Auth-Admin-API, kein DB-Mapper-Thema.
  */
 
-import { execSync } from 'node:child_process';
 import { createHmac } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { assertLocalSupabaseTarget } from './lib/assertLocalSupabaseTarget';
+import { getLocalSupabaseStatus } from './lib/localSupabaseStatus';
 import {
   E2E_USERS,
   type E2EUserKey,
@@ -55,6 +55,10 @@ import {
   E2E_PUBLIC_CUP_ID,
   E2E_DRAFT_CUP_ID,
   E2E_STRANGER_CUP_ID,
+  E2E_LIVE_CUP_TITLE,
+  E2E_PUBLIC_CUP_TITLE,
+  E2E_DRAFT_CUP_TITLE,
+  E2E_STRANGER_CUP_TITLE,
   E2E_PUBLIC_CUP_SHARE_CODE,
   E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_TEAM_NAMES,
@@ -78,28 +82,6 @@ import { generateFullSchedule } from '../src/core/generators/scheduleGenerator';
 // =============================================================================
 // 0. PRODUKTIONS-SPERRE + CLIENT
 // =============================================================================
-
-function getLocalSupabaseStatus(): { url: string; serviceRoleKey: string; anonKey: string; jwtSecret: string } {
-  const raw = execSync('supabase status -o json', { encoding: 'utf8' });
-  const parsed: unknown = JSON.parse(raw);
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('`supabase status -o json` lieferte kein Objekt.');
-  }
-  const status = parsed as Record<string, unknown>;
-  const url = status.API_URL;
-  const serviceRoleKey = status.SERVICE_ROLE_KEY;
-  const anonKey = status.ANON_KEY;
-  const jwtSecret = status.JWT_SECRET;
-  if (
-    typeof url !== 'string' ||
-    typeof serviceRoleKey !== 'string' ||
-    typeof anonKey !== 'string' ||
-    typeof jwtSecret !== 'string'
-  ) {
-    throw new Error('`supabase status -o json` enthält nicht alle erwarteten Felder (API_URL/SERVICE_ROLE_KEY/ANON_KEY/JWT_SECRET).');
-  }
-  return { url, serviceRoleKey, anonKey, jwtSecret };
-}
 
 const { url, serviceRoleKey, anonKey, jwtSecret } = getLocalSupabaseStatus();
 assertLocalSupabaseTarget(url, serviceRoleKey);
@@ -397,7 +379,7 @@ async function main(): Promise<void> {
     service,
     {
       id: E2E_LIVE_CUP_ID,
-      title: 'Live-Cup',
+      title: E2E_LIVE_CUP_TITLE,
       ageClass: 'U13',
       date: new Date().toISOString().split('T')[0],
       timeSlot: '09:00 - 16:00',
@@ -555,7 +537,7 @@ async function main(): Promise<void> {
 
   const publicCup = service.createDraft({
     id: E2E_PUBLIC_CUP_ID,
-    title: 'Public-Cup',
+    title: E2E_PUBLIC_CUP_TITLE,
     ageClass: 'U15',
     date: new Date().toISOString().split('T')[0],
     timeSlot: '10:00 - 15:00',
@@ -654,7 +636,7 @@ async function main(): Promise<void> {
   log('Lege Entwurf-Cup an…');
   const draftCup = service.createDraft({
     id: E2E_DRAFT_CUP_ID,
-    title: 'Entwurf-Cup',
+    title: E2E_DRAFT_CUP_TITLE,
     ageClass: 'U11',
     date: new Date().toISOString().split('T')[0],
     timeSlot: '09:00 - 16:00',
@@ -676,7 +658,7 @@ async function main(): Promise<void> {
   log('Lege Fremd-Cup an…');
   const strangerCup = strangerService.createDraft({
     id: E2E_STRANGER_CUP_ID,
-    title: 'Fremd-Cup',
+    title: E2E_STRANGER_CUP_TITLE,
     ageClass: 'U11',
     date: new Date().toISOString().split('T')[0],
     timeSlot: '09:00 - 16:00',

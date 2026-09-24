@@ -60,13 +60,17 @@ export default defineConfig({
         test: {
           name: 'unit-node',
           environment: 'node',
-          // scripts/** und tests/e2e/cloud/**: Task T2 (Testumgebung) — Produktions-Sperre
-          // (scripts/lib/assertLocalSupabaseTarget.ts) und Registrierungscode-Gleichlauf
+          // scripts/** und tests/e2e/cloud/__tests__/**: Task T2 (Testumgebung) — Produktions-
+          // Sperre (scripts/lib/assertLocalSupabaseTarget.ts) und Registrierungscode-Gleichlauf
           // (tests/e2e/cloud/testData.ts) brauchen einen echten Vitest-Lauf, kein Playwright.
+          // NUR __tests__/ (nicht tests/e2e/cloud/**), weil Task T3 unter tests/e2e/cloud/
+          // echte PLAYWRIGHT-Specs hinzugefügt hat (smoke.spec.ts, auth.setup.ts) — die breitere
+          // Variante ließ Vitest smoke.spec.ts laden und mit "Playwright Test did not expect
+          // test.describe() to be called here" abstürzen (reproduziert vor dieser Änderung).
           include: [
             'src/**/*.{test,spec}.ts',
             'scripts/**/*.{test,spec}.ts',
-            'tests/e2e/cloud/**/*.{test,spec}.ts',
+            'tests/e2e/cloud/__tests__/**/*.{test,spec}.ts',
           ],
           exclude: [...DOM_ONLY_TS_TESTS],
         },

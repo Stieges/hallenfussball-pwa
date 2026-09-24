@@ -128,7 +128,7 @@ export function AdminHeader({
   const { t } = useTranslation('admin');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { status, isSyncing, lastSyncedAt, syncTournament } = useSyncStatus();
+  const { status, isSyncing, lastSyncedAt, pendingChanges, syncTournament } = useSyncStatus();
 
   const handleSyncClick = () => {
     if (tournamentId) {
@@ -199,6 +199,7 @@ export function AdminHeader({
           status={status}
           isSyncing={isSyncing}
           lastSyncedAt={lastSyncedAt}
+          pendingCount={pendingChanges}
           onSyncClick={handleSyncClick}
           compact
         />

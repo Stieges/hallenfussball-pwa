@@ -184,6 +184,19 @@ export function SyncStatusBar({
     const styles = useMemo(() => createStyles(config, compact), [config, compact]);
     const lastSyncText = formatLastSync(lastSyncedAt);
 
+    // Test-Zustand (Task T3, data-state auf data-testid="sync-status"): bewusst eigenes,
+    // schmaleres Vokabular ("idle" | "syncing" | "offline" | "error") statt des internen
+    // `SyncStatus`-Unions -- E2E-Tests (tests/e2e/cloud/helpers.ts#waitForSync) sollen nicht an
+    // die visuelle Unterscheidung "synced" vs. "updated" gekoppelt sein. "conflict" zählt hier
+    // als "error" (erfordert genau wie ein Fehler eine Nutzeraktion, bevor sync wieder ruht).
+    const testState: 'idle' | 'syncing' | 'offline' | 'error' = isSyncing
+        ? 'syncing'
+        : status === 'offline'
+            ? 'offline'
+            : status === 'error' || status === 'conflict'
+                ? 'error'
+                : 'idle';
+
     // Build status text with pending/failed info
     const hasPending = pendingCount > 0;
     const hasFailed = failedCount > 0;
@@ -204,6 +217,9 @@ export function SyncStatusBar({
     return (
         <>
             <button
+                data-testid="sync-status"
+                data-state={testState}
+                data-pending={pendingCount}
                 style={styles.container}
                 onClick={handleClick}
                 onKeyDown={handleKeyDown}

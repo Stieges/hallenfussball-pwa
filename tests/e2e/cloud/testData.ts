@@ -96,6 +96,13 @@ export const E2E_PUBLIC_CUP_ID = e2eUuid('tournament:public-cup');
 export const E2E_DRAFT_CUP_ID = e2eUuid('tournament:draft-cup');
 export const E2E_STRANGER_CUP_ID = e2eUuid('tournament:stranger-cup');
 
+/** Titel der vier Testturniere (`scripts/e2e-seed.ts` UND `tests/e2e/cloud/smoke.spec.ts`
+ *  importieren von hier — keine literale Zweitstelle). */
+export const E2E_LIVE_CUP_TITLE = 'Live-Cup';
+export const E2E_PUBLIC_CUP_TITLE = 'Public-Cup';
+export const E2E_DRAFT_CUP_TITLE = 'Entwurf-Cup';
+export const E2E_STRANGER_CUP_TITLE = 'Fremd-Cup';
+
 /** Fester Share-Code des Public-Cup (Nachweis 3: anonymer Zugriff per Share-Code). */
 export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
 
