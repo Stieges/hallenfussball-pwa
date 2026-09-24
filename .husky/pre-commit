@@ -75,5 +75,8 @@ if git diff --cached --name-only | grep -qE "src/i18n/"; then
   echo ""
 fi
 
+# Wächter gegen Anbieter-Namen (Begriffsliste lokal, siehe scripts/check-forbidden-terms.sh)
+scripts/check-forbidden-terms.sh --staged
+
 npx lint-staged
 npm run test -- --run

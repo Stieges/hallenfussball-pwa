@@ -1,7 +1,7 @@
 # Implementierungs-Entscheidungsanalyse: fairScheduler.ts Fixes
 
 > **Erstellt:** 04.12.2025
-> **Basis:** AI Hub Analyse + Follow-up
+> **Basis:** LLM-Gateway-Analyse + Follow-up
 > **Status:** ⏳ Wartet auf User-Entscheidungen
 
 ---

@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # MCP Server und sensitive Daten
-mcp-ai-hub-analyzer/
+mcp-*-analyzer/
 .mcp.json
 .claude/
 **/mcp*.md
@@ -45,7 +45,7 @@ mcp-ai-hub-analyzer/
 **/*apikey*
 TEST-CREDENTIALS.md
 
-# Entwickler-Skripte mit API Keys (AI Hub)
+# Entwickler-Skripte mit API Keys (LLM-Gateway)
 evaluate-plan.js
 clarify-*.js
 search-property-names.js
