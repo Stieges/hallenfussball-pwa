@@ -7,16 +7,44 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Europe/Berlin"
+    # Gruppen fassen nur kleine und Patch-Updates zusammen. Hauptversionen kommen
+    # einzeln, damit ein einziges Problem nicht alle anderen Updates blockiert
+    # (so geschehen in #188: TypeScript 7 hielt 19 weitere Updates auf).
     groups:
       dev-dependencies:
-        patterns: ["*"]
         dependency-type: "development"
+        update-types: ["minor", "patch"]
       production:
-        patterns: ["*"]
         dependency-type: "production"
-    open-pull-requests-limit: 5
+        update-types: ["minor", "patch"]
+    ignore:
+      # TypeScript 7 (nativer Compiler) vorerst nicht: typescript-eslint unterstützt
+      # Stand 2026-09-24 nur TypeScript < 6.1. Umstieg als eigenes Paket, sobald
+      # typescript-eslint TypeScript 7 offiziell unterstützt. Dann diesen Eintrag löschen.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 10
     commit-message:
       prefix: "deps"
+    labels:
+      - "dependencies"
+    reviewers:
+      - "Stieges"
+
+  # GitHub Actions aktuell halten (die CI warnt vor auslaufendem Node 20 in
+  # actions/checkout@v4 und supabase/setup-cli@v1).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Berlin"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
     labels:
       - "dependencies"
     reviewers:
