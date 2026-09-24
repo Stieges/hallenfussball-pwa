@@ -239,7 +239,6 @@ export function useTournamentWizard(
     setVisitedSteps(prev => new Set([...prev, targetStep]));
     setStepErrors(prev => {
       const { [targetStep]: _removed, ...rest } = prev;
-      void _removed; // Consume unused variable
       return rest;
     });
     setStep(targetStep);
