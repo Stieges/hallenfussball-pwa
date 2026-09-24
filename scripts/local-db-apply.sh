@@ -87,23 +87,43 @@ SCHEMA_EXISTS="$(psql_scalar "SELECT to_regclass('public.tournaments') IS NOT NU
 if [[ "$SCHEMA_EXISTS" == "t" ]]; then
   echo "Schema bereits vorhanden (public.tournaments existiert) — Einspielen übersprungen." >&2
   echo "Für ein sauberes Neu-Einspielen: npm run test:env:reset" >&2
-  exit 0
-fi
-
-# --- 2. Baseline + neuere Migrationen einspielen, in dieser Reihenfolge ---------------------
-echo "Container: $CONTAINER_NAME" >&2
-echo "Baseline einspielen: $(basename "$BASELINE_FILE")" >&2
-psql_stdin < "$BASELINE_FILE"
-
-NEWER_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
-if [[ -n "$NEWER_RAW" ]]; then
-  while IFS= read -r f; do
-    [[ -z "$f" ]] && continue
-    echo "Migration einspielen: $(basename "$f")" >&2
-    psql_stdin < "$f"
-  done <<< "$NEWER_RAW"
 else
-  echo "Keine neueren Migrationsdateien nachzuspielen." >&2
+  # --- 2. Baseline + neuere Migrationen einspielen, in dieser Reihenfolge -------------------
+  echo "Container: $CONTAINER_NAME" >&2
+  echo "Baseline einspielen: $(basename "$BASELINE_FILE")" >&2
+  psql_stdin < "$BASELINE_FILE"
+
+  NEWER_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+  if [[ -n "$NEWER_RAW" ]]; then
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      echo "Migration einspielen: $(basename "$f")" >&2
+      psql_stdin < "$f"
+    done <<< "$NEWER_RAW"
+  else
+    echo "Keine neueren Migrationsdateien nachzuspielen." >&2
+  fi
+
+  echo "Fertig: Baseline + neuere Migrationen eingespielt." >&2
 fi
 
-echo "Fertig: Baseline + neuere Migrationen eingespielt." >&2
+# --- 3. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
+# task-T4-review.md Fixrunde 1): Die lokale Supabase-CLI legt `supabase_realtime` beim ersten
+# Start LEER an (CLI-Standard, kein Migrations-Artefakt, kein DDL, das ein Schema-Dump sähe).
+# Produktion enthält laut Live-Abfrage (2026-09-25, durch den Auftraggeber) GENAU vier
+# Tabellen: public.match_events, public.matches, public.monitor_heartbeats, public.teams. Ohne
+# das ist jede Realtime-Subscription (Live-Cockpit auf zwei Geräten, Hallen-Monitor) lokal
+# wirkungslos, obwohl der Code identisch zur Produktion ist — gefunden beim T4-Sofort-Fix, der
+# den lokalen Stack für seinen Nachweis genutzt hat. `ALTER PUBLICATION ... SET TABLE` ist
+# idempotent (ersetzt den Tabellensatz vollständig, kein Unterschied ob vorher leer oder
+# bereits gesetzt) — läuft deshalb IMMER, unabhängig vom obigen Schema-Einspielen-Zweig, damit
+# auch ein `test:env:up` auf einen bereits eingespielten Stack die Publikation korrigiert.
+echo "Realtime-Publikation setzen (supabase_realtime: 4 Tabellen wie Produktion)…" >&2
+psql_stdin <<'SQL'
+ALTER PUBLICATION supabase_realtime SET TABLE
+  public.match_events,
+  public.matches,
+  public.monitor_heartbeats,
+  public.teams;
+SQL
+echo "Realtime-Publikation gesetzt." >&2

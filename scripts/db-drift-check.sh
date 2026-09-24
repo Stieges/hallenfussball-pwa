@@ -387,6 +387,48 @@ else
   echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
+# --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
+# task-T4-review.md Fixrunde 1) ------------------------------------------------------------
+# `supabase_realtime` ist eine Publication, kein Schema-Objekt in `public` -- Textdiff und
+# Katalogzählung unten (beide --schema=public) sehen sie nie, ein fehlender oder zusätzlicher
+# Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
+# Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
+# Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält
+# GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams.
+# scripts/local-db-apply.sh setzt denselben Satz lokal (idempotent), dieser Abschnitt prüft,
+# dass Produktion nicht abgewichen ist.
+REALTIME_PUBLICATION_TABLES=(
+  "match_events"
+  "matches"
+  "monitor_heartbeats"
+  "teams"
+)
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Realtime-Publikation supabase_realtime (live) ---"
+  PUB_OUT="$WORKDIR/realtime_publication.out"
+  docker exec "$CONTAINER_NAME" \
+    psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' ORDER BY tablename;" \
+    > "$PUB_OUT" 2>"$WORKDIR/realtime_publication.log" \
+    || { echo "::error::Konnte supabase_realtime nicht live lesen:" >&2
+         cat "$WORKDIR/realtime_publication.log" >&2; exit 1; }
+  ACTUAL_PUB_TABLES="$(sort "$PUB_OUT")"
+  EXPECTED_PUB_TABLES="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | sort)"
+  if [[ "$ACTUAL_PUB_TABLES" == "$EXPECTED_PUB_TABLES" ]]; then
+    ROW_COUNT="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | wc -l | tr -d ' ')"
+    echo "Realtime-Publikation grün: supabase_realtime enthält genau die erwarteten $ROW_COUNT Tabellen."
+  else
+    echo "::error::supabase_realtime weicht von der erwarteten Tabellenliste ab:" >&2
+    echo "### Diff (links: erwartet, rechts: live)" >&2
+    diff <(echo "$EXPECTED_PUB_TABLES") <(echo "$ACTUAL_PUB_TABLES") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Realtime-Publikation (supabase_realtime) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------
 normalize() {
   # Neben der Plattform-Boilerplate (GRANT/REVOKE/OWNER TO/DEFAULT PRIVILEGES) faellt hier

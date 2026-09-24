@@ -57,7 +57,8 @@ export type E2EUserKey =
   | 'viewer'
   | 'revoked'
   | 'stranger'
-  | 'google';
+  | 'google'
+  | 'logouttest';
 
 export interface E2EUserSpec {
   key: E2EUserKey;
@@ -80,6 +81,14 @@ export const E2E_USERS: Record<E2EUserKey, E2EUserSpec> = {
   // auth_provider = 'google' (Admin-API app_metadata.provider) — für den Hinweis bei
   // "Passwort vergessen" bei Konten ohne Passwort-Login.
   google: { key: 'google', email: 'google@test.local', displayName: 'Gustav Google' },
+  // Fixrunde 1 (C1, Ruling U): EIGENER Nutzer für den Anmelden/Abmelden-Test
+  // (`auth.cloud.spec.ts`) -- `supabase.auth.signOut()` läuft ohne `scope`-Option (Supabase-JS
+  // Standard `scope: 'global'`, `src/features/auth/context/authActions.ts:507`) und beendet
+  // damit ALLE Sessions des Kontos. Würde dieser Test `owner` abmelden, verlöre jeder andere
+  // owner-Test, der über `asRole('owner')` denselben `playwright/.auth/owner.json`-storageState
+  // (= dieselbe Session) teilt, mitten im Volllauf seine Anmeldung. Kein Turnier-Bezug nötig --
+  // dieser Nutzer ist NIRGENDWO Mitglied, taucht in KEINEM anderen Spec über `asRole()` auf.
+  logouttest: { key: 'logouttest', email: 'logouttest@test.local', displayName: 'Lena Logouttest' },
 };
 
 /** Adressen für offene/abgelaufene/widerrufene Einladungen OHNE eigenes Konto. */
@@ -114,6 +123,17 @@ export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
  * "keine Slides konfiguriert"-Screen, nie ein laufendes Spiel. Einzige Änderung: ein Slide.
  */
 export const E2E_PUBLIC_CUP_MONITOR_ID = e2eUuid('monitor:public-cup:1');
+
+/**
+ * Fixrunde 1 (I2, Ruling V): Sponsor + Monitor des Entwurf-Cup, für den Nachweis "Sponsor und
+ * Monitor folgen" in `publish-coadmin.cloud.spec.ts` -- der Monitor zeigt EINEN `sponsor`-Slide
+ * auf genau diesen Sponsor, damit ein anonymer Monitor-Aufruf nach dem (gewollten)
+ * Veröffentlichen den Sponsor-Namen zeigt. Analog zum bereits vorhandenen
+ * `E2E_PUBLIC_CUP_MONITOR_ID`-Muster.
+ */
+export const E2E_DRAFT_CUP_MONITOR_ID = e2eUuid('monitor:draft-cup:1');
+export const E2E_DRAFT_CUP_SPONSOR_ID = e2eUuid('sponsor:draft-cup:1');
+export const E2E_DRAFT_CUP_SPONSOR_NAME = 'Entwurf-Sponsor GmbH';
 
 /** Team-Namen des Live-Cup: 8 Teams (A–H), erste Hälfte Gruppe A, zweite Hälfte Gruppe B. */
 export const E2E_LIVE_CUP_TEAM_NAMES = [

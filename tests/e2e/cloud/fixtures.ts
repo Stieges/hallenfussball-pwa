@@ -13,7 +13,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const AUTH_DIR = path.join(__dirname, '..', '..', '..', 'playwright', '.auth');
+/** Exportiert (Fixrunde 1, M3): `offline.cloud.spec.ts` braucht denselben Pfad für einen
+ *  eigenen `browser.newContext({ storageState })`-Aufruf (offline-Test, `asRole()` gibt keinen
+ *  Zugriff auf den Context selbst) -- EINE Quelle statt einer zweiten, literal duplizierten
+ *  Pfad-Konstruktion. */
+export const AUTH_DIR = path.join(__dirname, '..', '..', '..', 'playwright', '.auth');
 
 /**
  * Consent-Status (identisch zu tests/e2e/helpers/test-fixtures.ts, dort für die offline-Suite).

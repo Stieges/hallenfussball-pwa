@@ -9,6 +9,8 @@
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { E2E_USERS, E2E_TEST_PASSWORD, type E2EUserKey } from './testData';
+import { getLocalSupabaseStatus } from '../../../scripts/lib/localSupabaseStatus';
+import { assertLocalSupabaseTarget } from '../../../scripts/lib/assertLocalSupabaseTarget';
 
 // =============================================================================
 // LOGIN (über die Oberfläche, Brief Abschnitt 2)
@@ -142,4 +144,75 @@ export async function enterGoal(page: Page, side: 'home' | 'away'): Promise<void
   const skipButton = page.locator('[data-testid="dialog-skip-button"]');
   await expect(skipButton).toBeVisible({ timeout: 5000 });
   await skipButton.click();
+}
+
+/**
+ * I6 (Fixrunde 1): Setzt den Spielstand des aktuell LAUFENDEN Spiels eines Turniers auf den
+ * übergebenen Seed-Ausgangswert zurück -- gebraucht von `two-devices.cloud.spec.ts` und
+ * `offline.cloud.spec.ts`, die beide dasselbe laufende Live-Cup-Spiel für ihren Echtzeit-Nachweis
+ * verwenden. Seit die Realtime-Publikation lokal korrekt gesetzt ist (Ruling W), schreibt ein
+ * Tor den `matches`-Zeilen-Score tatsächlich durch (nur der `match_events`-Insert scheitert
+ * weiter an Fehler A) -- ohne Rückbau würden sich aufeinanderfolgende Testläufe im selben
+ * `test:e2e:cloud`-Lauf gegenseitig verkoppeln (I6).
+ */
+export async function resetRunningMatchScore(
+  tournamentId: string,
+  homeScore: number,
+  awayScore: number
+): Promise<void> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.running`,
+    {
+      method: 'PATCH',
+      headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ score_a: homeScore, score_b: awayScore }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`resetRunningMatchScore(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+}
+
+// =============================================================================
+// SERVICE-ROLE REST-ZUGRIFF (Fixrunde 1, M1: EINE Stelle statt drei Kopien in
+// `auth.cloud.spec.ts`/`public-view.cloud.spec.ts`/`publish-coadmin.cloud.spec.ts`) --
+// `playwright.config.ts` importiert `getLocalSupabaseStatus` bereits direkt, "kein
+// tsx-Node-Kontext" war als Begründung für eigene `execSync`-Kopien falsch (Review I5/M1):
+// Playwright-Testdateien laufen selbst unter Node, nicht im Browser.
+// =============================================================================
+
+export interface LocalServiceRoleClient {
+  url: string;
+  serviceRoleKey: string;
+  /** Für Aufrufe MIT einem echten Nutzer-JWT (PostgREST verlangt `apikey` unabhängig vom
+   *  `Authorization`-Bearer-Token) -- siehe `roles.cloud.spec.ts#serverHasTournamentPermission`. */
+  anonKey: string;
+  mailpitUrl: string;
+  /** Fertige Header für `fetch()` gegen `${url}/rest/v1/...` mit Service-Role-Rechten. */
+  headers: { apikey: string; Authorization: string };
+}
+
+let cachedServiceRoleClient: LocalServiceRoleClient | null = null;
+
+/**
+ * Liest URL/Service-Role-Key/Mailpit-URL EINMAL pro Datei/Worker-Prozess (M2: `supabase status`
+ * ist ein Docker-Aufruf, nicht bei jedem `expect.poll()`-Durchlauf erneut nötig) und sperrt
+ * zusätzlich gegen Produktion (`assertLocalSupabaseTarget`, M1) -- VOR jedem Service-Role-
+ * Schreibzugriff dieser Cloud-Specs, dieselbe Sperre wie `scripts/e2e-seed.ts`.
+ */
+export function getLocalServiceRoleClient(): LocalServiceRoleClient {
+  if (cachedServiceRoleClient) {
+    return cachedServiceRoleClient;
+  }
+  const status = getLocalSupabaseStatus();
+  assertLocalSupabaseTarget(status.url, status.serviceRoleKey);
+  cachedServiceRoleClient = {
+    url: status.url,
+    serviceRoleKey: status.serviceRoleKey,
+    anonKey: status.anonKey,
+    mailpitUrl: status.mailpitUrl,
+    headers: { apikey: status.serviceRoleKey, Authorization: `Bearer ${status.serviceRoleKey}` },
+  };
+  return cachedServiceRoleClient;
 }

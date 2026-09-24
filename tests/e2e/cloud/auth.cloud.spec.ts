@@ -7,19 +7,32 @@
  * das IST der Testgegenstand).
  *
  * Braucht einen laufenden lokalen Stack mit Seed-Daten (`npm run test:env:up`/`test:env:reset`
- * zuerst) UND die `supabase`-CLI im PATH (für `supabase status -o json`, Mailpit-URL).
+ * zuerst).
+ *
+ * Fixrunde 1 (C1, Ruling U): Der Logout-Test meldet NICHT `owner` ab -- `supabase.auth.signOut()`
+ * läuft ohne `scope`-Option (`src/features/auth/context/authActions.ts:507`), Supabase-JS
+ * Standard ist `scope: 'global'`. Das beendet ALLE Sessions dieses Kontos, auch die aus
+ * `playwright/.auth/owner.json`, die sich jeder andere Owner-Test über `asRole('owner')` teilt --
+ * das war die wahrscheinliche Ursache der "Owner-Flakiness" im Volllauf (siehe Report). Statt das
+ * App-Verhalten zu ändern (Produktfrage, siehe Report), bekommt der Logout-Test einen EIGENEN
+ * Seed-Nutzer (`logouttest`, `testData.ts`), den kein anderer Spec über `asRole()` verwendet.
  */
 
-import { execSync } from 'node:child_process';
 import { test, expect } from './fixtures';
 import { gotoLogin, loginAsRole, logoutViaUi } from './helpers';
+import { getLocalServiceRoleClient } from './helpers';
 import { E2E_USERS } from './testData';
 
 // =============================================================================
 // MAILPIT (Brief: "Abfrage über die Mailpit/Inbucket-HTTP-API des lokalen Stacks, Port per
-// `supabase status`") -- dieselbe Quelle wie `scripts/lib/localSupabaseStatus.ts`, hier per
-// eigenem `execSync`-Aufruf statt Import, weil dieser Spec unter Playwright (Browser-Test-Runner)
-// läuft, nicht unter `tsx`/Node-Skript-Kontext wie der Seed.
+// `supabase status`") -- `getLocalServiceRoleClient()` liefert `mailpitUrl` aus derselben Quelle
+// wie alles andere (Fixrunde 1, M1: keine eigene `execSync`-Kopie mehr).
+//
+// Fixrunde 1 (M7): KEIN globales `DELETE /api/v1/messages` mehr -- `cloud-desktop` und
+// `cloud-mobile` laufen `fullyParallel` im selben Mailpit-Postfach, ein Test könnte die Mail
+// löschen, auf die ein anderer (paralleler) Test wartet. Stattdessen: Testbeginn-Zeitstempel
+// merken und beim Suchen nach `Created` filtern -- jeder Test sieht nur Mails, die NACH seinem
+// eigenen Start verschickt wurden.
 // =============================================================================
 
 interface MailpitAddress {
@@ -36,45 +49,26 @@ interface MailpitMessagesResponse {
   messages: MailpitMessage[];
 }
 
-function getMailpitUrl(): string {
-  const raw = execSync('supabase status -o json', { encoding: 'utf8' });
-  const parsed: unknown = JSON.parse(raw);
-  if (typeof parsed !== 'object' || parsed === null) {
-    throw new Error('`supabase status -o json` lieferte kein Objekt.');
-  }
-  const mailpitUrl = (parsed as Record<string, unknown>).MAILPIT_URL;
-  if (typeof mailpitUrl !== 'string') {
-    throw new Error('`supabase status -o json` enthält kein MAILPIT_URL -- läuft der lokale Stack?');
-  }
-  return mailpitUrl;
-}
-
-async function clearMailpit(mailpitUrl: string): Promise<void> {
-  const res = await fetch(`${mailpitUrl}/api/v1/messages`, { method: 'DELETE' });
-  if (!res.ok) {
-    throw new Error(`Mailpit-Postfach leeren fehlgeschlagen: ${res.status} ${res.statusText}`);
-  }
-}
-
-async function listMailpitMessages(mailpitUrl: string): Promise<MailpitMessage[]> {
+async function listMailpitMessagesSince(mailpitUrl: string, sinceIso: string): Promise<MailpitMessage[]> {
   const res = await fetch(`${mailpitUrl}/api/v1/messages`);
   if (!res.ok) {
     throw new Error(`Mailpit-Abfrage fehlgeschlagen: ${res.status} ${res.statusText}`);
   }
   const data = (await res.json()) as MailpitMessagesResponse;
-  return data.messages;
+  return data.messages.filter((m) => m.Created >= sinceIso);
 }
 
-/** Wartet bis zu `timeoutMs` auf eine Mail an `toEmail`. Wirft mit Ist-Zustand bei Timeout. */
-async function waitForMailpitMessage(
+/** Wartet bis zu `timeoutMs` auf eine Mail an `toEmail`, verschickt NACH `sinceIso`. */
+async function waitForMailpitMessageSince(
   mailpitUrl: string,
   toEmail: string,
+  sinceIso: string,
   timeoutMs = 10000
 ): Promise<MailpitMessage> {
   const deadline = Date.now() + timeoutMs;
   let lastCount = -1;
   while (Date.now() < deadline) {
-    const messages = await listMailpitMessages(mailpitUrl);
+    const messages = await listMailpitMessagesSince(mailpitUrl, sinceIso);
     lastCount = messages.length;
     const match = messages.find((m) => m.To.some((to) => to.Address === toEmail));
     if (match) {
@@ -83,10 +77,19 @@ async function waitForMailpitMessage(
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
   throw new Error(
-    `waitForMailpitMessage: keine Mail an "${toEmail}" innerhalb von ${timeoutMs}ms ` +
-    `(zuletzt ${lastCount} Nachricht(en) im Postfach insgesamt).`
+    `waitForMailpitMessageSince: keine Mail an "${toEmail}" seit ${sinceIso} innerhalb von ${timeoutMs}ms ` +
+    `(zuletzt ${lastCount} Nachricht(en) seither im Postfach).`
   );
 }
+
+/**
+ * Fixrunde 1 (M6): EINE Regex für Erfolgs- UND Fehlschlag-Prüfung des Reset-Dialogs -- vorher
+ * prüfte die Positiv-Seite `/E-Mail gesendet|Passwort zurücksetzen/i` und die Negativ-Seite nur
+ * `/Passwort zurücksetzen/i`. Hieße der Erfolgsdialog nur "E-Mail gesendet", hätte die
+ * Negativ-Prüfung nie etwas gefunden UND nie etwas widerlegt (immer "nicht sichtbar" richtig,
+ * aber aus dem falschen Grund).
+ */
+const RESET_PASSWORD_DIALOG_NAME = /E-Mail gesendet|Passwort zurücksetzen/i;
 
 // =============================================================================
 // TESTS
@@ -94,7 +97,9 @@ async function waitForMailpitMessage(
 
 test.describe('Cloud-Auth', () => {
   test('Anmelden und Abmelden mit Passwort', async ({ page }) => {
-    await loginAsRole(page, 'owner');
+    // C1/Ruling U: eigener Seed-Nutzer, den kein anderer Spec über asRole() teilt -- signOut()
+    // (scope: 'global', unverändert) darf hier niemand anderen betreffen.
+    await loginAsRole(page, 'logouttest');
     await logoutViaUi(page);
   });
 
@@ -110,8 +115,8 @@ test.describe('Cloud-Auth', () => {
   });
 
   test('Passwort vergessen (owner): Reset-Mail kommt im lokalen Postfach an', async ({ page }) => {
-    const mailpitUrl = getMailpitUrl();
-    await clearMailpit(mailpitUrl);
+    const { mailpitUrl } = getLocalServiceRoleClient();
+    const testStartIso = new Date().toISOString();
 
     await gotoLogin(page);
     await page.locator('[data-testid="login-email-input"]').fill(E2E_USERS.owner.email);
@@ -119,17 +124,17 @@ test.describe('Cloud-Auth', () => {
 
     // LoginResetPasswordDialog (kein data-testid, aria-labelledby="reset-password-title", siehe
     // src/features/auth/components/LoginDialogs.tsx) -- Rollen-/Text-Selektor statt neuem Test-Hook.
-    await expect(page.getByRole('dialog', { name: /E-Mail gesendet|Passwort zurücksetzen/i })).toBeVisible({
+    await expect(page.getByRole('dialog', { name: RESET_PASSWORD_DIALOG_NAME })).toBeVisible({
       timeout: 10000,
     });
 
-    const message = await waitForMailpitMessage(mailpitUrl, E2E_USERS.owner.email);
+    const message = await waitForMailpitMessageSince(mailpitUrl, E2E_USERS.owner.email, testStartIso);
     expect(message.Subject.toLowerCase()).toContain('reset');
   });
 
   test('Google-Testkonto: Hinweis statt Mail, kein Versand', async ({ page }) => {
-    const mailpitUrl = getMailpitUrl();
-    await clearMailpit(mailpitUrl);
+    const { mailpitUrl } = getLocalServiceRoleClient();
+    const testStartIso = new Date().toISOString();
 
     await gotoLogin(page);
     await page.locator('[data-testid="login-email-input"]').fill(E2E_USERS.google.email);
@@ -139,14 +144,15 @@ test.describe('Cloud-Auth', () => {
     await expect(errorMessage).toBeVisible({ timeout: 10000 });
     await expect(errorMessage).toContainText('Google');
 
-    // Kein Reset-Dialog (kein resetPasswordSent-Zustand).
-    await expect(page.getByRole('dialog', { name: /Passwort zurücksetzen/i })).toHaveCount(0);
+    // Kein Reset-Dialog (kein resetPasswordSent-Zustand) -- dieselbe Regex wie die Erfolgsprüfung
+    // oben (M6).
+    await expect(page.getByRole('dialog', { name: RESET_PASSWORD_DIALOG_NAME })).toHaveCount(0);
 
-    // Negativbeweis: keine Mail an das Google-Testkonto, auch nach kurzer Wartezeit. Ein leeres
-    // Ergebnis nach 0ms wäre kein Beweis (die Anfrage könnte noch unterwegs sein) -- deshalb
-    // kurz real warten, nicht sofort prüfen.
+    // Negativbeweis: keine Mail an das Google-Testkonto seit Testbeginn, auch nach kurzer
+    // Wartezeit. Ein leeres Ergebnis nach 0ms wäre kein Beweis (die Anfrage könnte noch
+    // unterwegs sein) -- deshalb kurz real warten, nicht sofort prüfen.
     await page.waitForTimeout(2000);
-    const messages = await listMailpitMessages(mailpitUrl);
+    const messages = await listMailpitMessagesSince(mailpitUrl, testStartIso);
     expect(messages.some((m) => m.To.some((to) => to.Address === E2E_USERS.google.email))).toBe(false);
   });
 });
