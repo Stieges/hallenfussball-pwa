@@ -17,6 +17,7 @@ import type {
   TiebreakerMode,
 } from '../models/LiveMatch';
 import type { TeamLogo, TeamColors } from '../../types/tournament';
+import { toSupabaseEventId } from '../utils/id';
 
 // ============================================================================
 // TYPE ALIASES
@@ -27,19 +28,29 @@ type MatchEventRow = Tables<'match_events'>;
 type MatchEventInsert = TablesInsert<'match_events'>;
 type TeamRow = Tables<'teams'>;
 
+/** MatchEventInsert, mit `id` als garantiert gesetztem string — mapMatchEventToSupabase
+ *  setzt ihn immer, auch wenn der generierte Supabase-Typ ihn als optional führt. */
+type MatchEventInsertWithId = MatchEventInsert & { id: string };
+
 // ============================================================================
 // STATUS MAPPING
 // ============================================================================
 
+// C-NSTART (Sofort-Fix 2026-09-25): 'not_started' verletzt matches_match_status_check
+// (erlaubt sind nur scheduled/waiting/running/paused/finished/skipped) — jeder Insert/Update
+// mit diesem Wert scheiterte, ein nie geöffnetes Spiel konnte in der Cloud nie angelegt
+// werden. NOT_STARTED wird jetzt als 'scheduled' geschrieben; 'not_started' wird beim
+// Lesen weiter toleriert (Alt-Zeilen aus der Zeit vor diesem Fix, falls es sie je gab).
 const STATUS_TO_FRONTEND: Record<string, MatchStatus> = {
   not_started: 'NOT_STARTED',
+  scheduled: 'NOT_STARTED',
   running: 'RUNNING',
   paused: 'PAUSED',
   finished: 'FINISHED',
 };
 
 const STATUS_TO_DB: Record<MatchStatus, string> = {
-  NOT_STARTED: 'not_started',
+  NOT_STARTED: 'scheduled',
   RUNNING: 'running',
   PAUSED: 'paused',
   FINISHED: 'finished',
@@ -126,14 +137,21 @@ export function mapMatchEventFromSupabase(row: MatchEventRow): MatchEvent {
 }
 
 /**
- * Maps a MatchEvent to Supabase match_events insert format
+ * Maps a MatchEvent to Supabase match_events insert format.
+ *
+ * C-EVID (Sofort-Fix 2026-09-25): `match_events.id` ist eine Postgres-`uuid`-Spalte. Neue
+ * Ereignisse haben bereits eine UUID als lokale Kennung (s. `core/utils/id.ts`), Alt-
+ * Ereignisse mit Text-Kennung (`${matchId}-goal-${Date.now()}-${zufall}` u.ä.) werden hier
+ * deterministisch in eine UUID umgerechnet — `toSupabaseEventId` lässt echte UUIDs
+ * unverändert. Die lokale Kennung (`MatchEvent.id`) bleibt unverändert, nur der an
+ * Supabase gesendete Wert ändert sich.
  */
 export function mapMatchEventToSupabase(
   event: MatchEvent,
   matchId: string
-): MatchEventInsert {
+): MatchEventInsertWithId {
   return {
-    id: event.id,
+    id: toSupabaseEventId(event.id),
     match_id: matchId,
     timestamp_seconds: event.timestampSeconds,
     type: event.type,
@@ -258,7 +276,7 @@ export function mapLiveMatchToSupabase(
   existingEventIds: Set<string> = new Set<string>()
 ): {
   matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null };
-  newEvents: MatchEventInsert[];
+  newEvents: MatchEventInsertWithId[];
 } {
   // Build live_state JSONB
   const liveState: LiveStateJson = {
@@ -288,10 +306,13 @@ export function mapLiveMatchToSupabase(
     updated_at: new Date().toISOString(),
   };
 
-  // Find new events (not yet in DB)
+  // Find new events (not yet in DB). Ruling R: der Abgleich "schon übertragen?" vergleicht
+  // die GEMAPPTE (Supabase-)Kennung, nicht die lokale MatchEvent.id — sonst würden
+  // Alt-Ereignisse mit Text-Kennung bei jedem save() erneut gesendet, weil ihre lokale ID
+  // nie im (aus DB-UUIDs gefüllten) existingEventIds-Cache steht.
   const newEvents = liveMatch.events
-    .filter((event) => !existingEventIds.has(event.id))
-    .map((event) => mapMatchEventToSupabase(event, liveMatch.id));
+    .map((event) => mapMatchEventToSupabase(event, liveMatch.id))
+    .filter((mapped) => !existingEventIds.has(mapped.id));
 
   return { matchUpdate, newEvents };
 }
@@ -302,7 +323,11 @@ export function mapLiveMatchToSupabase(
  * that have live_state set (created by initializeMatch but not yet started).
  */
 export function isMatchActive(matchRow: MatchRow): boolean {
-  const status = matchRow.match_status ?? 'not_started';
+  // Fallback-Default an C-NSTART angeglichen: 'scheduled' ist der tatsächliche DB-Default
+  // für match_status (matches_match_status_check erlaubt 'not_started' gar nicht). Ändert
+  // das Ergebnis nicht — 'not_started' wie 'scheduled' sind beides "nicht running/paused",
+  // die Unterscheidung "aktiv" fällt unten über live_state.
+  const status = matchRow.match_status ?? 'scheduled';
   if (status === 'running' || status === 'paused') { return true; }
   // Include initialized NOT_STARTED matches (have live_state set)
   const liveState = (matchRow as MatchRow & { live_state?: unknown }).live_state;
