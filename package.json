@@ -31,7 +31,11 @@
     "findings:status": "PYTHONPATH=scripts python3 -m findings.findings_status docs/findings/",
     "findings:fix": "PYTHONPATH=scripts python3 -m findings.finding_fix",
     "findings:routing-stats": "PYTHONPATH=scripts python3 -m findings.findings_routing_stats",
-    "findings:validate-freshness": "PYTHONPATH=scripts python3 -m findings.validate_review_freshness"
+    "findings:validate-freshness": "PYTHONPATH=scripts python3 -m findings.validate_review_freshness",
+    "test:env:up": "supabase start && bash scripts/local-db-apply.sh",
+    "test:env:down": "supabase stop",
+    "test:env:reset": "supabase db reset --local && bash scripts/local-db-apply.sh",
+    "test:env:status": "bash scripts/test-env-status.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

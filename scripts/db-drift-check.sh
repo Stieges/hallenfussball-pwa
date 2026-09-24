@@ -106,23 +106,19 @@ if [[ ! -f "$BASELINE_FILE" ]]; then
 fi
 
 # --- 1. Marker aus der Baseline lesen, neuere Migrationsdateien bestimmen -----------------
-MARKER="$(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
-if [[ -z "$MARKER" ]]; then
-  echo "::error::Marker 'baseline-includes-through' fehlt im Kopf von $BASELINE_BASENAME." >&2
-  echo "::error::Ohne ihn kann dieses Skript nicht wissen, welche Migrationen bereits in der Baseline stecken." >&2
-  exit 1
+# Gemeinsame Logik mit scripts/rls-role-matrix.sh und scripts/local-db-apply.sh — siehe
+# scripts/lib/migrations-since-baseline.sh (T1, "die Liste darf es nur EINMAL geben").
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+NEWER_MIGRATIONS=()
+if [[ -n "$NEWER_MIGRATIONS_RAW" ]]; then
+  # bash 3.2 (macOS-Standard) kennt kein mapfile — portable while-read-Schleife.
+  while IFS= read -r line; do
+    NEWER_MIGRATIONS+=("$line")
+  done <<< "$NEWER_MIGRATIONS_RAW"
 fi
 
-NEWER_MIGRATIONS=()
-for f in "$MIGRATIONS_DIR"/*.sql; do
-  base="$(basename "$f")"
-  [[ "$base" == "$BASELINE_BASENAME" ]] && continue
-  if [[ "$base" > "$MARKER" ]]; then
-    NEWER_MIGRATIONS+=("$f")
-  fi
-done
-
-echo "Baseline enthält bereits bis einschließlich: $MARKER"
+echo "Baseline enthält bereits bis einschließlich: $(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
 if [[ ${#NEWER_MIGRATIONS[@]} -eq 0 ]]; then
   echo "Keine neueren Migrationsdateien nachzuspielen."
 else
