@@ -26,11 +26,15 @@
 # werden muss — nur wenn die Baseline selbst neu erzeugt wird, muss der Marker in ihr
 # nachgezogen werden.
 #
-# Vergleich läuft auf zwei Beinen (beide müssen grün sein):
+# Vergleich läuft auf zwei Beinen (beide müssen grün sein), plus einer optionalen Rechte-
+# Assertion, die nur läuft, wenn SUPABASE_DB_READONLY_URL gesetzt ist:
 #   1. Normalisierter Textdiff des Schemas.
 #   2. Katalogzählung (Tabellen/Spalten/Policies/Funktionen/Trigger/Indizes/RLS-Tabellen),
 #      dynamisch aus dem SQL-Text ermittelt (scripts/db_catalog_counts.py) — keine
 #      fest verdrahteten Zahlen, sie ändern sich mit jeder Migration.
+#   3. Rechte-Assertion (R6, scripts/db_privilege_assertions.sql): feste Liste von Spalten-/
+#      Funktionsrechten, live per has_column_privilege()/has_function_privilege() geprüft — die
+#      GRANT/REVOKE-Anweisungen, die Beine 1+2 wegen --no-privileges nie sehen.
 #
 # Beide Seiten werden mit DEMSELBEN pg_dump-Binary aus DEMSELBEN Container erzeugt — das ist
 # entscheidend, weil unterschiedliche Dump-Werkzeuge allein durch Formatierung (Quoting,
@@ -239,6 +243,45 @@ else
   (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
+fi
+
+# --- 4b. Live-Rechte-Assertion (R6) -------------------------------------------------------
+# GRANT/REVOKE-Anweisungen sind fuer den Textdiff und die Katalogzaehlung unten unsichtbar
+# (beide Dumps laufen mit --no-privileges, siehe Kopfkommentar). Ein Live-GRANT SELECT ON
+# profiles TO anon (die Lücke, die 20260924_001_restrict_profiles.sql schliesst) würde vom
+# Rest dieses Skripts NIE bemerkt. scripts/db_privilege_assertions.sql prüft deshalb live,
+# über has_column_privilege()/has_function_privilege(), eine feste Liste von Spalten- und
+# Funktionsrechten (Details und Positivkontrollen im Kopfkommentar dieser Datei).
+#
+# Nur mit SUPABASE_DB_READONLY_URL moeglich (derselbe Verbindungsweg wie Schritt 4 oben) — die
+# rein CLI-basierte --linked-Alternative liefert keine Connection-URL, gegen die sich beliebiges
+# SQL ausfuehren liesse. Kein Ausführen ohne diese Variable heisst NICHT automatisch grün: das
+# Skript macht die Lücke im Log sichtbar, statt sie stillschweigend zu überspringen, faellt aber
+# (anders als der Rest des Skripts) nicht deswegen mit Exit 1 — das waere ein Rueckschritt fuer
+# den bestehenden --linked-Fallback-Pfad, der diese Variable nie gesetzt hat.
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Rechte-Assertion (R6, live über SUPABASE_DB_READONLY_URL) ---"
+  PRIV_OUT="$WORKDIR/privilege_assertions.out"
+  if ! { cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -v ON_ERROR_STOP=1 \
+    > "$PRIV_OUT" 2>&1; then
+    echo "::error::Rechte-Assertion konnte nicht ausgeführt werden (siehe Ausgabe):" >&2
+    cat "$PRIV_OUT" >&2
+    exit 1
+  fi
+  cat "$PRIV_OUT"
+  if grep -qE '\|f$' "$PRIV_OUT"; then
+    echo "::error::Rechte-Assertion fehlgeschlagen — mindestens eine Zeile ist 'f':" >&2
+    grep -E '\|f$' "$PRIV_OUT" | while IFS='|' read -r failed_name _; do
+      echo "::error::  $failed_name" >&2
+    done
+    exit 1
+  fi
+  echo "Rechte-Assertion grün: alle geprüften Spalten-/Funktionsrechte wie erwartet."
+else
+  echo ""
+  echo "Rechte-Assertion (R6) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------

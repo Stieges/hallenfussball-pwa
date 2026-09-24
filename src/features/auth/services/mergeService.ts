@@ -47,11 +47,13 @@ export async function checkEmailExists(email: string): Promise<boolean> {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email', email.toLowerCase().trim())
-      .maybeSingle();
+    // R6 (task-R6-brief.md, F3): profiles.email ist für anon/authenticated nicht mehr per
+    // SELECT lesbar/filterbar (20260924_001_restrict_profiles.sql). Existenzprüfung läuft
+    // deshalb über dieselbe SECURITY-DEFINER-RPC wie authHelpers.ts#checkOAuthOnlyUser — nur
+    // das Vorhandensein einer Zeile zählt hier, der zurückgegebene Provider ist irrelevant.
+    const { data, error } = await supabase.rpc('auth_provider_for_email', {
+      p_email: email.toLowerCase().trim(),
+    });
 
     if (error) {
       if (import.meta.env.DEV) { console.error('[MergeService] Error checking email:', error); }

@@ -51,8 +51,31 @@
 # Skriptende) — vorher endete es immer mit Exit 0 ("misst, urteilt nicht"), das reichte als
 # CI-Gate nicht. Die Gegenprobe-Modi bleiben bei Exit 0, sie sollen Abweichungen zeigen dürfen.
 #
+# R6 (task-R6-brief.md, F3/F7): 20260924_001_restrict_profiles.sql schützt "public"."profiles" —
+# Spalten-GRANTs statt der bisherigen ALL-Rechte für anon/authenticated, plus die SECURITY-
+# DEFINER-Funktion auth_provider_for_email(). Die Baseline enthält KEINE GRANT-Anweisungen
+# (siehe supabase/migrations/README.md — als Plattform-Boilerplate entfernt). Empirisch im
+# Wegwerf-Container geprüft: das Postgres-Init-Verhalten dieses Images vergibt trotzdem beim
+# CREATE TABLE automatisch ALL an anon/authenticated (ALTER DEFAULT PRIVILEGES, vom Image selbst
+# gesetzt, nicht von der Baseline-Datei) — der "vorher"-Zustand (volles Tabellen-GRANT ALL) ist
+# im Container also bereits der Ausgangszustand, ohne dass dieses Skript ihn erst herstellen
+# müsste. Das ausdrückliche `GRANT ALL ON public.profiles TO anon, authenticated;` unten bleibt
+# trotzdem stehen (schadet nicht, macht die Annahme explizit, statt sich auf Image-Verhalten zu
+# verlassen, das sich ändern könnte).
+#
+# Zweiter Fund beim Bau dieses Abschnitts: der Trigger "on_auth_user_created" (AFTER INSERT ON
+# auth.users, ruft public.handle_new_user() — ursprünglich 20260111_auth_hardening.sql) fehlt in
+# JEDEM aus der Baseline rekonstruierten Container, mit oder ohne R6. Grund: Die Baseline wurde
+# mit `pg_dump --schema public` erzeugt (siehe README.md) — ein Trigger AUF auth.users (Schema
+# "auth", nicht "public") landet in so einem Dump nicht, selbst wenn die aufgerufene Funktion
+# (im Schema "public") sehr wohl enthalten ist. Auf der echten Live-Instanz existiert dieser
+# Trigger (er wurde nie über eine spätere Migration entfernt); dieses Skript bildet ihn deshalb
+# hier NUR als Testaufbau nach, exakt wie er zuletzt definiert wurde — analog zum bereits
+# bestehenden Nachbau von repro_security_definer_owner_transfer() weiter unten für ein
+# vergleichbares Cross-Schema-Problem. Kein Teil irgendeiner committeten Migration.
+#
 # Nutzung:
-#   scripts/rls-role-matrix.sh                    # Baseline + alle vier Migrationen ("nachher")
+#   scripts/rls-role-matrix.sh                    # Baseline + alle fünf Migrationen ("nachher")
 #   scripts/rls-role-matrix.sh --baseline-only     # nur Baseline ("vorher", R1-Gegenprobe) —
 #                                                   # Abweichungen von der Rollentabelle sind
 #                                                   # hier ERWARTET (siehe Report) und führen
@@ -66,6 +89,12 @@
 #                                                   # ("vorher", Fixrunde-3-Gegenprobe) — die
 #                                                   # K3/H5/L5-Angriffszeilen müssen hier
 #                                                   # GELINGEN, sonst misst der Harness sie nicht.
+#   scripts/rls-role-matrix.sh --without-r6        # Alles bis 20260923_002 (R5), OHNE
+#                                                   # 20260924_001 (R6) — die Profile-Zeilen
+#                                                   # müssen hier den "vorher"-Zustand zeigen
+#                                                   # (E-Mail lesbar, Rolle selbst änderbar, RPC
+#                                                   # fehlt), sonst misst der Harness die R6-Lücke
+#                                                   # nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -82,11 +111,14 @@ MIGRATION_FILES=(
 )
 HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
 PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
+MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
+PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
 ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
 WITH_HARDENING=1
 WITH_PARENT_KEYS=1
+WITH_R6=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -94,6 +126,7 @@ while [[ $# -gt 0 ]]; do
       WITH_MIGRATION=0
       WITH_HARDENING=0
       WITH_PARENT_KEYS=0
+      WITH_R6=0
       shift
       ;;
     --without-hardening)
@@ -103,6 +136,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --without-004)
       WITH_PARENT_KEYS=0
+      shift
+      ;;
+    --without-r6)
+      WITH_R6=0
       shift
       ;;
     -h|--help)
@@ -124,6 +161,8 @@ for f in "${MIGRATION_FILES[@]}"; do
 done
 [[ -f "$HARDENING_FILE" ]] || { echo "::error::Migration fehlt: $HARDENING_FILE" >&2; exit 1; }
 [[ -f "$PARENT_KEYS_FILE" ]] || { echo "::error::Migration fehlt: $PARENT_KEYS_FILE" >&2; exit 1; }
+[[ -f "$MERGE_RESTRICT_FILE" ]] || { echo "::error::Migration fehlt: $MERGE_RESTRICT_FILE" >&2; exit 1; }
+[[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -182,10 +221,44 @@ fi
 if [[ "$WITH_PARENT_KEYS" -eq 1 ]]; then
   echo "Migration einspielen: $(basename "$PARENT_KEYS_FILE")" >&2
   psql_stdin < "$PARENT_KEYS_FILE"
+  echo "Migration einspielen: $(basename "$MERGE_RESTRICT_FILE")" >&2
+  psql_stdin < "$MERGE_RESTRICT_FILE"
 fi
 
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
-  MODE_LABEL="nachher (Baseline + alle vier Migrationen)"
+# R6-Testaufbau (siehe Kopfkommentar): Trigger auf auth.users existiert live, fehlt aber in
+# JEDEM aus der (public-schema-only) Baseline rekonstruierten Container — unabhängig von R6.
+# Ohne ihn bliebe public.profiles nach den Fixture-Inserts in auth.users unten leer, und jede
+# R6-Profile-Zeile würde etwas anderes messen als beabsichtigt (fehlende Zeile statt Rechte-
+# Verweigerung). Kein Teil einer committeten Migration, siehe Kopfkommentar. Läuft in JEDEM
+# Modus, unabhängig von WITH_R6 — die auth.users→profiles-Kopplung ist orthogonal zu R6.
+psql_stdin <<'SQL'
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+SQL
+
+# R6-Testaufbau: den "vorher"-Zustand von public.profiles nachbilden — MUSS vor einer eventuellen
+# R6-Migration laufen (siehe Kopfkommentar): R6 REVOKEt zuerst ALL und GRANTet danach nur die
+# Spaltenliste; ein GRANT ALL NACH R6 würde die gerade erst entzogenen Rechte sofort wieder
+# öffnen (Postgres vereinigt ACL-Einträge, es gibt kein implizites REVOKE danach). Empirisch
+# bestätigt (siehe Report): Das Postgres-Init-Verhalten dieses Images vergibt das beim
+# CREATE TABLE ohnehin automatisch (ALTER DEFAULT PRIVILEGES, vom Image gesetzt) — dieser GRANT
+# ist deshalb schon vor R6 ein No-op, macht die Annahme aber explizit statt sich auf
+# Image-Verhalten zu verlassen, das sich ändern könnte. Läuft in JEDEM Modus (auch --without-r6,
+# wo es der tatsächliche Endzustand bleibt, nicht nur eine Zwischenstufe).
+psql_stdin <<'SQL'
+GRANT ALL ON public.profiles TO anon, authenticated;
+SQL
+
+if [[ "$WITH_R6" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$PROFILES_FILE")" >&2
+  psql_stdin < "$PROFILES_FILE"
+fi
+
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 ]]; then
+  MODE_LABEL="nachher (Baseline + alle sechs Migrationen)"
+elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 ]]; then
+  MODE_LABEL="vorher/R6-Gegenprobe (Baseline + 001..002-restrict, ohne R6)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 ]]; then
   MODE_LABEL="vorher/Fixrunde-3-Gegenprobe (Baseline + 001 + 002 + 003, ohne 004)"
 elif [[ "$WITH_MIGRATION" -eq 1 ]]; then
@@ -736,6 +809,122 @@ else
   echo "=== Fixrunde 3 — K3/H5/L5 — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0, siehe Kommentar oben) ==="
 fi
 
+# --- 7d. R6 (task-R6-brief.md) — F3 (E-Mail-Adressen öffentlich lesbar) und F7 (Rolle selbst
+# änderbar). Läuft IMMER (unabhängig von WITH_MIGRATION/WITH_HARDENING/WITH_PARENT_KEYS) — die
+# Profile-Rechte sind orthogonal zur Tournament-/Collaborator-Härtung der Fixrunden 1-3. Nutzt
+# U_OWNER (Profil existiert dank des in Schritt 2 nachgebauten on_auth_user_created-Triggers,
+# E-Mail 'owner@rls-matrix.test', auth_provider 'email') und U_COADMIN als "fremder" Leser.
+run_select_as() {
+  local role="$1" user_id="$2" sql="$3"
+  local out ec
+  local sub_line=""
+  [[ -n "$user_id" ]] && sub_line="SET LOCAL request.jwt.claim.sub = '$user_id';"
+  set +e
+  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE $role;
+$sub_line
+$sql
+SQL
+)"
+  ec=$?
+  set -e
+  if [[ $ec -ne 0 || -z "$out" ]]; then
+    echo "denied"
+  else
+    echo "allowed"
+  fi
+}
+
+# Gibt den ROHEN Rückgabewert der RPC zurück statt allowed/denied — "NULL" für eine leere
+# (aber fehlerfreie) Antwort, "Funktion fehlt" wenn die Funktion (noch) nicht existiert
+# (--without-r6), sonst den Text nach "ERROR:" für alles andere Unerwartete.
+run_rpc_value() {
+  local sql="$1"
+  local out ec
+  set +e
+  out="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+SET LOCAL ROLE anon;
+$sql
+SQL
+)"
+  ec=$?
+  set -e
+  if [[ $ec -ne 0 ]]; then
+    if grep -q "does not exist" <<<"$out"; then
+      echo "Funktion fehlt"
+    else
+      echo "ERROR:$out"
+    fi
+  elif [[ -z "$out" ]]; then
+    echo "NULL"
+  else
+    echo "$out"
+  fi
+}
+
+if [[ "$WITH_R6" -eq 1 ]]; then
+  exp_r6_anon_email="denied"
+  exp_r6_auth_foreign_email="denied"
+  exp_r6_auth_own_email="denied"
+  exp_r6_anon_id_name="allowed"
+  exp_r6_anon_filter_email="denied"
+  exp_r6_auth_update_role="denied"
+  exp_r6_auth_update_display_name="allowed"
+  exp_r6_rpc_known="email"
+  exp_r6_rpc_unknown="NULL"
+else
+  exp_r6_anon_email="allowed"
+  exp_r6_auth_foreign_email="allowed"
+  exp_r6_auth_own_email="allowed"
+  exp_r6_anon_id_name="allowed"
+  exp_r6_anon_filter_email="allowed"
+  exp_r6_auth_update_role="allowed"
+  exp_r6_auth_update_display_name="allowed"
+  exp_r6_rpc_known="Funktion fehlt"
+  exp_r6_rpc_unknown="Funktion fehlt"
+fi
+exp_r6_handle_new_user="Profil angelegt"
+
+r6_anon_email="$(run_select_as anon "" "SELECT email FROM public.profiles WHERE id = '$U_OWNER';")"
+r6_auth_foreign_email="$(run_select_as authenticated "$U_COADMIN" "SELECT email FROM public.profiles WHERE id = '$U_OWNER';")"
+r6_auth_own_email="$(run_select_as authenticated "$U_OWNER" "SELECT email FROM public.profiles WHERE id = '$U_OWNER';")"
+r6_anon_id_name="$(run_select_as anon "" "SELECT id, display_name FROM public.profiles WHERE id = '$U_OWNER';")"
+r6_anon_filter_email="$(run_select_as anon "" "SELECT id FROM public.profiles WHERE email = 'owner@rls-matrix.test';")"
+r6_auth_update_role="$(run_write "$U_OWNER" "UPDATE public.profiles SET role = 'admin' WHERE id = '$U_OWNER';")"
+r6_auth_update_display_name="$(run_write "$U_OWNER" "UPDATE public.profiles SET display_name = 'RLS Matrix Owner' WHERE id = '$U_OWNER';")"
+r6_rpc_known="$(run_rpc_value "SELECT public.auth_provider_for_email('owner@rls-matrix.test');")"
+r6_rpc_unknown="$(run_rpc_value "SELECT public.auth_provider_for_email('nobody-r6@rls-matrix.test');")"
+
+# Regression, unabhängig von WITH_R6: Insert in auth.users muss weiterhin ein Profil anlegen
+# (der Testaufbau-Trigger aus Schritt 2, plus handle_new_user() selbst — R6 rührt an keinem von
+# beiden). Eigene Transaktion, eigener frischer User (nie committet, siehe Kopfkommentar zu
+# run_write() weiter oben — hier von Hand nachgebaut, weil weder run_write() noch
+# run_write_then_select() ein INSERT in auth.users unterstützen).
+new_user_id="$(uuid_for user:handle-new-user-probe)"
+handle_new_user_count="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -q -tA -v ON_ERROR_STOP=1 <<SQL 2>&1
+BEGIN;
+INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+VALUES ('00000000-0000-0000-0000-000000000000', '$new_user_id', 'authenticated', 'authenticated', 'handle-new-user-probe@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+SELECT count(*) FROM public.profiles WHERE id = '$new_user_id';
+SQL
+)"
+r6_handle_new_user="$([[ "$handle_new_user_count" == "1" ]] && echo "Profil angelegt" || echo "Profil fehlt ($handle_new_user_count)")"
+
+echo ""
+echo "=== R6 — Profile geschützt (F3/F7) — $MODE_LABEL ==="
+k1k2_mark_value "anon-select-email                          " "$r6_anon_email" "$exp_r6_anon_email"
+k1k2_mark_value "authenticated-select-email-fremdes-profil  " "$r6_auth_foreign_email" "$exp_r6_auth_foreign_email"
+k1k2_mark_value "authenticated-select-email-eigenes-profil  " "$r6_auth_own_email" "$exp_r6_auth_own_email"
+k1k2_mark_value "anon-select-id-display-name                " "$r6_anon_id_name" "$exp_r6_anon_id_name"
+k1k2_mark_value "anon-select-gefiltert-nach-email            " "$r6_anon_filter_email" "$exp_r6_anon_filter_email"
+k1k2_mark_value "authenticated-update-role-eigenes-profil   " "$r6_auth_update_role" "$exp_r6_auth_update_role"
+k1k2_mark_value "authenticated-update-display-name-eigenes  " "$r6_auth_update_display_name" "$exp_r6_auth_update_display_name"
+k1k2_mark_value "anon-rpc-auth-provider-for-email-bekannt   " "$r6_rpc_known" "$exp_r6_rpc_known"
+k1k2_mark_value "anon-rpc-auth-provider-for-email-unbekannt " "$r6_rpc_unknown" "$exp_r6_rpc_unknown"
+k1k2_mark_value "regression-handle-new-user-legt-profil-an  " "$r6_handle_new_user" "$exp_r6_handle_new_user"
+
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
@@ -752,13 +941,14 @@ fi
 echo ""
 echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung und Public-Read-Stichprobe) ==="
 
-# --- 9. L4: CI-Gate im Default-Modus ("nachher", alle vier Migrationen) -------------------
+# --- 9. L4: CI-Gate im Default-Modus ("nachher", alle Migrationen) ------------------------
 # Vorher endete dieses Skript immer mit Exit 0 ("misst, urteilt nicht") — das reicht als
 # CI-Gate nicht (final-review.md, L4). Ab jetzt: im vollen Default-Modus (Baseline + 001 + 002
-# + 003 + 004) beendet eine Abweichung von der Rollentabelle den Lauf mit Exit 1. Die
-# Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004) sollen Abweichungen
-# zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es bei Exit 0.
-if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
+# + 003 + 004 + R6) beendet eine Abweichung von der Rollentabelle den Lauf mit Exit 1. Die
+# Gegenprobe-Modi (--baseline-only, --without-hardening, --without-004, --without-r6) sollen
+# Abweichungen zeigen dürfen, ohne dass der Lauf selbst als fehlgeschlagen gilt — dort bleibt es
+# bei Exit 0.
+if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$MISMATCHES" -gt 0 ]]; then
   echo "::error::Default-Modus (nachher) hat $MISMATCHES Abweichung(en) von der Rollentabelle — CI-Gate schlägt fehl." >&2
   exit 1
 fi
