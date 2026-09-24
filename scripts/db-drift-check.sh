@@ -173,21 +173,12 @@ done
 
 docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$BASELINE_FILE"
 
-# R5b-Testaufbau (dieselbe Begründung wie in scripts/rls-role-matrix.sh): ci_schema_reader
-# existiert live, aber nicht in einem frisch aus der Baseline aufgebauten Container --
-# 20260924_002_central_role_permissions.sql referenziert die Rolle in einer eigenen Policy und
-# einem GRANT auf role_permissions. Ohne diesen Nachbau würde JEDER Drift-Check-Lauf am
-# Einspielen dieser (oder einer künftigen) Migration scheitern, sobald sie GRANT/CREATE POLICY
-# ... TO "ci_schema_reader" enthält. Kein Teil einer committeten Migration.
-docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q <<'SQL'
-DO $do$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
-    CREATE ROLE ci_schema_reader LOGIN;
-  END IF;
-END
-$do$;
-SQL
+# R5b-Fixrunde 1 (M2): Der frühere Nachbau der Rolle ci_schema_reader hier ist ENTFALLEN --
+# 20260924_002_central_role_permissions.sql legt sie jetzt selbst bedingt an (Abschnitt 0 der
+# Migration, NOLOGIN, DO-Block mit pg_roles-Abfrage) -- dieser interne Vergleichs-Container
+# verbindet sich ohnehin nie ALS ci_schema_reader (das passiert nur bei einer externen
+# SUPABASE_DB_READONLY_URL, siehe unten), er braucht die Rolle nur, damit die Migration
+# GRANT/CREATE POLICY ... TO "ci_schema_reader" einspielen kann.
 
 for f in "${NEWER_MIGRATIONS[@]:-}"; do
   [[ -z "$f" ]] && continue

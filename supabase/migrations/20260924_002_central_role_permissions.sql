@@ -13,9 +13,18 @@
 -- Diese Migration bringt beide Quellen auf eine Tabelle (public.role_permissions) plus eine
 -- Funktion (public.has_tournament_permission), gespiegelt in GENAU einer JSON
 -- (src/features/auth/permissions/rolePermissions.json, die App-seitige Laufzeit-Quelle von
--- permissions.ts#hasPermission()). Ein Recht ändern heißt ab jetzt: eine Zeile in
--- rolePermissions.json UND dieselbe Zeile im INSERT-Block unten -- KEINE Policy wird dafür mehr
--- angefasst. Das erzwingen drei automatisierte Prüfungen, die bei jeder Abweichung rot werden:
+-- permissions.ts#hasPermission()).
+--
+-- WIE MAN EIN RECHT ÄNDERT (korrigiert in Fixrunde 1, N3 -- vorher stand hier fälschlich "der
+-- INSERT-Block unten"): `20260924_002` selbst ist nach dem Anwenden HISTORISCH -- eine Datei, die
+-- bereits eingespielt wurde, wird nie wieder ausgeführt (weder von `apply_migration` noch von
+-- einem erneuten `psql -f`, das nur einmal gebrauchte `INSERT` liefe sonst kein zweites Mal, und
+-- ein DELETE für ein entzogenes Recht stünde dort ohnehin nie). Ein Recht ändern heißt deshalb:
+-- eine Zeile in rolePermissions.json PLUS eine NEUE Migration mit einem gezielten
+-- INSERT (Recht vergeben) bzw. DELETE (Recht entziehen) auf role_permissions -- niemals ein
+-- Editieren dieser Datei rückwirkend. `ON CONFLICT DO NOTHING` (siehe unten) kann ohnehin kein
+-- Recht entziehen, nur neue Zeilen ergänzen. Das erzwingen drei automatisierte Prüfungen, die bei
+-- jeder Abweichung zwischen JSON und der tatsächlichen Tabelle rot werden:
 --   1. scripts/rls-role-matrix.sh liest role_permissions aus dem Container und vergleicht es
 --      gegen rolePermissions.json (Abschnitt "Gleichlauf JSON/DB").
 --   2. scripts/db-drift-check.sh vergleicht denselben Tabelleninhalt LIVE (über die nur-lesende
@@ -102,6 +111,65 @@
 -- ausschließt, die bei jeder einzeln geschriebenen "<>"-Bedingung erneut auftreten könnte.
 --
 -- ============================================================================================
+-- Fixrunde 1 (adversariales Review, task-R5b-review.md, Commit a65bfd1)
+-- ============================================================================================
+--
+-- M2 (mittel): Diese Datei referenzierte die Rolle "ci_schema_reader" in einer Policy und einem
+-- GRANT, ohne sie je anzulegen -- jede Umgebung ohne diese Rolle (frischer Container,
+-- `supabase db reset`, ein neues Projekt) scheiterte beim Einspielen mit "role does not exist"
+-- und blieb in einem Teilzustand zurück (Tabelle existiert, Policy/Funktion/Grants fehlen). Fix:
+-- ein DO-Block legt die Rolle jetzt bedingt an (NOLOGIN, keine Rechte außer denen, die diese
+-- Migration selbst weiter unten vergibt) -- siehe Abschnitt 0 unten. Live ist das ein No-op (die
+-- Rolle existiert dort bereits, seit dem Datenbank-Programm vom 2026-09-21, mit LOGIN). Die
+-- Nachbauten in scripts/rls-role-matrix.sh und scripts/db-drift-check.sh ("kein Teil einer
+-- committeten Migration") entfallen dadurch -- die Migration ist wieder aus sich selbst
+-- rekonstruierbar.
+--
+-- M3 (mittel, Verschärfung des bekannten F4): has_tournament_permission() prüfte nur
+-- "accepted_at IS NOT NULL" und ignorierte "declined_at" -- eine vom Eigentümer widerrufene, aber
+-- vorher (oder trotzdem, siehe F4) angenommene Mitgliedschaft behielt volle Rechte, inklusive
+-- 'restructure' (Teams/Spiele löschen). Fix: "AND tc.declined_at IS NULL" ergänzt, siehe Abschnitt
+-- 2. Geprüft, ob dieselbe Lücke anderswo besteht (Auftrag: nur an Objekten fixen, die diese
+-- Migration ohnehin anfasst) -- gefunden bei match_events_select_v3/matches_select_v3/
+-- teams_select_v3/tournaments_select_v3 (Lese-Policies, alle UNVERÄNDERT seit der Baseline bzw.
+-- 20260922_001, nicht Teil dieser Migration) und bei profile_visible_to_viewer()
+-- (20260924_001_restrict_profiles.sql, ebenfalls nicht Teil dieser Migration). Beide bleiben hier
+-- UNANGETASTET und sind als Follow-up im Report vermerkt (task-R5b-report.md, Abschnitt
+-- "Fixrunde 1"). protect_collaborator_row() (20260922_003/20260923_001) hat denselben F4-Bug im
+-- Annahme-Zweig (eine widerrufene Einladung lässt sich trotzdem annehmen) -- ebenfalls nicht Teil
+-- dieser Migration, ebenfalls Follow-up.
+--
+-- N1 (niedrig): Die Schreib-Policies unten hatten zusätzlich zu has_tournament_permission() einen
+-- eigenen "(SELECT auth.uid()) = owner_id"-Zweig -- eine zweite, unabhängige Quelle für dieselbe
+-- Eigentümer-Prüfung, obwohl der Funktionskommentar behauptete, jede Policy riefe
+-- AUSSCHLIESSLICH die Funktion. has_tournament_permission() deckt den Eigentümer bereits vollständig
+-- über user_owns_tournament() ab (die INSERT-Policies dieser Migration hatten nie einen
+-- owner_id-Zweig und funktionieren nachweislich). Die owner_id-Zweige sind deshalb entfernt --
+-- geprüft per Harness, dass sich dadurch KEINE Zelle der Rollentabelle ändert (Report, Abschnitt
+-- "Fixrunde 1"/N1).
+--
+-- ============================================================================================
+
+
+-- ============================================================================
+-- 0. Rolle ci_schema_reader bedingt anlegen (M2) -- MUSS vor Abschnitt 1 laufen, das die Rolle in
+--    einer Policy und einem GRANT referenziert.
+-- ============================================================================
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
+    CREATE ROLE "ci_schema_reader" NOLOGIN;
+  END IF;
+END
+$$;
+
+COMMENT ON ROLE "ci_schema_reader" IS
+  'Bedingt angelegt von 20260924_002_central_role_permissions.sql (M2, Fixrunde 1) -- NOLOGIN,
+   keine Rechte außer dem, was diese Migration weiter unten per GRANT/CREATE POLICY vergibt. Live
+   existiert diese Rolle bereits (mit LOGIN, seit dem Datenbank-Programm 2026-09-21) -- dieser
+   Block ist dort ein No-op. Er stellt sicher, dass diese Migration auch auf einer frischen
+   Datenbank (Container, `supabase db reset`, neues Projekt) vollständig einspielbar bleibt.';
 
 
 -- ============================================================================
@@ -129,8 +197,10 @@ CREATE TABLE IF NOT EXISTS "public"."role_permissions" (
 COMMENT ON TABLE "public"."role_permissions" IS
   'Die EINE DB-seitige Rechtetabelle (R5b) -- gespiegelt in
    src/features/auth/permissions/rolePermissions.json (App-Laufzeit-Quelle,
-   permissions.ts#hasPermission()). Ein Recht ändern: eine Zeile hier UND dieselbe Zeile in der
-   JSON. Keine Policy anfassen -- siehe has_tournament_permission(). Gleichlauf wird erzwungen von
+   permissions.ts#hasPermission()). Ein Recht ändern: eine Zeile in der JSON PLUS eine NEUE
+   Migration mit INSERT (vergeben) bzw. DELETE (entziehen) auf dieser Tabelle -- NIEMALS diese
+   Datei rückwirkend editieren, sie ist nach dem Anwenden historisch (Fixrunde 1, N3). Keine
+   Policy anfassen -- siehe has_tournament_permission(). Gleichlauf wird erzwungen von
    scripts/rls-role-matrix.sh, scripts/db-drift-check.sh und
    permissions.rolePermissions.test.ts.';
 
@@ -144,9 +214,10 @@ CREATE POLICY "role_permissions_select" ON "public"."role_permissions"
   FOR SELECT TO "authenticated"
   USING (true);
 
--- ci_schema_reader (scripts/db-drift-check.sh, nur-lesende CI-Rolle) braucht als EINZIGE Tabelle
--- echten ZEILENZUGRIFF (nicht nur Schema-Dump ohne Datenzugriff wie bei jeder anderen Tabelle,
--- siehe Kopfkommentar von scripts/db-drift-check.sh: "sie ist weder anon noch authenticated noch
+-- ci_schema_reader (siehe Abschnitt 0 -- bedingt angelegt, live bereits vorhanden;
+-- scripts/db-drift-check.sh, nur-lesende CI-Rolle) braucht als EINZIGE Tabelle echten
+-- ZEILENZUGRIFF (nicht nur Schema-Dump ohne Datenzugriff wie bei jeder anderen Tabelle, siehe
+-- Kopfkommentar von scripts/db-drift-check.sh: "sie ist weder anon noch authenticated noch
 -- Eigentümerin, also greift keine Policy für sie") -- der Drift-Check vergleicht den INHALT von
 -- role_permissions live gegen rolePermissions.json (task-R5b-brief.md, Abschnitt 4). Ohne diese
 -- eigene Policy bliebe die Tabelle für ci_schema_reader trotz des GRANT unten leer (RLS filtert
@@ -202,17 +273,31 @@ CREATE OR REPLACE FUNCTION "public"."has_tournament_permission"(
       WHERE "tc"."tournament_id" = "p_tournament_id"
         AND "tc"."user_id" = ( SELECT "auth"."uid"() )
         AND "tc"."accepted_at" IS NOT NULL
+        -- Fixrunde 1 (M3): eine widerrufene Mitgliedschaft (Eigentümer setzt declined_at, siehe
+        -- membershipService/protect_collaborator_row) darf KEIN Recht mehr geben, auch wenn
+        -- accepted_at gesetzt ist (F4: die Annahme einer bereits widerrufenen Einladung sollte
+        -- gar nicht erst gelingen, ist aber ein bekannter, älterer Bug -- diese Zeile ist die
+        -- zweite, unabhängige Verteidigungslinie dagegen). Deckt sich mit
+        -- membershipService.ts#getTournamentMembers/getUserMembership, die dieselbe Spalte
+        -- filtern (".is('declined_at', null)").
+        AND "tc"."declined_at" IS NULL
         AND "rp"."permission" = "p_permission"
     );
 $$;
 
 COMMENT ON FUNCTION "public"."has_tournament_permission"("uuid", "text") IS
   'Die EINE Rechteprüfung (R5b): true, wenn der aufrufende Nutzer für p_tournament_id entweder
-   Eigentümer ist (user_owns_tournament(), immer alle Rechte) ODER ein akzeptiertes Mitglied
-   dieses Turniers mit einer Rolle ist, die role_permissions das angefragte p_permission
-   zuweist. Jede rollenbasierte Schreib-Policy in diesem Projekt ruft AUSSCHLIESSLICH diese
-   Funktion auf -- keine Policy enthält mehr eine eigene EXISTS-Klausel gegen
-   tournament_collaborators.role.
+   Eigentümer ist (user_owns_tournament(), immer alle Rechte) ODER ein akzeptiertes (accepted_at
+   IS NOT NULL), NICHT widerrufenes (declined_at IS NULL -- Fixrunde 1, M3) Mitglied dieses
+   Turniers mit einer Rolle ist, die role_permissions das angefragte p_permission zuweist. Jede
+   rollenbasierte Schreib-Policy in diesem Projekt ruft AUSSCHLIESSLICH diese Funktion auf --
+   keine Policy enthält mehr eine eigene EXISTS-Klausel gegen tournament_collaborators.role.
+
+   Fixrunde 1 (M3), bekannte, NICHT in dieser Migration behobene Lücken mit demselben Muster
+   (Follow-up, siehe task-R5b-report.md): die Lese-Policies (*_select_v3, u.a. matches_select_v3/
+   teams_select_v3/match_events_select_v3/tournaments_select_v3) und profile_visible_to_viewer()
+   (20260924_001_restrict_profiles.sql) prüfen ebenfalls nicht declined_at -- beide sind nicht
+   Teil dieser Migration. protect_collaborator_row() hat denselben F4-Bug im Annahme-Zweig.
 
    ERWEITERUNGSPUNKT: Eine künftige Rechtevergabe PRO TURNIER UND PERSON (z.B. eine Tabelle
    tournament_permission_overrides(tournament_id, user_id, permission, granted)) wird
@@ -246,14 +331,15 @@ CREATE POLICY "matches_insert_v2" ON "public"."matches"
   );
 
 -- R5-H1: vorher (Baseline) nur "auth.uid() = owner_id", kein Mitarbeiter-Zweig -- ein Co-Admin
--- traf beim Löschen still 0 Zeilen, siehe Kopfkommentar dieser Datei.
+-- traf beim Löschen still 0 Zeilen, siehe Kopfkommentar dieser Datei. Fixrunde 1 (N1): der
+-- owner_id-Zweig selbst ist entfernt -- has_tournament_permission() deckt den Eigentümer bereits
+-- vollständig über user_owns_tournament() ab, siehe Kopfkommentar-Abschnitt "Fixrunde 1"/N1.
 DROP POLICY IF EXISTS "matches_delete_v2" ON "public"."matches";
 
 CREATE POLICY "matches_delete_v2" ON "public"."matches"
   FOR DELETE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'restructure')
+    "public"."has_tournament_permission"("tournament_id", 'restructure')
   );
 
 DROP POLICY IF EXISTS "matches_update_v3" ON "public"."matches";
@@ -261,12 +347,10 @@ DROP POLICY IF EXISTS "matches_update_v3" ON "public"."matches";
 CREATE POLICY "matches_update_v3" ON "public"."matches"
   FOR UPDATE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'writeMatchData')
+    "public"."has_tournament_permission"("tournament_id", 'writeMatchData')
   )
   WITH CHECK (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'writeMatchData')
+    "public"."has_tournament_permission"("tournament_id", 'writeMatchData')
   );
 
 
@@ -281,8 +365,7 @@ DROP POLICY IF EXISTS "match_events_insert_v3" ON "public"."match_events";
 CREATE POLICY "match_events_insert_v3" ON "public"."match_events"
   FOR INSERT TO "authenticated", "anon"
   WITH CHECK (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"(
+    "public"."has_tournament_permission"(
       ( SELECT "tournament_id" FROM "public"."matches" WHERE "id" = "match_events"."match_id" ),
       'writeMatchData'
     )
@@ -293,15 +376,13 @@ DROP POLICY IF EXISTS "match_events_update_v2" ON "public"."match_events";
 CREATE POLICY "match_events_update_v2" ON "public"."match_events"
   FOR UPDATE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"(
+    "public"."has_tournament_permission"(
       ( SELECT "tournament_id" FROM "public"."matches" WHERE "id" = "match_events"."match_id" ),
       'correctEvents'
     )
   )
   WITH CHECK (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"(
+    "public"."has_tournament_permission"(
       ( SELECT "tournament_id" FROM "public"."matches" WHERE "id" = "match_events"."match_id" ),
       'correctEvents'
     )
@@ -312,8 +393,7 @@ DROP POLICY IF EXISTS "match_events_delete_v2" ON "public"."match_events";
 CREATE POLICY "match_events_delete_v2" ON "public"."match_events"
   FOR DELETE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"(
+    "public"."has_tournament_permission"(
       ( SELECT "tournament_id" FROM "public"."matches" WHERE "id" = "match_events"."match_id" ),
       'correctEvents'
     )
@@ -338,8 +418,7 @@ DROP POLICY IF EXISTS "teams_delete_v2" ON "public"."teams";
 CREATE POLICY "teams_delete_v2" ON "public"."teams"
   FOR DELETE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'restructure')
+    "public"."has_tournament_permission"("tournament_id", 'restructure')
   );
 
 DROP POLICY IF EXISTS "teams_update_v3" ON "public"."teams";
@@ -347,12 +426,10 @@ DROP POLICY IF EXISTS "teams_update_v3" ON "public"."teams";
 CREATE POLICY "teams_update_v3" ON "public"."teams"
   FOR UPDATE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'teams')
+    "public"."has_tournament_permission"("tournament_id", 'teams')
   )
   WITH CHECK (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("tournament_id", 'teams')
+    "public"."has_tournament_permission"("tournament_id", 'teams')
   );
 
 
@@ -368,12 +445,10 @@ DROP POLICY IF EXISTS "tournaments_update_v3" ON "public"."tournaments";
 CREATE POLICY "tournaments_update_v3" ON "public"."tournaments"
   FOR UPDATE TO "authenticated", "anon"
   USING (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("id", 'tournamentSettings')
+    "public"."has_tournament_permission"("id", 'tournamentSettings')
   )
   WITH CHECK (
-    (( SELECT "auth"."uid"() ) = "owner_id")
-    OR "public"."has_tournament_permission"("id", 'tournamentSettings')
+    "public"."has_tournament_permission"("id", 'tournamentSettings')
   );
 
 

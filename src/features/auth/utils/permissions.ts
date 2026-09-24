@@ -6,9 +6,11 @@
  * zur Laufzeit über hasPermission() ausgewertet. Die DB spiegelt dieselbe JSON in der Tabelle
  * public.role_permissions plus der Funktion has_tournament_permission()
  * (supabase/migrations/20260924_002_central_role_permissions.sql). Ein Recht ändern heißt
- * künftig: eine Zeile in rolePermissions.json UND dieselbe Zeile im INSERT-Block der Migration --
- * KEINE Policy und KEINE der can…-Funktionen unten muss dafür angefasst werden, solange die
- * Funktion selbst nur hasPermission() befragt (siehe Funktion-→-Recht-Tabelle im Report).
+ * künftig: eine Zeile in rolePermissions.json PLUS eine NEUE Migration mit INSERT (vergeben) bzw.
+ * DELETE (entziehen) auf role_permissions -- korrigiert in Fixrunde 1 (N3): die ursprüngliche
+ * Migrationsdatei ist nach dem Anwenden historisch und wird nie wieder ausgeführt. KEINE Policy
+ * und KEINE der can…-Funktionen unten muss dafür angefasst werden, solange die Funktion selbst
+ * nur hasPermission() befragt (siehe Funktion-→-Recht-Tabelle im Report).
  *
  * Der Eigentümer (role 'owner') hat IMMER alle Rechte -- fest in hasPermission() verankert, nicht
  * in der JSON (dort gibt es keine 'owner'-Zeile). Eine unbekannte/fehlende Rolle (Nicht-Mitglied)
@@ -20,6 +22,7 @@
  * @see docs/concepts/ANMELDUNG-KONZEPT.md Abschnitt 2.4
  */
 
+import { z } from 'zod';
 import type { TournamentRole, GlobalRole } from '../types/auth.types';
 import rolePermissionsJson from '../permissions/rolePermissions.json';
 
@@ -32,20 +35,40 @@ import rolePermissionsJson from '../permissions/rolePermissions.json';
  * CHECK-Constraints von public.role_permissions. Kein `string`, kein `any` -- jeder Aufrufer von
  * hasPermission() muss einen dieser Literale verwenden, ein Tippfehler fällt beim Bauen auf.
  */
-export type Permission =
-  | 'writeMatchData'
-  | 'correctEvents'
-  | 'tournamentSettings'
-  | 'teams'
-  | 'restructure'
-  | 'deleteTournament'
-  | 'manageMembers';
+const PermissionSchema = z.enum([
+  'writeMatchData',
+  'correctEvents',
+  'tournamentSettings',
+  'teams',
+  'restructure',
+  'deleteTournament',
+  'manageMembers',
+]);
 
-interface RolePermissionsFile {
-  roles: Record<string, Permission[]>;
-}
+export type Permission = z.infer<typeof PermissionSchema>;
 
-const rolePermissionsFile = rolePermissionsJson as unknown as RolePermissionsFile;
+/**
+ * Bekannte Rollen aus role_permissions -- deckungsgleich mit dessen role-CHECK-Constraint
+ * (bewusst OHNE 'owner', siehe hasPermission() unten und der JSON-Kopfkommentar).
+ */
+const RolePermissionsRoleSchema = z.enum(['co-admin', 'collaborator', 'trainer', 'viewer']);
+
+/**
+ * Fixrunde 1 (N4, task-R5b-review.md): Laufzeit-Validierung statt `as unknown as` -- ein
+ * Tippfehler in rolePermissions.json (z.B. "restucture" statt "restructure", oder ein
+ * unbekannter Rollen-Schlüssel) wirft jetzt beim Modul-Import eine ZodError, statt still auf
+ * `false` zurückzufallen. Weil praktisch jeder Auth-Test dieses Modul importiert, wird ein
+ * solcher Tippfehler sofort in Vitest sichtbar (rote Testdatei-Ladefehler, nicht nur eine
+ * einzelne falsche Assertion). Bewusst `.parse()` statt `.safeParse()`: rolePermissions.json ist
+ * eine gebündelte, zur Build-Zeit bekannte Konfigurationsdatei, kein Nutzereingabe-Fall -- ein
+ * Validierungsfehler hier ist ein Entwickler-/Deploy-Fehler, der laut scheitern soll, statt still
+ * (und potenziell mit falschen Rechten) weiterzulaufen.
+ */
+const RolePermissionsFileSchema = z.object({
+  roles: z.record(RolePermissionsRoleSchema, z.array(PermissionSchema)),
+});
+
+const rolePermissionsFile = RolePermissionsFileSchema.parse(rolePermissionsJson);
 
 /**
  * Rollen aus der JSON, je einmal als Set aufbereitet (O(1)-Lookup statt Array.includes() bei

@@ -269,24 +269,13 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 SQL
 
-# R5b-Testaufbau: ci_schema_reader (scripts/db-drift-check.sh, die nur-lesende CI-Rolle) existiert
-# live, aber nicht in einem aus der Baseline rekonstruierten Container -- kein Teil des
-# Postgres-Images, sondern eine eigens auf dem Supabase-Projekt angelegte Rolle. Die neue
-# Migration (20260924_002_central_role_permissions.sql, R5b) referenziert sie in einer eigenen
-# Policy UND einem GRANT auf role_permissions -- ohne diesen Nachbau würde das Einspielen der
-# Migration mit "role ci_schema_reader does not exist" scheitern. Läuft in JEDEM Modus (auch
-# --without-r5, wo die Migration die Rolle gar nicht referenziert) -- kostet nichts, hält die
-# Reihenfolge einfach. Kein Teil einer committeten Migration, dieselbe Begründung wie beim
-# auth.users-Trigger direkt oberhalb.
-psql_stdin <<'SQL'
-DO $do$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
-    CREATE ROLE ci_schema_reader LOGIN;
-  END IF;
-END
-$do$;
-SQL
+# R5b-Fixrunde 1 (M2): Der frühere Nachbau der Rolle ci_schema_reader hier ist ENTFALLEN --
+# 20260924_002_central_role_permissions.sql legt sie jetzt selbst bedingt an (Abschnitt 0 der
+# Migration, NOLOGIN, DO-Block mit pg_roles-Abfrage). Dieser Container braucht sie ohnehin nur,
+# damit die Migration einspielbar bleibt (CREATE POLICY/GRANT ... TO ci_schema_reader) -- niemand
+# verbindet sich hier je ALS ci_schema_reader (die Gleichlauf-Prüfung weiter unten liest
+# role_permissions als Superuser postgres, nicht über diese Rolle). M2 ist damit an der Quelle
+# behoben, nicht mehr per Testaufbau kaschiert.
 
 # R6-Testaufbau: den "vorher"-Zustand von public.profiles nachbilden — MUSS vor einer eventuellen
 # R6-Migration laufen (siehe Kopfkommentar): R6 REVOKEt zuerst ALL und GRANTet danach nur die
@@ -371,6 +360,32 @@ U_INVITEE="$(uuid_for user:invitee)"
 INVITEE_EMAIL="invitee@rls-matrix.test"
 C_PENDING_INVITE="$(uuid_for collaborator:pending-invite)"
 
+# R5b-Fixrunde 1 (task-R5b-review.md, M1/M3): zwei weitere Identitäten für die Vollmatrix.
+# U_PENDING hat eine ECHTE co-admin-Zeile mit user_id gesetzt, aber accepted_at IS NULL -- die
+# Lücke, die MP2 im Review ausnutzte (Annahme fehlt, Recht greift trotzdem). U_DECLINED hat
+# sowohl accepted_at ALS AUCH declined_at gesetzt -- genau der M3-Befund (Einladung angenommen,
+# dann vom Eigentümer widerrufen, has_tournament_permission() ignorierte das bisher). Beide mit
+# role='co-admin' (maximale Rechte in der Tabelle), damit ein fehlender Guard maximal sichtbar
+# wird -- nicht mit einer schwächeren Rolle, die den Fehler verschleiern würde.
+U_PENDING="$(uuid_for user:open-invitation)"
+U_DECLINED="$(uuid_for user:declined-membership)"
+C_OPEN_COADMIN="$(uuid_for collaborator:open-coadmin)"
+C_DECLINED_COADMIN="$(uuid_for collaborator:declined-coadmin)"
+
+# Explizite IDs für die vier Basis-Mitarbeiter-Zeilen auf T_MAIN (vorher ohne eigene id, per
+# gen_random_uuid() vergeben) -- die neue Vollmatrix braucht ein deterministisches Ziel für
+# collaborators UPDATE/DELETE, das NICHT die eigene Zeile der testenden Identität ist (sonst
+# griffe der "Eigenzweig" von collaborators_update_v3/_delete_v3 -- user_id = auth.uid() --
+# und würde manageMembers fälschlich als erlaubt zeigen, siehe target_membership_for_id() unten).
+MEMBERSHIP_COADMIN_MAIN="$(uuid_for membership:coadmin-main)"
+MEMBERSHIP_COLLAB_MAIN="$(uuid_for membership:collab-main)"
+MEMBERSHIP_TRAINER_MAIN="$(uuid_for membership:trainer-main)"
+MEMBERSHIP_VIEWER_MAIN="$(uuid_for membership:viewer-main)"
+# Dummy-Mitgliedszeile in T_ANON, ausschließlich als Ziel für die manageMembers-UPDATE/DELETE-
+# Sonden der Identität "owner-anonymous" (T_ANON hat sonst keine Mitarbeiter-Zeile).
+U_DUMMY_ANON_MEMBER="$(uuid_for user:dummy-anon-member)"
+MEMBERSHIP_VIEWER_ANON="$(uuid_for membership:viewer-anon)"
+
 T_MAIN="$(uuid_for tournament:main)"
 T_ANON="$(uuid_for tournament:anon)"
 T_PUBLIC="$(uuid_for tournament:public)"
@@ -422,7 +437,10 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_VIEWER', 'authenticated', 'authenticated', 'viewer@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_NONMEMBER', 'authenticated', 'authenticated', 'nonmember@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_PUBLIC_OWNER', 'authenticated', 'authenticated', 'public-owner@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
-  ('00000000-0000-0000-0000-000000000000', '$U_INVITEE', 'authenticated', 'authenticated', '$INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+  ('00000000-0000-0000-0000-000000000000', '$U_INVITEE', 'authenticated', 'authenticated', '$INVITEE_EMAIL', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_PENDING', 'authenticated', 'authenticated', 'open-invitation@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_DECLINED', 'authenticated', 'authenticated', 'declined-membership@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
+  ('00000000-0000-0000-0000-000000000000', '$U_DUMMY_ANON_MEMBER', 'authenticated', 'authenticated', 'dummy-anon-member@rls-matrix.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
 
 -- R5 (M4-Beweis "Co-Admin veröffentlicht"): T_MAIN bekommt von Anfang an einen publishedAt-
 -- Marker im config (is_public bleibt false) -- enforce_release_before_public (20260921_001,
@@ -438,13 +456,33 @@ INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, grou
 VALUES
   ('$T_PUBLIC', '$U_PUBLIC_OWNER', 'RLS Matrix — public read', '2026-09-22', 8, 15, true, '{"publishedAt":"2026-09-22T00:00:00.000Z"}'::jsonb);
 
-INSERT INTO public.tournament_collaborators (tournament_id, user_id, role, accepted_at)
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
 VALUES
-  ('$T_MAIN', '$U_COADMIN', 'co-admin', now()),
-  ('$T_MAIN', '$U_COLLAB', 'collaborator', now()),
-  ('$T_MAIN', '$U_TRAINER', 'trainer', now()),
-  ('$T_MAIN', '$U_VIEWER', 'viewer', now());
+  ('$MEMBERSHIP_COADMIN_MAIN', '$T_MAIN', '$U_COADMIN', 'co-admin', now()),
+  ('$MEMBERSHIP_COLLAB_MAIN', '$T_MAIN', '$U_COLLAB', 'collaborator', now()),
+  ('$MEMBERSHIP_TRAINER_MAIN', '$T_MAIN', '$U_TRAINER', 'trainer', now()),
+  ('$MEMBERSHIP_VIEWER_MAIN', '$T_MAIN', '$U_VIEWER', 'viewer', now());
   -- Nicht-Mitglied ($U_NONMEMBER) bekommt bewusst KEINE Zeile.
+
+-- R5b-Fixrunde 1 (M1/M3): dieselbe Dummy-Mitgliedszeile für owner-anonymous/T_ANON (Ziel der
+-- manageMembers-UPDATE/DELETE-Sonden dieser Identität -- T_ANON hat sonst kein Mitglied).
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
+VALUES
+  ('$MEMBERSHIP_VIEWER_ANON', '$T_ANON', '$U_DUMMY_ANON_MEMBER', 'viewer', now());
+
+-- R5b-Fixrunde 1 (M1, Beleg für MP2): offene Mitgliedschaft -- user_id ist bereits gesetzt
+-- (kein reiner "unclaimed"-Einladungszustand wie C_PENDING_INVITE oben, sondern der Zustand, den
+-- MP2 ausnutzte), aber accepted_at IS NULL. Erwartet: KEIN Recht, obwohl role='co-admin'.
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at, declined_at)
+VALUES
+  ('$C_OPEN_COADMIN', '$T_MAIN', '$U_PENDING', 'co-admin', NULL, NULL);
+
+-- R5b-Fixrunde 1 (M3, Beleg): angenommene, aber vom Eigentuemer widerrufene Mitgliedschaft --
+-- exakt der im Review belegte Zustand (Annahme UND Widerruf beide gesetzt). Erwartet: KEIN
+-- Recht, obwohl role='co-admin' UND accepted_at gesetzt ist.
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at, declined_at)
+VALUES
+  ('$C_DECLINED_COADMIN', '$T_MAIN', '$U_DECLINED', 'co-admin', now(), now());
 
 -- Fixrunde 2 / K2: offene (unclaimed) Einladung auf T_MAIN, exakt wie
 -- invitationService.ts#createInvitation sie anlegt -- user_id NULL, invite_email gesetzt,
@@ -627,20 +665,52 @@ SQL
   fi
 }
 
-# --- R5b: Testidentitäten sind ab jetzt FEST im Skript verankert, nicht mehr in der JSON. Die
-# JSON (rolePermissions.json) enthält NUR NOCH die Rechtetabelle selbst (Rolle -> Array erlaubter
-# Rechte) -- wer getestet wird (owner, owner-anonymous, co-admin, …) ist eine Eigenschaft des
-# HARNESS, keine "Zeile" der Rechtetabelle. perm_expected() liest die JSON direkt: 'owner' ist
-# IMMER true (fest verankert, spiegelt hasPermission()/has_tournament_permission()s
-# Eigentümer-Sonderfall), jede andere Rolle nachschlagen, 'non-member' (kein Turnier-Bezug, keine
-# TournamentRole) ist IMMER false.
-MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member)
+# --- R5b-Fixrunde 1 (M1, task-R5b-review.md): Vollmatrix, VOLLSTÄNDIG aus rolePermissions.json
+# erzeugt -- jede Rolle × jedes Recht × jede zugehörige Operation (15 Operationen, siehe
+# right_for_op()/op_sql() unten), über neun Identitäten. Ersetzt die vorherige Hauptmatrix, die
+# nur vier von sieben Rechten und keine offene/abgelehnte Mitgliedschaft maß -- der Review belegte
+# mit zwei Mutationen (MP2: accepted_at-Prüfung entfernt, MP3: matches_delete prüft 'teams' statt
+# 'restructure'), dass genau diese Lücken wirksam waren und trotzdem grün blieben.
+#
+# Testidentitäten sind FEST im Skript verankert, nicht Teil der JSON (das sind Testfixturen,
+# keine Rechte). Die JSON (rolePermissions.json) enthält NUR die Rechtetabelle selbst
+# (Rolle -> Array erlaubter Rechte). 'owner'/'owner-anonymous' sind IMMER true (fest verankert,
+# spiegelt hasPermission()/has_tournament_permission()s Eigentümer-Sonderfall). 'non-member'
+# (kein Turnier-Bezug), 'open-invitation' (accepted_at IS NULL, aber role='co-admin' -- der MP2-
+# Fall) und 'declined-membership' (accepted_at UND declined_at gesetzt -- der M3-Fall) sind IMMER
+# false, UNABHÄNGIG von ihrer role-Spalte in tournament_collaborators -- das ist der Kern dessen,
+# was M1/M3 beweisen sollen.
+MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member open-invitation declined-membership)
 
 role_for_id() {
   case "$1" in
     owner|owner-anonymous) echo "owner" ;;
-    non-member) echo "" ;;
+    non-member|open-invitation|declined-membership) echo "" ;;
     *) echo "$1" ;;
+  esac
+}
+
+# open-invitation/declined-membership haben eigene, dedizierte Nutzer (siehe Fixtures) -- alle
+# anderen Identitäten leiten sich wie bisher deterministisch aus ihrem Label ab.
+user_id_for_id() {
+  case "$1" in
+    open-invitation) echo "$U_PENDING" ;;
+    declined-membership) echo "$U_DECLINED" ;;
+    *) uuid_for "user:$1" ;;
+  esac
+}
+
+# Ziel-Mitgliedszeile für die manageMembers-UPDATE/DELETE-Sonden: NIE die eigene Zeile der
+# testenden Identität, sonst griffe der "Eigenzweig" von collaborators_update_v3/_delete_v3
+# (user_id = auth.uid()) und würde manageMembers fälschlich als erlaubt zeigen, obwohl nur
+# Selbstverwaltung (Einladung annehmen, eigene Zeile verlassen) greift, nicht das Recht, ANDERE zu
+# verwalten. 'viewer' zielt deshalb auf die Co-Admin-Zeile, alle anderen auf die Viewer-Zeile.
+# 'owner-anonymous' hat in T_MAIN kein Mitglied, deshalb die eigene Dummy-Zeile in T_ANON.
+target_membership_for_id() {
+  case "$1" in
+    viewer) echo "$MEMBERSHIP_COADMIN_MAIN" ;;
+    owner-anonymous) echo "$MEMBERSHIP_VIEWER_ANON" ;;
+    *) echo "$MEMBERSHIP_VIEWER_MAIN" ;;
   esac
 }
 
@@ -665,77 +735,120 @@ mark() {
   fi
 }
 
+# 15 Operationen (task-R5b-review.md, M1-Fix): teams/matches/match_events je INSERT/UPDATE/DELETE
+# (9), tournaments UPDATE/Soft-Delete/hartes DELETE (3), collaborators INSERT/UPDATE/DELETE (3).
+# right_for_op() ordnet jede Operation ihrem Recht aus rolePermissions.json zu -- außer
+# 'tournaments_hard_delete': das ist KEIN Recht aus der Tabelle (tournaments_delete_v2 bleibt seit
+# der Baseline Eigentümer-only, siehe Migrationskommentar Abschnitt 6), sondern eine reine
+# Owner-Only-Regression, deshalb der Sonderwert "ownerOnly".
+OPERATIONS=(
+  teams_insert teams_update teams_delete
+  matches_insert matches_update matches_delete
+  match_events_insert match_events_update match_events_delete
+  tournaments_settings_update tournaments_deleted_at_update tournaments_hard_delete
+  collaborators_insert collaborators_update collaborators_delete
+)
+
+right_for_op() {
+  case "$1" in
+    teams_insert|teams_delete|matches_insert|matches_delete) echo "restructure" ;;
+    teams_update) echo "teams" ;;
+    matches_update|match_events_insert) echo "writeMatchData" ;;
+    match_events_update|match_events_delete) echo "correctEvents" ;;
+    tournaments_settings_update) echo "tournamentSettings" ;;
+    tournaments_deleted_at_update) echo "deleteTournament" ;;
+    tournaments_hard_delete) echo "ownerOnly" ;;
+    collaborators_insert|collaborators_update|collaborators_delete) echo "manageMembers" ;;
+  esac
+}
+
+# Baut die Sonde je Operation -- echter App-Pfad, wo einer existiert (INSERT/DELETE wie
+# SupabaseRepository.save(), UPDATE wie das jeweilige Formular). Jede INSERT-Sonde bekommt eine
+# pro (Identität, Operation) eindeutige id (uuid_for "…:$id:$op"), damit keine zwei Zeilen im
+# selben Lauf kollidieren -- unkritisch, da jede Sonde in einer eigenen, nie committeten
+# Transaktion läuft, aber so bleibt jede Zeile im Log eindeutig einer Sonde zuordenbar.
+op_sql() {
+  local op="$1" tournament_id="$2" match_id="$3" team_id="$4" event_id="$5"
+  local ins_team="$6" ins_match="$7" ins_invite="$8" target_membership="$9"
+  case "$op" in
+    teams_insert)
+      echo "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$ins_team','$tournament_id','Vollmatrix Team');" ;;
+    teams_update)
+      echo "UPDATE public.teams SET name='Vollmatrix Team (Update)' WHERE id='$team_id';" ;;
+    teams_delete)
+      echo "DELETE FROM public.teams WHERE id='$team_id';" ;;
+    matches_insert)
+      echo "INSERT INTO public.matches (id,tournament_id,round,field) VALUES ('$ins_match','$tournament_id',9,9);" ;;
+    matches_update)
+      echo "UPDATE public.matches SET score_a = score_a + 1 WHERE id='$match_id';" ;;
+    matches_delete)
+      echo "DELETE FROM public.matches WHERE id='$match_id';" ;;
+    match_events_insert)
+      echo "INSERT INTO public.match_events (match_id,type,timestamp_seconds,score_home,score_away) VALUES ('$match_id','GOAL',22,0,0);" ;;
+    match_events_update)
+      echo "UPDATE public.match_events SET is_deleted = NOT is_deleted WHERE id='$event_id';" ;;
+    match_events_delete)
+      echo "DELETE FROM public.match_events WHERE id='$event_id';" ;;
+    tournaments_settings_update)
+      echo "UPDATE public.tournaments SET location_name='RLS Vollmatrix' WHERE id='$tournament_id';" ;;
+    tournaments_deleted_at_update)
+      echo "UPDATE public.tournaments SET deleted_at = now() WHERE id='$tournament_id';" ;;
+    tournaments_hard_delete)
+      echo "DELETE FROM public.tournaments WHERE id='$tournament_id';" ;;
+    collaborators_insert)
+      echo "INSERT INTO public.tournament_collaborators (id,tournament_id,invite_code,invite_email,role,invited_by,max_uses) VALUES ('$ins_invite','$tournament_id','MTRX-$ins_invite','matrix-$ins_invite@rls-matrix.test','viewer','$U_OWNER',5);" ;;
+    collaborators_update)
+      echo "UPDATE public.tournament_collaborators SET role='trainer' WHERE id='$target_membership';" ;;
+    collaborators_delete)
+      echo "DELETE FROM public.tournament_collaborators WHERE id='$target_membership';" ;;
+  esac
+}
+
 echo ""
-echo "=== Gemessene Matrix — $MODE_LABEL ==="
-printf '%-16s | %-14s | %-18s | %-18s | %-8s\n' "Rolle" "Spieldaten" "Ereignisse korr." "Turniereinstell." "Teams"
-printf -- '-----------------+----------------+--------------------+--------------------+----------\n'
+echo "=== Vollmatrix (M1: alle Rechte × alle Operationen × alle Identitäten) — $MODE_LABEL ==="
 
 MISMATCHES=0
 TOTAL=0
+VOLLMATRIX_MISMATCHES=0
 
 for id in "${MATRIX_IDS[@]}"; do
   role="$(role_for_id "$id")"
-  exp_write="$(perm_expected "$role" writeMatchData)"
-  exp_correct="$(perm_expected "$role" correctEvents)"
-  exp_settings="$(perm_expected "$role" tournamentSettings)"
-  exp_teams="$(perm_expected "$role" teams)"
+  user_id="$(user_id_for_id "$id")"
+  target_membership="$(target_membership_for_id "$id")"
 
-  user_id="$(uuid_for "user:$id")"
   if [[ "$id" == "owner-anonymous" ]]; then
     tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"
   else
     tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"
   fi
 
-  # authMode (anonym angemeldet vs. regulär) wirkt hier nur über die Fixture-Zuordnung
-  # (eigenes Turnier T_ANON statt T_MAIN) — auth.uid() in diesem Image liest den flachen
-  # GUC request.jwt.claim.sub, keine JSON-Claims. Keine der hier getesteten Policies ruft
-  # is_anonymous_user() auf.
+  for op in "${OPERATIONS[@]}"; do
+    right="$(right_for_op "$op")"
+    if [[ "$right" == "ownerOnly" ]]; then
+      exp="$([[ "$role" == "owner" ]] && echo true || echo false)"
+    else
+      exp="$(perm_expected "$role" "$right")"
+    fi
 
-  # writeMatchData: matches UPDATE + match_events INSERT — beide müssen übereinstimmen,
-  # sonst ist die Rollentabelle intern widersprüchlich (wird unten als eigener Befund markiert).
-  res_matches_update="$(run_write "$user_id" "UPDATE public.matches SET score_a = score_a + 1 WHERE id = '$match_id';")"
-  res_events_insert="$(run_write "$user_id" "INSERT INTO public.match_events (match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$match_id','GOAL',20,0,0);")"
-  if [[ "$res_matches_update" == "allowed" && "$res_events_insert" == "allowed" ]]; then
-    got_write="true"
-  elif [[ "$res_matches_update" == "denied" && "$res_events_insert" == "denied" ]]; then
-    got_write="false"
-  else
-    got_write="inconsistent($res_matches_update/$res_events_insert)"
-  fi
+    ins_team="$(uuid_for "vollmatrix-team:$id:$op")"
+    ins_match="$(uuid_for "vollmatrix-match:$id:$op")"
+    ins_invite="$(uuid_for "vollmatrix-invite:$id:$op")"
 
-  # correctEvents: match_events UPDATE + DELETE
-  res_events_update="$(run_write "$user_id" "UPDATE public.match_events SET is_deleted = NOT is_deleted WHERE id = '$event_id';")"
-  res_events_delete="$(run_write "$user_id" "DELETE FROM public.match_events WHERE id = '$event_id';")"
-  if [[ "$res_events_update" == "allowed" && "$res_events_delete" == "allowed" ]]; then
-    got_correct="true"
-  elif [[ "$res_events_update" == "denied" && "$res_events_delete" == "denied" ]]; then
-    got_correct="false"
-  else
-    got_correct="inconsistent($res_events_update/$res_events_delete)"
-  fi
+    sql="$(op_sql "$op" "$tournament_id" "$match_id" "$team_id" "$event_id" "$ins_team" "$ins_match" "$ins_invite" "$target_membership")"
+    result="$(run_write "$user_id" "$sql")"
+    got="$([[ "$result" == "allowed" ]] && echo true || echo false)"
 
-  # tournamentSettings: tournaments UPDATE
-  res_tournaments_update="$(run_write "$user_id" "UPDATE public.tournaments SET location_name = 'RLS Test' WHERE id = '$tournament_id';")"
-  got_settings="$([[ "$res_tournaments_update" == "allowed" ]] && echo true || echo false)"
-
-  # teams (R5b, neue Spalte): teams UPDATE auf eine BESTEHENDE Zeile — NICHT Anlegen/Entfernen,
-  # dafür siehe die eigene 'restructure'-Matrix unten.
-  res_teams_update="$(run_write "$user_id" "UPDATE public.teams SET name = 'RLS Matrix Team (updated)' WHERE id = '$team_id';")"
-  got_teams="$([[ "$res_teams_update" == "allowed" ]] && echo true || echo false)"
-
-  m_write="$(mark "$exp_write" "$got_write")"
-  m_correct="$(mark "$exp_correct" "$got_correct")"
-  m_settings="$(mark "$exp_settings" "$got_settings")"
-  m_teams="$(mark "$exp_teams" "$got_teams")"
-
-  for cell in "$m_write" "$m_correct" "$m_settings" "$m_teams"; do
+    cell="$(mark "$exp" "$got")"
     TOTAL=$((TOTAL + 1))
-    [[ "$cell" == *"!="* ]] && MISMATCHES=$((MISMATCHES + 1))
+    if [[ "$cell" == *"!="* ]]; then
+      MISMATCHES=$((MISMATCHES + 1))
+      VOLLMATRIX_MISMATCHES=$((VOLLMATRIX_MISMATCHES + 1))
+      printf 'vollmatrix %-20s %-28s: %s\n' "$id" "$op" "$cell"
+    fi
   done
-
-  printf '%-16s | %-14s | %-18s | %-18s | %-8s\n' "$id" "$m_write" "$m_correct" "$m_settings" "$m_teams"
 done
+
+echo "Vollmatrix: $((${#MATRIX_IDS[@]} * ${#OPERATIONS[@]})) Zellen geprüft (9 Identitäten × 15 Operationen), $VOLLMATRIX_MISMATCHES Abweichung(en) — nur abweichende Zellen werden einzeln aufgelistet (siehe oben), der Rest ist grün."
 
 # --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
 # Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
