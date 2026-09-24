@@ -203,7 +203,11 @@ export function mapLiveMatchFromSupabase(
   const liveState = (matchRow as MatchRow & { live_state?: LiveStateJson }).live_state;
 
   // Map status
-  const status = STATUS_TO_FRONTEND[matchRow.match_status ?? 'not_started'] ?? 'NOT_STARTED';
+  // Fallback-Default an C-NSTART angeglichen (Review-Fix Minor 6, Fixrunde 1): 'scheduled'
+  // ist der tatsächliche DB-Default für match_status, siehe isMatchActive() unten — beide
+  // Literale ('not_started'/'scheduled') sind in STATUS_TO_FRONTEND vorhanden und ergeben
+  // dasselbe Ergebnis (NOT_STARTED), das hier war nur uneinheitlich.
+  const status = STATUS_TO_FRONTEND[matchRow.match_status ?? 'scheduled'] ?? 'NOT_STARTED';
 
   // Map tournament phase
   const tournamentPhase = matchRow.phase
