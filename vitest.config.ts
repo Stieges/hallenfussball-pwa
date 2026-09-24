@@ -60,7 +60,14 @@ export default defineConfig({
         test: {
           name: 'unit-node',
           environment: 'node',
-          include: ['src/**/*.{test,spec}.ts'],
+          // scripts/** und tests/e2e/cloud/**: Task T2 (Testumgebung) — Produktions-Sperre
+          // (scripts/lib/assertLocalSupabaseTarget.ts) und Registrierungscode-Gleichlauf
+          // (tests/e2e/cloud/testData.ts) brauchen einen echten Vitest-Lauf, kein Playwright.
+          include: [
+            'src/**/*.{test,spec}.ts',
+            'scripts/**/*.{test,spec}.ts',
+            'tests/e2e/cloud/**/*.{test,spec}.ts',
+          ],
           exclude: [...DOM_ONLY_TS_TESTS],
         },
       },

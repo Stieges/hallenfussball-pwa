@@ -32,9 +32,10 @@
     "findings:fix": "PYTHONPATH=scripts python3 -m findings.finding_fix",
     "findings:routing-stats": "PYTHONPATH=scripts python3 -m findings.findings_routing_stats",
     "findings:validate-freshness": "PYTHONPATH=scripts python3 -m findings.validate_review_freshness",
-    "test:env:up": "supabase start && bash scripts/local-db-apply.sh",
+    "test:env:up": "bash -c 'source scripts/lib/e2e-registration-code.sh && supabase start && bash scripts/local-db-apply.sh'",
     "test:env:down": "supabase stop",
-    "test:env:reset": "supabase db reset --local && bash scripts/local-db-apply.sh",
+    "test:env:reset": "bash -c 'source scripts/lib/e2e-registration-code.sh && supabase db reset --local && bash scripts/local-db-apply.sh && npx tsx scripts/e2e-seed.ts'",
+    "test:env:seed": "bash -c 'source scripts/lib/e2e-registration-code.sh && npx tsx scripts/e2e-seed.ts'",
     "test:env:status": "bash scripts/test-env-status.sh"
   },
   "dependencies": {

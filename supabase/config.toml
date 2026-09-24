@@ -376,8 +376,13 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Task T2 (Testumgebung, Ruling O): Kein `supabase/functions/.env` (Repo-Hook blockt `.env`-Pfade
+# bewusst, siehe T1-Report). Der lokale Wert kommt stattdessen aus der Prozess-Variable
+# `E2E_REGISTRATION_CODE`, die npm-Skript `test:env:up`/`test:env:reset`/`test:env:seed` setzt
+# (einzige Quelle: `E2E_REGISTRATION_CODE` in `tests/e2e/cloud/testData.ts`). Dieser Wert darf
+# NIE in der Produktion gesetzt werden — dort bleibt es beim echten Supabase-Secret.
+[edge_runtime.secrets]
+REGISTRATION_CODE = "env(E2E_REGISTRATION_CODE)"
 
 [analytics]
 enabled = true
