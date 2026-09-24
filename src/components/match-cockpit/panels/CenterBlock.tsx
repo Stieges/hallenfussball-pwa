@@ -46,8 +46,6 @@ const CenterBlockComponent: React.FC<CenterBlockProps> = ({
   onOpenTimeDialog,
   onOpenRestartConfirm,
 }) => {
-  // matchId is unused now that we use dialog callbacks
-  void _matchId;
   const { showInfo } = useToast();
   const isMobile = useIsMobile();
 

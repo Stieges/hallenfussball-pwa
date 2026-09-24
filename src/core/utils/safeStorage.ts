@@ -30,7 +30,6 @@ class MemoryStorage implements Storage {
     removeItem(key: string): void {
         // Use object spread to avoid eslint no-dynamic-delete
         const { [key]: _, ...rest } = this.data;
-        void _; // Suppress unused variable warning
         this.data = rest;
     }
 
