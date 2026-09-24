@@ -26,7 +26,8 @@
     "prepare": "husky",
     "analyze": "npm run build && open dist/stats.html",
     "tokens:check": "node scripts/check-design-token-sync.cjs",
-    "terms:check": "node scripts/check-terminology.cjs"
+    "terms:check": "node scripts/check-terminology.cjs",
+    "guard:forbidden-terms": "scripts/check-forbidden-terms.sh --tree"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
