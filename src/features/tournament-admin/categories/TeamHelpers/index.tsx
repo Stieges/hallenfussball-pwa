@@ -14,7 +14,7 @@ import { CategoryPage, CollapsibleSection } from '../shared';
 import { Button } from '../../../../components/ui/Button';
 import { MemberList } from '../../../auth/components/MemberList';
 import { InviteDialog } from '../../../auth/components/InviteDialog';
-import { useTournamentMembers } from '../../../auth/hooks/useTournamentMembers';
+import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { useInvitation } from '../../../auth/hooks/useInvitation';
 import type { Invitation } from '../../../auth/types/auth.types';
 import { useAuth } from '../../../auth/hooks/useAuth';
@@ -41,7 +41,7 @@ export function TeamHelpersCategory({
 }: TeamHelpersCategoryProps) {
   const { t } = useTranslation('admin');
   const { user, isAuthenticated } = useAuth();
-  const { myMembership } = useTournamentMembers(tournamentId);
+  const { role: myRole } = useMyTournamentRole(tournamentId);
   const { getActiveInvitations } = useInvitation();
 
   // Dialog states
@@ -52,7 +52,11 @@ export function TeamHelpersCategory({
 
   // Permission check: Can manage members? (R5/M6: nur owner -- DB verlangt für
   // tournament_collaborators-INSERT user_owns_tournament(), siehe permissions.ts#canCreateInvitations)
-  const canManageMembers = myMembership ? canCreateInvitations(myMembership.role) : false;
+  //
+  // R7-Fixrunde 1 (H-1, final-review-2.md): useMyTournamentRole() statt direkt
+  // useTournamentMembers().myMembership -- derselbe Fehler wie in DangerZoneCategory (der
+  // echte Eigentümer hat live keine Zeile in tournament_collaborators), gemeinsame Lösung.
+  const canManageMembers = myRole ? canCreateInvitations(myRole) : false;
 
   // Load active invitations
   useEffect(() => {

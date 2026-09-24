@@ -13,7 +13,7 @@ import { CategoryPage } from '../shared';
 import { DANGER_ACTIONS } from '../../constants/admin.constants';
 import { Dialog } from '../../../../components/dialogs/Dialog';
 import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
-import { useTournamentMembers } from '../../../auth/hooks/useTournamentMembers';
+import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
@@ -226,7 +226,7 @@ export function DangerZoneCategory({
   onTournamentUpdate,
 }: DangerZoneCategoryProps) {
   const { t } = useTranslation('admin');
-  const { myMembership } = useTournamentMembers(tournamentId);
+  const { role: myRole } = useMyTournamentRole(tournamentId);
   const [pendingAction, setPendingAction] = useState<DangerActionConfig | null>(null);
   const [confirmationInput, setConfirmationInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
@@ -236,7 +236,14 @@ export function DangerZoneCategory({
   // Eigentümer löschen. Gleiches UI-Muster wie TeamHelpers/MemberList (R5/N4): der
   // Löschen-Bereich wird für alle anderen Rollen komplett ausgeblendet, nicht nur
   // deaktiviert -- konsistent mit canManageMembers in TeamHelpers/index.tsx.
-  const canDelete = myMembership ? canDeleteTournament(myMembership.role) : false;
+  //
+  // R7-Fixrunde 1 (H-1, final-review-2.md): NICHT mehr direkt aus useTournamentMembers()
+  // ableiten -- der echte Eigentümer hat live KEINE Zeile in tournament_collaborators
+  // (createOwnerMembership() hat keinen Aufrufer), `myMembership` wäre für ihn immer null und
+  // canDelete immer false. useMyTournamentRole() erkennt den Eigentümer zuverlässig (lokal/
+  // Gastmodus, echte Mitgliedszeile, oder per RPC-Fallback über has_tournament_permission),
+  // gemeinsam mit TeamHelpersCategory und MemberList.
+  const canDelete = myRole ? canDeleteTournament(myRole) : false;
 
   const handleOpenDialog = useCallback((action: DangerAction) => {
     const config = DANGER_ACTIONS[action];

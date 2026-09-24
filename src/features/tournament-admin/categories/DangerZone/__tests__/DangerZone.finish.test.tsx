@@ -5,16 +5,24 @@ import userEvent from '@testing-library/user-event';
 import { isTournamentCompleted } from '../../../../../utils/tournamentCategories';
 import type { Tournament } from '../../../../../types/tournament';
 
-// R7: DangerZoneCategory ruft seit der Löschen-Rollensperre useTournamentMembers() auf, das
-// intern useAuth() braucht (AuthProvider-Kontext). Dieser Test prüft "Turnier beenden"/
-// "Turnier archivieren" (kein Rollen-Gate), nicht "Turnier löschen" -- die Rolle 'owner' hält
-// den bestehenden Testinhalt unverändert wahr (der Eigentümer sieht ohnehin alle Aktionen).
+// R7 (Fixrunde 1, useMyTournamentRole): DangerZoneCategory ruft seit der Löschen-Rollensperre
+// useMyTournamentRole() auf, das intern useAuth() UND useTournamentMembers() braucht
+// (AuthProvider-Kontext). Dieser Test prüft "Turnier beenden"/"Turnier archivieren" (kein
+// Rollen-Gate), nicht "Turnier löschen" -- eine echte Mitgliedszeile mit role: 'owner' hält den
+// bestehenden Testinhalt unverändert wahr (der Eigentümer sieht ohnehin alle Aktionen; dass der
+// echte Eigentümer live KEINE solche Zeile hat, ist H-1 und wird dediziert in
+// DangerZoneCategory.deleteVisibility.test.tsx geprüft, nicht hier).
+vi.mock('../../../../auth/hooks/useAuth', () => ({
+  useAuth: () => ({ isAuthenticated: true }),
+}));
+
 vi.mock('../../../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({
     myMembership: {
       id: 'membership-1', userId: 'user-1', tournamentId: 't1', role: 'owner',
       teamIds: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
     },
+    isLoading: false,
   }),
 }));
 

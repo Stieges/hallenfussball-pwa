@@ -11,6 +11,7 @@ import { cssVars } from '../../../design-tokens'
 import { Button } from '../../../components/ui/Button';
 import { RoleBadge } from './RoleBadge';
 import { useTournamentMembers } from '../hooks/useTournamentMembers';
+import { useEffectiveTournamentRole } from '../hooks/useMyTournamentRole';
 import type { TournamentRole } from '../types/auth.types';
 import { ROLE_LABELS } from '../types/auth.types';
 import { canCreateInvitations } from '../utils/permissions';
@@ -48,6 +49,13 @@ export const MemberList: React.FC<MemberListProps> = ({
     clearError,
   } = useTournamentMembers(tournamentId);
 
+  // R7-Fixrunde 1 (H-1, final-review-2.md): useEffectiveTournamentRole() statt direkt
+  // myMembership -- der echte Eigentümer hat live keine Zeile in tournament_collaborators
+  // (createOwnerMembership() hat keinen Aufrufer). Nutzt die schon geladene myMembership/
+  // isLoading dieser Komponente weiter (kein zweiter useTournamentMembers()-Fetch), gemeinsame
+  // Lösung mit DangerZoneCategory/TeamHelpersCategory.
+  const { role: myRole } = useEffectiveTournamentRole(tournamentId, myMembership, isLoading);
+
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
@@ -68,8 +76,9 @@ export const MemberList: React.FC<MemberListProps> = ({
   };
 
   // R5/M6: nur owner -- DB verlangt für tournament_collaborators-INSERT user_owns_tournament(),
-  // siehe permissions.ts#canCreateInvitations.
-  const canManageMembers = myMembership ? canCreateInvitations(myMembership.role) : false;
+  // siehe permissions.ts#canCreateInvitations. R7-Fixrunde 1 (H-1): über myRole, nicht direkt
+  // myMembership (siehe useEffectiveTournamentRole oben).
+  const canManageMembers = myRole ? canCreateInvitations(myRole) : false;
 
   return (
     <div style={styles.container}>

@@ -133,4 +133,17 @@ SELECT 'positive-authenticated-select-role-permissions',
 UNION ALL
 SELECT 'positive-ci-schema-reader-select-role-permissions',
        has_table_privilege('ci_schema_reader', 'public.role_permissions', 'SELECT')
+UNION ALL
+-- R7-Fixrunde 1 (N-4, final-review-2.md): Ohne diese beiden Zeilen bliebe ein Live-ACL-Drift
+-- (ein versehentliches REVOKE EXECUTE) dem Drift-Check verborgen, obwohl der Container-Harness
+-- ihn fängt (DB-Mutation M4 des Reviews: EXECUTE auf is_active_tournament_member für anon
+-- entzogen → Public-Read-Stichprobe wird ROT) — die beiden Umgebungen prüfen unterschiedliche
+-- Dinge (Wegwerf-Container vs. Live-ACL), beide müssen dieselbe Lücke fangen können. Die Folge
+-- eines Live-Drifts wäre der stille Ausfall von Public View und Monitoren (anonymer Zugriff auf
+-- ein öffentliches Turnier läuft über genau diese beiden Funktionen).
+SELECT 'positive-anon-execute-is-active-tournament-member',
+       has_function_privilege('anon', 'public.is_active_tournament_member(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-anon-execute-has-tournament-permission',
+       has_function_privilege('anon', 'public.has_tournament_permission(uuid,text)', 'EXECUTE')
 ;

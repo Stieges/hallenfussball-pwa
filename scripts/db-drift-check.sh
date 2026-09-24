@@ -302,6 +302,8 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-anon-execute-auth-provider-for-email"
   "positive-authenticated-select-role-permissions"
   "positive-ci-schema-reader-select-role-permissions"
+  "positive-anon-execute-is-active-tournament-member"
+  "positive-anon-execute-has-tournament-permission"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

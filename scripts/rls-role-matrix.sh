@@ -536,10 +536,16 @@ VALUES
 -- Fixrunde 1 (R6, M1): "invited_by" = U_OWNER ergänzt (vorher nicht gesetzt) — wird von den
 -- neuen R6-Zeilen "Eingeladener sieht Einladenden vor/nach Annahme" gebraucht
 -- (profile_visible_to_viewer()-Regel (ii)). Ändert an K2/L5 nichts, die lesen die Spalte nicht.
+-- R7-Fixrunde 1 (M-1, final-review-2.md): "expires_at" = now() + 7 Tage ergänzt (vorher NULL) --
+-- die App setzt bei JEDER Einladung immer ein zukünftiges expires_at (invitationService.ts:183),
+-- eine Fixture ohne Ablaufdatum verschleiert DB-Mutationen an der expires_at-Prüfung im
+-- Annahme-Zweig von protect_collaborator_row() (Review-Beleg DB-M2: blieb ohne diesen Fix
+-- fälschlich grün). Betrifft ALLE Zeilen, die diese geteilte Fixture nutzen (k2/l5/R6/R7) --
+-- keine ändert ihr erwartetes Ergebnis, alle waren und bleiben "allowed"/funktionierend.
 INSERT INTO public.tournament_collaborators
-  (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, use_count, max_uses)
+  (id, tournament_id, user_id, invite_code, invite_email, role, invited_by, accepted_at, expires_at, use_count, max_uses)
 VALUES
-  ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', '$U_OWNER', NULL, 0, 5);
+  ('$C_PENDING_INVITE', '$T_MAIN', NULL, 'RLSTESTCODE', '$INVITEE_EMAIL', 'collaborator', '$U_OWNER', NULL, now() + interval '7 days', 0, 5);
 
 -- R7 (F4, task-R3-review.md): offene Einladung, die der Eigentümer per deactivateInvitation()
 -- widerrufen hat, BEVOR sie je angenommen wurde -- declined_at gesetzt, accepted_at bleibt NULL.
@@ -1592,6 +1598,12 @@ fi
 exp_r7_active="allowed"
 exp_r7_accept_valid="allowed"
 exp_r7_public_nonmember="allowed"
+# R7-Fixrunde 1 (N-3, final-review-2.md): "accepted_at IS NOT NULL" ist NICHT Teil von R7 selbst
+# (das prüften schon die alten Baseline-Select-Policies) -- eine offene, nie angenommene
+# Mitgliedschaft (U_PENDING/C_OPEN_COADMIN, role='co-admin', accepted_at IS NULL) darf in BEIDEN
+# Modi kein privates Turnier lesen. DB-Mutation M1 des Reviews (diese Bedingung aus
+# is_active_tournament_member() entfernt) soll GENAU diese Zeile rot färben.
+exp_r7_open_membership="denied"
 
 r7_declined_tournaments="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.tournaments WHERE id = '$T_MAIN';")"
 r7_declined_matches="$(run_select_as authenticated "$U_DECLINED" "SELECT id FROM public.matches WHERE id = '$M_MAIN';")"
@@ -1607,6 +1619,17 @@ r7_active_got="$([[ "$r7_active_tournaments" == "allowed" && "$r7_active_matches
 r7_declined_sees_owner_profile="$(run_select_as authenticated "$U_DECLINED" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';")"
 
 r7_nonmember_reads_public="$(run_select_as authenticated "$U_NONMEMBER" "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
+
+# R7-Fixrunde 1 (N-3): offene, nie angenommene Mitgliedschaft liest kein privates Turnier.
+r7_open_membership_reads_private="$(run_select_as authenticated "$U_PENDING" "SELECT id FROM public.tournaments WHERE id = '$T_MAIN';")"
+
+# R7-Fixrunde 1 (N-1, N-2): profile_visible_to_viewer() für eine noch OFFENE (nie angenommene)
+# Einladung, einmal widerrufen (C_DECLINED_INVITE), einmal abgelaufen (C_EXPIRED_INVITE). Beide
+# Fixturen haben user_id IS NULL -- Regel (b) greift nur über "invite_email = auth.email()",
+# deshalb der Email-Claim als vierter run_select_as()-Parameter (Muster wie die R6-Zeilen
+# "eingeladener sieht einladenden vor Annahme").
+r7_declined_invite_sees_inviter="$(run_select_as authenticated "$U_DECLINED_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$DECLINED_INVITEE_EMAIL")"
+r7_expired_invite_sees_inviter="$(run_select_as authenticated "$U_EXPIRED_INVITEE" "SELECT display_name FROM public.profiles WHERE id = '$U_OWNER';" "$EXPIRED_INVITEE_EMAIL")"
 
 # Annahme-Sonden: exakt derselbe Update-Pfad wie k2_accept_invitation oben
 # (invitationService.ts#acceptInvitation), je eigene, nie committete Transaktion (run_write()).
@@ -1632,6 +1655,12 @@ k1k2_mark_value "nicht-mitglied-liest-oeffentliches-turnier " "$r7_nonmember_rea
 k1k2_mark_value "annahme-widerrufene-einladung              " "$r7_accept_declined_invite" "$exp_r7_accept_declined"
 k1k2_mark_value "annahme-abgelaufene-einladung              " "$r7_accept_expired_invite" "$exp_r7_accept_expired"
 k1k2_mark_value "annahme-gueltige-einladung                 " "$r7_accept_valid_invite" "$exp_r7_accept_valid"
+
+echo ""
+echo "--- R7-Fixrunde 1 (final-review-2.md: M-1, N-1, N-2, N-3) — $MODE_LABEL ---"
+k1k2_mark_value "n3-offene-mitgliedschaft-liest-privates-turnier-nicht" "$r7_open_membership_reads_private" "$exp_r7_open_membership"
+k1k2_mark_value "n1-widerrufene-offene-einladung-sieht-einladenden-nicht" "$r7_declined_invite_sees_inviter" "$exp_r7_declined_profile"
+k1k2_mark_value "n2-abgelaufene-offene-einladung-sieht-einladenden-nicht" "$r7_expired_invite_sees_inviter" "$exp_r7_declined_profile"
 
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
 # R5b: fest im Skript verankert (nicht mehr in der JSON) -- das ist kein "Recht" aus der

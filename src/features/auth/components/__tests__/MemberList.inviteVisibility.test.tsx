@@ -4,16 +4,36 @@
  * R5b (.superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R5b-brief.md, N4): siehe
  * TeamHelpersCategory.inviteVisibility.test.tsx für die vollständige Begründung -- derselbe
  * fehlende Komponententest galt hier zusätzlich für MemberList selbst (`onInvite`-Knopf im
- * Header, gesteuert über `canManageMembers = myMembership ? canCreateInvitations(role) : false`).
+ * Header, gesteuert über `canManageMembers = myRole ? canCreateInvitations(myRole) : false`).
+ *
+ * R7-Fixrunde 1 (H-1, final-review-2.md): Die ERSTE Fassung mockte für den "Eigentümer"-Fall
+ * fälschlich eine echte `myMembership`-Zeile mit `role: 'owner'` -- die es live nie gibt. Jetzt
+ * über `useEffectiveTournamentRole()` (RPC-Fallback, gemeinsam mit DangerZoneCategory/
+ * TeamHelpersCategory) korrekt aufgelöst.
  */
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { TournamentMembership } from '../../types/auth.types';
 
+const useAuthMock = vi.fn();
 const useTournamentMembersMock = vi.fn();
+const rpcMock = vi.fn();
+
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => useAuthMock(),
+}));
 
 vi.mock('../../hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => useTournamentMembersMock(),
+}));
+
+// Getter statt Objekt-Literal: siehe DangerZoneCategory.deleteVisibility.test.tsx -- `vi.mock`
+// läuft vor den `const`-Deklarationen unten.
+vi.mock('../../../../lib/supabase', () => ({
+  get supabase() {
+    return { rpc: rpcMock };
+  },
+  isSupabaseConfigured: true,
 }));
 
 import { MemberList } from '../MemberList';
@@ -30,7 +50,12 @@ function makeMembership(role: TournamentMembership['role']): TournamentMembershi
   };
 }
 
-function setup(role: TournamentMembership['role']) {
+function render_() {
+  render(<MemberList tournamentId="tournament-1" onInvite={vi.fn()} />);
+}
+
+function setupWithMembership(role: TournamentMembership['role']) {
+  useAuthMock.mockReturnValue({ isAuthenticated: true });
   useTournamentMembersMock.mockReturnValue({
     members: [],
     myMembership: makeMembership(role),
@@ -43,20 +68,38 @@ function setup(role: TournamentMembership['role']) {
     canTransfer: () => false,
     clearError: vi.fn(),
   });
-
-  render(<MemberList tournamentId="tournament-1" onInvite={vi.fn()} />);
+  render_();
 }
 
-describe('MemberList — "+ Einladen"-Knopf im Header (N4)', () => {
-  it('owner sieht den "+ Einladen"-Knopf', () => {
-    setup('owner');
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
-    expect(screen.getByText('+ Einladen')).toBeInTheDocument();
+describe('MemberList — "+ Einladen"-Knopf im Header (N4, R7-Fixrunde 1: H-1)', () => {
+  it('Eigentümer OHNE Mitgliedszeile (RPC-Fallback) sieht den "+ Einladen"-Knopf', async () => {
+    useAuthMock.mockReturnValue({ isAuthenticated: true });
+    useTournamentMembersMock.mockReturnValue({
+      members: [], myMembership: null, isLoading: false, error: null,
+      setRole: vi.fn(), remove: vi.fn(), canEditMember: () => false, canSetRole: () => false,
+      canTransfer: () => false, clearError: vi.fn(),
+    });
+    rpcMock.mockResolvedValue({ data: true, error: null });
+
+    render_();
+
+    await waitFor(() => {
+      expect(screen.getByText('+ Einladen')).toBeInTheDocument();
+    });
+    expect(rpcMock).toHaveBeenCalledWith('has_tournament_permission', {
+      p_tournament_id: 'tournament-1',
+      p_permission: 'deleteTournament',
+    });
   });
 
-  it('co-admin sieht den "+ Einladen"-Knopf NICHT', () => {
-    setup('co-admin');
+  it('co-admin (echte Mitgliedszeile) sieht den "+ Einladen"-Knopf NICHT', () => {
+    setupWithMembership('co-admin');
 
     expect(screen.queryByText('+ Einladen')).not.toBeInTheDocument();
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 });
