@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 #
-# rls-role-matrix.sh — Misst die Schreibrechte-Matrix aus roleMatrix.json gegen eine echte
+# rls-role-matrix.sh — Misst die Schreibrechte-Matrix aus rolePermissions.json gegen eine echte
 # Postgres-Instanz mit aktivem RLS. Dauerhafte Absicherung für die Rollentabelle aus
-# .superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R1-brief.md — kein Wegwerf-Skript.
+# .superpowers/sdd/2026-09-22-rechte-und-cockpit-2/task-R1-brief.md (seit R5b:
+# task-R5b-brief.md) — kein Wegwerf-Skript.
 #
-# Was gemessen wird (nicht behauptet): Für jede Zeile aus
-# src/features/auth/__tests__/roleMatrix.json (der EINEN Quelle, gemeinsam mit dem
-# Vitest-Folgetask genutzt) wird ein echter auth.users-Eintrag angelegt, ggf. eine
+# Was gemessen wird (nicht behauptet): Für jede der sieben Test-Identitäten (owner,
+# owner-anonymous, co-admin, collaborator, trainer, viewer, non-member — fest im Skript verankert,
+# siehe MATRIX_IDS unten, KEIN Teil der JSON: das sind Testfixturen, keine Rechte) wird ein echter
+# auth.users-Eintrag angelegt, ggf. eine
 # tournament_collaborators-Zeile mit passender Rolle — und dann unter
 # `SET LOCAL ROLE authenticated` (bzw. `anon`) mit passendem `request.jwt.claim.sub` jeder
 # Schreibzugriff versucht: matches UPDATE, match_events INSERT/UPDATE/DELETE,
@@ -74,15 +76,16 @@
 # bestehenden Nachbau von repro_security_definer_owner_transfer() weiter unten für ein
 # vergleichbares Cross-Schema-Problem. Kein Teil irgendeiner committeten Migration.
 #
-# R5 (task-R5-brief.md): 20260924_002_coadmin_complete.sql schließt vier DB-Befunde aus dem
-# Abschluss-Review von R2/R3 (final-review.md, Abschnitte H4/M3/M4/M5): H4 (Co-Admin-Upsert auf
-# teams/matches scheitert halb -- teams_insert_v2/matches_insert_v2 bekommen einen Co-Admin-
-# Zweig), M3 (teams_update_v3 bekommt denselben Rollenfilter wie matches_update_v3: nur
-# co-admin/collaborator), M4 (cascade_tournament_visibility() wird SECURITY DEFINER, damit
-# sponsors/monitors einem Co-Admin-Publish folgen) und M5 (neuer BEFORE-UPDATE-Trigger
-# protect_deleted_at: tournaments.deleted_at nur für den Eigentümer änderbar, IS DISTINCT FROM
-# schützt den Normalfall "Co-Admin speichert mit unverändertem deleted_at"). Orthogonal zu R6
-# (profiles) -- läuft unabhängig von WITH_R6.
+# R5 (task-R5-brief.md, historisch): 20260924_002_coadmin_complete.sql schloss vier DB-Befunde
+# (H4/M3/M4/M5). R5b (task-R5b-brief.md, AKTUELL) hat diese Datei umbenannt und komplett neu
+# geschrieben -- 20260924_002_central_role_permissions.sql. Die vier R5-Befunde bleiben inhaltlich
+# erhalten (Co-Admin-Upsert gelingt, Teams-Rollenfilter, Kaskade folgt Co-Admin-Publish, deleted_at
+# nur Eigentümer), sind jetzt aber über EINE zentrale Tabelle (public.role_permissions) und EINE
+# Funktion (public.has_tournament_permission) ausgedrückt statt über neun einzeln geschriebene
+# EXISTS-Klauseln. Dazu R5-H1 (Auflage aus dem R5-Review): teams_delete_v2/matches_delete_v2
+# bekommen jetzt ebenfalls einen Mitarbeiter-Zweig ('restructure', nur co-admin) -- vorher durfte
+# NUR der Eigentümer löschen, ein Co-Admin traf beim Entfernen von Teams/Spielen still 0 Zeilen.
+# Orthogonal zu R6 (profiles) -- läuft unabhängig von WITH_R6.
 #
 # Nutzung:
 #   scripts/rls-role-matrix.sh                    # Baseline + alle sieben Migrationen ("nachher")
@@ -106,13 +109,16 @@
 #                                                   # fehlt), sonst misst der Harness die R6-Lücke
 #                                                   # nicht.
 #   scripts/rls-role-matrix.sh --without-r5        # Alles bis 20260924_001, OHNE 20260924_002
-#                                                   # (R5) — die H4/M3/M4/M5-Zeilen müssen hier
-#                                                   # den "vorher"-Zustand zeigen (Co-Admin-Upsert
-#                                                   # auf teams/matches scheitert, viewer/trainer
-#                                                   # dürfen Teams ändern, sponsors/monitors
-#                                                   # bleiben nach Co-Admin-Publish unsichtbar,
-#                                                   # Co-Admin darf deleted_at setzen), sonst
-#                                                   # misst der Harness die R5-Lücken nicht.
+#                                                   # (R5b: central_role_permissions) — die
+#                                                   # R5b-Zeilen müssen hier den "vorher"-Zustand
+#                                                   # zeigen (Co-Admin-Upsert auf teams/matches
+#                                                   # scheitert, viewer/trainer dürfen Teams
+#                                                   # ändern, sponsors/monitors bleiben nach
+#                                                   # Co-Admin-Publish unsichtbar, Co-Admin darf
+#                                                   # deleted_at setzen, Co-Admin-DELETE auf
+#                                                   # Teams/Spiele scheitert still statt zu
+#                                                   # gelingen), sonst misst der Harness die
+#                                                   # R5/R5b-Lücken nicht.
 #
 # Ändert NICHTS an der Produktionsdatenbank — der Container ist eine Wegwerf-Instanz, wird am
 # Ende entfernt (trap).
@@ -131,8 +137,8 @@ HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
 PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
 MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
 PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
-COADMIN_COMPLETE_FILE="$MIGRATIONS_DIR/20260924_002_coadmin_complete.sql"
-ROLE_MATRIX_FILE="$REPO_ROOT/src/features/auth/__tests__/roleMatrix.json"
+CENTRAL_PERMISSIONS_FILE="$MIGRATIONS_DIR/20260924_002_central_role_permissions.sql"
+ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
 WITH_HARDENING=1
@@ -179,7 +185,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v jq >/dev/null 2>&1 || { echo "::error::jq wird benötigt." >&2; exit 1; }
-[[ -f "$ROLE_MATRIX_FILE" ]] || { echo "::error::Rollentabelle fehlt: $ROLE_MATRIX_FILE" >&2; exit 1; }
+[[ -f "$ROLE_PERMISSIONS_FILE" ]] || { echo "::error::Rechtetabelle fehlt: $ROLE_PERMISSIONS_FILE" >&2; exit 1; }
 [[ -f "$BASELINE_FILE" ]] || { echo "::error::Baseline fehlt: $BASELINE_FILE" >&2; exit 1; }
 for f in "${MIGRATION_FILES[@]}"; do
   [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
@@ -188,7 +194,7 @@ done
 [[ -f "$PARENT_KEYS_FILE" ]] || { echo "::error::Migration fehlt: $PARENT_KEYS_FILE" >&2; exit 1; }
 [[ -f "$MERGE_RESTRICT_FILE" ]] || { echo "::error::Migration fehlt: $MERGE_RESTRICT_FILE" >&2; exit 1; }
 [[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
-[[ -f "$COADMIN_COMPLETE_FILE" ]] || { echo "::error::Migration fehlt: $COADMIN_COMPLETE_FILE" >&2; exit 1; }
+[[ -f "$CENTRAL_PERMISSIONS_FILE" ]] || { echo "::error::Migration fehlt: $CENTRAL_PERMISSIONS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -263,6 +269,25 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 SQL
 
+# R5b-Testaufbau: ci_schema_reader (scripts/db-drift-check.sh, die nur-lesende CI-Rolle) existiert
+# live, aber nicht in einem aus der Baseline rekonstruierten Container -- kein Teil des
+# Postgres-Images, sondern eine eigens auf dem Supabase-Projekt angelegte Rolle. Die neue
+# Migration (20260924_002_central_role_permissions.sql, R5b) referenziert sie in einer eigenen
+# Policy UND einem GRANT auf role_permissions -- ohne diesen Nachbau würde das Einspielen der
+# Migration mit "role ci_schema_reader does not exist" scheitern. Läuft in JEDEM Modus (auch
+# --without-r5, wo die Migration die Rolle gar nicht referenziert) -- kostet nichts, hält die
+# Reihenfolge einfach. Kein Teil einer committeten Migration, dieselbe Begründung wie beim
+# auth.users-Trigger direkt oberhalb.
+psql_stdin <<'SQL'
+DO $do$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
+    CREATE ROLE ci_schema_reader LOGIN;
+  END IF;
+END
+$do$;
+SQL
+
 # R6-Testaufbau: den "vorher"-Zustand von public.profiles nachbilden — MUSS vor einer eventuellen
 # R6-Migration laufen (siehe Kopfkommentar): R6 REVOKEt zuerst ALL und GRANTet danach nur die
 # Spaltenliste; ein GRANT ALL NACH R6 würde die gerade erst entzogenen Rechte sofort wieder
@@ -281,13 +306,16 @@ if [[ "$WITH_R6" -eq 1 ]]; then
   psql_stdin < "$PROFILES_FILE"
 fi
 
-# R5 (task-R5-brief.md): H4 (Co-Admin-INSERT-Zweig auf teams/matches), M3 (Teams-Rollenfilter),
-# M4 (cascade_tournament_visibility SECURITY DEFINER), M5 (deleted_at nur Eigentümer). Orthogonal
-# zu R6 (profiles) -- läuft unabhängig von WITH_R6, nur von WITH_MIGRATION/HARDENING/
-# PARENT_KEYS abhängig (siehe --baseline-only oben, das WITH_R5 mit auf 0 setzt).
+# R5b (task-R5b-brief.md): public.role_permissions + public.has_tournament_permission() ersetzen
+# neun einzeln geschriebene EXISTS-Klauseln durch EINE Tabelle + EINE Funktion. Inhaltlich
+# weiterhin H4 (Co-Admin-INSERT-Zweig auf teams/matches), M3 (Teams-Rollenfilter), M4
+# (cascade_tournament_visibility SECURITY DEFINER), M5 (deleted_at nur Eigentümer) -- dazu R5-H1
+# (Co-Admin-DELETE auf teams/matches über das neue Recht 'restructure'). Orthogonal zu R6
+# (profiles) -- läuft unabhängig von WITH_R6, nur von WITH_MIGRATION/HARDENING/PARENT_KEYS
+# abhängig (siehe --baseline-only oben, das WITH_R5 mit auf 0 setzt).
 if [[ "$WITH_R5" -eq 1 ]]; then
-  echo "Migration einspielen: $(basename "$COADMIN_COMPLETE_FILE")" >&2
-  psql_stdin < "$COADMIN_COMPLETE_FILE"
+  echo "Migration einspielen: $(basename "$CENTRAL_PERMISSIONS_FILE")" >&2
+  psql_stdin < "$CENTRAL_PERMISSIONS_FILE"
 fi
 
 if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
@@ -304,14 +332,23 @@ else
   MODE_LABEL="vorher/R1-Gegenprobe (nur Baseline)"
 fi
 
-# --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS ----------------------
+# --- 3. Vor der Matrix belegen: 44 Policies, 13 Tabellen mit RLS (R5b: +2/+1 mit role_permissions,
+#        nur wenn WITH_R5=1 -- die neue Tabelle existiert sonst nicht) ------------------------
+EXPECTED_POLICY_COUNT=44
+EXPECTED_RLS_TABLE_COUNT=13
+if [[ "$WITH_R5" -eq 1 ]]; then
+  # role_permissions bringt zwei neue Policies mit (role_permissions_select für authenticated,
+  # role_permissions_select_ci_schema_reader für die CI-Leserolle) und ist selbst RLS-aktiv.
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 2))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
+fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
 RLS_TABLE_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_tables WHERE schemaname = 'public' AND rowsecurity;")"
-echo "Policies (public): $POLICY_COUNT — Tabellen mit aktivem RLS: $RLS_TABLE_COUNT" >&2
-if [[ "$POLICY_COUNT" -ne 44 || "$RLS_TABLE_COUNT" -ne 13 ]]; then
-  echo "::error::Erwartung verfehlt (44 Policies, 13 RLS-Tabellen) — Baseline unvollständig eingespielt? Container-Neustart-Falle?" >&2
+echo "Policies (public): $POLICY_COUNT (erwartet: $EXPECTED_POLICY_COUNT) — Tabellen mit aktivem RLS: $RLS_TABLE_COUNT (erwartet: $EXPECTED_RLS_TABLE_COUNT)" >&2
+if [[ "$POLICY_COUNT" -ne "$EXPECTED_POLICY_COUNT" || "$RLS_TABLE_COUNT" -ne "$EXPECTED_RLS_TABLE_COUNT" ]]; then
+  echo "::error::Erwartung verfehlt ($EXPECTED_POLICY_COUNT Policies, $EXPECTED_RLS_TABLE_COUNT RLS-Tabellen) — Baseline unvollständig eingespielt? Container-Neustart-Falle?" >&2
   exit 1
 fi
 
@@ -349,6 +386,14 @@ TEAM_MAIN="$(uuid_for team:main)"
 # öffnen).
 TEAM_NEW="$(uuid_for team:coadmin-insert)"
 TEAM_ATTACK="$(uuid_for team:coadmin-attack-foreign-tournament)"
+# R5b: TEAM_ANON -- Gegenstück zu TEAM_MAIN im owner-anonymous-Turnier (T_ANON), gebraucht von
+# der 'teams'-Spalte der Hauptmatrix (die Zeile "owner-anonymous" testet immer gegen T_ANON/
+# M_ANON/E_ANON, nicht T_MAIN, siehe Zeile "tournament_id=..." weiter unten). TEAM_N4_INSERT ist
+# die Zeile, mit der der N4-Angreifer (Eigentümer von T_ANON) versucht, per INSERT eine neue Zeile
+# in das FREMDE T_MAIN zu legen -- der Angriff in die andere Richtung als K3-Lehre (dort: Co-Admin
+# von T_MAIN gegen T_ANON).
+TEAM_ANON="$(uuid_for team:anon)"
+TEAM_N4_INSERT="$(uuid_for team:n4-attacker-insert-foreign-tournament)"
 SPONSOR_MAIN="$(uuid_for sponsor:main)"
 MONITOR_MAIN="$(uuid_for monitor:main)"
 
@@ -425,6 +470,12 @@ VALUES
 INSERT INTO public.teams (id, tournament_id, name)
 VALUES
   ('$TEAM_MAIN', '$T_MAIN', 'RLS Matrix Team');
+
+-- R5b: Gegenstück im owner-anonymous-Turnier, gebraucht von der 'teams'-Spalte der Hauptmatrix
+-- (Zeile "owner-anonymous" testet gegen T_ANON).
+INSERT INTO public.teams (id, tournament_id, name)
+VALUES
+  ('$TEAM_ANON', '$T_ANON', 'RLS Matrix Team (anon owner)');
 
 -- R5 (M4-Beweis): sponsors/monitors_sync_owner (Baseline, BEFORE INSERT) leiten owner_id UND
 -- is_public von tournaments ab -- beide Zeilen starten also mit is_public=false (T_MAIN ist bei
@@ -576,33 +627,70 @@ SQL
   fi
 }
 
+# --- R5b: Testidentitäten sind ab jetzt FEST im Skript verankert, nicht mehr in der JSON. Die
+# JSON (rolePermissions.json) enthält NUR NOCH die Rechtetabelle selbst (Rolle -> Array erlaubter
+# Rechte) -- wer getestet wird (owner, owner-anonymous, co-admin, …) ist eine Eigenschaft des
+# HARNESS, keine "Zeile" der Rechtetabelle. perm_expected() liest die JSON direkt: 'owner' ist
+# IMMER true (fest verankert, spiegelt hasPermission()/has_tournament_permission()s
+# Eigentümer-Sonderfall), jede andere Rolle nachschlagen, 'non-member' (kein Turnier-Bezug, keine
+# TournamentRole) ist IMMER false.
+MATRIX_IDS=(owner owner-anonymous co-admin collaborator trainer viewer non-member)
+
+role_for_id() {
+  case "$1" in
+    owner|owner-anonymous) echo "owner" ;;
+    non-member) echo "" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+perm_expected() {
+  local role="$1" perm="$2"
+  if [[ -z "$role" ]]; then echo "false"; return; fi
+  if [[ "$role" == "owner" ]]; then echo "true"; return; fi
+  jq -r --arg role "$role" --arg perm "$perm" \
+    '(.roles[$role] // []) | any(. == $perm)' "$ROLE_PERMISSIONS_FILE"
+}
+
+# mark() nur als reine Funktion (kein Kommandosubstitutions-Aufruf mit Seiteneffekt) —
+# `x="$(f)"` startet eine Subshell; Änderungen an TOTAL/MISMATCHES darin gingen sonst verloren
+# (beim ersten Anlauf dieses Skripts genau so passiert: "0 Abweichungen" trotz sichtbarer "!="
+# in der Tabelle). Zählen passiert danach im Hauptprozess.
+mark() {
+  local exp="$1" got="$2"
+  if [[ "$got" == "$exp" ]]; then
+    echo "$got"
+  else
+    echo "${got}!=${exp}"
+  fi
+}
+
 echo ""
 echo "=== Gemessene Matrix — $MODE_LABEL ==="
-printf '%-16s | %-14s | %-18s | %-18s\n' "Rolle" "Spieldaten" "Ereignisse korr." "Turniereinstell."
-printf -- '-----------------+----------------+--------------------+--------------------\n'
+printf '%-16s | %-14s | %-18s | %-18s | %-8s\n' "Rolle" "Spieldaten" "Ereignisse korr." "Turniereinstell." "Teams"
+printf -- '-----------------+----------------+--------------------+--------------------+----------\n'
 
 MISMATCHES=0
 TOTAL=0
 
-while IFS= read -r row; do
-  id="$(jq -r '.id' <<<"$row")"
-  membership="$(jq -r '.membership' <<<"$row")"
-  authMode="$(jq -r '.authMode' <<<"$row")"
-  exp_write="$(jq -r '.writeMatchData' <<<"$row")"
-  exp_correct="$(jq -r '.correctEvents' <<<"$row")"
-  exp_settings="$(jq -r '.tournamentSettings' <<<"$row")"
+for id in "${MATRIX_IDS[@]}"; do
+  role="$(role_for_id "$id")"
+  exp_write="$(perm_expected "$role" writeMatchData)"
+  exp_correct="$(perm_expected "$role" correctEvents)"
+  exp_settings="$(perm_expected "$role" tournamentSettings)"
+  exp_teams="$(perm_expected "$role" teams)"
 
   user_id="$(uuid_for "user:$id")"
-  if [[ "$membership" == "owner" && "$authMode" == "anonymous" ]]; then
-    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"
+  if [[ "$id" == "owner-anonymous" ]]; then
+    tournament_id="$T_ANON"; match_id="$M_ANON"; event_id="$E_ANON"; team_id="$TEAM_ANON"
   else
-    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"
+    tournament_id="$T_MAIN"; match_id="$M_MAIN"; event_id="$E_MAIN"; team_id="$TEAM_MAIN"
   fi
 
   # authMode (anonym angemeldet vs. regulär) wirkt hier nur über die Fixture-Zuordnung
   # (eigenes Turnier T_ANON statt T_MAIN) — auth.uid() in diesem Image liest den flachen
-  # GUC request.jwt.claim.sub, keine JSON-Claims. Keine der fünf getesteten Policies ruft
-  # is_anonymous_user() auf, das Attribut ist für die Matrix dokumentarisch (roleMatrix.json).
+  # GUC request.jwt.claim.sub, keine JSON-Claims. Keine der hier getesteten Policies ruft
+  # is_anonymous_user() auf.
 
   # writeMatchData: matches UPDATE + match_events INSERT — beide müssen übereinstimmen,
   # sonst ist die Rollentabelle intern widersprüchlich (wird unten als eigener Befund markiert).
@@ -631,30 +719,23 @@ while IFS= read -r row; do
   res_tournaments_update="$(run_write "$user_id" "UPDATE public.tournaments SET location_name = 'RLS Test' WHERE id = '$tournament_id';")"
   got_settings="$([[ "$res_tournaments_update" == "allowed" ]] && echo true || echo false)"
 
-  # mark() nur als reine Funktion (kein Kommandosubstitutions-Aufruf mit Seiteneffekt) —
-  # `x="$(f)"` startet eine Subshell; Änderungen an TOTAL/MISMATCHES darin gingen sonst
-  # verloren (beim ersten Anlauf dieses Skripts genau so passiert: "0 Abweichungen"
-  # trotz sichtbarer "!=" in der Tabelle). Zählen passiert danach im Hauptprozess.
-  mark() {
-    local exp="$1" got="$2"
-    if [[ "$got" == "$exp" ]]; then
-      echo "$got"
-    else
-      echo "${got}!=${exp}"
-    fi
-  }
+  # teams (R5b, neue Spalte): teams UPDATE auf eine BESTEHENDE Zeile — NICHT Anlegen/Entfernen,
+  # dafür siehe die eigene 'restructure'-Matrix unten.
+  res_teams_update="$(run_write "$user_id" "UPDATE public.teams SET name = 'RLS Matrix Team (updated)' WHERE id = '$team_id';")"
+  got_teams="$([[ "$res_teams_update" == "allowed" ]] && echo true || echo false)"
 
   m_write="$(mark "$exp_write" "$got_write")"
   m_correct="$(mark "$exp_correct" "$got_correct")"
   m_settings="$(mark "$exp_settings" "$got_settings")"
+  m_teams="$(mark "$exp_teams" "$got_teams")"
 
-  for cell in "$m_write" "$m_correct" "$m_settings"; do
+  for cell in "$m_write" "$m_correct" "$m_settings" "$m_teams"; do
     TOTAL=$((TOTAL + 1))
     [[ "$cell" == *"!="* ]] && MISMATCHES=$((MISMATCHES + 1))
   done
 
-  printf '%-16s | %-14s | %-18s | %-18s\n' "$id" "$m_write" "$m_correct" "$m_settings"
-done < <(jq -c '.rows[]' "$ROLE_MATRIX_FILE")
+  printf '%-16s | %-14s | %-18s | %-18s | %-8s\n' "$id" "$m_write" "$m_correct" "$m_settings" "$m_teams"
+done
 
 # --- 7. Dedizierte Regressionsprüfung: Eigentümer bearbeitet/löscht ein Ereignis ------
 # Unabhängig vom Rollen-Loop oben (dort in "correctEvents" für die Zeile "owner" mit
@@ -892,6 +973,10 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
     exp_m4_sponsor_public="t"
     exp_m4_monitor_public="t"
     exp_k3_lehre_foreign_insert="denied"
+    # R5-H1 (Auflage aus dem R5-Review, jetzt behoben über das Recht 'restructure'): Co-Admin darf
+    # jetzt auch LÖSCHEN, nicht nur anlegen — genau die Symmetrie, die vorher fehlte.
+    exp_h1_coadmin_delete_team="allowed"
+    exp_h1_coadmin_delete_match="allowed"
   else
     exp_h4_team_upsert="denied"
     exp_h4_match_upsert="denied"
@@ -905,12 +990,29 @@ if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" 
     exp_m4_sponsor_public="f"
     exp_m4_monitor_public="f"
     exp_k3_lehre_foreign_insert="denied" # unverändert: schon die Baseline-Owner-Prüfung lehnt ab.
+    # R5-H1: ohne die Migration hatten teams_delete_v2/matches_delete_v2 GAR KEINEN
+    # Mitarbeiter-Zweig — genau die Lücke, die den stillen Datenfehler verursachte.
+    exp_h1_coadmin_delete_team="denied"
+    exp_h1_coadmin_delete_match="denied"
   fi
   # Regressionen, in BEIDEN Modi gleich (M3 lässt collaborator UPDATE unverändert zu — das war
   # schon vor R5 so, siehe Baseline-Bug oben):
   exp_m3_collab_update="allowed"
   exp_m5_coadmin_unchanged_deleted_at="allowed"
   exp_m5_owner_sets_deleted_at="allowed"
+  # R5-H1-Regression: Collaborator durfte NIE löschen — weder vor noch nach R5b (kein
+  # 'restructure' in keiner Fassung der Tabelle). Dieselbe Sonde in BEIDEN Modi.
+  exp_h1_collab_delete_team_denied="denied"
+  # N4 (task-R5b-brief.md): Eigentümer eines ANDEREN Turniers (T_ANON) als Angreifer gegen T_MAIN
+  # — in BEIDEN Modi abgelehnt, unabhängig von R5b (diese Angriffsklasse ist älter, siehe K3/H5).
+  exp_n4_upsert_foreign_id="denied"
+  exp_n4_insert_foreign_tournament="denied"
+  exp_n4_delete_foreign_rows="denied"
+  # manageMembers (R5b, neues Recht — aber die Grenze selbst ist unverändert seit K1/K2/M6:
+  # tournament_collaborators-INSERT verlangte immer schon user_owns_tournament()). Co-Admin
+  # bekommt es in KEINER Fassung der Tabelle zugewiesen, der Eigentümer hat es immer.
+  exp_managemembers_coadmin_denied="denied"
+  exp_managemembers_owner_allowed="allowed"
 
   # H4-1/H4-2: Co-Admin upserted eine BESTEHENDE teams-/matches-Zeile, exakt das Muster von
   # SupabaseRepository.save() ("INSERT ... ON CONFLICT (id) DO UPDATE") — nicht nur ein reines
@@ -984,8 +1086,37 @@ SQL
   k3_lehre_foreign_insert="$(run_write "$U_COADMIN" \
     "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_ATTACK','$T_ANON','RLS Matrix Team (foreign insert attempt)');")"
 
+  # R5-H1 (Fix-Beweis): Co-Admin löscht ein bestehendes Team bzw. Match von T_MAIN — echter
+  # App-Pfad (SupabaseRepository.save() löscht per ".delete().in('id', …)", ohne ON CONFLICT).
+  # Collaborator dieselbe Sonde gegen ein Team → abgelehnt (kein 'restructure').
+  h1_coadmin_delete_team="$(run_write "$U_COADMIN" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
+  h1_coadmin_delete_match="$(run_write "$U_COADMIN" "DELETE FROM public.matches WHERE id = '$M_MAIN';")"
+  h1_collab_delete_team_denied="$(run_write "$U_COLLAB" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
+
+  # N4 (task-R5b-brief.md): U_OWNER_ANON ist Eigentümer von T_ANON — ein völlig fremdes Turnier
+  # zu T_MAIN (Eigentümer U_OWNER). Er hat dort KEINE Mitgliedschaft. Drei Angriffe, alle über den
+  # ECHTEN App-Pfad (Upsert wie save(), DELETE wie save()):
+  #   - Upsert mit fremder id: ON CONFLICT trifft die BESTEHENDE Opfer-Zeile TEAM_MAIN — die
+  #     UPDATE-USING-Klausel muss greifen (nicht die INSERT-WITH-CHECK, die für sein eigenes
+  #     tournament_id im Payload sogar durchginge), siehe R5-Review Sonde A1/A2.
+  #   - INSERT mit fremder tournament_id: eine NEUE Zeile, direkt gegen T_MAIN gerichtet.
+  #   - DELETE fremder Zeilen: dieselbe Opfer-Zeile TEAM_MAIN.
+  n4_upsert_foreign_id="$(run_write "$U_OWNER_ANON" \
+    "INSERT INTO public.teams (id,tournament_id,name,owner_id) VALUES ('$TEAM_MAIN','$T_ANON','RLS Matrix N4 Hijack','$U_OWNER_ANON') ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name;")"
+  n4_insert_foreign_tournament="$(run_write "$U_OWNER_ANON" \
+    "INSERT INTO public.teams (id,tournament_id,name) VALUES ('$TEAM_N4_INSERT','$T_MAIN','RLS Matrix N4 Insert');")"
+  n4_delete_foreign_rows="$(run_write "$U_OWNER_ANON" "DELETE FROM public.teams WHERE id = '$TEAM_MAIN';")"
+
+  # manageMembers (R5b): Co-Admin versucht, einen neuen Mitarbeiter in T_MAIN einzuladen (echter
+  # App-Pfad, invitationService.ts#createInvitation-Muster) → muss abgelehnt bleiben. Eigentümer
+  # dieselbe Sonde → muss gelingen.
+  managemembers_coadmin_denied="$(run_write "$U_COADMIN" \
+    "INSERT INTO public.tournament_collaborators (id, tournament_id, invite_code, invite_email, role, invited_by, max_uses) VALUES ('$(uuid_for invite:n4-coadmin)', '$T_MAIN', 'RLSCOADMININV', 'nobody-coadmin@rls-matrix.test', 'viewer', '$U_COADMIN', 5);")"
+  managemembers_owner_allowed="$(run_write "$U_OWNER" \
+    "INSERT INTO public.tournament_collaborators (id, tournament_id, invite_code, invite_email, role, invited_by, max_uses) VALUES ('$(uuid_for invite:n4-owner)', '$T_MAIN', 'RLSOWNERINV', 'nobody-owner@rls-matrix.test', 'viewer', '$U_OWNER', 5);")"
+
   echo ""
-  echo "=== R5 — Co-Admin vollständig, Teams, Löschen, Mitgliederverwaltung — $MODE_LABEL ==="
+  echo "=== R5b — zentrale Rechtetabelle (H4/M3/M4/M5, R5-H1, N4, manageMembers) — $MODE_LABEL ==="
   k1k2_mark_value "h4-coadmin-upsert-bestehendes-team                     " "$h4_team_upsert" "$exp_h4_team_upsert"
   k1k2_mark_value "h4-coadmin-upsert-bestehendes-match                    " "$h4_match_upsert" "$exp_h4_match_upsert"
   k1k2_mark_value "h4-coadmin-insert-neues-team-owner-id                  " "$h4_new_team_owner" "$exp_h4_new_team_owner"
@@ -999,9 +1130,38 @@ SQL
   k1k2_mark_value "m4-coadmin-publish-sponsors-is-public                  " "$m4_sponsor_public" "$exp_m4_sponsor_public"
   k1k2_mark_value "m4-coadmin-publish-monitors-is-public                  " "$m4_monitor_public" "$exp_m4_monitor_public"
   k1k2_mark_value "k3-lehre-coadmin-insert-team-in-fremdes-turnier        " "$k3_lehre_foreign_insert" "$exp_k3_lehre_foreign_insert"
+  k1k2_mark_value "r5h1-coadmin-loescht-bestehendes-team                  " "$h1_coadmin_delete_team" "$exp_h1_coadmin_delete_team"
+  k1k2_mark_value "r5h1-coadmin-loescht-bestehendes-match                 " "$h1_coadmin_delete_match" "$exp_h1_coadmin_delete_match"
+  k1k2_mark_value "r5h1-regression-collaborator-loescht-team-abgelehnt    " "$h1_collab_delete_team_denied" "$exp_h1_collab_delete_team_denied"
+  k1k2_mark_value "n4-fremder-eigentuemer-upsert-mit-fremder-id           " "$n4_upsert_foreign_id" "$exp_n4_upsert_foreign_id"
+  k1k2_mark_value "n4-fremder-eigentuemer-insert-mit-fremder-tournament_id" "$n4_insert_foreign_tournament" "$exp_n4_insert_foreign_tournament"
+  k1k2_mark_value "n4-fremder-eigentuemer-delete-fremder-zeilen           " "$n4_delete_foreign_rows" "$exp_n4_delete_foreign_rows"
+  k1k2_mark_value "managemembers-coadmin-invite-abgelehnt                 " "$managemembers_coadmin_denied" "$exp_managemembers_coadmin_denied"
+  k1k2_mark_value "managemembers-eigentuemer-invite-erlaubt               " "$managemembers_owner_allowed" "$exp_managemembers_owner_allowed"
 else
   echo ""
-  echo "=== R5 — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0 oder WITH_PARENT_KEYS=0, siehe Kommentar oben) ==="
+  echo "=== R5b — übersprungen (WITH_MIGRATION=0 oder WITH_HARDENING=0 oder WITH_PARENT_KEYS=0, siehe Kommentar oben) ==="
+fi
+
+# --- 7c3. R5b (task-R5b-brief.md, Abschnitt 4) — Gleichlauf: public.role_permissions (DB) MUSS
+# byte-/zeilengleich zu rolePermissions.json (App) sein. Nur sinnvoll, wenn die Tabelle existiert
+# (WITH_R5=1) -- ohne die Migration gibt es "public.role_permissions" schlicht nicht.
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo ""
+  echo "=== Gleichlauf role_permissions (DB) vs. rolePermissions.json — $MODE_LABEL ==="
+  DB_ROLE_PERMISSIONS="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
+    "SELECT role || '|' || permission FROM public.role_permissions ORDER BY role, permission;" | sort)"
+  JSON_ROLE_PERMISSIONS="$(jq -r '.roles | to_entries[] | .key as $role | .value[] | $role + "|" + .' "$ROLE_PERMISSIONS_FILE" | sort)"
+  TOTAL=$((TOTAL + 1))
+  if [[ "$DB_ROLE_PERMISSIONS" == "$JSON_ROLE_PERMISSIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_ROLE_PERMISSIONS" | tr -d ' ')"
+    echo "gleichlauf-role_permissions-vs-json: allowed (identisch, $ROW_COUNT Zeilen)"
+  else
+    echo "gleichlauf-role_permissions-vs-json: denied (weicht ab)"
+    echo "--- Diff (links: rolePermissions.json, rechts: DB) ---"
+    diff <(echo "$JSON_ROLE_PERMISSIONS") <(echo "$DB_ROLE_PERMISSIONS") || true
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
 fi
 
 # --- 7d. R6 (task-R6-brief.md) — F3 (E-Mail-Adressen öffentlich lesbar) und F7 (Rolle selbst
@@ -1236,7 +1396,11 @@ k1k2_mark_value "k-angriff-invited-by-gefaelscht-opfer-verdeckt" "$r6_attack_fak
 k1k2_mark_value "k-angriff-zwangsmitgliedschaft-opfer-verdeckt" "$r6_attack_forced_membership" "$exp_r6_attack_forced_membership"
 
 # --- 8. Stichprobe: anonymes Lesen eines öffentlichen Turniers (inkl. seiner Ereignisse) ---
-pub_expect="$(jq -r '.publicRead.expectCanRead' "$ROLE_MATRIX_FILE")"
+# R5b: fest im Skript verankert (nicht mehr in der JSON) -- das ist kein "Recht" aus der
+# Rechtetabelle (rolePermissions.json enthält nur Schreibrechte je Rolle), sondern eine
+# unabhängige Regressions-Stichprobe für anonymes LESEN öffentlicher Turniere (siehe Fixrunde-1-
+# Kommentar oben). Immer "true" erwartet.
+pub_expect="true"
 pub_tournament="$(run_read_as_anon "SELECT id FROM public.tournaments WHERE id = '$T_PUBLIC';")"
 pub_match="$(run_read_as_anon "SELECT id FROM public.matches WHERE id = '$M_PUBLIC';")"
 pub_event="$(run_read_as_anon "SELECT id FROM public.match_events WHERE id = '$E_PUBLIC';")"
@@ -1249,7 +1413,7 @@ if [[ "$pub_got" != "$pub_expect" ]]; then
 fi
 
 echo ""
-echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5 (H4/M3/M4/M5), R6 (F3/F7) und Public-Read-Stichprobe) ==="
+echo "=== Zusammenfassung — $MODE_LABEL: $MISMATCHES Abweichung(en) von der Rollentabelle (von $TOTAL geprüften Zellen inkl. dedizierter Prüfung, K1/K2-Härtung, K3/H5/L5-Härtung, R5b (H4/M3/M4/M5, R5-H1, N4, manageMembers), R6 (F3/F7) und Public-Read-Stichprobe) ==="
 
 # --- 9. L4: CI-Gate im Default-Modus ("nachher", alle Migrationen) ------------------------
 # Vorher endete dieses Skript immer mit Exit 0 ("misst, urteilt nicht") — das reicht als

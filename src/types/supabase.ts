@@ -452,6 +452,21 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          permission: string
+          role: string
+        }
+        Insert: {
+          permission: string
+          role: string
+        }
+        Update: {
+          permission?: string
+          role?: string
+        }
+        Relationships: []
+      }
       sponsors: {
         Row: {
           clicks: number | null
@@ -965,6 +980,10 @@ export type Database = {
       can_create_tournament: { Args: never; Returns: Json }
       count_active_tournaments: { Args: { user_id: string }; Returns: number }
       generate_share_code: { Args: never; Returns: string }
+      has_tournament_permission: {
+        Args: { p_permission: string; p_tournament_id: string }
+        Returns: boolean
+      }
       is_anonymous_user: { Args: never; Returns: boolean }
       is_tournament_admin: {
         Args: { p_tournament_id: string }

@@ -26,9 +26,17 @@
 -- "<name>|t" (grün) oder "<name>|f" (rot). Das aufrufende Skript wertet jedes "|f" als Fehler
 -- UND vergleicht die Namensliste gegen PRIVILEGE_ASSERTION_NAMES (siehe dort).
 --
--- Positivkontrollen (die letzten beiden Zeilen) sind Pflicht, sonst wäre die Assertion
--- vakuum-grün: sie müssen "t" liefern, sonst hat schon die Messmethode selbst ein Problem
--- (z.B. falscher Rollen- oder Funktionsname), nicht erst der geprüfte Zustand.
+-- Positivkontrollen (die letzten Zeilen) sind Pflicht, sonst wäre die Assertion vakuum-grün: sie
+-- müssen "t" liefern, sonst hat schon die Messmethode selbst ein Problem (z.B. falscher Rollen-
+-- oder Funktionsname), nicht erst der geprüfte Zustand.
+--
+-- R5b (task-R5b-brief.md, Abschnitt 4): public.role_permissions -- anon bekommt GAR KEIN
+-- Tabellenrecht (REVOKE ALL), authenticated NUR SELECT (kein INSERT/UPDATE/DELETE), und
+-- ci_schema_reader bekommt SELECT dazu (siehe Migrationskommentar an der Tabelle für die
+-- Begründung: diese eine Tabelle braucht echten Zeilenzugriff für die nur-lesende CI-Rolle,
+-- anders als jede andere Tabelle -- has_table_privilege() prüft hier nur den GRANT, nicht die
+-- RLS-Policy; der eigentliche Zeileninhalt wird separat live verglichen, siehe
+-- scripts/db-drift-check.sh, Abschnitt "role_permissions-Inhalt vs. rolePermissions.json").
 
 \pset format unaligned
 \pset tuples_only on
@@ -100,10 +108,29 @@ UNION ALL
 SELECT 'authenticated-no-execute-merge-user-data',
        NOT has_function_privilege('authenticated', 'public.merge_user_data(uuid,uuid)', 'EXECUTE')
 UNION ALL
+-- R5b: role_permissions -- anon nichts, authenticated nur SELECT.
+SELECT 'anon-no-select-role-permissions',
+       NOT has_table_privilege('anon', 'public.role_permissions', 'SELECT')
+UNION ALL
+SELECT 'authenticated-no-insert-role-permissions',
+       NOT has_table_privilege('authenticated', 'public.role_permissions', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-role-permissions',
+       NOT has_table_privilege('authenticated', 'public.role_permissions', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-role-permissions',
+       NOT has_table_privilege('authenticated', 'public.role_permissions', 'DELETE')
+UNION ALL
 -- Positivkontrollen (siehe Kopfkommentar) — müssen "t" sein.
 SELECT 'positive-authenticated-select-display-name',
        has_column_privilege('authenticated', 'public.profiles', 'display_name', 'SELECT')
 UNION ALL
 SELECT 'positive-anon-execute-auth-provider-for-email',
        has_function_privilege('anon', 'public.auth_provider_for_email(text)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-select-role-permissions',
+       has_table_privilege('authenticated', 'public.role_permissions', 'SELECT')
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-role-permissions',
+       has_table_privilege('ci_schema_reader', 'public.role_permissions', 'SELECT')
 ;

@@ -172,6 +172,23 @@ for _ in $(seq 1 30); do
 done
 
 docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$BASELINE_FILE"
+
+# R5b-Testaufbau (dieselbe Begründung wie in scripts/rls-role-matrix.sh): ci_schema_reader
+# existiert live, aber nicht in einem frisch aus der Baseline aufgebauten Container --
+# 20260924_002_central_role_permissions.sql referenziert die Rolle in einer eigenen Policy und
+# einem GRANT auf role_permissions. Ohne diesen Nachbau würde JEDER Drift-Check-Lauf am
+# Einspielen dieser (oder einer künftigen) Migration scheitern, sobald sie GRANT/CREATE POLICY
+# ... TO "ci_schema_reader" enthält. Kein Teil einer committeten Migration.
+docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q <<'SQL'
+DO $do$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ci_schema_reader') THEN
+    CREATE ROLE ci_schema_reader LOGIN;
+  END IF;
+END
+$do$;
+SQL
+
 for f in "${NEWER_MIGRATIONS[@]:-}"; do
   [[ -z "$f" ]] && continue
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q < "$f"
@@ -286,8 +303,14 @@ PRIVILEGE_ASSERTION_NAMES=(
   "authenticated-no-update-profiles-auth-provider"
   "anon-no-execute-merge-user-data"
   "authenticated-no-execute-merge-user-data"
+  "anon-no-select-role-permissions"
+  "authenticated-no-insert-role-permissions"
+  "authenticated-no-update-role-permissions"
+  "authenticated-no-delete-role-permissions"
   "positive-authenticated-select-display-name"
   "positive-anon-execute-auth-provider-for-email"
+  "positive-authenticated-select-role-permissions"
+  "positive-ci-schema-reader-select-role-permissions"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -338,6 +361,41 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
 else
   echo ""
   echo "Rechte-Assertion (R6) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4c. R5b (task-R5b-brief.md, Abschnitt 4): role_permissions-Inhalt vs. rolePermissions.json --
+# Textdiff und Katalogzählung unten laufen mit --no-privileges UND vergleichen nur die SCHEMA-
+# Definition (Spalten, Constraints) der Tabelle role_permissions, NIE ihren Zeileninhalt (kein
+# Dump-Werkzeug hier zieht Daten). Eine live geänderte Zeile in role_permissions (z.B. per
+# Hand im SQL-Editor, an rolePermissions.json vorbei) würde von beiden Beinen NIE bemerkt. Dieser
+# Abschnitt vergleicht deshalb den tatsächlichen INHALT der Tabelle -- über dieselbe nur-lesende
+# Rolle wie die Rechte-Assertion oben (ci_schema_reader braucht dafür die eigene Policy
+# "role_permissions_select_ci_schema_reader", siehe Migrationskommentar; die Positivkontrolle
+# "positive-ci-schema-reader-select-role-permissions" oben belegt nur den GRANT, RLS könnte den
+# Zeileninhalt trotzdem auf 0 filtern -- das würde hier als "0 Zeilen" sichtbar UND als Diff
+# gegen die JSON rot, nicht stillschweigend als Erfolg gewertet).
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Gleichlauf role_permissions (DB, live) vs. rolePermissions.json ---"
+  DB_ROLE_PERMISSIONS_LIVE="$(docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT role || '|' || permission FROM public.role_permissions ORDER BY role, permission;" \
+    2>"$WORKDIR/role_permissions_live.log" | sort)" \
+    || { echo "::error::Konnte public.role_permissions nicht live lesen (ci_schema_reader):" >&2
+         cat "$WORKDIR/role_permissions_live.log" >&2; exit 1; }
+  JSON_ROLE_PERMISSIONS="$(jq -r '.roles | to_entries[] | .key as $role | .value[] | $role + "|" + .' \
+    "$REPO_ROOT/src/features/auth/permissions/rolePermissions.json" | sort)"
+  if [[ "$DB_ROLE_PERMISSIONS_LIVE" == "$JSON_ROLE_PERMISSIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_ROLE_PERMISSIONS" | tr -d ' ')"
+    echo "Gleichlauf grün: role_permissions (live) und rolePermissions.json stimmen überein ($ROW_COUNT Zeilen)."
+  else
+    echo "::error::role_permissions (live) weicht von rolePermissions.json ab:" >&2
+    echo "### Diff (links: rolePermissions.json, rechts: DB live)" >&2
+    diff <(echo "$JSON_ROLE_PERMISSIONS") <(echo "$DB_ROLE_PERMISSIONS_LIVE") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------
