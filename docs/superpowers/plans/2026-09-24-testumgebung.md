@@ -168,10 +168,25 @@ Tests entstehen im Paket „Helfer beendet Spiel“ zuerst rot (TDD), mit genau 
   schließen.
 - Browser-Modus nur **prüfen und bewerten**, nicht einführen. Ergebnis als Empfehlung im Report.
 
+
+### T7b: Vitest-Einstellungen ausreizen (nach T1, vor T2)
+
+Daniels Wunsch (24.09.). Dafür in beide Richtungen messen: Laufzeit, Testzahl und welche Tests rot werden.
+- **Vitest-Projects:** Logik-Tests laufen in `node`, nur Komponenten- und Hook-Tests in `jsdom`. Vitest
+  meldete, dass jsdom 107-mal neu erzeugt wird, das sind 63 % der Laufzeit. Die Testzahl muss gleich
+  bleiben.
+- **`clearMocks: true`** (die neue Voreinstellung von Vitest 5, in T7 bewusst zurückgedreht). Jeden
+  roten Test einzeln erklären: hing er von übrig gebliebenen Mock-Zuständen ab? Den Test reparieren,
+  nicht die Einstellung.
+- **Coverage-Baseline** messen und als Untergrenze setzen, knapp unter dem Ist-Wert. Den Wert in
+  `docs/TODO.md` nennen, sobald dort keine fremden Änderungen mehr liegen, sonst im Report.
+- `pool: 'vmThreads'` / `isolate: false` **nur nach Messung** und nur, wenn die Tests nachweislich
+  unabhängig bleiben.
+
 ## Reihenfolge und Abhängigkeiten
 
 ```
-T1 ▸ T2 ▸ T3 ▸ T4 ▸ T5 ▸ T6        T7 unabhängig, zuerst oder parallel am Anfang
+T7 ▸ T1 ▸ T7b ▸ T2 ▸ T3 ▸ T4 ▸ T5 ▸ T6
 ```
 
 T1 enthält die einzige Produktions-DDL (Trigger, live ein No-op), mit Freigabe durch Daniel.
