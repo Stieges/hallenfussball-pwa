@@ -38,11 +38,11 @@ jobs:
         with:
           # Fest gepinnt statt "latest": ein "latest"-Lauf ist bereits einmal an einem GitHub-
           # Rate-Limit gescheitert (Run 33303138564, 2026-08-30, "Failed to resolve latest
-          # Supabase CLI release: rate limit exceeded"). 2.67.1 ist die Version, mit der `supabase
-          # db dump --schema public --linked` und `--db-url` für dieses Projekt lokal geprüft
-          # wurden (siehe .superpowers/sdd/2026-09-21-db-baseline-und-testmuell/task-10-report.md) —
-          # nicht die neueste verfügbare (2.117.0), bewusst die belegt funktionierende.
-          version: 2.67.1
+          # Supabase CLI release: rate limit exceeded"). 2.117.0 ist die aktuell geprüfte Version
+          # (Update von 2.67.1 auf 2.117.0, siehe
+          # .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-CLI-report.md) —
+          # bewusst gepinnt statt "latest", damit ein CLI-Update nicht unbemerkt hereinkommt.
+          version: 2.117.0
 
       - name: Generate fresh types from live schema
         env:
@@ -56,6 +56,7 @@ jobs:
           fi
           supabase gen types typescript \
             --project-id "$SUPABASE_PROJECT_ID" \
+            --schema public \
             > /tmp/types-live.ts
 
       - name: Diff against committed types
@@ -77,6 +78,8 @@ jobs:
           strip_header /tmp/types-live.ts      > /tmp/types-live.norm.ts
           if ! diff -u /tmp/types-committed.norm.ts /tmp/types-live.norm.ts > /tmp/types-diff.txt; then
             echo "::error::Supabase schema has drifted from src/types/supabase.ts."
+            echo "--- Diff (erste 120 Zeilen) ---"
+            head -120 /tmp/types-diff.txt
             echo ""
             echo "## Schema drift detected" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -102,7 +105,7 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           # Begründung für die gepinnte Version: siehe Kommentar im Job "drift-check" oben.
-          version: 2.67.1
+          version: 2.117.0
 
       - name: Link Supabase project
         env:

@@ -10,7 +10,7 @@ Task T1 aus `docs/superpowers/plans/2026-09-24-testumgebung.md`. Hintergrund zur
 ## Voraussetzungen
 
 - Docker Desktop läuft (mind. ~4 GB RAM frei für den Stack).
-- Supabase CLI installiert (`supabase --version`; getestet mit 2.67.1).
+- Supabase CLI installiert (`supabase --version`; getestet mit 2.117.0).
 - `jq` installiert (`brew install jq`).
 
 ## Befehle
@@ -202,7 +202,7 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
 - **Wann:** bei jedem Pull Request gegen `main` und bei jedem Push auf `main` — dieselben
   Trigger wie `ci.yml`.
 - **Was:** startet einen echten lokalen Supabase-Stack im Runner (`supabase/setup-cli@v1`,
-  Version 2.67.1 — dieselbe wie lokal, siehe „Voraussetzungen" oben), spielt Schema + Seed über
+  Version 2.117.0 — dieselbe wie lokal, siehe „Voraussetzungen" oben), spielt Schema + Seed über
   denselben Befehl wie lokal ein (`npm run test:env:reset`) und lässt dann `npm run
   test:e2e:cloud` laufen (Playwright nur für `cloud-setup`/`cloud-desktop`/`cloud-mobile`, nur
   Chromium installiert). Keine Produktions-URL, keine Secrets — die Produktions-Sperre
