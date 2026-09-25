@@ -247,6 +247,14 @@ export class TournamentCreationService {
         // these fields over (by match id, from the DB state fetched above) means the diff sees NO
         // change for matches whose id survives regeneration, so nothing gets touched.
         const previousMatchById = new Map((previous?.matches ?? []).map((m) => [m.id, m]));
+        // A2 Fixrunde 4 (B1, `task-A2-rereview2.md`): the Wizard's own match (same id) wins over
+        // `previous` whenever it carries an explicit `matchStatus` -- that is the Wizard stating
+        // the status itself (e.g. "Turnier zurücksetzen" sets 'scheduled' and clears finishedAt,
+        // `useTournamentWizard#handleResetTournament`). Taking `previous` there left the cloud at
+        // match_status='finished' + actual_end while the scores became NULL. Only when the Wizard
+        // has no such match or never stated a status do we fall back to `previous` (N1c: a match a
+        // helper started after the Wizard loaded its copy stays protected).
+        const wizardMatchById = new Map((data.matches ?? []).map((m) => [m.id, m]));
 
         // Convert ScheduledMatch to domain Match
         tournament.matches = schedule.allMatches.map((scheduledMatch, index) => {
@@ -268,25 +276,28 @@ export class TournamentCreationService {
                 referee: scheduledMatch.referee,
             };
 
-            const previousMatch = previousMatchById.get(scheduledMatch.id);
-            if (!previousMatch) {
+            const wizardMatch = wizardMatchById.get(scheduledMatch.id);
+            const statusSource = wizardMatch?.matchStatus !== undefined
+                ? wizardMatch
+                : previousMatchById.get(scheduledMatch.id);
+            if (!statusSource) {
                 return base;
             }
 
             return {
                 ...base,
-                matchStatus: previousMatch.matchStatus,
-                finishedAt: previousMatch.finishedAt,
-                timerStartTime: previousMatch.timerStartTime,
-                timerPausedAt: previousMatch.timerPausedAt,
-                timerElapsedSeconds: previousMatch.timerElapsedSeconds,
-                overtimeScoreA: previousMatch.overtimeScoreA,
-                overtimeScoreB: previousMatch.overtimeScoreB,
-                penaltyScoreA: previousMatch.penaltyScoreA,
-                penaltyScoreB: previousMatch.penaltyScoreB,
-                decidedBy: previousMatch.decidedBy,
-                skippedReason: previousMatch.skippedReason,
-                skippedAt: previousMatch.skippedAt,
+                matchStatus: statusSource.matchStatus,
+                finishedAt: statusSource.finishedAt,
+                timerStartTime: statusSource.timerStartTime,
+                timerPausedAt: statusSource.timerPausedAt,
+                timerElapsedSeconds: statusSource.timerElapsedSeconds,
+                overtimeScoreA: statusSource.overtimeScoreA,
+                overtimeScoreB: statusSource.overtimeScoreB,
+                penaltyScoreA: statusSource.penaltyScoreA,
+                penaltyScoreB: statusSource.penaltyScoreB,
+                decidedBy: statusSource.decidedBy,
+                skippedReason: statusSource.skippedReason,
+                skippedAt: statusSource.skippedAt,
             };
         });
 

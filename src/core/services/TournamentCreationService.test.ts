@@ -4,6 +4,7 @@ import { TournamentCreationService } from './TournamentCreationService';
 import { ITournamentRepository } from '../repositories/ITournamentRepository';
 import { Tournament } from '../models/types';
 import { generateFullSchedule } from '../generators';
+import { mapMatchUpdateToSupabase } from '../repositories/supabaseMappers';
 
 // Mock dependencies
 vi.mock('../generators', () => ({
@@ -321,6 +322,79 @@ describe('TournamentCreationService', () => {
             // The result/status diff against the (unchanged) previous state must therefore be
             // empty -- no cloud write resets the running match.
             expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+        });
+
+        // A2 Fixrunde 4 (B1, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview2.md): "Turnier zurücksetzen" in the Wizard sets matchStatus 'scheduled'
+        // and clears finishedAt in `data.matches`. publish() must take those from the Wizard
+        // match, NOT from the pre-reset repository state -- otherwise the cloud keeps
+        // match_status='finished' + actual_end while score_a/score_b become NULL.
+        it('Reset im Wizard + publish: Status/Endzeit kommen aus dem Wizard-Spiel und erreichen die Cloud', async () => {
+            const mockSchedule = {
+                allMatches: [
+                    { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
+                ],
+            };
+            (generateFullSchedule as any).mockReturnValue(mockSchedule);
+
+            mockRepo.get.mockResolvedValue({
+                id: 'tour-1',
+                matches: [
+                    {
+                        id: 'm1',
+                        round: 1,
+                        field: 1,
+                        teamA: 't1',
+                        teamB: 't2',
+                        scoreA: 2,
+                        scoreB: 1,
+                        matchStatus: 'finished',
+                        finishedAt: '2026-01-01T10:10:00Z',
+                    },
+                ],
+            });
+
+            const data = {
+                id: 'tour-1',
+                publishedAt: '2026-01-01T09:00:00Z',
+                title: 'Published',
+                numberOfFields: 1,
+                groups: [{ id: 'g1', name: 'A' }],
+                teams: [{ id: 't1', name: 'T1' }, { id: 't2', name: 'T2' }],
+                // State after useTournamentWizard#handleResetTournament
+                matches: [
+                    {
+                        id: 'm1',
+                        round: 1,
+                        field: 1,
+                        teamA: 't1',
+                        teamB: 't2',
+                        scoreA: undefined,
+                        scoreB: undefined,
+                        matchStatus: 'scheduled' as const,
+                        finishedAt: undefined,
+                    },
+                ],
+            };
+
+            const result = await service.publish(data);
+
+            const savedMatch = result.matches.find((m) => m.id === 'm1');
+            expect(savedMatch?.matchStatus).toBe('scheduled');
+            expect(savedMatch?.finishedAt ?? null).toBeNull();
+
+            expect(mockRepo.updateMatches).toHaveBeenCalledTimes(1);
+            const [, updates] = mockRepo.updateMatches.mock.calls[0];
+            const update = updates.find((u: { id: string }) => u.id === 'm1');
+            expect(update).toMatchObject({ matchStatus: 'scheduled', finishedAt: null });
+
+            const cloudRow = mapMatchUpdateToSupabase(update);
+            expect(cloudRow).toMatchObject({
+                match_status: 'scheduled',
+                actual_end: null,
+                score_a: null,
+                score_b: null,
+            });
         });
     });
 });
