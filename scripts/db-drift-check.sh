@@ -300,6 +300,21 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-ci-schema-reader-select-role-permissions"
   "positive-anon-execute-is-active-tournament-member"
   "positive-anon-execute-has-tournament-permission"
+  "anon-no-select-match-event-authors"
+  "authenticated-no-insert-match-event-authors"
+  "authenticated-no-update-match-event-authors"
+  "authenticated-no-delete-match-event-authors"
+  "authenticated-no-insert-match-transitions"
+  "authenticated-no-update-match-transitions"
+  "authenticated-no-delete-match-transitions"
+  "authenticated-no-insert-app-config"
+  "authenticated-no-update-app-config"
+  "authenticated-no-delete-app-config"
+  "positive-authenticated-select-match-event-authors"
+  "positive-anon-select-match-transitions"
+  "positive-ci-schema-reader-select-match-transitions"
+  "positive-anon-select-app-config"
+  "positive-ci-schema-reader-select-app-config"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -385,6 +400,35 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
 else
   echo ""
   echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4c2. B2 (task-B2-brief.md, Abschnitt 2): match_transitions-Inhalt vs.
+# src/core/match/matchTransitions.json -- analog zu 4c (role_permissions), gleiches Muster:
+# Textdiff/Katalogzählung sehen nur die Schema-Definition der Tabelle, nie ihren Zeileninhalt.
+# ci_schema_reader braucht dafür die eigene Policy "match_transitions_select_ci_schema_reader"
+# (supabase/migrations/20260928_001_match_event_log.sql).
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Gleichlauf match_transitions (DB, live) vs. matchTransitions.json ---"
+  DB_MATCH_TRANSITIONS_LIVE="$(docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" \
+    2>"$WORKDIR/match_transitions_live.log" | sort)" \
+    || { echo "::error::Konnte public.match_transitions nicht live lesen (ci_schema_reader):" >&2
+         cat "$WORKDIR/match_transitions_live.log" >&2; exit 1; }
+  JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' \
+    "$REPO_ROOT/src/core/match/matchTransitions.json" | sort)"
+  if [[ "$DB_MATCH_TRANSITIONS_LIVE" == "$JSON_MATCH_TRANSITIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
+    echo "Gleichlauf grün: match_transitions (live) und matchTransitions.json stimmen überein ($ROW_COUNT Zeilen)."
+  else
+    echo "::error::match_transitions (live) weicht von matchTransitions.json ab:" >&2
+    echo "### Diff (links: matchTransitions.json, rechts: DB live)" >&2
+    diff <(echo "$JSON_MATCH_TRANSITIONS") <(echo "$DB_MATCH_TRANSITIONS_LIVE") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Gleichlauf match_transitions vs. matchTransitions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/

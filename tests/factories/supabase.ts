@@ -159,6 +159,19 @@ export function createEventRow(
     owner_id: null,
     version: 1,
     created_at: null,
+    // B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): neue Spalten auf
+    // match_events, additiv (event_format IS NULL = altes Ereignis). seq ist NICHT nullable
+    // (bigint GENERATED ALWAYS AS IDENTITY) -- ein fester Test-Default statt undefined.
+    seq: 1,
+    recorded_at: null,
+    client_time: null,
+    clock_ms: null,
+    section: null,
+    target_event_id: null,
+    base_seq: null,
+    review_state: null,
+    event_format: null,
+    control_epoch: null,
     ...overrides,
   };
 }

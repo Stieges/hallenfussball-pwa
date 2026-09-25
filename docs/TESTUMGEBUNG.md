@@ -229,14 +229,24 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   (Pfad-Trigger, kein Push).
 - **Was:** `bash scripts/rls-role-matrix.sh` im Default-Modus — das Skript startet seinen
   eigenen Wegwerf-Postgres-Container (`supabase/postgres:17.6.1.063`), braucht dafür keinen
-  laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (207 geprüfte Zellen,
-  Stand T1).
+  laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (208 geprüfte Zellen,
+  Stand B2 -- vorher 207/T1, B2 fügt den Gleichlauf-Check `match_transitions` vs.
+  `matchTransitions.json` hinzu, siehe unten). Zweiter Schritt (`bash
+  scripts/match-event-log-check.sh`, B2, `.superpowers/sdd/2026-09-25-pr-b-schreibweg/
+  task-B2-brief.md`) startet einen EIGENEN Wegwerf-Container und prüft das Ereignis-Log-Schema
+  (`supabase/migrations/20260928_001_match_event_log.sql`): Alt-Trigger weg, Guard-Trigger
+  (Direktweg abgedichtet, current_user-Muster statt set_config-GUC), `match_event_authors`/
+  `match_transitions`/`app_config`, Realtime-Publikation, `seq`-Backfill -- 10 Proben inkl.
+  Gegenprobe ohne die Migration (`--without-migration`, Proben 1/2a müssen dann ROT sein).
 - **Zeitbudget:** `timeout-minutes: 10` (kein Vorgabewert aus dem Brief, eigene Einschätzung).
 - **Roten Lauf lesen:** Exit ≠ 0 macht den Job automatisch rot, sobald eine Zelle von der
   Rechtetabelle abweicht — die Zusammenfassung mit der genauen Abweichungszahl steht direkt im
   Job-Log (kein separates Artefakt nötig). Lokale Gegenprobe (T6): eine bewusst falsche Zeile in
   `rolePermissions.json` (`collaborator` bekommt zusätzlich `manageMembers`) lässt das Skript mit
-  4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0.
+  4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0. Lokale
+  Gegenprobe (B2): `bash scripts/match-event-log-check.sh --without-migration` zeigt die
+  erwarteten ROT-Proben, Exit bleibt 0 (das Skript bewertet die Gegenprobe selbst, siehe dessen
+  Kopfkommentar).
 
 ### `.github/workflows/visual.yml`
 

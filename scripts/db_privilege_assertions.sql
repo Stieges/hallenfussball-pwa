@@ -146,4 +146,55 @@ SELECT 'positive-anon-execute-is-active-tournament-member',
 UNION ALL
 SELECT 'positive-anon-execute-has-tournament-permission',
        has_function_privilege('anon', 'public.has_tournament_permission(uuid,text)', 'EXECUTE')
+UNION ALL
+-- B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md, R16/R17): match_event_authors
+-- ist NICHT oeffentlich -- anon bekommt GAR KEIN Tabellenrecht (REVOKE ALL), authenticated darf
+-- nur SELECT (die Zeilen selbst filtert has_tournament_permission(..., 'writeMatchData') in der
+-- Policy -- kein INSERT/UPDATE/DELETE, nur append_match_events (B3b) schreibt hier).
+SELECT 'anon-no-select-match-event-authors',
+       NOT has_table_privilege('anon', 'public.match_event_authors', 'SELECT')
+UNION ALL
+SELECT 'authenticated-no-insert-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'DELETE')
+UNION ALL
+-- match_transitions/app_config: anon+authenticated+ci_schema_reader duerfen lesen, niemand darf
+-- per Rolle schreiben (nur eine NEUE Migration schreibt, siehe Migrationskommentare).
+SELECT 'authenticated-no-insert-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'DELETE')
+UNION ALL
+SELECT 'authenticated-no-insert-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'DELETE')
+UNION ALL
+SELECT 'positive-authenticated-select-match-event-authors',
+       has_table_privilege('authenticated', 'public.match_event_authors', 'SELECT')
+UNION ALL
+SELECT 'positive-anon-select-match-transitions',
+       has_table_privilege('anon', 'public.match_transitions', 'SELECT')
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-match-transitions',
+       has_table_privilege('ci_schema_reader', 'public.match_transitions', 'SELECT')
+UNION ALL
+SELECT 'positive-anon-select-app-config',
+       has_table_privilege('anon', 'public.app_config', 'SELECT')
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-app-config',
+       has_table_privilege('ci_schema_reader', 'public.app_config', 'SELECT')
 ;

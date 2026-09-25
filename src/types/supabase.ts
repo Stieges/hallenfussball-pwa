@@ -2,7 +2,14 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-24
+ * Letzte Regeneration: 2026-09-28 (B2, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md)
+ * -- ausnahmsweise aus dem LOKALEN Stack (`--local`, nicht `--project-id`), weil
+ * supabase/migrations/20260928_001_match_event_log.sql noch NICHT in Produktion eingespielt ist
+ * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
+ * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten)
+ * -- der Drift-Check (scripts/db-drift-check.sh) prüft das SCHEMA, nicht diese generierten Typen,
+ * und läuft ohnehin nie gegen Produktion aus dieser Session heraus. Nach dem Anwenden der
+ * Migration in Produktion: regulär mit --project-id neu erzeugen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -18,13 +25,23 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       match_corrections: {
         Row: {
           corrected_at: string | null
@@ -78,9 +95,56 @@ export type Database = {
           },
         ]
       }
+      match_event_authors: {
+        Row: {
+          base_state: Json | null
+          created_at: string | null
+          device_id: string | null
+          event_id: string
+          tournament_id: string
+          user_id: string | null
+        }
+        Insert: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id: string
+          tournament_id: string
+          user_id?: string | null
+        }
+        Update: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id?: string
+          tournament_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_event_authors_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_event_authors_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_events: {
         Row: {
+          base_seq: number | null
+          client_time: string | null
+          clock_ms: number | null
+          control_epoch: number | null
           created_at: string | null
+          event_format: number | null
           id: string
           incomplete: boolean | null
           is_deleted: boolean | null
@@ -90,15 +154,25 @@ export type Database = {
           payload: Json
           period: string | null
           player_id: string | null
+          recorded_at: string | null
+          review_state: string | null
           score_away: number
           score_home: number
+          section: number | null
+          seq: number
+          target_event_id: string | null
           team_id: string | null
           timestamp_seconds: number
           type: string
           version: number
         }
         Insert: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -108,15 +182,25 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away: number
           score_home: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds: number
           type: string
           version?: number
         }
         Update: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -126,8 +210,13 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away?: number
           score_home?: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds?: number
           type?: string
@@ -149,6 +238,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_events_target_event_id_fkey"
+            columns: ["target_event_id"]
+            isOneToOne: false
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "match_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -156,6 +252,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      match_transitions: {
+        Row: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Insert: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Update: {
+          actor?: string
+          event_type?: string
+          from_status?: string
+          to_status?: string
+        }
+        Relationships: []
       }
       matches: {
         Row: {
@@ -1174,3 +1291,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

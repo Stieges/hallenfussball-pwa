@@ -43,6 +43,7 @@ const PermissionSchema = z.enum([
   'restructure',
   'deleteTournament',
   'manageMembers',
+  'leadMatches',
 ]);
 
 export type Permission = z.infer<typeof PermissionSchema>;

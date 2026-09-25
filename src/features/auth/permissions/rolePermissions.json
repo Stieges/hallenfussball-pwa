@@ -9,10 +9,11 @@
     "teams": "Bestehende Teams ändern (Name, Logo) -- teams UPDATE. NICHT dasselbe wie Teams anlegen/entfernen, siehe 'restructure'.",
     "restructure": "Spielplan umbauen: Teams/Spiele anlegen und entfernen -- teams/matches INSERT und DELETE",
     "deleteTournament": "Turnier löschen (Soft-Delete) -- tournaments.deleted_at setzen oder zurücksetzen",
-    "manageMembers": "Mitarbeiter verwalten -- tournament_collaborators verwalten (Einladungen erstellen, Rollen ändern, Mitglieder entfernen)"
+    "manageMembers": "Mitarbeiter verwalten -- tournament_collaborators verwalten (Einladungen erstellen, Rollen ändern, Mitglieder entfernen)",
+    "leadMatches": "Turnierleitung im Spielbetrieb: Korrektur beendeter Spiele, Wiedereröffnen, Überspringen, Direkteintrag -- nur über append_match_events"
   },
   "roles": {
-    "co-admin": ["writeMatchData", "correctEvents", "tournamentSettings", "teams", "restructure"],
+    "co-admin": ["writeMatchData", "correctEvents", "tournamentSettings", "teams", "restructure", "leadMatches"],
     "collaborator": ["writeMatchData", "correctEvents", "teams"],
     "trainer": [],
     "viewer": []
