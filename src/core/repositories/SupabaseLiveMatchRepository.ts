@@ -20,6 +20,7 @@ import {
   mapLiveMatchToSupabase,
   isMatchActive,
 } from './liveMatchMappers';
+import { toSupabaseEventId } from '../utils/id';
 import { OptimisticLockError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
 
@@ -182,15 +183,34 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       // Map to Supabase format
       const { matchUpdate, newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
 
+      // Schreibschutz für NOT_STARTED (Review-Fix Minor 3, Fixrunde 1, 2026-09-25): ein
+      // Spiel, das inzwischen übersprungen (oder sonst nicht mehr 'scheduled') ist, darf
+      // durch ein save() mit Status NOT_STARTED nicht zurück auf 'scheduled' gesetzt
+      // werden. isMatchActive() liest eine übersprungene Zeile mit noch vorhandenem
+      // live_state weiter als aktiv, der Mapper macht daraus LiveMatch.status =
+      // NOT_STARTED ('skipped' ist kein Schlüssel in STATUS_TO_FRONTEND) — ein
+      // nachfolgendes save() würde sonst versuchen, genau das zu schreiben. Vorher
+      // verhinderte das nur zufällig der CHECK-Constraint ('not_started' war ohnehin
+      // ungültig); seit C-NSTART ist 'scheduled' gültig und die Lücke real. Der Filter
+      // wirkt NUR beim NOT_STARTED-Schreibfall — andere Status ändern eine Zeile ohnehin
+      // nur über den normalen Versions-CAS unten.
+      const isWritingNotStarted = matchUpdate.match_status === 'scheduled';
+
       // CAS (Compare-And-Swap): Update ONLY if version matches (BUG-002)
       // The DB trigger will auto-increment version on successful update
-      const { data: updatedRow, error: matchError } = await supabase
+      let matchUpdateQuery = supabase
         .from('matches')
         .update(matchUpdate)
         .eq('id', match.id)
-        .eq('version', match.version) // Optimistic lock check
+        .eq('version', match.version); // Optimistic lock check
+
+      if (isWritingNotStarted) {
+        matchUpdateQuery = matchUpdateQuery.eq('match_status', 'scheduled');
+      }
+
+      const { data: updatedRow, error: matchError } = await matchUpdateQuery
         .select('version')
-        .maybeSingle(); // Returns null if no row matched (version mismatch)
+        .maybeSingle(); // Returns null if no row matched (version mismatch OR status guard)
 
       if (matchError) {
         console.error('[SupabaseLiveMatchRepository] match update failed:', matchError);
@@ -209,13 +229,27 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         // Initialization retry: if the match is not_started/scheduled, the version mismatch
         // is caused by tournament saves bumping the version via the DB trigger.
         // Safe to retry with the current version since there's no concurrent live modification.
+        // C-NSTART (Sofort-Fix 2026-09-25): matches_match_status_check erlaubt 'not_started'
+        // in der DB gar nicht (nur 'scheduled' u.a.) — dieser Wert kann in match_status also
+        // real nie stehen. Die 'not_started'-Prüfung ist seither totes, aber harmloses
+        // Verteidigungs-Erbe von vor dem Fix; 'scheduled' ist der tatsächlich relevante Zweig.
         const currentVersion = currentMatch?.version ?? 1;
         if (currentMatch && (currentMatch.match_status === 'not_started' || currentMatch.match_status === 'scheduled')) {
-          const { data: retryRow, error: retryError } = await supabase
+          // Derselbe Schreibschutz wie oben, hier gegen die winzige Lücke zwischen dem
+          // currentMatch-SELECT und diesem UPDATE (TOCTOU) — falls die Zeile zwischen
+          // beiden Aufrufen übersprungen wurde, greift auch hier der Konfliktpfad statt
+          // eines stillen Überschreibens.
+          let retryQuery = supabase
             .from('matches')
             .update(matchUpdate)
             .eq('id', match.id)
-            .eq('version', currentVersion)
+            .eq('version', currentVersion);
+
+          if (isWritingNotStarted) {
+            retryQuery = retryQuery.eq('match_status', 'scheduled');
+          }
+
+          const { data: retryRow, error: retryError } = await retryQuery
             .select('version')
             .maybeSingle();
 
@@ -237,11 +271,16 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         }
       }
 
-      // Insert new events
+      // Insert new events. upsert + onConflict/ignoreDuplicates (ON CONFLICT DO NOTHING)
+      // statt insert (Sofort-Fix C-EVID): eine Wiederholung (z. B. nach verlorener
+      // Erfolgsbestätigung) sendet dieselben Kennungen erneut — ein reines insert würde
+      // am doppelten Schlüssel scheitern und den GANZEN Stapel blockieren, inklusive
+      // Ereignisse, die noch nie ankamen. DO NOTHING braucht kein UPDATE-Recht, nur die
+      // bestehende Insert-Policy von match_events (belegt im Report per Cloud-E2E).
       if (newEvents.length > 0) {
         const { error: eventsError } = await supabase
           .from('match_events')
-          .insert(newEvents);
+          .upsert(newEvents, { onConflict: 'id', ignoreDuplicates: true });
 
         if (eventsError) {
           console.error('[SupabaseLiveMatchRepository] events insert failed:', eventsError);
@@ -253,12 +292,11 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
             count: newEvents.length,
           });
         } else {
-          // Update event ID cache. `event.id` is always set by mapMatchEventToSupabase,
-          // even though MatchEventInsert types it as optional.
+          // Update event ID cache mit der GEMAPPTEN (Supabase-)Kennung — `id` ist bei
+          // MatchEventInsertWithId immer gesetzt, im Gegensatz zum generierten
+          // MatchEventInsert-Typ, der es als optional führt.
           for (const event of newEvents) {
-            if (event.id) {
-              existingEventIds.add(event.id);
-            }
+            existingEventIds.add(event.id);
           }
           this.eventIdsCache.set(match.id, existingEventIds);
         }
@@ -308,7 +346,14 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
   async deleteEvent(_tournamentId: string, _matchId: string, eventId: string): Promise<void> {
     if (!isSupabaseConfigured || !supabase) { return; }
-    const { error } = await supabase.from('match_events').update({ is_deleted: true }).eq('id', eventId);
+    // Symmetrie mit dem Schreibpfad (Review-Fix Minor 5, Fixrunde 1): mapMatchEventToSupabase
+    // bildet eine lokale Alt-Kennung ohne UUID-Format deterministisch auf eine UUID ab, bevor
+    // sie in match_events.id landet — deleteEvent muss dieselbe Abbildung anwenden, sonst
+    // träfe .eq('id', eventId) bei einer Alt-Kennung nie die tatsächlich gespeicherte Zeile.
+    const { error } = await supabase
+      .from('match_events')
+      .update({ is_deleted: true })
+      .eq('id', toSupabaseEventId(eventId));
     if (error) { console.error('[SupabaseLiveMatchRepository] deleteEvent failed:', error); throw error; }
   }
 
