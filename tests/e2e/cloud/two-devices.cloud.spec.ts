@@ -228,7 +228,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
    * seed-`running`-Spiel wird dabei ggf. beendet -- `forceMatchRunning()` im `finally` stellt es
    * unabhängig vom beobachteten Status wieder her (per ID, nicht per Status-Filter).
    */
-  test('Public-Cup: nie initialisiertes Spiel starten scheitert (C-NSTART)', async ({ asRole }) => {
+  test('Public-Cup: nie initialisiertes Spiel lässt sich im Cockpit öffnen (C-NSTART, behoben mit #201)', async ({ asRole }) => {
     const runningMatchId = await fetchRunningMatchId(E2E_PUBLIC_CUP_ID);
     const untouchedMatchId = await fetchUntouchedMatchId(E2E_PUBLIC_CUP_ID);
 
@@ -243,11 +243,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       // im Vorgänger-Review sowie der ursprüngliche Anker-Kommentar unter Test 2 oben).
       await expect(ownerPage.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- alles oben (Route erreicht, das
-      // nie gestartete Spiel ausgewählt) ist ein echter Vorgang, kein fälschlich "erwarteter"
-      // Fehlschlag.
-      test.fail();
-
+      // C-NSTART ist mit PR #201 behoben (NOT_STARTED wird als 'scheduled' geschrieben): das
+      // Spiel lässt sich initialisieren, das Status-Badge erscheint. Vorher test.fail().
       await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toBeVisible({ timeout: 15000 });
     } finally {
       await safeCleanup('Public-Cup Running-Match wiederherstellen (C-NSTART)', () =>
@@ -284,17 +281,8 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       // kann -- seit Ruling W (Realtime-Fix) zuverlässig grün (siehe Test 1).
       await expect(ownerHomeScore).toHaveText(String(before + 1), { timeout: 5000 });
 
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- alles oben ist jetzt ein echter
-      // Fehlschlag. Beobachtete Fehlermeldung (siehe Report): NICHT "Owner sieht das Tor nie"
-      // (das war vor Ruling W der Fall) -- "Rückgängig" wirkt nicht einmal LOKAL beim helper
-      // selbst (score-home bleibt auf dem erhöhten Wert stehen). Wahrscheinliche Ursache: der
-      // nie persistierte Event (Fehler A) wird durch die jetzt funktionierende Realtime-
-      // Aktualisierung der `matches`-Zeile aus dem lokalen `liveMatches`-Zustand verdrängt, bevor
-      // "Rückgängig" (das das LETZTE Ereignis im lokalen Array sucht) es findet -- ein
-      // Ereignis-Diff-Rückbau Richtung Cloud (bekannte Brief-Abweichung,
-      // docs/anforderungen/plattform/2026-09-24_fundament-gemeinsamer-stand.md) wurde dadurch nie
-      // erreicht.
-      test.fail();
+      // C-UNDO war eine Folge von C-EVID (Ereignisse erreichten die Cloud nie) und ist mit
+      // PR #201 behoben: Rückgängig wirkt lokal und beim Eigentümer. Vorher test.fail().
 
       await helperPage.locator('[data-testid="match-undo-button"]').click();
       await expect(helperHomeScore).toHaveText(String(before));
