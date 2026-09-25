@@ -55,7 +55,7 @@ jobs:
           # Dieselbe Version wie lokal genutzt (siehe docs/TESTUMGEBUNG.md, Abschnitt
           # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
           # "latest" (dort bereits einmal an einem GitHub-Rate-Limit gescheitert).
-          version: 2.67.1
+          version: 2.117.0
 
       - name: Lokalen Supabase-Stack starten
         # Registrierungscode wie lokal aus scripts/lib/e2e-registration-code.sh (fester
