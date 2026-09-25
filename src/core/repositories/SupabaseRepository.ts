@@ -300,7 +300,7 @@ export class SupabaseRepository implements ITournamentRepository {
     // 3. Handle matches - delete removed, upsert existing
     const { data: existingMatches } = await getSupabase()
       .from('matches')
-      .select('id')
+      .select('id, match_status, match_number')
       .eq('tournament_id', tournament.id);
 
     const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
@@ -312,6 +312,48 @@ export class SupabaseRepository implements ITournamentRepository {
       (id) => !newMatchIds.has(id)
     );
     if (matchesToDelete.length > 0) {
+      // A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md, C-K6): a match
+      // that is missing from the locally-held tournament (stale device, a schedule regenerated
+      // without it, ...) must NEVER be silently deleted once it has match_events -- match_events
+      // and match_corrections cascade-delete with the match (ON DELETE CASCADE, baseline
+      // :1461/:1465), so this would erase a real referee/goal log without anyone seeing it. Same
+      // for a match that is no longer 'scheduled' (running/finished/...): its result would vanish
+      // too. Checked BEFORE any delete is attempted (all-or-nothing for this batch, same fail-fast
+      // shape as the delete-count check below) -- the user sees a clear error via the existing
+      // MutationQueue dead-letter path (A4, SyncFailedList shows `RepositoryError.message`
+      // verbatim as the failure reason) instead of the save silently "succeeding" while quietly
+      // keeping a match around, or silently dropping its events.
+      const matchStatusById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, m.match_status] as const)
+      );
+      const matchNumberById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, m.match_number] as const)
+      );
+
+      const { data: eventRows, error: eventsError } = await getSupabase()
+        .from('match_events')
+        .select('match_id')
+        .in('match_id', matchesToDelete);
+
+      if (eventsError) {
+        console.error('Failed to check match_events before deleting matches:', eventsError);
+        throw new RepositoryError('saveMatches', eventsError.message, eventsError);
+      }
+
+      const matchIdsWithEvents = new Set((eventRows ?? []).map((e) => e.match_id));
+      const blockedMatchIds = matchesToDelete.filter((id) => {
+        const status = matchStatusById.get(id);
+        const isScheduledOrNull = status === 'scheduled' || status === null || status === undefined;
+        return matchIdsWithEvents.has(id) || !isScheduledOrNull;
+      });
+
+      if (blockedMatchIds.length > 0) {
+        const labels = blockedMatchIds.map((id) => matchNumberById.get(id) ?? id);
+        const message = `Spiel ${labels.join(', ')} hat Einträge – nur die Turnierleitung kann es absetzen.`;
+        console.error(message);
+        throw new RepositoryError('saveMatches', message);
+      }
+
       const { data: deletedMatches, error: deleteError } = await getSupabase()
         .from('matches')
         .delete()
@@ -504,17 +546,25 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   /**
-   * Deletes a tournament and all related data
-   * Note: Teams and matches should cascade delete via foreign keys
+   * Deletes a tournament and all related data.
+   *
+   * A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md): this used to
+   * delete matches and teams via two SEPARATE, direct DELETE statements BEFORE deleting the
+   * tournament row itself ("in case cascade isn't set up"). The baseline schema proves that
+   * assumption wrong -- `matches_tournament_id_fkey` and `teams_tournament_id_fkey` (and every
+   * other tournament_id/match_id foreign key: teams, sponsors, monitors, monitor_heartbeats,
+   * tournament_collaborators, match_events, match_corrections) are all `ON DELETE CASCADE`
+   * (supabase/migrations/00000000000000_baseline_live_schema.sql:1461-1533). Deleting matches
+   * as a standalone statement is not just redundant, it is actively harmful now that
+   * `matches_protect_events_before_delete` (supabase/migrations/20260925_002_...) exists: a
+   * direct `DELETE FROM matches WHERE tournament_id = ...` is NOT a cascade (the tournament row
+   * still exists at that point), so the trigger would reject it for every match that already has
+   * match_events -- blocking a legitimate whole-tournament deletion. Deleting ONLY the tournament
+   * row and letting the foreign keys cascade keeps the trigger's cascade exception
+   * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
+   * in one step, exactly as intended.
    */
   async delete(id: string): Promise<void> {
-    // Delete matches first (in case cascade isn't set up)
-    await getSupabase().from('matches').delete().eq('tournament_id', id);
-
-    // Delete teams
-    await getSupabase().from('teams').delete().eq('tournament_id', id);
-
-    // Delete tournament
     const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
 
     if (error) {
