@@ -36,7 +36,8 @@ export const MatchSchema = z.object({
     scoreB: z.number().min(0).optional(),
     group: z.string().optional(),
     isFinal: z.boolean().optional(),
-    finalType: z.string().optional(),
+    // finalType kommt aus einer nullable DB-Spalte (final_type) – null wird wie "nicht gesetzt" behandelt (C-ZOD-DEC).
+    finalType: z.string().nullable().optional().transform((v) => v ?? undefined),
     label: z.string().optional(),
     scheduledTime: z.preprocess(
       (arg) => {
@@ -60,7 +61,8 @@ export const MatchSchema = z.object({
     overtimeScoreB: z.number().min(0).optional(),
     penaltyScoreA: z.number().min(0).optional(),
     penaltyScoreB: z.number().min(0).optional(),
-    decidedBy: z.string().optional(),
+    // decidedBy kommt aus einer nullable DB-Spalte (decided_by) – null wird wie "nicht gesetzt" behandelt (C-ZOD-DEC).
+    decidedBy: z.string().nullable().optional().transform((v) => v ?? undefined),
     skippedReason: z.string().optional(),
     skippedAt: z.string().optional(),
     events: z.array(RuntimeMatchEventSchema).optional(),
