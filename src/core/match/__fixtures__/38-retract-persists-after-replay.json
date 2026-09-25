@@ -1,17 +1,18 @@
 {
-  "title": "K.o.-Remis -> decision_pending",
-  "szenario": null,
+  "title": "Zurücknehmen ist dauerhaft: ein zurückgenommenes Tor bleibt nach vollständiger Neu-Berechnung aus dem Log (Ollis Gerät lädt neu) draußen, ein weiteres Tor zählt normal weiter",
+  "szenario": "Zurücknehmen ist dauerhaft",
   "ctx": {
-    "matchId": "match-12a",
+    "matchId": "match-38",
     "teamAId": "teamA",
     "teamBId": "teamB"
   },
   "mode": "log",
   "events": [
     {
-      "id": "11111111-1111-4111-8111-111111111101",
+      "id": "00000038-0000-4000-8000-000000000001",
       "type": "MATCH_START",
       "actor": "helper",
+      "actorUser": "helper",
       "at": 1000,
       "section": 1,
       "clockMs": null,
@@ -20,80 +21,80 @@
           "sections": 2,
           "sectionSeconds": 600,
           "breakSeconds": 60,
-          "knockout": true,
+          "knockout": false,
           "tiebreak": null,
           "overtimeSeconds": 0,
           "shootersPerTeam": 5,
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      },
-      "actorUser": "helper"
+      }
     },
     {
-      "id": "11111111-1111-4111-8111-111111111102",
+      "id": "00000038-0000-4000-8000-000000000002",
       "type": "GOAL",
       "actor": "helper",
+      "actorUser": "helper",
       "at": 2000,
       "section": 1,
       "clockMs": 100000,
       "teamId": "teamA",
-      "payload": {},
-      "actorUser": "helper"
+      "payload": {}
     },
     {
-      "id": "11111111-1111-4111-8111-111111111103",
+      "id": "00000038-0000-4000-8000-000000000003",
+      "type": "RETRACT",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 110000,
+      "targetId": "00000038-0000-4000-8000-000000000002",
+      "payload": {}
+    },
+    {
+      "id": "00000038-0000-4000-8000-000000000004",
       "type": "GOAL",
       "actor": "helper",
-      "at": 3000,
+      "actorUser": "helper",
+      "at": 4000,
       "section": 1,
       "clockMs": 200000,
       "teamId": "teamB",
-      "payload": {},
-      "actorUser": "helper"
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111104",
-      "type": "MATCH_END",
-      "actor": "helper",
-      "at": 4000,
-      "section": 1,
-      "clockMs": 600000,
-      "payload": {},
-      "actorUser": "helper"
+      "payload": {}
     }
   ],
   "expect": {
     "results": [
       {
-        "id": "11111111-1111-4111-8111-111111111101",
+        "id": "00000038-0000-4000-8000-000000000001",
         "status": "accepted"
       },
       {
-        "id": "11111111-1111-4111-8111-111111111102",
+        "id": "00000038-0000-4000-8000-000000000002",
         "status": "accepted"
       },
       {
-        "id": "11111111-1111-4111-8111-111111111103",
+        "id": "00000038-0000-4000-8000-000000000003",
         "status": "accepted"
       },
       {
-        "id": "11111111-1111-4111-8111-111111111104",
+        "id": "00000038-0000-4000-8000-000000000004",
         "status": "accepted"
       }
     ],
     "serverState": {
-      "status": "decision_pending",
+      "status": "running",
       "phase": "regular",
       "section": 1,
       "clock": {
-        "running": false,
-        "elapsedMs": 600000,
-        "anchorAt": null
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
       },
       "scores": {
         "teamA": {
-          "regular": 1,
+          "regular": 0,
           "overtime": 0,
           "shootout": 0
         },
@@ -104,11 +105,11 @@
         }
       },
       "effectiveScores": {
-        "teamA": 1,
+        "teamA": 0,
         "teamB": 1
       },
       "shootoutKicks": [],
-      "lastScoreEventId": "11111111-1111-4111-8111-111111111103",
+      "lastScoreEventId": "00000038-0000-4000-8000-000000000004",
       "decidedBy": null,
       "finishedAt": null
     }

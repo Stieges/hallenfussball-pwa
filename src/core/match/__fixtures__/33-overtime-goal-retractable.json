@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000002",
@@ -36,7 +37,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000003",
@@ -45,7 +47,8 @@
       "at": 661000,
       "section": 2,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000004",
@@ -55,7 +58,8 @@
       "section": 2,
       "clockMs": 639000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000005",
@@ -65,7 +69,8 @@
       "section": 2,
       "clockMs": 649000,
       "targetId": "00000033-0000-4000-8000-000000000004",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000006",
@@ -75,7 +80,8 @@
       "section": 2,
       "clockMs": 650000,
       "targetId": "00000033-0000-4000-8000-000000000004",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000033-0000-4000-8000-000000000007",
@@ -84,7 +90,8 @@
       "at": 961000,
       "section": 2,
       "clockMs": 900000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "expect": {

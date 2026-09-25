@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111101",
@@ -37,7 +38,8 @@
       "section": 1,
       "clockMs": 100000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111102",
@@ -46,7 +48,8 @@
       "at": 2000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111103",
@@ -62,7 +65,8 @@
         },
         "reason": "Fehleintrag, Tor zählt nicht",
         "basedOn": "11111111-1111-4111-8111-111111111101"
-      }
+      },
+      "actorUser": "owner"
     },
     {
       "id": "11111111-1111-4111-8111-111111111105",
@@ -71,7 +75,8 @@
       "at": 5000,
       "section": null,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "11111111-1111-4111-8111-111111111104",
@@ -81,7 +86,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "11111111-1111-4111-8111-111111111101",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "11111111-1111-4111-8111-111111111106",
@@ -91,7 +97,8 @@
       "section": 1,
       "clockMs": 610000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111107",
@@ -101,7 +108,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "11111111-1111-4111-8111-111111111106",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     }
   ],
   "expect": {

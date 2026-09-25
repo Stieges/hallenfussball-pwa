@@ -1,7 +1,11 @@
 {
   "title": "Unbekannte Payload-Schlüssel werden ignoriert, nicht abgelehnt (Ruling K4)",
   "szenario": null,
-  "ctx": { "matchId": "match-15", "teamAId": "teamA", "teamBId": "teamB" },
+  "ctx": {
+    "matchId": "match-15",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
   "mode": "log",
   "events": [
     {
@@ -24,9 +28,19 @@
           "penaltySeconds": 120
         },
         "appVersionHinweis": "wird ignoriert, nicht Teil des Schemas"
-      }
+      },
+      "actorUser": "helper"
     },
-    { "id": "11111111-1111-4111-8111-111111111102", "type": "MATCH_END", "actor": "helper", "at": 2000, "section": 1, "clockMs": 600000, "payload": {} },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {},
+      "actorUser": "helper"
+    },
     {
       "id": "11111111-1111-4111-8111-111111111103",
       "type": "MATCH_END",
@@ -34,25 +48,53 @@
       "at": 3000,
       "section": 1,
       "clockMs": 600000,
-      "payload": { "reason": "auto", "extra": 123 }
+      "payload": {
+        "reason": "auto",
+        "extra": 123
+      },
+      "actorUser": "helper"
     }
   ],
   "expect": {
     "results": [
-      { "id": "11111111-1111-4111-8111-111111111101", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111102", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111103", "status": "noop" }
+      {
+        "id": "11111111-1111-4111-8111-111111111101",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111102",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111103",
+        "status": "noop"
+      }
     ],
     "serverState": {
       "status": "finished",
       "phase": "regular",
       "section": 1,
-      "clock": { "running": false, "elapsedMs": 600000, "anchorAt": null },
-      "scores": {
-        "teamA": { "regular": 0, "overtime": 0, "shootout": 0 },
-        "teamB": { "regular": 0, "overtime": 0, "shootout": 0 }
+      "clock": {
+        "running": false,
+        "elapsedMs": 600000,
+        "anchorAt": null
       },
-      "effectiveScores": { "teamA": 0, "teamB": 0 },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
       "shootoutKicks": [],
       "lastScoreEventId": null,
       "decidedBy": "regular",

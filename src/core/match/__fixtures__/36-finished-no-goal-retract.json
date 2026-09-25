@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000002",
@@ -37,7 +38,8 @@
       "section": 1,
       "clockMs": 100000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000003",
@@ -47,7 +49,8 @@
       "section": 1,
       "clockMs": 150000,
       "teamId": "teamB",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000004",
@@ -57,7 +60,8 @@
       "section": 1,
       "clockMs": 200000,
       "teamId": "teamB",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000005",
@@ -67,7 +71,8 @@
       "section": 1,
       "clockMs": 210000,
       "targetId": "00000036-0000-4000-8000-000000000004",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000006",
@@ -77,7 +82,8 @@
       "section": 1,
       "clockMs": 300000,
       "teamId": "teamB",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000007",
@@ -87,7 +93,8 @@
       "section": 1,
       "clockMs": 310000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000008",
@@ -96,7 +103,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000036-0000-4000-8000-000000000009",
@@ -106,7 +114,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000002",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000010",
@@ -116,7 +125,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000003",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000011",
@@ -126,7 +136,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000004",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000012",
@@ -136,7 +147,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000006",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000013",
@@ -146,7 +158,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000007",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000014",
@@ -162,7 +175,8 @@
         },
         "reason": "Eigentor war keins",
         "basedOn": "00000036-0000-4000-8000-000000000005"
-      }
+      },
+      "actorUser": "owner"
     },
     {
       "id": "00000036-0000-4000-8000-000000000015",
@@ -172,7 +186,8 @@
       "section": null,
       "clockMs": null,
       "targetId": "00000036-0000-4000-8000-000000000014",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     }
   ],
   "expect": {

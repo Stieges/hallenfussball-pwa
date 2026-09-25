@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000025h-0000-4000-8000-000000000002",
@@ -36,7 +37,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "0000025h-0000-4000-8000-000000000003",
@@ -47,7 +49,8 @@
       "clockMs": null,
       "payload": {
         "choice": "coinflip"
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000025h-0000-4000-8000-000000000004",
@@ -58,7 +61,8 @@
       "clockMs": null,
       "payload": {
         "choice": "shootout"
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000025h-0000-4000-8000-000000000005",
@@ -69,7 +73,8 @@
       "clockMs": null,
       "payload": {
         "choice": "overtime"
-      }
+      },
+      "actorUser": "helper"
     }
   ],
   "expect": {

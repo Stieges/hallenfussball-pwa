@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000091",
@@ -37,7 +38,8 @@
       "section": 1,
       "clockMs": 100000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000092",
@@ -47,7 +49,8 @@
       "section": 1,
       "clockMs": 200000,
       "teamId": "teamB",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000093",
@@ -56,7 +59,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000094",
@@ -72,7 +76,8 @@
         },
         "reason": "Tor für B vergessen",
         "basedOn": "00000030-0000-4000-8000-000000000091"
-      }
+      },
+      "actorUser": "owner"
     },
     {
       "id": "00000030-0000-4000-8000-000000000095",
@@ -81,7 +86,8 @@
       "at": 630000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000030-0000-4000-8000-000000000096",
@@ -90,7 +96,8 @@
       "at": 631000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "events": [
@@ -102,7 +109,8 @@
       "section": 1,
       "clockMs": null,
       "targetId": "00000030-0000-4000-8000-000000000091",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000002",
@@ -112,7 +120,8 @@
       "section": 1,
       "clockMs": null,
       "targetId": "00000030-0000-4000-8000-000000000092",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000003",
@@ -122,7 +131,8 @@
       "section": 1,
       "clockMs": null,
       "targetId": "00000030-0000-4000-8000-000000000094",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000004",
@@ -132,7 +142,8 @@
       "section": 1,
       "clockMs": null,
       "targetId": "00000030-0000-4000-8000-000000000094",
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000030-0000-4000-8000-000000000005",
@@ -144,7 +155,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000030-0000-4000-8000-000000000006",
@@ -154,7 +166,8 @@
       "section": 1,
       "clockMs": null,
       "targetId": "00000030-0000-4000-8000-000000000005",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "expect": {

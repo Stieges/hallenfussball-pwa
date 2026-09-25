@@ -1,7 +1,11 @@
 {
   "title": "Zwei Korrekturen vom selben Stand",
   "szenario": "Zwei Korrekturen vom selben Stand",
-  "ctx": { "matchId": "match-04", "teamAId": "teamA", "teamBId": "teamB" },
+  "ctx": {
+    "matchId": "match-04",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
   "mode": "log",
   "events": [
     {
@@ -23,12 +27,52 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
-    { "id": "11111111-1111-4111-8111-111111111101", "type": "GOAL", "actor": "helper", "at": 1000, "section": 1, "clockMs": 100000, "teamId": "teamA", "payload": {} },
-    { "id": "11111111-1111-4111-8111-111111111102", "type": "GOAL", "actor": "helper", "at": 2000, "section": 1, "clockMs": 150000, "teamId": "teamA", "payload": {} },
-    { "id": "11111111-1111-4111-8111-111111111103", "type": "GOAL", "actor": "helper", "at": 3000, "section": 1, "clockMs": 200000, "teamId": "teamB", "payload": {} },
-    { "id": "11111111-1111-4111-8111-111111111104", "type": "MATCH_END", "actor": "helper", "at": 4000, "section": 1, "clockMs": 600000, "payload": {} },
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": 100000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 150000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 200000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111104",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 4000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {},
+      "actorUser": "helper"
+    },
     {
       "id": "11111111-1111-4111-8111-111111111105",
       "type": "CORRECTION",
@@ -36,7 +80,15 @@
       "at": 5000,
       "section": null,
       "clockMs": null,
-      "payload": { "scores": { "teamA": 2, "teamB": 2 }, "reason": "Olli korrigiert auf 2:2", "basedOn": "11111111-1111-4111-8111-111111111103" }
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 2
+        },
+        "reason": "Olli korrigiert auf 2:2",
+        "basedOn": "11111111-1111-4111-8111-111111111103"
+      },
+      "actorUser": "owner"
     },
     {
       "id": "11111111-1111-4111-8111-111111111106",
@@ -45,23 +97,52 @@
       "at": 6000,
       "section": null,
       "clockMs": null,
-      "payload": { "scores": { "teamA": 3, "teamB": 1 }, "reason": "Maria korrigiert auf 3:1 (mit veraltetem Stand)", "basedOn": "11111111-1111-4111-8111-111111111103" }
+      "payload": {
+        "scores": {
+          "teamA": 3,
+          "teamB": 1
+        },
+        "reason": "Maria korrigiert auf 3:1 (mit veraltetem Stand)",
+        "basedOn": "11111111-1111-4111-8111-111111111103"
+      },
+      "actorUser": "owner"
     }
   ],
   "expect": {
     "results": [
-      { "id": "11111111-1111-4111-8111-111111111100", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111101", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111102", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111103", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111104", "status": "accepted" },
-      { "id": "11111111-1111-4111-8111-111111111105", "status": "accepted" },
+      {
+        "id": "11111111-1111-4111-8111-111111111100",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111101",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111102",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111103",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111104",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111105",
+        "status": "accepted"
+      },
       {
         "id": "11111111-1111-4111-8111-111111111106",
         "status": "rejected",
         "code": "STALE_BASE",
         "detail": {
-          "currentScores": { "teamA": 2, "teamB": 2 },
+          "currentScores": {
+            "teamA": 2,
+            "teamB": 2
+          },
           "lastScoreEventId": "11111111-1111-4111-8111-111111111105"
         }
       }
@@ -70,12 +151,27 @@
       "status": "finished",
       "phase": "regular",
       "section": 1,
-      "clock": { "running": false, "elapsedMs": 600000, "anchorAt": null },
-      "scores": {
-        "teamA": { "regular": 2, "overtime": 0, "shootout": 0 },
-        "teamB": { "regular": 1, "overtime": 0, "shootout": 0 }
+      "clock": {
+        "running": false,
+        "elapsedMs": 600000,
+        "anchorAt": null
       },
-      "effectiveScores": { "teamA": 2, "teamB": 2 },
+      "scores": {
+        "teamA": {
+          "regular": 2,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 2
+      },
       "shootoutKicks": [],
       "lastScoreEventId": "11111111-1111-4111-8111-111111111105",
       "decidedBy": "correction",

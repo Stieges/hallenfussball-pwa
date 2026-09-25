@@ -16,7 +16,8 @@
       "section": null,
       "clockMs": null,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111102",
@@ -37,7 +38,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111103",
@@ -46,7 +48,8 @@
       "at": 2000,
       "section": 1,
       "clockMs": 59000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "11111111-1111-4111-8111-111111111104",
@@ -56,7 +59,8 @@
       "section": 1,
       "clockMs": 59000,
       "teamId": "teamA",
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "expect": {

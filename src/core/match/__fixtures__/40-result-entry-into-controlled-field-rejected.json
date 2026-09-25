@@ -1,17 +1,18 @@
 {
-  "title": "Laufende Strafe übersteht Neuladen (Strafe bei 5:00, Neuladen bei 6:00 -> 1:00)",
-  "szenario": "Laufende Strafe übersteht Neuladen",
+  "title": "Direkteintrag in ein gesteuertes Feld (partiell): RESULT_ENTRY auf ein laufendes Spiel -> INVALID_TRANSITION (die Feldsteuerungs-Prüfung selbst -- 'Feld 2 wird von Tom gesteuert' -- kommt erst in PR E, siehe Report)",
+  "szenario": "Direkteintrag in ein gesteuertes Feld",
   "ctx": {
-    "matchId": "match-24-",
+    "matchId": "match-40",
     "teamAId": "teamA",
     "teamBId": "teamB"
   },
   "mode": "log",
   "events": [
     {
-      "id": "00000024-0000-4000-8000-000000000001",
+      "id": "00000040-0000-4000-8000-000000000001",
       "type": "MATCH_START",
       "actor": "helper",
+      "actorUser": "helper",
       "at": 1000,
       "section": 1,
       "clockMs": null,
@@ -22,37 +23,39 @@
           "breakSeconds": 60,
           "knockout": false,
           "tiebreak": null,
-          "overtimeSeconds": 300,
+          "overtimeSeconds": 0,
           "shootersPerTeam": 5,
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      },
-      "actorUser": "helper"
+      }
     },
     {
-      "id": "00000024-0000-4000-8000-000000000002",
-      "type": "TIME_PENALTY",
-      "actor": "helper",
-      "at": 301000,
-      "section": 1,
-      "clockMs": 300000,
-      "teamId": "teamA",
+      "id": "00000040-0000-4000-8000-000000000002",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "actorUser": "owner",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
       "payload": {
-        "playerNumber": 4
-      },
-      "actorUser": "helper"
+        "scores": {
+          "teamA": 3,
+          "teamB": 1
+        }
+      }
     }
   ],
   "expect": {
     "results": [
       {
-        "id": "00000024-0000-4000-8000-000000000001",
+        "id": "00000040-0000-4000-8000-000000000001",
         "status": "accepted"
       },
       {
-        "id": "00000024-0000-4000-8000-000000000002",
-        "status": "accepted"
+        "id": "00000040-0000-4000-8000-000000000002",
+        "status": "rejected",
+        "code": "INVALID_TRANSITION"
       }
     ],
     "serverState": {
@@ -84,28 +87,6 @@
       "lastScoreEventId": null,
       "decidedBy": null,
       "finishedAt": null
-    },
-    "state": {
-      "penalties": [
-        {
-          "id": "00000024-0000-4000-8000-000000000002",
-          "teamId": "teamA",
-          "playerNumber": 4,
-          "startMs": 300000,
-          "durationMs": 120000
-        }
-      ]
-    },
-    "penaltyChecks": [
-      {
-        "at": 361000,
-        "remaining": {
-          "00000024-0000-4000-8000-000000000002": 60000
-        },
-        "active": [
-          "00000024-0000-4000-8000-000000000002"
-        ]
-      }
-    ]
+    }
   }
 }

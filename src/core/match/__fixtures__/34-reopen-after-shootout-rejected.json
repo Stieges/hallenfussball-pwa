@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000034-0000-4000-8000-000000000091",
@@ -36,7 +37,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000034-0000-4000-8000-000000000080",
@@ -48,7 +50,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000034-0000-4000-8000-000000000081",
@@ -60,7 +63,8 @@
       "teamId": "teamB",
       "payload": {
         "scored": false
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "00000034-0000-4000-8000-000000000082",
@@ -69,7 +73,8 @@
       "at": 702000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "events": [
@@ -80,7 +85,8 @@
       "at": 710000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "00000034-0000-4000-8000-000000000002",
@@ -89,7 +95,8 @@
       "at": 711000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "owner"
     },
     {
       "id": "00000034-0000-4000-8000-000000000003",
@@ -105,7 +112,8 @@
         },
         "reason": "Sieger im Strafstoßschießen",
         "basedOn": null
-      }
+      },
+      "actorUser": "owner"
     }
   ],
   "expect": {

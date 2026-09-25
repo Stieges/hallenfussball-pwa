@@ -27,7 +27,8 @@
           "suddenDeathAfter": 5,
           "penaltySeconds": 120
         }
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000091",
@@ -36,7 +37,8 @@
       "at": 601000,
       "section": 1,
       "clockMs": 600000,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "events": [
@@ -50,7 +52,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000002",
@@ -62,7 +65,8 @@
       "teamId": "teamB",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000003",
@@ -74,7 +78,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000004",
@@ -86,7 +91,8 @@
       "teamId": "teamB",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000005",
@@ -98,7 +104,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000006",
@@ -110,7 +117,8 @@
       "teamId": "teamB",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000007",
@@ -119,7 +127,8 @@
       "at": 710000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000008",
@@ -131,7 +140,8 @@
       "teamId": "teamA",
       "payload": {
         "scored": true
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000009",
@@ -140,7 +150,8 @@
       "at": 712000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000010",
@@ -152,7 +163,8 @@
       "teamId": "teamB",
       "payload": {
         "scored": false
-      }
+      },
+      "actorUser": "helper"
     },
     {
       "id": "0000026b-0000-4000-8000-000000000011",
@@ -161,7 +173,8 @@
       "at": 714000,
       "section": 1,
       "clockMs": null,
-      "payload": {}
+      "payload": {},
+      "actorUser": "helper"
     }
   ],
   "expect": {
