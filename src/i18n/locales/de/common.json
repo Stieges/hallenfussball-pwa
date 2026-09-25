@@ -80,6 +80,20 @@
   },
   "unsavedChanges": "Ungespeicherte Änderungen vorhanden.",
   "syncStatus": {
+    "label": {
+      "synced": "Synchronisiert",
+      "updated": "Aktualisiert",
+      "conflict": "Konflikt",
+      "error": "Fehler",
+      "offline": "Offline"
+    },
+    "syncingAriaLabel": "Wird synchronisiert...",
+    "syncingLabel": "Synchronisiere...",
+    "pendingCountLabel": "{{count}} ausstehend",
+    "failedCountLabel": "{{count}} fehlgeschlagen",
+    "lastSyncNow": "Gerade eben",
+    "lastSyncMinutes": "vor {{count}} Min.",
+    "lastSyncHours": "vor {{count}} Std.",
     "failedListTitle": "Gescheiterte Übertragungen",
     "failedListEmpty": "Keine gescheiterten Übertragungen.",
     "failedReasonUnknown": "Unbekannter Fehler",

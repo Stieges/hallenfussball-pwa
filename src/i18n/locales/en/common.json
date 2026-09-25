@@ -80,6 +80,20 @@
   },
   "unsavedChanges": "Unsaved changes present.",
   "syncStatus": {
+    "label": {
+      "synced": "Synced",
+      "updated": "Updated",
+      "conflict": "Conflict",
+      "error": "Error",
+      "offline": "Offline"
+    },
+    "syncingAriaLabel": "Syncing...",
+    "syncingLabel": "Syncing...",
+    "pendingCountLabel": "{{count}} pending",
+    "failedCountLabel": "{{count}} failed",
+    "lastSyncNow": "Just now",
+    "lastSyncMinutes": "{{count}} min ago",
+    "lastSyncHours": "{{count}} h ago",
     "failedListTitle": "Failed transfers",
     "failedListEmpty": "No failed transfers.",
     "failedReasonUnknown": "Unknown error",

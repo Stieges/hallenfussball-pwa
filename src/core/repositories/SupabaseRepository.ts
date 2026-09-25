@@ -446,15 +446,26 @@ export class SupabaseRepository implements ITournamentRepository {
     for (const update of updates) {
       const supabaseUpdate = mapMatchUpdateToSupabase(update, teamNameToId);
 
-      const { error } = await getSupabase()
+      // Fixrunde 1 (A4 Review, Risiko 4): `.select('id')` so a silently RLS-filtered 0-row
+      // UPDATE surfaces as an error instead of a no-op -- same reasoning/pattern as save()'s
+      // per-match update loop (A2 Fixrunde 1, M3) and the teams/matches delete-count check
+      // (R5-H1). Deliberately ONLY here (the `matches` update below), NOT for the `tournaments`
+      // timestamp update further down: a collaborator/helper has `writeMatchData` but not
+      // necessarily any write right on `tournaments`, so the same check there would misclassify
+      // every helper edit as failed.
+      const { data, error } = await getSupabase()
         .from('matches')
         .update(supabaseUpdate)
         .eq('id', update.id)
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .select('id');
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
         errors.push(new Error(`Match ${update.id}: ${error.message}`));
+      } else if (!data || data.length === 0) {
+        console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
+        errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
       }
     }
 

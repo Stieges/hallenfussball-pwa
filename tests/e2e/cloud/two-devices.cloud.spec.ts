@@ -75,10 +75,14 @@
  * "Sync-Anzeige" (Test 5) und "Offline-Tore kommen nach Reconnect an"
  * (Test 6, hängt NICHT von der Sync-Anzeige ab). Details in den jeweiligen Testkommentaren.
  *
- * Task A4 (C-SYNC, 2026-09-25): Test 5 war `test.fail()` -- `AdminHeader`/`LiveCockpit` bekamen
- * `showSyncStatus`/den `SyncStatusIndicator` nirgends übergeben, `sync-status` wurde nie
- * gerendert. Jetzt behoben (SyncStatusIndicator im Cockpit-Kopf, selbstgesteuert per
- * `isCloudSyncAvailable`), `test.fail()`-Markierung entfernt.
+ * Task A4 (C-SYNC, 2026-09-25): `AdminHeader`/`LiveCockpit` bekamen `showSyncStatus`/den
+ * `SyncStatusIndicator` nirgends übergeben, `sync-status` wurde nie gerendert -- DAS ist behoben
+ * (SyncStatusIndicator im Cockpit-Kopf, selbstgesteuert per `isCloudSyncAvailable`).
+ *
+ * Fixrunde 1 (Ruling AL, `task-A4-review.md`, C2): Test 5 bleibt trotzdem `test.fail()`, mit
+ * korrigierter Begründung -- Live-Tore im Cockpit laufen (noch) über `liveMatchRepo` direkt,
+ * NICHT über die `MutationQueue`, die `sync-status` beobachtet (Befund C-OFFUI/Direktschreibung,
+ * behoben erst mit PR C). Details im Testkommentar bei Test 5 selbst.
  */
 
 import { test, expect } from './fixtures';
@@ -543,9 +547,22 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
   /**
    * Ruling AG (final-fix-brief.md, I2): HÄLFTE 1 des ehemaligen Test 4 -- NUR die
    * Sync-Anzeige (`sync-status`), isoliert von der eigentlichen Frage "kommen die Tore nach
-   * Reconnect an" (Test 6 unten). `showSyncStatus` wird der `AdminHeader` nirgends übergeben
-   * (C-SYNC, unverändert seit dem ursprünglichen T4-Fund) -- das Element wird nie gerendert,
-   * `toBeVisible()` läuft deshalb in ein Timeout statt einen echten Attribut-Mismatch.
+   * Reconnect an" (Test 6 unten).
+   *
+   * Fixrunde 1 (Ruling AL, Review `task-A4-review.md`, C2): Task A4 (Teil 1) hat
+   * `SyncStatusIndicator` in den Cockpit-Kopf eingebaut -- `sync-status` WIRD auf dieser Seite
+   * jetzt gerendert (anders als der ursprüngliche T4-Fund, der von genau diesem fehlenden Element
+   * ausging). Trotzdem bleibt dieser Test `test.fail()`, aus einem ANDEREN, echten Grund: Tore im
+   * Cockpit laufen über `MatchExecutionService`/`liveMatchRepo.save()`
+   * (`src/core/services/MatchExecutionService.ts`), NICHT über die `MutationQueue` des
+   * `tournamentRepository` (`OfflineRepository.mutationQueue`), die `useSyncStatus` beobachtet.
+   * Zwei offline eingetragene Tore erhöhen deshalb `pendingChanges` NICHT -- `data-pending` bleibt
+   * bei "0", nicht "2" wie unten geprüft. Das ist der bereits bekannte Befund C-OFFUI
+   * (Direktschreibung am Live-Match-Repo, kein Ausgang/keine lokale Kopie) -- behoben erst mit
+   * PR C (neuer Ausgang/lokale Spielkopie, siehe `docs/superpowers/plans/
+   * 2026-09-25-oktober-fundament-helfer.md`). Bis dahin zeigt die Cockpit-Anzeige nur die
+   * Turnier-Warteschlange (z. B. Metadaten-/Schedule-Änderungen) und deren Fehler -- NICHT
+   * offline eingetragene Live-Tore.
    *
    * KEIN positiver Anker zwischen "offline schalten" und `test.fail()` (anders als eine
    * Zwischenfassung dieses Tests): der naheliegende Kandidat "`score-home` zeigt lokal schon
@@ -579,8 +596,10 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await enterGoal(helperPage, 'home');
       await enterGoal(helperPage, 'home');
 
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- `sync-status` wird nirgends
-      // gerendert (C-SYNC).
+      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- Fixrunde 1 (Ruling AL): NICHT
+      // mehr "Element wird nie gerendert" (das behebt A4 Teil 1), sondern "Element rendert, zeigt
+      // die offline eingetragenen Tore aber nicht" (C-OFFUI, Live-Tore laufen am Cockpit direkt
+      // über liveMatchRepo statt über die MutationQueue -- kommt erst mit PR C).
       test.fail();
 
       await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', {
@@ -708,6 +727,45 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const failedList = ownerPage.locator('[data-testid="sync-failed-list"]');
     await expect(failedList).toBeVisible({ timeout: 2000 });
     await expect(failedList).toContainText('matches_match_status_check');
+
+    // M5 (Review Fixrunde 1): der Titel verspricht "retry/verwerfen wirken" -- bisher wurde nur
+    // verworfen geprüft. "Erneut versuchen": der Eintrag verlässt sofort die Fehlerliste UND
+    // landet zurück in der wartenden Warteschlange (retryFailedMutation() -> queue.push +
+    // process(), siehe GenericMutationQueue.ts). Die erneute Ablehnung selbst (Constraint bleibt
+    // ungültig) ist hier nicht das Ziel -- die bereits oben bewiesen.
+    await ownerPage.locator(`[data-testid="sync-retry-${badMutationId}"]`).click();
+    await expect.poll(async () => (await readQueueState()).deadLettered, {
+      message: '„erneut versuchen": Eintrag soll die Fehlerliste sofort verlassen',
+      timeout: 5000,
+    }).toBe(false);
+    await expect(syncStatus).not.toHaveAttribute('data-state', 'error', { timeout: 5000 });
+
+    // Für den "verwerfen"-Nachweis unten wird wieder ein gescheiterter Zustand gebraucht -- der
+    // Dead-Letter-Mechanismus selbst ist oben bereits bewiesen (5 echte Anstöße), hier reicht ein
+    // direkt gesetzter Dead-Letter-Eintrag (derselbe Grund-Text), um "verwerfen" isoliert zu
+    // prüfen, ohne den ganzen Anstoß-Ablauf zu wiederholen.
+    await ownerPage.evaluate(
+      ({ id }) => {
+        const item = {
+          id,
+          type: 'UPDATE_MATCH',
+          payload: {},
+          timestamp: Date.now(),
+          retryCount: 5,
+          failedAt: Date.now(),
+          lastError: 'new row for relation "matches" violates check constraint "matches_match_status_check"',
+        };
+        window.localStorage.setItem('mutation_queue_v1', '[]');
+        window.localStorage.setItem('mutation_queue_failed_v1', JSON.stringify([item]));
+      },
+      { id: badMutationId }
+    );
+    await ownerPage.reload();
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+    await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
+    await syncStatus.click();
+    await expect(failedList).toBeVisible({ timeout: 2000 });
 
     // Verwerfen: Rückfrage, erst nach Bestätigen weg.
     await ownerPage.locator(`[data-testid="sync-discard-${badMutationId}"]`).click();
