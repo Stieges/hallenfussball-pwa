@@ -386,11 +386,26 @@ SQL
 done
 
 # --- 6. Rechte-Assertion im migrierten Container ----------------------------------------------
-# scripts/db_privilege_assertions.sql laeuft live im Drift-Check (nur mit SUPABASE_DB_READONLY_URL);
-# hier derselbe Satz gegen den frisch migrierten Container, damit die B3a-Zeilen (SECURITY INVOKER,
-# STABLE/IMMUTABLE, kein PUBLIC-EXECUTE, Anzahl 41, Positivkontrollen) schon vor dem Live-Apply
-# bewiesen sind. Jede Zeile muss "|t" sein.
-PRIV_OUT="$(psql_value < "$REPO_ROOT/scripts/db_privilege_assertions.sql" 2>&1)" || {
+# scripts/db_privilege_assertions.sql laeuft live im Drift-Check (nur mit SUPABASE_DB_READONLY_URL,
+# ueber die Direktverbindung als ci_schema_reader). Hier derselbe Satz gegen den frisch migrierten
+# Container, damit die B3a-Zeilen (SECURITY INVOKER, STABLE/IMMUTABLE, kein PUBLIC-EXECUTE, Anzahl
+# 41, Positivkontrollen) schon vor dem Live-Apply bewiesen sind. Jede Zeile muss "|t" sein.
+#
+# Abschluss-Fixrunde (final-review-B.md, I2): SET ROLE ci_schema_reader VOR dem Einspielen der
+# Datei -- vorher lief die Assertion hier als postgres, der USAGE-Fehlen auf dem Schema
+# match_engine (fehlendes GRANT USAGE ... TO ci_schema_reader) waere NIE aufgefallen, weil
+# has_function_privilege() als postgres jede Rechteprüfung umgeht. has_function_privilege() mit
+# einer 'match_engine.f(...)'-Textsignatur loest die Funktion ueber regprocedure auf -- das prueft
+# USAGE auf dem Schema fuer den AUFRUFENDEN Nutzer, live also ci_schema_reader (siehe I2-Fund).
+# `postgres` ist im Supabase-Image (empirisch geprueft: rolsuper=false, rolcreaterole=true) KEIN
+# echter Superuser -- SET ROLE allein liefert "permission denied to set role" ohne vorherige
+# Mitgliedschaft. Da postgres ci_schema_reader selbst angelegt hat (20260924_002, bedingter
+# DO-Block), hat es ADMIN OPTION darauf (Postgres vergibt das automatisch an den Ersteller einer
+# Rolle mit CREATEROLE) und kann sich deshalb selbst per `GRANT ci_schema_reader TO postgres;`
+# Mitgliedschaft geben, bevor SET ROLE greift. RESET ROLE am Verbindungsende ist unnoetig (die
+# Verbindung wird sofort danach geschlossen); die GRANT-Mitgliedschaft bleibt im Wegwerf-Container
+# bestehen, ist aber wirkungslos (kein zweiter Aufrufer, Container wird ohnehin entfernt).
+PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || {
   echo "ABWEICHUNG  Rechte-Assertion nicht ausfuehrbar: $PRIV_OUT"
   PRIV_DEV=$((PRIV_DEV + 1))
   PRIV_OUT=""

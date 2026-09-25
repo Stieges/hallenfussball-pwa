@@ -816,6 +816,48 @@ else
   echo "SKIP  10. ohne Migration: Spalte section existiert nicht" >&2
 fi
 
+# --- Probe 11 (Abschluss-Fixrunde, final-review-B.md I1): pg_dump --table=public.match_event_authors
+# --schema-only als eine echte LOGIN-Rolle mit den Rechten von ci_schema_reader (Mitgliedschaft,
+# keine eigenen Tabellenrechte) muss gelingen -- scripts/db-drift-check.sh dumpt das Live-Schema
+# so (dort ohne --table, ueber die ganze Datenbank). Vor dem I1-Fix schlug das mit "permission
+# denied for table match_event_authors" fehl (reproduziert im Review), weil match_event_authors
+# kein GRANT SELECT fuer ci_schema_reader hatte. ci_schema_reader selbst ist NOLOGIN (20260924_002,
+# bedingt angelegt) -- pg_dump braucht eine echte Anmelderolle, deshalb eine eigens angelegte,
+# temporaere LOGIN-Rolle IN ROLE ci_schema_reader (erbt exakt deren Rechte, keine eigenen).
+#
+# BEWUSST auf `--table=public.match_event_authors` eingeschraenkt, NICHT `--schema=public` ohne
+# Tabellenfilter: unser Wegwerf-Container ist NUR Baseline + Migrationsdateien, ohne die von
+# Supabase bei der Projekt-Provisionierung automatisch vergebenen Plattform-Grants (siehe
+# supabase/migrations/README.md: "127 GRANT-Statements ... die jede Supabase-Instanz bei der
+# Provisionierung selbst erzeugt" wurden bewusst aus der Baseline entfernt). Ein voller
+# `--schema=public`-Dump als ci_schema_reader scheitert deshalb HIER an Tabellen wie
+# match_corrections, die live (ueber die Plattform-Grants) fuer diese Rolle lesbar sein koennen,
+# in unserem rekonstruierten Container aber nie ein explizites GRANT bekommen haben -- das waere
+# ein falsches ROT, das nichts mit I1 zu tun hat. Die eine Tabelle, die WIR per Migration
+# kontrollieren (match_event_authors), reicht als Beweis.
+if [[ "$MODE" != "without-migration" ]]; then
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q >/dev/null <<'SQL'
+DROP ROLE IF EXISTS __pgdump_probe;
+CREATE ROLE __pgdump_probe LOGIN PASSWORD 'probe' IN ROLE ci_schema_reader;
+SQL
+  set +e
+  PGDUMP_OUT="$(docker exec -e PGPASSWORD=probe -i "$CONTAINER_NAME" \
+    pg_dump -U __pgdump_probe -h 127.0.0.1 -d postgres --table=public.match_event_authors --schema-only --no-owner --no-privileges 2>&1 >/dev/null)"
+  PGDUMP_EC=$?
+  set -e
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q >/dev/null <<'SQL'
+DROP ROLE IF EXISTS __pgdump_probe;
+SQL
+  if [[ $PGDUMP_EC -eq 0 ]]; then
+    echo "OK    11. pg_dump --table=match_event_authors --schema-only als ci_schema_reader-Mitglied -> Exit 0" >&2
+  else
+    echo "FAIL  11. pg_dump --table=match_event_authors --schema-only als ci_schema_reader-Mitglied -> Exit $PGDUMP_EC: $PGDUMP_OUT" >&2
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+else
+  echo "SKIP  11. ohne Migration: match_event_authors existiert nicht -> kein sinnvoller Vergleich" >&2
+fi
+
 echo "" >&2
 if [[ "$MISMATCHES" -gt 0 ]]; then
   echo "::error::$MISMATCHES Abweichung(en) im Modus $MODE." >&2

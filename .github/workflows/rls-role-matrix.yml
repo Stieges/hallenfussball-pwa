@@ -58,3 +58,12 @@ jobs:
         # seq-Backfill. Siehe scripts/match-event-log-check.sh (Kopfkommentar) und
         # task-B2-report.md für die Gegenprobe ohne diese Migration.
         run: bash scripts/match-event-log-check.sh
+
+      - name: Ereignis-Log-Schema — Guard-Gegenprobe (Ruling G3, Abschluss-Fixrunde M5)
+        # Dritter, unabhängiger Wegwerf-Container -- Migration vollständig einspielen, danach
+        # DROP TRIGGER match_events_guard_engine_rows: alle Guard-Proben (2a-2e, 4a-4b, 4f3, 4h)
+        # müssen auf "ok" kippen, sonst wäre im Normalmodus ein anderer Mechanismus (CHECK/FK)
+        # statt des Guards die tatsächliche Ursache der Ablehnung. Lief bisher nur lokal
+        # (final-review-B.md, M5: docs/TESTUMGEBUNG.md nannte den Modus, die CI führte ihn nicht
+        # aus).
+        run: bash scripts/match-event-log-check.sh --without-guard

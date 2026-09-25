@@ -236,8 +236,12 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   task-B2-brief.md`) startet einen EIGENEN Wegwerf-Container und prüft das Ereignis-Log-Schema
   (`supabase/migrations/20260928_001_match_event_log.sql`): Alt-Trigger weg, Guard-Trigger
   (Direktweg abgedichtet, current_user-Muster statt set_config-GUC), `match_event_authors`/
-  `match_transitions`/`app_config`, Realtime-Publikation, `seq`-Backfill -- 10 Proben inkl.
-  Gegenprobe ohne die Migration (`--without-migration`, Proben 1/2a müssen dann ROT sein).
+  `match_transitions`/`app_config`, Realtime-Publikation, `seq`-Backfill -- Proben inkl.
+  Gegenprobe ohne die Migration (`--without-migration`, Proben 1/2a müssen dann ROT sein). Ein
+  dritter CI-Schritt (Abschluss-Fixrunde, M5) läuft zusätzlich mit `--without-guard` (Ruling G3,
+  B2-Fixrunde 1): Migration einspielen, dann `DROP TRIGGER match_events_guard_engine_rows` --
+  alle Guard-Proben (2a-2e, 4a-4b, 4f3, 4h) müssen dabei auf "ok" kippen, sonst würde im
+  Normalmodus ein anderer Mechanismus als der Guard selbst die Ablehnung erklären.
 - **Zeitbudget:** `timeout-minutes: 10` (kein Vorgabewert aus dem Brief, eigene Einschätzung).
 - **Roten Lauf lesen:** Exit ≠ 0 macht den Job automatisch rot, sobald eine Zelle von der
   Rechtetabelle abweicht — die Zusammenfassung mit der genauen Abweichungszahl steht direkt im

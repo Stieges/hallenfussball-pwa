@@ -186,6 +186,14 @@ UNION ALL
 SELECT 'positive-authenticated-select-match-event-authors',
        has_table_privilege('authenticated', 'public.match_event_authors', 'SELECT')
 UNION ALL
+-- Abschluss-Fixrunde (final-review-B.md, I1): ohne diesen GRANT scheitert pg_dump --schema-only
+-- (scripts/db-drift-check.sh, Live-Dump als ci_schema_reader) live mit "permission denied for
+-- table match_event_authors", sobald diese Migration eingespielt ist -- die Tabelle hat (anders
+-- als match_transitions/app_config) keine eigene SELECT-Policy fuer ci_schema_reader, RLS liefert
+-- also weiterhin 0 Zeilen; dieser GRANT sichert nur den Schema-Dump ab, keinen Datenzugriff.
+SELECT 'positive-ci-schema-reader-select-match-event-authors',
+       has_table_privilege('ci_schema_reader', 'public.match_event_authors', 'SELECT')
+UNION ALL
 SELECT 'positive-anon-select-match-transitions',
        has_table_privilege('anon', 'public.match_transitions', 'SELECT')
 UNION ALL

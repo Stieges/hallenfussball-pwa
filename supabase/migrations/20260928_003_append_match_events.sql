@@ -55,6 +55,11 @@
 -- Idempotent: CREATE OR REPLACE, REVOKE/GRANT. Keine Tabellen-/Datenaenderung. Rueckweg: DROP
 -- FUNCTION der zwei public-Funktionen und der sechs Helfer. Produktion wendet der Controller erst
 -- nach Freigabe an.
+--
+-- Abschluss-Fixrunde (final-review-B.md, M1): SET LOCAL lock_timeout, wie 20260928_001/002 --
+-- Begruendung dort (Kopfkommentar von 20260928_001).
+
+SET LOCAL lock_timeout = '5s';
 
 
 -- ============================================================================================

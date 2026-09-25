@@ -9,6 +9,16 @@
 # genau die Lücke, die von Mai bis September 2026 niemand bemerkt hat. Dieses Skript
 # vergleicht das tatsächliche Schema, nicht Typen.
 #
+# Abschluss-Fixrunde (final-review-B.md, I3): beide pg_dump-Aufrufe (rekonstruiert UND live,
+# plus der --linked-Fallback) laufen jetzt mit `--schema=public --schema=match_engine` statt nur
+# `--schema=public` — die 47 Funktionen der SQL-Rechenfunktion (B3a, 20260928_002_match_engine.sql)
+# liegen in einem eigenen, nicht über die API exponierten Schema (Ruling S12) und wären sonst für
+# diesen Check unsichtbar gewesen: ein Hotfix am Funktionsrumpf im Dashboard hätte den Drift-Check
+# nie rot gemacht. db_catalog_counts.py braucht dafür keine Änderung — seine Regex-Zählung für
+# Funktionen ist bereits schema-unabhängig (`^CREATE (?:OR REPLACE )?FUNCTION\b`, siehe dortiger
+# Kopfkommentar), match_engine enthält keine Tabellen/Policies/Trigger/Indizes/RLS-Zeilen, die die
+# öffentlich-schema-spezifischen Regex-Muster (TABLE_RE u.a.) falsch zählen könnten.
+#
 # Vergleichsziel ist NUR die Baseline (supabase/migrations/00000000000000_baseline_live_schema.sql)
 # plus die Migrationsdateien, die nach ihr hinzukommen — NICHT alle 23 Bestandsmigrationen.
 # Grund: Drei Bestandsdateien (20260121_005_anonymous_limit.sql,
@@ -194,7 +204,7 @@ DUMP_OK=0
 for attempt in 1 2 3 4 5; do
   if docker exec -e PGPASSWORD=postgres "$CONTAINER_NAME" \
     pg_dump -U postgres -h 127.0.0.1 -d postgres \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$RECON_RAW" 2>"$WORKDIR/recon_dump.log"; then
     DUMP_OK=1
     break
@@ -227,7 +237,7 @@ elif [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo "Live-Schema ueber die nur-lesende Rolle (SUPABASE_DB_READONLY_URL)."
   docker exec "$CONTAINER_NAME" \
     pg_dump --dbname="$SUPABASE_DB_READONLY_URL" \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$LIVE_RAW" 2>"$WORKDIR/live_dump.log" \
     || { echo "::error::Konnte Live-Schema nicht dumpen (nur-lesende Rolle):" >&2
          echo "::error::Faellt hier 'permission denied for table X' auf, ist X neu und die Rolle" >&2
@@ -244,7 +254,7 @@ else
   fi
   echo "Hinweis: SUPABASE_DB_READONLY_URL nicht gesetzt, weiche auf --linked aus."
   echo "Hinweis: Das braucht einen Token mit weitergehenden Rechten als der Zweck verlangt."
-  (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
+  (cd "$REPO_ROOT" && supabase db dump --schema public --schema match_engine --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
 fi
@@ -311,6 +321,7 @@ PRIVILEGE_ASSERTION_NAMES=(
   "authenticated-no-update-app-config"
   "authenticated-no-delete-app-config"
   "positive-authenticated-select-match-event-authors"
+  "positive-ci-schema-reader-select-match-event-authors"
   "positive-anon-select-match-transitions"
   "positive-ci-schema-reader-select-match-transitions"
   "positive-anon-select-app-config"
@@ -459,7 +470,7 @@ fi
 # --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
 # task-T4-review.md Fixrunde 1) ------------------------------------------------------------
 # `supabase_realtime` ist eine Publication, kein Schema-Objekt in `public` -- Textdiff und
-# Katalogzählung unten (beide --schema=public) sehen sie nie, ein fehlender oder zusätzlicher
+# Katalogzählung unten (beide --schema=public/match_engine, aber keine Publication-Katalogobjekte) sehen sie nie, ein fehlender oder zusätzlicher
 # Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
 # Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
 # Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält

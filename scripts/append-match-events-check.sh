@@ -883,7 +883,15 @@ SQL
 fi
 
 # --- 11. Rechte-Assertion ---------------------------------------------------------------------
-PRIV_OUT="$(psql_value < "$REPO_ROOT/scripts/db_privilege_assertions.sql" 2>&1)" || {
+# Abschluss-Fixrunde (final-review-B.md, I2): SET ROLE ci_schema_reader statt als postgres
+# einzuspielen -- sonst faellt ein fehlendes GRANT USAGE ON SCHEMA match_engine TO ci_schema_reader
+# hier nie auf, obwohl es den Drift-Check live rot machen wuerde (regprocedure-Aufloesung der
+# match_engine.*-Signaturen prueft USAGE fuer den aufrufenden Nutzer). `postgres` ist im
+# Supabase-Image kein echter Superuser (rolsuper=false) -- GRANT ci_schema_reader TO postgres vor
+# dem SET ROLE gibt die noetige Mitgliedschaft (postgres hat ADMIN OPTION, weil es die Rolle
+# selbst angelegt hat, 20260924_002). Siehe match-engine-parity.sh fuer denselben Fix und die
+# ausfuehrliche Begruendung.
+PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } | psql_value 2>&1)" || {
   count_dev Rechte-Assertion
   echo "ABWEICHUNG  [Rechte-Assertion] nicht ausfuehrbar: $(head -c 300 <<<"$PRIV_OUT")"
   PRIV_OUT=""

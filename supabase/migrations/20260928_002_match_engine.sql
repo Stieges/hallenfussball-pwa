@@ -61,6 +61,11 @@
 -- GRANT/REVOKE. Rueckweg: DROP SCHEMA match_engine CASCADE + DROP FUNCTION der sechs public-
 -- Funktionen (keine Daten, keine Tabellen). Produktion wendet der Controller erst nach
 -- Freigabe an (bis dahin nur lokal/Container).
+--
+-- Abschluss-Fixrunde (final-review-B.md, M1): SET LOCAL lock_timeout, wie 20260928_001 --
+-- Begruendung dort (Kopfkommentar).
+
+SET LOCAL lock_timeout = '5s';
 
 
 -- ============================================================================================
@@ -93,6 +98,15 @@ $$;
 CREATE SCHEMA IF NOT EXISTS match_engine;
 REVOKE ALL ON SCHEMA match_engine FROM PUBLIC;
 GRANT USAGE ON SCHEMA match_engine TO anon, authenticated, service_role;
+-- Abschluss-Fixrunde (final-review-B.md, I2): ci_schema_reader (nur-lesende Drift-Check-Rolle)
+-- braucht USAGE auf dem Schema, sonst schlaegt scripts/db_privilege_assertions.sql live fehl --
+-- has_function_privilege() loest 'match_engine.f(...)'-Signaturen ueber regprocedure auf, und das
+-- prueft USAGE auf dem Schema fuer den AUFRUFENDEN Nutzer (hier ci_schema_reader, siehe
+-- db-drift-check.sh, das die Assertion-Datei seit dieser Fixrunde per SET ROLE ci_schema_reader
+-- ausfuehrt). Harmlos: EXECUTE auf den einzelnen Funktionen bleibt unveraendert (nicht an PUBLIC
+-- vergeben, siehe REVOKE/GRANT je Funktion unten) -- USAGE oeffnet nur die Namensaufloesung im
+-- Schema, keinen Aufruf.
+GRANT USAGE ON SCHEMA match_engine TO ci_schema_reader;
 COMMENT ON SCHEMA match_engine IS
   'B3a/S12: interne Teilfunktionen der SQL-Rechenfunktion (20260928_002_match_engine.sql). Nicht ueber die API exponiert.';
 

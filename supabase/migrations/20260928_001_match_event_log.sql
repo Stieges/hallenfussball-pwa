@@ -36,6 +36,18 @@
 --
 -- Nachweis: scripts/match-event-log-check.sh (Wegwerf-Container, Proben 1-10 inkl. Gegenprobe
 -- OHNE diese Migration), task-B2-report.md.
+--
+-- Abschluss-Fixrunde (final-review-B.md, M1): SET LOCAL lock_timeout am Anfang -- `apply_migration`
+-- (Supabase MCP) spielt die gesamte Migration als EINE Transaktion ein, dort begrenzt das den
+-- ACCESS-EXCLUSIVE-Lock auf match_events (ADD COLUMN seq ... IDENTITY, Abschnitt 2 unten) auf
+-- maximal 5s Wartezeit gegen konkurrierende Leser/Schreiber, statt unbegrenzt zu blockieren.
+-- Live sind es 0 Zeilen in match_events, das Risiko ist gering, die Sperrzeit trotzdem als
+-- Sicherheitsnetz. In den Wegwerf-Container-Harnesses (rohes `psql -f`, keine explizite BEGIN/
+-- COMMIT-Klammer um die ganze Datei) hat SET LOCAL ausserhalb eines Transaktionsblocks keine
+-- Wirkung ueber die eigene implizite Transaktion hinaus (Postgres gibt dafuer eine WARNING aus,
+-- keinen Fehler) -- harmlos, bricht das Einspielen nicht (siehe Testlauf im Report).
+
+SET LOCAL lock_timeout = '5s';
 
 
 -- ============================================================================================
@@ -433,6 +445,17 @@ CREATE POLICY "match_event_authors_select" ON "public"."match_event_authors"
 
 REVOKE ALL ON "public"."match_event_authors" FROM "anon", "authenticated";
 GRANT SELECT ON "public"."match_event_authors" TO "authenticated";
+
+-- Abschluss-Fixrunde (final-review-B.md, I1): ci_schema_reader (die nur-lesende Rolle, ueber die
+-- scripts/db-drift-check.sh das Live-Schema per pg_dump --schema-only zieht) braucht einen
+-- Tabellen-GRANT, sonst scheitert der Dump nach dem Live-Apply mit "permission denied for table
+-- match_event_authors" -- selbst OHNE dass irgendjemand Zeilendaten lesen kann: es gibt fuer
+-- diese Rolle keine SELECT-Policy (anders als match_transitions/app_config unten, die absichtlich
+-- oeffentlich lesbar sind), RLS liefert also weiterhin 0 Zeilen. Muster
+-- 20260924_002_central_role_permissions.sql:231 (role_permissions_select_ci_schema_reader hat
+-- dort zusaetzlich eine eigene Policy, weil der Drift-Check DORT den Zeileninhalt vergleicht --
+-- match_event_authors braucht das nicht, nur den Schema-Dump).
+GRANT SELECT ON "public"."match_event_authors" TO "ci_schema_reader";
 
 
 -- ============================================================================================
