@@ -4,6 +4,7 @@ import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
+import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
@@ -174,12 +175,37 @@ export class TournamentCreationService {
     }
 
     /**
+     * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+     * task-A2-review.md`): `repository.save()` intentionally skips result/status columns for
+     * EXISTING matches (A2) -- editing a PUBLISHED tournament in the Wizard can change those
+     * (e.g. "Turnier zurücksetzen" in `useTournamentWizard.ts` clears score/status/finishedAt).
+     * Fetches the pre-save state (only when editing an existing tournament) and persists any
+     * result/status change via a targeted update, same pattern as `DangerZone`/`useCorrectionMode`.
+     * Wrapped in try/catch: a failure here must never block the actual save that already
+     * succeeded above -- worst case the result/status change stays local-only, exactly the A2 gap
+     * this closes, not a new failure mode.
+     */
+    private async persistResultStatusChanges(tournamentId: string, previous: Tournament | null, next: Tournament): Promise<void> {
+        if (!previous) { return; }
+        try {
+            const updates = diffMatchResultStatusUpdates(previous.matches, next.matches);
+            if (updates.length > 0) {
+                await this.repository.updateMatches(tournamentId, updates);
+            }
+        } catch (err) {
+            console.error('Failed to persist result/status changes after save:', err);
+        }
+    }
+
+    /**
      * Saves the current draft state
      */
     async saveDraft(data: Partial<Tournament>): Promise<Tournament> {
+        const previous = data.id ? await this.repository.get(data.id) : null;
         const tournament = this.createDraft(data, data.id);
         tournament.updatedAt = new Date().toISOString();
         await this.repository.save(tournament);
+        await this.persistResultStatusChanges(tournament.id, previous, tournament);
         return tournament;
     }
 
@@ -187,6 +213,7 @@ export class TournamentCreationService {
      * Publishes the tournament (generates schedule and sets status)
      */
     async publish(data: Partial<Tournament>): Promise<Tournament> {
+        const previous = data.id ? await this.repository.get(data.id) : null;
         const tournament = this.createDraft(data, data.id);
 
         // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
@@ -237,6 +264,7 @@ export class TournamentCreationService {
         tournament.updatedAt = new Date().toISOString();
 
         await this.repository.save(tournament);
+        await this.persistResultStatusChanges(tournament.id, previous, tournament);
         return tournament;
     }
 

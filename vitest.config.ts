@@ -20,6 +20,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/features/auth/hooks/__tests__/useRegisterForm.test.ts',
   'src/features/schedule-editor/hooks/__tests__/useMatchConflicts.test.ts',
   'src/features/schedule-editor/hooks/__tests__/useScheduleEditor.test.ts',
+  'src/features/tournament-management/hooks/__tests__/useScheduleTabActions.test.ts',
   'src/hooks/__tests__/useMatchExecution.realtime.test.ts',
   'src/hooks/__tests__/useMatchExecution.test.ts',
   'src/hooks/__tests__/useMatchTimer.test.ts',

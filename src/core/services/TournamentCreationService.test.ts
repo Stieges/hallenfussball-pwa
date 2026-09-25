@@ -200,6 +200,46 @@ describe('TournamentCreationService', () => {
                 updatedAt: expect.any(String)
             }));
         });
+
+        // A2 Fixrunde 1 (Ruling AJ, I1: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-review.md): editing an EXISTING published tournament in the Wizard (e.g.
+        // "Turnier zurücksetzen") can change match results/status -- repository.save() skips
+        // those columns for existing matches (A2), so saveDraft must ALSO persist them via a
+        // targeted updateMatches().
+        it('persists a result/status change via updateMatches when editing an existing tournament', async () => {
+            const existingMatch = { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
+            mockRepo.get.mockResolvedValue({ id: 'tour-1', matches: [existingMatch] });
+
+            const resetMatch = { ...existingMatch, scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled' as const };
+            const data = { id: 'tour-1', title: 'Draft', matches: [resetMatch] };
+
+            await service.saveDraft(data);
+
+            expect(mockRepo.updateMatches).toHaveBeenCalledWith(
+                'tour-1',
+                expect.arrayContaining([expect.objectContaining({ id: 'm1', matchStatus: 'scheduled' })])
+            );
+        });
+
+        it('does NOT call updateMatches when nothing about the result/status changed', async () => {
+            const existingMatch = { id: 'm1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1, matchStatus: 'finished' as const };
+            mockRepo.get.mockResolvedValue({ id: 'tour-1', matches: [existingMatch] });
+
+            const data = { id: 'tour-1', title: 'Renamed Draft', matches: [existingMatch] };
+
+            await service.saveDraft(data);
+
+            expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+        });
+
+        it('does NOT call repository.get / updateMatches for a brand-new (id-less) draft', async () => {
+            const data = { title: 'Brand New' };
+
+            await service.saveDraft(data);
+
+            expect(mockRepo.get).not.toHaveBeenCalled();
+            expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+        });
     });
 
     describe('publish', () => {

@@ -13,6 +13,7 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { DndContext, closestCenter, DragOverlay, Announcements } from '@dnd-kit/core';
 import { Tournament, Match } from '../../types/tournament';
+import type { MatchUpdate } from '../../core/models/types';
 
 // ============================================================================
 // History Types for Undo/Redo
@@ -49,6 +50,9 @@ interface ScheduleEditorProps {
   tournament: Tournament;
   /** Callback when tournament is updated */
   onTournamentUpdate: (tournament: Tournament) => void;
+  /** A2 Fixrunde 1: forwarded to `useScheduleEditor` for skip/unskip -- see its doc comment. */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   /** Whether editing is allowed */
   readOnly?: boolean;
   /** Show only specific match phase */
@@ -218,6 +222,8 @@ function groupMatchesByTimeSlot(
 export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   tournament,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
   readOnly = false,
   phase = 'all',
   compact = false,
@@ -327,6 +333,8 @@ export const ScheduleEditor: React.FC<ScheduleEditorProps> = ({
   } = useScheduleEditor({
     tournament,
     onTournamentUpdate,
+    onLocalTournamentUpdate,
+    onMatchesUpdate,
   });
 
   // Determine if we're in edit mode (external takes precedence)

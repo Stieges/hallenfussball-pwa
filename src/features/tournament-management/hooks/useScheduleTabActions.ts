@@ -10,6 +10,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
 import { MatchUpdate } from '../../../core/models/types';
+import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
@@ -199,24 +200,35 @@ export function useScheduleTabActions({
       updatedAt: new Date().toISOString(),
     };
 
-    // A2: track ONLY the matches touched by this result entry (the match itself, plus whatever
-    // playoff/bracket resolution changes as a consequence), so we can persist them via a
-    // targeted `updateMatch(es)` instead of a full tournament save.
+    // A2 Fixrunde 1 (Ruling AJ, "nur einen Weg"): track ONLY the matches touched by this result
+    // entry (the match itself, plus whatever playoff/bracket resolution changes as a
+    // consequence), so we can persist them via a targeted `updateMatch(es)` instead of a full
+    // tournament save. The scored match itself goes through the SAME shared helper every other
+    // result/status-changing action now uses (`diffMatchResultStatusUpdates`).
     const pendingUpdates = new Map<string, MatchUpdate>();
-    pendingUpdates.set(matchId, { id: matchId, scoreA, scoreB });
+    const [scoreUpdate] = diffMatchResultStatusUpdates(
+      tournament.matches,
+      updatedTournament.matches
+    );
+    if (scoreUpdate) {
+      pendingUpdates.set(matchId, scoreUpdate);
+    }
 
-    // Auto-resolve playoff pairings after group match completion
+    // Auto-resolve playoff pairings after group match completion. This can also clear a
+    // (regenerated) playoff match's score if its teams changed -- a RESULT field -- alongside the
+    // teamA/teamB SCHEDULE fields, so the result diff of THAT match is folded into the same
+    // targeted update object (mapMatchUpdateToSupabase writes both kinds of columns in one call).
     const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
     if (playoffResolution?.wasResolved) {
       for (const id of playoffResolution.updatedMatchIds) {
+        const before = tournament.matches.find((m) => m.id === id);
         const resolved = updatedTournament.matches.find((m) => m.id === id);
-        if (resolved) {
+        if (before && resolved) {
+          const [resultUpdate] = diffMatchResultStatusUpdates([before], [resolved]);
           pendingUpdates.set(id, {
-            id,
+            ...(resultUpdate ?? { id }),
             teamA: resolved.teamA,
             teamB: resolved.teamB,
-            scoreA: resolved.scoreA,
-            scoreB: resolved.scoreB,
           });
         }
       }

@@ -13,6 +13,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
 import { MatchUpdate } from '../core/models/types';
+import { useToast } from '../components/ui/Toast';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
@@ -57,6 +58,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onNavigateToSettings,
 }) => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const location = useLocation();
 
   // Get active tab from URL path (e.g., /tournament/:id/schedule)
@@ -107,8 +109,12 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
       : scheduleService.updateMatches(tournamentId, updates);
     run.catch((err: unknown) => {
       console.error('Failed to persist match update:', err);
+      // A2 Fixrunde 1 (M6): vorher nur console.error -- über OfflineRepository unkritisch (lokal
+      // geschrieben, eingereiht), aber ein Nutzer im reinen Cloud-Pfad bekam einen gescheiterten
+      // Ergebnis-/Status-Sync NIE angezeigt.
+      showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
     });
-  }, [scheduleService, tournamentId]);
+  }, [scheduleService, tournamentId, showError]);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {

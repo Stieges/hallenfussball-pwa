@@ -360,26 +360,51 @@ export class SupabaseRepository implements ITournamentRepository {
     }
 
     if (existingMatchRows.length > 0) {
-      const errors: Error[] = [];
+      // A2 Fixrunde 1 (I3, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md):
+      // the review's OWN suggested fix -- a single batch `upsert()` with only the schedule
+      // columns -- turned out to be UNSAFE, not just "geht nicht direkt" for NOT-NULL reasons.
+      // `matches_insert_v2` requires the 'restructure' permission, `matches_update_v3` only
+      // 'writeMatchData' (`supabase/migrations/20260924_002_central_role_permissions.sql:325-353`,
+      // `rolePermissions.json`). An `INSERT ... ON CONFLICT (id) DO UPDATE` statement is
+      // evaluated against BOTH the INSERT and the UPDATE RLS policy by Postgres, even when every
+      // row already exists and only the UPDATE branch actually fires. A `collaborator` (Helfer)
+      // has `writeMatchData` and `teams` but NOT `restructure` (`rolePermissions.json`) and can
+      // reach this exact path today (e.g. renaming a team via `TeamsTab`, permission `teams`) --
+      // switching to a batch upsert would silently lock every collaborator out of a full save
+      // that touches ANY existing match row, a regression this task must not introduce.
+      // Verifying this against a real RLS-enforced Postgres needs the local stack, which was busy
+      // with another task during this fix round -- documented instead of merged untested.
+      //
+      // Kept per-row `.update()` (same RLS shape as before A2), but PARALLELIZED via
+      // `Promise.all` instead of a sequential `for` loop -- this removes the actual complaint (N
+      // *sequential* round-trips) without touching the RLS-relevant statement shape at all.
+      // A2 Fixrunde 1 (M3): `.select('id')` so a silently RLS-filtered 0-row UPDATE surfaces as an
+      // error instead of a no-op -- same reasoning as the R5-H1 delete-count check above (a
+      // plain `.update()` without `.select()` reports no Postgres `error` even when RLS's USING
+      // clause matched nothing).
+      const results = await Promise.all(
+        existingMatchRows.map(async (row) => {
+          const scheduleUpdate = mapMatchToScheduleUpdate(row);
+          const { data, error: updateError } = await getSupabase()
+            .from('matches')
+            .update(scheduleUpdate)
+            .eq('id', row.id)
+            .eq('tournament_id', tournament.id)
+            .select('id');
+          return { id: row.id, error: updateError, updatedCount: data?.length ?? 0 };
+        })
+      );
 
-      for (const row of existingMatchRows) {
-        const scheduleUpdate = mapMatchToScheduleUpdate(row);
-        const { error: updateError } = await getSupabase()
-          .from('matches')
-          .update(scheduleUpdate)
-          .eq('id', row.id)
-          .eq('tournament_id', tournament.id);
-
-        if (updateError) {
-          console.error(`Failed to update match ${row.id}:`, updateError);
-          errors.push(new Error(`Match ${row.id}: ${updateError.message}`));
-        }
-      }
-
+      const errors = results.filter((r) => r.error !== null || r.updatedCount === 0);
       if (errors.length > 0) {
+        for (const { id, error } of errors) {
+          console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1');
+        }
         throw new RepositoryError(
           'saveMatches',
-          `Failed to update ${errors.length} match(es): ${errors.map((e) => e.message).join('; ')}`
+          `Failed to update ${errors.length} match(es): ${errors
+            .map((e) => `${e.id}: ${e.error?.message ?? `0 rows updated (expected 1, got ${e.updatedCount})`}`)
+            .join('; ')}`
         );
       }
     }

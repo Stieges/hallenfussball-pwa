@@ -276,6 +276,9 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     const newTeamName = `${originalTeamName} (A2 Test)`;
     let teamId: string | null = null;
     let ownerContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
+    // M4 (Fixrunde 1, Review task-A2-review.md): Baseline VOR Toms Tor -- Rückbau entfernt gezielt
+    // NUR das neu entstandene Event (gleiches Muster wie der A1-Test "Helfer beendet Spiel").
+    const eventIdsBeforeGoal = await fetchMatchEventIds(runningMatchId);
 
     try {
       teamId = await fetchTeamIdByName(E2E_LIVE_CUP_ID, originalTeamName);
@@ -343,6 +346,16 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
         timeout: 5000,
       }).toBe(E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home + 1);
       await expect.poll(() => fetchMatchRow(runningMatchId).then((row) => row.match_status)).toBe('running');
+
+      // M1 (Fixrunde 1, Review task-A2-review.md): der Brief verlangt "beim owner UND in der DB" --
+      // bisher wurde nur die DB geprüft. Olli navigiert (jetzt wieder online) zum Cockpit desselben
+      // Spiels und muss dort ebenfalls Toms Stand sehen, nicht den alten lokalen.
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live?matchId=${runningMatchId}`);
+      await ownerPage.waitForLoadState('networkidle');
+      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText(
+        String(E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home + 1),
+        { timeout: 15000 }
+      );
     } finally {
       if (ownerContext) {
         // I6/N16: safeCleanup() statt eines direkten .catch(() => {}) -- ein Fehler hier bleibt
@@ -357,6 +370,14 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
           E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
         )
       );
+      // M4 (Fixrunde 1): Toms Tor-Ereignis gezielt zurückbauen (Diff gegen die Baseline oben) --
+      // sonst bleibt es mit einem hohen timestamp_seconds stehen und verfälscht "letztes Ereignis"
+      // für einen nachfolgenden Test dieser Datei (gleiche Begründung wie beim A1-Test).
+      await safeCleanup('Live-Cup Tom-Tor-Ereignis zurückbauen (Task A2)', async () => {
+        const eventIdsAfterGoal = await fetchMatchEventIds(runningMatchId);
+        const newEventIds = eventIdsAfterGoal.filter((id) => !eventIdsBeforeGoal.includes(id));
+        await softDeleteMatchEvents(newEventIds);
+      });
       if (teamId) {
         await safeCleanup('Teamname zurückbauen (Task A2)', () => setTeamName(teamId!, originalTeamName));
       }

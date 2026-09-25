@@ -52,7 +52,10 @@ const hoisted = vi.hoisted(() => {
   const matchesDeleteInMock = vi.fn(() => ({ select: matchesDeleteSelectMock }));
   const matchesDeleteMock = vi.fn(() => ({ in: matchesDeleteInMock }));
   const matchesUpsertMock = vi.fn();
-  const matchesUpdateEqTournamentMock = vi.fn().mockResolvedValue({ error: null });
+  // A2 Fixrunde 1 (M3): .update().eq().eq().select('id') -- the .select() surfaces a silently
+  // RLS-filtered 0-row update, same reasoning as the R5-H1 delete-count check above.
+  const matchesUpdateSelectMock = vi.fn().mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+  const matchesUpdateEqTournamentMock = vi.fn(() => ({ select: matchesUpdateSelectMock }));
   const matchesUpdateEqIdMock = vi.fn(() => ({ eq: matchesUpdateEqTournamentMock }));
   const matchesUpdateMock = vi.fn((_update: Record<string, unknown>) => ({ eq: matchesUpdateEqIdMock }));
 
@@ -90,6 +93,7 @@ const hoisted = vi.hoisted(() => {
     matchesUpsertMock,
     matchesUpdateMock,
     matchesUpdateEqTournamentMock,
+    matchesUpdateSelectMock,
     fromMock,
     supabaseMock,
   };
@@ -113,6 +117,7 @@ const {
   matchesUpsertMock,
   matchesUpdateMock,
   matchesUpdateEqTournamentMock,
+  matchesUpdateSelectMock,
 } = hoisted;
 
 // ============================================================================
@@ -135,6 +140,7 @@ beforeEach(() => {
   tournamentsUpsertMock.mockResolvedValue({ error: null });
   teamsUpsertMock.mockResolvedValue({ error: null });
   matchesUpsertMock.mockResolvedValue({ error: null });
+  matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
   // Existing rows in the cloud: two teams / two matches, one of which ('team-removed' /
   // 'match-removed') is no longer in the local tournament passed to save() — exactly the
   // "user removed a team/match" scenario from the R5 review (Sonde S-CA).
@@ -278,5 +284,53 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
 
     expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
     expect(matchesUpdateEqTournamentMock).toHaveBeenCalledWith('tournament_id', tournament.id);
+  });
+
+  // A2 Fixrunde 1 (M3): a silently RLS-filtered 0-row update must throw, not be treated as
+  // success -- same reasoning as the R5-H1 delete-count check for teams/matches above.
+  it('throws when the schedule-only update silently affects 0 rows (RLS-filtered, no Postgres error)', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+    matchesUpdateSelectMock.mockResolvedValue({ data: [], error: null }); // 0 of 1 expected
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).rejects.toThrow(
+      /0 rows updated \(expected 1, got 0\)/
+    );
+  });
+
+  it('multiple existing matches are updated CONCURRENTLY (Promise.all), not one-at-a-time (I3)', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    matchesSelectEqMock.mockResolvedValue({
+      data: [{ id: 'match-survivor' }, { id: 'match-survivor-2' }],
+      error: null,
+    });
+
+    // Tracks how many `.select()` calls were IN FLIGHT at once -- a sequential `for await` loop
+    // never has more than 1 in flight; `Promise.all` starts both before either resolves.
+    let inFlight = 0;
+    let maxInFlight = 0;
+    matchesUpdateSelectMock.mockImplementation(async () => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await Promise.resolve(); // yield once, so a sequential loop WOULD show inFlight drop to 0 first
+      inFlight--;
+      return { data: [{ id: 'match-survivor' }], error: null };
+    });
+
+    const tournament = mapTournamentFromSupabase(
+      createTournamentRow({ version: null }),
+      [createTeamRow({ id: 'team-survivor', name: 'Survivor' })],
+      [
+        createMatchRow({ id: 'match-survivor', team_a_id: 'team-survivor' }),
+        createMatchRow({ id: 'match-survivor-2', team_a_id: 'team-survivor' }),
+      ]
+    );
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(tournament)).resolves.toBeUndefined();
+
+    expect(matchesUpdateMock).toHaveBeenCalledTimes(2);
+    expect(maxInFlight).toBe(2);
   });
 });

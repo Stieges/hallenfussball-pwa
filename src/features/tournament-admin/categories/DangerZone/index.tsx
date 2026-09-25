@@ -16,6 +16,8 @@ import { buildFinishTournamentPatch } from '../../../../utils/tournamentStats';
 import { useMyTournamentRole } from '../../../auth/hooks/useMyTournamentRole';
 import { canDeleteTournament } from '../../../auth/utils/permissions';
 import type { Tournament } from '../../../../types/tournament';
+import type { MatchUpdate } from '../../../../core/models/types';
+import { diffMatchResultStatusUpdates } from '../../../../core/services';
 import type { DangerAction, DangerActionConfig } from '../../types/admin.types';
 
 // =============================================================================
@@ -26,6 +28,14 @@ interface DangerZoneCategoryProps {
   tournamentId: string;
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament) => void;
+  /**
+   * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+   * task-A2-review.md`): "Ergebnisse zurücksetzen"/"Spielplan zurücksetzen" reset RESULT/STATUS
+   * columns (Score, Status, Timer) on existing matches -- a full `save()` skips those for
+   * existing matches (A2), so this local-state sync + targeted update pair persists the reset.
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
 }
 
 // =============================================================================
@@ -224,6 +234,8 @@ export function DangerZoneCategory({
   tournamentId,
   tournament,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
 }: DangerZoneCategoryProps) {
   const { t } = useTranslation('admin');
   const { role: myRole } = useMyTournamentRole(tournamentId);
@@ -288,11 +300,12 @@ export function DangerZoneCategory({
             };
           });
 
-          onTournamentUpdate({
+          onLocalTournamentUpdate({
             ...tournament,
             matches: resetMatches,
             updatedAt: now,
           });
+          onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, resetMatches));
           break;
         }
 
@@ -310,11 +323,12 @@ export function DangerZoneCategory({
             correctionHistory: undefined,
           }));
 
-          onTournamentUpdate({
+          onLocalTournamentUpdate({
             ...tournament,
             matches: resetMatches,
             updatedAt: now,
           });
+          onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, resetMatches));
           break;
         }
 
@@ -343,7 +357,7 @@ export function DangerZoneCategory({
     } finally {
       setIsExecuting(false);
     }
-  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate]);
+  }, [pendingAction, confirmationInput, tournament, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate]);
 
   const isConfirmEnabled = confirmationInput === pendingAction?.confirmText;
 

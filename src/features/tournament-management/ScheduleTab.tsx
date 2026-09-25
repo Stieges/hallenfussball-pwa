@@ -179,7 +179,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     handleConfirmCorrection,
   } = useCorrectionMode({
     tournament,
-    onTournamentUpdate,
+    onLocalTournamentUpdate,
+    onMatchesUpdate,
     canCorrectResults,
   });
 
@@ -386,6 +387,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             <ScheduleEditor
               tournament={tournament}
               onTournamentUpdate={(updatedTournament) => onTournamentUpdate(updatedTournament, false)}
+              onLocalTournamentUpdate={onLocalTournamentUpdate}
+              onMatchesUpdate={onMatchesUpdate}
               externalEditMode={isEditing}
               onBeforeChange={saveToHistory}
               hideToolbar={true}

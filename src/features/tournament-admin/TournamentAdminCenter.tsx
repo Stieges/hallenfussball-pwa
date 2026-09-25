@@ -14,6 +14,8 @@ import { useNavigate } from 'react-router-dom';
 import { cssVars } from '../../design-tokens';
 import { useBreakpoint } from '../../hooks/useBreakpoint';
 import { useTournamentManager } from '../../hooks/useTournamentManager';
+import type { MatchUpdate } from '../../core/models/types';
+import { useToast } from '../../components/ui/Toast';
 import type { AdminCategoryId, AdminWarning } from './types/admin.types';
 import { ADMIN_LAYOUT, getAdminCategory } from './constants/admin.constants';
 
@@ -144,6 +146,7 @@ export function TournamentAdminCenter({
   onBackToTournament,
 }: TournamentAdminCenterProps) {
   const { t } = useTranslation('admin');
+  const { showError } = useToast();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
 
@@ -155,7 +158,25 @@ export function TournamentAdminCenter({
   const [showMobileHub, setShowMobileHub] = useState(true);
 
   // Tournament data
-  const { tournament, handleTournamentUpdate, loadingError } = useTournamentManager(tournamentId);
+  const { tournament, handleTournamentUpdate, applyRemote, scheduleService, loadingError } =
+    useTournamentManager(tournamentId);
+
+  // A2 Fixrunde 1 (Ruling AJ, I1: .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+  // task-A2-review.md): actions that deliberately change a match's RESULT/STATUS (reset
+  // results/schedule in DangerZone, restore a backup in Exports, ...) must persist that through a
+  // targeted update -- a full save() skips result/status columns for existing matches (A2).
+  const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
+    if (updates.length === 0 || !scheduleService) { return; }
+    const run = updates.length === 1
+      ? scheduleService.updateMatch(tournamentId, updates[0])
+      : scheduleService.updateMatches(tournamentId, updates);
+    run.catch((err: unknown) => {
+      console.error('Failed to persist match update:', err);
+      // A2 Fixrunde 1 (M6): sichtbares Feedback statt nur console.error, gleiches Muster wie
+      // TournamentManagementScreen.tsx.
+      showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    });
+  }, [scheduleService, tournamentId, showError]);
 
   // Warnings (placeholder - will be computed from tournament state)
   const [warnings] = useState<AdminWarning[]>([]);
@@ -213,6 +234,11 @@ export function TournamentAdminCenter({
       tournamentId,
       tournament,
       onTournamentUpdate: handleTournamentUpdate,
+      // A2 Fixrunde 1: DangerZone (Ergebnisse/Spielplan zurücksetzen) und Exports (Backup
+      // wiederherstellen) brauchen diese beiden für den Ergebnis-/Status-Pfad -- andere
+      // Kategorien ignorieren die zusätzlichen Props einfach.
+      onLocalTournamentUpdate: applyRemote,
+      onMatchesUpdate: handleMatchesUpdate,
     };
 
     switch (activeCategory) {

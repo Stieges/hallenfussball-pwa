@@ -272,6 +272,16 @@ export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
 
 /**
  * Maps a frontend Match update to Supabase update format
+ *
+ * A2 Fixrunde 1 (Ruling AJ, C1/I1): result/status fields use `'field' in match` (own-property
+ * presence) instead of `match.field !== undefined`, and fall back to `null` -- NOT skip -- when
+ * present but `undefined`. This lets a caller EXPLICITLY clear a result/status column (e.g.
+ * `DangerZone`'s "Ergebnisse zurücksetzen" sets `scoreA: undefined`) by including the key, while a
+ * caller that never mentions the key (e.g. `skipMatch()` only sets `matchStatus`/`skippedReason`/
+ * `skippedAt`) still leaves the other columns untouched, exactly as before. Every current producer
+ * of `MatchUpdate` builds a small object literal with only the keys it cares about (audited:
+ * `MatchExecutionService`, `useScheduleTabActions`, `matchResultStatusDiff`) -- none spreads a full
+ * `Match` object into an update, which is what would make this distinction unsafe.
  */
 export function mapMatchUpdateToSupabase(
   match: Partial<Match>,
@@ -279,47 +289,47 @@ export function mapMatchUpdateToSupabase(
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
-  if (match.scoreA !== undefined) {
-    update.score_a = match.scoreA;
+  if ('scoreA' in match) {
+    update.score_a = match.scoreA ?? null;
   }
-  if (match.scoreB !== undefined) {
-    update.score_b = match.scoreB;
+  if ('scoreB' in match) {
+    update.score_b = match.scoreB ?? null;
   }
-  if (match.matchStatus !== undefined) {
-    update.match_status = match.matchStatus;
+  if ('matchStatus' in match) {
+    update.match_status = match.matchStatus ?? null;
   }
-  if (match.finishedAt !== undefined) {
-    update.actual_end = match.finishedAt;
+  if ('finishedAt' in match) {
+    update.actual_end = match.finishedAt ?? null;
   }
-  if (match.timerStartTime !== undefined) {
-    update.timer_start_time = match.timerStartTime;
+  if ('timerStartTime' in match) {
+    update.timer_start_time = match.timerStartTime ?? null;
   }
-  if (match.timerPausedAt !== undefined) {
-    update.timer_paused_at = match.timerPausedAt;
+  if ('timerPausedAt' in match) {
+    update.timer_paused_at = match.timerPausedAt ?? null;
   }
-  if (match.timerElapsedSeconds !== undefined) {
-    update.timer_elapsed_seconds = match.timerElapsedSeconds;
+  if ('timerElapsedSeconds' in match) {
+    update.timer_elapsed_seconds = match.timerElapsedSeconds ?? null;
   }
-  if (match.overtimeScoreA !== undefined) {
-    update.overtime_score_a = match.overtimeScoreA;
+  if ('overtimeScoreA' in match) {
+    update.overtime_score_a = match.overtimeScoreA ?? null;
   }
-  if (match.overtimeScoreB !== undefined) {
-    update.overtime_score_b = match.overtimeScoreB;
+  if ('overtimeScoreB' in match) {
+    update.overtime_score_b = match.overtimeScoreB ?? null;
   }
-  if (match.penaltyScoreA !== undefined) {
-    update.penalty_score_a = match.penaltyScoreA;
+  if ('penaltyScoreA' in match) {
+    update.penalty_score_a = match.penaltyScoreA ?? null;
   }
-  if (match.penaltyScoreB !== undefined) {
-    update.penalty_score_b = match.penaltyScoreB;
+  if ('penaltyScoreB' in match) {
+    update.penalty_score_b = match.penaltyScoreB ?? null;
   }
-  if (match.decidedBy !== undefined) {
-    update.decided_by = match.decidedBy;
+  if ('decidedBy' in match) {
+    update.decided_by = match.decidedBy ?? null;
   }
-  if (match.skippedReason !== undefined) {
-    update.skipped_reason = match.skippedReason;
+  if ('skippedReason' in match) {
+    update.skipped_reason = match.skippedReason ?? null;
   }
-  if (match.skippedAt !== undefined) {
-    update.skipped_at = match.skippedAt;
+  if ('skippedAt' in match) {
+    update.skipped_at = match.skippedAt ?? null;
   }
 
   // Handle team changes if teamNameToId is provided
