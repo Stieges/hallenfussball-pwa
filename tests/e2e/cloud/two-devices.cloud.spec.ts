@@ -84,6 +84,7 @@ import {
   enterGoal,
   fetchFailedMutationTypes,
   fetchMatchEventIds,
+  fetchQueuedMutationTypes,
   fetchRunningMatchId,
   fetchUntouchedMatchId,
   forceMatchRunning,
@@ -183,6 +184,14 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await ownerPage.waitForLoadState('networkidle');
       await ensureMatchRunning(ownerPage);
 
+      const ownerHomeScore = ownerPage.locator('[data-testid="score-home"]');
+      const ownerAwayScore = ownerPage.locator('[data-testid="score-away"]');
+      // M4 (Review, Fixrunde 1): "Endergebnis" heißt Spielstand, nicht nur Status-Badge -- die
+      // beiden Werte VOR dem Finish festhalten, danach müssen sie beim Owner UNVERÄNDERT neben
+      // dem Badge "BEENDET" stehen (das Finish selbst ändert den Score nicht).
+      const homeScoreBeforeFinish = await ownerHomeScore.textContent();
+      const awayScoreBeforeFinish = await ownerAwayScore.textContent();
+
       await helperPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
       await helperPage.waitForLoadState('networkidle');
       await expect(helperPage.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
@@ -192,14 +201,27 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       // Kein page.reload() -- expect() pollt den DOM selbst. Timeout=3000 IST der Beweis "ohne
       // Neuladen innerhalb von 3s" (Fundament-Zielgröße, wie Test 1 oben). Erfordert den
       // SupabaseLiveMatchRepository-Fix aus diesem Task (siehe Kommentar dort,
-      // `subscribe()`/`isMatchActive`) -- ohne ihn behandelte der Realtime-Kanal die
-      // Spielende-Aktualisierung wie eine Löschung, das Owner-Cockpit blieb bei "LÄUFT" hängen.
+      // `subscribe()`/`isMatchActive`) -- ohne ihn wurde die Spielende-Aktualisierung im
+      // Realtime-Kanal verworfen, das Owner-Cockpit blieb bei "LÄUFT" hängen.
       await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: 3000 });
+      // M4: das Endergebnis selbst, nicht nur das Badge.
+      await expect(ownerHomeScore).toHaveText(homeScoreBeforeFinish ?? '');
+      await expect(ownerAwayScore).toHaveText(awayScoreBeforeFinish ?? '');
 
-      // Kein gescheiterter Turnier-Save im Dead-Letter des Helfers -- der eigentliche Beweis
-      // dieses Tasks (vorher: OptimisticLockError → Dead-Letter, siehe Kopfkommentar).
+      // Kein gescheiterter Turnier-Save im Dead-Letter des Helfers.
       const failedTypes = await fetchFailedMutationTypes(helperPage);
       expect(failedTypes).not.toContain('SAVE_TOURNAMENT');
+
+      // I1 (Review, Fixrunde 1): das Dead-Letter allein beweist den Kernfix NICHT -- die
+      // MutationQueue braucht MAX_RETRIES=5 GETRENNTE Anstöße, bevor ein Eintrag dorthin
+      // wandert; Sekunden nach dem Klick läge ein gescheiterter SAVE_TOURNAMENT noch mit
+      // retryCount>=1 in der NOCH AUSSTEHENDEN Warteschlange `mutation_queue_v1`. `expect.poll`
+      // über ~2s, damit ein NACHTRÄGLICH eingereihter Eintrag (z. B. durch einen verzögerten
+      // Retry) auffällt, statt nur den Sofort-Zustand zu lesen.
+      await expect.poll(() => fetchQueuedMutationTypes(helperPage), {
+        message: 'mutation_queue_v1 darf nach Spielende keine SAVE_TOURNAMENT-Mutation des Helfers enthalten',
+        timeout: 2000,
+      }).not.toContain('SAVE_TOURNAMENT');
     } finally {
       // Rückbau: Spiel wieder laufend setzen, wie im C-NSTART-Test unten -- sonst koppelt dieser
       // Test mit allen anderen Tests dieser Datei, die dasselbe laufende Live-Cup-Spiel brauchen.

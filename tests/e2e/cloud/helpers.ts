@@ -221,6 +221,14 @@ export async function fetchRunningMatchId(tournamentId: string): Promise<string>
  * `match_status=eq.running`, trifft also NICHTS mehr, sobald der Status bereits gewechselt hat)
  * greift dieser Rückbau per ID auch dann, wenn `ManagementTab`s `initialMatchId`-Effekt das Spiel
  * zwischenzeitlich automatisch beendet hat (siehe `fetchUntouchedMatchId()`-Kommentar oben).
+ *
+ * Fixrunde 1 (M4, Review `task-A1-review.md`): setzt zusätzlich `actual_end`, `decided_by`,
+ * `timer_paused_at` und `live_state` zurück auf `null` -- den Baseline-Zustand des Seeds (der das
+ * laufende Spiel per Service-Role-Bypass anlegt, NIE über `MatchExecutionService`, siehe
+ * `scripts/e2e-seed.ts`). Ohne diese vier Felder hinterließ ein `finishMatch()`-Aufruf
+ * (`MatchExecutionService.persistFinalResult` setzt sie) Reste, die kein bestehender Test
+ * bemerkte, aber die Baseline-Annahme "wie frisch geseedet" verletzten -- z. B. bliebe
+ * `decided_by` auf `'regular'` stehen, obwohl das Spiel wieder als laufend gilt.
  */
 export async function forceMatchRunning(matchId: string, homeScore: number, awayScore: number): Promise<void> {
   const { url, headers } = getLocalServiceRoleClient();
@@ -233,6 +241,10 @@ export async function forceMatchRunning(matchId: string, homeScore: number, away
       score_b: awayScore,
       timer_start_time: new Date().toISOString(),
       timer_elapsed_seconds: 300,
+      timer_paused_at: null,
+      actual_end: null,
+      decided_by: null,
+      live_state: null,
     }),
   });
   if (!res.ok) {
@@ -293,6 +305,23 @@ export async function softDeleteMatchEvents(ids: string[]): Promise<void> {
  */
 export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
   const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_failed_v1'));
+  if (!raw) { return []; }
+  const parsed = JSON.parse(raw) as Array<{ type?: string }>;
+  return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
+}
+
+/**
+ * Fixrunde 1 (I1, Review `task-A1-review.md`): Gegenstück zu `fetchFailedMutationTypes()` für die
+ * NOCH AUSSTEHENDE Warteschlange `localStorage['mutation_queue_v1']` (`MutationQueue.ts#storageKey`
+ * -- GenericMutationQueue erreicht das Dead-Letter erst nach `MAX_RETRIES = 5` GETRENNTEN
+ * Anstößen, ein einzelner fehlgeschlagener Versuch kurz nach dem Klick liegt vorher hier, mit
+ * `retryCount` >= 1). Ohne diese zusätzliche Prüfung wäre der A1-Kernfix (kein voller
+ * Turnier-Save mehr nach Spielende) durch den Cloud-E2E-Test NICHT abgesichert -- eine
+ * `SAVE_TOURNAMENT`-Mutation, die scheitert, aber noch nicht 5 Versuche hinter sich hat, tauchte
+ * in `mutation_queue_failed_v1` gar nicht auf.
+ */
+export async function fetchQueuedMutationTypes(page: Page): Promise<string[]> {
+  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_v1'));
   if (!raw) { return []; }
   const parsed = JSON.parse(raw) as Array<{ type?: string }>;
   return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');

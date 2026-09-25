@@ -263,8 +263,13 @@ describe('useMatchExecution — handleFinish ruft nach Spielende KEINEN Turnier-
 
     expect(mockFinishMatch).toHaveBeenCalledWith('tour-1', 'match-1');
     // Zustand wird NUR lokal aktualisiert — kein Turnier-Speicherweg (der für einen Helfer per
-    // RLS scheitern würde, siehe MatchExecutionService.test.ts + task-A1-brief.md).
+    // RLS scheitern würde, siehe MatchExecutionService.test.ts + task-A1-brief.md). Review-Befund
+    // I2 (Fixrunde 1): eine Prüfung `mockTournamentRepository.save).not.toHaveBeenCalled()` stand
+    // hier vorher zusätzlich, hat aber nichts belegt — der Hook hat `tournamentRepository.save`
+    // auch VOR dem A1-Fix nie direkt aufgerufen (der Speicherweg lag in
+    // `useTournamentManager.handleTournamentUpdate`, siehe eigener Test dort:
+    // `useTournamentManager.applyRemote.test.ts`). Belastbar ist hier nur: der Hook ruft den
+    // ÜBERGEBENEN Callback (`onLocalTournamentUpdate`) auf, nicht irgendeinen Speicherpfad selbst.
     expect(onLocalTournamentUpdate).toHaveBeenCalledWith(reloadedTournament);
-    expect(mockTournamentRepository.save).not.toHaveBeenCalled();
   });
 });

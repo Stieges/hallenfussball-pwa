@@ -89,6 +89,15 @@ Fundament-Ziel ≤3s ist damit für den Monitor-Spielstand nicht erreicht (Befun
 übrigen, unangetasteten Public-Cup-Spiele bleiben bewusst
 `scheduled` (nie initialisiert) — das braucht der eigene C-NSTART-Test in derselben Datei.
 
+**Task A1 (Sofortschutz, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/`):** Ein weiterer
+Test in `two-devices.cloud.spec.ts` ("Helfer beendet das laufende Live-Cup-Spiel") beweist, dass
+ein Helfer (Rolle `collaborator`) das laufende Live-Cup-Spiel beenden kann, ohne dass danach ein
+voller Turnier-Save fehlschlägt — geprüft über `localStorage['mutation_queue_v1']` (noch
+ausstehend) UND `mutation_queue_failed_v1` (Dead-Letter) im Browser des Helfers, plus Status UND
+Endstand beim per `?matchId=` gepinnten Owner-Cockpit innerhalb von 3s ohne Reload. Rückbau setzt
+neben Status/Score/Timer auch `actual_end`/`decided_by`/`live_state` sowie das vom Finish neu
+angelegte `match_events`-Ereignis zurück (Diff gegen eine vor dem Finish gelesene Baseline).
+
 `logouttest`/`logouttestMobile` haben bewusst KEINE Turnier-Mitgliedschaft und werden von keinem
 anderen Spec über `asRole()` verwendet — `supabase.auth.signOut()` läuft ohne `scope`-Option
 (Supabase-JS-Standard `scope: 'global'`) und würde sonst jede andere Session desselben Kontos mit
