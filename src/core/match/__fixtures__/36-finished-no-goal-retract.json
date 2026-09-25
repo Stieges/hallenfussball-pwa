@@ -1,0 +1,294 @@
+{
+  "title": "Nach Spielende: Tor/Eigentor nicht zurücknehmbar (B-U12, auch bereits zurückgenommenes -> INVALID_PAYLOAD vor ALREADY_RETRACTED), Karte/Foul/Korrektur schon",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-36-",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "00000036-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 1,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 101000,
+      "section": 1,
+      "clockMs": 100000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000003",
+      "type": "OWN_GOAL",
+      "actor": "helper",
+      "at": 151000,
+      "section": 1,
+      "clockMs": 150000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000004",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 201000,
+      "section": 1,
+      "clockMs": 200000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000005",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 211000,
+      "section": 1,
+      "clockMs": 210000,
+      "targetId": "00000036-0000-4000-8000-000000000004",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000006",
+      "type": "YELLOW_CARD",
+      "actor": "helper",
+      "at": 301000,
+      "section": 1,
+      "clockMs": 300000,
+      "teamId": "teamB",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000007",
+      "type": "FOUL",
+      "actor": "helper",
+      "at": 311000,
+      "section": 1,
+      "clockMs": 310000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000008",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 601000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000009",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 610000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000002",
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000010",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 611000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000003",
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000011",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 612000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000004",
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000012",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 613000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000006",
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000013",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 614000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000007",
+      "payload": {},
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000014",
+      "type": "CORRECTION",
+      "actor": "leitung",
+      "at": 615000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 1,
+          "teamB": 0
+        },
+        "reason": "Eigentor war keins",
+        "basedOn": "00000036-0000-4000-8000-000000000005"
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "00000036-0000-4000-8000-000000000015",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 616000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "00000036-0000-4000-8000-000000000014",
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000036-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000006",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000007",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000008",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000009",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000010",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000011",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000012",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000013",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000014",
+        "status": "accepted"
+      },
+      {
+        "id": "00000036-0000-4000-8000-000000000015",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 600000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 2,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "00000036-0000-4000-8000-000000000015",
+      "decidedBy": "regular",
+      "finishedAt": 601000
+    },
+    "state": {
+      "cards": [],
+      "fouls": []
+    }
+  }
+}

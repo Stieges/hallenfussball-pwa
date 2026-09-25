@@ -1,0 +1,52 @@
+name: Match Engine Parity
+
+# Gleichlauf TS-Rechenfunktion <-> SQL-Zwilling (B3a,
+# .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md, Rulings R1/P2/P3).
+# scripts/match-engine-parity.sh laesst jede Fixture unter src/core/match/__fixtures__/ durch
+# beide Seiten laufen (TS per `node scripts/match-engine-ts-dump.ts`, SQL in einem eigenen
+# Wegwerf-Container supabase/postgres mit Baseline + allen neueren Migrationen) und verlangt
+# SQL == TS == expect. Die Gegenprobe beweist, dass der Check eine Abweichung auch erkennt.
+# Stil wie rls-role-matrix.yml: laeuft nur bei PRs, die die gepruefte Flaeche aendern.
+
+on:
+  pull_request:
+    paths:
+      - 'src/core/match/**'
+      - 'supabase/migrations/**'
+      - 'scripts/match-engine-*'
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - 'scripts/db_privilege_assertions.sql'
+      - '.github/workflows/match-engine-parity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  match-engine-parity:
+    name: SQL-Zwilling == TS-Rechenfunktion (Fixtures, Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # Die TS-Rechenfunktion importiert zod -- sonst nichts aus node_modules.
+        run: npm ci
+
+      - name: Gleichlauf pruefen
+        # Exit 1 bei jeder Abweichung (SQL != TS oder SQL != expect, compute_match_state-Probe,
+        # Rechte-Assertion). Container wird per trap entfernt.
+        run: bash scripts/match-engine-parity.sh
+
+      - name: Gegenprobe (Mutation muss erkannt werden)
+        # Exit 0 NUR, wenn die Mutationen (Uebergangszeile, PUBLIC-EXECUTE) als Abweichung erkannt
+        # werden -- sonst waere der Check zahnlos.
+        run: bash scripts/match-engine-parity.sh --gegenprobe

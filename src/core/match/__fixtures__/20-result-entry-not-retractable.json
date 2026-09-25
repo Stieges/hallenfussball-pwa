@@ -1,0 +1,97 @@
+{
+  "title": "RESULT_ENTRY ist bewusst nicht zurücknehmbar (K10), auch nicht für die Turnierleitung",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-20",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "type": "RESULT_ENTRY",
+      "actor": "leitung",
+      "at": 1000,
+      "section": null,
+      "clockMs": null,
+      "payload": {
+        "scores": {
+          "teamA": 2,
+          "teamB": 0
+        }
+      },
+      "actorUser": "owner"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 2000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "11111111-1111-4111-8111-111111111101",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 3000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "11111111-1111-4111-8111-111111111101",
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "11111111-1111-4111-8111-111111111101",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111102",
+        "status": "rejected",
+        "code": "FORBIDDEN_ACTOR"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111103",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 2,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "11111111-1111-4111-8111-111111111101",
+      "decidedBy": "direct",
+      "finishedAt": 1000
+    }
+  }
+}

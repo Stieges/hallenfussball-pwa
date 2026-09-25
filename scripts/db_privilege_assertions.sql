@@ -146,4 +146,183 @@ SELECT 'positive-anon-execute-is-active-tournament-member',
 UNION ALL
 SELECT 'positive-anon-execute-has-tournament-permission',
        has_function_privilege('anon', 'public.has_tournament_permission(uuid,text)', 'EXECUTE')
+UNION ALL
+-- B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md, R16/R17): match_event_authors
+-- ist NICHT oeffentlich -- anon bekommt GAR KEIN Tabellenrecht (REVOKE ALL), authenticated darf
+-- nur SELECT (die Zeilen selbst filtert has_tournament_permission(..., 'writeMatchData') in der
+-- Policy -- kein INSERT/UPDATE/DELETE, nur append_match_events (B3b) schreibt hier).
+SELECT 'anon-no-select-match-event-authors',
+       NOT has_table_privilege('anon', 'public.match_event_authors', 'SELECT')
+UNION ALL
+SELECT 'authenticated-no-insert-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-match-event-authors',
+       NOT has_table_privilege('authenticated', 'public.match_event_authors', 'DELETE')
+UNION ALL
+-- match_transitions/app_config: anon+authenticated+ci_schema_reader duerfen lesen, niemand darf
+-- per Rolle schreiben (nur eine NEUE Migration schreibt, siehe Migrationskommentare).
+SELECT 'authenticated-no-insert-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-match-transitions',
+       NOT has_table_privilege('authenticated', 'public.match_transitions', 'DELETE')
+UNION ALL
+SELECT 'authenticated-no-insert-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'INSERT')
+UNION ALL
+SELECT 'authenticated-no-update-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'UPDATE')
+UNION ALL
+SELECT 'authenticated-no-delete-app-config',
+       NOT has_table_privilege('authenticated', 'public.app_config', 'DELETE')
+UNION ALL
+SELECT 'positive-authenticated-select-match-event-authors',
+       has_table_privilege('authenticated', 'public.match_event_authors', 'SELECT')
+UNION ALL
+-- Abschluss-Fixrunde (final-review-B.md, I1): ohne diesen GRANT scheitert pg_dump --schema-only
+-- (scripts/db-drift-check.sh, Live-Dump als ci_schema_reader) live mit "permission denied for
+-- table match_event_authors", sobald diese Migration eingespielt ist -- die Tabelle hat (anders
+-- als match_transitions/app_config) keine eigene SELECT-Policy fuer ci_schema_reader, RLS liefert
+-- also weiterhin 0 Zeilen; dieser GRANT sichert nur den Schema-Dump ab, keinen Datenzugriff.
+SELECT 'positive-ci-schema-reader-select-match-event-authors',
+       has_table_privilege('ci_schema_reader', 'public.match_event_authors', 'SELECT')
+UNION ALL
+SELECT 'positive-anon-select-match-transitions',
+       has_table_privilege('anon', 'public.match_transitions', 'SELECT')
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-match-transitions',
+       has_table_privilege('ci_schema_reader', 'public.match_transitions', 'SELECT')
+UNION ALL
+SELECT 'positive-anon-select-app-config',
+       has_table_privilege('anon', 'public.app_config', 'SELECT')
+UNION ALL
+SELECT 'positive-ci-schema-reader-select-app-config',
+       has_table_privilege('ci_schema_reader', 'public.app_config', 'SELECT')
+UNION ALL
+-- B3a (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md, R17; Fixrunde 1: Review
+-- M7, Ruling S12) -- SQL-Rechenfunktion (supabase/migrations/20260928_002_match_engine.sql):
+-- 6 Funktionen in public + 35 interne Teilfunktionen im nicht exponierten Schema match_engine = 41.
+-- compute_match_state ist STABLE, die anderen 40 IMMUTABLE; keine ist SECURITY DEFINER (RLS gilt);
+-- alle haben search_path=public, pg_temp; keine hat EXECUTE fuer PUBLIC (auch nicht implizit:
+-- proacl IS NULL hiesse Standard-EXECUTE fuer PUBLIC); das Schema match_engine hat kein USAGE fuer
+-- PUBLIC; in public liegt kein match__-Helfer mehr. Die Zahlen sind fest, damit ein fehlender
+-- Einspielvorgang nicht vakuum-gruen wird -- neue Helfer muessen sie mitziehen. B3b
+-- (20260928_003) fuegt sechs IMMUTABLE-Helfer in match_engine hinzu: 41 + 6 = 47 (46 IMMUTABLE).
+SELECT 'compute-match-state-security-invoker',
+       NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
+UNION ALL
+SELECT 'compute-match-state-stable',
+       (SELECT p.provolatile = 's' FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
+UNION ALL
+SELECT 'match-apply-event-immutable',
+       (SELECT p.provolatile = 'i' FROM pg_proc p
+         WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
+UNION ALL
+SELECT 'match-engine-function-count-47',
+       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
+UNION ALL
+SELECT 'match-engine-immutable-count-46',
+       (SELECT count(*) = 46 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
+UNION ALL
+SELECT 'match-engine-no-security-definer',
+       (SELECT count(*) = 0 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.prosecdef)
+UNION ALL
+SELECT 'match-engine-search-path-all-47',
+       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
+UNION ALL
+SELECT 'match-engine-functions-no-public-execute',
+       (SELECT count(*) = 0 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND (p.proacl IS NULL OR EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)))
+UNION ALL
+SELECT 'match-engine-schema-no-public-usage',
+       (SELECT n.nspacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(n.nspacl) a WHERE a.grantee = 0)
+          FROM pg_namespace n WHERE n.nspname = 'match_engine')
+UNION ALL
+SELECT 'no-match-helpers-in-public',
+       NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                    WHERE n.nspname = 'public' AND p.proname LIKE 'match\_\_%')
+UNION ALL
+SELECT 'positive-anon-execute-compute-match-state',
+       has_function_privilege('anon', 'public.compute_match_state(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-compute-match-state',
+       has_function_privilege('authenticated', 'public.compute_match_state(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-match-apply-event',
+       has_function_privilege('authenticated', 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-anon-usage-match-engine',
+       has_schema_privilege('anon', 'match_engine', 'USAGE')
+UNION ALL
+SELECT 'positive-anon-execute-match-engine-payload-valid',
+       has_function_privilege('anon', 'match_engine.payload_valid(jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+-- B3b (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md, R17) -- Schreibweg
+-- (supabase/migrations/20260928_003_append_match_events.sql): append_match_events ist SECURITY
+-- DEFINER mit festem search_path, EXECUTE nur authenticated (nicht PUBLIC, nicht anon);
+-- server_time ist STABLE und fuer anon + authenticated ausfuehrbar; die sechs B3b-Helfer in
+-- match_engine braucht nur der Definer (kein EXECUTE fuer anon/authenticated).
+SELECT 'append-match-events-security-definer',
+       (SELECT p.prosecdef FROM pg_proc p
+         WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'append-match-events-search-path',
+       (SELECT p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+         WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'append-match-events-no-public-execute',
+       (SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+          FROM pg_proc p WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'anon-no-execute-append-match-events',
+       NOT has_function_privilege('anon', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'server-time-stable',
+       (SELECT p.provolatile = 's' AND NOT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.server_time()'::regprocedure)
+UNION ALL
+-- Fixrunde 1 (Review M7): alle sechs B3b-Helfer fuer anon, authenticated UND service_role gesperrt.
+SELECT 'b3b-helpers-no-execute-anon-authenticated-service-role',
+       NOT EXISTS (
+         SELECT 1
+           FROM unnest(ARRAY['match_engine.normalize_uuid(jsonb)', 'match_engine.cfg_num(jsonb)',
+                             'match_engine.envelope(jsonb,text,text)', 'match_engine.dedupe_key(jsonb)',
+                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb)',
+                             'match_engine.cache_columns(jsonb,jsonb)']) AS f(sig)
+          CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
+          WHERE has_function_privilege(r.role, f.sig, 'EXECUTE'))
+UNION ALL
+-- Fixrunde 1 (Nachtrag C3): service_role hat keinen EXECUTE auf append_match_events -- ohne
+-- auth.uid() waere der Aufruf ohnehin wirkungslos (42501); least privilege.
+SELECT 'service-role-no-execute-append-match-events',
+       NOT has_function_privilege('service_role', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-append-match-events',
+       has_function_privilege('authenticated', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-anon-execute-server-time',
+       has_function_privilege('anon', 'public.server_time()', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-server-time',
+       has_function_privilege('authenticated', 'public.server_time()', 'EXECUTE')
 ;

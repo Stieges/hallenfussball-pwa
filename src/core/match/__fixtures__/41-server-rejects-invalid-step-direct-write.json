@@ -1,0 +1,117 @@
+{
+  "title": "Unzulässiger Schritt wird auch am Server abgelehnt: Spiel 7 ist beendet, ein Tor-Ereignis (auch unter Umgehung der App direkt an die Datenbank gesendet) wird abgelehnt, der Spielstand bleibt unverändert -- Rechen-Seite für B3b (Helfer-Direktweg selbst ist B2-Harness); actorUser gesetzt für die RPC-Testnutzer-Zuordnung",
+  "szenario": "Unzulässiger Schritt wird auch am Server abgelehnt",
+  "ctx": {
+    "matchId": "match-41",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "00000041-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000041-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 100000,
+      "teamId": "teamA",
+      "payload": {}
+    },
+    {
+      "id": "00000041-0000-4000-8000-000000000003",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000041-0000-4000-8000-000000000004",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4000,
+      "section": 1,
+      "clockMs": 610000,
+      "teamId": "teamB",
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000041-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "00000041-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "00000041-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "00000041-0000-4000-8000-000000000004",
+        "status": "rejected",
+        "code": "MATCH_FINISHED"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 600000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "00000041-0000-4000-8000-000000000002",
+      "decidedBy": "regular",
+      "finishedAt": 3000
+    }
+  }
+}

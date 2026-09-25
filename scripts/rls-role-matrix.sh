@@ -180,6 +180,16 @@ DECLINED_EXPIRED_FILE="$(find_migration 20260924_003)"
 # T1: löst den früheren Behelf ab (siehe weiter unten) — der Trigger auf auth.users kommt jetzt
 # aus einer echten Migration, wird unconditional (wie der Behelf vorher) angewendet.
 AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
+# B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): fügt u.a. die Berechtigung
+# 'leadMatches' zu role_permissions hinzu (INSERT ('co-admin','leadMatches')) und seedet
+# public.match_transitions aus src/core/match/matchTransitions.json. ANDERS als AUTH_TRIGGER_FILE
+# NICHT unconditional -- an WITH_R5 gebunden (siehe deren Anwendung weiter unten), weil diese
+# Migration selbst ein ALTER/INSERT auf role_permissions enthält und ohne CENTRAL_PERMISSIONS_FILE
+# (WITH_R5) scheitern würde (Review M3, task-B2-review.md). Bei WITH_R5=0 (z. B. --without-r5)
+# prüft dieser Lauf 20260928_001 also GAR NICHT -- die Gleichlauf-Prüfungen unten
+# (role_permissions/match_transitions vs. JSON) sind entsprechend ebenfalls an WITH_R5 gebunden.
+MATCH_EVENT_LOG_FILE="$(find_migration 20260928_001)"
+MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
@@ -245,6 +255,8 @@ done
 [[ -f "$CENTRAL_PERMISSIONS_FILE" ]] || { echo "::error::Migration fehlt: $CENTRAL_PERMISSIONS_FILE" >&2; exit 1; }
 [[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
 [[ -f "$AUTH_TRIGGER_FILE" ]] || { echo "::error::Migration fehlt: $AUTH_TRIGGER_FILE" >&2; exit 1; }
+[[ -f "$MATCH_EVENT_LOG_FILE" ]] || { echo "::error::Migration fehlt: $MATCH_EVENT_LOG_FILE" >&2; exit 1; }
+[[ -f "$MATCH_TRANSITIONS_FILE" ]] || { echo "::error::Übergangstabelle fehlt: $MATCH_TRANSITIONS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -366,6 +378,17 @@ if [[ "$WITH_R7" -eq 1 ]]; then
   psql_stdin < "$DECLINED_EXPIRED_FILE"
 fi
 
+# B2 (siehe Kommentar an MATCH_EVENT_LOG_FILE oben): braucht has_tournament_permission()/
+# role_permissions aus CENTRAL_PERMISSIONS_FILE (WITH_R5) -- deshalb erst HIER, nach allen
+# R5/R6/R7-Bloecken, additiv und unabhaengig von WITH_R6/WITH_R7 (nur role_permissions-Zeile
+# 'leadMatches' braucht die Tabelle, match_transitions/app_config/match_events-Aenderungen sind
+# davon unabhaengig). Ohne WITH_R5 existiert public.role_permissions nicht -- die Migration
+# scheitert dann an ihrem eigenen ALTER/INSERT auf role_permissions, deshalb an WITH_R5 gebunden.
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo "Migration einspielen: $(basename "$MATCH_EVENT_LOG_FILE")" >&2
+  psql_stdin < "$MATCH_EVENT_LOG_FILE"
+fi
+
 if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
   MODE_LABEL="nachher (Baseline + alle acht Migrationen)"
 elif [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 ]]; then
@@ -391,6 +414,12 @@ if [[ "$WITH_R5" -eq 1 ]]; then
   # role_permissions_select_ci_schema_reader für die CI-Leserolle) und ist selbst RLS-aktiv.
   EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 2))
   EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 1))
+  # B2 (MATCH_EVENT_LOG_FILE, an WITH_R5 gebunden -- siehe Kommentar an dessen Anwendung oben):
+  # drei neue RLS-aktive Tabellen -- match_event_authors (1 Policy: match_event_authors_select),
+  # match_transitions (2 Policies: match_transitions_select, match_transitions_select_ci_schema_reader),
+  # app_config (2 Policies: app_config_select, app_config_select_ci_schema_reader).
+  EXPECTED_POLICY_COUNT=$((EXPECTED_POLICY_COUNT + 5))
+  EXPECTED_RLS_TABLE_COUNT=$((EXPECTED_RLS_TABLE_COUNT + 3))
 fi
 POLICY_COUNT="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
   "SELECT count(*) FROM pg_policies WHERE schemaname = 'public';")"
@@ -1371,6 +1400,28 @@ if [[ "$WITH_R5" -eq 1 ]]; then
     echo "gleichlauf-role_permissions-vs-json: denied (weicht ab)"
     echo "--- Diff (links: rolePermissions.json, rechts: DB) ---"
     diff <(echo "$JSON_ROLE_PERMISSIONS") <(echo "$DB_ROLE_PERMISSIONS") || true
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+fi
+
+# --- 7c4. B2 (task-B2-brief.md, Abschnitt 2) — Gleichlauf: public.match_transitions (DB) MUSS
+# byte-/zeilengleich zu src/core/match/matchTransitions.json sein. Analog 7c3. Nur sinnvoll, wenn
+# MATCH_EVENT_LOG_FILE eingespielt wurde (an WITH_R5 gebunden, siehe Kommentar an dessen
+# Anwendung oben).
+if [[ "$WITH_R5" -eq 1 ]]; then
+  echo ""
+  echo "=== Gleichlauf match_transitions (DB) vs. matchTransitions.json — $MODE_LABEL ==="
+  DB_MATCH_TRANSITIONS="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
+    "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" | sort)"
+  JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' "$MATCH_TRANSITIONS_FILE" | sort)"
+  TOTAL=$((TOTAL + 1))
+  if [[ "$DB_MATCH_TRANSITIONS" == "$JSON_MATCH_TRANSITIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
+    echo "gleichlauf-match_transitions-vs-json: allowed (identisch, $ROW_COUNT Zeilen)"
+  else
+    echo "gleichlauf-match_transitions-vs-json: denied (weicht ab)"
+    echo "--- Diff (links: matchTransitions.json, rechts: DB) ---"
+    diff <(echo "$JSON_MATCH_TRANSITIONS") <(echo "$DB_MATCH_TRANSITIONS") || true
     MISMATCHES=$((MISMATCHES + 1))
   fi
 fi

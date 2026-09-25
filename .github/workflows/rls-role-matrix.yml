@@ -25,6 +25,12 @@ on:
       - 'scripts/lib/migrations-since-baseline.sh'
       - '.github/workflows/rls-role-matrix.yml'
       - 'src/features/auth/permissions/rolePermissions.json'
+      # B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): Ereignis-Log-Schema --
+      # derselbe Wegwerf-Container-Job prüft jetzt zusätzlich scripts/match-event-log-check.sh.
+      # Die Übergangstabelle ist die zweite fachliche Quelle, deren Änderung diesen Job auslösen
+      # muss (Seed von public.match_transitions, Gleichlauf-Beweis in Probe 7 des Harnesses).
+      - 'src/core/match/matchTransitions.json'
+      - 'scripts/match-event-log-check.sh'
 
 permissions:
   contents: read
@@ -44,3 +50,20 @@ jobs:
         # weiteres Zutun rot. Container ist eine Wegwerf-Instanz, wird per trap am Skriptende
         # entfernt; berührt nichts außerhalb von sich selbst.
         run: bash scripts/rls-role-matrix.sh
+
+      - name: Ereignis-Log-Schema prüfen (B2)
+        # Zweiter, unabhängiger Wegwerf-Container (eigener Skriptlauf, eigener trap) -- prüft
+        # supabase/migrations/20260928_001_match_event_log.sql: Guard-Trigger, Alt-Trigger-
+        # Entfernung, match_event_authors/match_transitions/app_config, Realtime-Publikation,
+        # seq-Backfill. Siehe scripts/match-event-log-check.sh (Kopfkommentar) und
+        # task-B2-report.md für die Gegenprobe ohne diese Migration.
+        run: bash scripts/match-event-log-check.sh
+
+      - name: Ereignis-Log-Schema — Guard-Gegenprobe (Ruling G3, Abschluss-Fixrunde M5)
+        # Dritter, unabhängiger Wegwerf-Container -- Migration vollständig einspielen, danach
+        # DROP TRIGGER match_events_guard_engine_rows: alle Guard-Proben (2a-2e, 4a-4b, 4f3, 4h)
+        # müssen auf "ok" kippen, sonst wäre im Normalmodus ein anderer Mechanismus (CHECK/FK)
+        # statt des Guards die tatsächliche Ursache der Ablehnung. Lief bisher nur lokal
+        # (final-review-B.md, M5: docs/TESTUMGEBUNG.md nannte den Modus, die CI führte ihn nicht
+        # aus).
+        run: bash scripts/match-event-log-check.sh --without-guard

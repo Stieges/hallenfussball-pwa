@@ -229,14 +229,84 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   (Pfad-Trigger, kein Push).
 - **Was:** `bash scripts/rls-role-matrix.sh` im Default-Modus — das Skript startet seinen
   eigenen Wegwerf-Postgres-Container (`supabase/postgres:17.6.1.063`), braucht dafür keinen
-  laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (207 geprüfte Zellen,
-  Stand T1).
+  laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (208 geprüfte Zellen,
+  Stand B2 -- vorher 207/T1, B2 fügt den Gleichlauf-Check `match_transitions` vs.
+  `matchTransitions.json` hinzu, siehe unten). Zweiter Schritt (`bash
+  scripts/match-event-log-check.sh`, B2, `.superpowers/sdd/2026-09-25-pr-b-schreibweg/
+  task-B2-brief.md`) startet einen EIGENEN Wegwerf-Container und prüft das Ereignis-Log-Schema
+  (`supabase/migrations/20260928_001_match_event_log.sql`): Alt-Trigger weg, Guard-Trigger
+  (Direktweg abgedichtet, current_user-Muster statt set_config-GUC), `match_event_authors`/
+  `match_transitions`/`app_config`, Realtime-Publikation, `seq`-Backfill -- Proben inkl.
+  Gegenprobe ohne die Migration (`--without-migration`, Proben 1/2a müssen dann ROT sein). Ein
+  dritter CI-Schritt (Abschluss-Fixrunde, M5) läuft zusätzlich mit `--without-guard` (Ruling G3,
+  B2-Fixrunde 1): Migration einspielen, dann `DROP TRIGGER match_events_guard_engine_rows` --
+  alle Guard-Proben (2a-2e, 4a-4b, 4f3, 4h) müssen dabei auf "ok" kippen, sonst würde im
+  Normalmodus ein anderer Mechanismus als der Guard selbst die Ablehnung erklären.
 - **Zeitbudget:** `timeout-minutes: 10` (kein Vorgabewert aus dem Brief, eigene Einschätzung).
 - **Roten Lauf lesen:** Exit ≠ 0 macht den Job automatisch rot, sobald eine Zelle von der
   Rechtetabelle abweicht — die Zusammenfassung mit der genauen Abweichungszahl steht direkt im
   Job-Log (kein separates Artefakt nötig). Lokale Gegenprobe (T6): eine bewusst falsche Zeile in
   `rolePermissions.json` (`collaborator` bekommt zusätzlich `manageMembers`) lässt das Skript mit
-  4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0.
+  4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0. Lokale
+  Gegenprobe (B2): `bash scripts/match-event-log-check.sh --without-migration` zeigt die
+  erwarteten ROT-Proben, Exit bleibt 0 (das Skript bewertet die Gegenprobe selbst, siehe dessen
+  Kopfkommentar).
+
+### `.github/workflows/match-engine-parity.yml` (Gleichlauf-Skript, B3a)
+
+- **Wozu:** Die Spiel-Rechenfunktion existiert zweimal — in TS (`src/core/match/`, Referenz) und
+  als SQL-Zwilling (`supabase/migrations/20260928_002_match_engine.sql`: `match_apply_event`,
+  `match_reduce`/`match_continue`, `match_server_state`, `compute_match_state`). Das Skript
+  `scripts/match-engine-parity.sh` erzwingt, dass beide dasselbe entscheiden
+  (`.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md`).
+- **Was:** Jede Fixture unter `src/core/match/__fixtures__/` läuft durch beide Seiten. TS über
+  `node scripts/match-engine-ts-dump.ts` (natives Type-Stripping, Node ≥ 22.18, `.nvmrc` = 24;
+  zwei kleine Modul-Hooks ergänzen `.ts` bei Importen ohne Endung und laden die JSON-Tabelle),
+  SQL in einem eigenen Wegwerf-Container (`supabase/postgres:17.6.1.063`, Baseline + alle neueren
+  Migrationen, `20260928_002` zweimal eingespielt = Idempotenz) mit den Übergängen aus der Tabelle
+  `match_transitions` (prüft den Seed mit). Verlangt wird SQL == TS **und** SQL == `expect`
+  (Ergebnisse je Ereignis: id/status/code, detail wenn erwartet; `serverState` vollständig).
+  Zusätzlich: `compute_match_state`-Probe für drei Fixtures (Engine-Zeilen per SECURITY-DEFINER-
+  Testfunktion, Eigentümer bekommt den erwarteten Zustand, Fremder/anon `NULL`, Alt-Zeile und
+  `review_state = 'pending'` werden ignoriert), Seed-Gleichheit `match_transitions` (Container) ==
+  `matchTransitions.json` und `scripts/db_privilege_assertions.sql` gegen den migrierten Container
+  (alle Zeilen `|t`). Die internen Teilfunktionen liegen im Schema `match_engine`, das die API nicht
+  ausliefert (`supabase/config.toml` `[api] schemas = public, graphql_public`).
+- **Lokal:** `bash scripts/match-engine-parity.sh` (Docker + Node + jq nötig, ca. 1 Minute).
+  Ausgabe je Fixture `OK`/`ABWEICHUNG` mit Diff, am Ende die Gleichlauf-Tabelle; Exit ≠ 0 bei jeder
+  Abweichung. Gegenprobe: `bash scripts/match-engine-parity.sh --gegenprobe` ändert im Container
+  die Übergangszeile `(running, GOAL)` auf `leitung`, spielt `compute_match_state` ohne den
+  `review_state`-Filter ein und gibt `match_engine.num` EXECUTE für PUBLIC. Exit 0 nur, wenn jede
+  der vier Kategorien (Fixtures, Seed, compute_match_state-Probe, Rechte) einzeln ROT ist.
+- **Wann (CI):** Pull Requests, die `src/core/match/**`, `supabase/migrations/**`,
+  `scripts/match-engine-*`, `scripts/lib/migrations-since-baseline.sh`,
+  `scripts/db_privilege_assertions.sql` oder den Workflow selbst ändern. Zwei Schritte: normaler
+  Lauf, dann Gegenprobe. `timeout-minutes: 15`.
+- **Neue Fixture / Regeländerung:** Eine neue Fixture wird automatisch mitgeprüft. Ändert sich die
+  TS-Logik, muss dieselbe Änderung in einer NEUEN Migration (`CREATE OR REPLACE`) in SQL folgen,
+  sonst wird der Job rot.
+
+### `.github/workflows/append-match-events.yml` (Schreibweg, B3b)
+
+- **Wozu:** `append_match_events` (`supabase/migrations/20260928_003_append_match_events.sql`) ist
+  der einzige Weg, auf dem Geräte ab PR C Ereignisse schreiben. Das Skript
+  `scripts/append-match-events-check.sh` beweist ihn im Wegwerf-Container
+  (`.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md`).
+- **Was:** Testnutzer owner, coadmin, helper (collaborator), trainer, stranger und anon. Jede
+  Fixture läuft durch die RPC: Turnier, Teams und Spiel werden so angelegt, dass die vom Server
+  gesetzten Regeln den Fixture-Regeln entsprechen. Verlangt werden `results` == `expect.results`,
+  `compute_match_state` == `expect.serverState` == Zustand der letzten Antwort, und der
+  Zwischenspeicher auf `matches` passt zum Zustand. Dazu Proben für Rechte, Idempotenz, Kaskade,
+  zwei gleichzeitige Sitzungen, `CLIENT_OUTDATED`, `server_time()` für anon, den Guard aus B2,
+  Großbuchstaben-IDs (S10), echte Epoch-ms (S11), den Umschlag (S9), die Regelableitung und
+  `scripts/db_privilege_assertions.sql`. Die Laufzeit eines Aufrufs bei 100 gespeicherten
+  Ereignissen wird nur ausgegeben.
+- **Lokal:** `bash scripts/append-match-events-check.sh` (Docker + jq, ca. 1 Minute, läuft auch mit
+  der bash 3.2 von macOS). Gegenproben: `--without-migration` (ohne die B3b-Migration muss jede
+  Kategorie ROT sein) und `--gegenprobe` (Akteursermittlung `leadMatches` → `writeMatchData`,
+  Fixtures und Rechte müssen ROT sein). Beide enden nur dann mit Exit 0.
+- **Wann (CI):** gleicher Pfadfilter wie `match-engine-parity.yml` plus das Skript selbst; drei
+  Schritte (normal, Gegenprobe A, Gegenprobe B), `timeout-minutes: 20`.
 
 ### `.github/workflows/visual.yml`
 

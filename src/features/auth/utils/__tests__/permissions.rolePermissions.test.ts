@@ -49,6 +49,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'restructure',
   'deleteTournament',
   'manageMembers',
+  'leadMatches',
 ];
 
 // Rollen aus der JSON (co-admin, collaborator, trainer, viewer) + 'owner', der bewusst NICHT in

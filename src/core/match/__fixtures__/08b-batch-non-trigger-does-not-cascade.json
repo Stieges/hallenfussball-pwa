@@ -1,0 +1,103 @@
+{
+  "title": "Ein abgelehnter Eintrag hält die anderen nicht auf",
+  "szenario": "Ein abgelehnter Eintrag hält die anderen nicht auf",
+  "ctx": {
+    "matchId": "match-08b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "batch",
+  "events": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "type": "YELLOW_CARD",
+      "actor": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 10000,
+      "teamId": "unbekanntes-team",
+      "payload": {},
+      "actorUser": "helper"
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 20000,
+      "teamId": "teamA",
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "11111111-1111-4111-8111-111111111101",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111102",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111103",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "11111111-1111-4111-8111-111111111103",
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

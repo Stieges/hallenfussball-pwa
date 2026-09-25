@@ -9,6 +9,16 @@
 # genau die Lücke, die von Mai bis September 2026 niemand bemerkt hat. Dieses Skript
 # vergleicht das tatsächliche Schema, nicht Typen.
 #
+# Abschluss-Fixrunde (final-review-B.md, I3): beide pg_dump-Aufrufe (rekonstruiert UND live,
+# plus der --linked-Fallback) laufen jetzt mit `--schema=public --schema=match_engine` statt nur
+# `--schema=public` — die 47 Funktionen der SQL-Rechenfunktion (B3a, 20260928_002_match_engine.sql)
+# liegen in einem eigenen, nicht über die API exponierten Schema (Ruling S12) und wären sonst für
+# diesen Check unsichtbar gewesen: ein Hotfix am Funktionsrumpf im Dashboard hätte den Drift-Check
+# nie rot gemacht. db_catalog_counts.py braucht dafür keine Änderung — seine Regex-Zählung für
+# Funktionen ist bereits schema-unabhängig (`^CREATE (?:OR REPLACE )?FUNCTION\b`, siehe dortiger
+# Kopfkommentar), match_engine enthält keine Tabellen/Policies/Trigger/Indizes/RLS-Zeilen, die die
+# öffentlich-schema-spezifischen Regex-Muster (TABLE_RE u.a.) falsch zählen könnten.
+#
 # Vergleichsziel ist NUR die Baseline (supabase/migrations/00000000000000_baseline_live_schema.sql)
 # plus die Migrationsdateien, die nach ihr hinzukommen — NICHT alle 23 Bestandsmigrationen.
 # Grund: Drei Bestandsdateien (20260121_005_anonymous_limit.sql,
@@ -194,7 +204,7 @@ DUMP_OK=0
 for attempt in 1 2 3 4 5; do
   if docker exec -e PGPASSWORD=postgres "$CONTAINER_NAME" \
     pg_dump -U postgres -h 127.0.0.1 -d postgres \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$RECON_RAW" 2>"$WORKDIR/recon_dump.log"; then
     DUMP_OK=1
     break
@@ -227,7 +237,7 @@ elif [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo "Live-Schema ueber die nur-lesende Rolle (SUPABASE_DB_READONLY_URL)."
   docker exec "$CONTAINER_NAME" \
     pg_dump --dbname="$SUPABASE_DB_READONLY_URL" \
-    --schema=public --schema-only --no-owner --no-privileges \
+    --schema=public --schema=match_engine --schema-only --no-owner --no-privileges \
     > "$LIVE_RAW" 2>"$WORKDIR/live_dump.log" \
     || { echo "::error::Konnte Live-Schema nicht dumpen (nur-lesende Rolle):" >&2
          echo "::error::Faellt hier 'permission denied for table X' auf, ist X neu und die Rolle" >&2
@@ -244,7 +254,7 @@ else
   fi
   echo "Hinweis: SUPABASE_DB_READONLY_URL nicht gesetzt, weiche auf --linked aus."
   echo "Hinweis: Das braucht einen Token mit weitergehenden Rechten als der Zweck verlangt."
-  (cd "$REPO_ROOT" && supabase db dump --schema public --linked -f "$LIVE_RAW") \
+  (cd "$REPO_ROOT" && supabase db dump --schema public --schema match_engine --linked -f "$LIVE_RAW") \
     >"$WORKDIR/live_dump.log" 2>&1 \
     || { echo "::error::Konnte Live-Schema nicht dumpen:" >&2; cat "$WORKDIR/live_dump.log" >&2; exit 1; }
 fi
@@ -300,6 +310,47 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-ci-schema-reader-select-role-permissions"
   "positive-anon-execute-is-active-tournament-member"
   "positive-anon-execute-has-tournament-permission"
+  "anon-no-select-match-event-authors"
+  "authenticated-no-insert-match-event-authors"
+  "authenticated-no-update-match-event-authors"
+  "authenticated-no-delete-match-event-authors"
+  "authenticated-no-insert-match-transitions"
+  "authenticated-no-update-match-transitions"
+  "authenticated-no-delete-match-transitions"
+  "authenticated-no-insert-app-config"
+  "authenticated-no-update-app-config"
+  "authenticated-no-delete-app-config"
+  "positive-authenticated-select-match-event-authors"
+  "positive-ci-schema-reader-select-match-event-authors"
+  "positive-anon-select-match-transitions"
+  "positive-ci-schema-reader-select-match-transitions"
+  "positive-anon-select-app-config"
+  "positive-ci-schema-reader-select-app-config"
+  "compute-match-state-security-invoker"
+  "compute-match-state-stable"
+  "match-apply-event-immutable"
+  "match-engine-function-count-47"
+  "match-engine-immutable-count-46"
+  "match-engine-no-security-definer"
+  "match-engine-search-path-all-47"
+  "match-engine-functions-no-public-execute"
+  "match-engine-schema-no-public-usage"
+  "no-match-helpers-in-public"
+  "positive-anon-execute-compute-match-state"
+  "positive-authenticated-execute-compute-match-state"
+  "positive-authenticated-execute-match-apply-event"
+  "positive-anon-usage-match-engine"
+  "positive-anon-execute-match-engine-payload-valid"
+  "append-match-events-security-definer"
+  "append-match-events-search-path"
+  "append-match-events-no-public-execute"
+  "anon-no-execute-append-match-events"
+  "server-time-stable"
+  "b3b-helpers-no-execute-anon-authenticated-service-role"
+  "service-role-no-execute-append-match-events"
+  "positive-authenticated-execute-append-match-events"
+  "positive-anon-execute-server-time"
+  "positive-authenticated-execute-server-time"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
@@ -387,10 +438,39 @@ else
   echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
+# --- 4c2. B2 (task-B2-brief.md, Abschnitt 2): match_transitions-Inhalt vs.
+# src/core/match/matchTransitions.json -- analog zu 4c (role_permissions), gleiches Muster:
+# Textdiff/Katalogzählung sehen nur die Schema-Definition der Tabelle, nie ihren Zeileninhalt.
+# ci_schema_reader braucht dafür die eigene Policy "match_transitions_select_ci_schema_reader"
+# (supabase/migrations/20260928_001_match_event_log.sql).
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Gleichlauf match_transitions (DB, live) vs. matchTransitions.json ---"
+  DB_MATCH_TRANSITIONS_LIVE="$(docker exec -i "$CONTAINER_NAME" psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" \
+    2>"$WORKDIR/match_transitions_live.log" | sort)" \
+    || { echo "::error::Konnte public.match_transitions nicht live lesen (ci_schema_reader):" >&2
+         cat "$WORKDIR/match_transitions_live.log" >&2; exit 1; }
+  JSON_MATCH_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' \
+    "$REPO_ROOT/src/core/match/matchTransitions.json" | sort)"
+  if [[ "$DB_MATCH_TRANSITIONS_LIVE" == "$JSON_MATCH_TRANSITIONS" ]]; then
+    ROW_COUNT="$(wc -l <<<"$JSON_MATCH_TRANSITIONS" | tr -d ' ')"
+    echo "Gleichlauf grün: match_transitions (live) und matchTransitions.json stimmen überein ($ROW_COUNT Zeilen)."
+  else
+    echo "::error::match_transitions (live) weicht von matchTransitions.json ab:" >&2
+    echo "### Diff (links: matchTransitions.json, rechts: DB live)" >&2
+    diff <(echo "$JSON_MATCH_TRANSITIONS") <(echo "$DB_MATCH_TRANSITIONS_LIVE") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Gleichlauf match_transitions vs. matchTransitions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
 # --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
 # task-T4-review.md Fixrunde 1) ------------------------------------------------------------
 # `supabase_realtime` ist eine Publication, kein Schema-Objekt in `public` -- Textdiff und
-# Katalogzählung unten (beide --schema=public) sehen sie nie, ein fehlender oder zusätzlicher
+# Katalogzählung unten (beide --schema=public/match_engine, aber keine Publication-Katalogobjekte) sehen sie nie, ein fehlender oder zusätzlicher
 # Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
 # Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
 # Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält

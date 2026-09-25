@@ -2,7 +2,24 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-24
+ * Letzte Regeneration: 2026-09-28 (B3b, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md:
+ * append_match_events + server_time aus 20260928_003_append_match_events.sql; davor B3a -- Funktionen
+ * der SQL-Rechenfunktion aus 20260928_002_match_engine.sql, Fixrunde 1/Ruling S12: nur die sechs
+ * public-Funktionen, die internen Helfer liegen im nicht exponierten Schema match_engine; davor B2
+ * Fixrunde 1, Ruling G4)
+ * -- ausnahmsweise NICHT aus Produktion (B2: `--local`; B3a: `--db-url` gegen einen Wegwerf-Container
+ * supabase/postgres mit Baseline + allen neueren Migrationen; nicht `--project-id`), weil
+ * supabase/migrations/20260928_001_match_event_log.sql, 20260928_002_match_engine.sql und
+ * 20260928_003_append_match_events.sql noch NICHT in Produktion eingespielt sind
+ * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
+ * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten).
+ * WICHTIG (I4, korrigiert): Der Typ-Drift-Check (.github/workflows/supabase-drift-check.yml, Job
+ * "drift-check") vergleicht die per `--project-id` erzeugten Typen byteweise nach `strip_header`
+ * -- er bleibt deshalb ROT, bis (1) diese Migration in Produktion angewendet UND (2) diese Datei
+ * danach regulär mit `--project-id` (nicht `--local`) neu erzeugt wurde. Das ist erwartet, keine
+ * Aussage über das Schema selbst (scripts/db-drift-check.sh prüft das Schema unabhängig davon).
+ * Controller-Checkliste beim Live-Apply: (1) Migration anwenden, (2) diese Datei mit
+ * --project-id neu erzeugen und committen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -25,6 +42,21 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          key: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       match_corrections: {
         Row: {
           corrected_at: string | null
@@ -78,9 +110,56 @@ export type Database = {
           },
         ]
       }
+      match_event_authors: {
+        Row: {
+          base_state: Json | null
+          created_at: string | null
+          device_id: string | null
+          event_id: string
+          tournament_id: string
+          user_id: string | null
+        }
+        Insert: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id: string
+          tournament_id: string
+          user_id?: string | null
+        }
+        Update: {
+          base_state?: Json | null
+          created_at?: string | null
+          device_id?: string | null
+          event_id?: string
+          tournament_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_event_authors_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_event_authors_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_events: {
         Row: {
+          base_seq: number | null
+          client_time: string | null
+          clock_ms: number | null
+          control_epoch: number | null
           created_at: string | null
+          event_format: number | null
           id: string
           incomplete: boolean | null
           is_deleted: boolean | null
@@ -90,15 +169,25 @@ export type Database = {
           payload: Json
           period: string | null
           player_id: string | null
+          recorded_at: string | null
+          review_state: string | null
           score_away: number
           score_home: number
+          section: number | null
+          seq: number
+          target_event_id: string | null
           team_id: string | null
           timestamp_seconds: number
           type: string
           version: number
         }
         Insert: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -108,15 +197,25 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away: number
           score_home: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds: number
           type: string
           version?: number
         }
         Update: {
+          base_seq?: number | null
+          client_time?: string | null
+          clock_ms?: number | null
+          control_epoch?: number | null
           created_at?: string | null
+          event_format?: number | null
           id?: string
           incomplete?: boolean | null
           is_deleted?: boolean | null
@@ -126,8 +225,13 @@ export type Database = {
           payload?: Json
           period?: string | null
           player_id?: string | null
+          recorded_at?: string | null
+          review_state?: string | null
           score_away?: number
           score_home?: number
+          section?: number | null
+          seq?: never
+          target_event_id?: string | null
           team_id?: string | null
           timestamp_seconds?: number
           type?: string
@@ -149,6 +253,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "match_events_target_event_id_fkey"
+            columns: ["target_event_id"]
+            isOneToOne: false
+            referencedRelation: "match_events"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "match_events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -156,6 +267,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      match_transitions: {
+        Row: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Insert: {
+          actor: string
+          event_type: string
+          from_status: string
+          to_status: string
+        }
+        Update: {
+          actor?: string
+          event_type?: string
+          from_status?: string
+          to_status?: string
+        }
+        Relationships: []
       }
       matches: {
         Row: {
@@ -976,8 +1108,18 @@ export type Database = {
     }
     Functions: {
       anonymous_tournament_limit: { Args: never; Returns: number }
+      append_match_events: {
+        Args: {
+          p_client_format: number
+          p_device_id?: string
+          p_events: Json
+          p_match_id: string
+        }
+        Returns: Json
+      }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
       can_create_tournament: { Args: never; Returns: Json }
+      compute_match_state: { Args: { p_match_id: string }; Returns: Json }
       count_active_tournaments: { Args: { user_id: string }; Returns: number }
       generate_share_code: { Args: never; Returns: string }
       has_tournament_permission: {
@@ -1012,6 +1154,26 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      match_apply_event: {
+        Args: { ctx: Json; event: Json; state: Json; transitions: Json }
+        Returns: Json
+      }
+      match_continue: {
+        Args: {
+          ctx: Json
+          events: Json
+          mode?: string
+          state: Json
+          transitions: Json
+        }
+        Returns: Json
+      }
+      match_initial_state: { Args: { ctx: Json }; Returns: Json }
+      match_reduce: {
+        Args: { ctx: Json; events: Json; mode?: string; transitions: Json }
+        Returns: Json
+      }
+      match_server_state: { Args: { state: Json }; Returns: Json }
       merge_user_data: {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
@@ -1037,6 +1199,7 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      server_time: { Args: never; Returns: Json }
       tournament_limit_error_message: { Args: never; Returns: string }
       user_owns_tournament: {
         Args: { p_tournament_id: string }

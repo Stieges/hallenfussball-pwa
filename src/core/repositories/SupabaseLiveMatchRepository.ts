@@ -23,6 +23,13 @@ import {
 import { toSupabaseEventId } from '../utils/id';
 import { OptimisticLockError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
+import {
+  callAppendMatchEvents,
+  callServerTime,
+  type AppendableEvent,
+  type AppendOptions,
+  type AppendResult,
+} from './appendMatchEventsRpc';
 
 type MatchRow = Tables<'matches'>;
 type MatchEventRow = Tables<'match_events'>;
@@ -381,6 +388,28 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       console.error('[SupabaseLiveMatchRepository] clear failed:', error);
       throw error;
     }
+  }
+
+  // ==========================================================================
+  // Server-Schreibweg (B3b) -- noch nirgends aufgerufen, Nutzung ab PR C
+  // ==========================================================================
+
+  /**
+   * Hängt Ereignisse an EIN Spiel über `append_match_events` an (R12). Liefert je Ereignis ein
+   * Ergebnis, den Server-Zustand und die Serverzeit -- oder `{ error: 'CLIENT_OUTDATED' }`.
+   * Transport-/RPC-Fehler und unerwartete Antworten werfen `RepositoryError`.
+   */
+  appendMatchEvents(
+    matchId: string,
+    events: readonly AppendableEvent[],
+    options: AppendOptions
+  ): Promise<AppendResult> {
+    return callAppendMatchEvents(isSupabaseConfigured ? supabase : null, matchId, events, options);
+  }
+
+  /** Serverzeit in Epoch-ms (`server_time`), Fehler als `RepositoryError`. */
+  serverTime(): Promise<number> {
+    return callServerTime(isSupabaseConfigured ? supabase : null);
   }
 
   // ==========================================================================

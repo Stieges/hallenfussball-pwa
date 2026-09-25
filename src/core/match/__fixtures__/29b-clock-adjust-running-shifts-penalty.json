@@ -1,0 +1,130 @@
+{
+  "title": "CLOCK_ADJUST bei laufender Uhr setzt elapsed und Anker neu, Strafe-Rest folgt; Strafe ohne clockMs startet bei aktueller Spielzeit",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-29b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000029b-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 1,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000029b-0000-4000-8000-000000000002",
+      "type": "TIME_PENALTY",
+      "actor": "helper",
+      "at": 61000,
+      "section": 1,
+      "clockMs": null,
+      "teamId": "teamA",
+      "payload": {
+        "durationSeconds": 60
+      },
+      "actorUser": "helper"
+    },
+    {
+      "id": "0000029b-0000-4000-8000-000000000003",
+      "type": "CLOCK_ADJUST",
+      "actor": "helper",
+      "at": 110000,
+      "section": 1,
+      "clockMs": 95000,
+      "payload": {},
+      "actorUser": "helper"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000029b-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000029b-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000029b-0000-4000-8000-000000000003",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 95000,
+        "anchorAt": 110000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "penalties": [
+        {
+          "id": "0000029b-0000-4000-8000-000000000002",
+          "startMs": 60000,
+          "durationMs": 60000
+        }
+      ]
+    },
+    "penaltyChecks": [
+      {
+        "at": 110000,
+        "remaining": {
+          "0000029b-0000-4000-8000-000000000002": 25000
+        },
+        "active": [
+          "0000029b-0000-4000-8000-000000000002"
+        ]
+      },
+      {
+        "at": 135000,
+        "remaining": {
+          "0000029b-0000-4000-8000-000000000002": 0
+        },
+        "active": []
+      }
+    ]
+  }
+}
