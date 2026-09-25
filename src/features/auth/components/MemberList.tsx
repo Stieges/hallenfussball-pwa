@@ -86,7 +86,7 @@ export const MemberList: React.FC<MemberListProps> = ({
       <div style={styles.header}>
         <h3 style={styles.title}>Mitglieder ({members.length})</h3>
         {canManageMembers && onInvite && (
-          <Button variant="primary" size="sm" onClick={onInvite}>
+          <Button data-testid="invite-create-button" variant="primary" size="sm" onClick={onInvite}>
             + Einladen
           </Button>
         )}
@@ -103,7 +103,7 @@ export const MemberList: React.FC<MemberListProps> = ({
       )}
 
       {/* Member List */}
-      <div style={styles.list}>
+      <div data-testid="member-list" style={styles.list}>
         {members.map(({ membership, user }) => {
           const isEditing = editingMemberId === membership.id;
           const isConfirmingRemove = confirmRemoveId === membership.id;
@@ -111,7 +111,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           const isMe = membership.id === myMembership?.id;
 
           return (
-            <div key={membership.id} style={styles.memberCard}>
+            <div key={membership.id} data-testid={`member-row-${user?.id ?? membership.id}`} style={styles.memberCard}>
               {/* Member Info */}
               <div style={styles.memberInfo}>
                 <div style={styles.avatarContainer}>

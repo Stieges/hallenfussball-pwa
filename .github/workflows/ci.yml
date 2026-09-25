@@ -36,9 +36,23 @@ jobs:
       - name: Run Tests
         run: npm test -- --run --reporter=verbose
 
-      - name: Coverage report (non-blocking)
+      # Abschluss-Review (final-review.md, M7): der Kommentar in vitest.config.ts kündigt eine
+      # echte Untergrenze an ("schützt nur vor Regression unter das heute gemessene Niveau") --
+      # `continue-on-error: true` widersprach dem, der Schritt lief immer grün, egal was
+      # `test:coverage` (bzw. der darunterliegende `vitest run --coverage`, das die
+      # `coverage.thresholds` aus vitest.config.ts auswertet und bei Unterschreitung selbst mit
+      # Exit ≠ 0 endet) tatsächlich meldete. Lokal geprüft (final-fix-report.md, C1/I1/I2-Runde):
+      # Statements 43.08 %, Branches 35.42 %, Functions 35.63 %, Lines 43.98 % -- alle über den
+      # Schwellen (41/34/34/42), Exit 0.
+      # Nach-Review (final-rereview.md, I-N2): Ohne `shell:` nutzt GitHub `bash -e {0}`, also ohne
+      # `pipefail` -- der Exit-Code der Pipeline kam dann von `tail`, nicht von `test:coverage`,
+      # und der Schritt konnte nie rot werden (belegt per `bash -e -c 'false | tee … | tail -1'`
+      # → 0, mit `-o pipefail` → 1). `shell: bash` lässt GitHub den Schritt mit
+      # `bash --noprofile --norc -eo pipefail {0}` ausführen, damit macht ein Fehlschlag von
+      # `test:coverage` den Schritt trotz `tee`/`tail` tatsächlich rot.
+      - name: Coverage report (blockierend, Untergrenze aus vitest.config.ts)
+        shell: bash
         run: npm run test:coverage -- --reporter=dot 2>&1 | tee coverage-summary.txt | tail -40
-        continue-on-error: true
 
       - name: Upload coverage artifact
         if: always()

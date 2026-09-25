@@ -141,16 +141,45 @@ POSTGRES_IMAGE="supabase/postgres:17.6.1.063" # muss zur Live-Postgres-Version p
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
+
+# T1 (Testumgebung, task-T1-brief.md): "die Liste welche Dateien in welcher Reihenfolge darf es
+# nur EINMAL geben" — die Pfade unten werden nicht mehr fest verdrahtet, sondern aus der
+# gemeinsamen, nach dem Baseline-Marker sortierten Liste herausgesucht (dieselbe Quelle wie
+# scripts/db-drift-check.sh und scripts/local-db-apply.sh). Die Gruppierung/Toggle-Logik dieses
+# Skripts (WITH_HARDENING, WITH_R6, ...) bleibt eigenständig — das ist Testszenario, keine
+# Dateiliste.
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+ALL_NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+ALL_NEWER_MIGRATIONS=()
+if [[ -n "$ALL_NEWER_MIGRATIONS_RAW" ]]; then
+  # bash 3.2 (macOS-Standard) kennt kein mapfile — portable while-read-Schleife.
+  while IFS= read -r line; do
+    ALL_NEWER_MIGRATIONS+=("$line")
+  done <<< "$ALL_NEWER_MIGRATIONS_RAW"
+fi
+
+find_migration() {
+  local prefix="$1" f
+  for f in "${ALL_NEWER_MIGRATIONS[@]}"; do
+    [[ "$(basename "$f")" == "$prefix"* ]] && { echo "$f"; return 0; }
+  done
+  echo "::error::Migration mit Präfix '$prefix' nicht in der Liste 'neuer als Baseline' gefunden." >&2
+  return 1
+}
+
 MIGRATION_FILES=(
-  "$MIGRATIONS_DIR/20260922_001_role_based_write_policies.sql"
-  "$MIGRATIONS_DIR/20260922_002_fix_match_event_version_trigger.sql"
+  "$(find_migration 20260922_001)"
+  "$(find_migration 20260922_002)"
 )
-HARDENING_FILE="$MIGRATIONS_DIR/20260922_003_protect_owner_and_roles.sql"
-PARENT_KEYS_FILE="$MIGRATIONS_DIR/20260923_001_protect_parent_keys.sql"
-MERGE_RESTRICT_FILE="$MIGRATIONS_DIR/20260923_002_restrict_merge_user_data.sql"
-PROFILES_FILE="$MIGRATIONS_DIR/20260924_001_restrict_profiles.sql"
-CENTRAL_PERMISSIONS_FILE="$MIGRATIONS_DIR/20260924_002_central_role_permissions.sql"
-DECLINED_EXPIRED_FILE="$MIGRATIONS_DIR/20260924_003_declined_and_expired.sql"
+HARDENING_FILE="$(find_migration 20260922_003)"
+PARENT_KEYS_FILE="$(find_migration 20260923_001)"
+MERGE_RESTRICT_FILE="$(find_migration 20260923_002)"
+PROFILES_FILE="$(find_migration 20260924_001)"
+CENTRAL_PERMISSIONS_FILE="$(find_migration 20260924_002)"
+DECLINED_EXPIRED_FILE="$(find_migration 20260924_003)"
+# T1: löst den früheren Behelf ab (siehe weiter unten) — der Trigger auf auth.users kommt jetzt
+# aus einer echten Migration, wird unconditional (wie der Behelf vorher) angewendet.
+AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
 WITH_MIGRATION=1
@@ -215,6 +244,7 @@ done
 [[ -f "$PROFILES_FILE" ]] || { echo "::error::Migration fehlt: $PROFILES_FILE" >&2; exit 1; }
 [[ -f "$CENTRAL_PERMISSIONS_FILE" ]] || { echo "::error::Migration fehlt: $CENTRAL_PERMISSIONS_FILE" >&2; exit 1; }
 [[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
+[[ -f "$AUTH_TRIGGER_FILE" ]] || { echo "::error::Migration fehlt: $AUTH_TRIGGER_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
@@ -277,17 +307,17 @@ if [[ "$WITH_PARENT_KEYS" -eq 1 ]]; then
   psql_stdin < "$MERGE_RESTRICT_FILE"
 fi
 
-# R6-Testaufbau (siehe Kopfkommentar): Trigger auf auth.users existiert live, fehlt aber in
-# JEDEM aus der (public-schema-only) Baseline rekonstruierten Container — unabhängig von R6.
-# Ohne ihn bliebe public.profiles nach den Fixture-Inserts in auth.users unten leer, und jede
-# R6-Profile-Zeile würde etwas anderes messen als beabsichtigt (fehlende Zeile statt Rechte-
-# Verweigerung). Kein Teil einer committeten Migration, siehe Kopfkommentar. Läuft in JEDEM
-# Modus, unabhängig von WITH_R6 — die auth.users→profiles-Kopplung ist orthogonal zu R6.
-psql_stdin <<'SQL'
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-SQL
+# T1 (Testumgebung, task-T1-brief.md): Der frühere Testaufbau-Behelf hier ist ENTFALLEN.
+# 20260925_001_auth_user_created_trigger.sql legt den Trigger jetzt als echte, eingecheckte
+# Migration an (CREATE OR REPLACE TRIGGER — auf der Live-DB ein No-op, siehe Kopfkommentar der
+# Datei). Grund, warum er hier überhaupt fehlte: Die Baseline wurde mit
+# `--schema public` gedumpt und enthält deshalb keine Objekte im Schema "auth" — ohne diesen
+# Trigger bliebe public.profiles nach den Fixture-Inserts in auth.users unten leer, und jede
+# rollenabhängige profiles-Zeile würde etwas anderes messen als beabsichtigt (fehlende Zeile statt
+# Rechte-Verweigerung). Läuft in JEDEM Modus, unabhängig von allen WITH_*-Schaltern — die
+# auth.users→profiles-Kopplung ist orthogonal zu jeder einzelnen Migration.
+echo "Migration einspielen: $(basename "$AUTH_TRIGGER_FILE")" >&2
+psql_stdin < "$AUTH_TRIGGER_FILE"
 
 # R5b-Fixrunde 1 (M2): Der frühere Nachbau der Rolle ci_schema_reader hier ist ENTFALLEN --
 # 20260924_002_central_role_permissions.sql legt sie jetzt selbst bedingt an (Abschnitt 0 der

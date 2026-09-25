@@ -106,23 +106,19 @@ if [[ ! -f "$BASELINE_FILE" ]]; then
 fi
 
 # --- 1. Marker aus der Baseline lesen, neuere Migrationsdateien bestimmen -----------------
-MARKER="$(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
-if [[ -z "$MARKER" ]]; then
-  echo "::error::Marker 'baseline-includes-through' fehlt im Kopf von $BASELINE_BASENAME." >&2
-  echo "::error::Ohne ihn kann dieses Skript nicht wissen, welche Migrationen bereits in der Baseline stecken." >&2
-  exit 1
+# Gemeinsame Logik mit scripts/rls-role-matrix.sh und scripts/local-db-apply.sh — siehe
+# scripts/lib/migrations-since-baseline.sh (T1, "die Liste darf es nur EINMAL geben").
+source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
+NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
+NEWER_MIGRATIONS=()
+if [[ -n "$NEWER_MIGRATIONS_RAW" ]]; then
+  # bash 3.2 (macOS-Standard) kennt kein mapfile — portable while-read-Schleife.
+  while IFS= read -r line; do
+    NEWER_MIGRATIONS+=("$line")
+  done <<< "$NEWER_MIGRATIONS_RAW"
 fi
 
-NEWER_MIGRATIONS=()
-for f in "$MIGRATIONS_DIR"/*.sql; do
-  base="$(basename "$f")"
-  [[ "$base" == "$BASELINE_BASENAME" ]] && continue
-  if [[ "$base" > "$MARKER" ]]; then
-    NEWER_MIGRATIONS+=("$f")
-  fi
-done
-
-echo "Baseline enthält bereits bis einschließlich: $MARKER"
+echo "Baseline enthält bereits bis einschließlich: $(grep -m1 -- '--   baseline-includes-through:' "$BASELINE_FILE" | sed -E 's/^--   baseline-includes-through:[[:space:]]*//')"
 if [[ ${#NEWER_MIGRATIONS[@]} -eq 0 ]]; then
   echo "Keine neueren Migrationsdateien nachzuspielen."
 else
@@ -389,6 +385,55 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
 else
   echo ""
   echo "Gleichlauf role_permissions vs. rolePermissions.json übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
+fi
+
+# --- 4d. Realtime-Publikation (Ruling W, .superpowers/sdd/2026-09-24-testumgebung/
+# task-T4-review.md Fixrunde 1) ------------------------------------------------------------
+# `supabase_realtime` ist eine Publication, kein Schema-Objekt in `public` -- Textdiff und
+# Katalogzählung unten (beide --schema=public) sehen sie nie, ein fehlender oder zusätzlicher
+# Tabelleneintrag wäre für den Rest dieses Skripts unsichtbar. Erwartete Liste ist die vom
+# Auftraggeber gelieferte Live-Abfrage (2026-09-25, NICHT von diesem Skript selbst erhoben --
+# Ruling W verbietet eine neue Live-Abfrage durch die Automatisierung): Produktion enthält
+# GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams.
+# scripts/local-db-apply.sh setzt denselben Satz lokal (idempotent), dieser Abschnitt prüft,
+# dass Produktion nicht abgewichen ist.
+#
+# Fixrunde 2 (N10): Liste UND Abfrage jetzt schema-QUALIFIZIERT (`schema.tabelle`), OHNE
+# `WHERE schemaname = 'public'`-Filter -- Ruling W verlangt wörtlich "Publikation = genau diese
+# vier Tabellen". Der vorherige Filter blendete jede Tabelle aus einem ANDEREN Schema (z.B.
+# `auth.users`), die zusätzlich zur Publikation hinzugefügt worden wäre, VOR dem Vergleich aus --
+# genau so eine Abweichung wäre unsichtbar geblieben, nicht "grün, weil geprüft", sondern
+# "grün, weil nie hingeschaut".
+REALTIME_PUBLICATION_TABLES=(
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.teams"
+)
+if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
+  echo ""
+  echo "--- Realtime-Publikation supabase_realtime (live) ---"
+  PUB_OUT="$WORKDIR/realtime_publication.out"
+  docker exec "$CONTAINER_NAME" \
+    psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
+    -c "SELECT schemaname || '.' || tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' ORDER BY 1;" \
+    > "$PUB_OUT" 2>"$WORKDIR/realtime_publication.log" \
+    || { echo "::error::Konnte supabase_realtime nicht live lesen:" >&2
+         cat "$WORKDIR/realtime_publication.log" >&2; exit 1; }
+  ACTUAL_PUB_TABLES="$(sort "$PUB_OUT")"
+  EXPECTED_PUB_TABLES="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | sort)"
+  if [[ "$ACTUAL_PUB_TABLES" == "$EXPECTED_PUB_TABLES" ]]; then
+    ROW_COUNT="$(printf '%s\n' "${REALTIME_PUBLICATION_TABLES[@]}" | wc -l | tr -d ' ')"
+    echo "Realtime-Publikation grün: supabase_realtime enthält genau die erwarteten $ROW_COUNT Tabellen."
+  else
+    echo "::error::supabase_realtime weicht von der erwarteten Tabellenliste ab:" >&2
+    echo "### Diff (links: erwartet, rechts: live)" >&2
+    diff <(echo "$EXPECTED_PUB_TABLES") <(echo "$ACTUAL_PUB_TABLES") >&2 || true
+    exit 1
+  fi
+else
+  echo ""
+  echo "Realtime-Publikation (supabase_realtime) übersprungen: SUPABASE_DB_READONLY_URL nicht gesetzt." >&2
 fi
 
 # --- 5. Beide Dumps normalisieren (Plattform-Boilerplate entfernen) -----------------------

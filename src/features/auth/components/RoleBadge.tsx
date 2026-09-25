@@ -119,14 +119,14 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({
   if (compact) {
     const shortLabel = role === 'co-admin' ? 'CA' : roleLabel.label.charAt(0);
     return (
-      <span style={badgeStyle} className={className} title={roleLabel.label}>
+      <span data-testid="role-badge" data-role={role} style={badgeStyle} className={className} title={roleLabel.label}>
         {shortLabel}
       </span>
     );
   }
 
   return (
-    <span style={badgeStyle} className={className}>
+    <span data-testid="role-badge" data-role={role} style={badgeStyle} className={className}>
       {text}
     </span>
   );

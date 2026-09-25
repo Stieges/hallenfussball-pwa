@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { lazyWithRetry } from '../lazyWithRetry';
 
+// Hoisted + top-level: Vitest 5 throws (was a deprecation warning in v4) when
+// vi.hoisted/vi.mock are called nested inside a test body instead of at
+// module scope, since that no longer reflects real execution order.
+// Sentry is only exercised by the third test (final-failure path); the
+// first two tests never call captureFeatureError, so hoisting the mock to
+// file scope does not change what those tests observe.
+const sentryMock = vi.hoisted(() => vi.fn());
+vi.mock('../sentry', () => ({ captureFeatureError: sentryMock }));
+
 describe('lazyWithRetry', () => {
   it('returns a React.lazy component when import succeeds first try', async () => {
     const fakeComponent = { default: () => null };
@@ -29,9 +38,6 @@ describe('lazyWithRetry', () => {
   });
 
   it('reports to Sentry and dispatches event after all retries fail', async () => {
-    const sentryMock = vi.hoisted(() => vi.fn());
-    vi.mock('../sentry', () => ({ captureFeatureError: sentryMock }));
-
     const eventListener = vi.fn();
     window.addEventListener('lazy-import-failed', eventListener);
 
