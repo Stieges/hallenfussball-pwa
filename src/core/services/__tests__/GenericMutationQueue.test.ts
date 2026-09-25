@@ -358,6 +358,43 @@ describe('GenericMutationQueue', () => {
     expect(queue.getFailedCount()).toBe(0);
   });
 
+  // ===========================================================================
+  // A-Final-Fix 2 (final-review-A.md, Important 2): ein echter Programmfehler-TypeError
+  // (kein Netz-Muster in der Meldung) darf die Warteschlange nicht ewig blockieren -- er muss
+  // wie jeder andere dauerhafte Fehler nach MAX_RETRIES in die Fehlerliste wandern, und der
+  // NÄCHSTE Eintrag muss danach verarbeitet werden.
+  // ===========================================================================
+
+  it('ProgrammFehler-TypeError landet nach MAX_RETRIES in der Fehlerliste, statt die Warteschlange zu blockieren', async () => {
+    const programmingError = new TypeError("Cannot read properties of undefined (reading 'x')");
+    const execute = vi.fn()
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockRejectedValueOnce(programmingError)
+      .mockResolvedValue(undefined);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'poisoned' });
+    queue.enqueue('SAVE_THING', { id: 'next' });
+
+    onlineSpy.mockReturnValue(true);
+    // Same pattern as the "RLS-Fehler (dauerhaft)" test above: process() handles ONE failed
+    // attempt per call for a non-transient error (retryCount++, then breaks to retry later) --
+    // so MAX_RETRIES calls are needed for the poisoned entry to reach the dead-letter queue. On
+    // the MAX_RETRIES-th call the `while` loop continues within the SAME process() invocation
+    // once the poisoned item is dead-lettered, and picks up the next item right away.
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(MAX_RETRIES + 1);
+    expect(queue.getFailedCount()).toBe(1);
+    expect(queue.getFailedMutations()[0].payload).toEqual({ id: 'poisoned' });
+    // The next item was no longer blocked once the poisoned one left the head of the queue.
+    expect(queue.getPendingCount()).toBe(0);
+  });
+
   it('nutzt den konfigurierten execute-Callback statt eines Switch auf Mutation-Typen', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const { queue } = makeQueue({ execute, online: false });

@@ -627,10 +627,15 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
    * "Eine erzwungen dauerhaft abgelehnte Mutation ... ist innerhalb von 10s als gescheitert
    * sichtbar." Gewählter Weg, um die Ablehnung zu erzwingen (Brief lässt die Wahl offen, verlangt
    * eine Begründung): NICHT ein viewer-Schreibversuch über die Warteschlange -- geprüft und
-   * verworfen, weil `SupabaseRepository.updateMatches()` einen von RLS auf 0 Zeilen gefilterten
-   * UPDATE nicht als Fehler erkennt (`error` bleibt `null`, PostgREST wirft bei RLS-Filterung
-   * keinen Fehler) und die Mutation deshalb als "erfolgreich" gilt, obwohl nichts geschrieben
-   * wurde -- ein eigenständiger Befund neben C-SYNC, hier nicht behoben. Stattdessen: ein direkt in
+   * verworfen, weil ein Postgres-Constraint-Verletzung unabhängig von der genauen Rollen-/
+   * Policy-Konfiguration garantiert und deterministisch ein echter, nicht-transienter Fehler
+   * bleibt, während ein RLS-gefilterter viewer-Schreibversuch davon abhinge. (Zum Zeitpunkt
+   * dieser Testkonstruktion erkannte `SupabaseRepository.updateMatches()` einen von RLS auf 0
+   * Zeilen gefilterten UPDATE zusätzlich gar nicht als Fehler -- `error` blieb `null`, PostgREST
+   * wirft bei RLS-Filterung nichts, die Mutation galt als "erfolgreich", obwohl nichts
+   * geschrieben wurde. Seit f053b3f (A4 Fixrunde 1, Risiko 4) erkennt `updateMatches()` das über
+   * `.select('id')` + 0-Zeilen-Prüfung; der viewer-Weg bliebe wegen der Rollenabhängigkeit aber
+   * trotzdem die schlechtere Wahl für diesen Test.) Stattdessen: ein direkt in
    * `mutation_queue_v1` eingespeister `UPDATE_MATCH` mit `matchStatus` außerhalb des
    * DB-Constraints `matches_match_status_check` -- das erzeugt GARANTIERT einen echten,
    * nicht-transienten Postgres-Fehler (Constraint-Verletzung, kein RLS-Silent-Drop), unabhängig

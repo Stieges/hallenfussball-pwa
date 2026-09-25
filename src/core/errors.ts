@@ -222,11 +222,17 @@ export function isTransientMutationError(error: unknown): boolean {
     originalError?: unknown;
   };
 
+  // A-Final-Fix 2 (final-review-A.md, Important 2): `e.name === 'TypeError'` used to count as
+  // transient on its own, regardless of the message -- but a real programming error (e.g.
+  // `TypeError: Cannot read properties of undefined (...)` from a stale/corrupted persisted
+  // payload) is ALSO a `TypeError`, and that made the mutation queue retry it forever instead
+  // of moving it to the dead-letter list after MAX_RETRIES (GenericMutationQueue.ts). Every
+  // known browser network `TypeError` message (Chrome "Failed to fetch", Firefox "NetworkError
+  // when attempting to fetch resource", Safari "Load failed" -- see the A3 tests above/below)
+  // already matches one of `TRANSIENT_NETWORK_MESSAGE_PATTERNS`, so the separate `name` check
+  // was redundant for the case it was meant to catch, and harmful for every other `TypeError`.
   const message = e.message ?? '';
-  if (
-    e.name === 'TypeError' ||
-    TRANSIENT_NETWORK_MESSAGE_PATTERNS.some((pattern) => pattern.test(message))
-  ) {
+  if (TRANSIENT_NETWORK_MESSAGE_PATTERNS.some((pattern) => pattern.test(message))) {
     return true;
   }
 

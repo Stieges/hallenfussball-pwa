@@ -122,6 +122,18 @@ describe('isTransientMutationError', () => {
     expect(isTransientMutationError(new TypeError('NetworkError when attempting to fetch resource'))).toBe(true);
   });
 
+  // A-Final-Fix 2 (final-review-A.md, Important 2): `e.name === 'TypeError'` allein wertete
+  // JEDEN Laufzeit-TypeError als vorübergehend, nicht nur Netzfehler -- ein echter
+  // Programmfehler (z. B. auf altem/beschädigtem persistiertem Zustand) blieb dadurch ewig an
+  // der Spitze der Warteschlange stehen (GenericMutationQueue.ts:436-442 bricht sofort ab,
+  // retryCount++ wird nie erreicht) und blockierte alle folgenden Einträge, statt nach
+  // MAX_RETRIES in die Fehlerliste zu wandern.
+  it('behandelt einen ProgrammFehler-TypeError (kein Netz-Muster in der Meldung) als dauerhaft', () => {
+    expect(
+      isTransientMutationError(new TypeError("Cannot read properties of undefined (reading 'x')"))
+    ).toBe(false);
+  });
+
   it('erkennt Timeout als vorübergehend', () => {
     expect(isTransientMutationError(new Error('Request timeout'))).toBe(true);
   });
