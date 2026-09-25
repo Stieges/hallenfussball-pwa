@@ -7,11 +7,12 @@
  * 3. Monitor - Große Zuschauer-Ansicht
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
+import { MatchUpdate } from '../core/models/types';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
@@ -91,7 +92,23 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     loadingError,
     handleTournamentUpdate,
     applyRemote,
+    scheduleService,
   } = useTournamentManager(tournamentId);
+
+  // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in
+  // the schedule persists ONLY the touched matches (targeted update) instead of a full tournament
+  // save -- a stale local tournament state at the owner must never overwrite a helper's live
+  // match. Local state is already synced by `applyRemote` (via ScheduleTab's
+  // onLocalTournamentUpdate); this only talks to the repository.
+  const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
+    if (updates.length === 0) { return; }
+    const run = updates.length === 1
+      ? scheduleService.updateMatch(tournamentId, updates[0])
+      : scheduleService.updateMatches(tournamentId, updates);
+    run.catch((err: unknown) => {
+      console.error('Failed to persist match update:', err);
+    });
+  }, [scheduleService, tournamentId]);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
@@ -345,6 +362,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             schedule={schedule}
             currentStandings={currentStandings}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onLocalTournamentUpdate={applyRemote}
+            onMatchesUpdate={handleMatchesUpdate}
             onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
           />
         )}

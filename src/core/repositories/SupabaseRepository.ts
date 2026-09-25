@@ -16,6 +16,7 @@ import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
   mapMatchUpdateToSupabase,
+  mapMatchToScheduleUpdate,
   mapTeamToSupabase,
   mapMatchToSupabase,
   type TournamentUpdate,
@@ -329,15 +330,57 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Upsert matches
-    if (matchRows.length > 0) {
-      const { error: matchesError } = await getSupabase()
-        .from('matches')
-        .upsert(matchRows, { onConflict: 'id' });
+    // Insert new matches, update existing matches -- SEPARATELY (A2,
+    // .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
+    //
+    // Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
+    // for EVERY match, including a helper's live/result columns (score_a/b, match_status, timer,
+    // overtime/penalty, decided_by, ...). If the tournament owner still had an older local
+    // tournament state (e.g. after only renaming a team) and saved the whole tournament while a
+    // helper was running a live match, the owner's stale row overwrote the helper's current
+    // match state in the cloud. A NEW match has no live state yet, so it is still fully inserted;
+    // an EXISTING match is updated with ONLY the schedule columns via
+    // `mapMatchToScheduleUpdate` -- never the live/result ones.
+    const newMatchRows = matchRows.filter(
+      (m) => typeof m.id !== 'string' || !existingMatchIds.has(m.id)
+    );
+    const existingMatchRows = matchRows.filter(
+      (m): m is typeof m & { id: string } => typeof m.id === 'string' && existingMatchIds.has(m.id)
+    );
 
-      if (matchesError) {
-        console.error('Failed to save matches:', matchesError);
-        throw new RepositoryError('saveMatches', matchesError.message, matchesError);
+    if (newMatchRows.length > 0) {
+      const { error: insertError } = await getSupabase()
+        .from('matches')
+        .upsert(newMatchRows, { onConflict: 'id' });
+
+      if (insertError) {
+        console.error('Failed to insert matches:', insertError);
+        throw new RepositoryError('saveMatches', insertError.message, insertError);
+      }
+    }
+
+    if (existingMatchRows.length > 0) {
+      const errors: Error[] = [];
+
+      for (const row of existingMatchRows) {
+        const scheduleUpdate = mapMatchToScheduleUpdate(row);
+        const { error: updateError } = await getSupabase()
+          .from('matches')
+          .update(scheduleUpdate)
+          .eq('id', row.id)
+          .eq('tournament_id', tournament.id);
+
+        if (updateError) {
+          console.error(`Failed to update match ${row.id}:`, updateError);
+          errors.push(new Error(`Match ${row.id}: ${updateError.message}`));
+        }
+      }
+
+      if (errors.length > 0) {
+        throw new RepositoryError(
+          'saveMatches',
+          `Failed to update ${errors.length} match(es): ${errors.map((e) => e.message).join('; ')}`
+        );
       }
     }
   }

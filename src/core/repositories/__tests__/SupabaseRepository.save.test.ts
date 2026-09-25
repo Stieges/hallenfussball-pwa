@@ -44,13 +44,17 @@ const hoisted = vi.hoisted(() => {
   const teamsDeleteMock = vi.fn(() => ({ in: teamsDeleteInMock }));
   const teamsUpsertMock = vi.fn();
 
-  // matches: same shape as teams
+  // matches: same shape as teams, PLUS update (A2: existing matches are updated with
+  // schedule-only columns instead of upserted with the full row -- see task-A2-brief.md).
   const matchesSelectEqMock = vi.fn();
   const matchesSelectMock = vi.fn(() => ({ eq: matchesSelectEqMock }));
   const matchesDeleteSelectMock = vi.fn();
   const matchesDeleteInMock = vi.fn(() => ({ select: matchesDeleteSelectMock }));
   const matchesDeleteMock = vi.fn(() => ({ in: matchesDeleteInMock }));
   const matchesUpsertMock = vi.fn();
+  const matchesUpdateEqTournamentMock = vi.fn().mockResolvedValue({ error: null });
+  const matchesUpdateEqIdMock = vi.fn(() => ({ eq: matchesUpdateEqTournamentMock }));
+  const matchesUpdateMock = vi.fn((_update: Record<string, unknown>) => ({ eq: matchesUpdateEqIdMock }));
 
   const fromMock = vi.fn((table: string) => {
     if (table === 'tournaments') {
@@ -60,7 +64,12 @@ const hoisted = vi.hoisted(() => {
       return { select: teamsSelectMock, delete: teamsDeleteMock, upsert: teamsUpsertMock };
     }
     if (table === 'matches') {
-      return { select: matchesSelectMock, delete: matchesDeleteMock, upsert: matchesUpsertMock };
+      return {
+        select: matchesSelectMock,
+        delete: matchesDeleteMock,
+        upsert: matchesUpsertMock,
+        update: matchesUpdateMock,
+      };
     }
     throw new Error(`unexpected table in test mock: ${table}`);
   });
@@ -79,6 +88,8 @@ const hoisted = vi.hoisted(() => {
     matchesSelectEqMock,
     matchesDeleteSelectMock,
     matchesUpsertMock,
+    matchesUpdateMock,
+    matchesUpdateEqTournamentMock,
     fromMock,
     supabaseMock,
   };
@@ -100,6 +111,8 @@ const {
   matchesSelectEqMock,
   matchesDeleteSelectMock,
   matchesUpsertMock,
+  matchesUpdateMock,
+  matchesUpdateEqTournamentMock,
 } = hoisted;
 
 // ============================================================================
@@ -168,7 +181,7 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     expect(matchesUpsertMock).not.toHaveBeenCalled();
   });
 
-  it('all requested rows actually deleted (owner/co-admin path) succeeds and continues to upsert', async () => {
+  it('all requested rows actually deleted (owner/co-admin path) succeeds and continues to update', async () => {
     teamsDeleteSelectMock.mockResolvedValue({ data: [{ id: 'team-removed' }], error: null });
     matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
 
@@ -176,10 +189,13 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
 
     expect(teamsUpsertMock).toHaveBeenCalledTimes(1);
-    expect(matchesUpsertMock).toHaveBeenCalledTimes(1);
+    // 'match-survivor' already exists in the cloud (see beforeEach) -> A2: existing matches are
+    // updated (schedule columns only), never upserted with the full row.
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
   });
 
-  it('no delete attempted (nothing removed locally) never calls delete, only upsert', async () => {
+  it('no delete attempted (nothing removed locally) never calls delete, only update', async () => {
     // Ground state: nothing removed -- existing ids equal the tournament's own ids.
     teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
     matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
@@ -190,6 +206,77 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
     expect(teamsDeleteSelectMock).not.toHaveBeenCalled();
     expect(matchesDeleteSelectMock).not.toHaveBeenCalled();
     expect(teamsUpsertMock).toHaveBeenCalledTimes(1);
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ============================================================================
+// A2 (task-A2-brief.md): full save must never overwrite a helper's live match
+// ============================================================================
+
+describe('SupabaseRepository.save() — A2: existing matches update ONLY schedule columns', () => {
+  it('an EXISTING match is inserted via the schedule-only update, not the full-row upsert', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
+
+    const updatePayload = matchesUpdateMock.mock.calls[0][0];
+    // Schedule columns are present ...
+    expect(updatePayload).toHaveProperty('round');
+    expect(updatePayload).toHaveProperty('field');
+    expect(updatePayload).toHaveProperty('team_a_id');
+    // ... but NOT ANY live/result column.
+    expect(updatePayload).not.toHaveProperty('score_a');
+    expect(updatePayload).not.toHaveProperty('score_b');
+    expect(updatePayload).not.toHaveProperty('match_status');
+    expect(updatePayload).not.toHaveProperty('actual_end');
+    expect(updatePayload).not.toHaveProperty('actual_start');
+    expect(updatePayload).not.toHaveProperty('timer_start_time');
+    expect(updatePayload).not.toHaveProperty('timer_paused_at');
+    expect(updatePayload).not.toHaveProperty('timer_elapsed_seconds');
+    expect(updatePayload).not.toHaveProperty('overtime_score_a');
+    expect(updatePayload).not.toHaveProperty('overtime_score_b');
+    expect(updatePayload).not.toHaveProperty('penalty_score_a');
+    expect(updatePayload).not.toHaveProperty('penalty_score_b');
+    expect(updatePayload).not.toHaveProperty('decided_by');
+    expect(updatePayload).not.toHaveProperty('skipped_reason');
+    expect(updatePayload).not.toHaveProperty('skipped_at');
+    expect(updatePayload).not.toHaveProperty('live_state');
+  });
+
+  it('a NEW match (not yet in the cloud) is still fully inserted via upsert', async () => {
+    // Nothing exists in the cloud yet for this tournament -- e.g. right after schedule generation.
+    teamsSelectEqMock.mockResolvedValue({ data: [], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(matchesUpdateMock).not.toHaveBeenCalled();
     expect(matchesUpsertMock).toHaveBeenCalledTimes(1);
+
+    const insertedRows = matchesUpsertMock.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(insertedRows).toHaveLength(1);
+    // The new row keeps its full shape (live columns included, default 'scheduled').
+    expect(insertedRows[0]).toHaveProperty('score_a');
+    expect(insertedRows[0]).toHaveProperty('match_status', 'scheduled');
+  });
+
+  it('the schedule-only update scopes to the correct match AND tournament id', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [{ id: 'team-survivor' }], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [{ id: 'match-survivor' }], error: null });
+
+    const repo = new SupabaseRepository();
+    const tournament = makeTournamentWithOneTeamAndMatch();
+    await expect(repo.save(tournament)).resolves.toBeUndefined();
+
+    expect(matchesUpdateMock).toHaveBeenCalledTimes(1);
+    expect(matchesUpdateEqTournamentMock).toHaveBeenCalledWith('tournament_id', tournament.id);
   });
 });

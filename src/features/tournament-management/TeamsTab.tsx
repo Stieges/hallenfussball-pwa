@@ -439,6 +439,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
             return (
               <div
                 key={team.id}
+                data-testid={`team-card-${team.id}`}
                 style={{
                   ...teamCardStyle,
                   borderColor: isExpanded ? cssVars.colors.primary : cssVars.colors.border,
@@ -446,6 +447,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
               >
                 {/* Card Header */}
                 <div
+                  data-testid={`team-expand-toggle-${team.id}`}
                   style={teamCardHeaderStyle}
                   onClick={() => !isEditing && toggleExpanded(team.id)}
                 >
@@ -512,6 +514,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               value={editingName}
                               onChange={setEditingName}
                               placeholder={t('teams.teamName')}
+                              data-testid={`team-rename-input-${team.id}`}
                             />
                           </div>
                           <div style={buttonGroupStyle}>
@@ -522,6 +525,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                               variant="primary"
                               onClick={handleSaveRename}
                               disabled={!editingName.trim() || editingName.trim() === team.name}
+                              data-testid={`team-rename-save-${team.id}`}
                             >
                               {t('common.save')}
                             </Button>
@@ -565,6 +569,7 @@ export const TeamsTab: React.FC<TeamsTabProps> = ({
                             <button
                               style={actionButtonStyle('edit')}
                               onClick={() => handleStartEdit(team)}
+                              data-testid={`team-edit-button-${team.id}`}
                             >
                               ✏️ {t('teams.rename')}
                             </button>

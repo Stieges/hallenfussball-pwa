@@ -368,6 +368,89 @@ export async function resetRunningMatchScore(
   }
 }
 
+/**
+ * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): liest Score UND
+ * Status eines Spiels direkt aus der DB -- gebraucht vom Test "Olli speichert das Turnier,
+ * während Tom ein Spiel leitet", um NACH einem vollen Turnier-Save des owners zu prüfen, dass
+ * der Live-Stand des helpers steht, NICHT der (potenziell veraltete) lokale Stand des owners.
+ */
+export interface MatchScoreRow {
+  score_a: number | null;
+  score_b: number | null;
+  match_status: string | null;
+}
+
+export async function fetchMatchRow(matchId: string): Promise<MatchScoreRow> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/matches?id=eq.${matchId}&select=score_a,score_b,match_status`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchMatchRow(${matchId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as MatchScoreRow[];
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`fetchMatchRow(${matchId}): kein Spiel gefunden.`);
+  }
+  return row;
+}
+
+/**
+ * A2: liest die `id` eines Teams über seinen (zum Zeitpunkt des Aufrufs eindeutigen) Namen --
+ * gebraucht, um den per UI umbenannten Team-Namen im `finally`-Block gezielt per Service-Role
+ * zurückzubauen, ohne dass die UI zu diesem Zeitpunkt noch erreichbar sein muss.
+ */
+export async function fetchTeamIdByName(tournamentId: string, name: string): Promise<string> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/teams?tournament_id=eq.${tournamentId}&name=eq.${encodeURIComponent(name)}&select=id`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchTeamIdByName(${tournamentId}, ${name}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ id: string }>;
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`fetchTeamIdByName(${tournamentId}, ${name}): kein Team mit diesem Namen gefunden.`);
+  }
+  return row.id;
+}
+
+/**
+ * A2: liest den aktuellen Namen eines Teams per Service-Role -- Gegenstück zu `setTeamName()`,
+ * gebraucht um NACH dem Reconnect zu prüfen, dass die UI-Umbenennung tatsächlich in der DB
+ * ankam (Beweis, dass A2 nur die Live-/Ergebnis-Spalten sperrt, nicht die Schedule-Spalten).
+ */
+export async function fetchTeamName(teamId: string): Promise<string | null> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/teams?id=eq.${teamId}&select=name`, { headers });
+  if (!res.ok) {
+    throw new Error(`fetchTeamName(${teamId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ name: string }>;
+  return rows[0]?.name ?? null;
+}
+
+/**
+ * A2: setzt den Namen eines Teams per Service-Role zurück -- Rückbau-Gegenstück zur UI-Umbenennung
+ * im Test (das per Service-Role gesetzt wird, statt erneut über die UI zu laufen, damit der
+ * Rückbau nicht von einer ggf. selbst fehlgeschlagenen UI-Interaktion abhängt, N16).
+ */
+export async function setTeamName(teamId: string, name: string): Promise<void> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/teams?id=eq.${teamId}`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    throw new Error(`setTeamName(${teamId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+}
+
 // =============================================================================
 // SERVICE-ROLE REST-ZUGRIFF (Fixrunde 1, M1: EINE Stelle statt drei Kopien in
 // `auth.cloud.spec.ts`/`public-view.cloud.spec.ts`/`publish-coadmin.cloud.spec.ts`) --

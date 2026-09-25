@@ -234,6 +234,43 @@ export function mapMatchToSupabase(
 }
 
 /**
+ * Extracts ONLY the schedule columns from a full match insert row — used by
+ * SupabaseRepository.save() when updating an EXISTING match (A2,
+ * .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
+ *
+ * Deliberately excludes every live/result column: score_a, score_b, match_status,
+ * actual_end/actual_start, timer_start_time, timer_paused_at, timer_elapsed_seconds,
+ * overtime_score_a/b, penalty_score_a/b, decided_by, skipped_reason, skipped_at, live_state,
+ * last_modified_by, version, owner_id, is_public. A full-save from a stale local state (e.g. the
+ * tournament owner editing a team name) must never overwrite a helper's in-progress live match.
+ *
+ * Included ("schedule columns"): team_a_id/team_b_id (+ placeholders), round, field, slot,
+ * group_letter, is_final, final_type, label, scheduled_start, match_number, phase,
+ * referee_number — everything the Schedule Editor / Wizard can change about WHEN/WHERE/WHO
+ * plays, never the running result.
+ */
+export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
+  return {
+    team_a_id: row.team_a_id,
+    team_b_id: row.team_b_id,
+    team_a_placeholder: row.team_a_placeholder,
+    team_b_placeholder: row.team_b_placeholder,
+    round: row.round,
+    field: row.field,
+    slot: row.slot,
+    group_letter: row.group_letter,
+    is_final: row.is_final,
+    final_type: row.final_type,
+    label: row.label,
+    scheduled_start: row.scheduled_start,
+    match_number: row.match_number,
+    phase: row.phase,
+    referee_number: row.referee_number,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
  * Maps a frontend Match update to Supabase update format
  */
 export function mapMatchUpdateToSupabase(
