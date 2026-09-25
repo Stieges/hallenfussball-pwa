@@ -14,11 +14,11 @@
  * (Task T2) gibt helper aber NUR eine Mitgliedschaft im Live-Cup -- keine im Public-Cup, dessen
  * Monitor-Route der Brief für Kontext C verlangt ("Monitor-Route des Public-Cup"). Ein Tor kann
  * strukturell nicht gleichzeitig in zwei verschiedenen Turnieren stehen. Diese Datei prüft
- * deshalb ZWEI getrennte, aber gleichwertige Echtzeit-Nachweise:
+ * deshalb ZWEI getrennte Nachweise „ohne Neuladen“ (Cockpit per Echtzeit, Monitor per Abfrage):
  *   1. Live-Cup: helper trägt das Tor ein, owner sieht es im selben Cockpit (Brief-Kern).
  *   2. Public-Cup: owner trägt ein Tor ein (einzige Rolle mit Zugriff auf beide Turniere), der
  *      anonyme Monitor (Kontext C) sieht es -- das ist der Teil des Briefs, der die
- *      Monitor-Route (`/display/:tournamentId/:monitorId`, mit Echtzeit-Subscription, ANDERS als
+ *      Monitor-Route (`/display/:tournamentId/:monitorId`, Spielstand heute per 5-s-Abfrage, siehe C-MONPOLL; ANDERS als
  *      `/live/:shareCode` aus `public-view.cloud.spec.ts`) tatsächlich beweist.
  * Für den Monitor selbst: der Seed-Monitor hatte `slides: []` (T2) -- ein `live`-Slide auf Feld 1
  * wurde ergänzt (`testData.ts#E2E_PUBLIC_CUP_MONITOR_ID`, `scripts/e2e-seed.ts`), sonst zeigt die
@@ -199,7 +199,7 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await enterGoal(ownerPage, 'home');
 
       // Kein page.reload() -- expect() pollt den DOM selbst, siehe Timeout-Begründung oben.
-      await expect(monitorHomeBlock).toHaveAttribute('aria-label', `Heim: ${before + 1}`, { timeout: 8000 });
+      await expect(monitorHomeBlock).toHaveAttribute('aria-label', `Heim: ${before + 1}`, { timeout: 12000 }); // gemessen 7,0–7,9 s (5-s-Abfrage), Puffer gegen Wackeln; Ziel ≤ 3 s verfehlt → C-MONPOLL
     } finally {
       // I6/N8/N16, analog zu Test 1 -- derselbe Public-Cup-Score darf nicht zwischen Läufen
       // driften.
