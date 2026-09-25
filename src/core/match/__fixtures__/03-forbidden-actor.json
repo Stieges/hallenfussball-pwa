@@ -1,45 +1,18 @@
 {
   "title": "Nur erlaubte Schritte",
-  "szenario": null,
-  "ctx": {
-    "matchId": "match-03",
-    "teamAId": "teamA",
-    "teamBId": "teamB"
-  },
+  "szenario": "Nur erlaubte Schritte",
+  "ctx": { "matchId": "match-03", "teamAId": "teamA", "teamBId": "teamB" },
   "mode": "log",
   "events": [
+    { "id": "11111111-1111-4111-8111-111111111101", "type": "SKIP", "actor": "helper", "at": 1000, "section": null, "clockMs": null, "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111102", "type": "SKIP", "actor": "leitung", "at": 2000, "section": null, "clockMs": null, "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111103", "type": "UNSKIP", "actor": "helper", "at": 3000, "section": null, "clockMs": null, "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111104", "type": "UNSKIP", "actor": "leitung", "at": 4000, "section": null, "clockMs": null, "payload": {} },
     {
-      "id": "11111111-1111-4111-8111-111111111101",
-      "type": "SKIP",
-      "actor": "helper",
-      "at": 1000,
-      "section": null,
-      "clockMs": null,
-      "payload": {}
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111102",
-      "type": "SKIP",
-      "actor": "leitung",
-      "at": 2000,
-      "section": null,
-      "clockMs": null,
-      "payload": {}
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111103",
-      "type": "UNSKIP",
-      "actor": "leitung",
-      "at": 3000,
-      "section": null,
-      "clockMs": null,
-      "payload": {}
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111104",
+      "id": "11111111-1111-4111-8111-111111111105",
       "type": "MATCH_START",
       "actor": "helper",
-      "at": 4000,
+      "at": 5000,
       "section": 1,
       "clockMs": null,
       "payload": {
@@ -56,135 +29,57 @@
         }
       }
     },
-    {
-      "id": "11111111-1111-4111-8111-111111111105",
-      "type": "MATCH_END",
-      "actor": "helper",
-      "at": 5000,
-      "section": 1,
-      "clockMs": 600000,
-      "payload": {}
-    },
-    {
-      "id": "11111111-1111-4111-8111-111111111106",
-      "type": "CORRECTION",
-      "actor": "helper",
-      "at": 6000,
-      "section": null,
-      "clockMs": null,
-      "payload": {
-        "scores": {
-          "teamA": 1,
-          "teamB": 0
-        },
-        "reason": "Manuelle Korrektur",
-        "basedOn": null
-      }
-    },
+    { "id": "11111111-1111-4111-8111-111111111106", "type": "MATCH_END", "actor": "helper", "at": 6000, "section": 1, "clockMs": 600000, "payload": {} },
     {
       "id": "11111111-1111-4111-8111-111111111107",
       "type": "CORRECTION",
-      "actor": "leitung",
+      "actor": "helper",
       "at": 7000,
       "section": null,
       "clockMs": null,
-      "payload": {
-        "scores": {
-          "teamA": 1,
-          "teamB": 0
-        },
-        "reason": "Manuelle Korrektur",
-        "basedOn": null
-      }
+      "payload": { "scores": { "teamA": 1, "teamB": 0 }, "reason": "Manuelle Korrektur", "basedOn": null }
     },
     {
       "id": "11111111-1111-4111-8111-111111111108",
-      "type": "REOPEN",
-      "actor": "helper",
+      "type": "CORRECTION",
+      "actor": "leitung",
       "at": 8000,
       "section": null,
       "clockMs": null,
-      "payload": {}
+      "payload": { "scores": { "teamA": 1, "teamB": 0 }, "reason": "Manuelle Korrektur", "basedOn": null }
     },
-    {
-      "id": "11111111-1111-4111-8111-111111111109",
-      "type": "REOPEN",
-      "actor": "leitung",
-      "at": 9000,
-      "section": null,
-      "clockMs": null,
-      "payload": {}
-    }
+    { "id": "11111111-1111-4111-8111-111111111109", "type": "REOPEN", "actor": "helper", "at": 9000, "section": null, "clockMs": null, "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111110", "type": "REOPEN", "actor": "leitung", "at": 10000, "section": null, "clockMs": null, "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111111", "type": "RETRACT", "actor": "helper", "at": 11000, "section": null, "clockMs": null, "targetId": "11111111-1111-4111-8111-111111111108", "payload": {} },
+    { "id": "11111111-1111-4111-8111-111111111112", "type": "RETRACT", "actor": "leitung", "at": 12000, "section": null, "clockMs": null, "targetId": "11111111-1111-4111-8111-111111111108", "payload": {} }
   ],
   "expect": {
     "results": [
-      {
-        "id": "11111111-1111-4111-8111-111111111101",
-        "status": "rejected",
-        "code": "FORBIDDEN_ACTOR"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111102",
-        "status": "accepted"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111103",
-        "status": "accepted"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111104",
-        "status": "accepted"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111105",
-        "status": "accepted"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111106",
-        "status": "rejected",
-        "code": "FORBIDDEN_ACTOR"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111107",
-        "status": "accepted"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111108",
-        "status": "rejected",
-        "code": "FORBIDDEN_ACTOR"
-      },
-      {
-        "id": "11111111-1111-4111-8111-111111111109",
-        "status": "accepted"
-      }
+      { "id": "11111111-1111-4111-8111-111111111101", "status": "rejected", "code": "FORBIDDEN_ACTOR" },
+      { "id": "11111111-1111-4111-8111-111111111102", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111103", "status": "rejected", "code": "FORBIDDEN_ACTOR" },
+      { "id": "11111111-1111-4111-8111-111111111104", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111105", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111106", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111107", "status": "rejected", "code": "FORBIDDEN_ACTOR" },
+      { "id": "11111111-1111-4111-8111-111111111108", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111109", "status": "rejected", "code": "FORBIDDEN_ACTOR" },
+      { "id": "11111111-1111-4111-8111-111111111110", "status": "accepted" },
+      { "id": "11111111-1111-4111-8111-111111111111", "status": "rejected", "code": "FORBIDDEN_ACTOR" },
+      { "id": "11111111-1111-4111-8111-111111111112", "status": "accepted" }
     ],
     "serverState": {
       "status": "running",
       "phase": "regular",
       "section": 1,
-      "clock": {
-        "running": true,
-        "elapsedMs": 600000,
-        "anchorAt": 9000
-      },
+      "clock": { "running": true, "elapsedMs": 600000, "anchorAt": 10000 },
       "scores": {
-        "teamA": {
-          "regular": 0,
-          "overtime": 0,
-          "shootout": 0
-        },
-        "teamB": {
-          "regular": 0,
-          "overtime": 0,
-          "shootout": 0
-        }
+        "teamA": { "regular": 0, "overtime": 0, "shootout": 0 },
+        "teamB": { "regular": 0, "overtime": 0, "shootout": 0 }
       },
-      "effectiveScores": {
-        "teamA": 1,
-        "teamB": 0
-      },
+      "effectiveScores": { "teamA": 0, "teamB": 0 },
       "shootoutKicks": [],
-      "lastScoreEventId": "11111111-1111-4111-8111-111111111107",
+      "lastScoreEventId": "11111111-1111-4111-8111-111111111112",
       "decidedBy": null,
       "finishedAt": null
     }

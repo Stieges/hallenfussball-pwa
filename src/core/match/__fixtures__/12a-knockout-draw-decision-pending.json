@@ -21,7 +21,7 @@
           "sectionSeconds": 600,
           "breakSeconds": 60,
           "knockout": true,
-          "tiebreak": "shootout",
+          "tiebreak": null,
           "overtimeSeconds": 0,
           "shootersPerTeam": 5,
           "suddenDeathAfter": 5,

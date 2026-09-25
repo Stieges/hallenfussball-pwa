@@ -6,6 +6,13 @@
 export * from './types';
 export { isPayloadValid, PAYLOAD_SCHEMAS } from './payloadValidation';
 export { applyEvent, initialState } from './applyEvent';
-export { reduceMatch, applyBatch, type EventResult, type ReduceResult } from './reduceMatch';
+export {
+  reduceMatch,
+  continueLog,
+  applyBatch,
+  isSameEventContent,
+  type EventResult,
+  type ReduceResult,
+} from './reduceMatch';
 export { toServerState, type ServerMatchState } from './serverState';
 export { transitions, findTransition, isActorAllowed, type TransitionRow } from './transitions';

@@ -14,7 +14,9 @@ export function runEndCheck(state: MatchState, event: EngineEvent, ctx: MatchCon
     return {
       ...state,
       status: 'finished',
-      decidedBy: state.phase === 'overtime' ? 'overtime' : 'regular',
+      // Ruling K1: `decidedBy` wird zentral in applyEvent.ts aus baseDecidedBy + Überschreibungs-
+      // Stapel abgeleitet (decidedByFor). Die Spielende-Prüfung setzt nur die Basis.
+      baseDecidedBy: state.phase === 'overtime' ? 'overtime' : 'regular',
       finishedAt: event.at,
     };
   }

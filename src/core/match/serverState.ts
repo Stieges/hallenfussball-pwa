@@ -21,16 +21,20 @@ export interface ServerMatchState {
 
 export function toServerState(state: MatchState): ServerMatchState {
   const effectiveScores: Record<string, number> = {};
+  const scores: Record<string, TeamScoreBreakdown> = {};
   for (const teamId of Object.keys(state.scores)) {
     effectiveScores[teamId] = effectiveScoreFor(state, teamId);
+    // M8 (Fixrunde 1): flache Kopie -- ein Aufrufer darf state.scores[teamId] nicht über den
+    // zurückgegebenen Server-Ausschnitt mutieren können.
+    scores[teamId] = { ...state.scores[teamId] };
   }
 
   return {
     status: state.status,
     phase: state.phase,
     section: state.section,
-    clock: state.clock,
-    scores: state.scores,
+    clock: { ...state.clock },
+    scores,
     effectiveScores,
     shootoutKicks: state.shootoutKicks.map((kick) => ({ id: kick.id, teamId: kick.teamId, scored: kick.scored })),
     lastScoreEventId: state.lastScoreEventId,

@@ -1,6 +1,6 @@
 {
   "title": "Direkteintrag",
-  "szenario": null,
+  "szenario": "Ergebnis direkt im Spielplan eintragen",
   "ctx": {
     "matchId": "match-10",
     "teamAId": "teamA",

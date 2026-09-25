@@ -120,11 +120,18 @@ export const EngineEventSchema = z.object({
 });
 export type EngineEvent = z.infer<typeof EngineEventSchema>;
 
-export const MatchContextSchema = z.object({
-  matchId: z.string().min(1),
-  teamAId: z.string().min(1),
-  teamBId: z.string().min(1),
-});
+// M10 (Fixrunde 1): teamAId und teamBId müssen sich unterscheiden, sonst hat `scores` nur
+// einen Schlüssel und Team-Zuordnung wird mehrdeutig. Wird von `initialState()` durchgesetzt.
+export const MatchContextSchema = z
+  .object({
+    matchId: z.string().min(1),
+    teamAId: z.string().min(1),
+    teamBId: z.string().min(1),
+  })
+  .refine((ctx) => ctx.teamAId !== ctx.teamBId, {
+    message: 'teamAId und teamBId müssen unterschiedlich sein',
+    path: ['teamBId'],
+  });
 export type MatchContext = z.infer<typeof MatchContextSchema>;
 
 // ============================================
@@ -184,12 +191,29 @@ export interface ShootoutKickRecord {
   shooterNumber?: number;
 }
 
-export interface CorrectionRecord {
+/**
+ * Ruling K1 (Fixrunde 1, C1/I1/I6): RESULT_ENTRY und CORRECTION bilden einen Stapel
+ * "Überschreibungen" (nicht zurückgenommene, in Log-Reihenfolge). Jede Überschreibung
+ * speichert `snapshot` = der aus Toren berechnete Stand zum Zeitpunkt ihrer Annahme. Der
+ * effektive Stand ist dann die letzte Überschreibung plus die seitdem gefallenen Tore
+ * (`effectiveScoreFor`). Damit zählen Tore nach REOPEN weiter, ohne dass eine Korrektur
+ * verloren geht.
+ */
+export interface OverrideRecord {
   id: string;
+  kind: 'correction' | 'direct';
   scores: Record<string, number>;
-  reason: string;
-  basedOn: string | null;
+  snapshot: Record<string, number>;
+  reason?: string;
+  basedOn?: string | null;
   at: number;
+}
+
+/** Ruling K5 (Fixrunde 1, I7): Tore merken sich ihre Phase, damit RETRACT in derselben Phase abzieht. */
+export interface GoalRecord {
+  id: string;
+  scoringTeamId: string;
+  phase: 'regular' | 'overtime';
 }
 
 export interface MatchState {
@@ -199,27 +223,53 @@ export interface MatchState {
   rules: MatchRules | null;
   clock: ClockState;
   scores: Record<string, TeamScoreBreakdown>;
-  correctedScores: Record<string, number> | null;
+  goals: GoalRecord[];
+  overrides: OverrideRecord[];
+  /** Von der Spielende-Prüfung gesetzt ('regular'/'overtime'), REOPEN setzt es zurück auf null (K1). */
+  baseDecidedBy: DecidedBy | null;
   shootoutKicks: ShootoutKickRecord[];
   cards: CardRecord[];
   fouls: FoulRecord[];
   penalties: PenaltyRecord[];
   substitutions: SubstitutionRecord[];
-  corrections: CorrectionRecord[];
   accepted: Record<string, EngineEvent>;
   retracted: string[];
   lastScoreEventId: string | null;
+  /** Abgeleitet über `decidedByFor()`, nach jedem Ereignis neu berechnet (applyEvent.ts). */
   decidedBy: DecidedBy | null;
   finishedAt: number | null;
 }
 
-/** Effektiver Stand eines Teams: correctedScores falls gesetzt, sonst regular+overtime. */
-export function effectiveScoreFor(state: MatchState, teamId: string): number {
-  if (state.correctedScores) {
-    return state.correctedScores[teamId] ?? 0;
-  }
+/** Aus Toren berechneter Stand eines Teams, ohne Überschreibungen (regular+overtime). */
+export function computedScoreFor(state: MatchState, teamId: string): number {
   const breakdown = state.scores[teamId];
   return breakdown ? breakdown.regular + breakdown.overtime : 0;
+}
+
+/**
+ * Effektiver Stand eines Teams (Ruling K1): ohne Überschreibung der aus Toren berechnete
+ * Stand, sonst die letzte Überschreibung zzgl. der seitdem gefallenen Tore (Snapshot-Delta).
+ */
+export function effectiveScoreFor(state: MatchState, teamId: string): number {
+  const lastOverride = state.overrides[state.overrides.length - 1];
+  if (!lastOverride) {
+    return computedScoreFor(state, teamId);
+  }
+  const overrideValue = lastOverride.scores[teamId] ?? 0;
+  const snapshotValue = lastOverride.snapshot[teamId] ?? 0;
+  return overrideValue + (computedScoreFor(state, teamId) - snapshotValue);
+}
+
+/**
+ * `decidedBy` aus dem Überschreibungs-Stapel ableiten (Ruling K1): letzte Überschreibung
+ * bestimmt 'correction'/'direct', sonst gilt `baseDecidedBy` aus der Spielende-Prüfung.
+ */
+export function decidedByFor(state: MatchState): DecidedBy | null {
+  const lastOverride = state.overrides[state.overrides.length - 1];
+  if (lastOverride) {
+    return lastOverride.kind === 'correction' ? 'correction' : 'direct';
+  }
+  return state.baseDecidedBy;
 }
 
 /** Liefert die "andere" Team-ID zu einem gegebenen Team im Kontext eines Spiels. */

@@ -16,7 +16,15 @@ import { adjustClock, resumeClock, startClock, stopClock } from './handlers/cloc
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
 import { applyRetract } from './handlers/retract';
 import { runEndCheck } from './handlers/endcheck';
-import { ERROR_CODES, type EngineEvent, type ErrorCode, type MatchContext, type MatchState } from './types';
+import {
+  decidedByFor,
+  ERROR_CODES,
+  MatchContextSchema,
+  type EngineEvent,
+  type ErrorCode,
+  type MatchContext,
+  type MatchState,
+} from './types';
 import { isPayloadValid } from './payloadValidation';
 
 export type ApplyResult =
@@ -24,8 +32,13 @@ export type ApplyResult =
   | { status: 'noop'; state: MatchState }
   | { status: 'rejected'; code: ErrorCode; detail?: unknown };
 
-/** Frischer Anfangszustand für ein Spiel (Brief Abschnitt 3). */
+/**
+ * Frischer Anfangszustand für ein Spiel (Brief Abschnitt 3). Validiert `ctx` gegen
+ * `MatchContextSchema` (M10, Fixrunde 1) -- teamAId === teamBId ist ein Aufrufer-Fehler und
+ * wirft laut, statt ein Spiel mit nur einem Team-Schlüssel in `scores` zu erzeugen.
+ */
 export function initialState(ctx: MatchContext): MatchState {
+  MatchContextSchema.parse(ctx);
   const zeroBreakdown = { regular: 0, overtime: 0, shootout: 0 };
   return {
     status: 'scheduled',
@@ -37,13 +50,14 @@ export function initialState(ctx: MatchContext): MatchState {
       [ctx.teamAId]: { ...zeroBreakdown },
       [ctx.teamBId]: { ...zeroBreakdown },
     },
-    correctedScores: null,
+    goals: [],
+    overrides: [],
+    baseDecidedBy: null,
     shootoutKicks: [],
     cards: [],
     fouls: [],
     penalties: [],
     substitutions: [],
-    corrections: [],
     accepted: {},
     retracted: [],
     lastScoreEventId: null,
@@ -67,9 +81,11 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'RESUME':
       return { status: 'ok', state: { ...state, clock: resumeClock(state.clock, event) } };
     case 'REOPEN':
+      // Ruling K1: baseDecidedBy zurücksetzen, nicht decidedBy direkt -- eine noch aktive
+      // Überschreibung (Korrektur/Direkteintrag) bleibt bestehen und bestimmt weiter decidedBy.
       return {
         status: 'ok',
-        state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, decidedBy: null },
+        state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, baseDecidedBy: null },
       };
     case 'CLOCK_ADJUST':
       return { status: 'ok', state: { ...state, clock: adjustClock(state.clock, event) } };
@@ -87,7 +103,7 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'SUBSTITUTION':
       return { status: 'ok', state: applySubstitution(state, event) };
     case 'RETRACT': {
-      const outcome = applyRetract(state, event, ctx);
+      const outcome = applyRetract(state, event);
       return outcome.status === 'ok' ? { status: 'ok', state: outcome.state } : { status: 'rejected', code: outcome.code };
     }
     case 'CORRECTION': {
@@ -97,7 +113,7 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
         : { status: 'rejected', code: outcome.code, detail: outcome.detail };
     }
     case 'RESULT_ENTRY':
-      return { status: 'ok', state: applyResultEntry(state, event) };
+      return { status: 'ok', state: applyResultEntry(state, event, ctx) };
     default:
       // SKIP/UNSKIP sowie die B1b-Zeilen (SECTION_END, SECTION_START, TIEBREAK_CHOICE,
       // SHOOTOUT_KICK, SHOOTOUT_END): in B1a nur der reine Statuswechsel via `to`.
@@ -138,7 +154,13 @@ export function applyEvent(state: MatchState, event: EngineEvent, ctx: MatchCont
     nextState = { ...nextState, status: row.to };
   }
 
-  nextState = { ...nextState, accepted: { ...nextState.accepted, [event.id]: event } };
+  // Ruling K1: decidedBy nach jedem Ereignis zentral aus baseDecidedBy + Überschreibungs-Stapel
+  // ableiten, statt es in jedem einzelnen Handler von Hand zu pflegen.
+  nextState = {
+    ...nextState,
+    decidedBy: decidedByFor(nextState),
+    accepted: { ...nextState.accepted, [event.id]: event },
+  };
 
   return { status: 'accepted', state: nextState };
 }

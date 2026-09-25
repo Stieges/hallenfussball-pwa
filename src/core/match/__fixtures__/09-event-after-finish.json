@@ -1,6 +1,6 @@
 {
-  "title": "Ereignis nach Spielende",
-  "szenario": null,
+  "title": "Unzulässiger Schritt wird abgelehnt",
+  "szenario": "Unzulässiger Schritt wird abgelehnt",
   "ctx": {
     "matchId": "match-09",
     "teamAId": "teamA",

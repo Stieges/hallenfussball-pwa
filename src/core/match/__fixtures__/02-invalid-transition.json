@@ -1,5 +1,5 @@
 {
-  "title": "Unzulässiger Schritt wird abgelehnt",
+  "title": "Ungültiger Übergang wird abgelehnt (kein Zustandswechsel)",
   "szenario": null,
   "ctx": {
     "matchId": "match-02",

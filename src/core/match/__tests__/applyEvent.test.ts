@@ -7,16 +7,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { applyEvent, initialState } from '../applyEvent';
 import type { EngineEvent, MatchContext } from '../types';
-
-function deepFreeze<T>(value: T): T {
-  if (value !== null && typeof value === 'object') {
-    for (const key of Object.getOwnPropertyNames(value)) {
-      deepFreeze((value as Record<string, unknown>)[key]);
-    }
-    Object.freeze(value);
-  }
-  return value;
-}
+import { deepFreeze } from './deepFreeze';
 
 const ctx: MatchContext = { matchId: 'match-immutable', teamAId: 'teamA', teamBId: 'teamB' };
 
@@ -68,6 +59,16 @@ describe('applyEvent Immutabilität', () => {
 
     expect(() => applyEvent(frozenState, invalidEvent, ctx)).not.toThrow();
     expect(frozenState.status).toBe('scheduled');
+  });
+});
+
+describe('initialState() Ctx-Validierung (M10, Fixrunde 1)', () => {
+  it('wirft, wenn teamAId === teamBId', () => {
+    expect(() => initialState({ matchId: 'm', teamAId: 'team-x', teamBId: 'team-x' })).toThrow();
+  });
+
+  it('akzeptiert unterschiedliche Team-IDs', () => {
+    expect(() => initialState({ matchId: 'm', teamAId: 'team-a', teamBId: 'team-b' })).not.toThrow();
   });
 });
 

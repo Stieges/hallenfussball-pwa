@@ -6,7 +6,9 @@
 import { z } from 'zod';
 import { MatchRulesSchema, type EngineEvent, type EventType, type MatchContext } from './types';
 
-const EmptyPayloadSchema = z.object({}).strict();
+// Ruling K4 (Fixrunde 1, I5): kein Schema ist `.strict()` -- unbekannte Schlüssel werden
+// ignoriert (z.object()-Default "strip"), nicht abgelehnt. Nur Pflichtfelder werden geprüft.
+const EmptyPayloadSchema = z.object({});
 const OptionalPlayerPayloadSchema = z.object({ playerNumber: z.number().int().nonnegative().optional() });
 const TimePenaltyPayloadSchema = z.object({
   playerNumber: z.number().int().nonnegative().optional(),

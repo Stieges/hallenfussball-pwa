@@ -3,14 +3,14 @@
  * (Brief Abschnitt 3). Ziel muss in `state.accepted` sein und darf noch nicht
  * zurückgenommen worden sein.
  */
-import type { EngineEvent, ErrorCode, MatchContext, MatchState } from '../types';
-import { ERROR_CODES } from '../types';
 import { RETRACTABLE_EVENT_TYPES } from '../payloadValidation';
+import { ERROR_CODES } from '../types';
+import type { EngineEvent, ErrorCode, MatchState } from '../types';
 import { reverseGoal } from './records';
 
 export type RetractOutcome = { status: 'ok'; state: MatchState } | { status: 'rejected'; code: ErrorCode };
 
-export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchContext): RetractOutcome {
+export function applyRetract(state: MatchState, event: EngineEvent): RetractOutcome {
   // targetId ist bereits durch isPayloadValid() als Pflichtfeld geprüft.
   const targetId = event.targetId ?? '';
   const target = state.accepted[targetId];
@@ -24,21 +24,25 @@ export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchCo
     return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
   }
 
+  // Ruling K2: Überschreibungen (CORRECTION/RESULT_ENTRY) dürfen nur die Turnierleitung
+  // zurücknehmen -- unabhängig davon, dass die Übergangszeile für `running`/`paused`/
+  // `section_break`/`shootout` auch Helfer zulässt (Fixrunde 1, I6).
+  if ((target.type === 'CORRECTION' || target.type === 'RESULT_ENTRY') && event.actor !== 'leitung') {
+    return { status: 'rejected', code: ERROR_CODES.FORBIDDEN_ACTOR };
+  }
+
   const retracted = [...state.retracted, targetId];
 
   if (target.type === 'GOAL' || target.type === 'OWN_GOAL') {
-    return { status: 'ok', state: { ...reverseGoal(state, target, ctx), retracted, lastScoreEventId: event.id } };
+    return { status: 'ok', state: { ...reverseGoal(state, targetId), retracted, lastScoreEventId: event.id } };
   }
 
-  if (target.type === 'CORRECTION') {
-    const remainingCorrections = state.corrections.filter((correction) => correction.id !== targetId);
-    const lastRemaining = remainingCorrections[remainingCorrections.length - 1] ?? null;
+  if (target.type === 'CORRECTION' || target.type === 'RESULT_ENTRY') {
     return {
       status: 'ok',
       state: {
         ...state,
-        corrections: remainingCorrections,
-        correctedScores: lastRemaining ? lastRemaining.scores : null,
+        overrides: state.overrides.filter((override) => override.id !== targetId),
         retracted,
         lastScoreEventId: event.id,
       },

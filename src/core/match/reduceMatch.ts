@@ -1,7 +1,7 @@
 /**
- * `reduceMatch` faltet einen gespeicherten Ereignis-Log (Reihenfolge = Server-`seq`, R3)
- * über `initialState` ab, `applyBatch` tut dasselbe für einen Offline-Stapel mit
- * Folgeablehnung (R12). Beide sind rein -- das Systemdatum wird hier nicht gelesen.
+ * `reduceMatch` faltet einen gespeicherten Ereignis-Log (Reihenfolge = Server-`seq`, R3) über
+ * `initialState` ab, `applyBatch` tut dasselbe für einen Offline-Stapel mit Folgeablehnung
+ * (R12). Beide sind rein -- das Systemdatum wird hier nicht gelesen.
  *
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B1a-brief.md Abschnitt 4
  */
@@ -29,11 +29,47 @@ const CASCADE_TRIGGER_TYPES: ReadonlySet<EngineEvent['type']> = new Set([
   'UNSKIP',
 ]);
 
-/** Tiefer Vergleich zweier Ereignisse ohne `actorUser` (nur Fixture-Debug-Feld, R11). */
-function isSameEventContent(a: EngineEvent, b: EngineEvent): boolean {
-  const { actorUser: _actorUserA, ...restA } = a;
-  const { actorUser: _actorUserB, ...restB } = b;
-  return JSON.stringify(restA) === JSON.stringify(restB);
+/**
+ * Ruling K3 (Fixrunde 1, I4): kanonischer Duplikat-Vergleich über die inhaltlichen Felder
+ * `{type, teamId, targetId, section, clockMs, payload}`. `at` (der Server klemmt es, R2) und
+ * `actor`/`actorUser` (der Server leitet den Akteur aus der Rolle ab) zählen NICHT mit, sonst
+ * würde eine echte Wiederholung mit leicht anderem `at` fälschlich ID_CONFLICT ergeben.
+ * `payload` wird rekursiv mit sortierten Schlüsseln verglichen, `null`-Werte werden entfernt
+ * (Analogon zu `jsonb_strip_nulls` auf SQL-Seite, schlüsselordnungsfrei wie jsonb-Gleichheit).
+ */
+function stripNullsAndSortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stripNullsAndSortKeys);
+  }
+  if (value !== null && typeof value === 'object') {
+    const sortedEntries: Record<string, unknown> = {};
+    for (const key of Object.keys(value).sort()) {
+      const entryValue = (value as Record<string, unknown>)[key];
+      if (entryValue === null || entryValue === undefined) {
+        continue;
+      }
+      sortedEntries[key] = stripNullsAndSortKeys(entryValue);
+    }
+    return sortedEntries;
+  }
+  return value;
+}
+
+function canonicalComparableContent(event: EngineEvent): string {
+  const normalized = {
+    clockMs: event.clockMs,
+    payload: stripNullsAndSortKeys(event.payload),
+    section: event.section,
+    targetId: event.targetId ?? null,
+    teamId: event.teamId ?? null,
+    type: event.type,
+  };
+  return JSON.stringify(normalized);
+}
+
+/** Tiefer, kanonischer Vergleich zweier Ereignisse ohne `at`/`actor`/`actorUser` (R11, Ruling K3). */
+export function isSameEventContent(a: EngineEvent, b: EngineEvent): boolean {
+  return canonicalComparableContent(a) === canonicalComparableContent(b);
 }
 
 function processEvent(state: MatchState, event: EngineEvent, ctx: MatchContext): { state: MatchState; result: EventResult } {
@@ -63,16 +99,26 @@ function processEvent(state: MatchState, event: EngineEvent, ctx: MatchContext):
   };
 }
 
-/** Faltet den gespeicherten Log ab `initialState` (keine Folgeablehnung -- das ist R12/applyBatch). */
-export function reduceMatch(events: readonly EngineEvent[], ctx: MatchContext): ReduceResult {
-  let state = initialState(ctx);
+/**
+ * Faltet `events` ab einem gegebenen Zustand ohne Folgeablehnung -- das ist der Kern von
+ * `reduceMatch` (ab `initialState`) und wird von der Fixture-Runner-Erweiterung (Ruling K6,
+ * optionales Fixture-Feld `prior`) auch genutzt, um einen Vorzustand als bereits gespeicherten
+ * Log aufzubauen, bevor `mode: batch`/`log` darauf aufsetzt.
+ */
+export function continueLog(state: MatchState, events: readonly EngineEvent[], ctx: MatchContext): ReduceResult {
+  let currentState = state;
   const results: EventResult[] = [];
   for (const event of events) {
-    const step = processEvent(state, event, ctx);
-    state = step.state;
+    const step = processEvent(currentState, event, ctx);
+    currentState = step.state;
     results.push(step.result);
   }
-  return { state, results };
+  return { state: currentState, results };
+}
+
+/** Faltet den gespeicherten Log ab `initialState` (keine Folgeablehnung -- das ist R12/applyBatch). */
+export function reduceMatch(events: readonly EngineEvent[], ctx: MatchContext): ReduceResult {
+  return continueLog(initialState(ctx), events, ctx);
 }
 
 /**
