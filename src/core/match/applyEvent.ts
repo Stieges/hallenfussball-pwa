@@ -106,6 +106,11 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'RESUME':
       return { status: 'ok', state: { ...state, clock: resumeClock(state.clock, event) } };
     case 'REOPEN':
+      // Ruling B-U11: nur nach Spielende in phase regular/overtime; nach Strafstoßschießen korrigiert
+      // die Turnierleitung per CORRECTION.
+      if (state.phase === 'shootout') {
+        return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'SHOOTOUT_FINISHED' } };
+      }
       // Ruling K1: baseDecidedBy zurücksetzen, nicht decidedBy direkt -- eine noch aktive
       // Überschreibung (Korrektur/Direkteintrag) bleibt bestehen und bestimmt weiter decidedBy.
       return {
@@ -138,7 +143,7 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'TIEBREAK_CHOICE':
       return { status: 'ok', state: applyTiebreakChoice(state, event) };
     case 'SHOOTOUT_KICK':
-      return { status: 'ok', state: applyShootoutKick(state, event) };
+      return applyShootoutKick(state, event, ctx);
     case 'SHOOTOUT_END':
       return applyShootoutEnd(state, event, ctx);
     case 'RESULT_ENTRY':

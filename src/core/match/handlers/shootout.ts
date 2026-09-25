@@ -6,17 +6,28 @@
  */
 import { ERROR_CODES, type EngineEvent, type ErrorCode, type MatchContext, type MatchState } from '../types';
 
+export type ShootoutKickOutcome =
+  | { status: 'ok'; state: MatchState }
+  | { status: 'rejected'; code: ErrorCode; detail: { reason: 'WINNER_DETERMINED' } };
+
 export type ShootoutEndOutcome =
   | { status: 'ok'; state: MatchState }
   | { status: 'rejected'; code: ErrorCode; detail: { shootoutScores: Record<string, number> } };
 
-/** SHOOTOUT_KICK: Schuss anhängen, bei Treffer `scores[team].shootout + 1`. */
-export function applyShootoutKick(state: MatchState, event: EngineEvent): MatchState {
+/**
+ * SHOOTOUT_KICK: Schuss anhängen, bei Treffer `scores[team].shootout + 1`. Steht der Sieger schon
+ * fest, wird der Schuss abgelehnt (B-U13: INVALID_TRANSITION `{reason:'WINNER_DETERMINED'}`) --
+ * das Gerät muss SHOOTOUT_END senden.
+ */
+export function applyShootoutKick(state: MatchState, event: EngineEvent, ctx: MatchContext): ShootoutKickOutcome {
+  if (shootoutWinner(state, ctx) !== null) {
+    return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'WINNER_DETERMINED' } };
+  }
   // teamId ist durch isPayloadValid() als Pflichtfeld ∈ {teamAId, teamBId} geprüft.
   const teamId = event.teamId ?? '';
   const payload = event.payload as { scored: boolean; shooterNumber?: number };
   const previous = state.scores[teamId];
-  return {
+  const next: MatchState = {
     ...state,
     shootoutKicks: [
       ...state.shootoutKicks,
@@ -31,6 +42,7 @@ export function applyShootoutKick(state: MatchState, event: EngineEvent): MatchS
       ? { ...state.scores, [teamId]: { ...previous, shootout: previous.shootout + 1 } }
       : state.scores,
   };
+  return { status: 'ok', state: next };
 }
 
 /** Rücknahme eines Schusses: aus der Serie entfernen, Treffer zurücknehmen. */

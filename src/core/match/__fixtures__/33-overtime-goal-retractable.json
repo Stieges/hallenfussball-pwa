@@ -1,15 +1,15 @@
 {
-  "title": "K.o.-Remis, overtime-then-shootout: Verlängerung mit Tor -> finished overtime (SECTION_END in Verlängerung abgelehnt)",
+  "title": "Verlängerung: eigenes Tor der Verlängerung bleibt zurücknehmbar (B-U15-Gegenprobe), doppelt -> ALREADY_RETRACTED, Remis -> Strafstoßschießen",
   "szenario": null,
   "ctx": {
-    "matchId": "match-25b",
+    "matchId": "match-33-",
     "teamAId": "teamA",
     "teamBId": "teamB"
   },
   "mode": "log",
   "events": [
     {
-      "id": "0000025b-0000-4000-8000-000000000001",
+      "id": "00000033-0000-4000-8000-000000000001",
       "type": "MATCH_START",
       "actor": "helper",
       "at": 1000,
@@ -30,7 +30,7 @@
       }
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000002",
+      "id": "00000033-0000-4000-8000-000000000002",
       "type": "MATCH_END",
       "actor": "helper",
       "at": 601000,
@@ -39,7 +39,7 @@
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000003",
+      "id": "00000033-0000-4000-8000-000000000003",
       "type": "SECTION_START",
       "actor": "helper",
       "at": 661000,
@@ -48,26 +48,37 @@
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000004",
-      "type": "SECTION_END",
+      "id": "00000033-0000-4000-8000-000000000004",
+      "type": "GOAL",
       "actor": "helper",
       "at": 700000,
       "section": 2,
       "clockMs": 639000,
-      "payload": {}
-    },
-    {
-      "id": "0000025b-0000-4000-8000-000000000005",
-      "type": "GOAL",
-      "actor": "helper",
-      "at": 761000,
-      "section": 2,
-      "clockMs": 700000,
       "teamId": "teamA",
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000006",
+      "id": "00000033-0000-4000-8000-000000000005",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 710000,
+      "section": 2,
+      "clockMs": 649000,
+      "targetId": "00000033-0000-4000-8000-000000000004",
+      "payload": {}
+    },
+    {
+      "id": "00000033-0000-4000-8000-000000000006",
+      "type": "RETRACT",
+      "actor": "helper",
+      "at": 711000,
+      "section": 2,
+      "clockMs": 650000,
+      "targetId": "00000033-0000-4000-8000-000000000004",
+      "payload": {}
+    },
+    {
+      "id": "00000033-0000-4000-8000-000000000007",
       "type": "MATCH_END",
       "actor": "helper",
       "at": 961000,
@@ -79,37 +90,38 @@
   "expect": {
     "results": [
       {
-        "id": "0000025b-0000-4000-8000-000000000001",
+        "id": "00000033-0000-4000-8000-000000000001",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000002",
+        "id": "00000033-0000-4000-8000-000000000002",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000003",
+        "id": "00000033-0000-4000-8000-000000000003",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000004",
+        "id": "00000033-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "00000033-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "00000033-0000-4000-8000-000000000006",
         "status": "rejected",
-        "code": "INVALID_TRANSITION",
-        "detail": {
-          "reason": "OVERTIME"
-        }
+        "code": "ALREADY_RETRACTED"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000005",
-        "status": "accepted"
-      },
-      {
-        "id": "0000025b-0000-4000-8000-000000000006",
+        "id": "00000033-0000-4000-8000-000000000007",
         "status": "accepted"
       }
     ],
     "serverState": {
-      "status": "finished",
-      "phase": "overtime",
+      "status": "shootout",
+      "phase": "shootout",
       "section": 2,
       "clock": {
         "running": false,
@@ -119,7 +131,7 @@
       "scores": {
         "teamA": {
           "regular": 0,
-          "overtime": 1,
+          "overtime": 0,
           "shootout": 0
         },
         "teamB": {
@@ -129,13 +141,13 @@
         }
       },
       "effectiveScores": {
-        "teamA": 1,
+        "teamA": 0,
         "teamB": 0
       },
       "shootoutKicks": [],
-      "lastScoreEventId": "0000025b-0000-4000-8000-000000000005",
-      "decidedBy": "overtime",
-      "finishedAt": 961000
+      "lastScoreEventId": "00000033-0000-4000-8000-000000000005",
+      "decidedBy": null,
+      "finishedAt": null
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  "title": "RETRACT auf MATCH_END, unbekanntes Ziel, doppelte Rücknahme",
+  "title": "RETRACT auf MATCH_END, unbekanntes Ziel; Tor-Rücknahme nach Spielende abgelehnt (B-U12), doppelte Rücknahme im laufenden Spiel nach REOPEN",
   "szenario": null,
   "ctx": {
     "matchId": "match-14",
@@ -69,6 +69,25 @@
       "payload": {}
     },
     {
+      "id": "11111111-1111-4111-8111-111111111108",
+      "type": "RETRACT",
+      "actor": "leitung",
+      "at": 5500,
+      "section": null,
+      "clockMs": null,
+      "targetId": "11111111-1111-4111-8111-111111111102",
+      "payload": {}
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111109",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 5800,
+      "section": 1,
+      "clockMs": null,
+      "payload": {}
+    },
+    {
       "id": "11111111-1111-4111-8111-111111111106",
       "type": "RETRACT",
       "actor": "leitung",
@@ -114,6 +133,15 @@
         "code": "UNKNOWN_TARGET"
       },
       {
+        "id": "11111111-1111-4111-8111-111111111108",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111109",
+        "status": "accepted"
+      },
+      {
         "id": "11111111-1111-4111-8111-111111111106",
         "status": "accepted"
       },
@@ -124,13 +152,13 @@
       }
     ],
     "serverState": {
-      "status": "finished",
+      "status": "running",
       "phase": "regular",
       "section": 1,
       "clock": {
-        "running": false,
+        "running": true,
         "elapsedMs": 600000,
-        "anchorAt": null
+        "anchorAt": 5800
       },
       "scores": {
         "teamA": {
@@ -150,8 +178,8 @@
       },
       "shootoutKicks": [],
       "lastScoreEventId": "11111111-1111-4111-8111-111111111106",
-      "decidedBy": "regular",
-      "finishedAt": 3000
+      "decidedBy": null,
+      "finishedAt": null
     }
   }
 }

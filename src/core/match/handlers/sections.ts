@@ -7,16 +7,16 @@ import { resumeClock, stopClock } from './clock';
 
 export type SectionOutcome =
   | { status: 'ok'; state: MatchState }
-  | { status: 'rejected'; code: ErrorCode; detail?: { reason: 'LAST_SECTION' } };
+  | { status: 'rejected'; code: ErrorCode; detail: { reason: 'LAST_SECTION' | 'OVERTIME' } };
 
 /**
  * SECTION_END: nur in phase regular und nicht im letzten Abschnitt (sonst INVALID_TRANSITION mit
- * `{reason:'LAST_SECTION'}`); in der Verlängerung immer INVALID_TRANSITION (ein Abschnitt, ohne
- * detail). Wirkung: Uhr stoppen wie PAUSE; den Status `section_break` setzt die Tabellenzeile.
+ * `{reason:'LAST_SECTION'}`); in der Verlängerung immer INVALID_TRANSITION `{reason:'OVERTIME'}`
+ * (ein Abschnitt, B-U14). Wirkung: Uhr stoppen wie PAUSE; den Status `section_break` setzt die Tabellenzeile.
  */
 export function applySectionEnd(state: MatchState, event: EngineEvent): SectionOutcome {
   if (state.phase !== 'regular') {
-    return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION };
+    return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'OVERTIME' } };
   }
   const sections = state.rules?.sections ?? 1;
   if (state.section >= sections) {

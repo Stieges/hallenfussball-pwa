@@ -23,6 +23,46 @@ function staleBaseDetail(state: MatchState, ctx: MatchContext): { currentScores:
   };
 }
 
+const GOAL_TYPES: ReadonlySet<string> = new Set(['GOAL', 'OWN_GOAL']);
+
+/**
+ * Zieltyp-Zulässigkeit je Status/Phase (B-U16 Schritt 2) -- false => INVALID_PAYLOAD:
+ * - K10: Typ nicht in RETRACTABLE_EVENT_TYPES (u. a. MATCH_END, RESULT_ENTRY).
+ * - B-U10: im Strafstoßschießen nur SHOOTOUT_KICK; in der Pause vor der Verlängerung keine Tore.
+ * - B-U6/B-U12: SHOOTOUT_KICK nur im Strafstoßschießen; nach Spielende keine Tore/Eigentore.
+ * - B-U15: in phase overtime kein Tor, das in der regulären Zeit fiel.
+ * Bewusst unabhängig davon, ob das Ziel schon zurückgenommen ist (Tor-Einträge bleiben erhalten).
+ */
+function isTargetAdmissible(state: MatchState, target: EngineEvent): boolean {
+  if (!RETRACTABLE_EVENT_TYPES.has(target.type)) {
+    return false;
+  }
+  if (state.status === 'shootout') {
+    return target.type === 'SHOOTOUT_KICK';
+  }
+  if (target.type === 'SHOOTOUT_KICK') {
+    return false;
+  }
+  if (!GOAL_TYPES.has(target.type)) {
+    return true;
+  }
+  if (state.status === 'finished') {
+    return false;
+  }
+  if (state.phase === 'overtime') {
+    if (state.status === 'section_break') {
+      return false;
+    }
+    const goalRecord = state.goals.find((goal) => goal.id === target.id);
+    return goalRecord?.phase !== 'regular';
+  }
+  return true;
+}
+
+/**
+ * Prüfreihenfolge (Ruling B-U16, verbindlich auch für B3a): UNKNOWN_TARGET -> Zieltyp-Zulässigkeit
+ * (INVALID_PAYLOAD) -> K2 (FORBIDDEN_ACTOR) -> ALREADY_RETRACTED -> K9 (STALE_BASE) -> Wirkung.
+ */
 export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchContext): RetractOutcome {
   // targetId ist bereits durch isPayloadValid() als Pflichtfeld geprüft.
   const targetId = event.targetId ?? '';
@@ -30,32 +70,22 @@ export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchCo
   if (!target) {
     return { status: 'rejected', code: ERROR_CODES.UNKNOWN_TARGET };
   }
-  if (state.retracted.includes(targetId)) {
-    return { status: 'rejected', code: ERROR_CODES.ALREADY_RETRACTED };
-  }
-  if (!RETRACTABLE_EVENT_TYPES.has(target.type)) {
-    // Ruling K10: RESULT_ENTRY ist bewusst NICHT in RETRACTABLE_EVENT_TYPES -- ein Direkteintrag
-    // lässt sich nie zurücknehmen (auch nicht durch die Turnierleitung), Fehler behebt eine
-    // CORRECTION. Dieser Zweig fängt das für jeden Akteur ab, der die allgemeine
-    // Tabellenzeilen-Prüfung passiert hat (Fixrunde 2, RR-I2).
+  if (!isTargetAdmissible(state, target)) {
     return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
   }
-
-  // Ruling K2 (Fixrunde 2 präzisiert, RR-I2): NUR CORRECTION verlangt zwingend die
-  // Turnierleitung -- RESULT_ENTRY erreicht diesen Zweig nie, weil es oben bereits als nicht
-  // zurücknehmbar abgelehnt wird (K10).
+  // Ruling K2: eine CORRECTION nimmt nur die Turnierleitung zurück (RESULT_ENTRY scheitert schon an K10).
   if (target.type === 'CORRECTION' && event.actor !== 'leitung') {
     return { status: 'rejected', code: ERROR_CODES.FORBIDDEN_ACTOR };
+  }
+  if (state.retracted.includes(targetId)) {
+    return { status: 'rejected', code: ERROR_CODES.ALREADY_RETRACTED };
   }
 
   const retracted = [...state.retracted, targetId];
 
-  if (target.type === 'GOAL' || target.type === 'OWN_GOAL') {
-    // Ruling K9 (Fixrunde 2, RR-I1): ein Tor, das VOR der letzten aktiven Überschreibung fiel,
-    // ist in deren Stand schon "eingerechnet" -- seine Rücknahme würde effectiveScoreFor unter
-    // 0 drücken. Solche Rücknahmen werden abgelehnt wie eine veraltete CORRECTION (STALE_BASE,
-    // gleiches Detail-Format); der richtige Weg ist danach eine neue CORRECTION. Ein Tor NACH
-    // der letzten Überschreibung bleibt normal zurücknehmbar.
+  if (GOAL_TYPES.has(target.type)) {
+    // Ruling K9: ein Tor, das VOR der letzten aktiven Überschreibung fiel, ist in deren Stand schon
+    // eingerechnet -- Rücknahme -> STALE_BASE (Detail wie bei CORRECTION); danach neue CORRECTION.
     const goalRecord = state.goals.find((goal) => goal.id === targetId);
     const lastOverride = state.overrides[state.overrides.length - 1];
     if (goalRecord && lastOverride && goalRecord.seq < lastOverride.seq) {
@@ -92,11 +122,7 @@ export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchCo
     };
   }
 
-  // SHOOTOUT_KICK (B1b, B-U6): nur im laufenden Strafstoßschießen zurücknehmbar, sonst
-  // INVALID_PAYLOAD; nimmt einen Treffer zurück. lastScoreEventId bleibt: Schüsse ändern den
-  // effektiven Stand (regular+overtime) nicht.
-  if (state.status !== 'shootout') {
-    return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
-  }
+  // SHOOTOUT_KICK (nur in status shootout, siehe isTargetAdmissible): nimmt einen Treffer zurück.
+  // lastScoreEventId bleibt: Schüsse ändern den effektiven Stand (regular+overtime) nicht.
   return { status: 'ok', state: { ...reverseShootoutKick(state, targetId), retracted } };
 }

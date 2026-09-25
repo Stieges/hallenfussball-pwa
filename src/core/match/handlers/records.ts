@@ -42,7 +42,11 @@ export function applyGoal(state: MatchState, event: EngineEvent, ctx: MatchConte
   };
 }
 
-/** Rücknahme eines GOAL/OWN_GOAL: zieht in der beim Tor gespeicherten Phase ab (Ruling K5). */
+/**
+ * Rücknahme eines GOAL/OWN_GOAL: zieht in der beim Tor gespeicherten Phase ab (Ruling K5). Der
+ * Tor-Eintrag bleibt erhalten (B1b Fixrunde 1), damit die Zulässigkeitsprüfung (B-U15/B-U16) die
+ * Phase auch eines schon zurückgenommenen Tors kennt; zurückgenommen ist, was in `retracted` steht.
+ */
 export function reverseGoal(state: MatchState, targetId: string): MatchState {
   const goalRecord = state.goals.find((goal) => goal.id === targetId);
   if (!goalRecord) {
@@ -57,7 +61,6 @@ export function reverseGoal(state: MatchState, targetId: string): MatchState {
       ...state.scores,
       [goalRecord.scoringTeamId]: { ...previous, [goalRecord.phase]: previous[goalRecord.phase] - 1 },
     },
-    goals: state.goals.filter((goal) => goal.id !== targetId),
   };
 }
 

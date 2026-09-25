@@ -1,5 +1,5 @@
 {
-  "title": "Strafstoßschießen: Rücknahme eines Schusses nimmt den Treffer zurück; nach Spielende nicht mehr zurücknehmbar",
+  "title": "Strafstoßschießen: Rücknahme eines Schusses nimmt den Treffer zurück; Schuss bei feststehendem Sieger abgelehnt (B-U13); nach Spielende nicht mehr zurücknehmbar",
   "szenario": null,
   "ctx": {
     "matchId": "match-26c",
@@ -195,7 +195,11 @@
       },
       {
         "id": "0000026c-0000-4000-8000-000000000008",
-        "status": "accepted"
+        "status": "rejected",
+        "code": "INVALID_TRANSITION",
+        "detail": {
+          "reason": "WINNER_DETERMINED"
+        }
       },
       {
         "id": "0000026c-0000-4000-8000-000000000009",
@@ -225,7 +229,7 @@
         "teamA": {
           "regular": 0,
           "overtime": 0,
-          "shootout": 3
+          "shootout": 2
         },
         "teamB": {
           "regular": 0,
@@ -257,11 +261,6 @@
           "id": "0000026c-0000-4000-8000-000000000007",
           "teamId": "teamB",
           "scored": false
-        },
-        {
-          "id": "0000026c-0000-4000-8000-000000000008",
-          "teamId": "teamA",
-          "scored": true
         }
       ],
       "lastScoreEventId": null,

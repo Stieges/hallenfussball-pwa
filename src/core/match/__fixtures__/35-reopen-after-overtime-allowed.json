@@ -1,15 +1,15 @@
 {
-  "title": "K.o.-Remis, overtime-then-shootout: Verlängerung mit Tor -> finished overtime (SECTION_END in Verlängerung abgelehnt)",
+  "title": "REOPEN nach Ende in der Verlängerung ist erlaubt (B-U11-Gegenprobe): Spiel läuft in der Verlängerung weiter",
   "szenario": null,
   "ctx": {
-    "matchId": "match-25b",
+    "matchId": "match-35-",
     "teamAId": "teamA",
     "teamBId": "teamB"
   },
   "mode": "log",
   "events": [
     {
-      "id": "0000025b-0000-4000-8000-000000000001",
+      "id": "00000035-0000-4000-8000-000000000001",
       "type": "MATCH_START",
       "actor": "helper",
       "at": 1000,
@@ -30,7 +30,7 @@
       }
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000002",
+      "id": "00000035-0000-4000-8000-000000000002",
       "type": "MATCH_END",
       "actor": "helper",
       "at": 601000,
@@ -39,7 +39,7 @@
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000003",
+      "id": "00000035-0000-4000-8000-000000000003",
       "type": "SECTION_START",
       "actor": "helper",
       "at": 661000,
@@ -48,94 +48,90 @@
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000004",
-      "type": "SECTION_END",
-      "actor": "helper",
-      "at": 700000,
-      "section": 2,
-      "clockMs": 639000,
-      "payload": {}
-    },
-    {
-      "id": "0000025b-0000-4000-8000-000000000005",
+      "id": "00000035-0000-4000-8000-000000000004",
       "type": "GOAL",
       "actor": "helper",
       "at": 761000,
       "section": 2,
       "clockMs": 700000,
-      "teamId": "teamA",
+      "teamId": "teamB",
       "payload": {}
     },
     {
-      "id": "0000025b-0000-4000-8000-000000000006",
+      "id": "00000035-0000-4000-8000-000000000005",
       "type": "MATCH_END",
       "actor": "helper",
       "at": 961000,
       "section": 2,
       "clockMs": 900000,
       "payload": {}
+    },
+    {
+      "id": "00000035-0000-4000-8000-000000000006",
+      "type": "REOPEN",
+      "actor": "leitung",
+      "at": 970000,
+      "section": 2,
+      "clockMs": null,
+      "payload": {}
     }
   ],
   "expect": {
     "results": [
       {
-        "id": "0000025b-0000-4000-8000-000000000001",
+        "id": "00000035-0000-4000-8000-000000000001",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000002",
+        "id": "00000035-0000-4000-8000-000000000002",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000003",
+        "id": "00000035-0000-4000-8000-000000000003",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000004",
-        "status": "rejected",
-        "code": "INVALID_TRANSITION",
-        "detail": {
-          "reason": "OVERTIME"
-        }
-      },
-      {
-        "id": "0000025b-0000-4000-8000-000000000005",
+        "id": "00000035-0000-4000-8000-000000000004",
         "status": "accepted"
       },
       {
-        "id": "0000025b-0000-4000-8000-000000000006",
+        "id": "00000035-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "00000035-0000-4000-8000-000000000006",
         "status": "accepted"
       }
     ],
     "serverState": {
-      "status": "finished",
+      "status": "running",
       "phase": "overtime",
       "section": 2,
       "clock": {
-        "running": false,
+        "running": true,
         "elapsedMs": 900000,
-        "anchorAt": null
+        "anchorAt": 970000
       },
       "scores": {
         "teamA": {
           "regular": 0,
-          "overtime": 1,
+          "overtime": 0,
           "shootout": 0
         },
         "teamB": {
           "regular": 0,
-          "overtime": 0,
+          "overtime": 1,
           "shootout": 0
         }
       },
       "effectiveScores": {
-        "teamA": 1,
-        "teamB": 0
+        "teamA": 0,
+        "teamB": 1
       },
       "shootoutKicks": [],
-      "lastScoreEventId": "0000025b-0000-4000-8000-000000000005",
-      "decidedBy": "overtime",
-      "finishedAt": 961000
+      "lastScoreEventId": "00000035-0000-4000-8000-000000000004",
+      "decidedBy": null,
+      "finishedAt": null
     }
   }
 }
