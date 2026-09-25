@@ -248,6 +248,37 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   erwarteten ROT-Proben, Exit bleibt 0 (das Skript bewertet die Gegenprobe selbst, siehe dessen
   Kopfkommentar).
 
+### `.github/workflows/match-engine-parity.yml` (Gleichlauf-Skript, B3a)
+
+- **Wozu:** Die Spiel-Rechenfunktion existiert zweimal — in TS (`src/core/match/`, Referenz) und
+  als SQL-Zwilling (`supabase/migrations/20260928_002_match_engine.sql`: `match_apply_event`,
+  `match_reduce`/`match_continue`, `match_server_state`, `compute_match_state`). Das Skript
+  `scripts/match-engine-parity.sh` erzwingt, dass beide dasselbe entscheiden
+  (`.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md`).
+- **Was:** Jede Fixture unter `src/core/match/__fixtures__/` läuft durch beide Seiten. TS über
+  `node scripts/match-engine-ts-dump.ts` (natives Type-Stripping, Node ≥ 22.18, `.nvmrc` = 24;
+  zwei kleine Modul-Hooks ergänzen `.ts` bei Importen ohne Endung und laden die JSON-Tabelle),
+  SQL in einem eigenen Wegwerf-Container (`supabase/postgres:17.6.1.063`, Baseline + alle neueren
+  Migrationen, `20260928_002` zweimal eingespielt = Idempotenz) mit den Übergängen aus der Tabelle
+  `match_transitions` (prüft den Seed mit). Verlangt wird SQL == TS **und** SQL == `expect`
+  (Ergebnisse je Ereignis: id/status/code, detail wenn erwartet; `serverState` vollständig).
+  Zusätzlich: `compute_match_state`-Probe für drei Fixtures (Engine-Zeilen per SECURITY-DEFINER-
+  Testfunktion, Eigentümer bekommt den erwarteten Zustand, Fremder/anon `NULL`, Alt-Zeile und
+  `review_state = 'pending'` werden ignoriert) und `scripts/db_privilege_assertions.sql` gegen den
+  migrierten Container (alle Zeilen `|t`).
+- **Lokal:** `bash scripts/match-engine-parity.sh` (Docker + Node + jq nötig, ca. 1 Minute).
+  Ausgabe je Fixture `OK`/`ABWEICHUNG` mit Diff, am Ende die Gleichlauf-Tabelle; Exit ≠ 0 bei jeder
+  Abweichung. Gegenprobe: `bash scripts/match-engine-parity.sh --gegenprobe` ändert im Container
+  die Übergangszeile `(running, GOAL)` auf `leitung` und gibt `match__num` EXECUTE für PUBLIC —
+  das Skript muss ROT melden (Exit 0 nur dann, Exit 1 wenn die Mutation unbemerkt bliebe).
+- **Wann (CI):** Pull Requests, die `src/core/match/**`, `supabase/migrations/**`,
+  `scripts/match-engine-*`, `scripts/lib/migrations-since-baseline.sh`,
+  `scripts/db_privilege_assertions.sql` oder den Workflow selbst ändern. Zwei Schritte: normaler
+  Lauf, dann Gegenprobe. `timeout-minutes: 15`.
+- **Neue Fixture / Regeländerung:** Eine neue Fixture wird automatisch mitgeprüft. Ändert sich die
+  TS-Logik, muss dieselbe Änderung in einer NEUEN Migration (`CREATE OR REPLACE`) in SQL folgen,
+  sonst wird der Job rot.
+
 ### `.github/workflows/visual.yml`
 
 - **Wann:** bei Pull Requests gegen `main`, `types: [opened, synchronize, reopened, labeled]`

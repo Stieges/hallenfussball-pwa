@@ -315,6 +315,14 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-ci-schema-reader-select-match-transitions"
   "positive-anon-select-app-config"
   "positive-ci-schema-reader-select-app-config"
+  "compute-match-state-security-invoker"
+  "compute-match-state-stable"
+  "match-apply-event-immutable"
+  "match-engine-functions-no-public-execute"
+  "match-engine-function-count-41"
+  "positive-anon-execute-compute-match-state"
+  "positive-authenticated-execute-compute-match-state"
+  "positive-authenticated-execute-match-apply-event"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

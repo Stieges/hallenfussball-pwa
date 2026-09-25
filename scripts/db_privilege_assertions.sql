@@ -197,4 +197,44 @@ SELECT 'positive-anon-select-app-config',
 UNION ALL
 SELECT 'positive-ci-schema-reader-select-app-config',
        has_table_privilege('ci_schema_reader', 'public.app_config', 'SELECT')
+UNION ALL
+-- B3a (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md, R17): SQL-Rechenfunktion
+-- (supabase/migrations/20260928_002_match_engine.sql). compute_match_state ist NICHT SECURITY
+-- DEFINER (RLS gilt) und STABLE; match_apply_event ist IMMUTABLE (rein, R1). Keine der 41
+-- Engine-Funktionen (match__* intern + die fuenf match_*-Einstiege + compute_match_state) hat EXECUTE fuer PUBLIC -- auch
+-- nicht implizit (proacl IS NULL hiesse Standard-EXECUTE fuer PUBLIC). Die Anzahl ist fest, damit
+-- ein fehlender Einspielvorgang nicht vakuum-gruen wird.
+SELECT 'compute-match-state-security-invoker',
+       NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
+UNION ALL
+SELECT 'compute-match-state-stable',
+       (SELECT p.provolatile = 's' FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
+UNION ALL
+SELECT 'match-apply-event-immutable',
+       (SELECT p.provolatile = 'i' FROM pg_proc p
+         WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
+UNION ALL
+SELECT 'match-engine-functions-no-public-execute',
+       NOT EXISTS (
+         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = 'public'
+            AND (p.proname LIKE 'match\_\_%' OR p.proname IN ('match_initial_state', 'match_apply_event',
+                 'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))
+            AND (p.proacl IS NULL OR EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
+       )
+UNION ALL
+SELECT 'match-engine-function-count-41',
+       (SELECT count(*) = 41 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'public'
+           AND (p.proname LIKE 'match\_\_%' OR p.proname IN ('match_initial_state', 'match_apply_event',
+                'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state')))
+UNION ALL
+SELECT 'positive-anon-execute-compute-match-state',
+       has_function_privilege('anon', 'public.compute_match_state(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-compute-match-state',
+       has_function_privilege('authenticated', 'public.compute_match_state(uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-match-apply-event',
+       has_function_privilege('authenticated', 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)', 'EXECUTE')
 ;

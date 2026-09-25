@@ -2,10 +2,12 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-28 (B2, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md,
- * Fixrunde 1: Ruling G4 nach Review-Fund I4)
- * -- ausnahmsweise aus dem LOKALEN Stack (`--local`, nicht `--project-id`), weil
- * supabase/migrations/20260928_001_match_event_log.sql noch NICHT in Produktion eingespielt ist
+ * Letzte Regeneration: 2026-09-28 (B3a, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md:
+ * Funktionen der SQL-Rechenfunktion aus 20260928_002_match_engine.sql; davor B2 Fixrunde 1, Ruling G4)
+ * -- ausnahmsweise NICHT aus Produktion (B2: `--local`; B3a: `--db-url` gegen einen Wegwerf-Container
+ * supabase/postgres mit Baseline + allen neueren Migrationen; nicht `--project-id`), weil
+ * supabase/migrations/20260928_001_match_event_log.sql und 20260928_002_match_engine.sql noch NICHT
+ * in Produktion eingespielt sind
  * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
  * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten).
  * WICHTIG (I4, korrigiert): Der Typ-Drift-Check (.github/workflows/supabase-drift-check.yml, Job
@@ -1105,6 +1107,7 @@ export type Database = {
       anonymous_tournament_limit: { Args: never; Returns: number }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
       can_create_tournament: { Args: never; Returns: Json }
+      compute_match_state: { Args: { p_match_id: string }; Returns: Json }
       count_active_tournaments: { Args: { user_id: string }; Returns: number }
       generate_share_code: { Args: never; Returns: string }
       has_tournament_permission: {
@@ -1139,6 +1142,136 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      match__adjust_clock: {
+        Args: { p_clock: Json; p_event: Json }
+        Returns: Json
+      }
+      match__apply_correction: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_effect: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_goal: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_result_entry: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_retract: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_section_end: {
+        Args: { p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_section_start: {
+        Args: { p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_shootout_end: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__apply_shootout_kick: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__canonical: { Args: { p_event: Json }; Returns: Json }
+      match__computed_score: {
+        Args: { p_state: Json; p_team: string }
+        Returns: number
+      }
+      match__decided_by: { Args: { p_state: Json }; Returns: Json }
+      match__effective_score: {
+        Args: { p_state: Json; p_team: string }
+        Returns: number
+      }
+      match__effective_scores: {
+        Args: { p_ctx: Json; p_state: Json }
+        Returns: Json
+      }
+      match__endcheck: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json }
+        Returns: Json
+      }
+      match__enter_decision: {
+        Args: { p_mode: string; p_state: Json }
+        Returns: Json
+      }
+      match__is_int: { Args: { p_value: Json }; Returns: boolean }
+      match__is_nonneg_int: { Args: { p_value: Json }; Returns: boolean }
+      match__num: { Args: { p_value: Json }; Returns: number }
+      match__ok: { Args: { p_state: Json }; Returns: Json }
+      match__opt_nonneg_int: {
+        Args: { p_key: string; p_payload: Json }
+        Returns: boolean
+      }
+      match__payload_valid: {
+        Args: { p_ctx: Json; p_event: Json }
+        Returns: boolean
+      }
+      match__process: {
+        Args: { p_ctx: Json; p_event: Json; p_state: Json; p_transitions: Json }
+        Returns: Json
+      }
+      match__reject: {
+        Args: { p_code: string; p_detail?: Json }
+        Returns: Json
+      }
+      match__resume_clock: {
+        Args: { p_clock: Json; p_event: Json }
+        Returns: Json
+      }
+      match__retract_target_admissible: {
+        Args: { p_state: Json; p_target_id: string; p_target_type: string }
+        Returns: boolean
+      }
+      match__rules_valid: { Args: { p_rules: Json }; Returns: boolean }
+      match__shootout_winner: {
+        Args: { p_ctx: Json; p_state: Json }
+        Returns: string
+      }
+      match__snapshot: { Args: { p_ctx: Json; p_state: Json }; Returns: Json }
+      match__stale_base_detail: {
+        Args: { p_ctx: Json; p_state: Json }
+        Returns: Json
+      }
+      match__start_clock: { Args: { p_event: Json }; Returns: Json }
+      match__stop_clock: {
+        Args: { p_clock: Json; p_event: Json }
+        Returns: Json
+      }
+      match__team_scores_valid: {
+        Args: { p_ctx: Json; p_scores: Json }
+        Returns: boolean
+      }
+      match__truthy: { Args: { p_value: Json }; Returns: boolean }
+      match_apply_event: {
+        Args: { ctx: Json; event: Json; state: Json; transitions: Json }
+        Returns: Json
+      }
+      match_continue: {
+        Args: {
+          ctx: Json
+          events: Json
+          mode?: string
+          state: Json
+          transitions: Json
+        }
+        Returns: Json
+      }
+      match_initial_state: { Args: { ctx: Json }; Returns: Json }
+      match_reduce: {
+        Args: { ctx: Json; events: Json; mode?: string; transitions: Json }
+        Returns: Json
+      }
+      match_server_state: { Args: { state: Json }; Returns: Json }
       merge_user_data: {
         Args: { p_source_user_id: string; p_target_user_id: string }
         Returns: Json
