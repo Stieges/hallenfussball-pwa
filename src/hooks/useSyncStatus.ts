@@ -14,7 +14,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useOnlineStatus } from './useOnlineStatus';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { SyncStatus, SyncResult, SyncConflict, OfflineRepository } from '../core/repositories/OfflineRepository';
-import type { MutationQueueStatus } from '../core/services/MutationQueue';
+import type { MutationQueueStatus, FailedMutationItem } from '../core/services/MutationQueue';
 
 export interface SyncState {
     /** Current sync status */
@@ -31,6 +31,8 @@ export interface SyncState {
     pendingChanges: number;
     /** Number of failed mutations in dead-letter queue */
     failedChanges: number;
+    /** Failed mutations (dead-letter queue) with their reason (lastError), newest last */
+    failedMutations: FailedMutationItem[];
 }
 
 export interface UseSyncStatusReturn extends SyncState {
@@ -42,6 +44,17 @@ export interface UseSyncStatusReturn extends SyncState {
     clearError: () => void;
     /** Clear conflicts state */
     clearConflicts: () => void;
+    /** Move a failed mutation back into the queue and retry it. No-op if the repository has no mutation queue. */
+    retryFailedMutation: (id: string) => void;
+    /** Discard a failed mutation permanently. No-op if the repository has no mutation queue. */
+    discardFailedMutation: (id: string) => void;
+    /**
+     * True only in Cloud-Modus (angemeldet, kein lokaler Gast): the active repository is an
+     * OfflineRepository with a MutationQueue. RepositoryContext only wires that up when the user
+     * is authenticated and NOT a local guest (`canUseSupabase`) — so this doubles as the
+     * "Gilt nur im Cloud-Modus" check for C-SYNC without a separate auth lookup here.
+     */
+    isCloudSyncAvailable: boolean;
 }
 
 /**
@@ -69,6 +82,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
         isSyncing: false,
         pendingChanges: 0,
         failedChanges: 0,
+        failedMutations: [],
     });
 
     const isMounted = useRef(true);
@@ -89,6 +103,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
             ...prev,
             pendingChanges: initialStatus.pendingCount,
             failedChanges: initialStatus.failedCount,
+            failedMutations: mutationQueue.getFailedMutations(),
         }));
 
         // Subscribe to updates
@@ -98,6 +113,7 @@ export function useSyncStatus(): UseSyncStatusReturn {
                 ...prev,
                 pendingChanges: queueStatus.pendingCount,
                 failedChanges: queueStatus.failedCount,
+                failedMutations: mutationQueue.getFailedMutations(),
             }));
         });
 
@@ -245,11 +261,31 @@ export function useSyncStatus(): UseSyncStatusReturn {
         }));
     }, [isOnline]);
 
+    // A4 (C-SYNC): Gescheiterte Übertragungen erneut versuchen oder verwerfen. Delegiert an die
+    // bereits vorhandene GenericMutationQueue (retryFailedMutation/clearFailedMutation) — die
+    // Statusaktualisierung übernimmt der subscribe()-Listener oben (queue.notifyListeners()).
+    const retryFailedMutation = useCallback((id: string) => {
+        if (!('mutationQueue' in repository)) {
+            return;
+        }
+        (repository as OfflineRepository).mutationQueue.retryFailedMutation(id);
+    }, [repository]);
+
+    const discardFailedMutation = useCallback((id: string) => {
+        if (!('mutationQueue' in repository)) {
+            return;
+        }
+        (repository as OfflineRepository).mutationQueue.clearFailedMutation(id);
+    }, [repository]);
+
     return {
         ...state,
         syncTournament,
         resolveConflict,
         clearError,
         clearConflicts,
+        retryFailedMutation,
+        discardFailedMutation,
+        isCloudSyncAvailable: 'mutationQueue' in repository,
     };
 }

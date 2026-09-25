@@ -72,9 +72,13 @@
  * brauchten deshalb ohnehin dieselbe Serialisierung.
  *
  * Ruling AG (final-fix-brief.md, I2): Der ehemalige Test 4 ist jetzt ZWEI Tests --
- * "Sync-Anzeige" (Test 5, `test.fail()` wegen C-SYNC) und "Offline-Tore kommen nach Reconnect an"
- * (Test 6, hängt NICHT von der -- kaputten -- Sync-Anzeige ab). Details in den jeweiligen
- * Testkommentaren.
+ * "Sync-Anzeige" (Test 5) und "Offline-Tore kommen nach Reconnect an"
+ * (Test 6, hängt NICHT von der Sync-Anzeige ab). Details in den jeweiligen Testkommentaren.
+ *
+ * Task A4 (C-SYNC, 2026-09-25): Test 5 war `test.fail()` -- `AdminHeader`/`LiveCockpit` bekamen
+ * `showSyncStatus`/den `SyncStatusIndicator` nirgends übergeben, `sync-status` wurde nie
+ * gerendert. Jetzt behoben (SyncStatusIndicator im Cockpit-Kopf, selbstgesteuert per
+ * `isCloudSyncAvailable`), `test.fail()`-Markierung entfernt.
  */
 
 import { test, expect } from './fixtures';
@@ -597,6 +601,122 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
         )
       );
     }
+  });
+
+  /**
+   * Task A4 (C-SYNC, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A4-brief.md`):
+   * "Eine erzwungen dauerhaft abgelehnte Mutation ... ist innerhalb von 10s als gescheitert
+   * sichtbar." Gewählter Weg, um die Ablehnung zu erzwingen (Brief lässt die Wahl offen, verlangt
+   * eine Begründung): NICHT ein viewer-Schreibversuch über die Warteschlange -- geprüft und
+   * verworfen, weil `SupabaseRepository.updateMatches()` einen von RLS auf 0 Zeilen gefilterten
+   * UPDATE nicht als Fehler erkennt (`error` bleibt `null`, PostgREST wirft bei RLS-Filterung
+   * keinen Fehler) und die Mutation deshalb als "erfolgreich" gilt, obwohl nichts geschrieben
+   * wurde -- ein eigenständiger Befund neben C-SYNC, hier nicht behoben. Stattdessen: ein direkt in
+   * `mutation_queue_v1` eingespeister `UPDATE_MATCH` mit `matchStatus` außerhalb des
+   * DB-Constraints `matches_match_status_check` -- das erzeugt GARANTIERT einen echten,
+   * nicht-transienten Postgres-Fehler (Constraint-Verletzung, kein RLS-Silent-Drop), unabhängig
+   * von der Rolle. `MAX_RETRIES=5` braucht 5 GETRENNTE `process()`-Anstöße (siehe Kommentar bei
+   * Test 1/A1 oben); echtes Offline/Online-Toggling wäre riskant (ein Request mitten im Umschalten
+   * kann als "Netzfehler" statt "echter Fehler" gelten, siehe A3/`isTransientMutationError`,
+   * und würde `retryCount` NICHT erhöhen) -- stattdessen synthetische `online`-DOM-Events
+   * (`window.dispatchEvent(new Event('online'))`), die denselben Listener wie ein echtes
+   * Reconnect auslösen, ohne die tatsächliche Netzwerkverbindung anzufassen.
+   */
+  test('eine dauerhaft abgelehnte Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC)', async ({
+    asRole,
+  }) => {
+    const runningMatchId = await fetchRunningMatchId(E2E_LIVE_CUP_ID);
+    const ownerPage = await asRole('owner');
+    await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+    // Positiver Anker vor dem Seed: das Cockpit ist geladen, `sync-status` bereits sichtbar (kein
+    // Timeout wie im ehemaligen Test 5 vor dem A4-Fix).
+    await expect(ownerPage.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 10000 });
+
+    const badMutationId = `a4-test-${Date.now()}`;
+    await ownerPage.evaluate(
+      ({ id, tournamentId, matchId }) => {
+        const item = {
+          id,
+          type: 'UPDATE_MATCH',
+          payload: { tournamentId, update: { id: matchId, matchStatus: 'A4_TEST_INVALID_STATUS' } },
+          timestamp: Date.now(),
+          retryCount: 0,
+        };
+        window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
+      },
+      { id: badMutationId, tournamentId: E2E_LIVE_CUP_ID, matchId: runningMatchId }
+    );
+
+    // Neu laden: eine frische MutationQueue-Instanz lädt den geseedeten Eintrag aus localStorage
+    // und unternimmt (online) sofort den ersten von 5 nötigen Versuchen.
+    await ownerPage.reload();
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+
+    // Liest {retryCount, deadLettered} direkt aus localStorage -- `deadLettered: true` sobald der
+    // Eintrag in mutation_queue_failed_v1 liegt (dann aus mutation_queue_v1 entfernt, retryCount
+    // dort nicht mehr aussagekräftig).
+    const readQueueState = () =>
+      ownerPage.evaluate(() => {
+        const failedRaw = window.localStorage.getItem('mutation_queue_failed_v1');
+        const failed = failedRaw ? (JSON.parse(failedRaw) as unknown[]) : [];
+        if (failed.length > 0) { return { retryCount: -1, deadLettered: true }; }
+        const queuedRaw = window.localStorage.getItem('mutation_queue_v1');
+        const queued = queuedRaw ? (JSON.parse(queuedRaw) as Array<{ retryCount?: number }>) : [];
+        return { retryCount: queued[0]?.retryCount ?? 0, deadLettered: false };
+      });
+
+    // Nach dem Reload (Anstoß 1) sollte retryCount bereits bei 1 stehen -- Baseline VOR der
+    // Schleife lesen (nicht raten), damit "gestiegen" je Runde echt geprüft wird statt einmalig
+    // gegen 0 (das schon nach Anstoß 1 dauerhaft erfüllt wäre und die Schleife wirkungslos macht).
+    await expect.poll(async () => (await readQueueState()).retryCount, {
+      message: 'Anstoß 1 (Neuladen): retryCount soll 1 sein',
+      timeout: 8000,
+    }).toBeGreaterThanOrEqual(1);
+    let lastRetryCount = (await readQueueState()).retryCount;
+
+    // 4 weitere, GETRENNTE Anstöße (insgesamt 5) -- je einen erst NACH dem vorherigen abwarten
+    // (retryCount ECHT gestiegen ODER bereits im Dead-Letter), damit `isProcessing` keinen
+    // gleichzeitig ausgelösten Anstoß still verschluckt (process() ist keine Warteschlange für
+    // Aufrufe während einer laufenden Verarbeitung, sondern ein No-op).
+    for (let attempt = 2; attempt <= 5; attempt++) {
+      const before = await readQueueState();
+      if (before.deadLettered) { break; }
+
+      await ownerPage.evaluate(() => window.dispatchEvent(new Event('online')));
+
+      await expect.poll(async () => {
+        const state = await readQueueState();
+        return state.deadLettered || state.retryCount > lastRetryCount;
+      }, {
+        message: `Anstoß ${attempt}: retryCount soll über ${lastRetryCount} steigen (oder Dead-Letter)`,
+        timeout: 8000,
+      }).toBe(true);
+
+      lastRetryCount = (await readQueueState()).retryCount;
+    }
+
+    // Fundament-Zielgröße: innerhalb von 10s als gescheitert sichtbar.
+    const syncStatus = ownerPage.locator('[data-testid="sync-status"]');
+    await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
+
+    // Liste öffnen (Klick, da failedChanges > 0 -- siehe SyncStatusIndicator.handleClick), Grund
+    // je Eintrag sichtbar.
+    await syncStatus.click();
+    const failedList = ownerPage.locator('[data-testid="sync-failed-list"]');
+    await expect(failedList).toBeVisible({ timeout: 2000 });
+    await expect(failedList).toContainText('matches_match_status_check');
+
+    // Verwerfen: Rückfrage, erst nach Bestätigen weg.
+    await ownerPage.locator(`[data-testid="sync-discard-${badMutationId}"]`).click();
+    await ownerPage.locator('[data-testid="confirm-dialog-confirm"]').click();
+    await expect(syncStatus).toHaveAttribute('data-state', 'idle', { timeout: 5000 });
+    const failedAfterDiscard = await ownerPage.evaluate(() =>
+      window.localStorage.getItem('mutation_queue_failed_v1')
+    );
+    expect(failedAfterDiscard === null || failedAfterDiscard === '[]').toBe(true);
   });
 
   /**

@@ -12,8 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
-import { SyncStatusBar } from '../../collaboration';
-import { useSyncStatus } from '../../../hooks/useSyncStatus';
+import { SyncStatusIndicator } from '../../collaboration';
 
 // =============================================================================
 // STYLES
@@ -128,13 +127,6 @@ export function AdminHeader({
   const { t } = useTranslation('admin');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { status, isSyncing, lastSyncedAt, pendingChanges, syncTournament } = useSyncStatus();
-
-  const handleSyncClick = () => {
-    if (tournamentId) {
-      void syncTournament(tournamentId);
-    }
-  };
 
   const handleSearchToggle = () => {
     if (isSearchExpanded && searchQuery) {
@@ -195,14 +187,7 @@ export function AdminHeader({
 
       {/* Sync Status */}
       {showSyncStatus && (
-        <SyncStatusBar
-          status={status}
-          isSyncing={isSyncing}
-          lastSyncedAt={lastSyncedAt}
-          pendingCount={pendingChanges}
-          onSyncClick={handleSyncClick}
-          compact
-        />
+        <SyncStatusIndicator tournamentId={tournamentId} compact />
       )}
 
       {/* Search */}

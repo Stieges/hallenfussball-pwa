@@ -36,6 +36,17 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({ myMembership: null, members: [], isLoading: false, error: null }),
 }));
 
+// A4 (C-SYNC): SyncStatusIndicator (neu im Cockpit-Kopf) braucht RepositoryContext via
+// useSyncStatus/useRepositories -- dieser Test rendert ManagementTab (und damit LiveCockpit) ohne
+// Provider. isCloudSyncAvailable:false spiegelt genau den fehlenden Cloud-Kontext hier wider.
+vi.mock('../../../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(),
+    isCloudSyncAvailable: false,
+  }),
+}));
+
 // Spiel-Zustand kommt als Map direkt aus dem Hook — so wie ihn der Service liefert:
 // Draht-Format im payload, kein einziges UI-Feld.
 const liveMatches = new Map<string, CoreLiveMatch>();

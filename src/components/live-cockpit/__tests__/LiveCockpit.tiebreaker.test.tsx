@@ -9,6 +9,17 @@ vi.mock('../../../hooks/useMatchSound', () => ({
   useMatchSound: () => ({ play: vi.fn(), stop: vi.fn(), testPlay: vi.fn(), activate: vi.fn(), isPlaying: false, isLoading: false, isReady: true, isActivated: true, error: null }),
 }));
 
+// A4 (C-SYNC): SyncStatusIndicator (neu im Match-Header) braucht RepositoryContext via
+// useSyncStatus/useRepositories -- diese Tests rendern LiveCockpit ohne Provider. isCloudSyncAvailable
+// false spiegelt exakt den Gast/lokal-Fall wider (kein Provider = keine Cloud), Indicator rendert nichts.
+vi.mock('../../../hooks/useSyncStatus', () => ({
+  useSyncStatus: () => ({
+    status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
+    syncTournament: vi.fn(), retryFailedMutation: vi.fn(), discardFailedMutation: vi.fn(),
+    isCloudSyncAvailable: false,
+  }),
+}));
+
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'match-1', number: 7, phaseLabel: 'Finale', fieldId: 'field-1',

@@ -84,6 +84,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // Permission check: Get current user's role in this tournament
   const { myMembership } = useTournamentMembers(tournament.id);
 
+
   // Determine if user can edit results for a specific match
   const userTeamIds = useMemo(() => myMembership?.teamIds ?? [], [myMembership?.teamIds]);
   const checkCanEditMatch = useCallback((matchTeamIds: string[]) => {

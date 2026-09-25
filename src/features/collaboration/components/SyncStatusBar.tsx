@@ -189,13 +189,22 @@ export function SyncStatusBar({
     // `SyncStatus`-Unions -- E2E-Tests (tests/e2e/cloud/helpers.ts#waitForSync) sollen nicht an
     // die visuelle Unterscheidung "synced" vs. "updated" gekoppelt sein. "conflict" zählt hier
     // als "error" (erfordert genau wie ein Fehler eine Nutzeraktion, bevor sync wieder ruht).
+    //
+    // Task A4 (C-SYNC): `failedCount > 0` schlägt IMMER zuerst durch, auch bei `status="synced"`
+    // oder `"offline"` -- die MutationQueue verschiebt Einträge passiv ins Dead-Letter (kein
+    // syncTournament()/resolveConflict()-Aufruf dabei, der sonst `status` setzt), useSyncStatus()
+    // aktualisiert `status` selbst NIE anhand von failedChanges. Ohne diesen Vorrang blieb
+    // `data-state` bei "idle"/"offline" hängen, obwohl Einträge dauerhaft gescheitert waren
+    // (gefunden im Cloud-E2E-Nachweis dieses Tasks).
     const testState: 'idle' | 'syncing' | 'offline' | 'error' = isSyncing
         ? 'syncing'
-        : status === 'offline'
-            ? 'offline'
-            : status === 'error' || status === 'conflict'
-                ? 'error'
-                : 'idle';
+        : failedCount > 0
+            ? 'error'
+            : status === 'offline'
+                ? 'offline'
+                : status === 'error' || status === 'conflict'
+                    ? 'error'
+                    : 'idle';
 
     // Build status text with pending/failed info
     const hasPending = pendingCount > 0;

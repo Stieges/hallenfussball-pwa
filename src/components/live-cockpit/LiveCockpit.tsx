@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { SyncStatusIndicator } from '../../features/collaboration';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
@@ -867,6 +868,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
+            {/* A4 (C-SYNC): SyncStatusIndicator rendert selbst nichts außerhalb des Cloud-Modus
+                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig. */}
+            <SyncStatusIndicator tournamentId={tournamentId} compact />
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
             {/* ARIA-live region for screen readers to announce status changes */}
             <span

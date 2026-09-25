@@ -79,6 +79,25 @@
     "reconnectAriaLabel": "Reconnect"
   },
   "unsavedChanges": "Unsaved changes present.",
+  "syncStatus": {
+    "failedListTitle": "Failed transfers",
+    "failedListEmpty": "No failed transfers.",
+    "failedReasonUnknown": "Unknown error",
+    "retry": "Try again",
+    "retryAriaLabel": "Retry transfer",
+    "discard": "Discard",
+    "discardAriaLabel": "Discard transfer",
+    "discardConfirmTitle": "Discard transfer?",
+    "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. This cannot be undone.",
+    "close": "Close",
+    "mutationTypes": {
+      "SAVE_TOURNAMENT": "Save tournament",
+      "DELETE_TOURNAMENT": "Delete tournament",
+      "UPDATE_MATCH": "Update match",
+      "UPDATE_MATCHES": "Update matches",
+      "UPDATE_TOURNAMENT_METADATA": "Update tournament data"
+    }
+  },
   "progressBar": {
     "stepLabel": "Step {{step}}: {{label}}",
     "errorTooltip": "Error: {{errors}}",

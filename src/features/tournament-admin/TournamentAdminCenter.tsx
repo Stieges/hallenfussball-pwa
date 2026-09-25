@@ -149,6 +149,9 @@ export function TournamentAdminCenter({
   const { showError } = useToast();
   const navigate = useNavigate();
   const { isMobile } = useBreakpoint();
+  // A4 (C-SYNC): AdminHeader schaltet SyncStatusIndicator frei, das intern selbst nichts rendert
+  // außerhalb des Cloud-Modus (isCloudSyncAvailable in useSyncStatus) -- kein Auth-Check hier nötig.
+  const showSyncStatus = true;
 
   // Category from URL is now passed as prop from App.tsx (single source of truth)
   const categoryFromUrl = initialCategory;
@@ -310,6 +313,8 @@ export function TournamentAdminCenter({
             showBackToHub
             onBackToHub={handleBackToHub}
             onBackToTournament={onBackToTournament}
+            tournamentId={tournamentId}
+            showSyncStatus={showSyncStatus}
           />
           <div style={{ ...styles.contentArea, ...styles.contentAreaMobile }}>
             <ErrorBoundary onReset={handleErrorReset}>
@@ -344,6 +349,8 @@ export function TournamentAdminCenter({
           title={categoryTitle}
           hideBackButton // Desktop: sidebar already has back button
           onBackToTournament={onBackToTournament}
+          tournamentId={tournamentId}
+          showSyncStatus={showSyncStatus}
         />
         <div style={styles.contentArea}>
           <ErrorBoundary onReset={handleErrorReset}>

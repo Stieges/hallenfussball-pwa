@@ -26,6 +26,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useMatchTimer.test.ts',
   'src/hooks/__tests__/useTournamentManager.applyRemote.test.ts',
   'src/hooks/__tests__/useMonitorTheme.test.ts',
+  'src/hooks/__tests__/useSyncStatus.test.ts',
   'src/lib/__tests__/lazyWithRetry.test.ts',
   'src/lib/__tests__/themeManager.test.ts',
 ]
