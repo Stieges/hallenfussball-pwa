@@ -282,6 +282,28 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   TS-Logik, muss dieselbe Änderung in einer NEUEN Migration (`CREATE OR REPLACE`) in SQL folgen,
   sonst wird der Job rot.
 
+### `.github/workflows/append-match-events.yml` (Schreibweg, B3b)
+
+- **Wozu:** `append_match_events` (`supabase/migrations/20260928_003_append_match_events.sql`) ist
+  der einzige Weg, auf dem Geräte ab PR C Ereignisse schreiben. Das Skript
+  `scripts/append-match-events-check.sh` beweist ihn im Wegwerf-Container
+  (`.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md`).
+- **Was:** Testnutzer owner, coadmin, helper (collaborator), trainer, stranger und anon. Jede
+  Fixture läuft durch die RPC: Turnier, Teams und Spiel werden so angelegt, dass die vom Server
+  gesetzten Regeln den Fixture-Regeln entsprechen. Verlangt werden `results` == `expect.results`,
+  `compute_match_state` == `expect.serverState` == Zustand der letzten Antwort, und der
+  Zwischenspeicher auf `matches` passt zum Zustand. Dazu Proben für Rechte, Idempotenz, Kaskade,
+  zwei gleichzeitige Sitzungen, `CLIENT_OUTDATED`, `server_time()` für anon, den Guard aus B2,
+  Großbuchstaben-IDs (S10), echte Epoch-ms (S11), den Umschlag (S9), die Regelableitung und
+  `scripts/db_privilege_assertions.sql`. Die Laufzeit eines Aufrufs bei 100 gespeicherten
+  Ereignissen wird nur ausgegeben.
+- **Lokal:** `bash scripts/append-match-events-check.sh` (Docker + jq, ca. 1 Minute, läuft auch mit
+  der bash 3.2 von macOS). Gegenproben: `--without-migration` (ohne die B3b-Migration muss jede
+  Kategorie ROT sein) und `--gegenprobe` (Akteursermittlung `leadMatches` → `writeMatchData`,
+  Fixtures und Rechte müssen ROT sein). Beide enden nur dann mit Exit 0.
+- **Wann (CI):** gleicher Pfadfilter wie `match-engine-parity.yml` plus das Skript selbst; drei
+  Schritte (normal, Gegenprobe A, Gegenprobe B), `timeout-minutes: 20`.
+
 ### `.github/workflows/visual.yml`
 
 - **Wann:** bei Pull Requests gegen `main`, `types: [opened, synchronize, reopened, labeled]`
