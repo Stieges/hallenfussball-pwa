@@ -12,10 +12,12 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { OptimisticLockError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
   mapMatchUpdateToSupabase,
+  mapMatchToScheduleUpdate,
   mapTeamToSupabase,
   mapMatchToSupabase,
   type TournamentUpdate,
@@ -187,6 +189,79 @@ export class SupabaseRepository implements ITournamentRepository {
       user.id
     );
 
+    // =========================================================================================
+    // A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md, C-K6; Fixrunde 1,
+    // task-A6-review.md I1/I2, Ruling AN): find PROTECTED matches -- missing from the local
+    // tournament (stale device, a regenerated schedule, ...) but already having match_events, or
+    // a match_status other than 'scheduled'/NULL -- BEFORE any write happens.
+    //
+    // I1: this must run before the tournament row, teams, AND matches are touched. The earlier
+    // version (Fixrunde 0) ran this check only inside step 3 (matches), AFTER step 2 had already
+    // deleted teams missing from the local state. If a protected match's own team was ALSO
+    // missing locally, that team was deleted before the match-level check ever ran -- the match
+    // row itself survived, but `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL, baseline
+    // :1485/:1489) were wiped by the team deletion anyway, silently losing the pairing (and, via
+    // `match_events.team_id`/`team_players`, the scorer attribution) despite the match "surviving".
+    // Fix: compute `protectedTeamIds` here too and exclude them from `teamsToDelete` below.
+    //
+    // I2 (Ruling AN): a protected match no longer makes save() THROW. `save()` completes the
+    // rest of the tournament normally; only the protected match(es) are excluded from
+    // `matchesToDelete`. The caller (MutationQueue) sees this SAVE_TOURNAMENT mutation as a
+    // SUCCESS -- throwing here would count as a failed attempt and, after MAX_RETRIES, dead-letter
+    // the mutation, permanently blocking every later save of this tournament (the queue is FIFO
+    // and keeps re-trying the SAME stale payload). The caller instead learns about the kept
+    // match(es) via `notifyMatchesProtected()` (see `core/services/matchProtectionNotices.ts` for
+    // why this needs its own channel instead of a return value or thrown error) once the save
+    // actually succeeds, below.
+    const { data: existingMatches } = await getSupabase()
+      .from('matches')
+      .select('id, match_status, match_number, team_a_id, team_b_id')
+      .eq('tournament_id', tournament.id);
+
+    const existingMatchIds = new Set((existingMatches ?? []).map((m) => m.id));
+    const newMatchIds = new Set(matchRows.map((m) => m.id));
+    const candidateMatchesToDelete = [...existingMatchIds].filter((id) => !newMatchIds.has(id));
+
+    const matchNumberById = new Map(
+      (existingMatches ?? []).map((m) => [m.id, m.match_number] as const)
+    );
+    let blockedMatchIds: string[] = [];
+    const protectedTeamIds = new Set<string>();
+
+    if (candidateMatchesToDelete.length > 0) {
+      const matchStatusById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, m.match_status] as const)
+      );
+      const matchTeamsById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, [m.team_a_id, m.team_b_id] as const])
+      );
+
+      const { data: eventRows, error: eventsError } = await getSupabase()
+        .from('match_events')
+        .select('match_id')
+        .in('match_id', candidateMatchesToDelete);
+
+      if (eventsError) {
+        console.error('Failed to check match_events before deleting matches:', eventsError);
+        throw new RepositoryError('saveMatches', eventsError.message, eventsError);
+      }
+
+      const matchIdsWithEvents = new Set((eventRows ?? []).map((e) => e.match_id));
+      blockedMatchIds = candidateMatchesToDelete.filter((id) => {
+        const status = matchStatusById.get(id);
+        const isScheduledOrNull = status === 'scheduled' || status === null || status === undefined;
+        return matchIdsWithEvents.has(id) || !isScheduledOrNull;
+      });
+
+      for (const id of blockedMatchIds) {
+        const [teamAId, teamBId] = matchTeamsById.get(id) ?? [null, null];
+        if (teamAId) { protectedTeamIds.add(teamAId); }
+        if (teamBId) { protectedTeamIds.add(teamBId); }
+      }
+    }
+
+    const matchesToDelete = candidateMatchesToDelete.filter((id) => !blockedMatchIds.includes(id));
+
     // Start transaction-like operation
     // Note: Supabase doesn't support true transactions in the client,
     // but we can use RPC for atomic operations if needed
@@ -262,8 +337,12 @@ export class SupabaseRepository implements ITournamentRepository {
     // once the subsequent upsert (INSERT ... ON CONFLICT DO UPDATE) succeeded for that same
     // caller. Counting the actually-deleted rows and throwing on a mismatch converts this into a
     // loud error that reaches the existing MutationQueue retry/dead-letter path instead.
+    // I1 (task-A6-review.md, Fixrunde 1): a team referenced by a PROTECTED match (computed above,
+    // before any write) is excluded here too -- otherwise the team gets deleted (missing locally,
+    // same as the match), and `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL) silently loses
+    // the pairing on the match that was supposedly "kept".
     const teamsToDelete = [...existingTeamIds].filter(
-      (id) => !newTeamIds.has(id)
+      (id) => !newTeamIds.has(id) && !protectedTeamIds.has(id)
     );
     if (teamsToDelete.length > 0) {
       const { data: deletedTeams, error: deleteError } = await getSupabase()
@@ -296,20 +375,9 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // 3. Handle matches - delete removed, upsert existing
-    const { data: existingMatches } = await getSupabase()
-      .from('matches')
-      .select('id')
-      .eq('tournament_id', tournament.id);
-
-    const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
-    const newMatchIds = new Set(matchRows.map((m) => m.id));
-
-    // Delete matches that are no longer in the tournament (R5b/R5-H1, same reasoning as teams
-    // above -- matches_delete_v2 gates on 'restructure' too).
-    const matchesToDelete = [...existingMatchIds].filter(
-      (id) => !newMatchIds.has(id)
-    );
+    // 3. Handle matches - delete removed (excluding protected, computed above), upsert existing.
+    // R5b/R5-H1, same reasoning as teams above -- matches_delete_v2 gates on 'restructure' too.
+    // `matchesToDelete` already excludes `blockedMatchIds` (A6, computed before any write above).
     if (matchesToDelete.length > 0) {
       const { data: deletedMatches, error: deleteError } = await getSupabase()
         .from('matches')
@@ -329,16 +397,93 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Upsert matches
-    if (matchRows.length > 0) {
-      const { error: matchesError } = await getSupabase()
-        .from('matches')
-        .upsert(matchRows, { onConflict: 'id' });
+    // Insert new matches, update existing matches -- SEPARATELY (A2,
+    // .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
+    //
+    // Before this fix, a single `.upsert(matchRows)` wrote EVERY column of `mapMatchToSupabase`
+    // for EVERY match, including a helper's live/result columns (score_a/b, match_status, timer,
+    // overtime/penalty, decided_by, ...). If the tournament owner still had an older local
+    // tournament state (e.g. after only renaming a team) and saved the whole tournament while a
+    // helper was running a live match, the owner's stale row overwrote the helper's current
+    // match state in the cloud. A NEW match has no live state yet, so it is still fully inserted;
+    // an EXISTING match is updated with ONLY the schedule columns via
+    // `mapMatchToScheduleUpdate` -- never the live/result ones.
+    const newMatchRows = matchRows.filter(
+      (m) => typeof m.id !== 'string' || !existingMatchIds.has(m.id)
+    );
+    const existingMatchRows = matchRows.filter(
+      (m): m is typeof m & { id: string } => typeof m.id === 'string' && existingMatchIds.has(m.id)
+    );
 
-      if (matchesError) {
-        console.error('Failed to save matches:', matchesError);
-        throw new RepositoryError('saveMatches', matchesError.message, matchesError);
+    if (newMatchRows.length > 0) {
+      const { error: insertError } = await getSupabase()
+        .from('matches')
+        .upsert(newMatchRows, { onConflict: 'id' });
+
+      if (insertError) {
+        console.error('Failed to insert matches:', insertError);
+        throw new RepositoryError('saveMatches', insertError.message, insertError);
       }
+    }
+
+    if (existingMatchRows.length > 0) {
+      // A2 Fixrunde 1 (I3, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md):
+      // the review's OWN suggested fix -- a single batch `upsert()` with only the schedule
+      // columns -- turned out to be UNSAFE, not just "geht nicht direkt" for NOT-NULL reasons.
+      // `matches_insert_v2` requires the 'restructure' permission, `matches_update_v3` only
+      // 'writeMatchData' (`supabase/migrations/20260924_002_central_role_permissions.sql:325-353`,
+      // `rolePermissions.json`). An `INSERT ... ON CONFLICT (id) DO UPDATE` statement is
+      // evaluated against BOTH the INSERT and the UPDATE RLS policy by Postgres, even when every
+      // row already exists and only the UPDATE branch actually fires. A `collaborator` (Helfer)
+      // has `writeMatchData` and `teams` but NOT `restructure` (`rolePermissions.json`) and can
+      // reach this exact path today (e.g. renaming a team via `TeamsTab`, permission `teams`) --
+      // switching to a batch upsert would silently lock every collaborator out of a full save
+      // that touches ANY existing match row, a regression this task must not introduce.
+      // Verifying this against a real RLS-enforced Postgres needs the local stack, which was busy
+      // with another task during this fix round -- documented instead of merged untested.
+      //
+      // Kept per-row `.update()` (same RLS shape as before A2), but PARALLELIZED via
+      // `Promise.all` instead of a sequential `for` loop -- this removes the actual complaint (N
+      // *sequential* round-trips) without touching the RLS-relevant statement shape at all.
+      // A2 Fixrunde 1 (M3): `.select('id')` so a silently RLS-filtered 0-row UPDATE surfaces as an
+      // error instead of a no-op -- same reasoning as the R5-H1 delete-count check above (a
+      // plain `.update()` without `.select()` reports no Postgres `error` even when RLS's USING
+      // clause matched nothing).
+      const results = await Promise.all(
+        existingMatchRows.map(async (row) => {
+          const scheduleUpdate = mapMatchToScheduleUpdate(row);
+          const { data, error: updateError } = await getSupabase()
+            .from('matches')
+            .update(scheduleUpdate)
+            .eq('id', row.id)
+            .eq('tournament_id', tournament.id)
+            .select('id');
+          return { id: row.id, error: updateError, updatedCount: data?.length ?? 0 };
+        })
+      );
+
+      const errors = results.filter((r) => r.error !== null || r.updatedCount === 0);
+      if (errors.length > 0) {
+        for (const { id, error } of errors) {
+          console.error(`Failed to update match ${id}:`, error ?? '0 rows updated (RLS?), expected 1');
+        }
+        throw new RepositoryError(
+          'saveMatches',
+          `Failed to update ${errors.length} match(es): ${errors
+            .map((e) => `${e.id}: ${e.error?.message ?? `0 rows updated (expected 1, got ${e.updatedCount})`}`)
+            .join('; ')}`
+        );
+      }
+    }
+
+    // A6 (I2, Ruling AN): the save succeeded in full -- if any match was kept instead of deleted,
+    // tell whoever is listening (see core/services/matchProtectionNotices.ts for why this can't
+    // be the return value or a thrown error).
+    if (blockedMatchIds.length > 0) {
+      notifyMatchesProtected({
+        tournamentId: tournament.id,
+        matches: blockedMatchIds.map((id) => ({ id, matchNumber: matchNumberById.get(id) ?? null })),
+      });
     }
   }
 
@@ -378,15 +523,26 @@ export class SupabaseRepository implements ITournamentRepository {
     for (const update of updates) {
       const supabaseUpdate = mapMatchUpdateToSupabase(update, teamNameToId);
 
-      const { error } = await getSupabase()
+      // Fixrunde 1 (A4 Review, Risiko 4): `.select('id')` so a silently RLS-filtered 0-row
+      // UPDATE surfaces as an error instead of a no-op -- same reasoning/pattern as save()'s
+      // per-match update loop (A2 Fixrunde 1, M3) and the teams/matches delete-count check
+      // (R5-H1). Deliberately ONLY here (the `matches` update below), NOT for the `tournaments`
+      // timestamp update further down: a collaborator/helper has `writeMatchData` but not
+      // necessarily any write right on `tournaments`, so the same check there would misclassify
+      // every helper edit as failed.
+      const { data, error } = await getSupabase()
         .from('matches')
         .update(supabaseUpdate)
         .eq('id', update.id)
-        .eq('tournament_id', tournamentId);
+        .eq('tournament_id', tournamentId)
+        .select('id');
 
       if (error) {
         console.error(`Failed to update match ${update.id}:`, error);
         errors.push(new Error(`Match ${update.id}: ${error.message}`));
+      } else if (!data || data.length === 0) {
+        console.error(`Failed to update match ${update.id}: 0 rows updated (RLS or missing row), expected 1`);
+        errors.push(new Error(`Match ${update.id}: 0 rows updated (RLS or missing row), expected 1`));
       }
     }
 
@@ -425,17 +581,25 @@ export class SupabaseRepository implements ITournamentRepository {
   }
 
   /**
-   * Deletes a tournament and all related data
-   * Note: Teams and matches should cascade delete via foreign keys
+   * Deletes a tournament and all related data.
+   *
+   * A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md): this used to
+   * delete matches and teams via two SEPARATE, direct DELETE statements BEFORE deleting the
+   * tournament row itself ("in case cascade isn't set up"). The baseline schema proves that
+   * assumption wrong -- `matches_tournament_id_fkey` and `teams_tournament_id_fkey` (and every
+   * other tournament_id/match_id foreign key: teams, sponsors, monitors, monitor_heartbeats,
+   * tournament_collaborators, match_events, match_corrections) are all `ON DELETE CASCADE`
+   * (supabase/migrations/00000000000000_baseline_live_schema.sql:1461-1533). Deleting matches
+   * as a standalone statement is not just redundant, it is actively harmful now that
+   * `matches_protect_events_before_delete` (supabase/migrations/20260925_002_...) exists: a
+   * direct `DELETE FROM matches WHERE tournament_id = ...` is NOT a cascade (the tournament row
+   * still exists at that point), so the trigger would reject it for every match that already has
+   * match_events -- blocking a legitimate whole-tournament deletion. Deleting ONLY the tournament
+   * row and letting the foreign keys cascade keeps the trigger's cascade exception
+   * (`pg_trigger_depth() > 1`) true, so a tournament with matches AND events can still be deleted
+   * in one step, exactly as intended.
    */
   async delete(id: string): Promise<void> {
-    // Delete matches first (in case cascade isn't set up)
-    await getSupabase().from('matches').delete().eq('tournament_id', id);
-
-    // Delete teams
-    await getSupabase().from('teams').delete().eq('tournament_id', id);
-
-    // Delete tournament
     const { error } = await getSupabase().from('tournaments').delete().eq('id', id);
 
     if (error) {

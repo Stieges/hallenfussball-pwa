@@ -102,6 +102,33 @@ describe('MatchSchema', () => {
     const result = MatchSchema.parse({ id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2' });
     expect(result.events).toBeUndefined();
   });
+
+  // C-ZOD-DEC: Supabase liefert für nullable Spalten `null` statt `undefined`.
+  // decidedBy/finalType kamen bisher als `null` durch (Cast ohne `?? undefined`
+  // in supabaseMappers.ts), was die Validierung scheitern ließ und das Turnier
+  // lokal verwarf (LocalStorageRepository.loadList).
+  it('accepts decidedBy: null from the cloud and normalizes it to undefined', () => {
+    const result = MatchSchema.parse({
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', decidedBy: null,
+    });
+    expect(result.decidedBy).toBeUndefined();
+  });
+
+  it('accepts finalType: null from the cloud and normalizes it to undefined', () => {
+    const result = MatchSchema.parse({
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2', finalType: null,
+    });
+    expect(result.finalType).toBeUndefined();
+  });
+
+  it('still accepts decidedBy/finalType as a real string', () => {
+    const result = MatchSchema.parse({
+      id: 'm1', round: 1, field: 1, teamA: 't1', teamB: 't2',
+      decidedBy: 'penalty', finalType: 'final',
+    });
+    expect(result.decidedBy).toBe('penalty');
+    expect(result.finalType).toBe('final');
+  });
 });
 
 // =============================================================================

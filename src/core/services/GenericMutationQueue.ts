@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { generateUniqueId } from '../../utils/idGenerator';
 import { safeLocalStorage } from '../utils/safeStorage';
 import { captureFeatureError } from '../../lib/sentry';
+import { isTransientMutationError } from '../errors';
 
 /**
  * Structural (not enum-restricted) validation for a queued mutation item.
@@ -431,6 +432,14 @@ export class GenericMutationQueue<TType extends string> {
                     await this.config.execute(item);
                 } catch (error) {
                     if (import.meta.env.DEV) { console.warn(`MutationQueue: Error processing ${item.type} (${item.id})`, error); }
+
+                    if (isTransientMutationError(error)) {
+                        // Vorübergehender Fehler (z. B. kein echtes Internet trotz
+                        // navigator.onLine — Hallen-WLAN-Anmeldeseite, Server-Überlastung):
+                        // zählt nicht als Fehlversuch. Item bleibt unverändert an erster
+                        // Stelle stehen und wird beim nächsten Anstoß erneut versucht.
+                        break;
+                    }
 
                     item.retryCount++;
 

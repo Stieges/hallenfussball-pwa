@@ -51,7 +51,7 @@ describe('DangerZone — Turnierabschluss (L5)', () => {
 
   it('L5: "Turnier beenden" setzt manuallyCompleted, completedAt und statsSnapshot', async () => {
     const onTournamentUpdate = vi.fn(); const user = userEvent.setup();
-    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} />);
+    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} onLocalTournamentUpdate={onTournamentUpdate} onMatchesUpdate={vi.fn()} />);
     await triggerAction(user, /Turnier beenden/i, 'BEENDEN');
     const u = onTournamentUpdate.mock.calls[0][0] as Tournament;
     expect(u.manuallyCompleted).toBe(true); expect(u.completedAt).toBeDefined();
@@ -60,14 +60,14 @@ describe('DangerZone — Turnierabschluss (L5)', () => {
   });
   it('L5: das beendete Turnier gilt in der Kategorisierung als beendet', async () => {
     const onTournamentUpdate = vi.fn(); const user = userEvent.setup();
-    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} />);
+    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} onLocalTournamentUpdate={onTournamentUpdate} onMatchesUpdate={vi.fn()} />);
     await triggerAction(user, /Turnier beenden/i, 'BEENDEN');
     expect(isTournamentCompleted(onTournamentUpdate.mock.calls[0][0] as Tournament)).toBe(true);
     expect(isTournamentCompleted(tournament)).toBe(false);
   });
   it('L5: "Turnier archivieren" verwendet dieselbe Logik', async () => {
     const onTournamentUpdate = vi.fn(); const user = userEvent.setup();
-    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} />);
+    render(<DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={onTournamentUpdate} onLocalTournamentUpdate={onTournamentUpdate} onMatchesUpdate={vi.fn()} />);
     await triggerAction(user, /Turnier archivieren/i, 'ARCHIVIEREN');
     const u = onTournamentUpdate.mock.calls[0][0] as Tournament;
     expect(u.manuallyCompleted).toBe(true); expect(u.statsSnapshot).toBeDefined();

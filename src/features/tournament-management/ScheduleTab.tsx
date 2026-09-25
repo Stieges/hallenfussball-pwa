@@ -22,6 +22,7 @@ import { Card } from '../../components/ui';
 import { useToast } from '../../components/ui/Toast';
 import { cssVars, mediaQueries } from '../../design-tokens'
 import { Tournament, Standing, Match } from '../../types/tournament';
+import { MatchUpdate } from '../../core/models/types';
 import {
   useScheduleHistory,
   useRunningMatches,
@@ -48,6 +49,14 @@ interface ScheduleTabProps {
   schedule: GeneratedSchedule;
   currentStandings: Standing[];
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /**
+   * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): local-only state
+   * sync (no persistence) — used by result entry so the UI updates immediately without a full
+   * tournament save.
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  /** A2: persists specific matches via a targeted update instead of a full tournament save. */
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   /** Callback to navigate to management tab with selected match */
   onNavigateToCockpit?: (matchId: string) => void;
 }
@@ -57,6 +66,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   schedule,
   currentStandings,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
   onNavigateToCockpit,
 }) => {
   const { t } = useTranslation('tournament');
@@ -168,7 +179,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
     handleConfirmCorrection,
   } = useCorrectionMode({
     tournament,
-    onTournamentUpdate,
+    onLocalTournamentUpdate,
+    onMatchesUpdate,
     canCorrectResults,
   });
 
@@ -245,6 +257,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
   } = useScheduleTabActions({
     tournament,
     onTournamentUpdate,
+    onLocalTournamentUpdate,
+    onMatchesUpdate,
     isEditing,
     saveToHistory,
     showSuccess,
@@ -373,6 +387,8 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({
             <ScheduleEditor
               tournament={tournament}
               onTournamentUpdate={(updatedTournament) => onTournamentUpdate(updatedTournament, false)}
+              onLocalTournamentUpdate={onLocalTournamentUpdate}
+              onMatchesUpdate={onMatchesUpdate}
               externalEditMode={isEditing}
               onBeforeChange={saveToHistory}
               hideToolbar={true}

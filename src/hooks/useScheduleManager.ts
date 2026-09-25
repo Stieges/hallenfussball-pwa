@@ -53,7 +53,16 @@ export function useScheduleManager(tournamentId: string) {
 
             // Reload state to ensure sync
             // Optimization: modifying local state directly would be faster
-            setMatches(prev => prev.map(m => m.id === update.id ? { ...m, ...update } : m));
+            // A2 Fixrunde 3 (N2): `null` in `update` means "explicitly cleared" (wire-safe form,
+            // see core/models/types.ts) -- translate back to `undefined` for the local `Match`.
+            setMatches(prev => prev.map(m => {
+                if (m.id !== update.id) { return m; }
+                const merged: Record<string, unknown> = { ...m };
+                for (const [key, value] of Object.entries(update)) {
+                    merged[key] = value ?? undefined;
+                }
+                return merged as unknown as Match;
+            }));
         } catch (err) {
             console.error(err);
             setError('Fehler beim Speichern');

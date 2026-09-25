@@ -11,6 +11,8 @@
 
 import { useReducer, useCallback, useMemo, useEffect } from 'react';
 import { Match, Tournament } from '../../../types/tournament';
+import type { MatchUpdate } from '../../../core/models/types';
+import { diffMatchResultStatusUpdates } from '../../../core/services';
 import {
   EditorState,
   EditorAction,
@@ -119,6 +121,14 @@ export interface UseScheduleEditorOptions {
   tournament: Tournament;
   /** Callback when tournament is updated */
   onTournamentUpdate: (tournament: Tournament) => void;
+  /**
+   * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+   * task-A2-review.md`): local-state-only sync for `skipMatch`/`unskipMatch` -- the actual
+   * persistence for those goes through `onMatchesUpdate` (targeted update), a full `save()`
+   * skips STATUS columns for existing matches (A2).
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   /** Optional initial mode */
   initialMode?: 'view' | 'edit';
 }
@@ -181,7 +191,7 @@ export interface UseScheduleEditorReturn {
 export function useScheduleEditor(
   options: UseScheduleEditorOptions
 ): UseScheduleEditorReturn {
-  const { tournament, onTournamentUpdate, initialMode = 'view' } = options;
+  const { tournament, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate, initialMode = 'view' } = options;
 
   // Initialize state
   const [state, dispatch] = useReducer(editorReducer, {
@@ -322,12 +332,15 @@ export function useScheduleEditor(
         : m
     );
 
-    onTournamentUpdate({
+    // A2 Fixrunde 1 (I1): local sync + targeted STATUS update instead of a full save (which
+    // skips STATUS columns for existing matches, see A2).
+    onLocalTournamentUpdate({
       ...tournament,
       matches: updatedMatches,
       updatedAt: new Date().toISOString(),
     });
-  }, [tournament, onTournamentUpdate, createChange]);
+    onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, updatedMatches));
+  }, [tournament, onLocalTournamentUpdate, onMatchesUpdate, createChange]);
 
   const unskipMatch = useCallback((matchId: string) => {
     const match = tournament.matches.find(m => m.id === matchId);
@@ -344,12 +357,19 @@ export function useScheduleEditor(
       return { ...rest, matchStatus: 'scheduled' as const };
     });
 
-    onTournamentUpdate({
+    // A2 Fixrunde 1 (I1): same targeted-update pattern as skipMatch above -- this ALSO fixes a
+    // pre-existing gap noted in the A1 review (M1): the old `onTournamentUpdate()`-only path
+    // never cleared `skipped_reason`/`skipped_at` in the cloud even before A2, because
+    // `mapMatchUpdateToSupabase` skipped fields that were simply absent from the object (see its
+    // A2-Fixrunde-1 doc comment). `diffMatchResultStatusUpdates` always includes every
+    // result/status field as an explicit key, so the clear now actually persists.
+    onLocalTournamentUpdate({
       ...tournament,
       matches: updatedMatches,
       updatedAt: new Date().toISOString(),
     });
-  }, [tournament, onTournamentUpdate, createChange]);
+    onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, updatedMatches));
+  }, [tournament, onLocalTournamentUpdate, onMatchesUpdate, createChange]);
 
   // =========================================================================
   // History Actions

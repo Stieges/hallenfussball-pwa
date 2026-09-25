@@ -11,6 +11,8 @@ import { useState, useCallback } from 'react';
 import { useToast } from '../../../components/ui/Toast';
 import { useUserProfile } from '../../../hooks/useUserProfile';
 import { Tournament, CorrectionEntry, Match } from '../../../types/tournament';
+import { MatchUpdate } from '../../../core/models/types';
+import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { CorrectionReason } from '../../../types/userProfile';
 
 // Correction state interface
@@ -22,7 +24,16 @@ interface CorrectionState {
 
 interface UseCorrectionModeOptions {
   tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /**
+   * A2 Fixrunde 1 (Ruling AJ, C1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+   * task-A2-review.md`): applies the corrected tournament to LOCAL state only, WITHOUT a full
+   * `save()` -- the score itself now persists via `onMatchesUpdate` (targeted update), same
+   * pattern as `useScheduleTabActions#handleScoreChange`.
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  /** A2 Fixrunde 1: persists the corrected match's result via a targeted update instead of a
+   *  full tournament save -- a full save skips result columns for existing matches (A2). */
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   canCorrectResults: boolean;
 }
 
@@ -47,7 +58,8 @@ export interface CorrectionModeControls {
  */
 export function useCorrectionMode({
   tournament,
-  onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
   canCorrectResults,
 }: UseCorrectionModeOptions): CorrectionModeControls {
   const { showWarning } = useToast();
@@ -119,14 +131,30 @@ export function useCorrectionMode({
       };
     });
 
-    onTournamentUpdate(
-      { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() },
-      false // Triggers standings recalculation in parent
-    );
+    const updatedTournament = { ...tournament, matches: updatedMatches, updatedAt: new Date().toISOString() };
+
+    // A2 Fixrunde 1 (C1): sync local state (standings recalculation etc.), then persist ONLY the
+    // corrected match's result via a targeted update -- a full save() would skip it (A2).
+    onLocalTournamentUpdate(updatedTournament);
+
+    // A-Final-Fix 1: `correctionHistory` must travel in the SAME targeted update as the result,
+    // not just in local state -- otherwise it is lost on reload (permanently in guest mode, see
+    // `LocalStorageRepository#updateMatches`/`mergeMatchUpdate`, which only merges keys the
+    // update actually carries). `mapMatchUpdateToSupabase` ignores the unknown key, so the cloud
+    // is unaffected (there is no `correctionHistory` column there).
+    const resultUpdates = diffMatchResultStatusUpdates(tournament.matches, updatedMatches);
+    const correctedMatch = updatedMatches.find(m => m.id === correctionState.matchId);
+    const existingUpdate = resultUpdates.find(u => u.id === correctionState.matchId);
+    if (existingUpdate) {
+      existingUpdate.correctionHistory = correctedMatch?.correctionHistory;
+    } else if (correctedMatch) {
+      resultUpdates.push({ id: correctedMatch.id, correctionHistory: correctedMatch.correctionHistory });
+    }
+    onMatchesUpdate(resultUpdates);
 
     setShowCorrectionDialog(false);
     setCorrectionState(null);
-  }, [correctionState, tournament, onTournamentUpdate, profile.name]);
+  }, [correctionState, tournament, onLocalTournamentUpdate, onMatchesUpdate, profile.name]);
 
   return {
     correctionState,

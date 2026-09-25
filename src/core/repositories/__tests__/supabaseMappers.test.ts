@@ -5,6 +5,7 @@ import {
   mapMatchFromSupabase,
   mapMatchToSupabase,
   mapMatchUpdateToSupabase,
+  mapMatchToScheduleUpdate,
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
   mapInvitationInsertToSupabase,
@@ -336,6 +337,101 @@ describe('mapMatchToSupabase', () => {
     );
 
     expect(row.phase).toBe('groupStage');
+  });
+});
+
+describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
+  it('carries over every schedule column from the full insert row', () => {
+    const teamNameToId = new Map([
+      ['Team Alpha', 'team-a-id'],
+      ['Team Beta', 'team-b-id'],
+    ]);
+    const row = mapMatchToSupabase(
+      {
+        id: 'match-1',
+        round: 2,
+        field: 3,
+        slot: 4,
+        teamA: 'Team Alpha',
+        teamB: 'Team Beta',
+        group: 'A',
+        isFinal: true,
+        finalType: 'final',
+        label: 'Finale',
+        matchNumber: 7,
+        phase: 'final',
+        referee: 5,
+      },
+      'tournament-1',
+      teamNameToId
+    );
+
+    const update = mapMatchToScheduleUpdate(row);
+
+    expect(update.team_a_id).toBe('team-a-id');
+    expect(update.team_b_id).toBe('team-b-id');
+    expect(update.team_a_placeholder).toBeNull();
+    expect(update.team_b_placeholder).toBeNull();
+    expect(update.round).toBe(2);
+    expect(update.field).toBe(3);
+    expect(update.slot).toBe(4);
+    expect(update.group_letter).toBe('A');
+    expect(update.is_final).toBe(true);
+    expect(update.final_type).toBe('final');
+    expect(update.label).toBe('Finale');
+    expect(update.match_number).toBe(7);
+    expect(update.phase).toBe('final');
+    expect(update.referee_number).toBe(5);
+    expect(update.updated_at).toEqual(expect.any(String));
+  });
+
+  it('NEVER includes any live/result column, even though the source row has them', () => {
+    const row = mapMatchToSupabase(
+      {
+        id: 'match-1',
+        round: 1,
+        field: 1,
+        teamA: 'A',
+        teamB: 'B',
+        scoreA: 3,
+        scoreB: 1,
+        matchStatus: 'finished',
+        finishedAt: '2026-01-01T10:00:00Z',
+        timerStartTime: '2026-01-01T09:00:00Z',
+        timerPausedAt: '2026-01-01T09:30:00Z',
+        timerElapsedSeconds: 600,
+        overtimeScoreA: 1,
+        overtimeScoreB: 0,
+        penaltyScoreA: 4,
+        penaltyScoreB: 3,
+        decidedBy: 'penalty',
+        skippedReason: 'noShow',
+        skippedAt: '2026-01-01T09:05:00Z',
+      },
+      'tournament-1',
+      new Map()
+    );
+
+    const update = mapMatchToScheduleUpdate(row);
+
+    expect(update).not.toHaveProperty('score_a');
+    expect(update).not.toHaveProperty('score_b');
+    expect(update).not.toHaveProperty('match_status');
+    expect(update).not.toHaveProperty('actual_end');
+    expect(update).not.toHaveProperty('actual_start');
+    expect(update).not.toHaveProperty('timer_start_time');
+    expect(update).not.toHaveProperty('timer_paused_at');
+    expect(update).not.toHaveProperty('timer_elapsed_seconds');
+    expect(update).not.toHaveProperty('overtime_score_a');
+    expect(update).not.toHaveProperty('overtime_score_b');
+    expect(update).not.toHaveProperty('penalty_score_a');
+    expect(update).not.toHaveProperty('penalty_score_b');
+    expect(update).not.toHaveProperty('decided_by');
+    expect(update).not.toHaveProperty('skipped_reason');
+    expect(update).not.toHaveProperty('skipped_at');
+    expect(update).not.toHaveProperty('live_state');
+    expect(update).not.toHaveProperty('owner_id');
+    expect(update).not.toHaveProperty('is_public');
   });
 });
 

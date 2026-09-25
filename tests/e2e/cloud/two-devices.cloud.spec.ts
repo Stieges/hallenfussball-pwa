@@ -72,9 +72,17 @@
  * brauchten deshalb ohnehin dieselbe Serialisierung.
  *
  * Ruling AG (final-fix-brief.md, I2): Der ehemalige Test 4 ist jetzt ZWEI Tests --
- * "Sync-Anzeige" (Test 5, `test.fail()` wegen C-SYNC) und "Offline-Tore kommen nach Reconnect an"
- * (Test 6, hängt NICHT von der -- kaputten -- Sync-Anzeige ab). Details in den jeweiligen
- * Testkommentaren.
+ * "Sync-Anzeige" (Test 5) und "Offline-Tore kommen nach Reconnect an"
+ * (Test 6, hängt NICHT von der Sync-Anzeige ab). Details in den jeweiligen Testkommentaren.
+ *
+ * Task A4 (C-SYNC, 2026-09-25): `AdminHeader`/`LiveCockpit` bekamen `showSyncStatus`/den
+ * `SyncStatusIndicator` nirgends übergeben, `sync-status` wurde nie gerendert -- DAS ist behoben
+ * (SyncStatusIndicator im Cockpit-Kopf, selbstgesteuert per `isCloudSyncAvailable`).
+ *
+ * Fixrunde 1 (Ruling AL, `task-A4-review.md`, C2): Test 5 bleibt trotzdem `test.fail()`, mit
+ * korrigierter Begründung -- Live-Tore im Cockpit laufen (noch) über `liveMatchRepo` direkt,
+ * NICHT über die `MutationQueue`, die `sync-status` beobachtet (Befund C-OFFUI/Direktschreibung,
+ * behoben erst mit PR C). Details im Testkommentar bei Test 5 selbst.
  */
 
 import { test, expect } from './fixtures';
@@ -82,14 +90,23 @@ import { AUTH_DIR } from './fixtures';
 import {
   ensureMatchRunning,
   enterGoal,
+  fetchFailedMutationTypes,
+  fetchMatchEventIds,
+  fetchMatchRow,
+  fetchQueuedMutationTypes,
   fetchRunningMatchId,
+  fetchTeamIdByName,
+  fetchTeamName,
   fetchUntouchedMatchId,
   forceMatchRunning,
   resetRunningMatchScore,
   safeCleanup,
+  setTeamName,
+  softDeleteMatchEvents,
 } from './helpers';
 import {
   E2E_LIVE_CUP_ID,
+  E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_ID,
   E2E_PUBLIC_CUP_MONITOR_ID,
   E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE,
@@ -145,6 +162,233 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
           E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
         )
       );
+    }
+  });
+
+  /**
+   * Task A1 (Sofortschutz, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A1-brief.md`):
+   * Vorher (`useMatchExecution.ts#handleFinish`) lud die App nach Spielende das ganze Turnier neu
+   * und schrieb es per vollem `TournamentService.updateTournament` zurück -- für einen Helfer
+   * (Rolle `collaborator`, kein `tournamentSettings`-Recht) trifft das per RLS 0 Zeilen →
+   * `OptimisticLockError` → nach 5 Versuchen Dead-Letter in `mutation_queue_failed_v1`. Der Fix
+   * ersetzt diesen Pfad durch ein rein lokales State-Update (`useTournamentManager().applyRemote`,
+   * `useMatchExecution.ts#UseMatchExecutionProps.onLocalTournamentUpdate`) -- der Spielstand selbst
+   * ist längst über `MatchExecutionService.persistFinalResult` (Match-Pfad, per `writeMatchData`
+   * erlaubt) persistiert.
+   */
+  test('Helfer beendet das laufende Live-Cup-Spiel: owner sieht das Endergebnis ohne Neuladen, keine gescheiterte SAVE_TOURNAMENT-Mutation (Task A1)', async ({ asRole }) => {
+    const runningMatchId = await fetchRunningMatchId(E2E_LIVE_CUP_ID);
+    // I6/N16: Baseline VOR dem Finish -- finishMatch() legt ein neues STATUS_CHANGE-Ereignis an,
+    // das im finally-Block gezielt zurückgebaut wird (siehe fetchMatchEventIds()-Kommentar).
+    const eventIdsBeforeFinish = await fetchMatchEventIds(runningMatchId);
+    try {
+      const ownerPage = await asRole('owner');
+      const helperPage = await asRole('helper');
+
+      // Owner NAVIGIERT explizit mit `?matchId=` auf das laufende Spiel (wie der C-NSTART-Test
+      // unten, `ManagementTab.tsx#initialMatchId`-Effekt) -- pinnt `selectedMatchId` fest auf
+      // dieses Spiel. Ohne diesen Pin würde `currentMatchData` (ManagementTab.tsx, Auto-Wahl "das
+      // laufende Spiel ODER das erste ohne Ergebnis") automatisch auf das NÄCHSTE, noch nicht
+      // gestartete Spiel umschalten, sobald dieses Spiel den Status FINISHED erreicht -- das
+      // Status-Badge würde dann ein ANDERES Spiel zeigen, nicht mehr das gerade beendete (in einem
+      // Testlauf beobachtet: Badge sprang auf "NICHT GESTARTET" statt "BEENDET"). Der Pin macht
+      // die Prüfung robust gegen dieses (gewollte) Auto-Advance-Verhalten der App.
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live?matchId=${runningMatchId}`);
+      await ownerPage.waitForLoadState('networkidle');
+      await ensureMatchRunning(ownerPage);
+
+      const ownerHomeScore = ownerPage.locator('[data-testid="score-home"]');
+      const ownerAwayScore = ownerPage.locator('[data-testid="score-away"]');
+      // M4 (Review, Fixrunde 1): "Endergebnis" heißt Spielstand, nicht nur Status-Badge -- die
+      // beiden Werte VOR dem Finish festhalten, danach müssen sie beim Owner UNVERÄNDERT neben
+      // dem Badge "BEENDET" stehen (das Finish selbst ändert den Score nicht).
+      const homeScoreBeforeFinish = await ownerHomeScore.textContent();
+      const awayScoreBeforeFinish = await ownerAwayScore.textContent();
+
+      await helperPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+      await helperPage.waitForLoadState('networkidle');
+      await expect(helperPage.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+
+      await helperPage.locator('[data-testid="match-finish-button"]').click();
+
+      // Kein page.reload() -- expect() pollt den DOM selbst. Timeout=3000 IST der Beweis "ohne
+      // Neuladen innerhalb von 3s" (Fundament-Zielgröße, wie Test 1 oben). Erfordert den
+      // SupabaseLiveMatchRepository-Fix aus diesem Task (siehe Kommentar dort,
+      // `subscribe()`/`isMatchActive`) -- ohne ihn wurde die Spielende-Aktualisierung im
+      // Realtime-Kanal verworfen, das Owner-Cockpit blieb bei "LÄUFT" hängen.
+      await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: 3000 });
+      // M4: das Endergebnis selbst, nicht nur das Badge.
+      await expect(ownerHomeScore).toHaveText(homeScoreBeforeFinish ?? '');
+      await expect(ownerAwayScore).toHaveText(awayScoreBeforeFinish ?? '');
+
+      // Kein gescheiterter Turnier-Save im Dead-Letter des Helfers.
+      const failedTypes = await fetchFailedMutationTypes(helperPage);
+      expect(failedTypes).not.toContain('SAVE_TOURNAMENT');
+
+      // I1 (Review, Fixrunde 1): das Dead-Letter allein beweist den Kernfix NICHT -- die
+      // MutationQueue braucht MAX_RETRIES=5 GETRENNTE Anstöße, bevor ein Eintrag dorthin
+      // wandert; Sekunden nach dem Klick läge ein gescheiterter SAVE_TOURNAMENT noch mit
+      // retryCount>=1 in der NOCH AUSSTEHENDEN Warteschlange `mutation_queue_v1`. `expect.poll`
+      // über ~2s, damit ein NACHTRÄGLICH eingereihter Eintrag (z. B. durch einen verzögerten
+      // Retry) auffällt, statt nur den Sofort-Zustand zu lesen.
+      await expect.poll(() => fetchQueuedMutationTypes(helperPage), {
+        message: 'mutation_queue_v1 darf nach Spielende keine SAVE_TOURNAMENT-Mutation des Helfers enthalten',
+        timeout: 2000,
+      }).not.toContain('SAVE_TOURNAMENT');
+    } finally {
+      // Rückbau: Spiel wieder laufend setzen, wie im C-NSTART-Test unten -- sonst koppelt dieser
+      // Test mit allen anderen Tests dieser Datei, die dasselbe laufende Live-Cup-Spiel brauchen.
+      await safeCleanup('Live-Cup Spiel wieder laufend setzen (Helfer beendet Spiel, Task A1)', () =>
+        forceMatchRunning(
+          runningMatchId,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
+      );
+      // I6/N16: das vom Finish angelegte STATUS_CHANGE-Ereignis gezielt zurückbauen (Diff gegen
+      // die Baseline oben) -- sonst bleibt es mit einem hohen timestamp_seconds stehen und
+      // verfälscht "letztes Ereignis" für den nächsten Test dieser Datei ("Ereignis löschen",
+      // beobachtet: Rückgängig traf das alte Finish-Ereignis statt des neuen Tors).
+      await safeCleanup('Live-Cup Finish-Ereignis zurückbauen (Helfer beendet Spiel, Task A1)', async () => {
+        const eventIdsAfterFinish = await fetchMatchEventIds(runningMatchId);
+        const newEventIds = eventIdsAfterFinish.filter((id) => !eventIdsBeforeFinish.includes(id));
+        await softDeleteMatchEvents(newEventIds);
+      });
+    }
+  });
+
+  /**
+   * Task A2 (Sofortschutz, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md`):
+   * Vorher schrieb `SupabaseRepository.save()` für JEDES bestehende Spiel den vollständigen
+   * Zeilen-Upsert, inklusive Live-/Ergebnis-Spalten (score_a/b, match_status, timer, ...). Olli
+   * (owner) hat die Turnierleitungs-Seite VOR Toms (helper) Tor geladen -- sein lokaler
+   * `tournament`-Zustand kennt also noch den alten Spielstand. Ändert er währenddessen einen
+   * Teamnamen (Kontext: er nimmt NICHT wahr, dass Tom gerade ein Spiel leitet) und speichert, hätte
+   * der alte Code Toms zwischenzeitliches Tor mit Ollis veraltetem lokalen Stand überschrieben.
+   * `context.setOffline(true)` erzwingt genau dieses Race deterministisch: Ollis Save wird als
+   * `SAVE_TOURNAMENT`-Mutation MIT dem veralteten `tournament`-Objekt in die lokale MutationQueue
+   * eingereiht (nicht sofort gesendet, siehe `OfflineRepository.save()`), Toms Tor passiert in der
+   * Zwischenzeit online, und erst DANACH geht Olli wieder online -- die Mutation feuert dann gegen
+   * den bereits veränderten Server-Zustand, exakt das im Brief beschriebene Szenario.
+   *
+   * Kein `sync-status`-Warten (C-SYNC, siehe Test 5 oben -- das Element wird nirgends gerendert):
+   * `expect.poll()` gegen die DB selbst ist das direkt interessierende Signal, wie beim
+   * Reconnect-Test unten.
+   */
+  test('Olli (owner) speichert das Turnier mit veraltetem lokalen Stand, während Tom (helper) ein Live-Spiel leitet: Toms Stand bleibt (Task A2)', async ({
+    asRole,
+    browser,
+  }) => {
+    const runningMatchId = await fetchRunningMatchId(E2E_LIVE_CUP_ID);
+    const originalTeamName = E2E_LIVE_CUP_TEAM_NAMES[E2E_LIVE_CUP_TEAM_NAMES.length - 1];
+    const newTeamName = `${originalTeamName} (A2 Test)`;
+    let teamId: string | null = null;
+    let ownerContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
+    // M4 (Fixrunde 1, Review task-A2-review.md): Baseline VOR Toms Tor -- Rückbau entfernt gezielt
+    // NUR das neu entstandene Event (gleiches Muster wie der A1-Test "Helfer beendet Spiel").
+    const eventIdsBeforeGoal = await fetchMatchEventIds(runningMatchId);
+
+    try {
+      teamId = await fetchTeamIdByName(E2E_LIVE_CUP_ID, originalTeamName);
+
+      // Eigener Context für owner (statt asRole()): braucht `context().setOffline()`, siehe
+      // "helper geht offline"-Tests unten für dasselbe Muster.
+      ownerContext = await browser.newContext({ storageState: path.join(AUTH_DIR, 'owner.json') });
+      const ownerPage = await ownerContext.newPage();
+      await ownerPage.addInitScript(() => {
+        // Gleicher Consent-Bypass wie fixtures.ts#page -- ein eigener Context bekommt den
+        // Init-Script der `page`-Fixture nicht automatisch mit.
+        window.localStorage.setItem(
+          'app:consent',
+          JSON.stringify({ errorTracking: true, sessionReplay: false, timestamp: Date.now(), version: 1 })
+        );
+      });
+      // Ein evtl. auftretender window.confirm() (Team-Umbenennung-Warnung, nur bei Teams MIT
+      // Ergebnissen -- das letzte Live-Cup-Team hat keine, siehe Testkommentar) automatisch
+      // bestätigen, statt dass Playwright den Dialog stillschweigend blockiert.
+      ownerPage.on('dialog', (dialog) => { void dialog.accept(); });
+
+      // Olli lädt die Teams-Seite VOR Toms Tor -- sein lokaler Tournament-Zustand kennt noch den
+      // Ausgangsstand (E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE).
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/teams`);
+      await ownerPage.waitForLoadState('networkidle');
+      const teamCard = ownerPage.locator('[data-testid^="team-card-"]').filter({ hasText: originalTeamName });
+      await expect(teamCard).toBeVisible({ timeout: 15000 });
+
+      // Ab hier bekommt Olli keine Realtime-Aktualisierungen mehr -- sein lokaler Stand bleibt
+      // eingefroren, während Tom online sein Tor einträgt.
+      await ownerContext.setOffline(true);
+
+      await teamCard.locator('[data-testid^="team-expand-toggle-"]').click();
+      await teamCard.locator('[data-testid^="team-edit-button-"]').click();
+      await teamCard.locator('[data-testid^="team-rename-input-"]').fill(newTeamName);
+      await teamCard.locator('[data-testid^="team-rename-save-"]').click();
+      // Der Save landet (noch offline) in der lokalen MutationQueue, siehe Testkommentar oben.
+
+      const helperPage = await asRole('helper');
+      await helperPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+      await helperPage.waitForLoadState('networkidle');
+      await expect(helperPage.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+      await enterGoal(helperPage, 'home');
+
+      await expect.poll(() => fetchMatchRow(runningMatchId).then((row) => row.score_a), {
+        message: 'Toms Tor sollte den Score in der DB auf seed.home + 1 gesetzt haben',
+        timeout: 10000,
+      }).toBe(E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home + 1);
+
+      // Olli geht wieder online -- die MutationQueue schickt jetzt SEINEN (veralteten) vollen
+      // Turnier-Save an den Server, GEGEN Toms bereits verändertem Stand.
+      await ownerContext.setOffline(false);
+
+      // Der Teamname-Save selbst muss ankommen (Beweis: die Schedule-Spalten der Match-Aktualisierung
+      // funktionieren weiterhin, A2 sperrt nur die Live-/Ergebnis-Spalten).
+      await expect.poll(() => fetchTeamName(teamId!), {
+        message: 'Der neue Teamname sollte nach dem Reconnect in der DB stehen',
+        timeout: 15000,
+      }).toBe(newTeamName);
+
+      // DER KERNFIX: trotz Ollis veraltetem vollen Save bleibt Toms Live-Stand erhalten -- NICHT
+      // auf den Seed-Ausgangswert zurückgesetzt.
+      await expect.poll(() => fetchMatchRow(runningMatchId).then((row) => row.score_a), {
+        message: 'Toms Live-Stand darf durch Ollis vollen Turnier-Save NICHT überschrieben werden (Task A2)',
+        timeout: 5000,
+      }).toBe(E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home + 1);
+      await expect.poll(() => fetchMatchRow(runningMatchId).then((row) => row.match_status)).toBe('running');
+
+      // M1 (Fixrunde 1, Review task-A2-review.md): der Brief verlangt "beim owner UND in der DB" --
+      // bisher wurde nur die DB geprüft. Olli navigiert (jetzt wieder online) zum Cockpit desselben
+      // Spiels und muss dort ebenfalls Toms Stand sehen, nicht den alten lokalen.
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live?matchId=${runningMatchId}`);
+      await ownerPage.waitForLoadState('networkidle');
+      await expect(ownerPage.locator('[data-testid="score-home"]')).toHaveText(
+        String(E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home + 1),
+        { timeout: 15000 }
+      );
+    } finally {
+      if (ownerContext) {
+        // I6/N16: safeCleanup() statt eines direkten .catch(() => {}) -- ein Fehler hier bleibt
+        // trotzdem laut sichtbar, statt still verschluckt zu werden.
+        await safeCleanup('Owner-Context wieder online schalten (Task A2)', () => ownerContext!.setOffline(false));
+        await ownerContext.close();
+      }
+      await safeCleanup('Live-Cup Score zurücksetzen (Task A2)', () =>
+        resetRunningMatchScore(
+          E2E_LIVE_CUP_ID,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
+      );
+      // M4 (Fixrunde 1): Toms Tor-Ereignis gezielt zurückbauen (Diff gegen die Baseline oben) --
+      // sonst bleibt es mit einem hohen timestamp_seconds stehen und verfälscht "letztes Ereignis"
+      // für einen nachfolgenden Test dieser Datei (gleiche Begründung wie beim A1-Test).
+      await safeCleanup('Live-Cup Tom-Tor-Ereignis zurückbauen (Task A2)', async () => {
+        const eventIdsAfterGoal = await fetchMatchEventIds(runningMatchId);
+        const newEventIds = eventIdsAfterGoal.filter((id) => !eventIdsBeforeGoal.includes(id));
+        await softDeleteMatchEvents(newEventIds);
+      });
+      if (teamId) {
+        await safeCleanup('Teamname zurückbauen (Task A2)', () => setTeamName(teamId!, originalTeamName));
+      }
     }
   });
 
@@ -303,9 +547,22 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
   /**
    * Ruling AG (final-fix-brief.md, I2): HÄLFTE 1 des ehemaligen Test 4 -- NUR die
    * Sync-Anzeige (`sync-status`), isoliert von der eigentlichen Frage "kommen die Tore nach
-   * Reconnect an" (Test 6 unten). `showSyncStatus` wird der `AdminHeader` nirgends übergeben
-   * (C-SYNC, unverändert seit dem ursprünglichen T4-Fund) -- das Element wird nie gerendert,
-   * `toBeVisible()` läuft deshalb in ein Timeout statt einen echten Attribut-Mismatch.
+   * Reconnect an" (Test 6 unten).
+   *
+   * Fixrunde 1 (Ruling AL, Review `task-A4-review.md`, C2): Task A4 (Teil 1) hat
+   * `SyncStatusIndicator` in den Cockpit-Kopf eingebaut -- `sync-status` WIRD auf dieser Seite
+   * jetzt gerendert (anders als der ursprüngliche T4-Fund, der von genau diesem fehlenden Element
+   * ausging). Trotzdem bleibt dieser Test `test.fail()`, aus einem ANDEREN, echten Grund: Tore im
+   * Cockpit laufen über `MatchExecutionService`/`liveMatchRepo.save()`
+   * (`src/core/services/MatchExecutionService.ts`), NICHT über die `MutationQueue` des
+   * `tournamentRepository` (`OfflineRepository.mutationQueue`), die `useSyncStatus` beobachtet.
+   * Zwei offline eingetragene Tore erhöhen deshalb `pendingChanges` NICHT -- `data-pending` bleibt
+   * bei "0", nicht "2" wie unten geprüft. Das ist der bereits bekannte Befund C-OFFUI
+   * (Direktschreibung am Live-Match-Repo, kein Ausgang/keine lokale Kopie) -- behoben erst mit
+   * PR C (neuer Ausgang/lokale Spielkopie, siehe `docs/superpowers/plans/
+   * 2026-09-25-oktober-fundament-helfer.md`). Bis dahin zeigt die Cockpit-Anzeige nur die
+   * Turnier-Warteschlange (z. B. Metadaten-/Schedule-Änderungen) und deren Fehler -- NICHT
+   * offline eingetragene Live-Tore.
    *
    * KEIN positiver Anker zwischen "offline schalten" und `test.fail()` (anders als eine
    * Zwischenfassung dieses Tests): der naheliegende Kandidat "`score-home` zeigt lokal schon
@@ -339,8 +596,10 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await enterGoal(helperPage, 'home');
       await enterGoal(helperPage, 'home');
 
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- `sync-status` wird nirgends
-      // gerendert (C-SYNC).
+      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- Fixrunde 1 (Ruling AL): NICHT
+      // mehr "Element wird nie gerendert" (das behebt A4 Teil 1), sondern "Element rendert, zeigt
+      // die offline eingetragenen Tore aber nicht" (C-OFFUI, Live-Tore laufen am Cockpit direkt
+      // über liveMatchRepo statt über die MutationQueue -- kommt erst mit PR C).
       test.fail();
 
       await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', {
@@ -361,6 +620,166 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
         )
       );
     }
+  });
+
+  /**
+   * Task A4 (C-SYNC, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A4-brief.md`):
+   * "Eine erzwungen dauerhaft abgelehnte Mutation ... ist innerhalb von 10s als gescheitert
+   * sichtbar." Gewählter Weg, um die Ablehnung zu erzwingen (Brief lässt die Wahl offen, verlangt
+   * eine Begründung): NICHT ein viewer-Schreibversuch über die Warteschlange -- geprüft und
+   * verworfen, weil ein Postgres-Constraint-Verletzung unabhängig von der genauen Rollen-/
+   * Policy-Konfiguration garantiert und deterministisch ein echter, nicht-transienter Fehler
+   * bleibt, während ein RLS-gefilterter viewer-Schreibversuch davon abhinge. (Zum Zeitpunkt
+   * dieser Testkonstruktion erkannte `SupabaseRepository.updateMatches()` einen von RLS auf 0
+   * Zeilen gefilterten UPDATE zusätzlich gar nicht als Fehler -- `error` blieb `null`, PostgREST
+   * wirft bei RLS-Filterung nichts, die Mutation galt als "erfolgreich", obwohl nichts
+   * geschrieben wurde. Seit f053b3f (A4 Fixrunde 1, Risiko 4) erkennt `updateMatches()` das über
+   * `.select('id')` + 0-Zeilen-Prüfung; der viewer-Weg bliebe wegen der Rollenabhängigkeit aber
+   * trotzdem die schlechtere Wahl für diesen Test.) Stattdessen: ein direkt in
+   * `mutation_queue_v1` eingespeister `UPDATE_MATCH` mit `matchStatus` außerhalb des
+   * DB-Constraints `matches_match_status_check` -- das erzeugt GARANTIERT einen echten,
+   * nicht-transienten Postgres-Fehler (Constraint-Verletzung, kein RLS-Silent-Drop), unabhängig
+   * von der Rolle. `MAX_RETRIES=5` braucht 5 GETRENNTE `process()`-Anstöße (siehe Kommentar bei
+   * Test 1/A1 oben); echtes Offline/Online-Toggling wäre riskant (ein Request mitten im Umschalten
+   * kann als "Netzfehler" statt "echter Fehler" gelten, siehe A3/`isTransientMutationError`,
+   * und würde `retryCount` NICHT erhöhen) -- stattdessen synthetische `online`-DOM-Events
+   * (`window.dispatchEvent(new Event('online'))`), die denselben Listener wie ein echtes
+   * Reconnect auslösen, ohne die tatsächliche Netzwerkverbindung anzufassen.
+   */
+  test('eine dauerhaft abgelehnte Mutation ist innerhalb von 10s als gescheitert sichtbar, retry/verwerfen wirken (Task A4, C-SYNC)', async ({
+    asRole,
+  }) => {
+    const runningMatchId = await fetchRunningMatchId(E2E_LIVE_CUP_ID);
+    const ownerPage = await asRole('owner');
+    await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+    // Positiver Anker vor dem Seed: das Cockpit ist geladen, `sync-status` bereits sichtbar (kein
+    // Timeout wie im ehemaligen Test 5 vor dem A4-Fix).
+    await expect(ownerPage.locator('[data-testid="sync-status"]')).toBeVisible({ timeout: 10000 });
+
+    const badMutationId = `a4-test-${Date.now()}`;
+    await ownerPage.evaluate(
+      ({ id, tournamentId, matchId }) => {
+        const item = {
+          id,
+          type: 'UPDATE_MATCH',
+          payload: { tournamentId, update: { id: matchId, matchStatus: 'A4_TEST_INVALID_STATUS' } },
+          timestamp: Date.now(),
+          retryCount: 0,
+        };
+        window.localStorage.setItem('mutation_queue_v1', JSON.stringify([item]));
+      },
+      { id: badMutationId, tournamentId: E2E_LIVE_CUP_ID, matchId: runningMatchId }
+    );
+
+    // Neu laden: eine frische MutationQueue-Instanz lädt den geseedeten Eintrag aus localStorage
+    // und unternimmt (online) sofort den ersten von 5 nötigen Versuchen.
+    await ownerPage.reload();
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+
+    // Liest {retryCount, deadLettered} direkt aus localStorage -- `deadLettered: true` sobald der
+    // Eintrag in mutation_queue_failed_v1 liegt (dann aus mutation_queue_v1 entfernt, retryCount
+    // dort nicht mehr aussagekräftig).
+    const readQueueState = () =>
+      ownerPage.evaluate(() => {
+        const failedRaw = window.localStorage.getItem('mutation_queue_failed_v1');
+        const failed = failedRaw ? (JSON.parse(failedRaw) as unknown[]) : [];
+        if (failed.length > 0) { return { retryCount: -1, deadLettered: true }; }
+        const queuedRaw = window.localStorage.getItem('mutation_queue_v1');
+        const queued = queuedRaw ? (JSON.parse(queuedRaw) as Array<{ retryCount?: number }>) : [];
+        return { retryCount: queued[0]?.retryCount ?? 0, deadLettered: false };
+      });
+
+    // Nach dem Reload (Anstoß 1) sollte retryCount bereits bei 1 stehen -- Baseline VOR der
+    // Schleife lesen (nicht raten), damit "gestiegen" je Runde echt geprüft wird statt einmalig
+    // gegen 0 (das schon nach Anstoß 1 dauerhaft erfüllt wäre und die Schleife wirkungslos macht).
+    await expect.poll(async () => (await readQueueState()).retryCount, {
+      message: 'Anstoß 1 (Neuladen): retryCount soll 1 sein',
+      timeout: 8000,
+    }).toBeGreaterThanOrEqual(1);
+    let lastRetryCount = (await readQueueState()).retryCount;
+
+    // 4 weitere, GETRENNTE Anstöße (insgesamt 5) -- je einen erst NACH dem vorherigen abwarten
+    // (retryCount ECHT gestiegen ODER bereits im Dead-Letter), damit `isProcessing` keinen
+    // gleichzeitig ausgelösten Anstoß still verschluckt (process() ist keine Warteschlange für
+    // Aufrufe während einer laufenden Verarbeitung, sondern ein No-op).
+    for (let attempt = 2; attempt <= 5; attempt++) {
+      const before = await readQueueState();
+      if (before.deadLettered) { break; }
+
+      await ownerPage.evaluate(() => window.dispatchEvent(new Event('online')));
+
+      await expect.poll(async () => {
+        const state = await readQueueState();
+        return state.deadLettered || state.retryCount > lastRetryCount;
+      }, {
+        message: `Anstoß ${attempt}: retryCount soll über ${lastRetryCount} steigen (oder Dead-Letter)`,
+        timeout: 8000,
+      }).toBe(true);
+
+      lastRetryCount = (await readQueueState()).retryCount;
+    }
+
+    // Fundament-Zielgröße: innerhalb von 10s als gescheitert sichtbar.
+    const syncStatus = ownerPage.locator('[data-testid="sync-status"]');
+    await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
+
+    // Liste öffnen (Klick, da failedChanges > 0 -- siehe SyncStatusIndicator.handleClick), Grund
+    // je Eintrag sichtbar.
+    await syncStatus.click();
+    const failedList = ownerPage.locator('[data-testid="sync-failed-list"]');
+    await expect(failedList).toBeVisible({ timeout: 2000 });
+    await expect(failedList).toContainText('matches_match_status_check');
+
+    // M5 (Review Fixrunde 1): der Titel verspricht "retry/verwerfen wirken" -- bisher wurde nur
+    // verworfen geprüft. "Erneut versuchen": der Eintrag verlässt sofort die Fehlerliste UND
+    // landet zurück in der wartenden Warteschlange (retryFailedMutation() -> queue.push +
+    // process(), siehe GenericMutationQueue.ts). Die erneute Ablehnung selbst (Constraint bleibt
+    // ungültig) ist hier nicht das Ziel -- die bereits oben bewiesen.
+    await ownerPage.locator(`[data-testid="sync-retry-${badMutationId}"]`).click();
+    await expect.poll(async () => (await readQueueState()).deadLettered, {
+      message: '„erneut versuchen": Eintrag soll die Fehlerliste sofort verlassen',
+      timeout: 5000,
+    }).toBe(false);
+    await expect(syncStatus).not.toHaveAttribute('data-state', 'error', { timeout: 5000 });
+
+    // Für den "verwerfen"-Nachweis unten wird wieder ein gescheiterter Zustand gebraucht -- der
+    // Dead-Letter-Mechanismus selbst ist oben bereits bewiesen (5 echte Anstöße), hier reicht ein
+    // direkt gesetzter Dead-Letter-Eintrag (derselbe Grund-Text), um "verwerfen" isoliert zu
+    // prüfen, ohne den ganzen Anstoß-Ablauf zu wiederholen.
+    await ownerPage.evaluate(
+      ({ id }) => {
+        const item = {
+          id,
+          type: 'UPDATE_MATCH',
+          payload: {},
+          timestamp: Date.now(),
+          retryCount: 5,
+          failedAt: Date.now(),
+          lastError: 'new row for relation "matches" violates check constraint "matches_match_status_check"',
+        };
+        window.localStorage.setItem('mutation_queue_v1', '[]');
+        window.localStorage.setItem('mutation_queue_failed_v1', JSON.stringify([item]));
+      },
+      { id: badMutationId }
+    );
+    await ownerPage.reload();
+    await ownerPage.waitForLoadState('networkidle');
+    await ensureMatchRunning(ownerPage);
+    await expect(syncStatus).toHaveAttribute('data-state', 'error', { timeout: 10000 });
+    await syncStatus.click();
+    await expect(failedList).toBeVisible({ timeout: 2000 });
+
+    // Verwerfen: Rückfrage, erst nach Bestätigen weg.
+    await ownerPage.locator(`[data-testid="sync-discard-${badMutationId}"]`).click();
+    await ownerPage.locator('[data-testid="confirm-dialog-confirm"]').click();
+    await expect(syncStatus).toHaveAttribute('data-state', 'idle', { timeout: 5000 });
+    const failedAfterDiscard = await ownerPage.evaluate(() =>
+      window.localStorage.getItem('mutation_queue_failed_v1')
+    );
+    expect(failedAfterDiscard === null || failedAfterDiscard === '[]').toBe(true);
   });
 
   /**

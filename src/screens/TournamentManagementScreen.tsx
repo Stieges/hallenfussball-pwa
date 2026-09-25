@@ -7,11 +7,13 @@
  * 3. Monitor - Große Zuschauer-Ansicht
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CSSProperties } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cssVars, fontSizesMd3 } from '../design-tokens'
 import { Tournament } from '../types/tournament';
+import { MatchUpdate } from '../core/models/types';
+import { useToast } from '../components/ui/Toast';
 import { getLocationName, formatDateGerman } from '../utils/locationHelpers';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useTournamentManager } from '../hooks/useTournamentManager';
@@ -56,6 +58,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
   onNavigateToSettings,
 }) => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const location = useLocation();
 
   // Get active tab from URL path (e.g., /tournament/:id/schedule)
@@ -90,7 +93,28 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     isLoading,
     loadingError,
     handleTournamentUpdate,
+    applyRemote,
+    scheduleService,
   } = useTournamentManager(tournamentId);
+
+  // A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): result entry in
+  // the schedule persists ONLY the touched matches (targeted update) instead of a full tournament
+  // save -- a stale local tournament state at the owner must never overwrite a helper's live
+  // match. Local state is already synced by `applyRemote` (via ScheduleTab's
+  // onLocalTournamentUpdate); this only talks to the repository.
+  const handleMatchesUpdate = useCallback((updates: MatchUpdate[]) => {
+    if (updates.length === 0) { return; }
+    const run = updates.length === 1
+      ? scheduleService.updateMatch(tournamentId, updates[0])
+      : scheduleService.updateMatches(tournamentId, updates);
+    run.catch((err: unknown) => {
+      console.error('Failed to persist match update:', err);
+      // A2 Fixrunde 1 (M6): vorher nur console.error -- über OfflineRepository unkritisch (lokal
+      // geschrieben, eingereiht), aber ein Nutzer im reinen Cloud-Pfad bekam einen gescheiterten
+      // Ergebnis-/Status-Sync NIE angezeigt.
+      showError('Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.');
+    });
+  }, [scheduleService, tournamentId, showError]);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
   const handleTabChange = (newTab: TabType) => {
@@ -344,6 +368,8 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             schedule={schedule}
             currentStandings={currentStandings}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onLocalTournamentUpdate={applyRemote}
+            onMatchesUpdate={handleMatchesUpdate}
             onNavigateToCockpit={(id) => { handleNavigateToCockpit(id); }}
           />
         )}
@@ -359,6 +385,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             tournament={tournament}
             schedule={schedule}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onLocalTournamentUpdate={applyRemote}
             initialMatchId={initialMatchId}
             onInitialMatchConsumed={() => setInitialMatchId(null)}
           />

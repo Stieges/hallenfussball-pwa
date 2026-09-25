@@ -21,6 +21,11 @@ import type {
   MatchDecidedBy,
   TournamentStatus,
 } from '../../types/tournament';
+// Renamed on import: this file already has its own `MatchUpdate` (the Supabase table's Update
+// shape, below) -- `DomainMatchUpdate` is the frontend/domain DTO (`core/models/types.ts`), which
+// (since A2 Fixrunde 3, N2) allows `null` on result/status fields to survive the offline mutation
+// queue's JSON round-trip.
+import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -234,55 +239,102 @@ export function mapMatchToSupabase(
 }
 
 /**
+ * Extracts ONLY the schedule columns from a full match insert row — used by
+ * SupabaseRepository.save() when updating an EXISTING match (A2,
+ * .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md).
+ *
+ * Deliberately excludes every live/result column: score_a, score_b, match_status,
+ * actual_end/actual_start, timer_start_time, timer_paused_at, timer_elapsed_seconds,
+ * overtime_score_a/b, penalty_score_a/b, decided_by, skipped_reason, skipped_at, live_state,
+ * last_modified_by, version, owner_id, is_public. A full-save from a stale local state (e.g. the
+ * tournament owner editing a team name) must never overwrite a helper's in-progress live match.
+ *
+ * Included ("schedule columns"): team_a_id/team_b_id (+ placeholders), round, field, slot,
+ * group_letter, is_final, final_type, label, scheduled_start, match_number, phase,
+ * referee_number — everything the Schedule Editor / Wizard can change about WHEN/WHERE/WHO
+ * plays, never the running result.
+ */
+export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
+  return {
+    team_a_id: row.team_a_id,
+    team_b_id: row.team_b_id,
+    team_a_placeholder: row.team_a_placeholder,
+    team_b_placeholder: row.team_b_placeholder,
+    round: row.round,
+    field: row.field,
+    slot: row.slot,
+    group_letter: row.group_letter,
+    is_final: row.is_final,
+    final_type: row.final_type,
+    label: row.label,
+    scheduled_start: row.scheduled_start,
+    match_number: row.match_number,
+    phase: row.phase,
+    referee_number: row.referee_number,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+/**
  * Maps a frontend Match update to Supabase update format
+ *
+ * A2 Fixrunde 1 (Ruling AJ, C1/I1): result/status fields use `'field' in match` (own-property
+ * presence) instead of `match.field !== undefined`, and fall back to `null` -- NOT skip -- when
+ * present but `undefined`. This lets a caller EXPLICITLY clear a result/status column (e.g.
+ * `DangerZone`'s "Ergebnisse zurücksetzen" sets `scoreA: undefined`) by including the key, while a
+ * caller that never mentions the key (e.g. `skipMatch()` only sets `matchStatus`/`skippedReason`/
+ * `skippedAt`) still leaves the other columns untouched, exactly as before. Every current producer
+ * of `MatchUpdate` builds a small object literal with only the keys it cares about (audited:
+ * `MatchExecutionService`, `useScheduleTabActions`, `matchResultStatusDiff`) -- none spreads a full
+ * `Match` object into an update, which is what would make this distinction unsafe.
  */
 export function mapMatchUpdateToSupabase(
-  match: Partial<Match>,
+  match: DomainMatchUpdate | Partial<Match>,
   teamNameToId?: Map<string, string>
 ): MatchUpdate {
   const update: MatchUpdate = {};
 
-  if (match.scoreA !== undefined) {
-    update.score_a = match.scoreA;
+  if ('scoreA' in match) {
+    update.score_a = match.scoreA ?? null;
   }
-  if (match.scoreB !== undefined) {
-    update.score_b = match.scoreB;
+  if ('scoreB' in match) {
+    update.score_b = match.scoreB ?? null;
   }
-  if (match.matchStatus !== undefined) {
-    update.match_status = match.matchStatus;
+  if ('matchStatus' in match) {
+    update.match_status = match.matchStatus ?? null;
   }
-  if (match.finishedAt !== undefined) {
-    update.actual_end = match.finishedAt;
+  if ('finishedAt' in match) {
+    update.actual_end = match.finishedAt ?? null;
   }
-  if (match.timerStartTime !== undefined) {
-    update.timer_start_time = match.timerStartTime;
+  if ('timerStartTime' in match) {
+    update.timer_start_time = match.timerStartTime ?? null;
   }
-  if (match.timerPausedAt !== undefined) {
-    update.timer_paused_at = match.timerPausedAt;
+  if ('timerPausedAt' in match) {
+    update.timer_paused_at = match.timerPausedAt ?? null;
   }
-  if (match.timerElapsedSeconds !== undefined) {
-    update.timer_elapsed_seconds = match.timerElapsedSeconds;
+  if ('timerElapsedSeconds' in match) {
+    update.timer_elapsed_seconds = match.timerElapsedSeconds ?? null;
   }
-  if (match.overtimeScoreA !== undefined) {
-    update.overtime_score_a = match.overtimeScoreA;
+  if ('overtimeScoreA' in match) {
+    update.overtime_score_a = match.overtimeScoreA ?? null;
   }
-  if (match.overtimeScoreB !== undefined) {
-    update.overtime_score_b = match.overtimeScoreB;
+  if ('overtimeScoreB' in match) {
+    update.overtime_score_b = match.overtimeScoreB ?? null;
   }
-  if (match.penaltyScoreA !== undefined) {
-    update.penalty_score_a = match.penaltyScoreA;
+  if ('penaltyScoreA' in match) {
+    update.penalty_score_a = match.penaltyScoreA ?? null;
   }
-  if (match.penaltyScoreB !== undefined) {
-    update.penalty_score_b = match.penaltyScoreB;
+  if ('penaltyScoreB' in match) {
+    update.penalty_score_b = match.penaltyScoreB ?? null;
   }
-  if (match.decidedBy !== undefined) {
-    update.decided_by = match.decidedBy;
+  if ('decidedBy' in match) {
+    update.decided_by = match.decidedBy ?? null;
   }
-  if (match.skippedReason !== undefined) {
-    update.skipped_reason = match.skippedReason;
+  if ('skippedReason' in match) {
+    update.skipped_reason = match.skippedReason ?? null;
   }
-  if (match.skippedAt !== undefined) {
-    update.skipped_at = match.skippedAt;
+  if ('skippedAt' in match) {
+    update.skipped_at = match.skippedAt ?? null;
   }
 
   // Handle team changes if teamNameToId is provided

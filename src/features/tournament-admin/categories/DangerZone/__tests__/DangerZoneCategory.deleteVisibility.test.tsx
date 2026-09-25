@@ -70,7 +70,7 @@ const tournament = {
 
 function renderDangerZone() {
   render(
-    <DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} />
+    <DangerZoneCategory tournamentId="t1" tournament={tournament} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} onMatchesUpdate={vi.fn()} />
   );
 }
 

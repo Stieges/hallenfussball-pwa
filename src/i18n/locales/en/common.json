@@ -79,6 +79,40 @@
     "reconnectAriaLabel": "Reconnect"
   },
   "unsavedChanges": "Unsaved changes present.",
+  "syncStatus": {
+    "label": {
+      "synced": "Synced",
+      "updated": "Updated",
+      "conflict": "Conflict",
+      "error": "Error",
+      "offline": "Offline"
+    },
+    "syncingAriaLabel": "Syncing...",
+    "syncingLabel": "Syncing...",
+    "pendingCountLabel": "{{count}} pending",
+    "failedCountLabel": "{{count}} failed",
+    "lastSyncNow": "Just now",
+    "lastSyncMinutes": "{{count}} min ago",
+    "lastSyncHours": "{{count}} h ago",
+    "failedListTitle": "Failed transfers",
+    "failedListEmpty": "No failed transfers.",
+    "failedReasonUnknown": "Unknown error",
+    "matchProtectedHint": "Match {{matchLabel}} has entries and was not deleted.",
+    "retry": "Try again",
+    "retryAriaLabel": "Retry transfer",
+    "discard": "Discard",
+    "discardAriaLabel": "Discard transfer",
+    "discardConfirmTitle": "Discard transfer?",
+    "discardConfirmMessage": "This change will be permanently discarded and will no longer be transferred to the cloud. This cannot be undone.",
+    "close": "Close",
+    "mutationTypes": {
+      "SAVE_TOURNAMENT": "Save tournament",
+      "DELETE_TOURNAMENT": "Delete tournament",
+      "UPDATE_MATCH": "Update match",
+      "UPDATE_MATCHES": "Update matches",
+      "UPDATE_TOURNAMENT_METADATA": "Update tournament data"
+    }
+  },
   "progressBar": {
     "stepLabel": "Step {{step}}: {{label}}",
     "errorTooltip": "Error: {{errors}}",

@@ -415,4 +415,86 @@ describe('MatchExecutionService', () => {
             expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
         });
     });
+
+    // Task A1 (Sofortschutz): finishMatch war für ein bereits beendetes Spiel KEIN No-op — ein
+    // zweiter Aufruf (z. B. Doppel-Tap, oder Realtime-Race zwischen zwei Geräten) legte ein
+    // zweites STATUS_CHANGE-Ereignis an und schrieb `tournamentRepo.updateMatch` ein zweites Mal.
+    describe('finishMatch — Idempotenz bei bereits beendetem Spiel (Task A1)', () => {
+        it('zweimal finishMatch hintereinander: genau ein Spielende-Ereignis, ein Persist-Aufruf', async () => {
+            const runningMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                status: 'RUNNING',
+                homeScore: 2,
+                awayScore: 1,
+                tournamentPhase: 'groupStage',
+                canEndInDraw: true,
+            };
+            mockLiveMatchRepo.get.mockResolvedValueOnce(runningMatch);
+
+            const first = await service.finishMatch('tour-1', 'match-1');
+
+            expect(first).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockLiveMatchRepo.save).toHaveBeenCalledTimes(1);
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledTimes(1);
+
+            const finishedMatch = mockLiveMatchRepo.save.mock.calls[0][1] as LiveMatch;
+            expect(finishedMatch.status).toBe('FINISHED');
+            expect(finishedMatch.events.length).toBe(1);
+            expect(finishedMatch.events[0].type).toBe('STATUS_CHANGE');
+
+            // Zweiter Aufruf: der Live-Match-Store liefert jetzt das bereits beendete Match zurück
+            // (genau wie in der Realität, weil der erste Aufruf es so gespeichert hat).
+            mockLiveMatchRepo.get.mockResolvedValueOnce(finishedMatch);
+
+            const second = await service.finishMatch('tour-1', 'match-1');
+
+            expect(second).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            // Kein zweites Ereignis, kein zweiter Persist-Aufruf — No-op.
+            expect(mockLiveMatchRepo.save).toHaveBeenCalledTimes(1);
+            expect(mockTournamentRepo.updateMatch).toHaveBeenCalledTimes(1);
+        });
+
+        it('ein bereits beendetes Spiel bleibt bei finishMatch unverändert (kein Save)', async () => {
+            const alreadyFinished: LiveMatch = {
+                ...minimalLiveMatch,
+                status: 'FINISHED' as MatchStatus,
+                homeScore: 3,
+                awayScore: 0,
+                events: [{
+                    id: 'evt-existing',
+                    matchId: 'match-1',
+                    timestampSeconds: 900,
+                    type: 'STATUS_CHANGE',
+                    payload: { toStatus: 'FINISHED' },
+                    scoreAfter: { home: 3, away: 0 },
+                }],
+            } as unknown as LiveMatch;
+            mockLiveMatchRepo.get.mockResolvedValueOnce(alreadyFinished);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+            expect(mockLiveMatchRepo.save).not.toHaveBeenCalled();
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
+        });
+
+        it('Tiebreaker-Pfad bleibt unverändert: ein PAUSED-Match mit awaitingTiebreakerChoice ist NICHT "bereits beendet"', async () => {
+            const drawnFinalMatch: LiveMatch = {
+                ...minimalLiveMatch,
+                status: 'PAUSED',
+                homeScore: 1,
+                awayScore: 1,
+                tournamentPhase: 'final',
+                canEndInDraw: false,
+                tiebreakerMode: 'shootout',
+            };
+            mockLiveMatchRepo.get.mockResolvedValueOnce(drawnFinalMatch);
+
+            const result = await service.finishMatch('tour-1', 'match-1');
+
+            expect(result).toEqual({ success: false, needsTiebreaker: true, decidedBy: 'regular' });
+            expect(mockLiveMatchRepo.save).toHaveBeenCalledTimes(1);
+            expect(mockTournamentRepo.updateMatch).not.toHaveBeenCalled();
+        });
+    });
 });

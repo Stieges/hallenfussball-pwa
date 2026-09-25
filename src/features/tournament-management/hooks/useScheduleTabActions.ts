@@ -9,6 +9,8 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tournament } from '../../../types/tournament';
+import { MatchUpdate } from '../../../core/models/types';
+import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
@@ -16,6 +18,20 @@ import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /**
+   * A2 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-brief.md): applies the given
+   * tournament to LOCAL state only, WITHOUT persisting it. handleScoreChange uses this for the
+   * optimistic UI update, so entering a result never triggers a full `save()` (which would
+   * overwrite a helper's live match with the owner's possibly-stale local state -- see A1's
+   * `applyRemote` for the same reasoning on the cockpit side).
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
+  /**
+   * A2: persists ONLY the given matches via a targeted update (`tournamentRepo.updateMatch(es)`),
+   * never a full tournament save. Used by handleScoreChange for the result itself and for any
+   * playoff/bracket matches that got auto-resolved as a consequence.
+   */
+  onMatchesUpdate: (updates: MatchUpdate[]) => void;
   isEditing: boolean;
   saveToHistory: () => void;
   showSuccess: (message: string) => void;
@@ -38,6 +54,8 @@ interface UseScheduleTabActionsResult {
 export function useScheduleTabActions({
   tournament,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
+  onMatchesUpdate,
   isEditing,
   saveToHistory,
   showSuccess,
@@ -182,20 +200,69 @@ export function useScheduleTabActions({
       updatedAt: new Date().toISOString(),
     };
 
-    onTournamentUpdate(updatedTournament, false);
+    // A2 Fixrunde 1 (Ruling AJ, "nur einen Weg"): track ONLY the matches touched by this result
+    // entry (the match itself, plus whatever playoff/bracket resolution changes as a
+    // consequence), so we can persist them via a targeted `updateMatch(es)` instead of a full
+    // tournament save. The scored match itself goes through the SAME shared helper every other
+    // result/status-changing action now uses (`diffMatchResultStatusUpdates`).
+    const pendingUpdates = new Map<string, MatchUpdate>();
+    const [scoreUpdate] = diffMatchResultStatusUpdates(
+      tournament.matches,
+      updatedTournament.matches
+    );
+    if (scoreUpdate) {
+      pendingUpdates.set(matchId, scoreUpdate);
+    }
 
-    // Auto-resolve playoff pairings after group match completion
+    // Auto-resolve playoff pairings after group match completion. This can also clear a
+    // (regenerated) playoff match's score if its teams changed -- a RESULT field -- alongside the
+    // teamA/teamB SCHEDULE fields, so the result diff of THAT match is folded into the same
+    // targeted update object (mapMatchUpdateToSupabase writes both kinds of columns in one call).
     const playoffResolution = autoResolvePlayoffsIfReady(updatedTournament);
     if (playoffResolution?.wasResolved) {
-      onTournamentUpdate(updatedTournament, false);
+      for (const id of playoffResolution.updatedMatchIds) {
+        const before = tournament.matches.find((m) => m.id === id);
+        const resolved = updatedTournament.matches.find((m) => m.id === id);
+        if (before && resolved) {
+          const [resultUpdate] = diffMatchResultStatusUpdates([before], [resolved]);
+          pendingUpdates.set(id, {
+            ...(resultUpdate ?? { id }),
+            teamA: resolved.teamA,
+            teamB: resolved.teamB,
+          });
+        }
+      }
     }
 
     // Also resolve bracket placeholders after playoff matches
     const bracketResolution = resolveBracketAfterPlayoffMatch(updatedTournament);
     if (bracketResolution?.wasResolved) {
-      onTournamentUpdate(updatedTournament, false);
+      for (const id of bracketResolution.updatedMatchIds) {
+        const resolved = updatedTournament.matches.find((m) => m.id === id);
+        if (resolved) {
+          pendingUpdates.set(id, {
+            ...pendingUpdates.get(id),
+            id,
+            teamA: resolved.teamA,
+            teamB: resolved.teamB,
+          });
+        }
+      }
     }
-  }, [tournament, onTournamentUpdate, lockFinishedResults, showWarning, saveToHistory, t]);
+
+    // Sync local UI state once, without saving the whole tournament ...
+    onLocalTournamentUpdate(updatedTournament);
+    // ... then persist only the touched matches.
+    onMatchesUpdate(Array.from(pendingUpdates.values()));
+  }, [
+    tournament,
+    onLocalTournamentUpdate,
+    onMatchesUpdate,
+    lockFinishedResults,
+    showWarning,
+    saveToHistory,
+    t,
+  ]);
 
   // Handle referee assignment (pending in edit mode, direct otherwise)
   const handleRefereeAssignment = useCallback((matchId: string, refereeNumber: number | null) => {

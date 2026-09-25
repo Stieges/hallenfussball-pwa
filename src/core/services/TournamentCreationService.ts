@@ -4,6 +4,7 @@ import { generateTournamentId } from '../../utils/idGenerator';
 import { getSportConfig, DEFAULT_SPORT_ID } from '../../config/sports';
 import { generateFullSchedule } from '../generators';
 import { generateShareCode } from '../../utils/shareCode';
+import { diffMatchResultStatusUpdates } from './matchResultStatusDiff';
 
 export class TournamentCreationService {
     constructor(private readonly repository: ITournamentRepository) { }
@@ -174,12 +175,37 @@ export class TournamentCreationService {
     }
 
     /**
+     * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+     * task-A2-review.md`): `repository.save()` intentionally skips result/status columns for
+     * EXISTING matches (A2) -- editing a PUBLISHED tournament in the Wizard can change those
+     * (e.g. "Turnier zurücksetzen" in `useTournamentWizard.ts` clears score/status/finishedAt).
+     * Fetches the pre-save state (only when editing an existing tournament) and persists any
+     * result/status change via a targeted update, same pattern as `DangerZone`/`useCorrectionMode`.
+     * Wrapped in try/catch: a failure here must never block the actual save that already
+     * succeeded above -- worst case the result/status change stays local-only, exactly the A2 gap
+     * this closes, not a new failure mode.
+     */
+    private async persistResultStatusChanges(tournamentId: string, previous: Tournament | null, next: Tournament): Promise<void> {
+        if (!previous) { return; }
+        try {
+            const updates = diffMatchResultStatusUpdates(previous.matches, next.matches);
+            if (updates.length > 0) {
+                await this.repository.updateMatches(tournamentId, updates);
+            }
+        } catch (err) {
+            console.error('Failed to persist result/status changes after save:', err);
+        }
+    }
+
+    /**
      * Saves the current draft state
      */
     async saveDraft(data: Partial<Tournament>): Promise<Tournament> {
+        const previous = data.id ? await this.repository.get(data.id) : null;
         const tournament = this.createDraft(data, data.id);
         tournament.updatedAt = new Date().toISOString();
         await this.repository.save(tournament);
+        await this.persistResultStatusChanges(tournament.id, previous, tournament);
         return tournament;
     }
 
@@ -187,6 +213,7 @@ export class TournamentCreationService {
      * Publishes the tournament (generates schedule and sets status)
      */
     async publish(data: Partial<Tournament>): Promise<Tournament> {
+        const previous = data.id ? await this.repository.get(data.id) : null;
         const tournament = this.createDraft(data, data.id);
 
         // Veröffentlichen IST die Freigabe — aber nur beim ersten Mal. "Erweiterte Bearbeitung"
@@ -209,24 +236,70 @@ export class TournamentCreationService {
         // Generate full schedule
         const schedule = generateFullSchedule(tournament);
 
+        // A2 Fixrunde 3 (N1c, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview.md`): "Erweiterte Bearbeitung" (re-publishing an already-published
+        // tournament) regenerates the WHOLE schedule -- `schedule.allMatches` never carries
+        // matchStatus/timer/tiebreaker fields (see `ScheduledMatch`, which doesn't declare them).
+        // Without this, `persistResultStatusChanges()` below would see e.g. a running match's
+        // `matchStatus` go from `'running'` (in `previous`, the real DB state) to `undefined` (in
+        // the freshly regenerated match) and reset it -- silently ending a helper's live match
+        // from the cloud's point of view, just because the owner re-published the wizard. Carrying
+        // these fields over (by match id, from the DB state fetched above) means the diff sees NO
+        // change for matches whose id survives regeneration, so nothing gets touched.
+        const previousMatchById = new Map((previous?.matches ?? []).map((m) => [m.id, m]));
+        // A2 Fixrunde 4 (B1, `task-A2-rereview2.md`): the Wizard's own match (same id) wins over
+        // `previous` whenever it carries an explicit `matchStatus` -- that is the Wizard stating
+        // the status itself (e.g. "Turnier zurücksetzen" sets 'scheduled' and clears finishedAt,
+        // `useTournamentWizard#handleResetTournament`). Taking `previous` there left the cloud at
+        // match_status='finished' + actual_end while the scores became NULL. Only when the Wizard
+        // has no such match or never stated a status do we fall back to `previous` (N1c: a match a
+        // helper started after the Wizard loaded its copy stays protected).
+        const wizardMatchById = new Map((data.matches ?? []).map((m) => [m.id, m]));
+
         // Convert ScheduledMatch to domain Match
-        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
-            id: scheduledMatch.id,
-            round: Math.floor(index / tournament.numberOfFields) + 1,
-            field: scheduledMatch.field,
-            slot: scheduledMatch.slot,
-            teamA: scheduledMatch.originalTeamA,
-            teamB: scheduledMatch.originalTeamB,
-            scoreA: scheduledMatch.scoreA,
-            scoreB: scheduledMatch.scoreB,
-            group: scheduledMatch.group,
-            isFinal: scheduledMatch.phase !== 'groupStage',
-            phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
-            finalType: scheduledMatch.finalType,
-            label: scheduledMatch.label,
-            scheduledTime: scheduledMatch.startTime,
-            referee: scheduledMatch.referee,
-        }));
+        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => {
+            const base = {
+                id: scheduledMatch.id,
+                round: Math.floor(index / tournament.numberOfFields) + 1,
+                field: scheduledMatch.field,
+                slot: scheduledMatch.slot,
+                teamA: scheduledMatch.originalTeamA,
+                teamB: scheduledMatch.originalTeamB,
+                scoreA: scheduledMatch.scoreA,
+                scoreB: scheduledMatch.scoreB,
+                group: scheduledMatch.group,
+                isFinal: scheduledMatch.phase !== 'groupStage',
+                phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
+                finalType: scheduledMatch.finalType,
+                label: scheduledMatch.label,
+                scheduledTime: scheduledMatch.startTime,
+                referee: scheduledMatch.referee,
+            };
+
+            const wizardMatch = wizardMatchById.get(scheduledMatch.id);
+            const statusSource = wizardMatch?.matchStatus !== undefined
+                ? wizardMatch
+                : previousMatchById.get(scheduledMatch.id);
+            if (!statusSource) {
+                return base;
+            }
+
+            return {
+                ...base,
+                matchStatus: statusSource.matchStatus,
+                finishedAt: statusSource.finishedAt,
+                timerStartTime: statusSource.timerStartTime,
+                timerPausedAt: statusSource.timerPausedAt,
+                timerElapsedSeconds: statusSource.timerElapsedSeconds,
+                overtimeScoreA: statusSource.overtimeScoreA,
+                overtimeScoreB: statusSource.overtimeScoreB,
+                penaltyScoreA: statusSource.penaltyScoreA,
+                penaltyScoreB: statusSource.penaltyScoreB,
+                decidedBy: statusSource.decidedBy,
+                skippedReason: statusSource.skippedReason,
+                skippedAt: statusSource.skippedAt,
+            };
+        });
 
         // Important: scheduledTime in Match interface is likely Date or string?
         // In LiveMatch, it was string? 
@@ -237,6 +310,7 @@ export class TournamentCreationService {
         tournament.updatedAt = new Date().toISOString();
 
         await this.repository.save(tournament);
+        await this.persistResultStatusChanges(tournament.id, previous, tournament);
         return tournament;
     }
 

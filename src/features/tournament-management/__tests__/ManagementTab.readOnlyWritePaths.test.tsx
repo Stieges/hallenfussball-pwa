@@ -123,7 +123,7 @@ describe('ManagementTab — "Beenden und wechseln" prüft die Berechtigung für 
   it('ohne Berechtigung (viewer): kein Bestätigungsdialog, kein handleFinish — Auswahl wechselt trotzdem', async () => {
     currentRole = 'viewer';
     const user = userEvent.setup();
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />);
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
 
     const select = screen.getByRole('combobox');
     await user.selectOptions(select, MATCH_TARGET);
@@ -136,7 +136,7 @@ describe('ManagementTab — "Beenden und wechseln" prüft die Berechtigung für 
   it('mit Berechtigung (owner): Dialog erscheint, nach Bestätigen ruft es handleFinish für das laufende Spiel auf — wie bisher', async () => {
     currentRole = 'owner';
     const user = userEvent.setup();
-    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />);
+    render(<ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />);
 
     const select = screen.getByRole('combobox');
     await user.selectOptions(select, MATCH_TARGET);
@@ -158,7 +158,7 @@ describe('ManagementTab — initialMatchId (URL-Parameter) prüft die Berechtigu
       <ManagementTab
         tournament={tournament}
         schedule={schedule}
-        onTournamentUpdate={vi.fn()}
+        onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()}
         initialMatchId={pending}
         onInitialMatchConsumed={() => setPending(null)}
       />

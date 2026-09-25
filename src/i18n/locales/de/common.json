@@ -79,6 +79,40 @@
     "reconnectAriaLabel": "Erneut verbinden"
   },
   "unsavedChanges": "Ungespeicherte Änderungen vorhanden.",
+  "syncStatus": {
+    "label": {
+      "synced": "Synchronisiert",
+      "updated": "Aktualisiert",
+      "conflict": "Konflikt",
+      "error": "Fehler",
+      "offline": "Offline"
+    },
+    "syncingAriaLabel": "Wird synchronisiert...",
+    "syncingLabel": "Synchronisiere...",
+    "pendingCountLabel": "{{count}} ausstehend",
+    "failedCountLabel": "{{count}} fehlgeschlagen",
+    "lastSyncNow": "Gerade eben",
+    "lastSyncMinutes": "vor {{count}} Min.",
+    "lastSyncHours": "vor {{count}} Std.",
+    "failedListTitle": "Gescheiterte Übertragungen",
+    "failedListEmpty": "Keine gescheiterten Übertragungen.",
+    "failedReasonUnknown": "Unbekannter Fehler",
+    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge und wurde nicht gelöscht.",
+    "retry": "Erneut versuchen",
+    "retryAriaLabel": "Übertragung erneut versuchen",
+    "discard": "Verwerfen",
+    "discardAriaLabel": "Übertragung verwerfen",
+    "discardConfirmTitle": "Übertragung verwerfen?",
+    "discardConfirmMessage": "Diese Änderung wird endgültig verworfen und nicht mehr an die Cloud übertragen. Das kann nicht rückgängig gemacht werden.",
+    "close": "Schließen",
+    "mutationTypes": {
+      "SAVE_TOURNAMENT": "Turnier speichern",
+      "DELETE_TOURNAMENT": "Turnier löschen",
+      "UPDATE_MATCH": "Spiel aktualisieren",
+      "UPDATE_MATCHES": "Spiele aktualisieren",
+      "UPDATE_TOURNAMENT_METADATA": "Turnierdaten aktualisieren"
+    }
+  },
   "progressBar": {
     "stepLabel": "Schritt {{step}}: {{label}}",
     "errorTooltip": "Fehler: {{errors}}",

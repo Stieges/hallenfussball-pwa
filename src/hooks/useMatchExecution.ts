@@ -26,7 +26,18 @@ import { captureFeatureError } from '../lib/sentry';
 
 export interface UseMatchExecutionProps {
     tournament: Tournament;
-    onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+    /**
+     * Task A1 (Sofortschutz): NUR ein lokales State-Update, KEIN Speicherpfad. Jede Stelle in
+     * diesem Hook, die nach einer Match-Aktion (Spielende, Elfmeterergebnis, Skip/Unskip, …) den
+     * frisch geladenen Tournament-Stand übernimmt, tat das bisher über den vollen
+     * Turnier-Speicherweg (TournamentService.updateTournament → SupabaseRepository.save mit
+     * Versionsprüfung) — für einen Helfer (Rolle collaborator, kein tournamentSettings-Recht)
+     * schlägt das per RLS fehl (0 Zeilen → OptimisticLockError → nach Retries Dead-Letter in der
+     * MutationQueue). Der eigentliche Spielstand ist über MatchExecutionService.persistFinalResult
+     * (Match-Pfad, per writeMatchData erlaubt) längst persistiert — hier wird nur der lokale
+     * Zustand nachgezogen. Erwartet z. B. `useTournamentManager().applyRemote`.
+     */
+    onLocalTournamentUpdate: (tournament: Tournament) => void;
 }
 
 /**
@@ -116,7 +127,7 @@ export type ConflictErrorHandler = (matchId: string, error: OptimisticLockError)
 
 export function useMatchExecution({
     tournament,
-    onTournamentUpdate,
+    onLocalTournamentUpdate,
 }: UseMatchExecutionProps): UseMatchExecutionReturn {
 
     // Get auth-aware tournament repository (Supabase for authenticated, localStorage for guests)
@@ -357,7 +368,7 @@ export function useMatchExecution({
             const repo = tournamentRepo;
             const updated = await repo.get(tournament.id);
             if (updated) {
-                onTournamentUpdate(updated, false);
+                onLocalTournamentUpdate(updated);
             }
 
             // Update local state
@@ -382,7 +393,7 @@ export function useMatchExecution({
         } finally {
             setLoading('finish', false);
         }
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo, setLoading]);
+    }, [service, tournament.id, onLocalTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository, refreshMatchState, showInfo, setLoading]);
 
     const handleForceFinish = useCallback(async (matchId: string): Promise<void> => {
         const match = liveMatches.get(matchId);
@@ -394,7 +405,7 @@ export function useMatchExecution({
         const repo = tournamentRepo;
         const updated = await repo.get(tournament.id);
         if (updated) {
-            onTournamentUpdate(updated, false);
+            onLocalTournamentUpdate(updated);
         }
 
         const updatedMatch = await liveMatchRepository.get(tournament.id, matchId);
@@ -403,7 +414,7 @@ export function useMatchExecution({
         }
 
         announceMatchFinished(matchId);
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository]);
+    }, [liveMatches, service, tournament.id, onLocalTournamentUpdate, announceMatchFinished, tournamentRepo, liveMatchRepository]);
 
     const handleGoal = useCallback(async (
         matchId: string,
@@ -426,7 +437,7 @@ export function useMatchExecution({
             if (updated.status === 'FINISHED') {
                 const repo = tournamentRepo;
                 const t = await repo.get(tournament.id);
-                if (t) { onTournamentUpdate(t, false); }
+                if (t) { onLocalTournamentUpdate(t); }
                 announceMatchFinished(matchId);
             } else {
                 // H-3 FIX: Announce goal update to other tabs
@@ -447,7 +458,7 @@ export function useMatchExecution({
         } finally {
             setLoading('goal', false);
         }
-    }, [liveMatches, service, tournament.id, onTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo, setLoading]);
+    }, [liveMatches, service, tournament.id, onLocalTournamentUpdate, announceMatchFinished, announceMatchUpdated, tournamentRepo, refreshMatchState, showInfo, setLoading]);
 
     const handleCard = useCallback(async (
         matchId: string,
@@ -595,9 +606,9 @@ export function useMatchExecution({
 
         const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
-        if (t) { onTournamentUpdate(t, false); }
+        if (t) { onLocalTournamentUpdate(t); }
         announceMatchFinished(matchId);
-    }, [service, tournament.id, onTournamentUpdate, announceMatchFinished, tournamentRepo]);
+    }, [service, tournament.id, onLocalTournamentUpdate, announceMatchFinished, tournamentRepo]);
 
     const handleCancelTiebreaker = useCallback(async (matchId: string): Promise<void> => {
         try {
@@ -665,16 +676,16 @@ export function useMatchExecution({
 
         const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
-        if (t) { onTournamentUpdate(t, false); }
-    }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
+        if (t) { onLocalTournamentUpdate(t); }
+    }, [service, tournament.id, onLocalTournamentUpdate, tournamentRepo]);
 
     const handleUnskipMatch = useCallback(async (matchId: string): Promise<void> => {
         await service.unskipMatch(tournament.id, matchId);
 
         const repo = tournamentRepo;
         const t = await repo.get(tournament.id);
-        if (t) { onTournamentUpdate(t, false); }
-    }, [service, tournament.id, onTournamentUpdate, tournamentRepo]);
+        if (t) { onLocalTournamentUpdate(t); }
+    }, [service, tournament.id, onLocalTournamentUpdate, tournamentRepo]);
 
     const handleUndoLastEvent = useCallback(async (matchId: string): Promise<void> => {
         // H-1 FIX: Prevent double-taps

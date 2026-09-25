@@ -84,6 +84,18 @@ export function useTournamentManager(tournamentId: string) {
         }
     }, [service, loadTournament]);
 
+    // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
+    // Aufrufer (z. B. useMatchExecution nach Spielende) wollen den lokalen Zustand nur mit dem
+    // bereits über einen anderen Weg persistierten Server-Stand synchronisieren — nicht das ganze
+    // Turnier erneut speichern. Für einen Helfer (Rolle collaborator, kein tournamentSettings-
+    // Recht) schlägt ein voller Turnier-Save per RLS fehl (0 Zeilen → OptimisticLockError → nach
+    // Retries Dead-Letter in der MutationQueue); der eigentliche Spielstand ist über
+    // MatchExecutionService.persistFinalResult (updateMatch, per writeMatchData erlaubt) längst
+    // in der DB. `applyRemote` übernimmt nur den bereits frisch geladenen Tournament-State.
+    const applyRemote = useCallback((updated: Tournament) => {
+        setTournament(updated);
+    }, []);
+
     // =========================================================================
     // BACKWARD COMPATIBILITY: Schedule View and Standings
     // These are computed from the loaded tournament for display purposes.
@@ -114,6 +126,7 @@ export function useTournamentManager(tournamentId: string) {
         isLoading,
         loadingError: error,
         handleTournamentUpdate,
+        applyRemote,
         reload: loadTournament,
         scheduleService: service.schedule,
         // Realtime status

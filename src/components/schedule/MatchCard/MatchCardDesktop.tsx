@@ -80,7 +80,7 @@ export interface MatchCardDesktopProps {
 // ---------------------------------------------------------------------------
 
 export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
-  matchId: _matchId,
+  matchId,
   matchNumber,
   scheduledTime,
   field,
@@ -281,6 +281,7 @@ export const MatchCardDesktop: React.FC<MatchCardDesktopProps> = ({
             size={52}
             onClick={handleCircleClick}
             disabled={disabled}
+            matchId={matchId}
           />
           {/* Chevron indicator for matches with events (shows expandability) */}
           {hasEvents && !isLive && (
