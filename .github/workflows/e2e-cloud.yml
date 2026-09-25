@@ -1,0 +1,109 @@
+name: E2E Cloud
+
+# Cloud-E2E-Tests (Task T6, .superpowers/sdd/2026-09-24-testumgebung/task-T6-brief.md) gegen
+# einen ECHTEN lokalen Supabase-Stack im CI-Runner (Postgres, Auth, PostgREST, Realtime, Edge
+# Functions) -- keine Produktions-URL, keine Secrets. Läuft dieselbe Befehlskette wie lokal
+# (`npm run test:env:reset` + `npm run test:e2e:cloud`), nichts davon ist hier neu erfunden.
+#
+# Eigener Workflow statt Job in ci.yml: ci.yml deckt bereits Unit-Tests + die Offline-E2E-Matrix
+# (9 Viewport-Projekte, kein Supabase) ab und ist scharf geschnitten. Dieser Job braucht einen
+# komplett anderen Unterbau (Docker-Stack, Supabase-CLI, eigenes Zeitbudget von 12 Minuten statt
+# der 20 Minuten der Offline-Matrix) und soll separat beobachtbar/deaktivierbar sein, ohne
+# ci.yml anzufassen -- genau das Muster, das dieses Repo für Supabase-nahe Prüfungen bereits
+# nutzt (siehe supabase-drift-check.yml, ebenfalls ein eigener Workflow statt Job in ci.yml).
+#
+# Noch NICHT Pflicht-Check (Branch-Protection unverändert) -- wird laut Ruling im Programm-
+# Ledger (.superpowers/sdd/2026-09-24-testumgebung/progress.md) eine Woche nur beobachtet, siehe
+# docs/TESTUMGEBUNG.md, Abschnitt "CI".
+#
+# Der Job `visual` (Bildvergleiche, T5) ist bewusst NICHT Teil dieser Datei.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-cloud:
+    name: Cloud E2E Tests (lokaler Supabase-Stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright (nur Chromium -- die cloud-Projekte nutzen kein anderes)
+        run: npx playwright install --with-deps chromium
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          # Dieselbe Version wie lokal genutzt (siehe task-T1-report.md, Abschnitt
+          # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
+          # "latest" (dort bereits einmal an einem GitHub-Rate-Limit gescheitert).
+          version: 2.67.1
+
+      - name: Lokalen Supabase-Stack starten
+        # Registrierungscode wie lokal aus scripts/lib/e2e-registration-code.sh (fester
+        # Testwert, kein Secret) -- dieselbe Datei, keine zweite Kopie des Werts. Muss VOR
+        # `supabase start` gesetzt sein, weil die Edge-Runtime das Secret beim Container-Start
+        # aus der Prozess-Variable liest (supabase/config.toml, [edge_runtime.secrets]).
+        run: |
+          source scripts/lib/e2e-registration-code.sh
+          supabase start
+
+      - name: Schema zurücksetzen + Testdaten säen
+        # Dieselbe Kette wie lokal, ein einziger npm-Befehl -- keine zweite Kopie der Logik aus
+        # scripts/local-db-apply.sh / scripts/e2e-seed.ts.
+        run: npm run test:env:reset
+
+      - name: Cloud-E2E-Tests ausführen
+        # Enthält bash scripts/require-local-stack.sh (Vorbedingung) + Playwright nur für die
+        # cloud-Projekte (cloud-setup, cloud-desktop, cloud-mobile). Produktions-Sperre greift
+        # ohne Zutun: assertLocalSupabaseTarget prüft die Ziel-URL/den Key vor jedem
+        # Service-Role-Zugriff, und dieser Job setzt nirgends eine Produktions-URL oder
+        # -Keys -- der lokale Stack ist die einzige konfigurierte Quelle.
+        run: npm run test:e2e:cloud
+
+      - name: Supabase-Diagnose einsammeln
+        if: failure()
+        run: |
+          mkdir -p ci-diagnostics
+          supabase status > ci-diagnostics/supabase-status.txt 2>&1 || true
+          {
+            for c in $(docker ps -a --filter "name=supabase_" --format '{{.Names}}'); do
+              echo "=== $c (letzte 100 Zeilen) ==="
+              docker logs --tail 100 "$c" 2>&1
+              echo
+            done
+          } > ci-diagnostics/container-logs.txt
+
+      - name: Supabase-Diagnose hochladen
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: supabase-logs-cloud
+          path: ci-diagnostics/
+          retention-days: 7
+
+      - name: Playwright-Report hochladen
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-cloud
+          path: playwright-report/
+          retention-days: 7

@@ -130,6 +130,52 @@ Ergebnis — das ist das erwartete Verhalten, kein Bug.
 | Edge Function antwortet mit „Server configuration error" | `E2E_REGISTRATION_CODE` war beim Container-Start nicht gesetzt (z. B. `supabase start` direkt statt `npm run test:env:up`) | `npm run test:env:up`/`test:env:reset` verwenden (setzt die Variable vor dem Start) |
 | `test:env:status` meldet „Testumgebung läuft nicht" | Stack nicht gestartet | `npm run test:env:up` zuerst |
 
+## CI
+
+Task T6 (`.superpowers/sdd/2026-09-24-testumgebung/task-T6-brief.md`) bringt diese Testumgebung
+und den Rechte-Harness als zwei eigene GitHub-Actions-Workflows in die CI. **Beide sind noch
+KEIN Pflicht-Check** — die Branch-Protection ist unverändert. Sie werden eine Woche lang nur
+beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Programm-Ledger,
+`.superpowers/sdd/2026-09-24-testumgebung/progress.md`).
+
+### `.github/workflows/e2e-cloud.yml`
+
+- **Wann:** bei jedem Pull Request gegen `main` und bei jedem Push auf `main` — dieselben
+  Trigger wie `ci.yml`.
+- **Was:** startet einen echten lokalen Supabase-Stack im Runner (`supabase/setup-cli@v1`,
+  Version 2.67.1 — dieselbe wie lokal, siehe „Voraussetzungen" oben), spielt Schema + Seed über
+  denselben Befehl wie lokal ein (`npm run test:env:reset`) und lässt dann `npm run
+  test:e2e:cloud` laufen (Playwright nur für `cloud-setup`/`cloud-desktop`/`cloud-mobile`, nur
+  Chromium installiert). Keine Produktions-URL, keine Secrets — die Produktions-Sperre
+  (`assertLocalSupabaseTarget`, `scripts/require-local-stack.sh`) bleibt wie lokal aktiv, weil
+  der Job nirgends eine andere Ziel-URL setzt.
+- **Zeitbudget:** `timeout-minutes: 12`. Lokal (warme Docker-Images, warmer `node_modules`-/
+  Playwright-Cache) dauert die Kette `supabase start` (~25 s) + `test:env:reset` (~33 s) +
+  `test:e2e:cloud` (~67 s) zusammen rund 2 Minuten — der CI-Runner braucht zusätzlich `npm ci`,
+  die Chromium-Installation und einen kalten Image-Pull für den Supabase-Stack (Runner hat dafür
+  kein Docker-Layer-Cache); ob 12 Minuten dafür reichen, zeigt erst der erste echte Lauf.
+- **Roten Lauf lesen:** bei Fehlschlag lädt der Job zwei Artefakte hoch —
+  `playwright-report-cloud` (HTML-Report, wie beim bestehenden `e2e-tests`-Job in `ci.yml`) und
+  `supabase-logs-cloud` (`supabase status` + die letzten 100 Zeilen jedes
+  `supabase_*`-Containers). Ein `test.fail()`-annotierter Cloud-Spec-Test, der wie erwartet
+  fehlschlägt, zählt NICHT als roter Lauf (Playwright zählt ihn als „passed" — siehe
+  `docs/superpowers/plans/2026-09-24-testumgebung.md`, Task T4).
+
+### `.github/workflows/rls-role-matrix.yml`
+
+- **Wann:** nur bei Pull Requests, die `supabase/migrations/**`, `scripts/rls-role-matrix.sh`
+  oder `src/features/auth/permissions/rolePermissions.json` ändern (Pfad-Trigger, kein Push).
+- **Was:** `bash scripts/rls-role-matrix.sh` im Default-Modus — das Skript startet seinen
+  eigenen Wegwerf-Postgres-Container (`supabase/postgres:17.6.1.063`), braucht dafür keinen
+  laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (207 geprüfte Zellen,
+  Stand T1).
+- **Zeitbudget:** `timeout-minutes: 10` (kein Vorgabewert aus dem Brief, eigene Einschätzung).
+- **Roten Lauf lesen:** Exit ≠ 0 macht den Job automatisch rot, sobald eine Zelle von der
+  Rechtetabelle abweicht — die Zusammenfassung mit der genauen Abweichungszahl steht direkt im
+  Job-Log (kein separates Artefakt nötig). Lokale Gegenprobe (T6): eine bewusst falsche Zeile in
+  `rolePermissions.json` (`collaborator` bekommt zusätzlich `manageMembers`) lässt das Skript mit
+  4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0.
+
 ## Nie tun
 
 - `supabase link` in diesem Repo ausführen.

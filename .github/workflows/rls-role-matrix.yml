@@ -1,0 +1,39 @@
+name: RLS Role Matrix
+
+# Rechte-Harness (scripts/rls-role-matrix.sh, entstanden im Paket "Rechte",
+# .superpowers/sdd/2026-09-22-rechte-und-cockpit-2/) in der CI (Task T6,
+# .superpowers/sdd/2026-09-24-testumgebung/task-T6-brief.md). Prüft rolePermissions.json gegen
+# eine ECHTE Postgres-Instanz mit aktivem RLS -- das Skript startet seinen eigenen Wegwerf-
+# Container (supabase/postgres:17.6.1.063), braucht dafür keinen laufenden lokalen Supabase-
+# Stack. Läuft NUR bei PRs, die etwas an der geprüften Fläche ändern: Migrationen, das Skript
+# selbst oder die Rechte-Tabelle.
+#
+# Kein Pflicht-Check (Branch-Protection unverändert) -- wird laut Ruling im Programm-Ledger
+# (.superpowers/sdd/2026-09-24-testumgebung/progress.md) eine Woche nur beobachtet, siehe
+# docs/TESTUMGEBUNG.md, Abschnitt "CI".
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/rls-role-matrix.sh'
+      - 'src/features/auth/permissions/rolePermissions.json'
+
+permissions:
+  contents: read
+
+jobs:
+  rls-role-matrix:
+    name: Rechte-Matrix gegen echtes RLS (Postgres-Wegwerfcontainer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Rechte-Matrix prüfen
+        # Exit 1 bei Abweichung (Default-Modus, Skriptende "L4: CI-Gate") -- macht den Job ohne
+        # weiteres Zutun rot. Container ist eine Wegwerf-Instanz, wird per trap am Skriptende
+        # entfernt; berührt nichts außerhalb von sich selbst.
+        run: bash scripts/rls-role-matrix.sh
