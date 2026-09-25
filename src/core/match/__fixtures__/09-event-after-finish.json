@@ -1,0 +1,99 @@
+{
+  "title": "Ereignis nach Spielende",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-09",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "type": "GOAL",
+      "actor": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 600000,
+      "teamId": "teamA",
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "11111111-1111-4111-8111-111111111101",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111102",
+        "status": "accepted"
+      },
+      {
+        "id": "11111111-1111-4111-8111-111111111103",
+        "status": "rejected",
+        "code": "MATCH_FINISHED"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 600000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": "regular",
+      "finishedAt": 2000
+    }
+  }
+}
