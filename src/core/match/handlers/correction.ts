@@ -55,11 +55,17 @@ export function applyCorrection(state: MatchState, event: EngineEvent, ctx: Matc
     reason: payload.reason,
     basedOn: payload.basedOn,
     at: event.at,
+    seq: state.nextSeq,
   };
 
   return {
     status: 'ok',
-    state: { ...state, overrides: [...state.overrides, override], lastScoreEventId: event.id },
+    state: {
+      ...state,
+      overrides: [...state.overrides, override],
+      nextSeq: state.nextSeq + 1,
+      lastScoreEventId: event.id,
+    },
   };
 }
 
@@ -73,10 +79,12 @@ export function applyResultEntry(state: MatchState, event: EngineEvent, ctx: Mat
     snapshot: snapshotFor(state, ctx),
     basedOn: null,
     at: event.at,
+    seq: state.nextSeq,
   };
   return {
     ...state,
     overrides: [...state.overrides, override],
+    nextSeq: state.nextSeq + 1,
     finishedAt: event.at,
     lastScoreEventId: event.id,
   };

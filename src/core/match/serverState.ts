@@ -38,7 +38,11 @@ export function toServerState(state: MatchState): ServerMatchState {
     effectiveScores,
     shootoutKicks: state.shootoutKicks.map((kick) => ({ id: kick.id, teamId: kick.teamId, scored: kick.scored })),
     lastScoreEventId: state.lastScoreEventId,
-    decidedBy: state.decidedBy,
+    // Ruling K11 (Fixrunde 2, RR-M2): decidedBy ist irreführend, solange das Spiel nicht
+    // `finished` ist -- z. B. nach REOPEN mit noch aktiver Überschreibung, wo intern weiter
+    // `decidedByFor()` = 'correction' gilt, obwohl das Spiel läuft und noch nichts entschieden
+    // ist. Für C/Monitor gilt deshalb nach außen: nur bei `finished` ausgeben, sonst null.
+    decidedBy: state.status === 'finished' ? state.decidedBy : null,
     finishedAt: state.finishedAt,
   };
 }

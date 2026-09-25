@@ -52,6 +52,7 @@ export function initialState(ctx: MatchContext): MatchState {
     },
     goals: [],
     overrides: [],
+    nextSeq: 0,
     baseDecidedBy: null,
     shootoutKicks: [],
     cards: [],
@@ -103,8 +104,10 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'SUBSTITUTION':
       return { status: 'ok', state: applySubstitution(state, event) };
     case 'RETRACT': {
-      const outcome = applyRetract(state, event);
-      return outcome.status === 'ok' ? { status: 'ok', state: outcome.state } : { status: 'rejected', code: outcome.code };
+      const outcome = applyRetract(state, event, ctx);
+      return outcome.status === 'ok'
+        ? { status: 'ok', state: outcome.state }
+        : { status: 'rejected', code: outcome.code, detail: outcome.detail };
     }
     case 'CORRECTION': {
       const outcome = applyCorrection(state, event, ctx);

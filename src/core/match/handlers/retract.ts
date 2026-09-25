@@ -4,13 +4,25 @@
  * zurückgenommen worden sein.
  */
 import { RETRACTABLE_EVENT_TYPES } from '../payloadValidation';
-import { ERROR_CODES } from '../types';
-import type { EngineEvent, ErrorCode, MatchState } from '../types';
+import { ERROR_CODES, effectiveScoreFor } from '../types';
+import type { EngineEvent, ErrorCode, MatchContext, MatchState } from '../types';
 import { reverseGoal } from './records';
 
-export type RetractOutcome = { status: 'ok'; state: MatchState } | { status: 'rejected'; code: ErrorCode };
+export type RetractOutcome =
+  | { status: 'ok'; state: MatchState }
+  | { status: 'rejected'; code: ErrorCode; detail?: { currentScores: Record<string, number>; lastScoreEventId: string | null } };
 
-export function applyRetract(state: MatchState, event: EngineEvent): RetractOutcome {
+function staleBaseDetail(state: MatchState, ctx: MatchContext): { currentScores: Record<string, number>; lastScoreEventId: string | null } {
+  return {
+    currentScores: {
+      [ctx.teamAId]: effectiveScoreFor(state, ctx.teamAId),
+      [ctx.teamBId]: effectiveScoreFor(state, ctx.teamBId),
+    },
+    lastScoreEventId: state.lastScoreEventId,
+  };
+}
+
+export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchContext): RetractOutcome {
   // targetId ist bereits durch isPayloadValid() als Pflichtfeld geprüft.
   const targetId = event.targetId ?? '';
   const target = state.accepted[targetId];
@@ -21,23 +33,37 @@ export function applyRetract(state: MatchState, event: EngineEvent): RetractOutc
     return { status: 'rejected', code: ERROR_CODES.ALREADY_RETRACTED };
   }
   if (!RETRACTABLE_EVENT_TYPES.has(target.type)) {
+    // Ruling K10: RESULT_ENTRY ist bewusst NICHT in RETRACTABLE_EVENT_TYPES -- ein Direkteintrag
+    // lässt sich nie zurücknehmen (auch nicht durch die Turnierleitung), Fehler behebt eine
+    // CORRECTION. Dieser Zweig fängt das für jeden Akteur ab, der die allgemeine
+    // Tabellenzeilen-Prüfung passiert hat (Fixrunde 2, RR-I2).
     return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
   }
 
-  // Ruling K2: Überschreibungen (CORRECTION/RESULT_ENTRY) dürfen nur die Turnierleitung
-  // zurücknehmen -- unabhängig davon, dass die Übergangszeile für `running`/`paused`/
-  // `section_break`/`shootout` auch Helfer zulässt (Fixrunde 1, I6).
-  if ((target.type === 'CORRECTION' || target.type === 'RESULT_ENTRY') && event.actor !== 'leitung') {
+  // Ruling K2 (Fixrunde 2 präzisiert, RR-I2): NUR CORRECTION verlangt zwingend die
+  // Turnierleitung -- RESULT_ENTRY erreicht diesen Zweig nie, weil es oben bereits als nicht
+  // zurücknehmbar abgelehnt wird (K10).
+  if (target.type === 'CORRECTION' && event.actor !== 'leitung') {
     return { status: 'rejected', code: ERROR_CODES.FORBIDDEN_ACTOR };
   }
 
   const retracted = [...state.retracted, targetId];
 
   if (target.type === 'GOAL' || target.type === 'OWN_GOAL') {
+    // Ruling K9 (Fixrunde 2, RR-I1): ein Tor, das VOR der letzten aktiven Überschreibung fiel,
+    // ist in deren Stand schon "eingerechnet" -- seine Rücknahme würde effectiveScoreFor unter
+    // 0 drücken. Solche Rücknahmen werden abgelehnt wie eine veraltete CORRECTION (STALE_BASE,
+    // gleiches Detail-Format); der richtige Weg ist danach eine neue CORRECTION. Ein Tor NACH
+    // der letzten Überschreibung bleibt normal zurücknehmbar.
+    const goalRecord = state.goals.find((goal) => goal.id === targetId);
+    const lastOverride = state.overrides[state.overrides.length - 1];
+    if (goalRecord && lastOverride && goalRecord.seq < lastOverride.seq) {
+      return { status: 'rejected', code: ERROR_CODES.STALE_BASE, detail: staleBaseDetail(state, ctx) };
+    }
     return { status: 'ok', state: { ...reverseGoal(state, targetId), retracted, lastScoreEventId: event.id } };
   }
 
-  if (target.type === 'CORRECTION' || target.type === 'RESULT_ENTRY') {
+  if (target.type === 'CORRECTION') {
     return {
       status: 'ok',
       state: {

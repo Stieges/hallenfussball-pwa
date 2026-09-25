@@ -207,6 +207,8 @@ export interface OverrideRecord {
   reason?: string;
   basedOn?: string | null;
   at: number;
+  /** Log-Position bei Annahme (`state.nextSeq` vor dem Inkrement), für Ruling K9. */
+  seq: number;
 }
 
 /** Ruling K5 (Fixrunde 1, I7): Tore merken sich ihre Phase, damit RETRACT in derselben Phase abzieht. */
@@ -214,6 +216,8 @@ export interface GoalRecord {
   id: string;
   scoringTeamId: string;
   phase: 'regular' | 'overtime';
+  /** Log-Position bei Annahme (`state.nextSeq` vor dem Inkrement), für Ruling K9. */
+  seq: number;
 }
 
 export interface MatchState {
@@ -225,6 +229,8 @@ export interface MatchState {
   scores: Record<string, TeamScoreBreakdown>;
   goals: GoalRecord[];
   overrides: OverrideRecord[];
+  /** Monotoner Zähler für die Log-Position von Toren/Überschreibungen (Ruling K9). */
+  nextSeq: number;
   /** Von der Spielende-Prüfung gesetzt ('regular'/'overtime'), REOPEN setzt es zurück auf null (K1). */
   baseDecidedBy: DecidedBy | null;
   shootoutKicks: ShootoutKickRecord[];

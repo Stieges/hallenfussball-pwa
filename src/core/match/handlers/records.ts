@@ -28,7 +28,8 @@ export function applyGoal(state: MatchState, event: EngineEvent, ctx: MatchConte
       ...state.scores,
       [scoringTeam]: { ...previous, [phaseKey]: previous[phaseKey] + 1 },
     },
-    goals: [...state.goals, { id: event.id, scoringTeamId: scoringTeam, phase: phaseKey }],
+    goals: [...state.goals, { id: event.id, scoringTeamId: scoringTeam, phase: phaseKey, seq: state.nextSeq }],
+    nextSeq: state.nextSeq + 1,
     lastScoreEventId: event.id,
   };
 }
