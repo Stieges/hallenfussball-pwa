@@ -1,0 +1,117 @@
+{
+  "title": "Unbekannter Ereignistyp (auch Prototyp-Name) wird abgelehnt statt zu werfen (S9)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-44",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "44444444-4444-4444-8444-444444444401",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444402",
+      "type": "UNKNOWN_TYPE",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 1000,
+      "payload": {}
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444403",
+      "type": "constructor",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": 2000,
+      "payload": {}
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444404",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 4000,
+      "section": 1,
+      "clockMs": 3000,
+      "teamId": "teamA",
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "44444444-4444-4444-8444-444444444401",
+        "status": "accepted"
+      },
+      {
+        "id": "44444444-4444-4444-8444-444444444402",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "44444444-4444-4444-8444-444444444403",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "44444444-4444-4444-8444-444444444404",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "44444444-4444-4444-8444-444444444404",
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

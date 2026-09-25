@@ -95,6 +95,11 @@ export const RETRACTABLE_EVENT_TYPES: ReadonlySet<EventType> = new Set([
  * Ereignisses. Reiner Struktur-Check -- Zustandsübergänge prüft applyEvent separat.
  */
 export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
+  // Ruling S9 (B3b): ein unbekannter Ereignistyp (auch ein Prototyp-Name wie `constructor`) ist
+  // INVALID_PAYLOAD statt einer Exception -- gleich wie der SQL-Zwilling (payload_valid, ELSE false).
+  if (!Object.hasOwn(PAYLOAD_SCHEMAS, event.type)) {
+    return false;
+  }
   const schema = PAYLOAD_SCHEMAS[event.type];
   const parsed = schema.safeParse(event.payload);
   if (!parsed.success) {

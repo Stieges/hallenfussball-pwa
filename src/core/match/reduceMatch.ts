@@ -73,7 +73,8 @@ export function isSameEventContent(a: EngineEvent, b: EngineEvent): boolean {
 }
 
 function processEvent(state: MatchState, event: EngineEvent, ctx: MatchContext): { state: MatchState; result: EventResult } {
-  const existing = state.accepted[event.id];
+  // M1 (B3a-Review): nur eigene Schlüssel -- sonst träfe eine ID wie `toString` den Prototyp.
+  const existing = Object.hasOwn(state.accepted, event.id) ? state.accepted[event.id] : undefined;
   if (existing) {
     if (isSameEventContent(existing, event)) {
       return { state, result: { id: event.id, status: 'duplicate' } };

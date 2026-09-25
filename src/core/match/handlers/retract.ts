@@ -66,7 +66,8 @@ function isTargetAdmissible(state: MatchState, target: EngineEvent): boolean {
 export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchContext): RetractOutcome {
   // targetId ist bereits durch isPayloadValid() als Pflichtfeld geprüft.
   const targetId = event.targetId ?? '';
-  const target = state.accepted[targetId];
+  // M1 (B3a-Review): nur eigene Schlüssel -- `constructor`/`__proto__` sind unbekannte Ziele.
+  const target = Object.hasOwn(state.accepted, targetId) ? state.accepted[targetId] : undefined;
   if (!target) {
     return { status: 'rejected', code: ERROR_CODES.UNKNOWN_TARGET };
   }
