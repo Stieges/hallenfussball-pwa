@@ -2,7 +2,8 @@
 #
 # match-event-log-check.sh — Container-Beweis fuer das Ereignis-Log-Schema
 # (supabase/migrations/20260928_001_match_event_log.sql, B2,
-# .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md).
+# .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md, Fixrunde 1 nach
+# task-B2-review.md: Ruling G3).
 #
 # Stil: scripts/protect-matches-with-events-check.sh (Wegwerf-Postgres, Baseline + neuere
 # Migrationen ueber scripts/lib/migrations-since-baseline.sh, "SET LOCAL ROLE authenticated" +
@@ -11,14 +12,24 @@
 #
 # Aufrufoptionen:
 #   ./scripts/match-event-log-check.sh            normaler Lauf (Baseline + ALLE neueren
-#                                                   Migrationen, inkl. 20260928_001) — die 10
-#                                                   Proben muessen GRUEN sein.
+#                                                   Migrationen, inkl. 20260928_001, Guard aktiv)
+#                                                   — alle Proben muessen GRUEN sein.
 #   ./scripts/match-event-log-check.sh --without-migration
-#                                                   Gegenprobe (Probe 10): Baseline + alle
-#                                                   neueren Migrationen AUSSER
-#                                                   20260928_001_match_event_log.sql — Proben 1,
-#                                                   2, 4 muessen ROT sein (erwarteter Fehlschlag,
-#                                                   Exit 0 trotzdem, siehe unten).
+#                                                   Gegenprobe A: Baseline + alle neueren
+#                                                   Migrationen AUSSER 20260928_001 — Proben 1, 2a
+#                                                   muessen ROT sein (erwarteter Fehlschlag,
+#                                                   Exit 0 trotzdem). Beweist NUR den Alt-Trigger/
+#                                                   Typ-CHECK, NICHT den Guard (siehe Review I3) --
+#                                                   dafuer --without-guard.
+#   ./scripts/match-event-log-check.sh --without-guard
+#                                                   Gegenprobe B (Ruling G3): Migration vollstaendig
+#                                                   einspielen, danach
+#                                                   `DROP TRIGGER match_events_guard_engine_rows`.
+#                                                   ALLE Guard-Proben (2a-2e, 4a-4b, 4f-Direktweg)
+#                                                   muessen jetzt auf "ok" kippen (ROT) — beweist,
+#                                                   dass tatsaechlich der GUARD und nicht ein
+#                                                   anderer Mechanismus (CHECK/FK) die Proben im
+#                                                   Normalmodus ablehnt.
 #
 # Aendert NICHTS an der Produktionsdatenbank — Wegwerf-Container, wird am Ende entfernt (trap).
 #
@@ -27,6 +38,8 @@ set -euo pipefail
 MODE="with-migration"
 if [[ "${1:-}" == "--without-migration" ]]; then
   MODE="without-migration"
+elif [[ "${1:-}" == "--without-guard" ]]; then
+  MODE="without-guard"
 fi
 
 POSTGRES_IMAGE="supabase/postgres:17.6.1.063"
@@ -46,21 +59,19 @@ if [[ -n "$NEWER_MIGRATIONS_RAW" ]]; then
 fi
 
 FOUND_TARGET=0
+BEFORE_TARGET=()
+TARGET_FILE=""
 for f in "${NEWER_MIGRATIONS[@]}"; do
-  [[ "$(basename "$f")" == "$TARGET_MIGRATION" ]] && FOUND_TARGET=1
+  if [[ "$(basename "$f")" == "$TARGET_MIGRATION" ]]; then
+    FOUND_TARGET=1
+    TARGET_FILE="$f"
+  elif [[ "$FOUND_TARGET" -ne 1 ]]; then
+    BEFORE_TARGET+=("$f")
+  fi
 done
 if [[ "$FOUND_TARGET" -ne 1 ]]; then
   echo "::error::$TARGET_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
-fi
-
-TO_APPLY=("${NEWER_MIGRATIONS[@]}")
-if [[ "$MODE" == "without-migration" ]]; then
-  TO_APPLY=()
-  for f in "${NEWER_MIGRATIONS[@]}"; do
-    [[ "$(basename "$f")" == "$TARGET_MIGRATION" ]] && continue
-    TO_APPLY+=("$f")
-  done
 fi
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
@@ -94,12 +105,6 @@ psql_stdin() {
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 -q "$@"
 }
 
-echo "[$MODE] Baseline + $(( ${#TO_APPLY[@]} )) Migration(en) einspielen..." >&2
-psql_stdin < "$BASELINE_FILE"
-for f in "${TO_APPLY[@]}"; do
-  psql_stdin < "$f"
-done
-
 uuid_for() {
   local h
   h="$(printf '%s' "match-event-log-check:$1" | shasum -a 256 | cut -c1-32)"
@@ -118,8 +123,28 @@ M_2="$(uuid_for match:2)"
 M_LEGACY_UPDATE="$(uuid_for match:legacy-update)"
 TEAM_A="$(uuid_for team:a)"
 TEAM_B="$(uuid_for team:b)"
+T_BESTAND="$(uuid_for tournament:bestand)"
+M_BESTAND="$(uuid_for match:bestand)"
+EB1="$(uuid_for event:bestand-1)"
+EB2="$(uuid_for event:bestand-2)"
+EB3="$(uuid_for event:bestand-3)"
+T_TEAMDEL="$(uuid_for tournament:teamdel)"
+M_TEAMDEL="$(uuid_for match:teamdel)"
+TEAM_C="$(uuid_for team:c)"
+TEAM_D="$(uuid_for team:d)"
+E_TEAMDEL="$(uuid_for event:teamdel)"
 
-echo "Fixtures anlegen..." >&2
+echo "[$MODE] Baseline + $(( ${#BEFORE_TARGET[@]} )) Migration(en) vor $TARGET_MIGRATION einspielen..." >&2
+psql_stdin < "$BASELINE_FILE"
+for f in "${BEFORE_TARGET[@]}"; do
+  psql_stdin < "$f"
+done
+
+# M1 (task-B2-review.md, Fixrunde 1): "Bestandszeilen" MUESSEN vor 20260928_001 existieren, sonst
+# beweist der Backfill-Test nichts (eine frische ADD-COLUMN-Tabelle hat nie Bestandszeilen). Hier
+# also VOR dem Einspielen der Zielmigration: Testnutzer + ein eigenes Turnier/Spiel + drei
+# Alt-Ereignis-Zeilen (direkt als postgres, so wie echte historische Produktionsdaten -- keine
+# RLS-Rolle noetig, das ist Bootstrap, keine Probe).
 psql_stdin <<SQL
 BEGIN;
 
@@ -133,6 +158,53 @@ VALUES
   ('00000000-0000-0000-0000-000000000000', '$U_TRAINER', 'authenticated', 'authenticated', 'trainer@match-event-log.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_VIEWER', 'authenticated', 'authenticated', 'viewer@match-event-log.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now()),
   ('00000000-0000-0000-0000-000000000000', '$U_STRANGER', 'authenticated', 'authenticated', 'stranger@match-event-log.test', 'x', now(), '{"provider":"email","providers":["email"]}', '{}', now(), now());
+
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
+VALUES ('$T_BESTAND', '$U_OWNER', 'Match-Event-Log — Bestand', '2026-09-28', 8, 15, '{}'::jsonb);
+
+INSERT INTO public.matches (id, tournament_id, round, field, match_status)
+VALUES ('$M_BESTAND', '$T_BESTAND', 1, 1, 'running');
+
+INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away)
+VALUES
+  ('$EB1', '$M_BESTAND', 'GOAL', 5, 1, 0),
+  ('$EB2', '$M_BESTAND', 'GOAL', 15, 2, 0),
+  ('$EB3', '$M_BESTAND', 'FOUL', 25, 2, 0);
+
+COMMIT;
+SQL
+
+TO_APPLY_TARGET=1
+[[ "$MODE" == "without-migration" ]] && TO_APPLY_TARGET=0
+
+if [[ "$TO_APPLY_TARGET" -eq 1 ]]; then
+  echo "Zielmigration einspielen: $TARGET_MIGRATION" >&2
+  psql_stdin < "$TARGET_FILE"
+
+  # M1: Idempotenz jetzt IM Harness belegen (vorher nur manuell behauptet) -- zweite Anwendung auf
+  # einer Tabelle, die bereits Bestandszeilen UND vom ersten Lauf vergebene seq-Werte hat, muss
+  # Exit 0 liefern und darf die bestehenden seq-Werte nicht veraendern.
+  SEQ_BEFORE_REAPPLY="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT string_agg(id || ':' || seq, ',' ORDER BY id) FROM public.match_events;")"
+  echo "Zielmigration ZUM ZWEITEN MAL einspielen (Idempotenz, M1)..." >&2
+  psql_stdin < "$TARGET_FILE"
+  SEQ_AFTER_REAPPLY="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT string_agg(id || ':' || seq, ',' ORDER BY id) FROM public.match_events;")"
+  if [[ "$SEQ_BEFORE_REAPPLY" != "$SEQ_AFTER_REAPPLY" ]]; then
+    echo "::error::Idempotenz-Probe (M1): seq-Werte haben sich durch die zweite Anwendung veraendert." >&2
+    exit 1
+  fi
+  echo "OK    M1-Idempotenz: zweite Anwendung Exit 0, seq-Werte unveraendert." >&2
+fi
+
+if [[ "$MODE" == "without-guard" ]]; then
+  echo "Ruling G3 (Gegenprobe B): DROP TRIGGER match_events_guard_engine_rows..." >&2
+  psql_stdin <<'SQL'
+DROP TRIGGER match_events_guard_engine_rows ON public.match_events;
+SQL
+fi
+
+echo "Fixtures anlegen..." >&2
+psql_stdin <<SQL
+BEGIN;
 
 INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
 VALUES
@@ -186,8 +258,7 @@ SQL
 
 # run_sql_committed(): wie run_sql, aber COMMIT statt Rollback am Transaktionsende (implizites
 # ROLLBACK durch den Verbindungsabbau bei run_sql) -- fuer Proben, die eine Zeile fuer eine
-# SPAETERE Probe stehen lassen muessen (z.B. Probe 3 legt die Engine-Zeile an, die Probe 4
-# aktualisieren/loeschen will).
+# SPAETERE Probe stehen lassen muessen.
 run_sql_committed() {
   local user_id="$1" sql="$2"
   local out ec
@@ -210,35 +281,57 @@ SQL
   fi
 }
 
-# run_sql_definer(): simuliert die kuenftige append_match_events-RPC (B3b existiert noch nicht) --
-# eine im Harness selbst angelegte SECURITY-DEFINER-Testfunktion, die genau EIN INSERT mit
-# event_format=1 ausfuehrt. Damit current_user innerhalb der Funktion NICHT authenticated/anon
-# ist (Postgres-Funktionseigentuemer ist hier "postgres", siehe empirischer Beleg in
-# 20260922_003_protect_owner_and_roles.sql).
+# setup_definer_probe_fn(): simuliert die kuenftige append_match_events-RPC (B3b existiert noch
+# nicht) -- eine im Harness selbst angelegte SECURITY-DEFINER-Testfunktion, die genau EIN INSERT
+# mit event_format=1 ausfuehrt (optional mit team_id, fuer die Kaskaden-Proben 4d/4h). Damit
+# current_user innerhalb der Funktion NICHT authenticated/anon ist (Postgres-Funktionseigentuemer
+# ist hier "postgres", siehe empirischer Beleg in 20260922_003_protect_owner_and_roles.sql).
 setup_definer_probe_fn() {
   docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<'SQL'
 CREATE OR REPLACE FUNCTION public.__test_insert_engine_event(
-  p_id uuid, p_match_id uuid, p_type text, p_score_home int, p_score_away int
+  p_id uuid, p_match_id uuid, p_type text, p_score_home int, p_score_away int,
+  p_team_id uuid DEFAULT NULL
 ) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $fn$
 BEGIN
   INSERT INTO public.match_events
-    (id, match_id, type, timestamp_seconds, score_home, score_away, event_format)
+    (id, match_id, type, team_id, timestamp_seconds, score_home, score_away, event_format)
   VALUES
-    (p_id, p_match_id, p_type, 10, p_score_home, p_score_away, 1);
+    (p_id, p_match_id, p_type, p_team_id, 10, p_score_home, p_score_away, 1);
 END;
 $fn$;
-REVOKE ALL ON FUNCTION public.__test_insert_engine_event(uuid,uuid,text,int,int) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.__test_insert_engine_event(uuid,uuid,text,int,int) TO authenticated;
+REVOKE ALL ON FUNCTION public.__test_insert_engine_event(uuid,uuid,text,int,int,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.__test_insert_engine_event(uuid,uuid,text,int,int,uuid) TO authenticated;
+
+-- I2-Fix-Beleg (Ruling G2c): Proxy fuer den relevanten Teil von merge_user_data() (Baseline
+-- :476, "UPDATE match_events SET owner_id = p_target_user_id WHERE owner_id = p_source_user_id"),
+-- top-level (pg_trigger_depth() = 1 innerhalb der Funktion). merge_user_data() selbst laesst sich
+-- NICHT end-to-end mit einer Engine-Zeile durchtesten: sie referenziert weiter unten (Baseline
+-- :481) die Tabelle "tournament_members", die es nicht gibt (bekannter, VON B2 UNABHAENGIGER Bug,
+-- dokumentiert in 20260922_003_protect_owner_and_roles.sql) -- jeder Aufruf mit einem Quellnutzer,
+-- der ein Turnier besitzt (Voraussetzung, damit ueberhaupt eine match_events-Zeile getroffen
+-- wird), scheitert dort IMMER, unabhaengig vom Guard. Dieser Proxy isoliert deshalb GENAU die
+-- Zeile, die der Guard bewertet.
+CREATE OR REPLACE FUNCTION public.__test_update_engine_event_owner(
+  p_id uuid, p_new_owner uuid
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $fn$
+BEGIN
+  UPDATE public.match_events SET owner_id = p_new_owner WHERE id = p_id;
+END;
+$fn$;
+REVOKE ALL ON FUNCTION public.__test_update_engine_event_owner(uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.__test_update_engine_event_owner(uuid,uuid) TO authenticated;
 SQL
 }
 
 # run_select_count(): SELECT count(*) als eine bestimmte Rolle (authenticated+Claim ODER anon).
 # Gibt bei Erfolg die reine Zahl zurueck, bei RLS-/Rechte-Fehler "denied" -- sauber getrennt vom
-# rohen Fehlertext, damit check() nicht an verunreinigtem Output scheitert (anders als ein simples
-# "... || echo denied", das den Fehlertext UND "denied" gemeinsam einfangen wuerde).
+# rohen Fehlertext, damit check() nicht an verunreinigtem Output scheitert.
 run_select_count() {
   local role="$1" user_id="$2" sql="$3"
   local out ec claim=""
@@ -274,20 +367,38 @@ check() {
   fi
 }
 
+# assert_guard_message(): I3/Ruling G3 — eine abgelehnte Anweisung im Normalmodus muss NACHWEISLICH
+# vom GUARD kommen (Text "append_match_events" oder "unveraenderlich"), nicht von einem anderen
+# Mechanismus (CHECK/FK). Nur im Modus "with-migration" sinnvoll (im Gegenprobe-Modus
+# "without-guard" wird dieselbe Anweisung erwartungsgemaess NICHT mehr abgelehnt; im Modus
+# "without-migration" fehlt der Guard komplett und andere Mechanismen greifen aus anderem Grund,
+# siehe Kopfkommentar).
+assert_guard_message() {
+  local label="$1"
+  if [[ "$MODE" != "with-migration" ]]; then
+    return 0
+  fi
+  if grep -qE 'append_match_events|Rechenfunktion' <<<"$LAST_OUTPUT"; then
+    echo "OK    $label -> Guard-Meldung vorhanden" >&2
+  else
+    echo "FAIL  $label -> Guard-Meldung FEHLT in der Fehlerausgabe (moeglicherweise ein anderer Mechanismus)" >&2
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+}
+
 echo "" >&2
 echo "=== Proben ($MODE) ===" >&2
 
 # --- Probe 1: Tor-INSERT mit team_id (alter Typ GOAL, event_format NULL, als Helfer/Collaborator)
 # -> matches.score_a UNVERAENDERT (Alt-Trigger sync_match_score_from_event ist weg, R19). In
 # "without-migration" bleibt der Alt-Trigger aktiv -> score_a wird HOCHGEZAEHLT -> Probe ROT
-# (erwarteter Fehlschlag der Gegenprobe).
+# (erwarteter Fehlschlag der Gegenprobe A).
 SCORE_BEFORE="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT COALESCE(score_a,0) FROM public.matches WHERE id = '$M_1';")"
 run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for event:probe1)', '$M_1', 'GOAL', '$TEAM_A', 10, 1, 0);"
 SCORE_AFTER="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT COALESCE(score_a,0) FROM public.matches WHERE id = '$M_1';")"
-if [[ "$MODE" == "with-migration" ]]; then
+if [[ "$MODE" != "without-migration" ]]; then
   check "1. Tor-INSERT altes Format -> matches.score_a unveraendert (Alt-Trigger weg)" "$SCORE_BEFORE" "$SCORE_AFTER"
 else
-  # Gegenprobe: score_a MUSS sich aendern (Alt-Trigger noch da) -> das ist das erwartete ROT.
   if [[ "$SCORE_BEFORE" == "$SCORE_AFTER" ]]; then
     echo "FAIL(erwartet-rot)  1. ohne Migration haette score_a sich aendern muessen (Alt-Trigger) -> ist aber gleich geblieben" >&2
     MISMATCHES=$((MISMATCHES + 1))
@@ -296,28 +407,66 @@ else
   fi
 fi
 
-# --- Probe 2: Helfer-INSERT type='CORRECTION' per Rolle authenticated -> abgelehnt.
-# Ebenso event_format=1 mit altem Typ -> abgelehnt. In "without-migration" existiert weder der
-# neue Typ CORRECTION (Typ-CHECK) noch die Spalte event_format -> beides scheitert schon an
-# anderen Fehlern (Constraint bzw. unbekannte Spalte), NICHT am Guard-Trigger -- das ist die
-# erwartete ROT-Ausgabe der Gegenprobe (dokumentiert im Report, siehe unten).
+# --- Probe 2a/2b: Ruling G2(a) — Client-INSERT: neuer Typ bzw. event_format gesetzt -> abgelehnt.
 run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$(uuid_for event:probe2a)', '$M_1', 'CORRECTION', 10, 1, 0);"
-if [[ "$MODE" == "with-migration" ]]; then
-  check "2a. Helfer-INSERT type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+if [[ "$MODE" == "without-migration" ]]; then
+  check "2a(ohne Migration, erwartet ROT weil Typ-CHECK den neuen Typ nicht kennt, NICHT der Guard)" "denied" "$LAST_RESULT"
+elif [[ "$MODE" == "without-guard" ]]; then
+  check "2a(Gegenprobe B, Guard weg): INSERT type=CORRECTION -> jetzt erlaubt" "ok" "$LAST_RESULT"
 else
-  check "2a(ohne Migration, erwartet ROT weil Typ-CHECK den neuen Typ nicht kennt)" "denied" "$LAST_RESULT"
+  check "2a. Helfer-INSERT type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  assert_guard_message "2a"
 fi
 
-if [[ "$MODE" == "with-migration" ]]; then
+if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, event_format) VALUES ('$(uuid_for event:probe2b)', '$M_1', 'GOAL', 10, 1, 0, 1);"
-  check "2b. Helfer-INSERT event_format=1 mit altem Typ (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "2b(Gegenprobe B, Guard weg): INSERT event_format=1 mit altem Typ -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "2b. Helfer-INSERT event_format=1 mit altem Typ (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "2b"
+  fi
 else
   echo "SKIP  2b. ohne Migration: Spalte event_format existiert nicht -> kein sinnvoller Vergleich" >&2
 fi
 
+# --- Probe 2c/2d: C1-Fix (Ruling G2b) — UPDATE einer bestehenden Alt-Zeile (Bestand EB1/EB2) zu
+# einer Engine-Zeile per Client-Rolle -> abgelehnt. Das war GENAU der C1-Umgehungsweg.
+if [[ "$MODE" != "without-migration" ]]; then
+  run_sql "$U_OWNER" "UPDATE public.match_events SET event_format = 1 WHERE id = '$EB1';"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "2c(Gegenprobe B, C1): UPDATE Alt-Zeile event_format=1 -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "2c. (C1-Fix) UPDATE Alt-Zeile auf event_format=1 (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "2c"
+  fi
+
+  run_sql "$U_OWNER" "UPDATE public.match_events SET type = 'CORRECTION' WHERE id = '$EB2';"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "2d(Gegenprobe B, C1): UPDATE Alt-Zeile type=CORRECTION -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "2d. (C1-Fix) UPDATE Alt-Zeile auf type=CORRECTION (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "2d"
+  fi
+
+  # --- Probe 2e: I1-Fix (Ruling G2a) — Client-INSERT eines ALTEN Typs mit target_event_id gesetzt
+  # (Wert ist eine tatsaechlich existierende Zeile -- EB3 -- die FK allein wuerde das durchlassen)
+  # -> abgelehnt, weil ALLE Engine-Spalten NULL sein muessen.
+  run_sql "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, target_event_id) VALUES ('$(uuid_for event:probe2e)', '$M_1', 'NOTE', 10, 0, 0, '$EB3');"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "2e(Gegenprobe B, I1): INSERT Alt-Typ mit target_event_id -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "2e. (I1-Fix) INSERT Alt-Typ mit target_event_id gesetzt (authenticated) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "2e"
+  fi
+else
+  echo "SKIP  2c-2e. ohne Migration: Spalten/Guard existieren nicht -> kein sinnvoller Vergleich" >&2
+fi
+
 # --- Probe 3: Als SECURITY-DEFINER-Testfunktion (simuliert die RPC) -> INSERT mit event_format=1
-# erlaubt.
-if [[ "$MODE" == "with-migration" ]]; then
+# erlaubt (auch ohne Guard -- der war nie das Hindernis fuer Definer-Aufrufe).
+E_DEFINER=""
+if [[ "$MODE" != "without-migration" ]]; then
   setup_definer_probe_fn
   E_DEFINER="$(uuid_for event:probe3-definer)"
   set +e
@@ -337,34 +486,108 @@ else
   echo "SKIP  3. ohne Migration: Guard-Trigger/Spalten existieren nicht -> kein sinnvoller Vergleich" >&2
 fi
 
-# --- Probe 4: UPDATE und DELETE auf diese Zeile (auch als Eigentuemer) -> abgelehnt.
-# Loeschen des Spiels (Kaskade): matches_protect_events_before_delete (20260925_002) blockiert
-# JEDES Spiel mit vorhandenen match_events direkt -- die einzige Route zu pg_trigger_depth() > 1
-# fuer eine Engine-Zeile ist deshalb die TURNIER-Kaskade (tournaments -> matches -> match_events),
-# nicht ein direktes DELETE FROM matches. Das wird unten separat geprueft (Probe 4c).
-if [[ "$MODE" == "with-migration" ]]; then
+# --- Probe 4a/4b: UPDATE und DELETE auf eine Engine-Zeile (auch als Eigentuemer) -> abgelehnt
+# (ausser den in Ruling G2c erlaubten Spalten, hier NICHT betroffen: score_home ist keine davon).
+if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_OWNER" "UPDATE public.match_events SET score_home = 9 WHERE id = '$E_DEFINER';"
-  check "4a. UPDATE auf Engine-Zeile (Eigentuemer) -> abgelehnt" "denied" "$LAST_RESULT"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "4a(Gegenprobe B): UPDATE auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "4a. UPDATE auf Engine-Zeile (Eigentuemer, unerlaubte Spalte score_home) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "4a"
+  fi
 
   run_sql "$U_OWNER" "DELETE FROM public.match_events WHERE id = '$E_DEFINER';"
-  check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "4b(Gegenprobe B): DELETE auf Engine-Zeile (direkt) -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "4b. DELETE auf Engine-Zeile (Eigentuemer, direkt) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "4b"
+  fi
 
   # 4c: direktes DELETE FROM matches ist wegen protect_matches_with_events (20260925_002) bereits
-  # blockiert, BEVOR der neue Guard ueberhaupt zum Zug kaeme (Spiel hat match_events) -- das ist
-  # das dokumentierte Zusammenspiel aus dem Brief ("pruefe stattdessen die Turnier-Kaskade oder
-  # dokumentiere das Zusammenspiel"). Beleg hier:
+  # blockiert, BEVOR der neue Guard ueberhaupt zum Zug kaeme (Spiel hat match_events) -- dieses
+  # Zusammenspiel gilt unabhaengig vom Guard-Zustand (without-guard aendert daran nichts, deshalb
+  # keine Sonderbehandlung fuer diesen Modus).
   run_sql "$U_OWNER" "DELETE FROM public.matches WHERE id = '$M_1';"
   R4C_REASON="anders"
   [[ "$LAST_RESULT" == "denied" ]] && grep -q "Ereignis" <<<"$LAST_OUTPUT" && R4C_REASON="protect_matches_with_events"
   check "4c. Direktes DELETE FROM matches (Spiel mit Engine-Zeile) -> abgelehnt von protect_matches_with_events (nicht vom neuen Guard)" "protect_matches_with_events" "$R4C_REASON"
 
-  # 4d: Turnier-Kaskade (DELETE FROM tournaments) entfernt Engine-Zeilen sehr wohl (pg_trigger_depth() > 1).
+  # 4d: Turnier-Kaskade (DELETE FROM tournaments) entfernt Engine-Zeilen (pg_trigger_depth() > 1)
+  # -- auch mit team_id gesetzt (Coordinator-Auftrag: "tournament deletion with engine rows incl.
+  # team_id set"). Neue Engine-Zeile MIT team_id=TEAM_A anlegen (E_DEFINER wurde in 4b evtl.
+  # bereits geloescht -- ohne Guard in without-guard-Mode, sonst abgelehnt und existiert noch).
+  E_CASCADE="$(uuid_for event:probe4d-cascade)"
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
+SELECT public.__test_insert_engine_event('$E_CASCADE', '$M_2', 'GOAL', 1, 0, '$TEAM_A');
+SQL
   run_sql_committed "$U_OWNER" "DELETE FROM public.tournaments WHERE id = '$T_MAIN';"
-  check "4d. Turnier-Kaskade loescht Engine-Zeile mit (pg_trigger_depth() > 1)" "ok" "$LAST_RESULT"
-  REMAINING="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE id = '$E_DEFINER';")"
-  check "4e. Engine-Zeile nach Turnier-Kaskade tatsaechlich weg" "0" "$REMAINING"
+  check "4d. Turnier-Kaskade loescht Engine-Zeile MIT team_id gesetzt (pg_trigger_depth() > 1)" "ok" "$LAST_RESULT"
+  REMAINING="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE id IN ('$E_CASCADE','$E_DEFINER');")"
+  check "4e. Engine-Zeilen nach Turnier-Kaskade tatsaechlich weg" "0" "$REMAINING"
 else
-  echo "SKIP  4. ohne Migration: Guard-Trigger existiert nicht -> kein sinnvoller Vergleich" >&2
+  echo "SKIP  4a-4e. ohne Migration: Guard-Trigger existiert nicht -> kein sinnvoller Vergleich" >&2
+fi
+
+# --- Probe 4f: I2-Fix (Ruling G2c) — Team loeschen setzt team_id auf einer Engine-Zeile via FK
+# ON DELETE SET NULL auf NULL. Das laeuft SELBST ALS TOP-LEVEL "DELETE FROM teams" verschachtelt
+# (die FK-Trigger-Ausfuehrung zaehlt fuer pg_trigger_depth()) -- muss deshalb ERLAUBT sein (auch
+# mit aktivem Guard), NICHT erst ohne Guard.
+if [[ "$MODE" != "without-migration" ]]; then
+  psql_stdin <<SQL
+BEGIN;
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config)
+VALUES ('$T_TEAMDEL', '$U_OWNER', 'Match-Event-Log — Team-Delete', '2026-09-28', 8, 15, '{}'::jsonb);
+INSERT INTO public.teams (id, tournament_id, name)
+VALUES ('$TEAM_C', '$T_TEAMDEL', 'Team C'), ('$TEAM_D', '$T_TEAMDEL', 'Team D');
+INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id)
+VALUES ('$M_TEAMDEL', '$T_TEAMDEL', 1, 1, 'running', '$TEAM_C', '$TEAM_D');
+COMMIT;
+SQL
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
+SELECT public.__test_insert_engine_event('$E_TEAMDEL', '$M_TEAMDEL', 'GOAL', 1, 0, '$TEAM_C');
+SQL
+  run_sql_committed "$U_OWNER" "DELETE FROM public.teams WHERE id = '$TEAM_C';"
+  check "4f. (I2-Fix) Team mit Engine-Tor loeschen -> erlaubt (FK ON DELETE SET NULL, depth > 1)" "ok" "$LAST_RESULT"
+  TEAM_ID_AFTER="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT team_id FROM public.match_events WHERE id = '$E_TEAMDEL';")"
+  check "4f2. team_id der Engine-Zeile danach NULL" "" "$TEAM_ID_AFTER"
+
+  # 4f3 (Gegenprobe zum Gegenprobe-Konzept, ohne ein eigenes --without-guard noetig): derselbe
+  # Aufbau, aber DIREKT (kein FK-Trigger, Tiefe 1) -- ein Client darf team_id NICHT direkt auf
+  # einer Engine-Zeile setzen.
+  E_TEAMDEL_DIRECT="$(uuid_for event:teamdel-direct)"
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
+SELECT public.__test_insert_engine_event('$E_TEAMDEL_DIRECT', '$M_TEAMDEL', 'GOAL', 1, 0, '$TEAM_D');
+SQL
+  run_sql "$U_OWNER" "UPDATE public.match_events SET team_id = NULL WHERE id = '$E_TEAMDEL_DIRECT';"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "4f3(Gegenprobe B): direktes team_id=NULL auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "4f3. Direktes team_id=NULL auf Engine-Zeile (Tiefe 1, kein FK) -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "4f3"
+  fi
+
+  # --- Probe 4g: I2-Fix (Ruling G2c) — owner_id einer Engine-Zeile aendern (Proxy fuer
+  # merge_user_data, siehe Kommentar an __test_update_engine_event_owner oben) -> erlaubt, TROTZ
+  # aktivem Guard (das war die "zu streng"-Haelfte von I2).
+  E_OWNERCHG="$(uuid_for event:probe4g-owner)"
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
+SELECT public.__test_insert_engine_event('$E_OWNERCHG', '$M_TEAMDEL', 'MATCH_START', 0, 0);
+SQL
+  set +e
+  OUT4G="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 <<SQL 2>&1
+SELECT public.__test_update_engine_event_owner('$E_OWNERCHG', '$U_STRANGER');
+SQL
+)"
+  EC4G=$?
+  set -e
+  R4G="ok"; [[ $EC4G -ne 0 ]] && R4G="denied"
+  check "4g. (I2-Fix) owner_id einer Engine-Zeile per Definer-UPDATE (Proxy merge_user_data) -> erlaubt" "ok" "$R4G"
+  OWNER_AFTER="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT owner_id FROM public.match_events WHERE id = '$E_OWNERCHG';")"
+  check "4g2. owner_id tatsaechlich uebernommen" "$U_STRANGER" "$OWNER_AFTER"
+else
+  echo "SKIP  4f-4g. ohne Migration: Guard-Trigger/Spalten existieren nicht -> kein sinnvoller Vergleich" >&2
 fi
 
 # --- Probe 5: Alte App-Wege unveraendert -- Helfer-INSERT alter Typ ohne event_format erlaubt;
@@ -387,16 +610,16 @@ E_LEGACY="$(uuid_for event:legacy)"
 run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E_LEGACY', '$M_LEGACY', 'GOAL', 10, 1, 0);"
 check "5a. Helfer/Collaborator-INSERT alter Typ ohne event_format -> erlaubt" "ok" "$LAST_RESULT"
 
-if [[ "$MODE" == "with-migration" ]]; then
+if [[ "$MODE" != "without-migration" ]]; then
   run_sql "$U_COLLAB" "UPDATE public.match_events SET score_home = 2 WHERE id = '$E_LEGACY';"
-  check "5b. correctEvents-UPDATE auf alte Zeile (event_format NULL) -> erlaubt" "ok" "$LAST_RESULT"
+  check "5b. correctEvents-UPDATE auf alte Zeile (event_format NULL, keine Engine-Spalte geaendert) -> erlaubt" "ok" "$LAST_RESULT"
 else
   echo "SKIP  5b. ohne Migration: kein sinnvoller Unterschied (Alt-Pfad war nie betroffen)" >&2
 fi
 
 # --- Probe 6: match_event_authors -- Eigentuemer/Co-Admin/Helfer sehen die Zeile; Trainer/Viewer/
 # Fremder/anon nicht; niemand darf per authenticated schreiben. Nur sinnvoll mit Migration.
-if [[ "$MODE" == "with-migration" ]]; then
+if [[ "$MODE" != "without-migration" ]]; then
   T_AUTH="$(uuid_for tournament:authors)"
   M_AUTH="$(uuid_for match:authors)"
   E_AUTH="$(uuid_for event:authors)"
@@ -439,7 +662,7 @@ fi
 
 # --- Probe 7: match_transitions = JSON (jq-Diff); app_config.min_client_format = 1; anon kann
 # beide lesen, nicht schreiben.
-if [[ "$MODE" == "with-migration" ]]; then
+if [[ "$MODE" != "without-migration" ]]; then
   DB_TRANSITIONS="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
     "SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;" | sort)"
   JSON_TRANSITIONS="$(jq -r '.transitions[] | [.from,.type,.actor,.to] | join("|")' "$REPO_ROOT/src/core/match/matchTransitions.json" | sort)"
@@ -459,7 +682,7 @@ if [[ "$MODE" == "with-migration" ]]; then
   ANON_CONFIG="$(run_select_count anon "" "SELECT count(*) FROM public.app_config;")"
   check "7d. anon kann app_config lesen" "1" "$ANON_CONFIG"
 
-  run_sql "$U_OWNER" "INSERT INTO public.match_transitions (from_status, event_type, actor, to_status) VALUES ('x','x','helper','x');"
+  run_sql "$U_OWNER" "INSERT INTO public.match_transitions (from_status, event_type, actor, to_status) VALUES ('scheduled','NOTE','helper','running');"
   check "7e. authenticated darf NICHT in match_transitions schreiben" "denied" "$LAST_RESULT"
   run_sql "$U_OWNER" "INSERT INTO public.app_config (key, value) VALUES ('x', '1');"
   check "7f. authenticated darf NICHT in app_config schreiben" "denied" "$LAST_RESULT"
@@ -468,13 +691,20 @@ else
 fi
 
 # --- Probe 8: match_event_authors NICHT in pg_publication_tables; die vier Tabellen sind drin.
-if [[ "$MODE" == "with-migration" ]]; then
-  PUB_TABLES="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
-    "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public';")"
+# M4 (task-B2-review.md): exakter Zeilenvergleich (grep -qx auf einer eigenen Zeile je Tabelle)
+# statt Teilstring-Suche auf einer kommaseparierten Liste.
+if [[ "$MODE" != "without-migration" ]]; then
+  PUB_TABLES_LINES="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc \
+    "SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' ORDER BY 1;")"
   for t in match_events matches teams monitor_heartbeats; do
-    grep -q "$t" <<<"$PUB_TABLES" && echo "OK    8. $t in Publikation" >&2 || { echo "FAIL  8. $t fehlt in Publikation" >&2; MISMATCHES=$((MISMATCHES+1)); }
+    if grep -qx "$t" <<<"$PUB_TABLES_LINES"; then
+      echo "OK    8. $t in Publikation" >&2
+    else
+      echo "FAIL  8. $t fehlt in Publikation" >&2
+      MISMATCHES=$((MISMATCHES + 1))
+    fi
   done
-  if grep -q "match_event_authors" <<<"$PUB_TABLES"; then
+  if grep -qx "match_event_authors" <<<"$PUB_TABLES_LINES"; then
     echo "FAIL  8. match_event_authors darf NICHT in der Publikation sein" >&2
     MISMATCHES=$((MISMATCHES + 1))
   else
@@ -484,10 +714,14 @@ else
   echo "SKIP  8. ohne Migration: Publikations-Block ist Teil der Migration" >&2
 fi
 
-# --- Probe 9: seq fuer Bestandszeilen gesetzt, neue Zeilen streng steigend.
-if [[ "$MODE" == "with-migration" ]]; then
-  NULL_SEQ="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE seq IS NULL;")"
-  check "9a. keine Zeile mit seq IS NULL (Bestandszeilen backgefuellt)" "0" "$NULL_SEQ"
+# --- Probe 9: seq fuer Bestandszeilen (EB1-EB3, vor der Migration angelegt, M1) gesetzt und
+# eindeutig, neue Zeilen streng steigend.
+if [[ "$MODE" != "without-migration" ]]; then
+  TOTAL_ROWS="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events;")"
+  DISTINCT_SEQ="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(DISTINCT seq) FROM public.match_events;")"
+  check "9a. count(DISTINCT seq) = count(*) -- auch fuer die drei Bestandszeilen EB1-EB3 (M1)" "$TOTAL_ROWS" "$DISTINCT_SEQ"
+  BESTAND_NULL_SEQ="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT count(*) FROM public.match_events WHERE id IN ('$EB1','$EB2','$EB3') AND seq IS NULL;")"
+  check "9a2. Bestandszeilen EB1-EB3 haben KEIN seq IS NULL" "0" "$BESTAND_NULL_SEQ"
 
   E9A="$(uuid_for event:probe9a)"; E9B="$(uuid_for event:probe9b)"
   run_sql_committed "$U_COLLAB" "INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away) VALUES ('$E9A', '$M_LEGACY', 'FOUL', 20, 1, 0);"

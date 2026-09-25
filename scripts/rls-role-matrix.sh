@@ -182,11 +182,12 @@ DECLINED_EXPIRED_FILE="$(find_migration 20260924_003)"
 AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
 # B2 (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md): fügt u.a. die Berechtigung
 # 'leadMatches' zu role_permissions hinzu (INSERT ('co-admin','leadMatches')) und seedet
-# public.match_transitions aus src/core/match/matchTransitions.json. Läuft UNCONDITIONAL wie
-# AUTH_TRIGGER_FILE (kein eigener WITH_*-Schalter) -- additiv, orthogonal zu R5/R6/R7, und die
-# Gleichlauf-Prüfungen unten (role_permissions/match_transitions vs. JSON) brauchen sie in JEDEM
-# Modus, sonst diffte rolePermissions.json (die 'leadMatches' jetzt enthält) sofort gegen eine DB
-# ohne diese Zeile.
+# public.match_transitions aus src/core/match/matchTransitions.json. ANDERS als AUTH_TRIGGER_FILE
+# NICHT unconditional -- an WITH_R5 gebunden (siehe deren Anwendung weiter unten), weil diese
+# Migration selbst ein ALTER/INSERT auf role_permissions enthält und ohne CENTRAL_PERMISSIONS_FILE
+# (WITH_R5) scheitern würde (Review M3, task-B2-review.md). Bei WITH_R5=0 (z. B. --without-r5)
+# prüft dieser Lauf 20260928_001 also GAR NICHT -- die Gleichlauf-Prüfungen unten
+# (role_permissions/match_transitions vs. JSON) sind entsprechend ebenfalls an WITH_R5 gebunden.
 MATCH_EVENT_LOG_FILE="$(find_migration 20260928_001)"
 MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"

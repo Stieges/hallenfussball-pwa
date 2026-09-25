@@ -2,14 +2,19 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-28 (B2, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md)
+ * Letzte Regeneration: 2026-09-28 (B2, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B2-brief.md,
+ * Fixrunde 1: Ruling G4 nach Review-Fund I4)
  * -- ausnahmsweise aus dem LOKALEN Stack (`--local`, nicht `--project-id`), weil
  * supabase/migrations/20260928_001_match_event_log.sql noch NICHT in Produktion eingespielt ist
  * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
- * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten)
- * -- der Drift-Check (scripts/db-drift-check.sh) prüft das SCHEMA, nicht diese generierten Typen,
- * und läuft ohnehin nie gegen Produktion aus dieser Session heraus. Nach dem Anwenden der
- * Migration in Produktion: regulär mit --project-id neu erzeugen.
+ * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten).
+ * WICHTIG (I4, korrigiert): Der Typ-Drift-Check (.github/workflows/supabase-drift-check.yml, Job
+ * "drift-check") vergleicht die per `--project-id` erzeugten Typen byteweise nach `strip_header`
+ * -- er bleibt deshalb ROT, bis (1) diese Migration in Produktion angewendet UND (2) diese Datei
+ * danach regulär mit `--project-id` (nicht `--local`) neu erzeugt wurde. Das ist erwartet, keine
+ * Aussage über das Schema selbst (scripts/db-drift-check.sh prüft das Schema unabhängig davon).
+ * Controller-Checkliste beim Live-Apply: (1) Migration anwenden, (2) diese Datei mit
+ * --project-id neu erzeugen und committen.
  * NICHT MANUELL BEARBEITEN!
  *
  * Regenerieren mit:
@@ -25,6 +30,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   public: {
     Tables: {
       app_config: {
@@ -1291,4 +1301,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

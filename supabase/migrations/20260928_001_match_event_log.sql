@@ -181,26 +181,61 @@ ALTER TABLE "public"."match_events" ADD CONSTRAINT "match_events_type_check"
 
 
 -- ============================================================================================
--- 4. Unveraenderlichkeit + Direktweg abdichten (R13, Ruling G1)
+-- 4. Unveraenderlichkeit + Direktweg abdichten (R13, Ruling G1; neu gefasst in Fixrunde 1,
+--    Ruling G2, nach Review-Funden C1/I1/I2)
 -- ============================================================================================
+--
+-- Fixrunde 1 (task-B2-review.md, Ruling G2): die urspruengliche Fassung (Ruling G1) prüfte beim
+-- UPDATE nur OLD.event_format -- eine Alt-Zeile (event_format IS NULL) liess sich per UPDATE zu
+-- einer Engine-Zeile umschreiben (C1, R13 verletzt: leadMatches/append_match_events umgehbar),
+-- und ein Client durfte beim INSERT einer Alt-Zeile beliebige Werte in die neuen Engine-Spalten
+-- schreiben, u.a. target_event_id mit FK ON DELETE RESTRICT -- ein fremdes Turnier wurde dadurch
+-- unloeschbar (I1). Die pg_trigger_depth()-Ausnahme fuer UPDATE war ausserdem gleichzeitig zu
+-- streng (merge_user_data, das owner_id auf oberster Ebene setzt, scheiterte, I2) und zu locker
+-- (jedes verschachtelte UPDATE, auch ON DELETE SET NULL fuer team_id/player_id, nutzte dieselbe
+-- Ausnahme und liess Engine-Zeilen rueckwirkend veraendern).
+--
+-- Ruling G2 (Controller) -- vier Regeln:
+--   (a) INSERT, current_user IN ('authenticated','anon'): NUR erlaubt, wenn NEW.type EIN alter
+--       (legacy) Typ ist UND ALLE acht Engine-Spalten (event_format, target_event_id, base_seq,
+--       review_state, clock_ms, section, client_time, control_epoch) NULL sind. Jede Abweichung
+--       (neuer Typ, event_format gesetzt, oder auch nur EINE Engine-Spalte an einer sonst alten
+--       Zeile gesetzt -- der I1-Fund) wird abgelehnt. Fuer current_user AUSSERHALB
+--       authenticated/anon (SECURITY-DEFINER-Aufrufer, die kuenftige RPC) gilt keine Einschraenkung.
+--   (b) UPDATE einer ALTEN Zeile (OLD.event_format IS NULL), current_user IN
+--       ('authenticated','anon'): NEW.type muss weiterhin ein legacy Typ sein UND alle acht
+--       Engine-Spalten muessen UNVERAENDERT bleiben (IS NOT DISTINCT FROM OLD) -- das schliesst
+--       den C1-Umbauweg (Alt-Zeile -> Engine-Zeile per UPDATE). Fuer Nicht-Client-Rollen (z.B.
+--       merge_user_data auf einer Alt-Zeile) gilt keine Einschraenkung -- unveraendert wie vor B2.
+--   (c) UPDATE einer ENGINE-Zeile (OLD.event_format IS NOT NULL), JEDE Rolle (kein current_user-
+--       Zweig -- I2: die Kaskaden-Ausnahme war zu grob): erlaubt sind AUSSCHLIESSLICH Aenderungen
+--       an owner_id/is_public/version (merge_user_data, cascade_tournament_visibility,
+--       increment_match_event_version -- alle drei laufen unabhaengig von pg_trigger_depth()).
+--       ZUSAETZLICH duerfen team_id/player_id auf NULL gesetzt werden, aber NUR wenn
+--       pg_trigger_depth() > 1 gilt (die ON-DELETE-SET-NULL-Fremdschluessel-Trigger beim Loeschen
+--       eines Teams/Spielers -- Baseline :1469/:1473 -- laufen selbst als Trigger, das UPDATE auf
+--       match_events darin hat deshalb Tiefe > 1, siehe Harness-Probe). Jede andere Spaltenaenderung
+--       wird abgelehnt, exakt wie zuvor.
+--   (d) DELETE einer Engine-Zeile: unveraendert -- nur erlaubt, wenn pg_trigger_depth() > 1 (die
+--       Turnier-Loeschungs-Kaskade, siehe Herleitung unten). Gilt fuer JEDE Rolle, wie zuvor.
 --
 -- Wechselwirkung mit vorhandenen Triggern auf match_events (geprueft, alle BEFORE, alle bleiben
 -- unveraendert und laufen unabhaengig vom neuen Guard weiter):
 --   - match_events_sync_owner (BEFORE INSERT, sync_owner_from_match): setzt owner_id/is_public
 --     vom Elternspiel ab -- betrifft eine andere Spalte, keine Ueberschneidung.
 --   - match_event_version_trigger (BEFORE UPDATE, increment_match_event_version): erhoeht
---     version/updated_at -- laeuft nur, wenn der Guard das UPDATE nicht schon abgelehnt hat
---     (Trigger-Reihenfolge innerhalb derselben Ausfuehrungsphase ist alphabetisch nach Name;
---     "match_event_version_trigger" < "match_events_guard_engine_rows" < "match_events_protect_*"
---     -- das spielt hier keine Rolle, weil ein RAISE EXCEPTION in JEDEM der Trigger die gesamte
---     Anweisung abbricht, unabhaengig von der Reihenfolge).
+--     version -- ausdruecklich in der (c)-Ausnahme erlaubt (siehe oben). Trigger-Reihenfolge
+--     bleibt alphabetisch nach Name ("match_event_version_trigger" <
+--     "match_events_guard_engine_rows" < "match_events_protect_*"); der Guard sieht NEW.version
+--     deshalb bereits erhoeht, ist aber unerheblich, weil version explizit ausgenommen ist.
 --   - match_events_protect_owner_id (BEFORE UPDATE, protect_owner_id): haelt owner_id fest,
---     kein RAISE -- keine Ueberschneidung.
+--     kein RAISE -- keine Ueberschneidung, owner_id ist ohnehin in (c) erlaubt.
 --   - match_events_protect_match_id (BEFORE UPDATE, protect_parent_keys('match_id')): wirft bei
---     App-seitigem Umhaengen von match_id -- keine Ueberschneidung (andere Spalte).
+--     App-seitigem Umhaengen von match_id -- keine Ueberschneidung (andere Spalte, match_id ist in
+--     (c) NICHT erlaubt und wuerde ohnehin schon von protect_parent_keys blockiert).
 --   - matches_protect_events_before_delete (20260925_002) sitzt auf `matches`, nicht auf
 --     match_events -- betrifft diesen Guard nicht direkt, ist aber der Grund, warum die
---     Kaskaden-Ausnahme unten dasselbe Muster (pg_trigger_depth() > 1) braucht: Loeschen eines
+--     Kaskaden-Ausnahme (d) dasselbe Muster (pg_trigger_depth() > 1) braucht: Loeschen eines
 --     Spiels MIT Ereignissen ist durch protect_matches_with_events bereits blockiert; die einzige
 --     verbleibende Route zu einem DELETE auf match_events mit event_format IS NOT NULL ist die
 --     Turnier-Kaskade (tournaments -> matches -> match_events, ON DELETE CASCADE, Baseline Zeile
@@ -209,17 +244,10 @@ ALTER TABLE "public"."match_events" ADD CONSTRAINT "match_events_type_check"
 --     die Ausnahme greift. Siehe Kaskaden-Kommentar in 20260925_002 fuer die vollstaendige
 --     Herleitung von pg_trigger_depth().
 --
--- BEFORE INSERT: NEU (event_format IS NOT NULL) oder ein neuer Typ (nicht in der alten
--- 14er-Liste) ist nur erlaubt, wenn current_user NICHT authenticated/anon ist -- also aus einer
--- SECURITY-DEFINER-Funktion heraus (die kuenftige append_match_events-RPC, B3b). Muster identisch
--- zu 20260922_003_protect_owner_and_roles.sql (current_user-Ausnahme statt set_config-GUC,
--- Ruling G1).
---
--- BEFORE UPDATE/DELETE: eine Zeile mit OLD.event_format IS NOT NULL ist IMMER unveraenderlich --
--- auch fuer current_user ausserhalb authenticated/anon (also auch fuer eine kuenftige
--- SECURITY-DEFINER-Funktion). Engine-Zeilen werden nie upgedatet, nur durch neue Ereignisse
--- (RETRACT/CORRECTION/REVIEW_*) ergaenzt. Einzige Ausnahme: die Turnier-Kaskade beim Loeschen
--- (pg_trigger_depth() > 1, siehe oben).
+-- Bewusste Grenze (Review M7, akzeptiert): der Guard unterscheidet nur current_user IN
+-- ('authenticated','anon') (Client-Rollen, Ruling G1) von allem anderen. Jede andere
+-- Login-Rolle mit INSERT/UPDATE-Recht auf match_events (heute nur postgres/service_role, die
+-- Migrationsrolle) umgeht die Sperre -- akzeptiert, weil kein App-Pfad diese Rollen erreicht.
 
 CREATE OR REPLACE FUNCTION "public"."match_events_guard_engine_rows"() RETURNS "trigger"
     LANGUAGE "plpgsql"
@@ -231,28 +259,81 @@ DECLARE
     'TIME_PENALTY', 'TIME_PENALTY_END', 'SUBSTITUTION', 'TIMEOUT', 'STATUS_CHANGE',
     'RESULT_EDIT', 'NOTE', 'FOUL', 'HALFTIME'
   ];
+  is_client boolean := current_user IN ('authenticated', 'anon');
+  old_cmp jsonb;
+  new_cmp jsonb;
 BEGIN
   IF TG_OP = 'INSERT' THEN
-    IF (NEW.event_format IS NOT NULL OR NOT (NEW.type = ANY (legacy_types)))
-       AND current_user IN ('authenticated', 'anon') THEN
-      RAISE EXCEPTION
-        'Nicht erlaubt: neue Ereignis-Zeilen (event_format gesetzt oder neuer Typ %) duerfen nur ueber append_match_events geschrieben werden.',
-        NEW.type
-        USING ERRCODE = 'insufficient_privilege';
+    -- Ruling G2(a).
+    IF is_client THEN
+      IF NOT (NEW.type = ANY (legacy_types))
+         OR NEW.event_format IS NOT NULL
+         OR NEW.target_event_id IS NOT NULL
+         OR NEW.base_seq IS NOT NULL
+         OR NEW.review_state IS NOT NULL
+         OR NEW.clock_ms IS NOT NULL
+         OR NEW.section IS NOT NULL
+         OR NEW.client_time IS NOT NULL
+         OR NEW.control_epoch IS NOT NULL
+      THEN
+        RAISE EXCEPTION
+          'Nicht erlaubt: neue Ereignis-Zeilen (event_format/Engine-Spalten gesetzt oder neuer Typ %) duerfen nur ueber append_match_events geschrieben werden.',
+          NEW.type
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
     END IF;
     RETURN NEW;
   END IF;
 
   IF TG_OP = 'UPDATE' THEN
-    IF OLD.event_format IS NOT NULL AND pg_trigger_depth() <= 1 THEN
-      RAISE EXCEPTION
-        'Nicht erlaubt: Ereignis-Zeilen der neuen Rechenfunktion (event_format gesetzt) sind unveraenderlich.'
-        USING ERRCODE = 'insufficient_privilege';
+    IF OLD.event_format IS NOT NULL THEN
+      -- Ruling G2(c): Engine-Zeile, JEDE Rolle. Erlaubt: owner_id/is_public/version immer;
+      -- team_id/player_id -> NULL nur bei pg_trigger_depth() > 1 (FK-Kaskade). Alles andere muss
+      -- unveraendert bleiben.
+      old_cmp := to_jsonb(OLD) - ARRAY['owner_id', 'is_public', 'version'];
+      new_cmp := to_jsonb(NEW) - ARRAY['owner_id', 'is_public', 'version'];
+      IF pg_trigger_depth() > 1 THEN
+        IF NEW.team_id IS NULL THEN
+          old_cmp := old_cmp - 'team_id';
+          new_cmp := new_cmp - 'team_id';
+        END IF;
+        IF NEW.player_id IS NULL THEN
+          old_cmp := old_cmp - 'player_id';
+          new_cmp := new_cmp - 'player_id';
+        END IF;
+      END IF;
+      IF old_cmp IS DISTINCT FROM new_cmp THEN
+        RAISE EXCEPTION
+          'Nicht erlaubt: Ereignis-Zeilen der neuen Rechenfunktion (event_format gesetzt) sind unveraenderlich (ausser owner_id/is_public/version sowie team_id/player_id bei Team-/Turnier-Loeschung).'
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      RETURN NEW;
+    END IF;
+
+    -- Ruling G2(b): Alte Zeile (OLD.event_format IS NULL), Client-Rolle -- Typ muss legacy
+    -- bleiben, keine Engine-Spalte darf sich aendern (schliesst C1: Alt-Zeile -> Engine-Zeile
+    -- per UPDATE).
+    IF is_client THEN
+      IF NOT (NEW.type = ANY (legacy_types))
+         OR NEW.event_format IS NOT NULL
+         OR NEW.target_event_id IS DISTINCT FROM OLD.target_event_id
+         OR NEW.base_seq IS DISTINCT FROM OLD.base_seq
+         OR NEW.review_state IS DISTINCT FROM OLD.review_state
+         OR NEW.clock_ms IS DISTINCT FROM OLD.clock_ms
+         OR NEW.section IS DISTINCT FROM OLD.section
+         OR NEW.client_time IS DISTINCT FROM OLD.client_time
+         OR NEW.control_epoch IS DISTINCT FROM OLD.control_epoch
+      THEN
+        RAISE EXCEPTION
+          'Nicht erlaubt: eine bestehende Ereignis-Zeile darf per UPDATE nicht zu einer Ereignis-Zeile der neuen Rechenfunktion (event_format/Engine-Spalten) werden -- nur ueber append_match_events.'
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
     END IF;
     RETURN NEW;
   END IF;
 
   IF TG_OP = 'DELETE' THEN
+    -- Ruling G2(d): unveraendert.
     IF OLD.event_format IS NOT NULL AND pg_trigger_depth() <= 1 THEN
       RAISE EXCEPTION
         'Nicht erlaubt: Ereignis-Zeilen der neuen Rechenfunktion (event_format gesetzt) koennen nur ueber eine Turnier-Loeschung (Kaskade) entfernt werden.'
@@ -266,14 +347,17 @@ END;
 $$;
 
 COMMENT ON FUNCTION "public"."match_events_guard_engine_rows"() IS
-  'B2 (R13, Ruling G1): dichtet den Direktweg fuer die neue Rechenfunktion ab. INSERT einer
-   Engine-Zeile (event_format gesetzt ODER ein neuer, nicht-legacy Ereignistyp) ist nur aus einer
-   SECURITY-DEFINER-Funktion heraus erlaubt (current_user NICHT authenticated/anon -- Muster
-   20260922_003_protect_owner_and_roles.sql, current_user statt session_user, siehe dortiger
-   Kopfkommentar ab Zeile 44). UPDATE/DELETE einer Engine-Zeile ist IMMER verboten, auch fuer
-   SECURITY-DEFINER-Aufrufer, ausser als Teil einer Turnier-Loeschungs-Kaskade
-   (pg_trigger_depth() > 1, Muster 20260925_002_protect_matches_with_events.sql). Alte Zeilen
-   (event_format IS NULL) und alte Typen bleiben unberuehrt bis D3.';
+  'B2 (R13, Ruling G1, neu gefasst in Fixrunde 1 als Ruling G2 nach Review-Funden C1/I1/I2):
+   dichtet den Direktweg fuer die neue Rechenfunktion ab. INSERT: Client-Rollen (authenticated/
+   anon) duerfen nur legacy Typen MIT durchgaengig NULL Engine-Spalten schreiben (G2a). UPDATE
+   einer bestehenden Alt-Zeile: Client-Rollen duerfen weder den Typ auf einen neuen Typ noch eine
+   Engine-Spalte aendern (G2b, schliesst C1). UPDATE einer Engine-Zeile: JEDE Rolle darf
+   ausschliesslich owner_id/is_public/version aendern, zusaetzlich team_id/player_id -> NULL nur
+   bei pg_trigger_depth() > 1 -- FK-Kaskade beim Team-/Spieler-Loeschen (G2c, loest I2). DELETE
+   einer Engine-Zeile nur bei pg_trigger_depth() > 1 -- Turnier-Loeschungs-Kaskade (G2d,
+   unveraendert). Bewusste Grenze (Review M7): current_user unterscheidet nur
+   authenticated/anon von allem anderen, keine feinere Rollenprüfung. Alte Zeilen
+   (event_format IS NULL) und alte Typen bleiben ansonsten unberuehrt bis D3.';
 
 DROP TRIGGER IF EXISTS "match_events_guard_engine_rows" ON "public"."match_events";
 
@@ -326,13 +410,40 @@ GRANT SELECT ON "public"."match_event_authors" TO "authenticated";
 -- 6. match_transitions -- Seed exakt aus src/core/match/matchTransitions.json (Ruling P1)
 -- ============================================================================================
 
+-- M5 (task-B2-review.md, Fixrunde 1): billige Absicherung zusaetzlich zum Gleichlauf-Check --
+-- from_status/event_type/to_status gegen dieselben Wertelisten wie MatchStatusSchema
+-- (src/core/match/types.ts) bzw. match_events_type_check oben. to_status erlaubt zusaetzlich die
+-- beiden Sentinel-Werte '=' (Zustand bleibt) und '@endcheck' (automatische Spielende-Pruefung,
+-- R5) aus matchTransitions.json.
 CREATE TABLE IF NOT EXISTS "public"."match_transitions" (
   "from_status" text NOT NULL,
   "event_type" text NOT NULL,
   "actor" text NOT NULL,
   "to_status" text NOT NULL,
   CONSTRAINT "match_transitions_pkey" PRIMARY KEY ("from_status", "event_type"),
-  CONSTRAINT "match_transitions_actor_check" CHECK ("actor" IN ('helper', 'leitung'))
+  CONSTRAINT "match_transitions_actor_check" CHECK ("actor" IN ('helper', 'leitung')),
+  CONSTRAINT "match_transitions_from_status_check" CHECK (
+    "from_status" IN (
+      'scheduled', 'running', 'paused', 'section_break', 'decision_pending', 'shootout',
+      'finished', 'skipped'
+    )
+  ),
+  CONSTRAINT "match_transitions_to_status_check" CHECK (
+    "to_status" IN (
+      'scheduled', 'running', 'paused', 'section_break', 'decision_pending', 'shootout',
+      'finished', 'skipped', '=', '@endcheck'
+    )
+  ),
+  CONSTRAINT "match_transitions_event_type_check" CHECK (
+    "event_type" IN (
+      'GOAL', 'OWN_GOAL', 'YELLOW_CARD', 'YELLOW_RED_CARD', 'RED_CARD',
+      'TIME_PENALTY', 'TIME_PENALTY_END', 'SUBSTITUTION', 'TIMEOUT', 'STATUS_CHANGE',
+      'RESULT_EDIT', 'NOTE', 'FOUL', 'HALFTIME',
+      'MATCH_START', 'PAUSE', 'RESUME', 'SECTION_END', 'SECTION_START', 'CLOCK_ADJUST',
+      'MATCH_END', 'TIEBREAK_CHOICE', 'SHOOTOUT_KICK', 'SHOOTOUT_END', 'RETRACT', 'CORRECTION',
+      'REOPEN', 'SKIP', 'UNSKIP', 'RESULT_ENTRY', 'REVIEW_ACCEPT', 'REVIEW_DISCARD'
+    )
+  )
 );
 
 COMMENT ON TABLE "public"."match_transitions" IS
