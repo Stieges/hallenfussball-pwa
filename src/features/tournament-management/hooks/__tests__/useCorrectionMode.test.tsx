@@ -89,7 +89,24 @@ describe('useCorrectionMode — handleConfirmCorrection', () => {
     // A2 Fixrunde 3 (N1a): only the field that ACTUALLY changed goes out -- scoreB stayed 1,
     // so it must NOT appear in the update (Fixrunde 1 would have included it, sourced from the
     // caller's local state, even though it didn't change).
-    expect(updates).toEqual([{ id: 'm1', scoreA: 4 }]);
+    // A-Final-Fix 1: `correctionHistory` must ALSO be part of the targeted update -- otherwise
+    // it only ever lands in React state (`onLocalTournamentUpdate`) and is lost on reload (in
+    // guest mode, permanently; LocalStorageRepository#updateMatches merges exactly the keys the
+    // update carries, see `mergeMatchUpdate`).
+    expect(updates).toEqual([{
+      id: 'm1',
+      scoreA: 4,
+      correctionHistory: [
+        expect.objectContaining({
+          previousScoreA: 3,
+          previousScoreB: 1,
+          newScoreA: 4,
+          newScoreB: 1,
+          reasonType: 'referee_decision',
+          note: 'Schiedsrichter-Korrektur',
+        }),
+      ],
+    }]);
   });
 
   it('does NOT call onMatchesUpdate when there is no active correction', () => {

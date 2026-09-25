@@ -136,7 +136,21 @@ export function useCorrectionMode({
     // A2 Fixrunde 1 (C1): sync local state (standings recalculation etc.), then persist ONLY the
     // corrected match's result via a targeted update -- a full save() would skip it (A2).
     onLocalTournamentUpdate(updatedTournament);
-    onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, updatedMatches));
+
+    // A-Final-Fix 1: `correctionHistory` must travel in the SAME targeted update as the result,
+    // not just in local state -- otherwise it is lost on reload (permanently in guest mode, see
+    // `LocalStorageRepository#updateMatches`/`mergeMatchUpdate`, which only merges keys the
+    // update actually carries). `mapMatchUpdateToSupabase` ignores the unknown key, so the cloud
+    // is unaffected (there is no `correctionHistory` column there).
+    const resultUpdates = diffMatchResultStatusUpdates(tournament.matches, updatedMatches);
+    const correctedMatch = updatedMatches.find(m => m.id === correctionState.matchId);
+    const existingUpdate = resultUpdates.find(u => u.id === correctionState.matchId);
+    if (existingUpdate) {
+      existingUpdate.correctionHistory = correctedMatch?.correctionHistory;
+    } else if (correctedMatch) {
+      resultUpdates.push({ id: correctedMatch.id, correctionHistory: correctedMatch.correctionHistory });
+    }
+    onMatchesUpdate(resultUpdates);
 
     setShowCorrectionDialog(false);
     setCorrectionState(null);
