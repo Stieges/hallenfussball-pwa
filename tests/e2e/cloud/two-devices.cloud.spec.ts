@@ -156,15 +156,27 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
    * -- dieser Test hier prüft jetzt WIRKLICH den Echtzeit-Pfad des Monitors (Verifikation #6 des
    * Plans), vorher kam er nie so weit.
    *
-   * Timeout 8000ms statt der 3000ms aus Test 1 (Live-Cup, Cockpit-zu-Cockpit): empirisch drei
-   * stabile Läufe (final-fix-report.md) zeigen, dass die Monitor-Route ("/display/...") den
-   * Score-Push konsistent nach ca. 4-5s zeigt, nie erst nach einem Reload -- spürbar langsamer als
-   * der Cockpit-Pfad, aber echtes Realtime, kein Timeout-Zufallstreffer. Naheliegende Ursache
-   * (nicht weiter verfolgt, bereits bekannter, dokumentierter Produktivbefund): der
-   * `monitor:heartbeat`-Fehler in der Konsole bei jedem Lauf ("monitor/tournament mismatch or not
-   * visible", siehe MEMORY.md "Heartbeat-Pipeline nie funktional").
+   * Nach-Review (final-rereview.md, I-N1): Dieser Test beweist "ohne Reload", NICHT "in
+   * Echtzeit" -- der Monitor liest den Spielstand nur aus `tournament.matches`
+   * (`MonitorDisplayPage.tsx#toLiveMatch` -> `LiveMatchDisplay.tsx` -> `ScoreBlock.tsx`, alles
+   * gespeist über `loadData()`), und `loadData()` läuft AUSSCHLIESSLICH per `setInterval`
+   * (`MonitorDisplayPage.tsx:1116-1121`), nie per Realtime-Subscription. Der Seed-Monitor hat
+   * `performanceMode: 'auto'`, das ergibt hier `high`, also einen 5000ms-Takt
+   * (`src/types/monitor.ts:43`). `useLiveMatches` treibt auf dem Monitor nur die Tor-Animation
+   * (hängt an `match_events`, wo wegen Fehler A oben nichts ankommt) -- für den Spielstand selbst
+   * gibt es keinen Echtzeitpfad. Die gemessenen 7,0-7,9s (final-fix-report.md, drei stabile
+   * Läufe) passen genau zum 5s-Poll-Takt plus Verarbeitungszeit -- NICHT "ca. 4-5s", wie eine
+   * frühere Fassung dieses Kommentars widersprüchlich behauptete.
+   *
+   * Das Fundament-Ziel "<= 3s" (wie Test 1, Live-Cup Cockpit-zu-Cockpit, das per Echtzeit-
+   * Publikation auf `matches` tatsächlich unter 3s bleibt) ist für den Monitor-Spielstand damit
+   * NICHT erreicht -- eigener Befund C-MONPOLL ("Monitor-Spielstand nur per 5s-Polling, verfehlt
+   * das 3s-Ziel"). Timeout bleibt bei 8000ms: knapp über dem 5s-Takt plus Verarbeitungszeit, aber
+   * nah an den gemessenen 7,9s -- ein langsamerer CI-Runner kann diesen Test dadurch flaky
+   * machen (bekanntes Restrisiko, festgehalten statt stillschweigend vergrößert, siehe
+   * final-rereview.md).
    */
-  test('Public-Cup: owner trägt Tor ein, anonymer Monitor sieht es in Echtzeit ohne Reload', async ({
+  test('Public-Cup: owner trägt Tor ein, anonymer Monitor zeigt es ohne Reload (5s-Polling, kein Echtzeitpfad)', async ({
     asRole,
     page: anonPage,
   }) => {

@@ -81,8 +81,12 @@ Spiel, das der Seed direkt per Service-Role auf `matchStatus: 'running'` setzt �
 bereits bestehenden laufenden Live-Cup-Spiel, NIE über `MatchExecutionService.initializeMatch()`
 (das würde bei einem noch nie zuvor geladenen Spiel an C-NSTART scheitern, siehe
 `tests/e2e/cloud/testData.ts#E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE`). Ohne diesen Bypass konnte
-der Monitor-Echtzeit-Nachweis (`two-devices.cloud.spec.ts`) nie über C-NSTART hinauskommen — seit
-der Fixrunde läuft er wirklich. Die übrigen, unangetasteten Public-Cup-Spiele bleiben bewusst
+der Monitor-Nachweis (`two-devices.cloud.spec.ts`) nie über C-NSTART hinauskommen — seit der
+Fixrunde läuft er wirklich. **Nach-Review (final-rereview.md, I-N1):** Dieser Test beweist "ohne
+Reload" per 5s-Polling, NICHT "in Echtzeit" — der Monitor liest den Spielstand ausschließlich per
+`setInterval` (`MonitorDisplayPage.tsx:1116-1121`), keine Realtime-Subscription; das
+Fundament-Ziel ≤3s ist damit für den Monitor-Spielstand nicht erreicht (Befund C-MONPOLL). Die
+übrigen, unangetasteten Public-Cup-Spiele bleiben bewusst
 `scheduled` (nie initialisiert) — das braucht der eigene C-NSTART-Test in derselben Datei.
 
 `logouttest`/`logouttestMobile` haben bewusst KEINE Turnier-Mitgliedschaft und werden von keinem
@@ -128,9 +132,10 @@ die gesamte Offline-Suite gegen eine Produktions-App laufen können, ohne dass d
 - `CI_E2E_USE_PREVIEW` außerhalb der CI (`!process.env.CI`) bricht die `playwright.config.ts`-Konfiguration
   jetzt mit einer klaren Fehlermeldung sofort ab — ein lokaler `npm run build` würde `.env.local`
   fest in das Preview-Bundle einbauen (Vite ersetzt `VITE_SUPABASE_*` beim Build, nicht zur
-  Laufzeit). Einzige Ausnahme: `npm run test:visual`/`test:visual:update` (siehe unten) setzen
-  neben `CI_E2E_USE_PREVIEW=1` explizit auch `CI=true` UND leeren `VITE_SUPABASE_*` selbst per
-  Docker-`-e`-Flag — ein bewusst nachgebauter CI-Ablauf, keine Umgehung.
+  Laufzeit). Einzige Ausnahme: `npm run test:visual`/`test:visual:update` (siehe unten,
+  `scripts/visual-in-container.sh`) setzen neben `CI_E2E_USE_PREVIEW=1` explizit auch `CI=true`
+  UND leeren `VITE_SUPABASE_*` selbst für den Build im Container — ein bewusst nachgebauter
+  CI-Ablauf, keine Umgehung.
 
 **Gegenprobe (final-fix-report.md):** `npm run dev` auf Port 3000 laufen lassen (liest
 `.env.local`, ohne dessen Inhalt zu lesen — die Datei bleibt für diese Aufgabe tabu), danach die
@@ -311,33 +316,42 @@ Lokale Docker-Läufe UND die CI (`.github/workflows/visual.yml`) verwenden exakt
 Snapshot mit dem in der CI (im selben Container) erzeugten identisch.
 
 **`npm run test:visual`** (Vergleichsmodus) und **`npm run test:visual:update`**
-(`--update-snapshots=all`) starten dafür `docker run` mit dem Repo als Bind-Mount und
-`npm ci && npm run build && npx playwright test …` innerhalb des Containers.
+(`--update-snapshots=all`) rufen dafür `scripts/visual-in-container.sh compare`/`update` auf.
 
 **Abschluss-Fixrunde (final-review.md, I1/Ruling AG):** Vorher lief im Container `npm run dev`
 (kein Build) — anders als die CI, die per `npm run build` + `CI_E2E_USE_PREVIEW` (`vite preview`)
 baut. Die Vorlagen stammen aus genau diesem Build, ein Dev-Server kann abweichendes CSS-Timing/
--Reihenfolge liefern und falsche Differenzen erzeugen. Schlimmer: der Bind-Mount (`-v
-"$(pwd):/work"`) macht `.env.local` — falls vorhanden — im Container sichtbar; ein `npm run build`
-dort würde sie wie ein normaler lokaler Build fest ins Bundle einbacken (siehe C1 oben). Beide
-Skripte setzen deshalb jetzt explizit per Docker-`-e`-Flag:
-- `CI=true` + `CI_E2E_USE_PREVIEW=1` — derselbe Build+Preview-Ablauf wie `visual.yml` (löst auch
-  den harten `playwright.config.ts`-Abbruch für `CI_E2E_USE_PREVIEW` außerhalb der CI absichtlich
-  aus, siehe Kommentar dort — dieser Container-Lauf IST der nachgebaute CI-Ablauf).
-- `VITE_SUPABASE_URL=` und `VITE_SUPABASE_ANON_KEY=` (leer) — überschreiben `.env.local` für den
-  Build, unabhängig davon, ob die Datei über den Bind-Mount sichtbar ist (Vite-Priorität:
-  Prozess-Variablen schlagen jede `.env*`-Datei).
+-Reihenfolge liefern und falsche Differenzen erzeugen. Gefixt: Build statt Dev-Server, mit
+`CI=true` + `CI_E2E_USE_PREVIEW=1` (derselbe Build+Preview-Ablauf wie `visual.yml`) und leeren
+`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`.
 
-Zweiter Fix: `node_modules` ist jetzt ein **eigenes, anonymes Docker-Volume**
-(`-v /work/node_modules`, zusätzlich zum Bind-Mount) statt des vorher gemounteten Host-Ordners —
-`npm ci` im Container installiert Linux-native Abhängigkeiten dadurch NICHT mehr in den
-Host-`node_modules`. Kein manuelles `npm ci` auf dem Host nach einem Docker-Lauf mehr nötig.
+**Nach-Review (final-rereview.md, I-R1):** Der Fix aus der Abschluss-Fixrunde reichte nicht —
+der damalige Bind-Mount (`-v "$(pwd):/work"`) machte `.env.local` im Container sichtbar, und Vite
+lädt beim Build ALLE `VITE_*`-Variablen aus einer sichtbaren `.env.local`, nicht nur die beiden
+Supabase-Werte, die die Docker-`-e`-Flags überschreiben. `.env.example` führt u. a.
+`VITE_FF_ANON_AUTH`/`VITE_FF_OFFLINE`/`VITE_FF_LIMIT`/`VITE_FF_MERGE` aktiv und `VITE_SENTRY_DSN`
+optional — ein lokal gesetztes `VITE_FF_LIMIT=true` hätte andere Vorlagen erzeugt als die CI
+(sauberer Checkout ohne `.env.local`), ein gesetztes `VITE_SENTRY_DSN` sogar einen echten
+PROD-Sentry-Report ausgelöst (die Visual-Fixtures setzen `errorTracking: true`).
+
+Deshalb jetzt `scripts/visual-in-container.sh`: Das Repo wird **read-only** gemountet
+(`-v "$REPO_ROOT:/src:ro"`), im Container entsteht daraus per `tar`-Kopie (kein Bind-Mount) eine
+eigene Arbeitskopie unter `/work` — die Exclude-Muster `.env*`, `node_modules`, `dist`,
+`test-results`, `playwright-report` lassen `.env*` dabei kategorisch aus der Kopie heraus,
+unabhängig davon, was auf dem Host liegt. Dort laufen `npm ci`, der Build (mit `CI=true`,
+`CI_E2E_USE_PREVIEW=1`, leeren `VITE_SUPABASE_*`) und die drei `visual-*`-Projekte. Im
+Update-Modus kopiert das Skript am Ende nur die neuen Vorlagen aus
+`/work/tests/e2e/visual/__screenshots__` in einen zweiten, beschreibbaren Mount
+(`-v "$PWD/tests/e2e/visual/__screenshots__:/out"`) zurück — sonst verlässt nichts den Container.
+
+`node_modules` lebt dadurch im eigenen Dateisystem des Containers (nicht mehr als Docker-Volume
+nötig) — das Host-`node_modules` wird nie berührt, dafür macht jeder Lauf einen vollen `npm ci`.
 
 **Weiterhin NICHT lokal ausgeführt** (Auftrag der Abschluss-Fixrunde, final-fix-brief.md: „Docker-
 Platte voll, nichts löschen — nur sorgfältig prüfen und dokumentieren") — Skript und Doku sind
-geprüft (Kommandos, Env-Variablen, Volume-Syntax), aber nicht gegen den echten Container
-ausgeführt. Ein CI-Lauf mit dem Label `visual-update` bleibt der Weg, um neue Vorlagen zu
-erzeugen.
+geprüft (`bash -n`, `shellcheck`, Kommandos, Env-Variablen, Mount-Syntax), aber nicht gegen den
+echten Container ausgeführt. Ein CI-Lauf mit dem Label `visual-update` bleibt der Weg, um neue
+Vorlagen zu erzeugen.
 
 ### Was stattdessen lokal (ohne Container) geprüft wurde
 
