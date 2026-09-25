@@ -176,6 +176,113 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   `rolePermissions.json` (`collaborator` bekommt zusätzlich `manageMembers`) lässt das Skript mit
   4 Abweichungen und Exit 1 enden; nach dem Zurücksetzen wieder 0 Abweichungen, Exit 0.
 
+### `.github/workflows/visual.yml`
+
+- **Wann:** nur bei Pull Requests gegen `main` (kein Push-Trigger — Vorlagen ändern sich nicht
+  von selbst).
+- **Was:** siehe Abschnitt „Visual Regression (Bildvergleiche)" unten für das Gesamtbild. Der
+  Job läuft im offiziellen Playwright-Container (`mcr.microsoft.com/playwright:v1.63.0-noble`,
+  exakt passend zur gepinnten `@playwright/test`-Version) und vergleicht per Default
+  (`--update-snapshots=none`) gegen die eingecheckten Vorlagen. Trägt der PR das Label
+  `visual-update`, schreibt der Job stattdessen neue Vorlagen (`--update-snapshots=all`, Job wird
+  grün) und lädt sie als Artefakt `visual-snapshots` hoch.
+- **Zeitbudget:** `timeout-minutes: 15` (kein Vorgabewert aus dem Brief, eigene Einschätzung —
+  Production-Build + drei Viewport-Projekte im Container ohne Docker-Layer-Cache).
+- **Roten Lauf lesen:** bei einer Abweichung (ohne Label) lädt der Job zwei Artefakte hoch —
+  `playwright-report-visual` (HTML-Report mit Differenzbildern) und `visual-diff-results`
+  (`test-results/`, dieselben Differenzbilder als Rohdateien). Mit Label `visual-update` kann der
+  Job nicht rot werden (es gibt nichts zum Vergleichen) — das Committen der neuen Vorlagen macht
+  in jedem Fall der Controller, nicht der Workflow selbst.
+
+## Visual Regression (Bildvergleiche)
+
+Task T5 (`.superpowers/sdd/2026-09-24-testumgebung/task-T5-brief.md`). `toHaveScreenshot`-Tests
+unter `tests/e2e/visual/*.visual.spec.ts` für acht Screens auf drei Breakpoints (Handy 390,
+Tablet 768, Desktop 1280 — eigene Playwright-Projekte `visual-mobile`/`visual-tablet`/
+`visual-desktop`, `playwright.config.ts`):
+
+| Screen | Spec-Datei | Route |
+|---|---|---|
+| Dashboard | `dashboard.visual.spec.ts` | `/#/` |
+| Wizard Schritt 1 (Stammdaten) | `wizard-step1.visual.spec.ts` | `/#/tournament/new` |
+| Wizard Schritt 5 (Teams) | `wizard-step5.visual.spec.ts` | `/#/tournament/new?step=5` |
+| Turnier-Admin (Dashboard-Kategorie) | `admin.visual.spec.ts` | `/#/tournament/:id/admin/dashboard` |
+| Live-Cockpit (laufendes Spiel) | `cockpit-running.visual.spec.ts` | `/#/tournament/:id/live` |
+| Monitor | `monitor.visual.spec.ts` | `/#/display/:id/:monitorId` |
+| Public View | `public-view.visual.spec.ts` | `/#/public/:id` |
+| Login | `login.visual.spec.ts` | `/#/login` |
+
+Macht 8 × 3 = 24 Vorlagen, wie im Plan vorgegeben.
+
+### Warum ein eigener Ordner, eigene Projekte
+
+Die Visual-Specs laufen **nicht** in den bestehenden E2E-Projekten (`mobile-sm`, `desktop`, ...)
+mit — dort gibt es keinen Playwright-Container, Schriften/Sub-Pixel-Rendering würden zwischen
+macOS/Ubuntu-ohne-Container und dem Container abweichen. `playwright.config.ts` gibt den
+`visual-*`-Projekten ein eigenes `testDir` (`tests/e2e/visual`) und schließt diesen Ordner bei
+allen anderen Projekten per `testIgnore` aus.
+
+### Immer im offiziellen Container
+
+Lokale Docker-Läufe UND die CI (`.github/workflows/visual.yml`) verwenden exakt
+`mcr.microsoft.com/playwright:v1.63.0-noble` — dieselbe Version wie das installierte
+`@playwright/test` (`npx playwright --version`). Nur so ist ein lokal (im Container) erzeugter
+Snapshot mit dem in der CI (im selben Container) erzeugten identisch.
+
+**`npm run test:visual`** (Vergleichsmodus) und **`npm run test:visual:update`**
+(`--update-snapshots=all`) starten dafür `docker run` mit dem Repo als Bind-Mount und `npm ci`
++ `npx playwright test` innerhalb des Containers. Bekannter Nebeneffekt: `npm ci` im Container
+installiert Linux-native Abhängigkeiten in das (gemountete, also auch auf dem Host sichtbare)
+`node_modules` — nach einem lokalen Docker-Lauf auf dem Mac einmal `npm ci` auf dem Host erneut
+laufen lassen, um wieder Mac-native Binaries zu bekommen.
+
+**In dieser Aufgabe (T5) lokal NICHT ausgeführt** — die lokale Docker-Platte hat nur ~1,8 GB
+frei, das Playwright-Image passt dort nicht (Ruling Y im Task-Brief, „Nichts in Docker löschen").
+Der erste echte CI-Lauf mit dem Label `visual-update` (Vorlagen erzeugen) läuft durch den
+Controller, nicht durch diese Aufgabe.
+
+### Was stattdessen lokal (ohne Container) geprüft wurde
+
+Ohne Container liefert derselbe Test andere Pixel (macOS-Font-Rendering) — die dabei erzeugten
+Bilder dürfen deshalb nie die eingecheckten Vorlagen werden. `playwright.config.ts` liest dafür
+`VISUAL_SNAPSHOT_DIR`: gesetzt, zeigt der Snapshot-Pfad auf ein beliebiges (temporäres)
+Verzeichnis statt auf `tests/e2e/visual/__screenshots__`. So lässt sich lokal mit echtem
+Chromium beweisen, dass Selektoren, Fixtures, Masken und `page.clock` funktionieren, ohne
+Mac-Bilder einzuchecken. Ergebnis und Laufzeiten: siehe
+`.superpowers/sdd/2026-09-24-testumgebung/task-T5-report.md`.
+
+### Uhrzeit einfrieren statt maskieren, wo möglich
+
+`tests/e2e/visual/helpers.ts#freezeClock()` setzt `page.clock.setFixedTime()` auf ein festes
+Datum, **bevor** die erste Navigation passiert. Das macht `Date.now()`/`new Date()` für die
+gesamte Testdauer konstant — Spieluhr (`useMatchTimerExtended`, per `requestAnimationFrame`),
+Monitor-Timer, Pixel-Shift-Schutz (`usePixelShift`, 60s-Intervall wird während des kurzen Tests
+nie fällig) und „vor X Min."-Texte (`SyncStatusBar`) zeigen dadurch bei jedem Lauf denselben
+Stand — ganz ohne die zusätzlichen, volleren Fake-Timer aus `page.clock.install()`, die hier ein
+Hänge-Risiko hätten (siehe ausführliche Begründung im Datei-Kommentar von `helpers.ts`: ein
+`setTimeout`-Retry beim Nachladen von Lazy-Chunks, `src/lib/lazyWithRetry.ts`, könnte sonst nie
+feuern).
+
+Zusätzlich, defensiv per `mask` (Playwright deckt den Bereich grau ab, matcht ein Screen das
+Element nicht, wird es einfach ignoriert): Toast-Container, Sync-Status-Badge, QR-Code
+(`commonMasks()` in `helpers.ts`) — auf den gewählten acht Screens kommen QR-/Share-Codes aktuell
+nicht vor (die Maske ist ein Sicherheitsnetz für spätere Screens, nicht aktuell wirksam).
+
+### Datenquelle: Offline-Fixtures statt Supabase
+
+Alle acht Screens laufen offline (IndexedDB-Fixtures über `seedIndexedDB`, wie die bestehenden
+`tests/e2e/flows/*.spec.ts`). Für „Public View" gibt es zwei Routen mit unterschiedlicher
+Datenquelle (`src/core/routing/routeRegistry.ts`): `/live/:shareCode` braucht einen echten
+Supabase-Stack, `/public/:tournamentId` rendert denselben Screen (`PublicTournamentViewScreen`)
+komplett aus IndexedDB. Die Visual-Specs nutzen `/public/:tournamentId` — keine Lücke, kein
+`test.fixme` nötig (Ruling Y, Punkt 2 im Task-Brief).
+
+Das Live-Cockpit braucht zusätzlich einen Eintrag in der `liveMatches-<tournamentId>`-
+localStorage-Quelle (`src/hooks/useLiveMatches.ts`, getrennt vom IndexedDB-Turnier-Blob) — dafür
+gibt es `seedRunningLiveMatch()` in `helpers.ts`, mit einem `timerStartTime` exakt 320s vor der
+eingefrorenen Uhr statt eines echten Start-Klicks (deterministisch statt klick-zeitpunkt-
+abhängig).
+
 ## Nie tun
 
 - `supabase link` in diesem Repo ausführen.

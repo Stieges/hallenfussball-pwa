@@ -1,0 +1,104 @@
+name: Visual Regression
+
+# Bildvergleiche (Task T5, .superpowers/sdd/2026-09-24-testumgebung/task-T5-brief.md) gegen die
+# eingecheckten Referenzbilder unter tests/e2e/visual/__screenshots__. Läuft IMMER im offiziellen
+# Playwright-Container (playwright.config.ts pinnt exakt dieselbe Version wie @playwright/test,
+# siehe package.json), damit Schriften/Rendering nicht zwischen Runner-Ubuntu und Container
+# abweichen (Ruling Y).
+#
+# Eigener Workflow statt Job in ci.yml/e2e-cloud.yml — selbes Muster wie die anderen
+# Testumgebung-Workflows (separat beobachtbar/deaktivierbar, siehe e2e-cloud.yml und
+# rls-role-matrix.yml). Läuft NICHT in den bestehenden E2E-Projekten mit: playwright.config.ts
+# gibt den visual-*-Projekten ein eigenes testDir (tests/e2e/visual) und schließt diesen Ordner
+# bei den Breakpoint-/Device-/Cloud-Projekten per testIgnore aus.
+#
+# Zwei Modi (Ruling Y, Punkt 5):
+# - Ohne Label `visual-update` auf dem PR: Vergleichsmodus (--update-snapshots=none). Eine
+#   Abweichung macht den Job rot, Report + Differenzbilder gehen als Artefakt hoch.
+# - Mit Label `visual-update`: Update-Modus (--update-snapshots=all). Playwright schreibt neue
+#   Vorlagen statt sie zu vergleichen — der Job ist danach grün — und der neue Snapshot-Ordner
+#   geht als Artefakt `visual-snapshots` hoch. Das Committen der Vorlagen, Herunterladen des
+#   Artefakts und Entfernen des Labels macht NICHT dieser Workflow, sondern der Controller
+#   (Task-T5-Brief, Ruling Y Punkt 5 UND die Zusatzregel im Auftrag: "Den ersten CI-Lauf mit dem
+#   Label visual-update löst der Controller aus.").
+#
+# Noch KEIN Pflicht-Check (Branch-Protection unverändert), siehe docs/TESTUMGEBUNG.md, Abschnitt
+# "CI".
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  visual:
+    name: Visual Regression (Playwright-Container)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Kein "Install Playwright browsers"-Schritt: das Container-Image bringt Chromium/Firefox/
+      # WebKit exakt passend zur gepinnten Version v1.63.0-noble bereits mit (offizielles
+      # Playwright-Docker-Muster) — eine zusätzliche `playwright install` würde nur denselben
+      # Stand redundant neu herunterladen.
+
+      - name: Update-Modus bestimmen (Label `visual-update`)
+        id: mode
+        run: |
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'visual-update') }}" = "true" ]; then
+            echo "update=all" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Production-Build statt Dev-Server (CI_E2E_USE_PREVIEW steuert playwright.config.ts,
+      # webServer "offline" nutzt dann `vite preview` statt `vite dev`) — dasselbe Muster wie der
+      # bestehende e2e-tests-Job in ci.yml. Für Visual-Diffs ist das doppelt wichtig: der echte,
+      # minifizierte Produktions-Build ist das, was auch der eingecheckten Vorlage zugrunde liegt.
+      - name: Build für Visual-Tests
+        run: npm run build
+
+      - name: Visual-Tests ausführen
+        run: npx playwright test --project=visual-mobile --project=visual-tablet --project=visual-desktop --update-snapshots=${{ steps.mode.outputs.update }}
+        env:
+          CI_E2E_USE_PREVIEW: 'true'
+
+      - name: Neue Vorlagen als Artefakt hochladen (nur bei Label `visual-update`)
+        if: steps.mode.outputs.update == 'all'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-snapshots
+          path: tests/e2e/visual/__screenshots__/
+          retention-days: 14
+
+      - name: Playwright-Report hochladen (bei Abweichung)
+        if: failure() && steps.mode.outputs.update == 'none'
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-visual
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Differenzbilder hochladen (bei Abweichung)
+        if: failure() && steps.mode.outputs.update == 'none'
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-diff-results
+          path: test-results/
+          retention-days: 7

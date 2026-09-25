@@ -52,7 +52,7 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          # Dieselbe Version wie lokal genutzt (siehe task-T1-report.md, Abschnitt
+          # Dieselbe Version wie lokal genutzt (siehe docs/TESTUMGEBUNG.md, Abschnitt
           # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
           # "latest" (dort bereits einmal an einem GitHub-Rate-Limit gescheitert).
           version: 2.67.1

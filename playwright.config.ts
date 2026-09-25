@@ -66,6 +66,18 @@ export const networkProfiles = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// VISUAL REGRESSION (Task T5, .superpowers/sdd/2026-09-24-testumgebung/task-T5-brief.md)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Basisverzeichnis für die eingecheckten Referenzbilder. Per Umgebungsvariable
+// überschreibbar -- so kann lokal (ohne den offiziellen Playwright-Container, siehe Ruling Y der
+// Task-T5-Vorgabe) gegen ein TEMPORÄRES Verzeichnis geprüft werden, ob Selektoren/Masken/
+// page.clock greifen, ohne die eingecheckten, im Container erzeugten Vorlagen mit
+// Mac-gerenderten Bildern zu überschreiben. Ohne die Variable (CI, `npm run test:visual[:update]`
+// im Docker-Container) zeigt es auf den eingecheckten Ordner.
+const VISUAL_SNAPSHOT_ROOT = process.env.VISUAL_SNAPSHOT_DIR ?? 'tests/e2e/visual/__screenshots__';
+
 export default defineConfig({
   testDir: './tests/e2e',
   // Die cloud-Projekte (testDir: './tests/e2e/cloud', s.u.) haben ihre eigenen relativen Pfade
@@ -74,7 +86,23 @@ export default defineConfig({
   // Ohne das würde Playwright hier auch tests/e2e/cloud/__tests__/*.test.ts (Vitest-Syntax,
   // Task T2) als Playwright-Test laden und mit "Cannot read properties of undefined (reading
   // 'config')" abstürzen (reproduziert vor dieser Änderung).
-  testIgnore: '**/cloud/**',
+  //
+  // "visual" ist hier bewusst NICHT mitausgeschlossen: die visual-*-Projekte unten setzen ihr
+  // eigenes testDir/testMatch (wie die cloud-Projekte), und die bestehenden Breakpoint-/
+  // Device-Projekte (mobile-sm, desktop, ...) laufen weiterhin nur gegen ihr eigenes,
+  // unverändertes testDir -- ihr `testMatch` ist implizit "alles außer cloud", das schließt
+  // tests/e2e/visual/**/*.visual.spec.ts nicht aus. Deshalb bekommen die Breakpoint-Projekte
+  // unten zusätzlich ein explizites testIgnore für den visual-Ordner (Ruling Y, Punkt 1: die
+  // Visual-Specs dürfen NICHT in den bestehenden E2E-Jobs mitlaufen -- andere Fonts/kein
+  // Container dort liefern andere Pixel).
+  testIgnore: ['**/cloud/**', '**/visual/**'],
+  // Kein {platform}-Token (Ruling Y, Punkt 6): CI-Runner und der lokale Docker-Lauf sind BEIDE
+  // derselbe Linux-Container (mcr.microsoft.com/playwright:v1.63.0-noble) -- ein
+  // Plattform-Suffix würde hier nie zwischen zwei legitimen Quellen unterscheiden, nur
+  // versehentlich verhindern, dass ein lokaler Mac-Lauf (siehe VISUAL_SNAPSHOT_ROOT oben) sich
+  // als "gleich" ausgeben könnte. {projectName} bleibt nötig, weil visual-mobile/-tablet/-desktop
+  // sonst denselben Dateinamen (z.B. "dashboard.png") träfen.
+  snapshotPathTemplate: `${VISUAL_SNAPSHOT_ROOT}/{projectName}/{testFilePath}/{arg}{ext}`,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -105,6 +133,17 @@ export default defineConfig({
   expect: {
     // Expect timeout: 10s in CI, 5s locally
     timeout: process.env.CI ? 10000 : 5000,
+    // Task T5 (Visual Regression): Animationen/Caret aus (sonst flackert jeder Lauf anders),
+    // siehe Ruling im Brief ("Animationen aus (animations: 'disabled')"). Kleine Toleranz gegen
+    // Sub-Pixel-Antialiasing-Rauschen, das selbst im selben Container zwischen zwei Läufen
+    // auftreten kann (pragmatische Ingenieurs-Entscheidung, keine Brief-Vorgabe) -- 1% der
+    // Pixel einer Seite, nicht mehr. Gilt global (auch für die bestehenden Projekte), betrifft
+    // aber nur `toHaveScreenshot`-Aufrufe -- bislang ausschließlich in tests/e2e/visual/*.
+    toHaveScreenshot: {
+      animations: 'disabled',
+      caret: 'hide',
+      maxDiffPixelRatio: 0.01,
+    },
   },
 
   projects: [
@@ -251,6 +290,56 @@ export default defineConfig({
         hasTouch: true,
         userAgent:
           'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      },
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // VISUAL REGRESSION (Task T5) — Bildvergleiche, NUR im offiziellen Playwright-Container
+    // (Ruling Y). testDir zeigt exklusiv auf tests/e2e/visual; die Breakpoint-/Device-/Cloud-
+    // Projekte oben schließen diesen Ordner per testIgnore aus, laufen hier also nicht mit.
+    //
+    // deviceScaleFactor bewusst 1 (nicht wie mobile-md/tablet-portrait 2-3): für Visual-Diffs
+    // zählt Bild-zu-Bild-Stabilität zwischen zwei Container-Läufen, nicht Geräte-Realismus —
+    // ein DSF>1 vervielfacht nur Pixelzahl (und damit Diff-Fläche bei Sub-Pixel-Rauschen), ohne
+    // zusätzliche Aussagekraft für Layout-Regressionen. Viewport-Maße exakt wie im Brief
+    // (Handy 390, Tablet 768, Desktop 1280); Höhen an die bestehenden mobile-md/tablet-portrait/
+    // desktop-Projekte angelehnt.
+    // ═══════════════════════════════════════════════════════════════
+    {
+      name: 'visual-mobile',
+      testDir: './tests/e2e/visual',
+      testIgnore: [],
+      use: {
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        hasTouch: true,
+        userAgent:
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      },
+    },
+    {
+      name: 'visual-tablet',
+      testDir: './tests/e2e/visual',
+      testIgnore: [],
+      use: {
+        viewport: { width: 768, height: 1024 },
+        deviceScaleFactor: 1,
+        isMobile: true,
+        hasTouch: true,
+        userAgent:
+          'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      },
+    },
+    {
+      name: 'visual-desktop',
+      testDir: './tests/e2e/visual',
+      testIgnore: [],
+      use: {
+        viewport: { width: 1280, height: 720 },
+        deviceScaleFactor: 1,
+        isMobile: false,
+        hasTouch: false,
       },
     },
   ],

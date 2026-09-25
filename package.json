@@ -25,6 +25,8 @@
     "test:e2e:cloud": "bash scripts/require-local-stack.sh && playwright test --project=cloud-setup --project=cloud-desktop --project=cloud-mobile",
     "test:e2e:cloud:fresh": "npm run test:env:reset && npm run test:e2e:cloud",
     "test:a11y": "playwright test tests/e2e/usability/accessibility.spec.ts",
+    "test:visual": "docker run --rm -v \"$(pwd):/work\" -w /work mcr.microsoft.com/playwright:v1.63.0-noble bash -c \"npm ci && npx playwright test --project=visual-mobile --project=visual-tablet --project=visual-desktop --update-snapshots=none\"",
+    "test:visual:update": "docker run --rm -v \"$(pwd):/work\" -w /work mcr.microsoft.com/playwright:v1.63.0-noble bash -c \"npm ci && npx playwright test --project=visual-mobile --project=visual-tablet --project=visual-desktop --update-snapshots=all\"",
     "prepare": "husky",
     "analyze": "npm run build && open dist/stats.html",
     "tokens:check": "node scripts/check-design-token-sync.cjs",
