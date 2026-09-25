@@ -53,6 +53,34 @@ const DUPLICATE_ID_ALLOWLIST = new Set(['07-idempotency.json']);
 /** Erlaubte `actorUser`-Rollen (Brief Abschnitt 3): B3b mappt darauf echte Testnutzer. */
 const ALLOWED_ACTOR_USERS = new Set(['owner', 'coadmin', 'helper', 'trainer', 'stranger']);
 
+/**
+ * `actor`/`actorUser`-Passung (Brief Abschnitt 3): `actor:"leitung"` ⇒ `actorUser` ∈
+ * {owner, coadmin}, `actor:"helper"` ⇒ `actorUser` = "helper" -- **außer** die Fixture prüft
+ * bewusst einen anderen B3b-Testnutzer-Tier auf demselben `actor`-Wert. Jede Ausnahme muss hier
+ * mit Datei, Event (`at`, da IDs innerhalb einer Datei kollidieren dürfen, siehe
+ * `DUPLICATE_ID_ALLOWLIST`) und Begründung stehen -- der Test unten iteriert exakt diese Liste und
+ * lehnt jede nicht gelistete Inkonsistenz ab.
+ *
+ * - `07-idempotency.json`, Event `at: 2500` (`actor:"helper"`, `actorUser:"stranger"`): Brief
+ *   Abschnitt 3, letzter Satz -- "trainer/stranger nur für B3b -- im TS-Runner als helper
+ *   behandeln". Kein Rechte-Ablehnungstest (das Event wird als `duplicate` erwartet, nicht
+ *   `FORBIDDEN_ACTOR`); zeigt stattdessen, dass die Idempotenz-Prüfung (R11, Vergleich ohne
+ *   `actor`/`actorUser`) auch dann korrekt dedupliziert, wenn die Wiederholung von einem anderen
+ *   B3b-Testnutzer-Tier kommt als das Original. Der TS-Runner behandelt `actor:"helper"` ohnehin
+ *   einheitlich, unabhängig vom feineren `actorUser`.
+ */
+const ACTOR_ACTOR_USER_ALLOWLIST = new Set(['07-idempotency.json#2500']);
+
+function isActorUserConsistent(actor: string, actorUser: string): boolean {
+  if (actor === 'helper') {
+    return actorUser === 'helper';
+  }
+  if (actor === 'leitung') {
+    return actorUser === 'owner' || actorUser === 'coadmin';
+  }
+  return false;
+}
+
 /** Die verbindliche `serverState`-Form (`serverState.ts`, Ruling P2) -- genau diese Schlüssel. */
 const SERVER_STATE_KEYS = [
   'status',
@@ -150,6 +178,20 @@ describe('Fixture-Sammlung: Pflege-Regeln (B1c)', () => {
         for (const event of allEvents) {
           expect(typeof event.actorUser).toBe('string');
           expect(ALLOWED_ACTOR_USERS.has(event.actorUser!)).toBe(true);
+        }
+      });
+
+      it('hat für jedes Event ein zu `actor` passendes `actorUser` (leitung⇒owner|coadmin, helper⇒helper), außer auf der begründeten Allowlist', () => {
+        const allEvents = [...(fixture.prior ?? []), ...fixture.events];
+        for (const event of allEvents) {
+          const key = `${fileName}#${event.at}`;
+          if (ACTOR_ACTOR_USER_ALLOWLIST.has(key)) {
+            continue;
+          }
+          expect(
+            isActorUserConsistent(event.actor, event.actorUser!),
+            `${fileName} at=${event.at}: actor="${event.actor}" passt nicht zu actorUser="${event.actorUser}"`,
+          ).toBe(true);
         }
       });
     });
