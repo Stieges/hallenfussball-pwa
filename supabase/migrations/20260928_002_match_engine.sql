@@ -21,8 +21,9 @@
 --   match_reduce(events, ctx, transitions, mode)             dasselbe ab match_initial_state
 --   match_server_state(state)                                toServerState (Ruling P2, K11)
 --   compute_match_state(match_id)                            STABLE, SECURITY INVOKER (R17: RLS gilt)
--- Interne Teilfunktionen (Praefix match__, Ruling S8): Validierung, Uhr, Tor, Ruecknahme,
--- Korrektur, Abschnitte, Entscheidung, Strafstossschiessen, Spielende-Pruefung.
+-- Interne Teilfunktionen (Ruling S8) im nicht exponierten Schema match_engine (Ruling S12):
+-- Validierung, Uhr, Tor, Ruecknahme, Korrektur, Abschnitte, Entscheidung, Strafstossschiessen,
+-- Spielende-Pruefung.
 --
 -- `transitions` ist ein jsonb-Array [{from,type,actor,to}] (Form von matchTransitions.json).
 -- Die reinen Funktionen lesen KEINE Tabelle (ehrliches IMMUTABLE, R1); compute_match_state liest
@@ -56,16 +57,90 @@
 --    shootoutKicks[{id,teamId,scored}], accepted{<id>: kanonischer Inhalt inkl. type},
 --    retracted[<id>], lastScoreEventId, decidedBy, finishedAt}
 --
--- Idempotent: nur CREATE OR REPLACE FUNCTION + GRANT/REVOKE. Rueckweg: DROP FUNCTION der hier
--- angelegten Funktionen (keine Daten, keine Tabellen). Produktion wendet der Controller erst nach
+-- Idempotent: CREATE SCHEMA IF NOT EXISTS, CREATE OR REPLACE FUNCTION, DROP FUNCTION IF EXISTS,
+-- GRANT/REVOKE. Rueckweg: DROP SCHEMA match_engine CASCADE + DROP FUNCTION der sechs public-
+-- Funktionen (keine Daten, keine Tabellen). Produktion wendet der Controller erst nach
 -- Freigabe an (bis dahin nur lokal/Container).
+
+
+-- ============================================================================================
+-- 0. Voraussetzungen (M6), Schema match_engine (Ruling S12)
+-- ============================================================================================
+--
+-- Fail-fast (Review M6): compute_match_state (plpgsql) liesse sich auch ohne das B2-Schema
+-- anlegen und scheiterte erst beim ersten Aufruf. Beim Live-Einspielen in falscher Reihenfolge
+-- (002 vor 001) bricht die Migration deshalb sofort ab.
+DO $$
+BEGIN
+  IF to_regclass('public.match_transitions') IS NULL THEN
+    RAISE EXCEPTION '20260928_002_match_engine: public.match_transitions fehlt -- zuerst 20260928_001_match_event_log.sql einspielen';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_attribute
+     WHERE attrelid = 'public.match_events'::regclass AND attname = 'event_format' AND NOT attisdropped
+  ) THEN
+    RAISE EXCEPTION '20260928_002_match_engine: public.match_events.event_format fehlt -- zuerst 20260928_001_match_event_log.sql einspielen';
+  END IF;
+END;
+$$;
+
+-- Ruling S12 (Review M8): die internen Teilfunktionen liegen in einem eigenen Schema, das die
+-- API (PostgREST, supabase/config.toml [api] schemas = public, graphql_public) NICHT ausliefert --
+-- keine /rpc/-Endpunkte fuer Helfer, keine Eintraege in src/types/supabase.ts. USAGE + EXECUTE
+-- fuer anon/authenticated/service_role ist trotzdem noetig: die oeffentlichen Funktionen sind
+-- SECURITY INVOKER und rufen die Helfer mit den Rechten des Aufrufers. Alle Aufrufe sind
+-- schema-qualifiziert (match_engine.x), search_path bleibt public, pg_temp.
+CREATE SCHEMA IF NOT EXISTS match_engine;
+REVOKE ALL ON SCHEMA match_engine FROM PUBLIC;
+GRANT USAGE ON SCHEMA match_engine TO anon, authenticated, service_role;
+COMMENT ON SCHEMA match_engine IS
+  'B3a/S12: interne Teilfunktionen der SQL-Rechenfunktion (20260928_002_match_engine.sql). Nicht ueber die API exponiert.';
+
+-- Aufraeumen: eine fruehere lokale Fassung dieser (noch nie live eingespielten) Migration legte
+-- die Helfer als public.match__* an. Auf frischen Datenbanken ein No-op.
+DROP FUNCTION IF EXISTS
+  public.match__is_int(jsonb),
+  public.match__is_nonneg_int(jsonb),
+  public.match__opt_nonneg_int(jsonb, text),
+  public.match__num(jsonb),
+  public.match__truthy(jsonb),
+  public.match__reject(text, jsonb),
+  public.match__ok(jsonb),
+  public.match__rules_valid(jsonb),
+  public.match__team_scores_valid(jsonb, jsonb),
+  public.match__payload_valid(jsonb, jsonb),
+  public.match__computed_score(jsonb, text),
+  public.match__effective_score(jsonb, text),
+  public.match__effective_scores(jsonb, jsonb),
+  public.match__stale_base_detail(jsonb, jsonb),
+  public.match__decided_by(jsonb),
+  public.match__snapshot(jsonb, jsonb),
+  public.match__canonical(jsonb),
+  public.match__start_clock(jsonb),
+  public.match__stop_clock(jsonb, jsonb),
+  public.match__resume_clock(jsonb, jsonb),
+  public.match__adjust_clock(jsonb, jsonb),
+  public.match__enter_decision(jsonb, text),
+  public.match__shootout_winner(jsonb, jsonb),
+  public.match__endcheck(jsonb, jsonb, jsonb),
+  public.match__apply_shootout_kick(jsonb, jsonb, jsonb),
+  public.match__apply_shootout_end(jsonb, jsonb, jsonb),
+  public.match__apply_goal(jsonb, jsonb, jsonb),
+  public.match__apply_correction(jsonb, jsonb, jsonb),
+  public.match__apply_result_entry(jsonb, jsonb, jsonb),
+  public.match__apply_section_end(jsonb, jsonb),
+  public.match__apply_section_start(jsonb, jsonb),
+  public.match__retract_target_admissible(jsonb, text, text),
+  public.match__apply_retract(jsonb, jsonb, jsonb),
+  public.match__apply_effect(jsonb, jsonb, jsonb),
+  public.match__process(jsonb, jsonb, jsonb, jsonb);
 
 
 -- ============================================================================================
 -- 1. Werte-Helfer (Ganzzahl, Zahl, JS-Wahrheitswert)
 -- ============================================================================================
 
-CREATE OR REPLACE FUNCTION public.match__is_int(p_value jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.is_int(p_value jsonb) RETURNS boolean
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -76,23 +151,23 @@ AS $$
   END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__is_nonneg_int(p_value jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.is_nonneg_int(p_value jsonb) RETURNS boolean
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
-  SELECT CASE WHEN public.match__is_int(p_value) THEN p_value::numeric >= 0 ELSE false END;
+  SELECT CASE WHEN match_engine.is_int(p_value) THEN p_value::numeric >= 0 ELSE false END;
 $$;
 
 -- zod `.optional()`: Schluessel fehlt -> gueltig; vorhanden (auch als JSON-null) -> muss passen.
-CREATE OR REPLACE FUNCTION public.match__opt_nonneg_int(p_payload jsonb, p_key text) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.opt_nonneg_int(p_payload jsonb, p_key text) RETURNS boolean
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
-  SELECT CASE WHEN p_payload ? p_key THEN public.match__is_nonneg_int(p_payload -> p_key) ELSE true END;
+  SELECT CASE WHEN p_payload ? p_key THEN match_engine.is_nonneg_int(p_payload -> p_key) ELSE true END;
 $$;
 
 -- Zahl aus jsonb, sonst NULL (TS: `event.clockMs ?? …` -- null/fehlend faellt auf den Ersatz).
-CREATE OR REPLACE FUNCTION public.match__num(p_value jsonb) RETURNS numeric
+CREATE OR REPLACE FUNCTION match_engine.num(p_value jsonb) RETURNS numeric
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -100,7 +175,7 @@ AS $$
 $$;
 
 -- JS-Wahrheitswert (TS: `!event.targetId`).
-CREATE OR REPLACE FUNCTION public.match__truthy(p_value jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.truthy(p_value jsonb) RETURNS boolean
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -114,7 +189,7 @@ AS $$
   END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__reject(p_code text, p_detail jsonb DEFAULT NULL) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.reject(p_code text, p_detail jsonb DEFAULT NULL) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -122,7 +197,7 @@ AS $$
          || CASE WHEN p_detail IS NULL THEN '{}'::jsonb ELSE jsonb_build_object('detail', p_detail) END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__ok(p_state jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.ok(p_state jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -135,7 +210,7 @@ $$;
 -- ============================================================================================
 
 -- MatchRulesSchema (types.ts): alle Schluessel Pflicht, tiebreak nullable (Schluessel Pflicht).
-CREATE OR REPLACE FUNCTION public.match__rules_valid(p_rules jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.rules_valid(p_rules jsonb) RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -143,18 +218,18 @@ BEGIN
   IF jsonb_typeof(p_rules) IS DISTINCT FROM 'object' THEN
     RETURN false;
   END IF;
-  IF NOT public.match__is_int(p_rules -> 'sections') THEN
+  IF NOT match_engine.is_int(p_rules -> 'sections') THEN
     RETURN false;
   END IF;
   IF (p_rules -> 'sections')::numeric NOT IN (1, 2, 3, 4) THEN
     RETURN false;
   END IF;
-  IF NOT (public.match__is_nonneg_int(p_rules -> 'sectionSeconds')
-          AND public.match__is_nonneg_int(p_rules -> 'breakSeconds')
-          AND public.match__is_nonneg_int(p_rules -> 'overtimeSeconds')
-          AND public.match__is_nonneg_int(p_rules -> 'shootersPerTeam')
-          AND public.match__is_nonneg_int(p_rules -> 'suddenDeathAfter')
-          AND public.match__is_nonneg_int(p_rules -> 'penaltySeconds')) THEN
+  IF NOT (match_engine.is_nonneg_int(p_rules -> 'sectionSeconds')
+          AND match_engine.is_nonneg_int(p_rules -> 'breakSeconds')
+          AND match_engine.is_nonneg_int(p_rules -> 'overtimeSeconds')
+          AND match_engine.is_nonneg_int(p_rules -> 'shootersPerTeam')
+          AND match_engine.is_nonneg_int(p_rules -> 'suddenDeathAfter')
+          AND match_engine.is_nonneg_int(p_rules -> 'penaltySeconds')) THEN
     RETURN false;
   END IF;
   IF jsonb_typeof(p_rules -> 'knockout') IS DISTINCT FROM 'boolean' THEN
@@ -172,7 +247,7 @@ END;
 $$;
 
 -- TeamScoresSchema + "genau beide Teams" (CORRECTION/RESULT_ENTRY).
-CREATE OR REPLACE FUNCTION public.match__team_scores_valid(p_scores jsonb, p_ctx jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.team_scores_valid(p_scores jsonb, p_ctx jsonb) RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -180,7 +255,7 @@ BEGIN
   IF jsonb_typeof(p_scores) IS DISTINCT FROM 'object' THEN
     RETURN false;
   END IF;
-  IF EXISTS (SELECT 1 FROM jsonb_each(p_scores) s WHERE NOT public.match__is_nonneg_int(s.value)) THEN
+  IF EXISTS (SELECT 1 FROM jsonb_each(p_scores) s WHERE NOT match_engine.is_nonneg_int(s.value)) THEN
     RETURN false;
   END IF;
   RETURN (SELECT count(*) FROM jsonb_object_keys(p_scores)) = 2
@@ -191,7 +266,7 @@ $$;
 
 -- isPayloadValid (payloadValidation.ts). Unbekannter Typ: TS wirft (kein Schema); hier
 -- INVALID_PAYLOAD (Abweichung fuer Eingaben ausserhalb des TS-Typs, im Report benannt).
-CREATE OR REPLACE FUNCTION public.match__payload_valid(p_event jsonb, p_ctx jsonb) RETURNS boolean
+CREATE OR REPLACE FUNCTION match_engine.payload_valid(p_event jsonb, p_ctx jsonb) RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -206,7 +281,7 @@ BEGIN
 
   CASE v_type
     WHEN 'MATCH_START' THEN
-      IF NOT public.match__rules_valid(v_payload -> 'rules') THEN
+      IF NOT match_engine.rules_valid(v_payload -> 'rules') THEN
         RETURN false;
       END IF;
     WHEN 'PAUSE', 'RESUME', 'SECTION_END', 'SECTION_START', 'CLOCK_ADJUST', 'MATCH_END',
@@ -219,11 +294,11 @@ BEGIN
       END IF;
     WHEN 'SHOOTOUT_KICK' THEN
       IF NOT coalesce(jsonb_typeof(v_payload -> 'scored') = 'boolean', false)
-         OR NOT public.match__opt_nonneg_int(v_payload, 'shooterNumber') THEN
+         OR NOT match_engine.opt_nonneg_int(v_payload, 'shooterNumber') THEN
         RETURN false;
       END IF;
     WHEN 'CORRECTION' THEN
-      IF NOT public.match__team_scores_valid(v_payload -> 'scores', p_ctx) THEN
+      IF NOT match_engine.team_scores_valid(v_payload -> 'scores', p_ctx) THEN
         RETURN false;
       END IF;
       IF NOT coalesce(jsonb_typeof(v_payload -> 'reason') = 'string' AND length(v_payload ->> 'reason') >= 1, false) THEN
@@ -233,7 +308,7 @@ BEGIN
         RETURN false;
       END IF;
     WHEN 'RESULT_ENTRY' THEN
-      IF NOT public.match__team_scores_valid(v_payload -> 'scores', p_ctx) THEN
+      IF NOT match_engine.team_scores_valid(v_payload -> 'scores', p_ctx) THEN
         RETURN false;
       END IF;
     WHEN 'SKIP' THEN
@@ -241,15 +316,15 @@ BEGIN
         RETURN false;
       END IF;
     WHEN 'GOAL', 'OWN_GOAL', 'YELLOW_CARD', 'YELLOW_RED_CARD', 'RED_CARD', 'SUBSTITUTION', 'FOUL' THEN
-      IF NOT public.match__opt_nonneg_int(v_payload, 'playerNumber') THEN
+      IF NOT match_engine.opt_nonneg_int(v_payload, 'playerNumber') THEN
         RETURN false;
       END IF;
     WHEN 'TIME_PENALTY' THEN
-      IF NOT public.match__opt_nonneg_int(v_payload, 'playerNumber') THEN
+      IF NOT match_engine.opt_nonneg_int(v_payload, 'playerNumber') THEN
         RETURN false;
       END IF;
       IF v_payload ? 'durationSeconds'
-         AND NOT (public.match__is_int(v_payload -> 'durationSeconds')
+         AND NOT (match_engine.is_int(v_payload -> 'durationSeconds')
                   AND (v_payload -> 'durationSeconds')::numeric > 0) THEN
         RETURN false;
       END IF;
@@ -265,7 +340,7 @@ BEGIN
     END IF;
   END IF;
 
-  IF v_type = 'RETRACT' AND NOT public.match__truthy(p_event -> 'targetId') THEN
+  IF v_type = 'RETRACT' AND NOT match_engine.truthy(p_event -> 'targetId') THEN
     RETURN false;
   END IF;
 
@@ -326,7 +401,7 @@ END;
 $$;
 
 -- computedScoreFor (types.ts): regular + overtime aus Toren, ohne Ueberschreibungen.
-CREATE OR REPLACE FUNCTION public.match__computed_score(p_state jsonb, p_team text) RETURNS numeric
+CREATE OR REPLACE FUNCTION match_engine.computed_score(p_state jsonb, p_team text) RETURNS numeric
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -335,39 +410,39 @@ AS $$
 $$;
 
 -- effectiveScoreFor (types.ts, Ruling K1): letzte Ueberschreibung + seitdem gefallene Tore.
-CREATE OR REPLACE FUNCTION public.match__effective_score(p_state jsonb, p_team text) RETURNS numeric
+CREATE OR REPLACE FUNCTION match_engine.effective_score(p_state jsonb, p_team text) RETURNS numeric
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT CASE
-    WHEN jsonb_array_length(p_state -> 'overrides') = 0 THEN public.match__computed_score(p_state, p_team)
-    ELSE coalesce(public.match__num(p_state -> 'overrides' -> -1 -> 'scores' -> p_team), 0)
-         + public.match__computed_score(p_state, p_team)
-         - coalesce(public.match__num(p_state -> 'overrides' -> -1 -> 'snapshot' -> p_team), 0)
+    WHEN jsonb_array_length(p_state -> 'overrides') = 0 THEN match_engine.computed_score(p_state, p_team)
+    ELSE coalesce(match_engine.num(p_state -> 'overrides' -> -1 -> 'scores' -> p_team), 0)
+         + match_engine.computed_score(p_state, p_team)
+         - coalesce(match_engine.num(p_state -> 'overrides' -> -1 -> 'snapshot' -> p_team), 0)
   END;
 $$;
 
 -- `{teamA: effektiv, teamB: effektiv}` in der ctx-Reihenfolge (STALE_BASE-detail).
-CREATE OR REPLACE FUNCTION public.match__effective_scores(p_state jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.effective_scores(p_state jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object(
-    p_ctx ->> 'teamAId', public.match__effective_score(p_state, p_ctx ->> 'teamAId'),
-    p_ctx ->> 'teamBId', public.match__effective_score(p_state, p_ctx ->> 'teamBId'));
+    p_ctx ->> 'teamAId', match_engine.effective_score(p_state, p_ctx ->> 'teamAId'),
+    p_ctx ->> 'teamBId', match_engine.effective_score(p_state, p_ctx ->> 'teamBId'));
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__stale_base_detail(p_state jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.stale_base_detail(p_state jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object(
-    'currentScores', public.match__effective_scores(p_state, p_ctx),
+    'currentScores', match_engine.effective_scores(p_state, p_ctx),
     'lastScoreEventId', coalesce(p_state -> 'lastScoreEventId', 'null'::jsonb));
 $$;
 
 -- decidedByFor (types.ts, K1): letzte Ueberschreibung -> correction/direct, sonst baseDecidedBy.
-CREATE OR REPLACE FUNCTION public.match__decided_by(p_state jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.decided_by(p_state jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -379,17 +454,17 @@ AS $$
 $$;
 
 -- Snapshot des aus Toren berechneten Stands (handlers/correction.ts snapshotFor).
-CREATE OR REPLACE FUNCTION public.match__snapshot(p_state jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.snapshot(p_state jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object(
-    p_ctx ->> 'teamAId', public.match__computed_score(p_state, p_ctx ->> 'teamAId'),
-    p_ctx ->> 'teamBId', public.match__computed_score(p_state, p_ctx ->> 'teamBId'));
+    p_ctx ->> 'teamAId', match_engine.computed_score(p_state, p_ctx ->> 'teamAId'),
+    p_ctx ->> 'teamBId', match_engine.computed_score(p_state, p_ctx ->> 'teamBId'));
 $$;
 
 -- K3/S6: kanonischer Inhalt fuer den Duplikat-Vergleich (ohne at/actor/actorUser).
-CREATE OR REPLACE FUNCTION public.match__canonical(p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.canonical(p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -407,58 +482,58 @@ $$;
 -- 4. Uhr (handlers/clock.ts, R2 -- Spielzeit statt Wanduhr)
 -- ============================================================================================
 
-CREATE OR REPLACE FUNCTION public.match__start_clock(p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.start_clock(p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object(
     'running', true,
-    'elapsedMs', coalesce(public.match__num(p_event -> 'clockMs'), 0),
-    'anchorAt', public.match__num(p_event -> 'at'));
+    'elapsedMs', coalesce(match_engine.num(p_event -> 'clockMs'), 0),
+    'anchorAt', match_engine.num(p_event -> 'at'));
 $$;
 
 -- PAUSE/MATCH_END/SECTION_END/Golden Goal: nur eine laufende Uhr wird neu berechnet.
-CREATE OR REPLACE FUNCTION public.match__stop_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.stop_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_at numeric := public.match__num(p_event -> 'at');
+  v_at numeric := match_engine.num(p_event -> 'at');
 BEGIN
   IF NOT (p_clock -> 'running')::boolean THEN
     RETURN p_clock;
   END IF;
   RETURN jsonb_build_object(
     'running', false,
-    'elapsedMs', coalesce(public.match__num(p_event -> 'clockMs'),
+    'elapsedMs', coalesce(match_engine.num(p_event -> 'clockMs'),
                           (p_clock -> 'elapsedMs')::numeric
-                          + (v_at - coalesce(public.match__num(p_clock -> 'anchorAt'), v_at))),
+                          + (v_at - coalesce(match_engine.num(p_clock -> 'anchorAt'), v_at))),
     'anchorAt', NULL);
 END;
 $$;
 
 -- RESUME/REOPEN/SECTION_START.
-CREATE OR REPLACE FUNCTION public.match__resume_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.resume_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT jsonb_build_object(
     'running', true,
-    'anchorAt', public.match__num(p_event -> 'at'),
-    'elapsedMs', coalesce(public.match__num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric));
+    'anchorAt', match_engine.num(p_event -> 'at'),
+    'elapsedMs', coalesce(match_engine.num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric));
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__adjust_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.adjust_clock(p_clock jsonb, p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT CASE
     WHEN (p_clock -> 'running')::boolean THEN jsonb_build_object(
       'running', true,
-      'elapsedMs', coalesce(public.match__num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric),
-      'anchorAt', public.match__num(p_event -> 'at'))
+      'elapsedMs', coalesce(match_engine.num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric),
+      'anchorAt', match_engine.num(p_event -> 'at'))
     ELSE p_clock || jsonb_build_object(
-      'elapsedMs', coalesce(public.match__num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric))
+      'elapsedMs', coalesce(match_engine.num(p_event -> 'clockMs'), (p_clock -> 'elapsedMs')::numeric))
   END;
 $$;
 
@@ -469,7 +544,7 @@ $$;
 
 -- enterDecision: shootout -> Strafstossschiessen; overtime-then-shootout/goldenGoal -> Pause vor
 -- der Verlaengerung (section = sections + 1); ohne Modus decision_pending.
-CREATE OR REPLACE FUNCTION public.match__enter_decision(p_state jsonb, p_mode text) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.enter_decision(p_state jsonb, p_mode text) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -478,7 +553,7 @@ AS $$
     WHEN p_mode IN ('overtime-then-shootout', 'goldenGoal') THEN p_state || jsonb_build_object(
       'status', 'section_break',
       'phase', 'overtime',
-      'section', coalesce(public.match__num(p_state -> 'rules' -> 'sections'), 1) + 1)
+      'section', coalesce(match_engine.num(p_state -> 'rules' -> 'sections'), 1) + 1)
     ELSE p_state || '{"status": "decision_pending"}'::jsonb
   END;
 $$;
@@ -486,14 +561,14 @@ $$;
 -- shootoutWinner: Sieger-Team-ID oder NULL. (a) uneinholbar innerhalb von shootersPerTeam,
 -- (b) Sudden Death bei gleicher Schusszahl >= shootersPerTeam und ungleichen Treffern.
 -- suddenDeathAfter wird wie in TS bewusst nicht ausgewertet.
-CREATE OR REPLACE FUNCTION public.match__shootout_winner(p_state jsonb, p_ctx jsonb) RETURNS text
+CREATE OR REPLACE FUNCTION match_engine.shootout_winner(p_state jsonb, p_ctx jsonb) RETURNS text
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_team_a text := p_ctx ->> 'teamAId';
   v_team_b text := p_ctx ->> 'teamBId';
-  v_shooters numeric := coalesce(public.match__num(p_state -> 'rules' -> 'shootersPerTeam'), 0);
+  v_shooters numeric := coalesce(match_engine.num(p_state -> 'rules' -> 'shootersPerTeam'), 0);
   v_a_kicks numeric;
   v_a_goals numeric;
   v_b_kicks numeric;
@@ -523,13 +598,13 @@ $$;
 
 -- runEndCheck (@endcheck, R5): kein K.o. oder kein Remis -> finished (regular/overtime/goldenGoal);
 -- K.o.-Remis nach Verlaengerung -> Strafstossschiessen; nach regulaerer Zeit -> je Modus.
-CREATE OR REPLACE FUNCTION public.match__endcheck(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.endcheck(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_is_draw boolean := public.match__effective_score(p_state, p_ctx ->> 'teamAId')
-                       = public.match__effective_score(p_state, p_ctx ->> 'teamBId');
+  v_is_draw boolean := match_engine.effective_score(p_state, p_ctx ->> 'teamAId')
+                       = match_engine.effective_score(p_state, p_ctx ->> 'teamBId');
   v_is_knockout boolean := coalesce(p_state -> 'rules' -> 'knockout' = 'true'::jsonb, false);
   v_phase text := p_state ->> 'phase';
 BEGIN
@@ -541,16 +616,16 @@ BEGIN
         WHEN p_event ->> 'type' IN ('GOAL', 'OWN_GOAL') THEN 'goldenGoal'
         ELSE 'overtime'
       END,
-      'finishedAt', public.match__num(p_event -> 'at'));
+      'finishedAt', match_engine.num(p_event -> 'at'));
   END IF;
   IF v_phase = 'overtime' THEN
     RETURN p_state || '{"status": "shootout", "phase": "shootout"}'::jsonb;
   END IF;
-  RETURN public.match__enter_decision(p_state, p_state ->> 'tiebreakMode');
+  RETURN match_engine.enter_decision(p_state, p_state ->> 'tiebreakMode');
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__apply_shootout_kick(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_shootout_kick(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -559,8 +634,8 @@ DECLARE
   v_state jsonb;
 BEGIN
   -- B-U13: Sieger steht schon fest (Zustand VOR dem Schuss) -> Geraet muss SHOOTOUT_END senden.
-  IF public.match__shootout_winner(p_state, p_ctx) IS NOT NULL THEN
-    RETURN public.match__reject('INVALID_TRANSITION', '{"reason": "WINNER_DETERMINED"}'::jsonb);
+  IF match_engine.shootout_winner(p_state, p_ctx) IS NOT NULL THEN
+    RETURN match_engine.reject('INVALID_TRANSITION', '{"reason": "WINNER_DETERMINED"}'::jsonb);
   END IF;
   v_state := jsonb_set(p_state, '{shootoutKicks}', (p_state -> 'shootoutKicks') || jsonb_build_array(
     jsonb_build_object('id', p_event -> 'id', 'teamId', p_event -> 'teamId', 'scored', p_event -> 'payload' -> 'scored')));
@@ -568,22 +643,22 @@ BEGIN
     v_state := jsonb_set(v_state, ARRAY['scores', v_team, 'shootout'],
                          to_jsonb((v_state -> 'scores' -> v_team -> 'shootout')::numeric + 1));
   END IF;
-  RETURN public.match__ok(v_state);
+  RETURN match_engine.ok(v_state);
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__apply_shootout_end(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_shootout_end(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT CASE
-    WHEN public.match__shootout_winner(p_state, p_ctx) IS NULL THEN public.match__reject('NO_WINNER', jsonb_build_object(
+    WHEN match_engine.shootout_winner(p_state, p_ctx) IS NULL THEN match_engine.reject('NO_WINNER', jsonb_build_object(
       'shootoutScores', jsonb_build_object(
         p_ctx ->> 'teamAId', p_state -> 'scores' -> (p_ctx ->> 'teamAId') -> 'shootout',
         p_ctx ->> 'teamBId', p_state -> 'scores' -> (p_ctx ->> 'teamBId') -> 'shootout')))
-    ELSE public.match__ok(p_state || jsonb_build_object(
+    ELSE match_engine.ok(p_state || jsonb_build_object(
       'baseDecidedBy', 'shootout',
-      'finishedAt', public.match__num(p_event -> 'at')))
+      'finishedAt', match_engine.num(p_event -> 'at')))
   END;
 $$;
 
@@ -594,7 +669,7 @@ $$;
 
 -- applyGoal (records.ts) + Golden Goal (applyEvent.ts applyGoalEvent, B-U3). K5: Tor merkt sich
 -- seine Phase; S7: Log-Position ueber nextSeq.
-CREATE OR REPLACE FUNCTION public.match__apply_goal(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_goal(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -618,27 +693,27 @@ BEGIN
     'lastScoreEventId', p_event -> 'id');
 
   IF v_state ->> 'phase' = 'overtime' AND v_state ->> 'tiebreakMode' = 'goldenGoal' THEN
-    v_state := jsonb_set(v_state, '{clock}', public.match__stop_clock(v_state -> 'clock', p_event));
-    v_state := public.match__endcheck(v_state, p_event, p_ctx);
+    v_state := jsonb_set(v_state, '{clock}', match_engine.stop_clock(v_state -> 'clock', p_event));
+    v_state := match_engine.endcheck(v_state, p_event, p_ctx);
   END IF;
   RETURN v_state;
 END;
 $$;
 
 -- CORRECTION (R8, K1): basedOn muss letztem standaendernden Ereignis entsprechen, sonst STALE_BASE.
-CREATE OR REPLACE FUNCTION public.match__apply_correction(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_correction(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT CASE
     WHEN (p_event -> 'payload' -> 'basedOn') IS DISTINCT FROM coalesce(p_state -> 'lastScoreEventId', 'null'::jsonb)
-      THEN public.match__reject('STALE_BASE', public.match__stale_base_detail(p_state, p_ctx))
-    ELSE public.match__ok(p_state || jsonb_build_object(
+      THEN match_engine.reject('STALE_BASE', match_engine.stale_base_detail(p_state, p_ctx))
+    ELSE match_engine.ok(p_state || jsonb_build_object(
       'overrides', (p_state -> 'overrides') || jsonb_build_array(jsonb_build_object(
         'id', p_event -> 'id',
         'kind', 'correction',
         'scores', p_event -> 'payload' -> 'scores',
-        'snapshot', public.match__snapshot(p_state, p_ctx),
+        'snapshot', match_engine.snapshot(p_state, p_ctx),
         'seq', p_state -> 'nextSeq')),
       'nextSeq', (p_state -> 'nextSeq')::numeric + 1,
       'lastScoreEventId', p_event -> 'id'))
@@ -646,7 +721,7 @@ AS $$
 $$;
 
 -- RESULT_ENTRY (K1): Direkteintrag als Ueberschreibung, beendet das Spiel (Status via Tabelle).
-CREATE OR REPLACE FUNCTION public.match__apply_result_entry(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_result_entry(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -655,35 +730,35 @@ AS $$
       'id', p_event -> 'id',
       'kind', 'direct',
       'scores', p_event -> 'payload' -> 'scores',
-      'snapshot', public.match__snapshot(p_state, p_ctx),
+      'snapshot', match_engine.snapshot(p_state, p_ctx),
       'seq', p_state -> 'nextSeq')),
     'nextSeq', (p_state -> 'nextSeq')::numeric + 1,
-    'finishedAt', public.match__num(p_event -> 'at'),
+    'finishedAt', match_engine.num(p_event -> 'at'),
     'lastScoreEventId', p_event -> 'id');
 $$;
 
 -- SECTION_END (B-U14/B-U2): in der Verlaengerung OVERTIME, im letzten Abschnitt LAST_SECTION.
-CREATE OR REPLACE FUNCTION public.match__apply_section_end(p_state jsonb, p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_section_end(p_state jsonb, p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT CASE
     WHEN p_state ->> 'phase' <> 'regular'
-      THEN public.match__reject('INVALID_TRANSITION', '{"reason": "OVERTIME"}'::jsonb)
-    WHEN (p_state -> 'section')::numeric >= coalesce(public.match__num(p_state -> 'rules' -> 'sections'), 1)
-      THEN public.match__reject('INVALID_TRANSITION', '{"reason": "LAST_SECTION"}'::jsonb)
-    ELSE public.match__ok(jsonb_set(p_state, '{clock}', public.match__stop_clock(p_state -> 'clock', p_event)))
+      THEN match_engine.reject('INVALID_TRANSITION', '{"reason": "OVERTIME"}'::jsonb)
+    WHEN (p_state -> 'section')::numeric >= coalesce(match_engine.num(p_state -> 'rules' -> 'sections'), 1)
+      THEN match_engine.reject('INVALID_TRANSITION', '{"reason": "LAST_SECTION"}'::jsonb)
+    ELSE match_engine.ok(jsonb_set(p_state, '{clock}', match_engine.stop_clock(p_state -> 'clock', p_event)))
   END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__apply_section_start(p_state jsonb, p_event jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_section_start(p_state jsonb, p_event jsonb) RETURNS jsonb
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
   SELECT p_state || jsonb_build_object(
     'section', CASE WHEN p_state ->> 'phase' = 'regular' THEN (p_state -> 'section')::numeric + 1
                     ELSE (p_state -> 'section')::numeric END,
-    'clock', public.match__resume_clock(p_state -> 'clock', p_event));
+    'clock', match_engine.resume_clock(p_state -> 'clock', p_event));
 $$;
 
 
@@ -693,7 +768,7 @@ $$;
 
 -- Zieltyp-Zulaessigkeit je Status/Phase (K10, B-U10, B-U6/B-U12, B-U15) -- false => INVALID_PAYLOAD.
 -- Die Tor-Phase kommt aus `goals` (bleibt auch nach Ruecknahme erhalten).
-CREATE OR REPLACE FUNCTION public.match__retract_target_admissible(p_state jsonb, p_target_id text, p_target_type text)
+CREATE OR REPLACE FUNCTION match_engine.retract_target_admissible(p_state jsonb, p_target_id text, p_target_type text)
 RETURNS boolean
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
@@ -728,7 +803,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.match__apply_retract(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_retract(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -742,18 +817,18 @@ DECLARE
   v_kick jsonb;
 BEGIN
   IF v_target IS NULL THEN
-    RETURN public.match__reject('UNKNOWN_TARGET');
+    RETURN match_engine.reject('UNKNOWN_TARGET');
   END IF;
   v_target_type := v_target ->> 'type';
-  IF NOT public.match__retract_target_admissible(p_state, v_target_id, v_target_type) THEN
-    RETURN public.match__reject('INVALID_PAYLOAD');
+  IF NOT match_engine.retract_target_admissible(p_state, v_target_id, v_target_type) THEN
+    RETURN match_engine.reject('INVALID_PAYLOAD');
   END IF;
   -- K2: eine CORRECTION nimmt nur die Turnierleitung zurueck.
   IF v_target_type = 'CORRECTION' AND (p_event -> 'actor') IS DISTINCT FROM '"leitung"'::jsonb THEN
-    RETURN public.match__reject('FORBIDDEN_ACTOR');
+    RETURN match_engine.reject('FORBIDDEN_ACTOR');
   END IF;
   IF (p_state -> 'retracted') ? v_target_id THEN
-    RETURN public.match__reject('ALREADY_RETRACTED');
+    RETURN match_engine.reject('ALREADY_RETRACTED');
   END IF;
 
   v_state := jsonb_set(p_state, '{retracted}', (p_state -> 'retracted') || to_jsonb(v_target_id));
@@ -765,17 +840,17 @@ BEGIN
     -- K9: Tor vor der letzten aktiven Ueberschreibung -> STALE_BASE (Detail wie CORRECTION).
     IF v_goal IS NOT NULL AND v_last_override IS NOT NULL
        AND (v_goal -> 'seq')::numeric < (v_last_override -> 'seq')::numeric THEN
-      RETURN public.match__reject('STALE_BASE', public.match__stale_base_detail(p_state, p_ctx));
+      RETURN match_engine.reject('STALE_BASE', match_engine.stale_base_detail(p_state, p_ctx));
     END IF;
     IF v_goal IS NOT NULL THEN
       v_state := jsonb_set(v_state, ARRAY['scores', v_goal ->> 'scoringTeamId', v_goal ->> 'phase'],
         to_jsonb((v_state -> 'scores' -> (v_goal ->> 'scoringTeamId') -> (v_goal ->> 'phase'))::numeric - 1));
     END IF;
-    RETURN public.match__ok(v_state || jsonb_build_object('lastScoreEventId', p_event -> 'id'));
+    RETURN match_engine.ok(v_state || jsonb_build_object('lastScoreEventId', p_event -> 'id'));
   END IF;
 
   IF v_target_type = 'CORRECTION' THEN
-    RETURN public.match__ok(v_state || jsonb_build_object(
+    RETURN match_engine.ok(v_state || jsonb_build_object(
       'overrides', coalesce((SELECT jsonb_agg(o ORDER BY ord)
                              FROM jsonb_array_elements(p_state -> 'overrides') WITH ORDINALITY AS x(o, ord)
                              WHERE o ->> 'id' IS DISTINCT FROM v_target_id), '[]'::jsonb),
@@ -787,7 +862,7 @@ BEGIN
     SELECT k INTO v_kick FROM jsonb_array_elements(p_state -> 'shootoutKicks') WITH ORDINALITY AS x(k, ord)
       WHERE k ->> 'id' = v_target_id ORDER BY ord LIMIT 1;
     IF v_kick IS NULL THEN
-      RETURN public.match__ok(v_state);
+      RETURN match_engine.ok(v_state);
     END IF;
     v_state := jsonb_set(v_state, '{shootoutKicks}', coalesce((
       SELECT jsonb_agg(k ORDER BY ord)
@@ -797,11 +872,11 @@ BEGIN
       v_state := jsonb_set(v_state, ARRAY['scores', v_kick ->> 'teamId', 'shootout'],
         to_jsonb((v_state -> 'scores' -> (v_kick ->> 'teamId') -> 'shootout')::numeric - 1));
     END IF;
-    RETURN public.match__ok(v_state);
+    RETURN match_engine.ok(v_state);
   END IF;
 
   -- Karten/Zeitstrafe/Foul/Wechsel: nur TS fuehrt die Listen (R18) -- hier zaehlt die Ruecknahme.
-  RETURN public.match__ok(v_state);
+  RETURN match_engine.ok(v_state);
 END;
 $$;
 
@@ -811,7 +886,7 @@ $$;
 -- ============================================================================================
 
 -- applyTypeSpecificEffect (applyEvent.ts): liefert {status:'ok',state} oder eine Ablehnung.
-CREATE OR REPLACE FUNCTION public.match__apply_effect(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
+CREATE OR REPLACE FUNCTION match_engine.apply_effect(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
 AS $$
@@ -822,53 +897,53 @@ BEGIN
   CASE p_event ->> 'type'
     WHEN 'MATCH_START' THEN
       v_rules := p_event -> 'payload' -> 'rules';
-      RETURN public.match__ok(p_state || jsonb_build_object(
+      RETURN match_engine.ok(p_state || jsonb_build_object(
         'rules', v_rules,
         'tiebreakMode', coalesce(v_rules -> 'tiebreak', 'null'::jsonb),
         'phase', 'regular',
         'section', 1,
-        'clock', public.match__start_clock(p_event)));
+        'clock', match_engine.start_clock(p_event)));
     WHEN 'PAUSE', 'MATCH_END' THEN
-      RETURN public.match__ok(jsonb_set(p_state, '{clock}', public.match__stop_clock(p_state -> 'clock', p_event)));
+      RETURN match_engine.ok(jsonb_set(p_state, '{clock}', match_engine.stop_clock(p_state -> 'clock', p_event)));
     WHEN 'RESUME' THEN
-      RETURN public.match__ok(jsonb_set(p_state, '{clock}', public.match__resume_clock(p_state -> 'clock', p_event)));
+      RETURN match_engine.ok(jsonb_set(p_state, '{clock}', match_engine.resume_clock(p_state -> 'clock', p_event)));
     WHEN 'REOPEN' THEN
       -- B-U11: nach Strafstossschiessen nicht wiedereroeffnen (Leitung korrigiert per CORRECTION).
       IF p_state ->> 'phase' = 'shootout' THEN
-        RETURN public.match__reject('INVALID_TRANSITION', '{"reason": "SHOOTOUT_FINISHED"}'::jsonb);
+        RETURN match_engine.reject('INVALID_TRANSITION', '{"reason": "SHOOTOUT_FINISHED"}'::jsonb);
       END IF;
-      RETURN public.match__ok(p_state || jsonb_build_object(
-        'clock', public.match__resume_clock(p_state -> 'clock', p_event),
+      RETURN match_engine.ok(p_state || jsonb_build_object(
+        'clock', match_engine.resume_clock(p_state -> 'clock', p_event),
         'finishedAt', NULL,
         'baseDecidedBy', NULL));
     WHEN 'CLOCK_ADJUST' THEN
-      RETURN public.match__ok(jsonb_set(p_state, '{clock}', public.match__adjust_clock(p_state -> 'clock', p_event)));
+      RETURN match_engine.ok(jsonb_set(p_state, '{clock}', match_engine.adjust_clock(p_state -> 'clock', p_event)));
     WHEN 'GOAL', 'OWN_GOAL' THEN
-      RETURN public.match__ok(public.match__apply_goal(p_state, p_event, p_ctx));
+      RETURN match_engine.ok(match_engine.apply_goal(p_state, p_event, p_ctx));
     WHEN 'RETRACT' THEN
-      RETURN public.match__apply_retract(p_state, p_event, p_ctx);
+      RETURN match_engine.apply_retract(p_state, p_event, p_ctx);
     WHEN 'CORRECTION' THEN
-      RETURN public.match__apply_correction(p_state, p_event, p_ctx);
+      RETURN match_engine.apply_correction(p_state, p_event, p_ctx);
     WHEN 'SECTION_END' THEN
-      RETURN public.match__apply_section_end(p_state, p_event);
+      RETURN match_engine.apply_section_end(p_state, p_event);
     WHEN 'SECTION_START' THEN
-      RETURN public.match__ok(public.match__apply_section_start(p_state, p_event));
+      RETURN match_engine.ok(match_engine.apply_section_start(p_state, p_event));
     WHEN 'TIEBREAK_CHOICE' THEN
       v_mode := CASE p_event -> 'payload' ->> 'choice'
         WHEN 'overtime' THEN 'overtime-then-shootout'
         WHEN 'goldenGoal' THEN 'goldenGoal'
         ELSE 'shootout'
       END;
-      RETURN public.match__ok(public.match__enter_decision(p_state || jsonb_build_object('tiebreakMode', v_mode), v_mode));
+      RETURN match_engine.ok(match_engine.enter_decision(p_state || jsonb_build_object('tiebreakMode', v_mode), v_mode));
     WHEN 'SHOOTOUT_KICK' THEN
-      RETURN public.match__apply_shootout_kick(p_state, p_event, p_ctx);
+      RETURN match_engine.apply_shootout_kick(p_state, p_event, p_ctx);
     WHEN 'SHOOTOUT_END' THEN
-      RETURN public.match__apply_shootout_end(p_state, p_event, p_ctx);
+      RETURN match_engine.apply_shootout_end(p_state, p_event, p_ctx);
     WHEN 'RESULT_ENTRY' THEN
-      RETURN public.match__ok(public.match__apply_result_entry(p_state, p_event, p_ctx));
+      RETURN match_engine.ok(match_engine.apply_result_entry(p_state, p_event, p_ctx));
     ELSE
       -- Karten/Zeitstrafe/Foul/Wechsel (nur TS-Listen, R18), SKIP/UNSKIP (reiner Statuswechsel).
-      RETURN public.match__ok(p_state);
+      RETURN match_engine.ok(p_state);
   END CASE;
 END;
 $$;
@@ -886,8 +961,8 @@ DECLARE
   v_state jsonb;
 BEGIN
   -- 1. Payload (zod) -> INVALID_PAYLOAD.
-  IF NOT public.match__payload_valid(event, ctx) THEN
-    RETURN public.match__reject('INVALID_PAYLOAD');
+  IF NOT match_engine.payload_valid(event, ctx) THEN
+    RETURN match_engine.reject('INVALID_PAYLOAD');
   END IF;
 
   -- 2. R9/K8/B-U7: weiteres Spielende ist noop.
@@ -902,36 +977,36 @@ BEGIN
    ORDER BY ord
    LIMIT 1;
   IF v_row IS NULL THEN
-    RETURN public.match__reject(CASE WHEN v_status = 'finished' THEN 'MATCH_FINISHED' ELSE 'INVALID_TRANSITION' END);
+    RETURN match_engine.reject(CASE WHEN v_status = 'finished' THEN 'MATCH_FINISHED' ELSE 'INVALID_TRANSITION' END);
   END IF;
 
   -- 4. Akteur (R7): helper-Zeile erlaubt Helfer UND Turnierleitung.
   IF NOT (v_row ->> 'actor' = 'helper' OR coalesce(event -> 'actor' = '"leitung"'::jsonb, false)) THEN
-    RETURN public.match__reject('FORBIDDEN_ACTOR');
+    RETURN match_engine.reject('FORBIDDEN_ACTOR');
   END IF;
 
   -- 5. Typspezifische Wirkung, dann `to`.
-  v_effect := public.match__apply_effect(state, event, ctx);
+  v_effect := match_engine.apply_effect(state, event, ctx);
   IF v_effect ->> 'status' = 'rejected' THEN
     RETURN v_effect;
   END IF;
   v_state := v_effect -> 'state';
   IF v_row ->> 'to' = '@endcheck' THEN
-    v_state := public.match__endcheck(v_state, event, ctx);
+    v_state := match_engine.endcheck(v_state, event, ctx);
   ELSIF v_row ->> 'to' <> '=' THEN
     v_state := v_state || jsonb_build_object('status', v_row ->> 'to');
   END IF;
 
   -- K1: decidedBy zentral ableiten; Ereignis als angenommen fuehren (kanonisch, K3).
   v_state := v_state || jsonb_build_object(
-    'decidedBy', public.match__decided_by(v_state),
-    'accepted', (v_state -> 'accepted') || jsonb_build_object(event ->> 'id', public.match__canonical(event)));
+    'decidedBy', match_engine.decided_by(v_state),
+    'accepted', (v_state -> 'accepted') || jsonb_build_object(event ->> 'id', match_engine.canonical(event)));
   RETURN jsonb_build_object('status', 'accepted', 'state', v_state);
 END;
 $$;
 
 -- processEvent (reduceMatch.ts): Duplikat/ID_CONFLICT (R11, K3) vor applyEvent.
-CREATE OR REPLACE FUNCTION public.match__process(p_state jsonb, p_event jsonb, p_ctx jsonb, p_transitions jsonb)
+CREATE OR REPLACE FUNCTION match_engine.process(p_state jsonb, p_event jsonb, p_ctx jsonb, p_transitions jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
@@ -941,7 +1016,7 @@ DECLARE
   v_outcome jsonb;
 BEGIN
   IF v_existing IS NOT NULL THEN
-    IF v_existing = public.match__canonical(p_event) THEN
+    IF v_existing = match_engine.canonical(p_event) THEN
       RETURN jsonb_build_object('state', p_state,
                                 'result', jsonb_build_object('id', p_event -> 'id', 'status', 'duplicate'));
     END IF;
@@ -989,7 +1064,7 @@ BEGIN
       CONTINUE;
     END IF;
 
-    v_step := public.match__process(v_state, v_event, ctx, transitions);
+    v_step := match_engine.process(v_state, v_event, ctx, transitions);
     v_state := v_step -> 'state';
     v_results := v_results || jsonb_build_array(v_step -> 'result');
 
@@ -1029,7 +1104,7 @@ AS $$
         'regular', s.value -> 'regular', 'overtime', s.value -> 'overtime', 'shootout', s.value -> 'shootout'))
       FROM jsonb_each(state -> 'scores') AS s), '{}'::jsonb),
     'effectiveScores', coalesce((
-      SELECT jsonb_object_agg(s.key, public.match__effective_score(state, s.key))
+      SELECT jsonb_object_agg(s.key, match_engine.effective_score(state, s.key))
       FROM jsonb_each(state -> 'scores') AS s), '{}'::jsonb),
     'shootoutKicks', coalesce((
       SELECT jsonb_agg(jsonb_build_object('id', k -> 'id', 'teamId', k -> 'teamId', 'scored', k -> 'scored') ORDER BY ord)
@@ -1103,51 +1178,52 @@ $$;
 -- ============================================================================================
 --
 -- compute_match_state: authenticated + anon (liest nur, was RLS erlaubt; Public View/Monitor).
--- Reine Funktionen inkl. interner Teilfunktionen: REVOKE ALL FROM PUBLIC, EXECUTE fuer
--- authenticated, anon, service_role. Die Teilfunktionen MUESSEN mitgegeben werden, weil
+-- Reine Funktionen (6 in public) und interne Teilfunktionen (35 in match_engine, Schema-USAGE
+-- siehe Abschnitt 0): REVOKE ALL FROM PUBLIC, EXECUTE fuer authenticated, anon, service_role.
+-- Die Teilfunktionen MUESSEN mitgegeben werden, weil
 -- compute_match_state SECURITY INVOKER ist -- sie laufen mit den Rechten des Aufrufers. Sie
 -- lesen nichts und schreiben nichts (unschaedlich). service_role zusaetzlich auch fuer
 -- compute_match_state (Server-Werkzeuge, RLS-frei; keine Erweiterung gegenueber heute, die Rolle
 -- liest die Tabellen ohnehin).
 
 REVOKE ALL ON FUNCTION
-  public.match__is_int(jsonb),
-  public.match__is_nonneg_int(jsonb),
-  public.match__opt_nonneg_int(jsonb, text),
-  public.match__num(jsonb),
-  public.match__truthy(jsonb),
-  public.match__reject(text, jsonb),
-  public.match__ok(jsonb),
-  public.match__rules_valid(jsonb),
-  public.match__team_scores_valid(jsonb, jsonb),
-  public.match__payload_valid(jsonb, jsonb),
+  match_engine.is_int(jsonb),
+  match_engine.is_nonneg_int(jsonb),
+  match_engine.opt_nonneg_int(jsonb, text),
+  match_engine.num(jsonb),
+  match_engine.truthy(jsonb),
+  match_engine.reject(text, jsonb),
+  match_engine.ok(jsonb),
+  match_engine.rules_valid(jsonb),
+  match_engine.team_scores_valid(jsonb, jsonb),
+  match_engine.payload_valid(jsonb, jsonb),
+  match_engine.computed_score(jsonb, text),
+  match_engine.effective_score(jsonb, text),
+  match_engine.effective_scores(jsonb, jsonb),
+  match_engine.stale_base_detail(jsonb, jsonb),
+  match_engine.decided_by(jsonb),
+  match_engine.snapshot(jsonb, jsonb),
+  match_engine.canonical(jsonb),
+  match_engine.start_clock(jsonb),
+  match_engine.stop_clock(jsonb, jsonb),
+  match_engine.resume_clock(jsonb, jsonb),
+  match_engine.adjust_clock(jsonb, jsonb),
+  match_engine.enter_decision(jsonb, text),
+  match_engine.shootout_winner(jsonb, jsonb),
+  match_engine.endcheck(jsonb, jsonb, jsonb),
+  match_engine.apply_shootout_kick(jsonb, jsonb, jsonb),
+  match_engine.apply_shootout_end(jsonb, jsonb, jsonb),
+  match_engine.apply_goal(jsonb, jsonb, jsonb),
+  match_engine.apply_correction(jsonb, jsonb, jsonb),
+  match_engine.apply_result_entry(jsonb, jsonb, jsonb),
+  match_engine.apply_section_end(jsonb, jsonb),
+  match_engine.apply_section_start(jsonb, jsonb),
+  match_engine.retract_target_admissible(jsonb, text, text),
+  match_engine.apply_retract(jsonb, jsonb, jsonb),
+  match_engine.apply_effect(jsonb, jsonb, jsonb),
+  match_engine.process(jsonb, jsonb, jsonb, jsonb),
   public.match_initial_state(jsonb),
-  public.match__computed_score(jsonb, text),
-  public.match__effective_score(jsonb, text),
-  public.match__effective_scores(jsonb, jsonb),
-  public.match__stale_base_detail(jsonb, jsonb),
-  public.match__decided_by(jsonb),
-  public.match__snapshot(jsonb, jsonb),
-  public.match__canonical(jsonb),
-  public.match__start_clock(jsonb),
-  public.match__stop_clock(jsonb, jsonb),
-  public.match__resume_clock(jsonb, jsonb),
-  public.match__adjust_clock(jsonb, jsonb),
-  public.match__enter_decision(jsonb, text),
-  public.match__shootout_winner(jsonb, jsonb),
-  public.match__endcheck(jsonb, jsonb, jsonb),
-  public.match__apply_shootout_kick(jsonb, jsonb, jsonb),
-  public.match__apply_shootout_end(jsonb, jsonb, jsonb),
-  public.match__apply_goal(jsonb, jsonb, jsonb),
-  public.match__apply_correction(jsonb, jsonb, jsonb),
-  public.match__apply_result_entry(jsonb, jsonb, jsonb),
-  public.match__apply_section_end(jsonb, jsonb),
-  public.match__apply_section_start(jsonb, jsonb),
-  public.match__retract_target_admissible(jsonb, text, text),
-  public.match__apply_retract(jsonb, jsonb, jsonb),
-  public.match__apply_effect(jsonb, jsonb, jsonb),
   public.match_apply_event(jsonb, jsonb, jsonb, jsonb),
-  public.match__process(jsonb, jsonb, jsonb, jsonb),
   public.match_continue(jsonb, jsonb, jsonb, jsonb, text),
   public.match_reduce(jsonb, jsonb, jsonb, text),
   public.match_server_state(jsonb),
@@ -1155,43 +1231,43 @@ REVOKE ALL ON FUNCTION
 FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION
-  public.match__is_int(jsonb),
-  public.match__is_nonneg_int(jsonb),
-  public.match__opt_nonneg_int(jsonb, text),
-  public.match__num(jsonb),
-  public.match__truthy(jsonb),
-  public.match__reject(text, jsonb),
-  public.match__ok(jsonb),
-  public.match__rules_valid(jsonb),
-  public.match__team_scores_valid(jsonb, jsonb),
-  public.match__payload_valid(jsonb, jsonb),
+  match_engine.is_int(jsonb),
+  match_engine.is_nonneg_int(jsonb),
+  match_engine.opt_nonneg_int(jsonb, text),
+  match_engine.num(jsonb),
+  match_engine.truthy(jsonb),
+  match_engine.reject(text, jsonb),
+  match_engine.ok(jsonb),
+  match_engine.rules_valid(jsonb),
+  match_engine.team_scores_valid(jsonb, jsonb),
+  match_engine.payload_valid(jsonb, jsonb),
+  match_engine.computed_score(jsonb, text),
+  match_engine.effective_score(jsonb, text),
+  match_engine.effective_scores(jsonb, jsonb),
+  match_engine.stale_base_detail(jsonb, jsonb),
+  match_engine.decided_by(jsonb),
+  match_engine.snapshot(jsonb, jsonb),
+  match_engine.canonical(jsonb),
+  match_engine.start_clock(jsonb),
+  match_engine.stop_clock(jsonb, jsonb),
+  match_engine.resume_clock(jsonb, jsonb),
+  match_engine.adjust_clock(jsonb, jsonb),
+  match_engine.enter_decision(jsonb, text),
+  match_engine.shootout_winner(jsonb, jsonb),
+  match_engine.endcheck(jsonb, jsonb, jsonb),
+  match_engine.apply_shootout_kick(jsonb, jsonb, jsonb),
+  match_engine.apply_shootout_end(jsonb, jsonb, jsonb),
+  match_engine.apply_goal(jsonb, jsonb, jsonb),
+  match_engine.apply_correction(jsonb, jsonb, jsonb),
+  match_engine.apply_result_entry(jsonb, jsonb, jsonb),
+  match_engine.apply_section_end(jsonb, jsonb),
+  match_engine.apply_section_start(jsonb, jsonb),
+  match_engine.retract_target_admissible(jsonb, text, text),
+  match_engine.apply_retract(jsonb, jsonb, jsonb),
+  match_engine.apply_effect(jsonb, jsonb, jsonb),
+  match_engine.process(jsonb, jsonb, jsonb, jsonb),
   public.match_initial_state(jsonb),
-  public.match__computed_score(jsonb, text),
-  public.match__effective_score(jsonb, text),
-  public.match__effective_scores(jsonb, jsonb),
-  public.match__stale_base_detail(jsonb, jsonb),
-  public.match__decided_by(jsonb),
-  public.match__snapshot(jsonb, jsonb),
-  public.match__canonical(jsonb),
-  public.match__start_clock(jsonb),
-  public.match__stop_clock(jsonb, jsonb),
-  public.match__resume_clock(jsonb, jsonb),
-  public.match__adjust_clock(jsonb, jsonb),
-  public.match__enter_decision(jsonb, text),
-  public.match__shootout_winner(jsonb, jsonb),
-  public.match__endcheck(jsonb, jsonb, jsonb),
-  public.match__apply_shootout_kick(jsonb, jsonb, jsonb),
-  public.match__apply_shootout_end(jsonb, jsonb, jsonb),
-  public.match__apply_goal(jsonb, jsonb, jsonb),
-  public.match__apply_correction(jsonb, jsonb, jsonb),
-  public.match__apply_result_entry(jsonb, jsonb, jsonb),
-  public.match__apply_section_end(jsonb, jsonb),
-  public.match__apply_section_start(jsonb, jsonb),
-  public.match__retract_target_admissible(jsonb, text, text),
-  public.match__apply_retract(jsonb, jsonb, jsonb),
-  public.match__apply_effect(jsonb, jsonb, jsonb),
   public.match_apply_event(jsonb, jsonb, jsonb, jsonb),
-  public.match__process(jsonb, jsonb, jsonb, jsonb),
   public.match_continue(jsonb, jsonb, jsonb, jsonb, text),
   public.match_reduce(jsonb, jsonb, jsonb, text),
   public.match_server_state(jsonb),

@@ -23,16 +23,20 @@
 # RLS-Rolle den erwarteten serverState (Ruling S1: actor = 'leitung', S2: at aus client_time).
 # Eine Alt-Zeile (event_format IS NULL) und eine Engine-Zeile mit review_state = 'pending' im
 # selben Spiel muessen dabei ignoriert werden; Fremder/anon sehen NULL (R17: RLS gilt).
+# Seed-Gleichheit (Review M9): public.match_transitions im Container == matchTransitions.json.
 # Zuletzt laeuft scripts/db_privilege_assertions.sql gegen den migrierten Container (alle Zeilen |t).
 #
 # Aufrufoptionen:
 #   bash scripts/match-engine-parity.sh               normaler Lauf -- 0 Abweichungen, Exit 0
-#   bash scripts/match-engine-parity.sh --gegenprobe  Mutationen im Container: die Tabellenzeile
-#                                                     (running, GOAL) verlangt 'leitung' statt
-#                                                     'helper', und match__num(jsonb) bekommt EXECUTE
-#                                                     fuer PUBLIC. Das Skript MUSS Abweichungen melden
-#                                                     (ROT); Exit 0 nur, wenn es das tut, Exit 1 wenn
-#                                                     die Mutationen unbemerkt blieben.
+#   bash scripts/match-engine-parity.sh --gegenprobe  Drei Mutationen im Container (Review M4):
+#                                                     (1) Tabellenzeile (running, GOAL) verlangt
+#                                                     'leitung' statt 'helper' -> Fixtures + Seed rot;
+#                                                     (2) compute_match_state ohne den review_state-
+#                                                     Filter -> compute_match_state-Probe rot;
+#                                                     (3) match_engine.num(jsonb) bekommt EXECUTE fuer
+#                                                     PUBLIC -> Rechte-Assertion rot. Exit 0 NUR, wenn
+#                                                     JEDE der vier Kategorien (Fixtures, Seed, Probe,
+#                                                     Rechte) einzeln rot ist; sonst Exit 1 (zahnlos).
 #
 # Aendert NICHTS an der Produktionsdatenbank -- Wegwerf-Container, wird am Ende entfernt (trap).
 #
@@ -131,11 +135,38 @@ echo "Idempotenz: $ENGINE_MIGRATION ein zweites Mal einspielen..." >&2
 psql_stdin < "$ENGINE_FILE"
 
 if [[ "$MODE" == "gegenprobe" ]]; then
-  echo "GEGENPROBE: match_transitions (running, GOAL) actor helper -> leitung; match__num EXECUTE fuer PUBLIC" >&2
+  echo "GEGENPROBE: (1) match_transitions (running, GOAL) actor helper -> leitung;" \
+       "(2) compute_match_state ohne review_state-Filter; (3) match_engine.num EXECUTE fuer PUBLIC" >&2
+  # (2) zuerst: die Migration ohne den Filter erneut einspielen (setzt dabei auch die Rechte neu,
+  # deshalb vor (3)). grep belegt, dass die Filterzeile wirklich getroffen wird.
+  if ! grep -q '^     AND e.review_state IS NULL;$' "$ENGINE_FILE"; then
+    echo "::error::Gegenprobe (2): Filterzeile 'AND e.review_state IS NULL;' nicht gefunden." >&2
+    exit 1
+  fi
+  sed 's/^     AND e.review_state IS NULL;$/     ;/' "$ENGINE_FILE" | psql_stdin
   psql_stdin <<'SQL'
 UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
-GRANT EXECUTE ON FUNCTION public.match__num(jsonb) TO PUBLIC;
+GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
 SQL
+fi
+
+# --- 2a. Seed-Gleichheit match_transitions == matchTransitions.json (Review M9) ----------------
+FIX_DEV=0
+SEED_DEV=0
+PROBE_DEV=0
+PRIV_DEV=0
+SEED_DB="$(psql_value <<'SQL'
+SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;
+SQL
+)"
+SEED_JSON="$(jq -r '.transitions[] | "\(.from)|\(.type)|\(.actor)|\(.to)"' "$REPO_ROOT/src/core/match/matchTransitions.json" | LC_ALL=C sort)"
+SEED_DB="$(LC_ALL=C sort <<<"$SEED_DB")"
+if [[ "$SEED_DB" == "$SEED_JSON" ]]; then
+  echo "OK          Seed: match_transitions == matchTransitions.json ($(wc -l <<<"$SEED_DB" | tr -d ' ') Zeilen)"
+else
+  SEED_DEV=1
+  echo "ABWEICHUNG  Seed: match_transitions (Container) != matchTransitions.json"
+  diff -u --label "matchTransitions.json" --label "match_transitions" <(echo "$SEED_JSON") <(echo "$SEED_DB") | sed 's/^/    /' || true
 fi
 
 # --- 3. SQL-Seite -----------------------------------------------------------------------------
@@ -186,7 +217,6 @@ jq -cn --slurpfile ts "$WORKDIR/ts.json" --slurpfile sql "$WORKDIR/sql.json" --a
   | {file: $s.file, sql: $s, ts: $t}
 ' > "$WORKDIR/pairs.jsonl"
 
-DEVIATIONS=0
 OK_COUNT=0
 TABLE_ROWS=()
 while IFS= read -r pair; do
@@ -215,7 +245,7 @@ while IFS= read -r pair; do
     echo "OK          $file"
     TABLE_ROWS+=("| $file | = | = |")
   else
-    DEVIATIONS=$((DEVIATIONS + 1))
+    FIX_DEV=$((FIX_DEV + 1))
     echo "ABWEICHUNG  $file  (SQL==TS: $sql_ts, SQL==expect: $sql_expect)"
     TABLE_ROWS+=("| $file | $sql_ts | $sql_expect |")
     if [[ -n "$err" ]]; then
@@ -231,7 +261,7 @@ done < "$WORKDIR/pairs.jsonl"
 SQL_COUNT="$(jq 'length' "$WORKDIR/sql.json")"
 if [[ "$SQL_COUNT" -ne "$FIXTURE_COUNT" ]]; then
   echo "ABWEICHUNG  SQL-Seite lieferte $SQL_COUNT statt $FIXTURE_COUNT Fixtures"
-  DEVIATIONS=$((DEVIATIONS + 1))
+  FIX_DEV=$((FIX_DEV + 1))
 fi
 
 # --- 5. compute_match_state-Probe -------------------------------------------------------------
@@ -314,21 +344,23 @@ INSERT INTO public.teams (id, tournament_id, name) VALUES ('$team_a', '$T_PROBE'
 INSERT INTO public.matches (id, tournament_id, round, field, match_status, team_a_id, team_b_id, owner_id)
 VALUES ('$match_id', '$T_PROBE', 1, $PROBE_INDEX, 'running', '$team_a', '$team_b', '$U_OWNER');
 SQL
-  if [[ "$PROBE_INDEX" -eq 1 ]]; then
-    # Stoerzeilen, die compute_match_state ignorieren MUSS: eine Alt-Zeile (event_format IS NULL)
-    # und eine Engine-Zeile mit review_state = 'pending' (beides je ein Tor fuer Team A).
-    psql_stdin <<SQL
-INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away, owner_id)
-VALUES ('$(uuid_for legacy-goal)', '$match_id', 'GOAL', '$team_a', 5, 1, 0, '$U_OWNER');
-SQL
-    run_as authenticated "$U_OWNER" "SELECT public.__parity_insert_engine_event('$match_id', '$U_OWNER', '{\"id\":\"$(uuid_for pending-goal)\",\"type\":\"GOAL\",\"teamId\":\"$team_a\",\"at\":1500,\"section\":1,\"clockMs\":50000,\"payload\":{}}'::jsonb, 'pending');" >/dev/null
-  fi
   insert_sql=""
   while IFS= read -r ev; do
     ev_escaped="${ev//$SQ/$SQ$SQ}"
     insert_sql+="SELECT public.__parity_insert_engine_event('$match_id', '$U_OWNER', '$ev_escaped'::jsonb);"$'\n'
   done < <(jq -c '.[]' <<<"$stored")
   run_as authenticated "$U_OWNER" "$insert_sql" >/dev/null
+  if [[ "$PROBE_INDEX" -eq 1 ]]; then
+    # Stoerzeilen, die compute_match_state ignorieren MUSS: eine Alt-Zeile (event_format IS NULL)
+    # und eine Engine-Zeile mit review_state = 'pending' (beides je ein Tor fuer Team A). Sie
+    # stehen NACH dem gespeicherten Log (hoeheres seq, Spiel laeuft dort noch) -- wuerde der Filter
+    # fehlen, zaehlte das Tor (Gegenprobe (2) beweist das).
+    psql_stdin <<SQL
+INSERT INTO public.match_events (id, match_id, type, team_id, timestamp_seconds, score_home, score_away, owner_id)
+VALUES ('$(uuid_for legacy-goal)', '$match_id', 'GOAL', '$team_a', 5, 1, 0, '$U_OWNER');
+SQL
+    run_as authenticated "$U_OWNER" "SELECT public.__parity_insert_engine_event('$match_id', '$U_OWNER', '{\"id\":\"$(uuid_for pending-goal)\",\"type\":\"GOAL\",\"teamId\":\"$team_a\",\"at\":999000,\"section\":1,\"clockMs\":50000,\"payload\":{}}'::jsonb, 'pending');" >/dev/null
+  fi
 
   owner_state="$(run_as authenticated "$U_OWNER" "SELECT public.compute_match_state('$match_id');")"
   stranger_state="$(run_as authenticated "$U_STRANGER" "SELECT coalesce(public.compute_match_state('$match_id')::text, 'NULL');")"
@@ -337,7 +369,7 @@ SQL
   if [[ -n "$owner_state" ]] && jq -e --argjson e "$expected_state" '. == $e' <<<"$owner_state" >/dev/null 2>&1; then
     echo "OK          compute_match_state $probe (Eigentuemer, $(jq 'length' <<<"$stored") gespeicherte Ereignisse)"
   else
-    DEVIATIONS=$((DEVIATIONS + 1))
+    PROBE_DEV=$((PROBE_DEV + 1))
     echo "ABWEICHUNG  compute_match_state $probe (Eigentuemer)"
     diff -u --label "expect/$probe" --label "compute_match_state/$probe" \
       <(jq -S . <<<"$expected_state") <( (jq -S . <<<"$owner_state") 2>/dev/null || echo "$owner_state") | sed 's/^/    /' || true
@@ -347,7 +379,7 @@ SQL
     if [[ "$value" == "NULL" ]]; then
       echo "OK          compute_match_state $probe ($who sieht NULL -- RLS)"
     else
-      DEVIATIONS=$((DEVIATIONS + 1))
+      PROBE_DEV=$((PROBE_DEV + 1))
       echo "ABWEICHUNG  compute_match_state $probe ($who sieht: $value)"
     fi
   done
@@ -360,14 +392,14 @@ done
 # bewiesen sind. Jede Zeile muss "|t" sein.
 PRIV_OUT="$(psql_value < "$REPO_ROOT/scripts/db_privilege_assertions.sql" 2>&1)" || {
   echo "ABWEICHUNG  Rechte-Assertion nicht ausfuehrbar: $PRIV_OUT"
-  DEVIATIONS=$((DEVIATIONS + 1))
+  PRIV_DEV=$((PRIV_DEV + 1))
   PRIV_OUT=""
 }
 if [[ -n "$PRIV_OUT" ]]; then
   PRIV_FAILED="$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
   if [[ -n "$PRIV_FAILED" ]]; then
     echo "ABWEICHUNG  Rechte-Assertion: $PRIV_FAILED"
-    DEVIATIONS=$((DEVIATIONS + 1))
+    PRIV_DEV=$((PRIV_DEV + 1))
   else
     echo "OK          Rechte-Assertion: $(wc -l <<<"$PRIV_OUT" | tr -d ' ') Zeilen |t (scripts/db_privilege_assertions.sql)"
   fi
@@ -378,14 +410,23 @@ echo ""
 echo "Gleichlauf-Tabelle (Fixture | SQL==TS | SQL==expect):"
 printf '%s\n' "${TABLE_ROWS[@]}"
 echo ""
+DEVIATIONS=$((FIX_DEV + SEED_DEV + PROBE_DEV + PRIV_DEV))
 echo "Fixtures: $FIXTURE_COUNT, OK: $OK_COUNT, Abweichungen gesamt (inkl. compute_match_state-Probe): $DEVIATIONS"
+echo "Abweichungen je Kategorie: Fixtures=$FIX_DEV Seed=$SEED_DEV compute_match_state-Probe=$PROBE_DEV Rechte=$PRIV_DEV"
 
 if [[ "$MODE" == "gegenprobe" ]]; then
-  if [[ "$DEVIATIONS" -gt 0 ]]; then
-    echo "Gegenprobe wie erwartet ROT: die Mutationen wurden erkannt ($DEVIATIONS Abweichung(en))."
+  # Review M4: jede Kategorie muss EINZELN rot sein -- eine rote Kategorie darf eine zahnlos
+  # gewordene andere nicht verdecken.
+  TOOTHLESS=()
+  [[ "$FIX_DEV" -gt 0 ]] || TOOTHLESS+=("Fixtures")
+  [[ "$SEED_DEV" -gt 0 ]] || TOOTHLESS+=("Seed")
+  [[ "$PROBE_DEV" -gt 0 ]] || TOOTHLESS+=("compute_match_state-Probe")
+  [[ "$PRIV_DEV" -gt 0 ]] || TOOTHLESS+=("Rechte")
+  if [[ "${#TOOTHLESS[@]}" -eq 0 ]]; then
+    echo "Gegenprobe wie erwartet ROT in allen vier Kategorien ($DEVIATIONS Abweichung(en))."
     exit 0
   fi
-  echo "::error::Gegenprobe: Mutationen blieben UNBEMERKT -- der Gleichlauf-Check ist zahnlos." >&2
+  echo "::error::Gegenprobe: Mutation blieb UNBEMERKT in: ${TOOTHLESS[*]} -- dieser Teil des Checks ist zahnlos." >&2
   exit 1
 fi
 

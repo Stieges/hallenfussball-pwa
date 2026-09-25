@@ -264,13 +264,16 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   (Ergebnisse je Ereignis: id/status/code, detail wenn erwartet; `serverState` vollständig).
   Zusätzlich: `compute_match_state`-Probe für drei Fixtures (Engine-Zeilen per SECURITY-DEFINER-
   Testfunktion, Eigentümer bekommt den erwarteten Zustand, Fremder/anon `NULL`, Alt-Zeile und
-  `review_state = 'pending'` werden ignoriert) und `scripts/db_privilege_assertions.sql` gegen den
-  migrierten Container (alle Zeilen `|t`).
+  `review_state = 'pending'` werden ignoriert), Seed-Gleichheit `match_transitions` (Container) ==
+  `matchTransitions.json` und `scripts/db_privilege_assertions.sql` gegen den migrierten Container
+  (alle Zeilen `|t`). Die internen Teilfunktionen liegen im Schema `match_engine`, das die API nicht
+  ausliefert (`supabase/config.toml` `[api] schemas = public, graphql_public`).
 - **Lokal:** `bash scripts/match-engine-parity.sh` (Docker + Node + jq nötig, ca. 1 Minute).
   Ausgabe je Fixture `OK`/`ABWEICHUNG` mit Diff, am Ende die Gleichlauf-Tabelle; Exit ≠ 0 bei jeder
   Abweichung. Gegenprobe: `bash scripts/match-engine-parity.sh --gegenprobe` ändert im Container
-  die Übergangszeile `(running, GOAL)` auf `leitung` und gibt `match__num` EXECUTE für PUBLIC —
-  das Skript muss ROT melden (Exit 0 nur dann, Exit 1 wenn die Mutation unbemerkt bliebe).
+  die Übergangszeile `(running, GOAL)` auf `leitung`, spielt `compute_match_state` ohne den
+  `review_state`-Filter ein und gibt `match_engine.num` EXECUTE für PUBLIC. Exit 0 nur, wenn jede
+  der vier Kategorien (Fixtures, Seed, compute_match_state-Probe, Rechte) einzeln ROT ist.
 - **Wann (CI):** Pull Requests, die `src/core/match/**`, `supabase/migrations/**`,
   `scripts/match-engine-*`, `scripts/lib/migrations-since-baseline.sh`,
   `scripts/db_privilege_assertions.sql` oder den Workflow selbst ändern. Zwei Schritte: normaler

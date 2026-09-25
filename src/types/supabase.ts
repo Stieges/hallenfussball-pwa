@@ -3,7 +3,9 @@
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
  * Letzte Regeneration: 2026-09-28 (B3a, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md:
- * Funktionen der SQL-Rechenfunktion aus 20260928_002_match_engine.sql; davor B2 Fixrunde 1, Ruling G4)
+ * Funktionen der SQL-Rechenfunktion aus 20260928_002_match_engine.sql -- Fixrunde 1/Ruling S12: nur die
+ * sechs public-Funktionen, die internen Helfer liegen im nicht exponierten Schema match_engine;
+ * davor B2 Fixrunde 1, Ruling G4)
  * -- ausnahmsweise NICHT aus Produktion (B2: `--local`; B3a: `--db-url` gegen einen Wegwerf-Container
  * supabase/postgres mit Baseline + allen neueren Migrationen; nicht `--project-id`), weil
  * supabase/migrations/20260928_001_match_event_log.sql und 20260928_002_match_engine.sql noch NICHT
@@ -1142,116 +1144,6 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
-      match__adjust_clock: {
-        Args: { p_clock: Json; p_event: Json }
-        Returns: Json
-      }
-      match__apply_correction: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_effect: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_goal: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_result_entry: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_retract: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_section_end: {
-        Args: { p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_section_start: {
-        Args: { p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_shootout_end: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__apply_shootout_kick: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__canonical: { Args: { p_event: Json }; Returns: Json }
-      match__computed_score: {
-        Args: { p_state: Json; p_team: string }
-        Returns: number
-      }
-      match__decided_by: { Args: { p_state: Json }; Returns: Json }
-      match__effective_score: {
-        Args: { p_state: Json; p_team: string }
-        Returns: number
-      }
-      match__effective_scores: {
-        Args: { p_ctx: Json; p_state: Json }
-        Returns: Json
-      }
-      match__endcheck: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json }
-        Returns: Json
-      }
-      match__enter_decision: {
-        Args: { p_mode: string; p_state: Json }
-        Returns: Json
-      }
-      match__is_int: { Args: { p_value: Json }; Returns: boolean }
-      match__is_nonneg_int: { Args: { p_value: Json }; Returns: boolean }
-      match__num: { Args: { p_value: Json }; Returns: number }
-      match__ok: { Args: { p_state: Json }; Returns: Json }
-      match__opt_nonneg_int: {
-        Args: { p_key: string; p_payload: Json }
-        Returns: boolean
-      }
-      match__payload_valid: {
-        Args: { p_ctx: Json; p_event: Json }
-        Returns: boolean
-      }
-      match__process: {
-        Args: { p_ctx: Json; p_event: Json; p_state: Json; p_transitions: Json }
-        Returns: Json
-      }
-      match__reject: {
-        Args: { p_code: string; p_detail?: Json }
-        Returns: Json
-      }
-      match__resume_clock: {
-        Args: { p_clock: Json; p_event: Json }
-        Returns: Json
-      }
-      match__retract_target_admissible: {
-        Args: { p_state: Json; p_target_id: string; p_target_type: string }
-        Returns: boolean
-      }
-      match__rules_valid: { Args: { p_rules: Json }; Returns: boolean }
-      match__shootout_winner: {
-        Args: { p_ctx: Json; p_state: Json }
-        Returns: string
-      }
-      match__snapshot: { Args: { p_ctx: Json; p_state: Json }; Returns: Json }
-      match__stale_base_detail: {
-        Args: { p_ctx: Json; p_state: Json }
-        Returns: Json
-      }
-      match__start_clock: { Args: { p_event: Json }; Returns: Json }
-      match__stop_clock: {
-        Args: { p_clock: Json; p_event: Json }
-        Returns: Json
-      }
-      match__team_scores_valid: {
-        Args: { p_ctx: Json; p_scores: Json }
-        Returns: boolean
-      }
-      match__truthy: { Args: { p_value: Json }; Returns: boolean }
       match_apply_event: {
         Args: { ctx: Json; event: Json; state: Json; transitions: Json }
         Returns: Json

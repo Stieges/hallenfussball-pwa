@@ -198,12 +198,14 @@ UNION ALL
 SELECT 'positive-ci-schema-reader-select-app-config',
        has_table_privilege('ci_schema_reader', 'public.app_config', 'SELECT')
 UNION ALL
--- B3a (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md, R17): SQL-Rechenfunktion
--- (supabase/migrations/20260928_002_match_engine.sql). compute_match_state ist NICHT SECURITY
--- DEFINER (RLS gilt) und STABLE; match_apply_event ist IMMUTABLE (rein, R1). Keine der 41
--- Engine-Funktionen (match__* intern + die fuenf match_*-Einstiege + compute_match_state) hat EXECUTE fuer PUBLIC -- auch
--- nicht implizit (proacl IS NULL hiesse Standard-EXECUTE fuer PUBLIC). Die Anzahl ist fest, damit
--- ein fehlender Einspielvorgang nicht vakuum-gruen wird.
+-- B3a (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md, R17; Fixrunde 1: Review
+-- M7, Ruling S12) -- SQL-Rechenfunktion (supabase/migrations/20260928_002_match_engine.sql):
+-- 6 Funktionen in public + 35 interne Teilfunktionen im nicht exponierten Schema match_engine = 41.
+-- compute_match_state ist STABLE, die anderen 40 IMMUTABLE; keine ist SECURITY DEFINER (RLS gilt);
+-- alle haben search_path=public, pg_temp; keine hat EXECUTE fuer PUBLIC (auch nicht implizit:
+-- proacl IS NULL hiesse Standard-EXECUTE fuer PUBLIC); das Schema match_engine hat kein USAGE fuer
+-- PUBLIC; in public liegt kein match__-Helfer mehr. Die Zahlen sind fest, damit ein fehlender
+-- Einspielvorgang nicht vakuum-gruen wird -- neue Helfer (B3b) muessen sie mitziehen.
 SELECT 'compute-match-state-security-invoker',
        NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
 UNION ALL
@@ -214,20 +216,43 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
-SELECT 'match-engine-functions-no-public-execute',
-       NOT EXISTS (
-         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-          WHERE n.nspname = 'public'
-            AND (p.proname LIKE 'match\_\_%' OR p.proname IN ('match_initial_state', 'match_apply_event',
-                 'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))
-            AND (p.proacl IS NULL OR EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0))
-       )
-UNION ALL
 SELECT 'match-engine-function-count-41',
        (SELECT count(*) = 41 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public'
-           AND (p.proname LIKE 'match\_\_%' OR p.proname IN ('match_initial_state', 'match_apply_event',
-                'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state')))
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
+UNION ALL
+SELECT 'match-engine-immutable-count-40',
+       (SELECT count(*) = 40 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
+UNION ALL
+SELECT 'match-engine-no-security-definer',
+       (SELECT count(*) = 0 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.prosecdef)
+UNION ALL
+SELECT 'match-engine-search-path-all-41',
+       (SELECT count(*) = 41 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
+UNION ALL
+SELECT 'match-engine-functions-no-public-execute',
+       (SELECT count(*) = 0 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+          WHERE (n.nspname = 'match_engine'
+              OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
+                  'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND (p.proacl IS NULL OR EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)))
+UNION ALL
+SELECT 'match-engine-schema-no-public-usage',
+       (SELECT n.nspacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(n.nspacl) a WHERE a.grantee = 0)
+          FROM pg_namespace n WHERE n.nspname = 'match_engine')
+UNION ALL
+SELECT 'no-match-helpers-in-public',
+       NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                    WHERE n.nspname = 'public' AND p.proname LIKE 'match\_\_%')
 UNION ALL
 SELECT 'positive-anon-execute-compute-match-state',
        has_function_privilege('anon', 'public.compute_match_state(uuid)', 'EXECUTE')
@@ -237,4 +262,10 @@ SELECT 'positive-authenticated-execute-compute-match-state',
 UNION ALL
 SELECT 'positive-authenticated-execute-match-apply-event',
        has_function_privilege('authenticated', 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-anon-usage-match-engine',
+       has_schema_privilege('anon', 'match_engine', 'USAGE')
+UNION ALL
+SELECT 'positive-anon-execute-match-engine-payload-valid',
+       has_function_privilege('anon', 'match_engine.payload_valid(jsonb,jsonb)', 'EXECUTE')
 ;
