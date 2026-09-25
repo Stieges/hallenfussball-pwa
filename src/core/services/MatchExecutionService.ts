@@ -13,6 +13,7 @@ import { OptimisticLockError } from '../errors';
 import { LiveMatch, MatchStatus, LiveTeamInfo, MatchEvent, FinishResult } from '../models/LiveMatch';
 import { ScheduledMatch } from '../../core/generators';
 import { executeWithRetry } from '../utils/SingleFlight';
+import { generateEventId } from '../utils/id';
 import { getEffectiveScore } from '../../utils/matchScore';
 import { getSportConfig } from '../../config/sports';
 import sportGlossary from '../../i18n/glossary.json';
@@ -223,8 +224,8 @@ export class MatchExecutionService {
                     };
                 }
 
-                // Add event (timestamp + random ensures uniqueness across retries)
-                const eventId = `${matchId}-goal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                // Add event (UUID, s. Sofort-Fix C-EVID — match_events.id ist Postgres `uuid`)
+                const eventId = generateEventId();
                 const event: MatchEvent = {
                     id: eventId,
                     matchId,
@@ -315,7 +316,7 @@ export class MatchExecutionService {
         const elapsed = this.calculateElapsedSeconds(match);
 
         const event: MatchEvent = {
-            id: `${matchId}-${Date.now()}`,
+            id: generateEventId(),
             matchId,
             timestampSeconds: elapsed,
             type: cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD',
@@ -350,7 +351,7 @@ export class MatchExecutionService {
         const elapsed = this.calculateElapsedSeconds(match);
 
         const event: MatchEvent = {
-            id: `${matchId}-${Date.now()}`,
+            id: generateEventId(),
             matchId,
             timestampSeconds: elapsed,
             type: 'TIME_PENALTY',
@@ -383,7 +384,7 @@ export class MatchExecutionService {
         const elapsed = this.calculateElapsedSeconds(match);
 
         const event: MatchEvent = {
-            id: `${matchId}-${Date.now()}`,
+            id: generateEventId(),
             matchId,
             timestampSeconds: elapsed,
             type: 'SUBSTITUTION',
@@ -425,7 +426,7 @@ export class MatchExecutionService {
         const elapsed = this.calculateElapsedSeconds(match);
 
         const event: MatchEvent = {
-            id: `${matchId}-${Date.now()}`,
+            id: generateEventId(),
             matchId,
             timestampSeconds: elapsed,
             type: 'FOUL',
@@ -870,7 +871,7 @@ export class MatchExecutionService {
 
     private createStatusEvent(match: LiveMatch, status: MatchStatus): MatchEvent {
         return {
-            id: `${match.id}-${Date.now()}`,
+            id: generateEventId(),
             matchId: match.id,
             timestampSeconds: this.calculateElapsedSeconds(match),
             type: 'STATUS_CHANGE',
