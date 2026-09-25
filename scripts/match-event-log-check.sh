@@ -787,6 +787,35 @@ else
   echo "SKIP  9. ohne Migration: Spalte seq existiert nicht" >&2
 fi
 
+# --- Probe 10 (Ruling S13, B3b-Fixrunde 1): match_events_section_check erlaubt 1-5 -- die
+# Verlaengerung ist Abschnitt sections+1, bei vier Abschnitten also 5. 0 und 6 bleiben verboten.
+# Direkt als postgres (Nicht-Client-Rolle, Guard laesst Engine-Zeilen zu), Transaktion wird
+# zurueckgerollt.
+if [[ "$MODE" != "without-migration" ]]; then
+  for sec_case in "5:ok" "6:denied" "0:denied"; do
+    sec="${sec_case%%:*}"; want="${sec_case##*:}"
+    set +e
+    OUT10="$(docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q 2>&1 <<SQL
+BEGIN;
+INSERT INTO public.match_events (id, match_id, type, timestamp_seconds, score_home, score_away, event_format, section)
+VALUES ('$(uuid_for "event:probe10-$sec")', '$M_LEGACY', 'PAUSE', 1, 0, 0, 1, $sec);
+ROLLBACK;
+SQL
+)"
+    ec=$?
+    set -e
+    got="ok"
+    if [[ $ec -ne 0 ]]; then
+      got="denied"
+      # Abgelehnt werden darf nur durch den CHECK, nicht durch etwas anderes.
+      grep -q "match_events_section_check" <<<"$OUT10" || got="denied-anders: $OUT10"
+    fi
+    check "10. section = $sec (CHECK 1-5, S13)" "$want" "$got"
+  done
+else
+  echo "SKIP  10. ohne Migration: Spalte section existiert nicht" >&2
+fi
+
 echo "" >&2
 if [[ "$MISMATCHES" -gt 0 ]]; then
   echo "::error::$MISMATCHES Abweichung(en) im Modus $MODE." >&2

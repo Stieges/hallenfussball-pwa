@@ -293,11 +293,21 @@ UNION ALL
 SELECT 'server-time-stable',
        (SELECT p.provolatile = 's' AND NOT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.server_time()'::regprocedure)
 UNION ALL
-SELECT 'anon-no-execute-match-engine-envelope',
-       NOT has_function_privilege('anon', 'match_engine.envelope(jsonb,text,text)', 'EXECUTE')
+-- Fixrunde 1 (Review M7): alle sechs B3b-Helfer fuer anon, authenticated UND service_role gesperrt.
+SELECT 'b3b-helpers-no-execute-anon-authenticated-service-role',
+       NOT EXISTS (
+         SELECT 1
+           FROM unnest(ARRAY['match_engine.normalize_uuid(jsonb)', 'match_engine.cfg_num(jsonb)',
+                             'match_engine.envelope(jsonb,text,text)', 'match_engine.dedupe_key(jsonb)',
+                             'match_engine.server_rules(integer,text,integer,integer,jsonb,jsonb)',
+                             'match_engine.cache_columns(jsonb,jsonb)']) AS f(sig)
+          CROSS JOIN unnest(ARRAY['anon', 'authenticated', 'service_role']) AS r(role)
+          WHERE has_function_privilege(r.role, f.sig, 'EXECUTE'))
 UNION ALL
-SELECT 'authenticated-no-execute-match-engine-cache-columns',
-       NOT has_function_privilege('authenticated', 'match_engine.cache_columns(jsonb,jsonb)', 'EXECUTE')
+-- Fixrunde 1 (Nachtrag C3): service_role hat keinen EXECUTE auf append_match_events -- ohne
+-- auth.uid() waere der Aufruf ohnehin wirkungslos (42501); least privilege.
+SELECT 'service-role-no-execute-append-match-events',
+       NOT has_function_privilege('service_role', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
 UNION ALL
 SELECT 'positive-authenticated-execute-append-match-events',
        has_function_privilege('authenticated', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
