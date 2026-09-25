@@ -380,6 +380,30 @@ export interface MatchScoreRow {
   match_status: string | null;
 }
 
+/**
+ * A2 Fixrunde 2 (Cloud-Nachweis Ergebniskorrektur): liest ID + Score eines BEENDETEN Spiels --
+ * der Live-Cup-Seed legt genau zwei an (`matchDone1`/`matchDone2` in `e2e-seed.ts`, keine feste
+ * ID). `order=score_a.desc` macht die Auswahl deterministisch (immer dasselbe der zwei Spiele).
+ */
+export async function fetchFinishedMatchRow(
+  tournamentId: string
+): Promise<{ id: string; score_a: number; score_b: number }> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.finished&order=score_a.desc&limit=1&select=id,score_a,score_b`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchFinishedMatchRow(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ id: string; score_a: number; score_b: number }>;
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`fetchFinishedMatchRow(${tournamentId}): kein beendetes Spiel gefunden.`);
+  }
+  return row;
+}
+
 export async function fetchMatchRow(matchId: string): Promise<MatchScoreRow> {
   const { url, headers } = getLocalServiceRoleClient();
   const res = await fetch(

@@ -131,6 +131,7 @@ export function ScoreHeader({
           style={editButtonStyle}
           onClick={onEditScore}
           aria-label={t('matchSummary.editScore')}
+          data-testid="match-summary-edit-score"
         >
           ✏️ {t('matchSummary.editScore')}
         </button>

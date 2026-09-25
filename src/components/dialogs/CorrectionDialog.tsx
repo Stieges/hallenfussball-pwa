@@ -274,6 +274,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
               onChange={(e) => setNewScoreA(e.target.value)}
               style={scoreInputStyle}
               aria-label={t('correctionDialog.goalsFor', { team: teamA })}
+              data-testid="correction-score-a"
             />
             <span style={separatorStyle}>:</span>
             <input
@@ -283,6 +284,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
               onChange={(e) => setNewScoreB(e.target.value)}
               style={scoreInputStyle}
               aria-label={t('correctionDialog.goalsFor', { team: teamB })}
+              data-testid="correction-score-b"
             />
           </div>
         </div>
@@ -322,7 +324,7 @@ export const CorrectionDialog: React.FC<CorrectionDialogProps> = ({
           <button style={cancelButtonStyle} onClick={onClose}>
             {t('correctionDialog.cancel')}
           </button>
-          <button style={confirmButtonStyle} onClick={handleConfirm}>
+          <button style={confirmButtonStyle} onClick={handleConfirm} data-testid="correction-confirm-button">
             {t('correctionDialog.confirm')}
           </button>
         </div>

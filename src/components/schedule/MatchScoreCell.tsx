@@ -96,6 +96,7 @@ export const MatchScoreCell: React.FC<MatchScoreCellProps> = ({
               onStartCorrection();
             }}
             className="correction-button"
+            data-testid={`correction-button-${matchId}`}
           >
             {t('scoreCell.correctResult')}
           </button>
