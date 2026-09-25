@@ -17,6 +17,13 @@ on:
     paths:
       - 'supabase/migrations/**'
       - 'scripts/rls-role-matrix.sh'
+      # Abschluss-Review (final-review.md, M4): das Skript sourced diese Datei seit Task T1 für
+      # die Baseline-Migrationsliste (siehe scripts/lib/migrations-since-baseline.sh) -- eine
+      # Änderung dort ändert, welche Migrationen der Wegwerf-Container einspielt, ohne dass der
+      # Pfad-Filter vorher darauf reagierte. Der Workflow selbst gehört ebenfalls in den Filter,
+      # sonst prüft ein PR, der NUR diese Datei ändert, sich nie selbst.
+      - 'scripts/lib/migrations-since-baseline.sh'
+      - '.github/workflows/rls-role-matrix.yml'
       - 'src/features/auth/permissions/rolePermissions.json'
 
 permissions:

@@ -49,7 +49,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: &playwright_container_image mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      # Abschluss-Review (final-review.md, M9): EINE Quelle für die Image-Version — der
+      # Pin-Check-Schritt unten vergleicht sie gegen die installierte @playwright/test-Version.
+      # Der YAML-Alias (*playwright_container_image) übernimmt exakt den String aus
+      # `container.image` oben, keine zweite literale Kopie.
+      PLAYWRIGHT_CONTAINER_IMAGE: *playwright_container_image
 
     steps:
       - name: Checkout
@@ -67,7 +73,25 @@ jobs:
       # Kein "Install Playwright browsers"-Schritt: das Container-Image bringt Chromium/Firefox/
       # WebKit exakt passend zur gepinnten Version v1.63.0-noble bereits mit (offizielles
       # Playwright-Docker-Muster) — eine zusätzliche `playwright install` würde nur denselben
-      # Stand redundant neu herunterladen.
+      # Stand redundant neu herunterladen. GENAU DESHALB muss die Image-Version zur installierten
+      # @playwright/test-Version passen — der nächste Schritt erzwingt das.
+
+      # M9 (final-review.md): Dependabot bumpt `@playwright/test` in package.json wöchentlich,
+      # rührt das fest verdrahtete Container-Image (`container.image` oben, auch in
+      # `package.json#test:visual`/`test:visual:update` und `docs/TESTUMGEBUNG.md` dokumentiert)
+      # dabei NICHT an. Ohne diesen Schritt würde ein Versions-Bump hier lautlos mit
+      # abweichenden Browser-Binaries laufen (falsche/keine Regression, nur weil Chromium
+      # zwischen installierter Testbibliothek und Container-Image auseinanderläuft) statt sauber
+      # rot zu werden.
+      - name: Pin-Check — Container-Image passt zur installierten @playwright/test-Version
+        run: |
+          INSTALLED="$(npx playwright --version | awk '{print $2}')"
+          IMAGE_VERSION="$(echo "$PLAYWRIGHT_CONTAINER_IMAGE" | sed -E 's#.*:v([0-9.]+)-.*#\1#')"
+          echo "Installiert (@playwright/test): $INSTALLED — Container-Image: $IMAGE_VERSION ($PLAYWRIGHT_CONTAINER_IMAGE)"
+          if [ "$INSTALLED" != "$IMAGE_VERSION" ]; then
+            echo "::error::Container-Image ($PLAYWRIGHT_CONTAINER_IMAGE) passt NICHT zur installierten @playwright/test-Version ($INSTALLED). Nach einem Dependabot-Bump von @playwright/test: container.image in .github/workflows/visual.yml UND die Version in package.json (test:visual/test:visual:update) UND docs/TESTUMGEBUNG.md im selben PR anheben (final-review.md, M9)." >&2
+            exit 1
+          fi
 
       - name: Update-Modus bestimmen (Label `visual-update`)
         id: mode

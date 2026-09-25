@@ -76,6 +76,15 @@ Co-Admin-Veröffentlichung zu prüfen, ohne den Entwurf-Cup dafür zweckzuentfre
 außerdem einen Sponsor und einen Monitor mit `sponsor`-Slide (`E2E_RELEASE_CUP_*`-Konstanten),
 damit "Sponsor und Monitor folgen" nach einer (gewollten) Freigabe konkret geprüft werden kann.
 
+**Abschluss-Fixrunde (final-fix-brief.md, I2/Ruling AG):** Der Public-Cup bekommt zusätzlich EIN
+Spiel, das der Seed direkt per Service-Role auf `matchStatus: 'running'` setzt — analog zum
+bereits bestehenden laufenden Live-Cup-Spiel, NIE über `MatchExecutionService.initializeMatch()`
+(das würde bei einem noch nie zuvor geladenen Spiel an C-NSTART scheitern, siehe
+`tests/e2e/cloud/testData.ts#E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE`). Ohne diesen Bypass konnte
+der Monitor-Echtzeit-Nachweis (`two-devices.cloud.spec.ts`) nie über C-NSTART hinauskommen — seit
+der Fixrunde läuft er wirklich. Die übrigen, unangetasteten Public-Cup-Spiele bleiben bewusst
+`scheduled` (nie initialisiert) — das braucht der eigene C-NSTART-Test in derselben Datei.
+
 `logouttest`/`logouttestMobile` haben bewusst KEINE Turnier-Mitgliedschaft und werden von keinem
 anderen Spec über `asRole()` verwendet — `supabase.auth.signOut()` läuft ohne `scope`-Option
 (Supabase-JS-Standard `scope: 'global'`) und würde sonst jede andere Session desselben Kontos mit
@@ -93,6 +102,42 @@ Projekten.
 | Studio | 54323 | http://127.0.0.1:54323 |
 | Mailpit (Mail-Postfach) | 54324 | http://127.0.0.1:54324 |
 | Analytics | 54327 | – |
+
+### Playwright-Webserver (offline/cloud) — Produktions-Sperre lokal (C1)
+
+| Webserver | Port | Zeigt auf | `reuseExistingServer` |
+|---|---|---|---|
+| `offline` | 3000 (bzw. 4173 mit `CI_E2E_USE_PREVIEW`) | NIE Supabase (`VITE_SUPABASE_*` explizit leer) | `false` |
+| `cloud` | 3100 | lokaler Supabase-Stack (`getCloudSupabaseEnv()`) | `false` |
+
+Abschluss-Review (final-review.md, C1/Ruling AG): Vorher übernahm Playwright lokal
+(`reuseExistingServer: !process.env.CI`, also `true`) einen bereits laufenden Server auf
+Port 3000 — genau der Standardport von `npm run dev`. Lief beim Entwickeln `npm run dev` (liest
+`.env.local`, zeigt also auf die Produktion) und startete Daniel danach `npm run test:e2e`, hätte
+die gesamte Offline-Suite gegen eine Produktions-App laufen können, ohne dass der `env`-Override in
+`playwright.config.ts` je gegriffen hätte. Seit der Fixrunde:
+
+- `reuseExistingServer: false` für BEIDE Webserver, immer (nicht mehr nur in der CI) — Playwright
+  startet den Server bei JEDEM Lauf selbst neu.
+- `--strictPort` an `vite`/`vite preview` — belegt ein anderer Prozess (z. B. ein laufender
+  `npm run dev`) exakt diesen Port, bricht Vite sofort ab, statt still auf den nächsten freien Port
+  auszuweichen. Playwright meldet dann einen klaren Startfehler statt eines mehrminütigen Timeouts.
+- Beide Ports bleiben bewusst UNVERÄNDERT (3000 offline, 3100 cloud) — genau auf Port 3000
+  kollidiert ein versehentlich laufender `npm run dev` mit dem offline-Webserver, das ist Absicht
+  (siehe Gegenprobe unten).
+- `CI_E2E_USE_PREVIEW` außerhalb der CI (`!process.env.CI`) bricht die `playwright.config.ts`-Konfiguration
+  jetzt mit einer klaren Fehlermeldung sofort ab — ein lokaler `npm run build` würde `.env.local`
+  fest in das Preview-Bundle einbauen (Vite ersetzt `VITE_SUPABASE_*` beim Build, nicht zur
+  Laufzeit). Einzige Ausnahme: `npm run test:visual`/`test:visual:update` (siehe unten) setzen
+  neben `CI_E2E_USE_PREVIEW=1` explizit auch `CI=true` UND leeren `VITE_SUPABASE_*` selbst per
+  Docker-`-e`-Flag — ein bewusst nachgebauter CI-Ablauf, keine Umgehung.
+
+**Gegenprobe (final-fix-report.md):** `npm run dev` auf Port 3000 laufen lassen (liest
+`.env.local`, ohne dessen Inhalt zu lesen — die Datei bleibt für diese Aufgabe tabu), danach die
+Offline-Suite starten. Der eigene `offline`-Webserver scheitert am belegten Port
+(`--strictPort`/`EADDRINUSE`), Playwright bricht den Lauf ab — kein einziger Test läuft gegen den
+laufenden Dev-Server. `tests/e2e/flows/production-lockout.spec.ts` bleibt zusätzlich die
+strukturelle Absicherung (0 Anfragen an `*.supabase.co`), falls der Port zufällig frei ist.
 
 Auth ist ohne E-Mail-Bestätigung konfiguriert (`enable_confirmations = false`) — neu registrierte
 Testnutzer sind sofort anmeldefähig. `site_url`/`additional_redirect_urls` zeigen auf Port 3100
@@ -163,8 +208,11 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
 
 ### `.github/workflows/rls-role-matrix.yml`
 
-- **Wann:** nur bei Pull Requests, die `supabase/migrations/**`, `scripts/rls-role-matrix.sh`
-  oder `src/features/auth/permissions/rolePermissions.json` ändern (Pfad-Trigger, kein Push).
+- **Wann:** nur bei Pull Requests, die `supabase/migrations/**`, `scripts/rls-role-matrix.sh`,
+  `scripts/lib/migrations-since-baseline.sh` (Abschluss-Fixrunde, final-review.md M4 — das Skript
+  sourced diese Datei seit Task T1 für die Baseline-Migrationsliste, fehlte vorher im Filter),
+  der Workflow selbst oder `src/features/auth/permissions/rolePermissions.json` ändern
+  (Pfad-Trigger, kein Push).
 - **Was:** `bash scripts/rls-role-matrix.sh` im Default-Modus — das Skript startet seinen
   eigenen Wegwerf-Postgres-Container (`supabase/postgres:17.6.1.063`), braucht dafür keinen
   laufenden Supabase-Stack. Prüft `rolePermissions.json` gegen echtes RLS (207 geprüfte Zellen,
@@ -185,7 +233,10 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
   `synchronize`-Event das Label sieht.
 - **Was:** siehe Abschnitt „Visual Regression (Bildvergleiche)" unten für das Gesamtbild. Der
   Job läuft im offiziellen Playwright-Container (`mcr.microsoft.com/playwright:v1.63.0-noble`,
-  exakt passend zur gepinnten `@playwright/test`-Version) und vergleicht per Default
+  exakt passend zur gepinnten `@playwright/test`-Version — ein eigener Pin-Check-Schritt
+  (Abschluss-Fixrunde, final-review.md M9) vergleicht `npx playwright --version` gegen die
+  Image-Version und bricht mit klarer Meldung ab, falls ein Dependabot-Bump von
+  `@playwright/test` das Image nicht mit anhebt) und vergleicht per Default
   (`--update-snapshots=none`) gegen die eingecheckten Vorlagen. Trägt der PR das Label
   `visual-update`, schreibt der Job stattdessen neue Vorlagen (`--update-snapshots=all`) und lädt
   sie als Artefakt `visual-snapshots` hoch — **und beendet sich danach absichtlich rot**
@@ -260,16 +311,33 @@ Lokale Docker-Läufe UND die CI (`.github/workflows/visual.yml`) verwenden exakt
 Snapshot mit dem in der CI (im selben Container) erzeugten identisch.
 
 **`npm run test:visual`** (Vergleichsmodus) und **`npm run test:visual:update`**
-(`--update-snapshots=all`) starten dafür `docker run` mit dem Repo als Bind-Mount und `npm ci`
-+ `npx playwright test` innerhalb des Containers. Bekannter Nebeneffekt: `npm ci` im Container
-installiert Linux-native Abhängigkeiten in das (gemountete, also auch auf dem Host sichtbare)
-`node_modules` — nach einem lokalen Docker-Lauf auf dem Mac einmal `npm ci` auf dem Host erneut
-laufen lassen, um wieder Mac-native Binaries zu bekommen.
+(`--update-snapshots=all`) starten dafür `docker run` mit dem Repo als Bind-Mount und
+`npm ci && npm run build && npx playwright test …` innerhalb des Containers.
 
-**In dieser Aufgabe (T5) lokal NICHT ausgeführt** — die lokale Docker-Platte hat nur ~1,8 GB
-frei, das Playwright-Image passt dort nicht (Ruling Y im Task-Brief, „Nichts in Docker löschen").
-Der erste echte CI-Lauf mit dem Label `visual-update` (Vorlagen erzeugen) läuft durch den
-Controller, nicht durch diese Aufgabe.
+**Abschluss-Fixrunde (final-review.md, I1/Ruling AG):** Vorher lief im Container `npm run dev`
+(kein Build) — anders als die CI, die per `npm run build` + `CI_E2E_USE_PREVIEW` (`vite preview`)
+baut. Die Vorlagen stammen aus genau diesem Build, ein Dev-Server kann abweichendes CSS-Timing/
+-Reihenfolge liefern und falsche Differenzen erzeugen. Schlimmer: der Bind-Mount (`-v
+"$(pwd):/work"`) macht `.env.local` — falls vorhanden — im Container sichtbar; ein `npm run build`
+dort würde sie wie ein normaler lokaler Build fest ins Bundle einbacken (siehe C1 oben). Beide
+Skripte setzen deshalb jetzt explizit per Docker-`-e`-Flag:
+- `CI=true` + `CI_E2E_USE_PREVIEW=1` — derselbe Build+Preview-Ablauf wie `visual.yml` (löst auch
+  den harten `playwright.config.ts`-Abbruch für `CI_E2E_USE_PREVIEW` außerhalb der CI absichtlich
+  aus, siehe Kommentar dort — dieser Container-Lauf IST der nachgebaute CI-Ablauf).
+- `VITE_SUPABASE_URL=` und `VITE_SUPABASE_ANON_KEY=` (leer) — überschreiben `.env.local` für den
+  Build, unabhängig davon, ob die Datei über den Bind-Mount sichtbar ist (Vite-Priorität:
+  Prozess-Variablen schlagen jede `.env*`-Datei).
+
+Zweiter Fix: `node_modules` ist jetzt ein **eigenes, anonymes Docker-Volume**
+(`-v /work/node_modules`, zusätzlich zum Bind-Mount) statt des vorher gemounteten Host-Ordners —
+`npm ci` im Container installiert Linux-native Abhängigkeiten dadurch NICHT mehr in den
+Host-`node_modules`. Kein manuelles `npm ci` auf dem Host nach einem Docker-Lauf mehr nötig.
+
+**Weiterhin NICHT lokal ausgeführt** (Auftrag der Abschluss-Fixrunde, final-fix-brief.md: „Docker-
+Platte voll, nichts löschen — nur sorgfältig prüfen und dokumentieren") — Skript und Doku sind
+geprüft (Kommandos, Env-Variablen, Volume-Syntax), aber nicht gegen den echten Container
+ausgeführt. Ein CI-Lauf mit dem Label `visual-update` bleibt der Weg, um neue Vorlagen zu
+erzeugen.
 
 ### Was stattdessen lokal (ohne Container) geprüft wurde
 
@@ -338,6 +406,27 @@ localStorage-Quelle (`src/hooks/useLiveMatches.ts`, getrennt vom IndexedDB-Turni
 gibt es `seedRunningLiveMatch()` in `helpers.ts`, mit einem `timerStartTime` exakt 320s vor der
 eingefrorenen Uhr statt eines echten Start-Klicks (deterministisch statt klick-zeitpunkt-
 abhängig).
+
+### Toleranz (`maxDiffPixelRatio`) und Vorlagen als Ist-Stand (Ruling AF, Beobachtungswoche)
+
+`playwright.config.ts` setzt `expect.toHaveScreenshot.maxDiffPixelRatio: 0.01` global (1 % der
+Pixel einer Seite) — pragmatische Ingenieurs-Entscheidung gegen Sub-Pixel-Antialiasing-Rauschen
+zwischen zwei Container-Läufen, keine Brief-Vorgabe. Beim Cockpit auf dem Handy (`fullPage`, ca.
+390×1320 px) erlaubt das rund 5.000 abweichende Pixel — eine kleine Farb- oder
+Spielstand-Ziffernänderung kann darunter bleiben und würde den Vergleichslauf NICHT rot färben
+(final-review.md, M8). Bis zur Entscheidung nach der Beobachtungswoche (Ruling AF) bleibt der Wert
+bewusst so stehen; mittelfristige Alternativen: `maxDiffPixels` je Screen statt eines globalen
+Anteils, oder Element-Screenshots statt `fullPage` auf dem Handy.
+
+Die 24 eingecheckten Vorlagen halten den **Ist-Zustand** fest, nicht zwingend den gewünschten
+Soll-Zustand — u. a. bekannt und von Daniel zu bewerten:
+- **C-MON720:** Monitor-Desktop (1280×720) — die Spieluhr „05:20 / 10:00" überlappt die
+  Teamnamen. Vorlage hält den Ist-Zustand fest; nach einem UI-Fix bewusst neu erzeugen
+  (`npm run test:visual:update`, Label `visual-update`), nicht einfach als „falsch" markieren.
+- Cockpit-Handy (`fullPage`): die fixe Bottom-Nav liegt mitten im Bild und verdeckt Knöpfe.
+- Gleicher Spielstand nach 320 s zeigt Cockpit „04:40 / 10:00", Monitor „05:20 / 10:00" — sieht
+  nach Countdown (Cockpit) gegen Hochzählen (Monitor) mit gleichem Zeit-Suffix aus, nicht
+  geprüft.
 
 ## Nie tun
 

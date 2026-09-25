@@ -1,6 +1,35 @@
 import { defineConfig, devices } from '@playwright/test';
 import { getLocalSupabaseStatus } from './scripts/lib/localSupabaseStatus';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// C1 (Abschluss-Review, final-review.md; Ruling AG): CI_E2E_USE_PREVIEW baut per `npm run
+// build` — Vite bettet VITE_SUPABASE_* dabei FEST in das Bundle ein (build-time replacement,
+// keine Laufzeit-Variable). Außerhalb der CI existiert kein Mechanismus, der diese Variablen vor
+// dem Build leert (die CI-Workflows tun das implizit: ein frischer Checkout hat nie eine
+// `.env.local`) — ein lokaler Preview-Build würde also GENAU die echten Produktions-Zugangsdaten
+// aus `.env.local` fest einbacken, und der `env`-Override des "offline"-webServer weiter unten
+// (der nur den DEV-Server, nicht den fertigen Preview-Build erreicht) hätte darauf keinen
+// Einfluss mehr. Harter Abbruch statt eines stillen Fallbacks — dieselbe Regel wie beim
+// Guard in scripts/lib/assertLocalSupabaseTarget.ts.
+//
+// EINZIGE bewusste Ausnahme: `npm run test:visual`/`test:visual:update` (I1-Fix, package.json)
+// setzen NEBEN `CI_E2E_USE_PREVIEW=1` explizit auch `CI=true` UND leeren `VITE_SUPABASE_URL`/
+// `VITE_SUPABASE_ANON_KEY` selbst per Docker-`-e`-Flag (Vite-Priorität: eine bereits gesetzte
+// Prozess-Variable schlägt jede `.env*`-Datei, siehe Kommentar beim "offline"-webServer unten) —
+// dieser Container-Lauf simuliert absichtlich GENAU den CI-Ablauf (`visual.yml`), `CI=true` ist
+// hier ehrlich, keine Umgehung: der Build sieht garantiert leere Werte, unabhängig davon, ob
+// `.env.local` über den Bind-Mount im Container sichtbar ist.
+if (process.env.CI_E2E_USE_PREVIEW && !process.env.CI) {
+  throw new Error(
+    'CI_E2E_USE_PREVIEW ist außerhalb der CI gesetzt. Ein lokaler `npm run build` würde ' +
+      '`.env.local` (Produktions-Zugangsdaten) fest in das Preview-Bundle einbauen, siehe C1 ' +
+      '(.superpowers/sdd/2026-09-24-testumgebung/final-review.md). Für den offiziellen ' +
+      'Visual-Container-Lauf: `npm run test:visual` / `npm run test:visual:update` (setzen ' +
+      'CI=true + LEERE VITE_SUPABASE_* selbst, siehe package.json). Ein roher lokaler ' +
+      'Preview-Build außerhalb dieser Skripte ist nicht vorgesehen.'
+  );
+}
+
 // In CI with preview mode, Vite uses port 4173; otherwise dev server uses 3000
 const usePreview = !!process.env.CI_E2E_USE_PREVIEW;
 // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Empty PORT env var should use default
@@ -344,17 +373,33 @@ export default defineConfig({
     },
   ],
 
+  // C1 (Abschluss-Review, final-review.md; Ruling AG): BEIDE Webserver dürfen NIE einen bereits
+  // laufenden Server auf ihrem Port übernehmen — vorher `reuseExistingServer: !process.env.CI`
+  // (lokal also `true`): lief zufällig bereits ein `npm run dev` auf Port 3000 (Vite-Standardport,
+  // `vite.config.ts:162`, der gleiche Port, den der "offline"-webServer unten fest belegt) — z.B.
+  // weil Daniel gerade entwickelt und dieser Dev-Server GEGEN DIE PRODUKTION läuft
+  // (`.env.local`) — übernahm Playwright diesen fremden Server kommentarlos. Der `env`-Override
+  // unten (leere VITE_SUPABASE_*) greift nur beim SELBST gestarteten Prozess, nicht bei einem
+  // übernommenen. `reuseExistingServer: false` (jetzt IMMER, nicht nur in der CI) plus
+  // `--strictPort` (Vite/`vite preview`-CLI-Flag: beendet sich sofort, wenn der Port belegt ist,
+  // statt automatisch auf den nächsten freien Port auszuweichen) erzwingen einen harten Abbruch
+  // in genau diesem Fall — "Port belegt → Abbruch statt Ausweichen" (Auftrag). Gegenprobe
+  // (final-fix-report.md): `npm run dev` auf Port 3000 laufen lassen, danach die Offline-Suite
+  // starten — der eigene webServer-Start scheitert am belegten Port (EADDRINUSE via
+  // `--strictPort`), Playwright bricht den Lauf ab, KEIN Test läuft gegen den fremden Server.
   webServer: [
     {
-      // offline — Port 3000 (bzw. 4173 mit CI_E2E_USE_PREVIEW), NIEMALS gegen Supabase
-      // konfiguriert. In CI with CI_E2E_USE_PREVIEW, use production build (faster, no Vite
-      // cold-start). Locally, use dev server for hot reload.
+      // offline — fester, eigener Port 3000 (bzw. 4173 mit CI_E2E_USE_PREVIEW — beides der
+      // bisherige, dokumentierte Port dieses Projekts, absichtlich UNVERÄNDERT: genau auf diesem
+      // Port kollidiert ein versehentlich laufender `npm run dev` mit diesem webServer, siehe
+      // Kommentar oben), NIEMALS gegen Supabase konfiguriert. In CI with CI_E2E_USE_PREVIEW, use
+      // production build (faster, no Vite cold-start). Locally, use dev server for hot reload.
       name: 'offline',
       command: process.env.CI_E2E_USE_PREVIEW
-        ? `npm run preview -- --port ${PORT}`
-        : `npm run dev -- --port ${PORT}`,
+        ? `npm run preview -- --port ${PORT} --strictPort`
+        : `npm run dev -- --port ${PORT} --strictPort`,
       url: baseURL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120000,
       // Explizit leer — auch wenn eine .env.local existiert, gewinnt diese Prozess-Variable
       // (Vite-Doku, Context7 /vitejs/vite: "environment variables that already exist when Vite
@@ -367,12 +412,13 @@ export default defineConfig({
       },
     },
     {
-      // cloud (Task T3) — Port 3100, gegen den LOKALEN Supabase-Stack (nie Produktion, siehe
-      // getCloudSupabaseEnv() oben).
+      // cloud (Task T3) — fester, eigener Port 3100, gegen den LOKALEN Supabase-Stack (nie
+      // Produktion, siehe getCloudSupabaseEnv() oben). `--strictPort` aus demselben Grund wie
+      // beim offline-Server oben (kein stilles Ausweichen auf einen anderen Port).
       name: 'cloud',
-      command: `npm run dev -- --port ${CLOUD_PORT}`,
+      command: `npm run dev -- --port ${CLOUD_PORT} --strictPort`,
       url: cloudBaseURL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120000,
       env: getCloudSupabaseEnv(),
     },

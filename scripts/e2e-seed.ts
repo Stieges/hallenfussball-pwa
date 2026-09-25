@@ -70,6 +70,7 @@ import {
   E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
+  E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE,
   e2eUuid,
 } from '../tests/e2e/cloud/testData';
 
@@ -649,6 +650,66 @@ async function main(): Promise<void> {
       finishedAt: nowIso,
     }))
   );
+
+  // Abschluss-Review (final-review.md, I2/Ruling AG): EIN weiteres Public-Cup-Spiel (das dritte,
+  // direkt nach den beiden oben abgeschlossenen — dieselbe Reihenfolge "finished, finished,
+  // running" wie beim Live-Cup, Abschnitt 3.3) wird DIREKT per Service-Role auf
+  // `matchStatus: 'running'` gesetzt, NIE über `MatchExecutionService.initializeMatch()` — das
+  // würde bei einem noch nie zuvor geladenen Spiel an C-NSTART scheitern (siehe
+  // `E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE` in testData.ts). `numberOfFields: 1` — jedes
+  // Public-Cup-Spiel liegt bereits auf Feld 1, genau dort, wo der `live`-Slide des Seed-Monitors
+  // (oben, `E2E_PUBLIC_CUP_MONITOR_ID`) hinschaut. Alle Spiele AB Index 3 bleiben unangetastet
+  // (nie initialisiert) — genau der Zustand, den der eigene C-NSTART-Test in
+  // `two-devices.cloud.spec.ts` braucht.
+  const publicCupRunningMatch = publicCup.matches[2];
+  if (!publicCupRunningMatch) {
+    throw new Error('Public-Cup: erwartetes drittes Spiel (Index 2) für den running-Bypass fehlt.');
+  }
+  await ownerRepo.updateMatches(publicCup.id, [
+    {
+      id: publicCupRunningMatch.id,
+      scoreA: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.home,
+      scoreB: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.away,
+      matchStatus: 'running',
+      timerStartTime: nowIso,
+      timerElapsedSeconds: 300,
+    },
+  ]);
+
+  const publicCupTeamIdByName = new Map(publicCupTeams.map((t) => [t.name, t.id]));
+  const publicCupRunningHomeTeamId = publicCupTeamIdByName.get(publicCupRunningMatch.teamA) ?? null;
+  const publicCupRunningAwayTeamId = publicCupTeamIdByName.get(publicCupRunningMatch.teamB) ?? null;
+  const publicCupRunningEvents: MatchEvent[] = [
+    {
+      id: e2eUuid(`event:public-cup:${publicCupRunningMatch.id}:1`),
+      matchId: publicCupRunningMatch.id,
+      timestampSeconds: 180,
+      type: 'GOAL',
+      payload: { team: 'home' },
+      scoreAfter: { home: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.home, away: E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE.away },
+    },
+    {
+      id: e2eUuid(`event:public-cup:${publicCupRunningMatch.id}:2`),
+      matchId: publicCupRunningMatch.id,
+      timestampSeconds: 30,
+      type: 'STATUS_CHANGE',
+      payload: { toStatus: 'RUNNING' },
+      scoreAfter: { home: 0, away: 0 },
+    },
+  ];
+  const publicCupRunningEventRows = publicCupRunningEvents.map((event) => {
+    const row = mapMatchEventToSupabase(event, publicCupRunningMatch.id);
+    if (event.payload.team === 'home') {
+      row.team_id = publicCupRunningHomeTeamId;
+    } else if (event.payload.team === 'away') {
+      row.team_id = publicCupRunningAwayTeamId;
+    }
+    return row;
+  });
+  const { error: publicCupEventsError } = await admin.from('match_events').insert(publicCupRunningEventRows);
+  if (publicCupEventsError) {
+    throw new Error(`Public-Cup match_events: ${publicCupEventsError.message}`);
+  }
 
   // ---------------------------------------------------------------------------
   // 3.6 Entwurf-Cup: Entwurf, privat, OHNE publishedAt (Fixrunde 2, N3/Ruling AA -- wieder

@@ -165,6 +165,82 @@ export async function ensureMatchRunning(page: Page): Promise<void> {
 }
 
 /**
+ * Abschluss-Review (final-review.md, I2/Ruling AG): liest per Service-Role direkt aus
+ * `public.matches`, welches Spiel eines Turniers der Seed NIE angerührt hat (DB-Default
+ * `match_status='scheduled'`, kein Score, kein Timer) -- höchste `round`/`slot`-Kombination, rein
+ * um deterministisch IMMER dasselbe (das "letzte") Spiel zu treffen, nicht das seed-`running`-Spiel.
+ * Gebraucht vom C-NSTART-Test (`two-devices.cloud.spec.ts`): Direktnavigation mit `?matchId=`
+ * (`TournamentManagementScreen.tsx#matchIdFromUrl`) statt einer Dropdown-Auswahl -- Letztere
+ * triggert bei bereits laufendem Spiel einen Bestätigungsdialog (`ManagementTab.tsx#handleMatch
+ * SelectionChange`), den `?matchId=` umgeht (der `initialMatchId`-Effekt dort beendet das laufende
+ * Spiel automatisch, ohne Dialog -- siehe `forceMatchRunning()` unten für den Rückbau).
+ */
+export async function fetchUntouchedMatchId(tournamentId: string): Promise<string> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.scheduled&order=round.desc,slot.desc&limit=1&select=id`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchUntouchedMatchId(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ id: string }>;
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`fetchUntouchedMatchId(${tournamentId}): kein Spiel mit match_status='scheduled' gefunden.`);
+  }
+  return row.id;
+}
+
+/**
+ * Gegenstück zu `fetchUntouchedMatchId()`: liest die ID des aktuell laufenden Spiels eines
+ * Turniers -- gebraucht vom C-NSTART-Test, um sich VOR der Direktnavigation zu merken, welches
+ * Spiel `forceMatchRunning()` im `finally` wiederherstellen muss (die ID ist nicht deterministisch
+ * ableitbar, `generateFullSchedule()` vergibt sie erst zur Seed-Laufzeit).
+ */
+export async function fetchRunningMatchId(tournamentId: string): Promise<string> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.running&limit=1&select=id`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchRunningMatchId(${tournamentId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ id: string }>;
+  const row = rows[0];
+  if (!row) {
+    throw new Error(`fetchRunningMatchId(${tournamentId}): kein laufendes Spiel gefunden.`);
+  }
+  return row.id;
+}
+
+/**
+ * I6/N16-Gegenstück zu `resetRunningMatchScore()` für den C-NSTART-Test: setzt EIN Spiel per ID
+ * zurück auf `running` + festen Score/Timer. Anders als `resetRunningMatchScore()` (Filter
+ * `match_status=eq.running`, trifft also NICHTS mehr, sobald der Status bereits gewechselt hat)
+ * greift dieser Rückbau per ID auch dann, wenn `ManagementTab`s `initialMatchId`-Effekt das Spiel
+ * zwischenzeitlich automatisch beendet hat (siehe `fetchUntouchedMatchId()`-Kommentar oben).
+ */
+export async function forceMatchRunning(matchId: string, homeScore: number, awayScore: number): Promise<void> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      match_status: 'running',
+      score_a: homeScore,
+      score_b: awayScore,
+      timer_start_time: new Date().toISOString(),
+      timer_elapsed_seconds: 300,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`forceMatchRunning(${matchId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+}
+
+/**
  * Trägt ein Tor für `side` ein: klickt `goal-button-{side}`, überspringt den
  * Torschützen-Dialog (`dialog-skip-button`, siehe `GoalScorerDialog.tsx`) -- der Test braucht
  * nur den Zähler, keinen Spieler.

@@ -186,6 +186,20 @@ export const E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as con
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;
 
+/**
+ * Abschluss-Review (final-review.md, I2/Ruling AG): analog zu `E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE`
+ * -- der Seed setzt jetzt EIN Public-Cup-Spiel direkt auf `matchStatus: 'running'` (Feld 1, wie der
+ * `live`-Slide des Seed-Monitors ihn erwartet), genau wie beim Live-Cup DIREKT in der DB, nie über
+ * `MatchExecutionService.initializeMatch()` -- das würde bei einem noch nie zuvor geladenen Spiel an
+ * C-NSTART scheitern (`STATUS_TO_DB.NOT_STARTED='not_started'` verletzt die DB-CHECK-Constraint,
+ * siehe `two-devices.cloud.spec.ts`, Testfall "C-NSTART"). Ohne dieses Bypass hätte JEDES
+ * Public-Cup-Spiel diesen Fehler getroffen, sobald ein Test es zum ersten Mal startet -- der
+ * Echtzeit-Nachweis "Monitor sieht Tor ohne Reload" (Verifikation #6 des Plans) wäre nie über
+ * C-NSTART hinausgekommen. `resetRunningMatchScore()` (`tests/e2e/cloud/helpers.ts`) setzt diesen
+ * Wert nach jedem Test zurück, genau wie beim Live-Cup.
+ */
+export const E2E_PUBLIC_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
+
 // =============================================================================
 // MITARBEITER-ROLLEN IM LIVE-CUP (verbindliche Tabelle aus dem Brief)
 // =============================================================================
@@ -195,19 +209,27 @@ export type E2ECollaboratorRole = 'owner' | 'co-admin' | 'trainer' | 'collaborat
 export interface E2ELiveCupCollaboratorSpec {
   userKey: E2EUserKey;
   role: E2ECollaboratorRole;
-  /** true = angenommen (accepted_at gesetzt), false = noch offen */
-  accepted: boolean;
   /** true = danach widerrufen (declined_at gesetzt) */
   revoked?: boolean;
   /** nur für trainer: eingeschränkt auf Team A */
   teamNames?: readonly string[];
 }
 
+// Abschluss-Review (final-review.md, M3): Das Feld `accepted` stand hier vorher auf JEDER Zeile
+// literal `true`, wurde von scripts/e2e-seed.ts aber nie gelesen -- mapMembershipInsertToSupabase()
+// setzt accepted_at IMMER (scripts/e2e-seed.ts:459-465, supabaseMappers.ts:735: `input.acceptedAtIso
+// ?? now`), unabhängig vom hier gesetzten Wert. Ein künftiges `accepted: false` hätte deshalb
+// stillschweigend trotzdem ein angenommenes Mitglied erzeugt -- ein totes Feld, das eine Zusage
+// vortäuscht, die der Code nicht einlöst. Entfernt statt verdrahtet: eine "offene" (noch nicht
+// angenommene) Mitgliedschaft mit user_id GESETZT (anders als eine reine invite_email-Einladung)
+// kommt in diesem Turnier nirgends vor -- alle sechs Zeilen unten waren/sind angenommen. Offene
+// Einladungen OHNE Konto deckt bereits `targetedInvites` weiter unten ab (invite_email, user_id
+// NULL) -- ein strukturell anderer, bereits vorhandener Zustand.
 export const E2E_LIVE_CUP_COLLABORATORS: E2ELiveCupCollaboratorSpec[] = [
-  { userKey: 'owner', role: 'owner', accepted: true },
-  { userKey: 'coadmin', role: 'co-admin', accepted: true },
-  { userKey: 'helper', role: 'collaborator', accepted: true },
-  { userKey: 'trainer', role: 'trainer', accepted: true, teamNames: [E2E_LIVE_CUP_TEAM_NAMES[0]] },
-  { userKey: 'viewer', role: 'viewer', accepted: true },
-  { userKey: 'revoked', role: 'co-admin', accepted: true, revoked: true },
+  { userKey: 'owner', role: 'owner' },
+  { userKey: 'coadmin', role: 'co-admin' },
+  { userKey: 'helper', role: 'collaborator' },
+  { userKey: 'trainer', role: 'trainer', teamNames: [E2E_LIVE_CUP_TEAM_NAMES[0]] },
+  { userKey: 'viewer', role: 'viewer' },
+  { userKey: 'revoked', role: 'co-admin', revoked: true },
 ];
