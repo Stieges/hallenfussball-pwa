@@ -127,7 +127,7 @@ function renderTab(): void {
     <ManagementTab
       tournament={tournament}
       schedule={schedule}
-      onTournamentUpdate={vi.fn()}
+      onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()}
     />
   );
 }

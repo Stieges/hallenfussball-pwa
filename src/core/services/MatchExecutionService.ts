@@ -164,6 +164,15 @@ export class MatchExecutionService {
                 const match = await this.liveMatchRepo.get(tournamentId, matchId);
                 if (!match) { throw new Error(`Match ${matchId} not found`); }
 
+                // Task A1 (Sofortschutz): ein bereits beendetes Spiel ist ein No-op. Ohne diesen
+                // Guard legte ein zweiter finishMatch-Aufruf (Doppel-Tap, oder zwei Geräte fast
+                // gleichzeitig) ein zweites STATUS_CHANGE-Ereignis an und schrieb
+                // tournamentRepo.updateMatch ein zweites Mal — unnötig UND (in Kombination mit dem
+                // separaten Turnier-Reload-Problem in useMatchExecution) ein Symptomverstärker.
+                if (match.status === 'FINISHED') {
+                    return { success: true, needsTiebreaker: false, decidedBy: this.getDecidedBy(match) };
+                }
+
                 // Check if finals match needs tiebreaker
                 if (this.needsTiebreaker(match)) {
                     const paused: LiveMatch = {

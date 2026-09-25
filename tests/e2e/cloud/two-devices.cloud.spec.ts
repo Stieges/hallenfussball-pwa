@@ -82,11 +82,14 @@ import { AUTH_DIR } from './fixtures';
 import {
   ensureMatchRunning,
   enterGoal,
+  fetchFailedMutationTypes,
+  fetchMatchEventIds,
   fetchRunningMatchId,
   fetchUntouchedMatchId,
   forceMatchRunning,
   resetRunningMatchScore,
   safeCleanup,
+  softDeleteMatchEvents,
 } from './helpers';
 import {
   E2E_LIVE_CUP_ID,
@@ -145,6 +148,77 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
           E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
         )
       );
+    }
+  });
+
+  /**
+   * Task A1 (Sofortschutz, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A1-brief.md`):
+   * Vorher (`useMatchExecution.ts#handleFinish`) lud die App nach Spielende das ganze Turnier neu
+   * und schrieb es per vollem `TournamentService.updateTournament` zurück -- für einen Helfer
+   * (Rolle `collaborator`, kein `tournamentSettings`-Recht) trifft das per RLS 0 Zeilen →
+   * `OptimisticLockError` → nach 5 Versuchen Dead-Letter in `mutation_queue_failed_v1`. Der Fix
+   * ersetzt diesen Pfad durch ein rein lokales State-Update (`useTournamentManager().applyRemote`,
+   * `useMatchExecution.ts#UseMatchExecutionProps.onLocalTournamentUpdate`) -- der Spielstand selbst
+   * ist längst über `MatchExecutionService.persistFinalResult` (Match-Pfad, per `writeMatchData`
+   * erlaubt) persistiert.
+   */
+  test('Helfer beendet das laufende Live-Cup-Spiel: owner sieht das Endergebnis ohne Neuladen, keine gescheiterte SAVE_TOURNAMENT-Mutation (Task A1)', async ({ asRole }) => {
+    const runningMatchId = await fetchRunningMatchId(E2E_LIVE_CUP_ID);
+    // I6/N16: Baseline VOR dem Finish -- finishMatch() legt ein neues STATUS_CHANGE-Ereignis an,
+    // das im finally-Block gezielt zurückgebaut wird (siehe fetchMatchEventIds()-Kommentar).
+    const eventIdsBeforeFinish = await fetchMatchEventIds(runningMatchId);
+    try {
+      const ownerPage = await asRole('owner');
+      const helperPage = await asRole('helper');
+
+      // Owner NAVIGIERT explizit mit `?matchId=` auf das laufende Spiel (wie der C-NSTART-Test
+      // unten, `ManagementTab.tsx#initialMatchId`-Effekt) -- pinnt `selectedMatchId` fest auf
+      // dieses Spiel. Ohne diesen Pin würde `currentMatchData` (ManagementTab.tsx, Auto-Wahl "das
+      // laufende Spiel ODER das erste ohne Ergebnis") automatisch auf das NÄCHSTE, noch nicht
+      // gestartete Spiel umschalten, sobald dieses Spiel den Status FINISHED erreicht -- das
+      // Status-Badge würde dann ein ANDERES Spiel zeigen, nicht mehr das gerade beendete (in einem
+      // Testlauf beobachtet: Badge sprang auf "NICHT GESTARTET" statt "BEENDET"). Der Pin macht
+      // die Prüfung robust gegen dieses (gewollte) Auto-Advance-Verhalten der App.
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live?matchId=${runningMatchId}`);
+      await ownerPage.waitForLoadState('networkidle');
+      await ensureMatchRunning(ownerPage);
+
+      await helperPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+      await helperPage.waitForLoadState('networkidle');
+      await expect(helperPage.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+
+      await helperPage.locator('[data-testid="match-finish-button"]').click();
+
+      // Kein page.reload() -- expect() pollt den DOM selbst. Timeout=3000 IST der Beweis "ohne
+      // Neuladen innerhalb von 3s" (Fundament-Zielgröße, wie Test 1 oben). Erfordert den
+      // SupabaseLiveMatchRepository-Fix aus diesem Task (siehe Kommentar dort,
+      // `subscribe()`/`isMatchActive`) -- ohne ihn behandelte der Realtime-Kanal die
+      // Spielende-Aktualisierung wie eine Löschung, das Owner-Cockpit blieb bei "LÄUFT" hängen.
+      await expect(ownerPage.locator('[data-testid="match-status-badge"]')).toHaveText('BEENDET', { timeout: 3000 });
+
+      // Kein gescheiterter Turnier-Save im Dead-Letter des Helfers -- der eigentliche Beweis
+      // dieses Tasks (vorher: OptimisticLockError → Dead-Letter, siehe Kopfkommentar).
+      const failedTypes = await fetchFailedMutationTypes(helperPage);
+      expect(failedTypes).not.toContain('SAVE_TOURNAMENT');
+    } finally {
+      // Rückbau: Spiel wieder laufend setzen, wie im C-NSTART-Test unten -- sonst koppelt dieser
+      // Test mit allen anderen Tests dieser Datei, die dasselbe laufende Live-Cup-Spiel brauchen.
+      await safeCleanup('Live-Cup Spiel wieder laufend setzen (Helfer beendet Spiel, Task A1)', () =>
+        forceMatchRunning(
+          runningMatchId,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
+      );
+      // I6/N16: das vom Finish angelegte STATUS_CHANGE-Ereignis gezielt zurückbauen (Diff gegen
+      // die Baseline oben) -- sonst bleibt es mit einem hohen timestamp_seconds stehen und
+      // verfälscht "letztes Ereignis" für den nächsten Test dieser Datei ("Ereignis löschen",
+      // beobachtet: Rückgängig traf das alte Finish-Ereignis statt des neuen Tors).
+      await safeCleanup('Live-Cup Finish-Ereignis zurückbauen (Helfer beendet Spiel, Task A1)', async () => {
+        const eventIdsAfterFinish = await fetchMatchEventIds(runningMatchId);
+        const newEventIds = eventIdsAfterFinish.filter((id) => !eventIdsBeforeFinish.includes(id));
+        await softDeleteMatchEvents(newEventIds);
+      });
     }
   });
 

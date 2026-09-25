@@ -131,13 +131,13 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
   it('behält die Array-Identität, wenn sich am Match nur die Uhr ändert', () => {
     setLiveMatch({ elapsedSeconds: 30 });
     const { rerender } = render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
 
     // Neues Match-Objekt, identische Ereignisse — genau das, was ein Uhr-Tick erzeugt.
     setLiveMatch({ elapsedSeconds: 45 });
     rerender(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
 
     const first = seenEventArrays[0];
@@ -149,7 +149,7 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
   it('erzeugt ein neues Array, sobald sich die Ereignisse tatsächlich ändern', () => {
     setLiveMatch();
     const { rerender } = render(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
     const before = seenEventArrays[seenEventArrays.length - 1];
 
@@ -163,7 +163,7 @@ describe('ManagementTab → LiveCockpit: Identität der normalisierten Ereigniss
       ],
     });
     rerender(
-      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} />
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
     );
 
     const after = seenEventArrays[seenEventArrays.length - 1];

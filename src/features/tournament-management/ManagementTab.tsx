@@ -27,6 +27,12 @@ interface ManagementTabProps {
   tournament: Tournament;
   schedule: GeneratedSchedule;
   onTournamentUpdate: (tournament: Tournament, regenerateSchedule?: boolean) => void;
+  /**
+   * Task A1 (Sofortschutz): NUR lokales State-Update, KEIN Speicherpfad — siehe
+   * `UseMatchExecutionProps.onLocalTournamentUpdate`. Von `onTournamentUpdate` oben getrennt,
+   * weil `handleUpdateSettings` unten weiterhin echt speichern muss (Turnier-Einstellungen).
+   */
+  onLocalTournamentUpdate: (tournament: Tournament) => void;
   /** Initial match ID to select (from schedule navigation) */
   initialMatchId?: string | null;
   /** Callback when initial match has been consumed */
@@ -37,6 +43,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   tournament,
   schedule,
   onTournamentUpdate,
+  onLocalTournamentUpdate,
   initialMatchId,
   onInitialMatchConsumed,
 }) => {
@@ -72,7 +79,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     handleAbortPenaltyShootout,
     handleUpdateEvent,
     handleDeleteEvent,
-  } = useMatchExecution({ tournament, onTournamentUpdate });
+  } = useMatchExecution({ tournament, onLocalTournamentUpdate });
 
   // Permission check: Get current user's role in this tournament
   const { myMembership } = useTournamentMembers(tournament.id);

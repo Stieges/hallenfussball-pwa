@@ -241,6 +241,64 @@ export async function forceMatchRunning(matchId: string, homeScore: number, away
 }
 
 /**
+ * Task A1 (Sofortschutz): liest die (nicht gelöschten) `match_events`-IDs eines Spiels --
+ * Baseline VOR einer Aktion, um danach per Diff genau die NEU entstandenen Events zu erkennen
+ * und gezielt zurückzubauen (siehe `softDeleteMatchEvents()`). Ohne diesen Rückbau bleibt z. B.
+ * das `STATUS_CHANGE`-Ereignis eines `finishMatch()`-Aufrufs mit einem hohen `timestamp_seconds`
+ * dauerhaft in der Tabelle stehen -- ein späterer Test in derselben `serial`-Kette
+ * (`two-devices.cloud.spec.ts`, "Ereignis löschen") ermittelt das "letzte" Ereignis für
+ * `handleUndoLastEvent` und traf dabei fälschlich dieses alte, zeitlich spätere Ereignis statt
+ * des gerade eingetragenen Tors -- beobachtet als hängengebliebener Score nach einem Rückgängig-
+ * Klick.
+ */
+export async function fetchMatchEventIds(matchId: string): Promise<string[]> {
+  const { url, headers } = getLocalServiceRoleClient();
+  const res = await fetch(
+    `${url}/rest/v1/match_events?match_id=eq.${matchId}&is_deleted=eq.false&select=id`,
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`fetchMatchEventIds(${matchId}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+  const rows = (await res.json()) as Array<{ id: string }>;
+  return rows.map((row) => row.id);
+}
+
+/**
+ * Gegenstück zu `fetchMatchEventIds()`: markiert die übergebenen Event-IDs als gelöscht
+ * (`is_deleted=true`, dieselbe Soft-Delete-Spalte wie `MatchExecutionService.deleteEvent()`) --
+ * kein Effekt, wenn `ids` leer ist.
+ */
+export async function softDeleteMatchEvents(ids: string[]): Promise<void> {
+  if (ids.length === 0) { return; }
+  const { url, headers } = getLocalServiceRoleClient();
+  const idList = ids.map((id) => `"${id}"`).join(',');
+  const res = await fetch(`${url}/rest/v1/match_events?id=in.(${idList})`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ is_deleted: true }),
+  });
+  if (!res.ok) {
+    throw new Error(`softDeleteMatchEvents(${ids.join(',')}) fehlgeschlagen: ${res.status} ${await res.text()}`);
+  }
+}
+
+/**
+ * Task A1 (Sofortschutz): liest `localStorage['mutation_queue_failed_v1']` (Dead-Letter der
+ * `MutationQueue`, siehe `MutationQueue.ts#failedStorageKey`) auf `page` und gibt die
+ * `type`-Werte der darin enthaltenen Mutationen zurück (leeres Array, wenn der Schlüssel fehlt
+ * oder leer ist). Gebraucht vom "Helfer beendet Spiel"-Test, um zu beweisen, dass nach einem
+ * Spielende KEINE `SAVE_TOURNAMENT`-Mutation dort gelandet ist (vorher: RLS lehnt den vollen
+ * Turnier-Save für einen Helfer ab → nach Retries Dead-Letter).
+ */
+export async function fetchFailedMutationTypes(page: Page): Promise<string[]> {
+  const raw = await page.evaluate(() => window.localStorage.getItem('mutation_queue_failed_v1'));
+  if (!raw) { return []; }
+  const parsed = JSON.parse(raw) as Array<{ type?: string }>;
+  return parsed.map((item) => item.type).filter((type): type is string => typeof type === 'string');
+}
+
+/**
  * Trägt ein Tor für `side` ein: klickt `goal-button-{side}`, überspringt den
  * Torschützen-Dialog (`dialog-skip-button`, siehe `GoalScorerDialog.tsx`) -- der Test braucht
  * nur den Zähler, keinen Spieler.

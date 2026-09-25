@@ -421,8 +421,19 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
               if (!matchRow) { return; }
 
-            // Skip if not active
-            if (!isMatchActive(matchRow)) {
+            // Task A1 (Sofortschutz): ein FINISHED-Match ist NICHT "inaktiv" im Sinne dieses
+            // Guards, obwohl persistFinalResult live_state auf null setzt (siehe
+            // liveMatchMappers.ts#mapLiveMatchToSupabaseUpdate, `live_state: FINISHED ? null : …`)
+            // — das lässt isMatchActive() unten fälschlich false zurückgeben. Ohne diese
+            // Ausnahme wurde JEDE Spielende-Aktualisierung wie eine Löschung behandelt (siehe
+            // Zweig unten) und useMatchExecution.ts ignoriert eine solche Löschung bewusst
+            // (Kommentar dort: "Cockpit braucht beendete Spiele weiterhin") — ein zweites,
+            // bereits geöffnetes Cockpit (z. B. der Owner) erfuhr dadurch NIE per Realtime, dass
+            // ein Helfer das Spiel beendet hat, sondern hätte manuell neu laden müssen.
+            const isFinished = matchRow.match_status === 'finished';
+
+            // Skip if not active (außer: gerade beendet, siehe oben)
+            if (!isFinished && !isMatchActive(matchRow)) {
               // If it was active before, treat as delete
               if (payload.eventType === 'UPDATE') {
                 const oldMatch = payload.old as MatchRow | undefined;

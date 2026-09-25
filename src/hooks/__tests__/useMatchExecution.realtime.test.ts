@@ -166,7 +166,7 @@ beforeEach(() => {
 async function renderAndFlush(tournament: Tournament = makeTournament()) {
   const view = renderHook(
     (props: { tournament: Tournament }) =>
-      useMatchExecution({ tournament: props.tournament, onTournamentUpdate: vi.fn() }),
+      useMatchExecution({ tournament: props.tournament, onLocalTournamentUpdate: vi.fn() }),
     { initialProps: { tournament } }
   );
   await act(async () => {

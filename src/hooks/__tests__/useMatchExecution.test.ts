@@ -26,6 +26,7 @@ import type { LiveMatch } from '../../core/models/LiveMatch';
 
 const mockDeleteEvent = vi.fn();
 const mockAbortPenaltyShootout = vi.fn();
+const mockFinishMatch = vi.fn();
 
 vi.mock('../../core/services/MatchExecutionService', () => {
   // Arrow-function-Implementierungen sind nicht `new`-fähig — echte Klasse statt
@@ -33,6 +34,7 @@ vi.mock('../../core/services/MatchExecutionService', () => {
   class MockMatchExecutionService {
     deleteEvent = mockDeleteEvent;
     abortPenaltyShootout = mockAbortPenaltyShootout;
+    finishMatch = mockFinishMatch;
   }
   return { MatchExecutionService: MockMatchExecutionService };
 });
@@ -132,9 +134,9 @@ beforeEach(() => {
 // Rendert den Hook und wartet den asynchronen Lade-Effekt (liveMatchRepository.getAll) ab, BEVOR
 // ein Handler aufgerufen wird — sonst gewinnt manchmal das Race: der Lade-Effekt überschreibt den
 // vom Handler gerade gesetzten liveMatches-State mit der (leeren) Map aus getAll().
-async function renderAndFlush(onTournamentUpdate: (t: Tournament, r?: boolean) => void = vi.fn()) {
+async function renderAndFlush(onLocalTournamentUpdate: (t: Tournament) => void = vi.fn()) {
   const tournament = makeTournament();
-  const view = renderHook(() => useMatchExecution({ tournament, onTournamentUpdate }));
+  const view = renderHook(() => useMatchExecution({ tournament, onLocalTournamentUpdate }));
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
@@ -203,7 +205,7 @@ describe('useMatchExecution — handleDeleteEvent (Fixwave FIX 2)', () => {
 
 describe('useMatchExecution — handleAbortPenaltyShootout (Fixwave FIX 1)', () => {
   it('ruft service.abortPenaltyShootout auf und übernimmt das Ergebnis in liveMatches, OHNE das Turnier neu zu laden (kein Finish)', async () => {
-    const onTournamentUpdate = vi.fn();
+    const onLocalTournamentUpdate = vi.fn();
     const aborted = makeLiveMatch({ playPhase: 'penalty', awaitingTiebreakerChoice: true, status: 'PAUSED' });
     mockAbortPenaltyShootout.mockResolvedValueOnce(aborted);
     // handleAbortPenaltyShootout übernimmt (wie sein Vorbild handleCancelTiebreaker) NICHT den
@@ -211,7 +213,7 @@ describe('useMatchExecution — handleAbortPenaltyShootout (Fixwave FIX 1)', () 
     // liveMatchRepository.get den frischen Stand — der muss hier separat gemockt werden.
     mockLiveMatchRepository.get.mockResolvedValueOnce(aborted);
 
-    const { result } = await renderAndFlush(onTournamentUpdate);
+    const { result } = await renderAndFlush(onLocalTournamentUpdate);
 
     await act(async () => {
       await result.current.handleAbortPenaltyShootout('match-1');
@@ -220,7 +222,7 @@ describe('useMatchExecution — handleAbortPenaltyShootout (Fixwave FIX 1)', () 
     expect(mockAbortPenaltyShootout).toHaveBeenCalledWith('tour-1', 'match-1');
     expect(result.current.liveMatches.get('match-1')).toEqual(aborted);
     // kein Finish-Seiteneffekt: das Match wurde nicht beendet, also gibt es nichts am Turnier zu aktualisieren
-    expect(onTournamentUpdate).not.toHaveBeenCalled();
+    expect(onLocalTournamentUpdate).not.toHaveBeenCalled();
   });
 
   it('bei OptimisticLockError wird der State aufgefrischt und ein Konflikt-Hinweis gezeigt, der Handler wirft NICHT', async () => {
@@ -235,5 +237,34 @@ describe('useMatchExecution — handleAbortPenaltyShootout (Fixwave FIX 1)', () 
 
     expect(mockLiveMatchRepository.get).toHaveBeenCalledWith('tour-1', 'match-1');
     expect(mockShowInfo).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task A1 (Sofortschutz): handleFinish darf nach Spielende nie den vollen
+// Turnier-Speicherweg auslösen — nur den lokalen Zustand nachziehen.
+// ---------------------------------------------------------------------------
+
+describe('useMatchExecution — handleFinish ruft nach Spielende KEINEN Turnier-Speicherweg auf (Task A1)', () => {
+  it('übernimmt den frisch geladenen Tournament-Stand NUR lokal (onLocalTournamentUpdate), ohne tournamentRepository.save', async () => {
+    const onLocalTournamentUpdate = vi.fn();
+    const finishedLiveMatch = makeLiveMatch({ status: 'FINISHED' });
+    const reloadedTournament = { id: 'tour-1', matches: [] } as unknown as Tournament;
+
+    mockFinishMatch.mockResolvedValueOnce({ success: true, needsTiebreaker: false, decidedBy: 'regular' });
+    mockTournamentRepository.get.mockResolvedValueOnce(reloadedTournament);
+    mockLiveMatchRepository.get.mockResolvedValueOnce(finishedLiveMatch);
+
+    const { result } = await renderAndFlush(onLocalTournamentUpdate);
+
+    await act(async () => {
+      await result.current.handleFinish('match-1');
+    });
+
+    expect(mockFinishMatch).toHaveBeenCalledWith('tour-1', 'match-1');
+    // Zustand wird NUR lokal aktualisiert — kein Turnier-Speicherweg (der für einen Helfer per
+    // RLS scheitern würde, siehe MatchExecutionService.test.ts + task-A1-brief.md).
+    expect(onLocalTournamentUpdate).toHaveBeenCalledWith(reloadedTournament);
+    expect(mockTournamentRepository.save).not.toHaveBeenCalled();
   });
 });

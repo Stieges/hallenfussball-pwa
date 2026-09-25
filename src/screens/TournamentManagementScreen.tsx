@@ -90,6 +90,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
     isLoading,
     loadingError,
     handleTournamentUpdate,
+    applyRemote,
   } = useTournamentManager(tournamentId);
 
   // TOUR-EDIT-META: Tab-Wechsel mit Dirty-State-Prüfung
@@ -359,6 +360,7 @@ export const TournamentManagementScreen: React.FC<TournamentManagementScreenProp
             tournament={tournament}
             schedule={schedule}
             onTournamentUpdate={(t) => { void handleTournamentUpdate(t); }}
+            onLocalTournamentUpdate={applyRemote}
             initialMatchId={initialMatchId}
             onInitialMatchConsumed={() => setInitialMatchId(null)}
           />
