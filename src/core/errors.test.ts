@@ -183,4 +183,66 @@ describe('isTransientMutationError', () => {
     expect(isTransientMutationError(undefined)).toBe(false);
     expect(isTransientMutationError('boom')).toBe(false);
   });
+
+  // =============================================================================
+  // Task A3 Fixrunde 1: die tatsächliche Fehlerform, wie sie über
+  // SupabaseRepository ankommt — nicht ein roher TypeError, sondern ein von
+  // postgrest-js gefangenes Plain-Object (kein `.name`), von
+  // SupabaseRepository in RepositoryError verpackt. `updateMatch(es)` (der
+  // Live-Cockpit-Schreibpfad) verpackt zusätzlich in ein Error[]-Array.
+  // Chrome/Firefox/Safari je einmal, weil der Wortlaut je Browser abweicht
+  // und Safari/iOS ("Load failed") vorher NICHT erkannt wurde (Review-Fund).
+  // =============================================================================
+  describe('reale SupabaseRepository-Fehlerform (postgrest-js, kein Throw)', () => {
+    // Wie postgrest-js res.catch((fetchError) => ...) den Fehler tatsächlich
+    // liefert: ein Plain-Object OHNE .name-Feld, message = "<name>: <reason>".
+    function postgrestNonThrowError(message: string) {
+      return { message, details: '', hint: '', code: '' };
+    }
+
+    const browserMessages = {
+      chrome: 'TypeError: Failed to fetch',
+      firefox: 'TypeError: NetworkError when attempting to fetch resource.',
+      safari: 'TypeError: Load failed',
+    };
+
+    it.each(Object.entries(browserMessages))(
+      'get()/save()-Pfad (RepositoryError mit einzelnem originalError) — %s',
+      (_browser, message) => {
+        const postgrestError = postgrestNonThrowError(message);
+        const wrapped = new RepositoryError('get', postgrestError.message, postgrestError);
+        expect(isTransientMutationError(wrapped)).toBe(true);
+      }
+    );
+
+    it.each(Object.entries(browserMessages))(
+      'updateMatch(es)-Pfad (RepositoryError mit Error[]-originalError) — %s',
+      (_browser, message) => {
+        const postgrestError = postgrestNonThrowError(message);
+        const errors = [new Error(`Match m1: ${postgrestError.message}`)];
+        const wrapped = new RepositoryError(
+          'updateMatches',
+          `Failed to update matches/tournament: ${errors.map((e) => e.message).join('; ')}`,
+          errors
+        );
+        expect(isTransientMutationError(wrapped)).toBe(true);
+      }
+    );
+
+    it('durchsucht das originalError-Array auch, wenn die Top-Level-Nachricht keinen Netz-Hinweis trägt', () => {
+      // Konstruiert bewusst so, dass NUR die Array-Rekursion den Fall findet
+      // (Top-Level-Message enthält absichtlich keinen der Muster) — beweist,
+      // dass das Durchsuchen des Arrays selbst etwas beiträgt, nicht nur die
+      // (im echten Code zufällig auch treffende) Top-Level-Konkatenation.
+      const errors = [new Error('Match m1: irgendein anderer Fehler'), new Error('Match m2: TypeError: Load failed')];
+      const wrapped = new RepositoryError('updateMatches', 'Mehrere Matches konnten nicht aktualisiert werden', errors);
+      expect(isTransientMutationError(wrapped)).toBe(true);
+    });
+
+    it('Array ohne jeden Netz-Hinweis bleibt dauerhaft', () => {
+      const errors = [new Error('Match m1: permission denied'), new Error('Match m2: constraint violated')];
+      const wrapped = new RepositoryError('updateMatches', 'Mehrere Matches konnten nicht aktualisiert werden', errors);
+      expect(isTransientMutationError(wrapped)).toBe(false);
+    });
+  });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GenericMutationQueue, MAX_RETRIES } from '../GenericMutationQueue';
 import type { GenericMutationItem, FailedMutationItem } from '../GenericMutationQueue';
+import { RepositoryError } from '../../errors';
 
 // =============================================================================
 // Mocks (mirrored from MutationQueue.test.ts — same infra, generic payloads)
@@ -311,6 +312,35 @@ describe('GenericMutationQueue', () => {
 
     expect(queue.getPendingCount()).toBe(1);
     expect(queue.getFailedCount()).toBe(0);
+  });
+
+  it('Safari-Netzfehler ("Load failed") über die reale SupabaseRepository-Wrapping-Form zählt nicht als Fehlversuch', async () => {
+    // Nachgebaut wie SupabaseRepository.updateMatches ihn tatsächlich wirft
+    // (task-A3-review.md, Critical #1): postgrest-js liefert bei
+    // fehlgeschlagenem fetch() (kein .throwOnError()) ein Plain-Object OHNE
+    // .name-Feld; SupabaseRepository sammelt pro Match einen Error und wirft
+    // am Ende EIN RepositoryError mit einem Error[]-originalError.
+    const postgrestError = { message: 'TypeError: Load failed', details: '', hint: '', code: '' };
+    const perMatchErrors = [new Error(`Match a: ${postgrestError.message}`)];
+    const realError = new RepositoryError(
+      'updateMatches',
+      `Failed to update matches/tournament: ${perMatchErrors.map((e) => e.message).join('; ')}`,
+      perMatchErrors
+    );
+    const execute = vi.fn().mockRejectedValue(realError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 20; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(20);
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+    const stored = JSON.parse(mockStorage.get('test_queue_v1') ?? '[]') as GenericMutationItem<TestType>[];
+    expect(stored[0].retryCount).toBe(0);
   });
 
   it('HTTP 429 zählt nicht als Fehlversuch — Eintrag bleibt wartend', async () => {
