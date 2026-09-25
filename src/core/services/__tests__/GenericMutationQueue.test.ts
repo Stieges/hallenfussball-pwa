@@ -258,6 +258,76 @@ describe('GenericMutationQueue', () => {
     expect(status.failedCount).toBe(0);
   });
 
+  // ===========================================================================
+  // Task A3: Netzfehler (kein echtes Internet trotz navigator.onLine) zählt
+  // nicht als Fehlversuch — Eintrag bleibt wartend statt in der Fehlerliste.
+  // ===========================================================================
+
+  it('Netzfehler (Failed to fetch) zählt auch nach 20 Anstößen nicht als Fehlversuch', async () => {
+    const execute = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 20; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(20);
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+    const stored = JSON.parse(mockStorage.get('test_queue_v1') ?? '[]') as GenericMutationItem<TestType>[];
+    expect(stored[0].retryCount).toBe(0);
+  });
+
+  it('RLS-Fehler (dauerhaft) landet wie bisher nach 5 Anstößen in der Fehlerliste', async () => {
+    const rlsError = Object.assign(new Error('new row violates row-level security policy'), {
+      code: '42501',
+    });
+    const execute = vi.fn().mockRejectedValue(rlsError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      await queue.process();
+    }
+
+    expect(execute).toHaveBeenCalledTimes(MAX_RETRIES);
+    expect(queue.getPendingCount()).toBe(0);
+    expect(queue.getFailedCount()).toBe(1);
+  });
+
+  it('HTTP 5xx zählt nicht als Fehlversuch — Eintrag bleibt wartend', async () => {
+    const serverError = Object.assign(new Error('Service Unavailable'), { status: 503 });
+    const execute = vi.fn().mockRejectedValue(serverError);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 5; i++) {
+      await queue.process();
+    }
+
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+  });
+
+  it('HTTP 429 zählt nicht als Fehlversuch — Eintrag bleibt wartend', async () => {
+    const rateLimited = Object.assign(new Error('Too Many Requests'), { status: 429 });
+    const execute = vi.fn().mockRejectedValue(rateLimited);
+    const { queue } = makeQueue({ execute, online: false });
+    queue.enqueue('SAVE_THING', { id: 'a' });
+
+    onlineSpy.mockReturnValue(true);
+    for (let i = 0; i < 5; i++) {
+      await queue.process();
+    }
+
+    expect(queue.getPendingCount()).toBe(1);
+    expect(queue.getFailedCount()).toBe(0);
+  });
+
   it('nutzt den konfigurierten execute-Callback statt eines Switch auf Mutation-Typen', async () => {
     const execute = vi.fn().mockResolvedValue(undefined);
     const { queue } = makeQueue({ execute, online: false });

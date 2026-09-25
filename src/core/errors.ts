@@ -139,6 +139,61 @@ export class OptimisticLockError extends Error {
 // =============================================================================
 
 /**
+ * Classifies an error thrown by a mutation-queue `execute()` call as
+ * transient (should NOT count as a failed attempt — the item stays at the
+ * head of the queue and is retried on the next process() call, without
+ * touching retryCount) or permanent (counts as before, unchanged).
+ *
+ * Task A3 (minimal, see task-A3-brief.md): behind a captive portal (e.g. a
+ * hall Wi-Fi login page), `navigator.onLine` reports true but every request
+ * fails with a network error — those must not be counted as failed
+ * attempts, or the queue silently dead-letters entries after MAX_RETRIES.
+ *
+ * Transient: network failures (fetch/TypeError, "Failed to fetch"),
+ * timeouts/aborts, HTTP 408, 429, 5xx.
+ * Permanent (default — everything not positively recognised as transient):
+ * RLS/403, other 4xx, Postgres error codes (23xxx, P0001, 22P02),
+ * OptimisticLockError, etc. — exactly today's behaviour.
+ */
+export function isTransientMutationError(error: unknown): boolean {
+  if (error instanceof OptimisticLockError) {
+    return false;
+  }
+  if (isAbortError(error)) {
+    return true;
+  }
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const e = error as {
+    name?: string;
+    message?: string;
+    status?: number;
+    statusCode?: number;
+    originalError?: unknown;
+  };
+
+  const message = e.message ?? '';
+  if (e.name === 'TypeError' || /fetch/i.test(message) || /timeout/i.test(message)) {
+    return true;
+  }
+
+  const status = e.status ?? e.statusCode;
+  if (typeof status === 'number' && (status === 408 || status === 429 || (status >= 500 && status < 600))) {
+    return true;
+  }
+
+  // RepositoryError wraps the raw Supabase/Postgrest error in originalError —
+  // the transient signal (status/message) may live there instead.
+  if (e.originalError && typeof e.originalError === 'object' && e.originalError !== error) {
+    return isTransientMutationError(e.originalError);
+  }
+
+  return false;
+}
+
+/**
  * Checks if an error is an AbortError (expected during navigation, StrictMode, unmount).
  * Consolidated from 3 duplicate implementations across the codebase.
  *
