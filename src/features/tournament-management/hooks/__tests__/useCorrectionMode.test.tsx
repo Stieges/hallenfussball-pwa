@@ -86,9 +86,10 @@ describe('useCorrectionMode — handleConfirmCorrection', () => {
     // ... but the RESULT persists via a targeted update, not a full tournament save.
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     const updates = onMatchesUpdate.mock.calls[0][0];
-    expect(updates).toEqual([
-      expect.objectContaining({ id: 'm1', scoreA: 4, scoreB: 1 }),
-    ]);
+    // A2 Fixrunde 3 (N1a): only the field that ACTUALLY changed goes out -- scoreB stayed 1,
+    // so it must NOT appear in the update (Fixrunde 1 would have included it, sourced from the
+    // caller's local state, even though it didn't change).
+    expect(updates).toEqual([{ id: 'm1', scoreA: 4 }]);
   });
 
   it('does NOT call onMatchesUpdate when there is no active correction', () => {

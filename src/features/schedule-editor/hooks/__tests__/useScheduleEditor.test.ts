@@ -539,10 +539,12 @@ describe('Skip/Unskip', () => {
     expect(updates).toHaveLength(1);
     expect(updates[0].id).toBe('m1');
     expect(updates[0].matchStatus).toBe('scheduled');
+    // A2 Fixrunde 3 (N2): a cleared field transports as `null`, not `undefined` -- `undefined`
+    // would be dropped entirely by JSON.stringify in the offline mutation queue.
     expect('skippedReason' in updates[0]).toBe(true);
-    expect(updates[0].skippedReason).toBeUndefined();
+    expect(updates[0].skippedReason).toBeNull();
     expect('skippedAt' in updates[0]).toBe(true);
-    expect(updates[0].skippedAt).toBeUndefined();
+    expect(updates[0].skippedAt).toBeNull();
   });
 });
 

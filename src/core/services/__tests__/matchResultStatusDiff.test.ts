@@ -1,6 +1,9 @@
 /**
  * matchResultStatusDiff.test.ts — A2 Fixrunde 1 (Ruling AJ, I2/C1/I1 in
- * `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md`).
+ * `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-review.md`), REWRITTEN in
+ * Fixrunde 3 (N1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`) --
+ * Fixrunde 1 emitted ALL 14 result/status fields whenever ANY of them changed (sourced from the
+ * caller's possibly-stale local state); Fixrunde 3 emits ONLY the fields that actually differ.
  */
 import { describe, it, expect } from 'vitest';
 import { diffMatchResultStatusUpdates } from '../matchResultStatusDiff';
@@ -31,21 +34,22 @@ describe('diffMatchResultStatusUpdates', () => {
     expect(updates).toEqual([]);
   });
 
-  it('detects a changed score and includes ALL result/status fields in the update, not just the diff', () => {
+  // A2 Fixrunde 3 (N1a): the core of the rereview finding -- a changed score must NOT drag along
+  // unrelated, unchanged fields from the caller's local state. Runde 1's version of this exact
+  // test asserted the opposite ("includes ALL result/status fields") -- that assertion is now the
+  // RED case the fix closes.
+  it('a changed score includes ONLY scoreA -- not matchStatus, which did not change', () => {
     const oldMatch = makeMatch({ scoreA: 1, scoreB: 0, matchStatus: 'running' });
     const newMatch = makeMatch({ scoreA: 2, scoreB: 0, matchStatus: 'running' });
     const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
 
     expect(updates).toHaveLength(1);
-    expect(updates[0]).toMatchObject({
-      id: 'match-1',
-      scoreA: 2,
-      scoreB: 0,
-      matchStatus: 'running',
-    });
+    expect(updates[0]).toEqual({ id: 'match-1', scoreA: 2 });
+    expect(updates[0]).not.toHaveProperty('scoreB');
+    expect(updates[0]).not.toHaveProperty('matchStatus');
   });
 
-  it('detects a status change (finished) with tiebreaker fields', () => {
+  it('detects a status change (finished) with tiebreaker fields -- and nothing else', () => {
     const oldMatch = makeMatch({ matchStatus: 'running' });
     const newMatch = makeMatch({
       matchStatus: 'finished',
@@ -59,7 +63,7 @@ describe('diffMatchResultStatusUpdates', () => {
     const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
 
     expect(updates).toHaveLength(1);
-    expect(updates[0]).toMatchObject({
+    expect(updates[0]).toEqual({
       id: 'match-1',
       matchStatus: 'finished',
       finishedAt: '2026-01-01T10:00:00Z',
@@ -85,17 +89,45 @@ describe('diffMatchResultStatusUpdates', () => {
     expect(updates[0].skippedAt).toBe('2026-01-01T09:00:00Z');
   });
 
-  it('a RESET (result cleared back to undefined) is still reported as a change -- with the fields present as own keys, so the caller can persist the clear', () => {
+  // A2 Fixrunde 3 (N1b): a cleared field must NOT become NULL for match_status/
+  // timer_elapsed_seconds -- same insert defaults as mapMatchToSupabase ('scheduled' / 0).
+  it('a RESET clears scoreA/finishedAt to null, but matchStatus to the schedule default \'scheduled\' -- not null', () => {
     const oldMatch = makeMatch({ scoreA: 3, scoreB: 1, matchStatus: 'finished', finishedAt: '2026-01-01T10:00:00Z' });
     const newMatch = makeMatch({ scoreA: undefined, scoreB: undefined, matchStatus: 'scheduled', finishedAt: undefined });
     const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
 
     expect(updates).toHaveLength(1);
     const update = updates[0];
-    expect('scoreA' in update).toBe(true);
-    expect(update.scoreA).toBeUndefined();
-    expect('finishedAt' in update).toBe(true);
+    expect(update.scoreA).toBeNull();
+    expect(update.scoreB).toBeNull();
+    expect(update.finishedAt).toBeNull();
     expect(update.matchStatus).toBe('scheduled');
+  });
+
+  it('a RESET clears timerElapsedSeconds to the schedule default 0 -- not null', () => {
+    const oldMatch = makeMatch({ matchStatus: 'running', timerElapsedSeconds: 600 });
+    const newMatch = makeMatch({ matchStatus: 'running', timerElapsedSeconds: undefined });
+    const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
+
+    expect(updates).toHaveLength(1);
+    expect(updates[0].timerElapsedSeconds).toBe(0);
+  });
+
+  // A2 Fixrunde 3 (N2): a cleared field is transported as `null`, never `undefined` -- `undefined`
+  // would be dropped entirely by `JSON.stringify` in the offline mutation queue.
+  it('a cleared field is `null`, not `undefined` (JSON-round-trip safety, N2)', () => {
+    const oldMatch = makeMatch({ skippedReason: 'Team not present', skippedAt: '2026-01-01T09:00:00Z', matchStatus: 'skipped' });
+    const newMatch = makeMatch({ skippedReason: undefined, skippedAt: undefined, matchStatus: 'scheduled' });
+    const updates = diffMatchResultStatusUpdates([oldMatch], [newMatch]);
+
+    expect(updates).toHaveLength(1);
+    const update = updates[0];
+    expect('skippedReason' in update).toBe(true);
+    expect(update.skippedReason).toBeNull();
+    expect('skippedAt' in update).toBe(true);
+    expect(update.skippedAt).toBeNull();
+    // JSON.stringify would silently drop these if they were `undefined` instead.
+    expect(JSON.parse(JSON.stringify(update))).toMatchObject({ skippedReason: null, skippedAt: null });
   });
 
   it('ignores a match that only exists in newMatches (freshly created, no live state to protect)', () => {

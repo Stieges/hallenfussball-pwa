@@ -259,6 +259,59 @@ describe('MutationQueue process', () => {
 });
 
 // =============================================================================
+// A2 Fixrunde 3 (N2, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md):
+// an explicit "clear this field" must survive save -> app restart (new queue instance re-reading
+// the SAME, now-stringified, localStorage) -> process -- not just an in-memory session.
+// =============================================================================
+
+describe('MutationQueue — explicit clear survives the JSON round-trip (N2)', () => {
+  it('null (not undefined) for a cleared field reaches the executor after save, reload, and process', async () => {
+    // 1. Enqueue OFFLINE -- persisted to (string!) storage, not processed yet.
+    const queue1 = createQueue({ online: false });
+    queue1.enqueue('UPDATE_MATCH', {
+      tournamentId: 't1',
+      update: { id: 'm1', skippedReason: null, skippedAt: null, matchStatus: 'scheduled' },
+    });
+    expect(queue1.getPendingCount()).toBe(1);
+
+    // 2. Simulate an app restart: a BRAND NEW queue instance, still offline so its own
+    // constructor doesn't race the explicit process() call below, reads the SAME storage.
+    const queue2 = createQueue({ online: false });
+    expect(queue2.getPendingCount()).toBe(1);
+
+    // 3. Now go online and process -- the executor must receive `null` for the cleared fields,
+    // exactly as enqueued; JSON.stringify/parse must not have dropped anything.
+    onlineSpy.mockReturnValue(true);
+    await queue2.process();
+
+    expect(mockRepo.updateMatch).toHaveBeenCalledWith('t1', {
+      id: 'm1',
+      skippedReason: null,
+      skippedAt: null,
+      matchStatus: 'scheduled',
+    });
+  });
+
+  // RED-GUARD (documents WHY null is required, not a fix in itself): `undefined` never makes it
+  // into storage at all -- `JSON.stringify` drops a present-but-undefined-valued key. This is
+  // the bug N2 fixes for every real MatchUpdate producer (OfflineRepository normalizes
+  // undefined -> null right before enqueue, matchResultStatusDiff never emits undefined for a
+  // changed field to begin with).
+  it('RED-GUARD: undefined for a cleared field does NOT survive JSON.stringify -- the key is gone', () => {
+    const queue1 = createQueue({ online: false });
+    queue1.enqueue('UPDATE_MATCH', {
+      tournamentId: 't1',
+      update: { id: 'm1', skippedReason: undefined, skippedAt: undefined, matchStatus: 'scheduled' },
+    });
+
+    const stored = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as MutationItem[];
+    const storedUpdate = stored[0].payload.update as Record<string, unknown>;
+    expect('skippedReason' in storedUpdate).toBe(false);
+    expect('skippedAt' in storedUpdate).toBe(false);
+  });
+});
+
+// =============================================================================
 // Error handling & Dead Letter
 // =============================================================================
 

@@ -93,6 +93,34 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
     ]);
   });
 
+  // A2 Fixrunde 3 (N1a, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md):
+  // the exact scenario the review flagged -- the owner enters a result for a match that is
+  // currently RUNNING (e.g. a helper's live match) via the "trotzdem eintragen" confirm
+  // (`liveMatchWarning`). Only scoreA/scoreB may go out; matchStatus/timer must NOT be
+  // overwritten with the owner's local (possibly stale) copy of them.
+  it('entering a score for a RUNNING match sends ONLY scoreA/scoreB -- never matchStatus or the timer', () => {
+    const tournament = createTournament([
+      createMatch({
+        id: 'm1',
+        matchStatus: 'running',
+        timerStartTime: '2026-01-01T10:00:00Z',
+        timerElapsedSeconds: 300,
+      }),
+    ]);
+    const { result, onMatchesUpdate } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 2, 1);
+    });
+
+    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
+    const updates = onMatchesUpdate.mock.calls[0][0];
+    expect(updates).toEqual([{ id: 'm1', scoreA: 2, scoreB: 1 }]);
+    expect(updates[0]).not.toHaveProperty('matchStatus');
+    expect(updates[0]).not.toHaveProperty('timerStartTime');
+    expect(updates[0]).not.toHaveProperty('timerElapsedSeconds');
+  });
+
   it('does nothing when the match is already finished and results are locked', () => {
     const tournament = createTournament([
       createMatch({ id: 'm1', scoreA: 1, scoreB: 1, matchStatus: 'finished' }),

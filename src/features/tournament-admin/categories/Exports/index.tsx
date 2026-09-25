@@ -26,7 +26,7 @@ import { exportStatisticsToPDF } from '../../../../lib/pdfStatisticsExporter';
 interface ExportsCategoryProps {
   tournamentId: string;
   tournament: Tournament;
-  onTournamentUpdate: (tournament: Tournament) => void;
+  onTournamentUpdate: (tournament: Tournament) => void | Promise<void>;
   /**
    * A2 Fixrunde 1 (Ruling AJ, I1: `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
    * task-A2-review.md`): a restored backup can change EXISTING matches' results/status, which a
@@ -281,9 +281,16 @@ export function ExportsCategory({
           updatedAt: new Date().toISOString(),
         };
 
-        onTournamentUpdate(restoredTournament);
-        // A2 Fixrunde 1 (I1): the full save() above intentionally skips result/status columns
-        // for EXISTING matches (A2) -- backfill exactly those from the restored backup.
+        // A2 Fixrunde 3 (N3, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview.md`): AWAIT the full save before the targeted update -- both are
+        // read-modify-write against the SAME local tournament list (`LocalStorageRepository`),
+        // without a lock. Firing them "in parallel" (no await on the first call) raced two
+        // writers against the same record; whichever finished last won, silently discarding the
+        // other's changes locally (a lost update). Sequencing makes the second write's
+        // read see the first write's result.
+        await onTournamentUpdate(restoredTournament);
+        // The full save above intentionally skips result/status columns for EXISTING matches
+        // (A2) -- backfill exactly those from the restored backup.
         onMatchesUpdate(diffMatchResultStatusUpdates(tournament.matches, restoredTournament.matches));
         setExportSuccess(t('exports.restoreSuccess'));
         setTimeout(() => setExportSuccess(null), 3000);

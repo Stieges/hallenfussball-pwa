@@ -236,24 +236,59 @@ export class TournamentCreationService {
         // Generate full schedule
         const schedule = generateFullSchedule(tournament);
 
+        // A2 Fixrunde 3 (N1c, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview.md`): "Erweiterte Bearbeitung" (re-publishing an already-published
+        // tournament) regenerates the WHOLE schedule -- `schedule.allMatches` never carries
+        // matchStatus/timer/tiebreaker fields (see `ScheduledMatch`, which doesn't declare them).
+        // Without this, `persistResultStatusChanges()` below would see e.g. a running match's
+        // `matchStatus` go from `'running'` (in `previous`, the real DB state) to `undefined` (in
+        // the freshly regenerated match) and reset it -- silently ending a helper's live match
+        // from the cloud's point of view, just because the owner re-published the wizard. Carrying
+        // these fields over (by match id, from the DB state fetched above) means the diff sees NO
+        // change for matches whose id survives regeneration, so nothing gets touched.
+        const previousMatchById = new Map((previous?.matches ?? []).map((m) => [m.id, m]));
+
         // Convert ScheduledMatch to domain Match
-        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => ({
-            id: scheduledMatch.id,
-            round: Math.floor(index / tournament.numberOfFields) + 1,
-            field: scheduledMatch.field,
-            slot: scheduledMatch.slot,
-            teamA: scheduledMatch.originalTeamA,
-            teamB: scheduledMatch.originalTeamB,
-            scoreA: scheduledMatch.scoreA,
-            scoreB: scheduledMatch.scoreB,
-            group: scheduledMatch.group,
-            isFinal: scheduledMatch.phase !== 'groupStage',
-            phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
-            finalType: scheduledMatch.finalType,
-            label: scheduledMatch.label,
-            scheduledTime: scheduledMatch.startTime,
-            referee: scheduledMatch.referee,
-        }));
+        tournament.matches = schedule.allMatches.map((scheduledMatch, index) => {
+            const base = {
+                id: scheduledMatch.id,
+                round: Math.floor(index / tournament.numberOfFields) + 1,
+                field: scheduledMatch.field,
+                slot: scheduledMatch.slot,
+                teamA: scheduledMatch.originalTeamA,
+                teamB: scheduledMatch.originalTeamB,
+                scoreA: scheduledMatch.scoreA,
+                scoreB: scheduledMatch.scoreB,
+                group: scheduledMatch.group,
+                isFinal: scheduledMatch.phase !== 'groupStage',
+                phase: scheduledMatch.phase, // BUG-FIX: Save phase for createPhases to work on reload
+                finalType: scheduledMatch.finalType,
+                label: scheduledMatch.label,
+                scheduledTime: scheduledMatch.startTime,
+                referee: scheduledMatch.referee,
+            };
+
+            const previousMatch = previousMatchById.get(scheduledMatch.id);
+            if (!previousMatch) {
+                return base;
+            }
+
+            return {
+                ...base,
+                matchStatus: previousMatch.matchStatus,
+                finishedAt: previousMatch.finishedAt,
+                timerStartTime: previousMatch.timerStartTime,
+                timerPausedAt: previousMatch.timerPausedAt,
+                timerElapsedSeconds: previousMatch.timerElapsedSeconds,
+                overtimeScoreA: previousMatch.overtimeScoreA,
+                overtimeScoreB: previousMatch.overtimeScoreB,
+                penaltyScoreA: previousMatch.penaltyScoreA,
+                penaltyScoreB: previousMatch.penaltyScoreB,
+                decidedBy: previousMatch.decidedBy,
+                skippedReason: previousMatch.skippedReason,
+                skippedAt: previousMatch.skippedAt,
+            };
+        });
 
         // Important: scheduledTime in Match interface is likely Date or string?
         // In LiveMatch, it was string? 

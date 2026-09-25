@@ -1,10 +1,25 @@
 import { ITournamentRepository } from './ITournamentRepository';
-import { Tournament, MatchUpdate } from '../models/types';
+import { Tournament, Match, MatchUpdate } from '../models/types';
 import { TournamentSchema } from '../models/schemas/TournamentSchema';
 import { STORAGE_KEYS } from '../../constants/storage';
 import { hydrateTournament } from './hydration';
 import { createStorage } from '../storage/StorageFactory';
 import { captureFeatureError } from '../../lib/sentry';
+
+/**
+ * A2 Fixrunde 3 (N2, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md`):
+ * merges a `MatchUpdate` into a local `Match`, translating `null` (the wire-safe "explicitly
+ * clear this field" sentinel used for the offline mutation queue, see `core/models/types.ts`)
+ * back to `undefined` -- `Match`'s own fields stay `T | undefined`, never `null`, so the rest of
+ * the app (`isMatchFinished`, etc.) keeps working on the local copy exactly as before.
+ */
+function mergeMatchUpdate(match: Match, update: MatchUpdate): Match {
+    const merged: Record<string, unknown> = { ...match };
+    for (const [key, value] of Object.entries(update)) {
+        merged[key] = value ?? undefined;
+    }
+    return merged as unknown as Match;
+}
 
 export class LocalStorageRepository implements ITournamentRepository {
 
@@ -70,7 +85,7 @@ export class LocalStorageRepository implements ITournamentRepository {
         const updatedMatches = tournament.matches.map(m => {
             const update = updateMap.get(m.id);
             if (update) {
-                return { ...m, ...update };
+                return mergeMatchUpdate(m, update);
             }
             return m;
         });

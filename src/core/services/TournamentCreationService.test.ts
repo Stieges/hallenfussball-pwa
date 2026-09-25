@@ -270,5 +270,57 @@ describe('TournamentCreationService', () => {
                 ])
             }));
         });
+
+        // A2 Fixrunde 3 (N1c, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+        // task-A2-rereview.md): "Erweiterte Bearbeitung" (re-publishing) regenerates the whole
+        // schedule. `schedule.allMatches` never carries matchStatus/timer/tiebreaker (the
+        // generator's ScheduledMatch type doesn't declare them) -- without preserving them from
+        // the previously-saved match (same id), a running match's status would look "changed"
+        // (running -> undefined) to matchResultStatusDiff and get reset to 'scheduled' in the
+        // cloud, silently ending a helper's live match.
+        it('preserves matchStatus/timer/tiebreaker of a RUNNING match across regeneration (does not reset it)', async () => {
+            const mockSchedule = {
+                allMatches: [
+                    { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
+                ],
+            };
+            (generateFullSchedule as any).mockReturnValue(mockSchedule);
+
+            mockRepo.get.mockResolvedValue({
+                id: 'tour-1',
+                matches: [
+                    {
+                        id: 'm1',
+                        round: 1,
+                        field: 1,
+                        teamA: 't1',
+                        teamB: 't2',
+                        matchStatus: 'running',
+                        timerStartTime: '2026-01-01T10:00:00Z',
+                        timerElapsedSeconds: 300,
+                    },
+                ],
+            });
+
+            const data = {
+                id: 'tour-1',
+                publishedAt: '2026-01-01T09:00:00Z', // republish, not first release
+                title: 'Published',
+                numberOfFields: 1,
+                groups: [{ id: 'g1', name: 'A' }],
+                teams: [{ id: 't1', name: 'T1' }, { id: 't2', name: 'T2' }],
+            };
+
+            const result = await service.publish(data);
+
+            const savedMatch = result.matches.find((m) => m.id === 'm1');
+            expect(savedMatch?.matchStatus).toBe('running');
+            expect(savedMatch?.timerStartTime).toBe('2026-01-01T10:00:00Z');
+            expect(savedMatch?.timerElapsedSeconds).toBe(300);
+
+            // The result/status diff against the (unchanged) previous state must therefore be
+            // empty -- no cloud write resets the running match.
+            expect(mockRepo.updateMatches).not.toHaveBeenCalled();
+        });
     });
 });

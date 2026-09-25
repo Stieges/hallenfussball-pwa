@@ -13,9 +13,22 @@
  * turns that into a targeted `MatchUpdate` — callers pass it their OLD and NEW `Match[]` and get
  * back exactly the updates to send via `tournamentRepo.updateMatch(es)` (offline: queued the same
  * way as everything else, see `OfflineRepository`), instead of relying on a full `save()`.
+ *
+ * A2 Fixrunde 3 (Ruling, N1: `task-A2-rereview.md`) — REWRITTEN from Fixrunde 1's design. Fixrunde
+ * 1 always emitted ALL 14 result/status fields from the NEW match whenever ANY of them changed,
+ * sourced from whatever the caller's local state happened to hold — for `handleScoreChange`, that
+ * meant a stale local `matchStatus`/timer/tiebreaker got written to the cloud alongside the score,
+ * exactly the "overwrite a helper's live match with an old local state" pattern A2 exists to
+ * prevent (the review's own "trotzdem eintragen" scenario: owner enters a score while a helper's
+ * match is running, confirms the live-match warning). Now: ONLY the fields that actually differ
+ * between `previous` and `match` are included — everything else is left untouched. A field that
+ * became `undefined` (explicitly cleared, e.g. `DangerZone`'s reset) is still reported, using the
+ * SAME insert defaults as `mapMatchToSupabase` (`matchStatus` → `'scheduled'`,
+ * `timerElapsedSeconds` → `0`) instead of `NULL` for those two, and `null` (not `undefined`, so it
+ * survives `JSON.stringify` in the offline mutation queue — see N2) for the rest.
  */
 
-import { Match, MatchUpdate } from '../models/types';
+import { Match, MatchUpdate, NullableMatchUpdateFields } from '../models/types';
 
 /**
  * The RESULT/STATUS columns a match can carry — the mirror image of the "schedule columns" that
@@ -23,7 +36,7 @@ import { Match, MatchUpdate } from '../models/types';
  * from `Match`) so a new field must be added here DELIBERATELY, the same reasoning as the
  * schedule-columns allowlist.
  */
-const RESULT_STATUS_FIELDS = [
+const RESULT_STATUS_FIELDS: readonly NullableMatchUpdateFields[] = [
   'scoreA',
   'scoreB',
   'matchStatus',
@@ -38,41 +51,24 @@ const RESULT_STATUS_FIELDS = [
   'decidedBy',
   'skippedReason',
   'skippedAt',
-] as const;
+];
 
-function hasResultStatusChange(previous: Match, current: Match): boolean {
-  return RESULT_STATUS_FIELDS.some((field) => previous[field] !== current[field]);
-}
-
-/** Builds the targeted update for one match — ALL result/status fields, not just the changed
- *  ones, so a caller never has to track field-level diffs itself. Every field is included as an
- *  OWN property (even when `undefined`) — `mapMatchUpdateToSupabase` (A2 Fixrunde 1) treats a
- *  present-but-undefined field as an explicit clear (writes `null`), so a reset (e.g.
- *  `scoreA: undefined` in `DangerZone`) is actually persisted, not silently skipped. */
-function toResultStatusUpdate(match: Match): MatchUpdate {
-  return {
-    id: match.id,
-    scoreA: match.scoreA,
-    scoreB: match.scoreB,
-    matchStatus: match.matchStatus,
-    finishedAt: match.finishedAt,
-    timerStartTime: match.timerStartTime,
-    timerPausedAt: match.timerPausedAt,
-    timerElapsedSeconds: match.timerElapsedSeconds,
-    overtimeScoreA: match.overtimeScoreA,
-    overtimeScoreB: match.overtimeScoreB,
-    penaltyScoreA: match.penaltyScoreA,
-    penaltyScoreB: match.penaltyScoreB,
-    decidedBy: match.decidedBy,
-    skippedReason: match.skippedReason,
-    skippedAt: match.skippedAt,
-  };
-}
+/**
+ * Insert defaults from `mapMatchToSupabase` (`supabaseMappers.ts`) — applied when a field is
+ * explicitly cleared (new value `undefined`) instead of writing `NULL`. Every field NOT listed
+ * here defaults to `null` when cleared, matching `mapMatchToSupabase`'s `?? null` fallback.
+ */
+const CLEARED_FIELD_DEFAULT: Partial<Record<NullableMatchUpdateFields, unknown>> = {
+  matchStatus: 'scheduled',
+  timerElapsedSeconds: 0,
+};
 
 /**
  * Diffs the RESULT/STATUS columns between an OLD and a NEW match list (old vs. new tournament
  * state) and returns one targeted `MatchUpdate` per match whose result or status actually
- * changed — ready for `tournamentRepo.updateMatch(es)` instead of a full `save()`.
+ * changed — ready for `tournamentRepo.updateMatch(es)` instead of a full `save()`. Only the
+ * fields that actually differ are included in each update; fields that are unchanged are left out
+ * entirely, even when SOME other field on the same match changed (N1).
  *
  * A match that exists only in `newMatches` (freshly created, e.g. schedule regeneration) is
  * skipped here — it has no live state in the cloud yet to protect, and is inserted through the
@@ -87,10 +83,34 @@ export function diffMatchResultStatusUpdates(
 
   for (const match of newMatches) {
     const previous = oldById.get(match.id);
-    if (!previous || !hasResultStatusChange(previous, match)) {
+    if (!previous) {
       continue;
     }
-    updates.push(toResultStatusUpdate(match));
+
+    let update: MatchUpdate | null = null;
+
+    for (const field of RESULT_STATUS_FIELDS) {
+      const oldValue = previous[field];
+      const newValue = match[field];
+      if (oldValue === newValue) {
+        continue;
+      }
+
+      update ??= { id: match.id };
+      if (newValue !== undefined) {
+        (update as Record<string, unknown>)[field] = newValue;
+      } else {
+        // Explicitly cleared: use the same insert default as mapMatchToSupabase, or `null` for
+        // every other field -- NEVER `undefined` (would be dropped by JSON.stringify, N2).
+        (update as Record<string, unknown>)[field] = field in CLEARED_FIELD_DEFAULT
+          ? CLEARED_FIELD_DEFAULT[field]
+          : null;
+      }
+    }
+
+    if (update) {
+      updates.push(update);
+    }
   }
 
   return updates;

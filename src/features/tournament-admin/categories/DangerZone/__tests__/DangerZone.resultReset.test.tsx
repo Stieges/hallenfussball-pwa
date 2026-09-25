@@ -75,9 +75,12 @@ describe('DangerZone — Ergebnis-/Statuszurücksetzung (A2 Fixrunde 1)', () => 
     const updates = onMatchesUpdate.mock.calls[0][0];
     expect(updates).toHaveLength(2);
     for (const update of updates) {
+      // A2 Fixrunde 3 (N1b/N2): the schedule-default for matchStatus is 'scheduled' (never
+      // null), and a genuinely cleared field (scoreA) is `null` -- NOT `undefined` (would be
+      // dropped by JSON.stringify in the offline mutation queue, N2).
       expect(update.matchStatus).toBe('scheduled');
       expect('scoreA' in update).toBe(true);
-      expect(update.scoreA).toBeUndefined();
+      expect(update.scoreA).toBeNull();
     }
   });
 });

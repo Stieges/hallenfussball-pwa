@@ -6,6 +6,27 @@ import { SupabaseRepository } from './SupabaseRepository';
 import { isAbortError, RepositoryError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
 
+/**
+ * A2 Fixrunde 3 (N2a, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+ * task-A2-rereview.md`): `GenericMutationQueue` persists its queue via `JSON.stringify` /
+ * `JSON.parse` (survives app restarts and dead-letter retries). `JSON.stringify` DROPS a
+ * present-but-`undefined`-valued key entirely (`JSON.stringify({scoreA: undefined}) === '{}'`),
+ * so an "explicit clear" (a caller sets `field: undefined` with the key present, e.g.
+ * `MatchExecutionService#unskipMatch`) that made it into the queue as an in-memory object would
+ * survive the CURRENT session but silently lose the clear on reload/replay. Normalizing
+ * `undefined` (key present) to `null` right before enqueueing makes every clear JSON-round-trip
+ * safe -- `mapMatchUpdateToSupabase` already treats a present `null` exactly like a present
+ * `undefined` (writes the column's `NULL`/default), so this changes nothing for the immediate,
+ * same-session path, only the persisted/replayed one.
+ */
+function normalizeMatchUpdateForQueue(update: MatchUpdate): MatchUpdate {
+    const normalized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(update)) {
+        normalized[key] = value === undefined ? null : value;
+    }
+    return normalized as MatchUpdate;
+}
+
 // =============================================================================
 // SYNC TYPES
 // =============================================================================
@@ -210,13 +231,19 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     async updateMatch(tournamentId: string, update: MatchUpdate): Promise<void> {
+        // Local write keeps the ORIGINAL update (undefined-with-key-present semantics, resolved
+        // against the in-memory Match by LocalStorageRepository) -- only the QUEUED copy is
+        // normalized for the JSON round-trip (N2a).
         await this.localRepo.updateMatch(tournamentId, update);
-        this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update });
+        this.mutationQueue.enqueue('UPDATE_MATCH', { tournamentId, update: normalizeMatchUpdateForQueue(update) });
     }
 
     async updateMatches(tournamentId: string, updates: MatchUpdate[], _baseVersion?: number): Promise<void> {
         await this.localRepo.updateMatches(tournamentId, updates);
-        this.mutationQueue.enqueue('UPDATE_MATCHES', { tournamentId, updates });
+        this.mutationQueue.enqueue('UPDATE_MATCHES', {
+            tournamentId,
+            updates: updates.map(normalizeMatchUpdateForQueue),
+        });
     }
 
     async delete(id: string): Promise<void> {
@@ -473,6 +500,19 @@ export class OfflineRepository implements ITournamentRepository {
         return hasChanges ? changes : null;
     }
 
+    /**
+     * A2 Fixrunde 3 (N2b, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+     * task-A2-rereview.md`): only ever sets a field when the LOCAL copy actually has a value for
+     * it (`lMatch.<field> !== undefined`). Before A2 Fixrunde 1, `mapMatchUpdateToSupabase` skipped
+     * any field whose VALUE was `undefined`, so assigning `update.scoreA = lMatch.scoreA` here was
+     * harmless even when `lMatch.scoreA` was `undefined` -- it never reached the DB. Fixrunde 1
+     * changed that mapper to key-PRESENCE (`'field' in match`), which broke this call site
+     * silently: a local copy that simply doesn't know a helper's live score (e.g. right after
+     * `syncUp()` runs at app start / reconnect, `useSyncOnReconnect.ts`, whenever
+     * `localVer > cloudVer`) would set `update.scoreA = undefined` with the KEY PRESENT, which the
+     * new mapper writes as `score_a = NULL` -- deleting the helper's live score in the cloud. This
+     * guard restores the original "don't touch what I don't know" behaviour.
+     */
     private getMatchUpdates(local: Tournament, remote: Tournament): MatchUpdate[] {
         const updates: MatchUpdate[] = [];
 
@@ -483,10 +523,10 @@ export class OfflineRepository implements ITournamentRepository {
             const update: MatchUpdate = { id: lMatch.id };
             let updated = false;
 
-            if (lMatch.scoreA !== rMatch.scoreA) { update.scoreA = lMatch.scoreA; updated = true; }
-            if (lMatch.scoreB !== rMatch.scoreB) { update.scoreB = lMatch.scoreB; updated = true; }
-            if (lMatch.matchStatus !== rMatch.matchStatus) { update.matchStatus = lMatch.matchStatus; updated = true; }
-            if (lMatch.timerElapsedSeconds !== rMatch.timerElapsedSeconds) { update.timerElapsedSeconds = lMatch.timerElapsedSeconds; updated = true; }
+            if (lMatch.scoreA !== undefined && lMatch.scoreA !== rMatch.scoreA) { update.scoreA = lMatch.scoreA; updated = true; }
+            if (lMatch.scoreB !== undefined && lMatch.scoreB !== rMatch.scoreB) { update.scoreB = lMatch.scoreB; updated = true; }
+            if (lMatch.matchStatus !== undefined && lMatch.matchStatus !== rMatch.matchStatus) { update.matchStatus = lMatch.matchStatus; updated = true; }
+            if (lMatch.timerElapsedSeconds !== undefined && lMatch.timerElapsedSeconds !== rMatch.timerElapsedSeconds) { update.timerElapsedSeconds = lMatch.timerElapsedSeconds; updated = true; }
             // Add other granular fields if needed
 
             if (updated) {

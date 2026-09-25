@@ -8,7 +8,7 @@
  * onMatchesUpdate call, alongside the (unchanged) full save.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { Tournament } from '../../../../../types/tournament';
 import { ExportsCategory } from '../index';
@@ -84,5 +84,44 @@ describe('ExportsCategory — Backup wiederherstellen (A2 Fixrunde 1)', () => {
     expect(updates).toEqual([
       expect.objectContaining({ id: 'm1', scoreA: 3, scoreB: 3 }),
     ]);
+  });
+
+  // A2 Fixrunde 3 (N3, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A2-rereview.md):
+  // both onTournamentUpdate (full save) and onMatchesUpdate (targeted update) do a
+  // read-modify-write against the SAME local tournament record (LocalStorageRepository), without
+  // a lock. Firing onMatchesUpdate before onTournamentUpdate's save has actually finished races
+  // two writers against the same record -- whichever finishes last silently discards the other's
+  // changes (a local lost update). `handleRestore` must AWAIT the full save first.
+  it('AWAITS the full save before firing the targeted update (no parallel race, N3)', async () => {
+    let resolveSave: () => void = () => { /* replaced below before use */ };
+    const savePromise = new Promise<void>((resolve) => { resolveSave = resolve; });
+    const onTournamentUpdate = vi.fn().mockReturnValue(savePromise);
+    const onMatchesUpdate = vi.fn();
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <ExportsCategory
+        tournamentId="t1"
+        tournament={tournament}
+        onTournamentUpdate={onTournamentUpdate}
+        onMatchesUpdate={onMatchesUpdate}
+      />
+    );
+
+    const file = new File([JSON.stringify(backup)], 'backup.json', { type: 'application/json' });
+    const input = container.querySelector('input[type="file"]');
+    expect(input).not.toBeNull();
+
+    const uploadDone = user.upload(input as HTMLInputElement, file);
+
+    // Give handleRestore's async body a chance to reach the await point.
+    await waitFor(() => expect(onTournamentUpdate).toHaveBeenCalledTimes(1));
+    // The full save has NOT resolved yet -- the targeted update must not have fired either.
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+
+    resolveSave();
+    await uploadDone;
+
+    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
   });
 });

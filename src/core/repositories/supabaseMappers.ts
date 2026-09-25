@@ -21,6 +21,11 @@ import type {
   MatchDecidedBy,
   TournamentStatus,
 } from '../../types/tournament';
+// Renamed on import: this file already has its own `MatchUpdate` (the Supabase table's Update
+// shape, below) -- `DomainMatchUpdate` is the frontend/domain DTO (`core/models/types.ts`), which
+// (since A2 Fixrunde 3, N2) allows `null` on result/status fields to survive the offline mutation
+// queue's JSON round-trip.
+import type { MatchUpdate as DomainMatchUpdate } from '../models/types';
 
 // Supabase Row Types
 type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
@@ -284,7 +289,7 @@ export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
  * `Match` object into an update, which is what would make this distinction unsafe.
  */
 export function mapMatchUpdateToSupabase(
-  match: Partial<Match>,
+  match: DomainMatchUpdate | Partial<Match>,
   teamNameToId?: Map<string, string>
 ): MatchUpdate {
   const update: MatchUpdate = {};

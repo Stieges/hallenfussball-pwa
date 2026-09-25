@@ -91,6 +91,33 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
     });
 
+    // A2 Fixrunde 3 (N2b, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
+    // task-A2-rereview.md): `getMatchUpdates()` used to set `update.scoreA = lMatch.scoreA` even
+    // when `lMatch.scoreA` was `undefined` (local device simply never loaded this match's live
+    // state). Since A2 Fixrunde 1 changed the Supabase mapper from a value check to a KEY-PRESENCE
+    // check, that assignment started writing `score_a = NULL` on every reconnect sync --
+    // deleting a helper's live score in the cloud. The fix: only ever propagate a field the local
+    // copy actually has an opinion on.
+    it('A2 Fixrunde 3 (N2b): does NOT null out a live score the local copy simply does not know', async () => {
+        // Local match carries NO score/status info at all; remote already has Tom's live score
+        // (e.g. from a targeted UPDATE_MATCH the helper's own device sent earlier).
+        const localMatch = { ...baseTournament.matches[0] };
+        const remoteMatch = { ...baseTournament.matches[0], scoreA: 5, scoreB: 2, matchStatus: 'running' as const };
+        const localT = { ...baseTournament, title: 'New Title', matches: [localMatch], version: 2 };
+        const remoteT = { ...baseTournament, matches: [remoteMatch], version: 1 };
+
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        await offlineRepo.syncUp();
+
+        // The title change legitimately triggers a metadata sync ...
+        expect(mockSupabase.updateTournamentMetadata).toHaveBeenCalled();
+        // ... but Tom's live score/status must never be touched -- the local copy has no opinion
+        // on them, so there is nothing legitimate to push.
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
+    });
+
     it('should perform full save when structural changes occur (teams added)', async () => {
         const newTeam = { id: 'te3', name: 'C', tournamentId: 't1' };
         const localT = { ...baseTournament, teams: [...baseTournament.teams, newTeam], version: 2 };
