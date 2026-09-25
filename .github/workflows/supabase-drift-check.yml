@@ -56,6 +56,7 @@ jobs:
           fi
           supabase gen types typescript \
             --project-id "$SUPABASE_PROJECT_ID" \
+            --schema public \
             > /tmp/types-live.ts
 
       - name: Diff against committed types
