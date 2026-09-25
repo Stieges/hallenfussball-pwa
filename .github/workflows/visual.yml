@@ -16,11 +16,21 @@ name: Visual Regression
 # - Ohne Label `visual-update` auf dem PR: Vergleichsmodus (--update-snapshots=none). Eine
 #   Abweichung macht den Job rot, Report + Differenzbilder gehen als Artefakt hoch.
 # - Mit Label `visual-update`: Update-Modus (--update-snapshots=all). Playwright schreibt neue
-#   Vorlagen statt sie zu vergleichen — der Job ist danach grün — und der neue Snapshot-Ordner
-#   geht als Artefakt `visual-snapshots` hoch. Das Committen der Vorlagen, Herunterladen des
-#   Artefakts und Entfernen des Labels macht NICHT dieser Workflow, sondern der Controller
-#   (Task-T5-Brief, Ruling Y Punkt 5 UND die Zusatzregel im Auftrag: "Den ersten CI-Lauf mit dem
-#   Label visual-update löst der Controller aus.").
+#   Vorlagen statt sie zu vergleichen (würde für sich genommen grün laufen) und der neue
+#   Snapshot-Ordner geht als Artefakt `visual-snapshots` hoch — DANACH beendet sich der Job
+#   ABSICHTLICH rot (Ruling AC/Issue #3 aus dem T5-Review, Fixrunde 1): ohne diesen bewussten
+#   Fehlschlag würde ein vergessenes, weiter gesetztes Label bei jedem folgenden Push
+#   stillschweigend neue Vorlagen schreiben und der Job liefe IMMER grün — eine echte visuelle
+#   Regression würde dabei kommentarlos zur neuen Vorlage, nie als roter Vergleichslauf sichtbar.
+#   Das Committen der Vorlagen, Herunterladen des Artefakts und Entfernen des Labels macht NICHT
+#   dieser Workflow, sondern der Controller (Task-T5-Brief, Ruling Y Punkt 5 UND die Zusatzregel
+#   im Auftrag: "Den ersten CI-Lauf mit dem Label visual-update löst der Controller aus.") — nach
+#   dem Commit der Vorlagen MUSS ein abschließender grüner Vergleichslauf (Label entfernt) den
+#   Endstand bestätigen, bevor der PR gemerged wird (siehe docs/TESTUMGEBUNG.md).
+#
+# `types: [opened, synchronize, reopened, labeled]` (statt der Defaults ohne `labeled`): reines
+# Setzen des Labels auf einen bereits offenen PR löst damit sofort einen Lauf aus, statt einen
+# Leer-Commit zu erfordern, damit ein `synchronize`-Event das Label sieht.
 #
 # Noch KEIN Pflicht-Check (Branch-Protection unverändert), siehe docs/TESTUMGEBUNG.md, Abschnitt
 # "CI".
@@ -28,6 +38,7 @@ name: Visual Regression
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
@@ -86,6 +97,19 @@ jobs:
           name: visual-snapshots
           path: tests/e2e/visual/__screenshots__/
           retention-days: 14
+
+      # Ruling AC (T5-Review, Issue #3, Fixrunde 1): Update-Modus endet BEWUSST rot, obwohl der
+      # vorherige "Visual-Tests ausführen"-Schritt für sich genommen grün gelaufen wäre
+      # (--update-snapshots=all vergleicht nichts, schreibt nur). Ohne diesen Schritt könnte ein
+      # versehentlich stehen gelassenes Label jeden weiteren Push stillschweigend als grün
+      # durchwinken, unabhängig von echten visuellen Regressionen. Läuft NUR im Update-Modus --
+      # der normale Vergleichsmodus (Label fehlt) wird durch einen echten Playwright-Fehlschlag
+      # rot, dafür ist dieser Schritt nicht nötig.
+      - name: 'Update-Modus: bewusst rot beenden'
+        if: steps.mode.outputs.update == 'all'
+        run: |
+          echo "::error::Update-Modus – Vorlagen im Artefakt visual-snapshots, Label entfernen und Vorlagen committen"
+          exit 1
 
       - name: Playwright-Report hochladen (bei Abweichung)
         if: failure() && steps.mode.outputs.update == 'none'

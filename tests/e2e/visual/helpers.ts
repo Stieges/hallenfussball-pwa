@@ -40,12 +40,18 @@
  * `commonMasks()` deckt zusätzlich zur eingefrorenen Uhr (defensiv, „belegen nicht annehmen")
  * die im Brief genannten Elemente ab, die NICHT über `Date.now()` laufen:
  * - Toast-Container (`aria-label="Benachrichtigungen"`, src/components/ui/Toast/ToastContainer.tsx)
- * - Sync-Status-Badge (`data-testid="sync-status"`, zeigt u.U. „vor X Min." zusätzlich zur
- *   Uhr-Berechnung auch als reinen Text-Snapshot beim Mount)
- * - QR-Code (`data-testid="qr-code"`, falls auf dem jeweiligen Screen vorhanden)
- * Alle drei matchen auf den gewählten Screens meist 0 Elemente (harmlos für `mask`, Playwright
- * ignoriert leere Locators) -- sie sind hier als Sicherheitsnetz dokumentiert, nicht weil sie auf
- * jedem Screen zwingend vorkommen.
+ *   -- existiert, matcht auf den gewählten Screens meist 0 Elemente (kein Toast im Ladepfad).
+ * - Sync-Status-Badge (`data-testid="sync-status"`, src/features/collaboration/components/
+ *   SyncStatusBar.tsx:220) -- existiert, zeigt u.U. „vor X Min." zusätzlich zur Uhr-Berechnung
+ *   auch als reinen Text-Snapshot beim Mount.
+ * - QR-Code (`data-testid="qr-code"`) -- KEIN existierendes Ziel (T5-Review, Issue #4, geprüft):
+ *   der QR-Code wird in `src/components/dialogs/ShareDialog.tsx` per `generateQRCode()`
+ *   (`src/utils/qrCodeGenerator.ts`) gerendert, aber OHNE dieses (oder irgendein) `data-testid`.
+ *   Diese Maske ist bewusst rein aspirational (Brief nennt "QR- und Share-Codes" explizit) und
+ *   bleibt wirkungslos, bis jemand das Testid am echten Element ergänzt UND ein Screen mit
+ *   sichtbarem ShareDialog visuell getestet wird -- keiner der aktuell acht Screens zeigt ihn im
+ *   initialen Ladezustand.
+ * Playwright ignoriert Masken, die 0 Elemente matchen (kein Testfehler dadurch).
  */
 
 import { Page, Locator } from '@playwright/test';

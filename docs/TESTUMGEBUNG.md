@@ -178,21 +178,33 @@ beobachtet, bevor Daniel entscheidet, ob sie zur Pflicht werden (Ruling im Progr
 
 ### `.github/workflows/visual.yml`
 
-- **Wann:** nur bei Pull Requests gegen `main` (kein Push-Trigger — Vorlagen ändern sich nicht
-  von selbst).
+- **Wann:** bei Pull Requests gegen `main`, `types: [opened, synchronize, reopened, labeled]`
+  (kein Push-Trigger — Vorlagen ändern sich nicht von selbst). Das explizite `labeled` (Fixrunde 1,
+  Ruling AC) sorgt dafür, dass reines Setzen des Labels `visual-update` auf einen bereits offenen
+  PR sofort einen Lauf auslöst, statt einen Leer-Commit zu erfordern, damit ein
+  `synchronize`-Event das Label sieht.
 - **Was:** siehe Abschnitt „Visual Regression (Bildvergleiche)" unten für das Gesamtbild. Der
   Job läuft im offiziellen Playwright-Container (`mcr.microsoft.com/playwright:v1.63.0-noble`,
   exakt passend zur gepinnten `@playwright/test`-Version) und vergleicht per Default
   (`--update-snapshots=none`) gegen die eingecheckten Vorlagen. Trägt der PR das Label
-  `visual-update`, schreibt der Job stattdessen neue Vorlagen (`--update-snapshots=all`, Job wird
-  grün) und lädt sie als Artefakt `visual-snapshots` hoch.
+  `visual-update`, schreibt der Job stattdessen neue Vorlagen (`--update-snapshots=all`) und lädt
+  sie als Artefakt `visual-snapshots` hoch — **und beendet sich danach absichtlich rot**
+  (Fixrunde 1, Ruling AC) mit der Meldung „Update-Modus – Vorlagen im Artefakt visual-snapshots,
+  Label entfernen und Vorlagen committen". Grund: `--update-snapshots=all` vergleicht nichts,
+  sondern schreibt nur — ohne den bewussten Fehlschlag würde ein vergessenes, weiter gesetztes
+  Label jeden folgenden Push stillschweigend als grün durchwinken, egal ob sich dabei eine echte
+  visuelle Regression einschleicht. **Nach dem Commit der Vorlagen muss deshalb immer ein
+  abschließender grüner Vergleichslauf (Label entfernt) den Endstand bestätigen, bevor der PR
+  gemerged wird** — ein roter Update-Modus-Lauf ist kein Fehler, sondern die Erinnerung daran.
 - **Zeitbudget:** `timeout-minutes: 15` (kein Vorgabewert aus dem Brief, eigene Einschätzung —
   Production-Build + drei Viewport-Projekte im Container ohne Docker-Layer-Cache).
-- **Roten Lauf lesen:** bei einer Abweichung (ohne Label) lädt der Job zwei Artefakte hoch —
-  `playwright-report-visual` (HTML-Report mit Differenzbildern) und `visual-diff-results`
-  (`test-results/`, dieselben Differenzbilder als Rohdateien). Mit Label `visual-update` kann der
-  Job nicht rot werden (es gibt nichts zum Vergleichen) — das Committen der neuen Vorlagen macht
-  in jedem Fall der Controller, nicht der Workflow selbst.
+- **Roten Lauf lesen:** zwei unterschiedliche Ursachen.
+  - Ohne Label, eine echte Abweichung: der Job lädt zwei Artefakte hoch — `playwright-report-visual`
+    (HTML-Report mit Differenzbildern) und `visual-diff-results` (`test-results/`, dieselben
+    Differenzbilder als Rohdateien).
+  - Mit Label `visual-update`: IMMER rot, absichtlich (siehe oben) — das Artefakt
+    `visual-snapshots` enthält in diesem Fall die neuen Vorlagen, kein Differenzbild. Das
+    Committen der neuen Vorlagen macht in jedem Fall der Controller, nicht der Workflow selbst.
 
 ## Visual Regression (Bildvergleiche)
 
@@ -205,14 +217,32 @@ Tablet 768, Desktop 1280 — eigene Playwright-Projekte `visual-mobile`/`visual-
 |---|---|---|
 | Dashboard | `dashboard.visual.spec.ts` | `/#/` |
 | Wizard Schritt 1 (Stammdaten) | `wizard-step1.visual.spec.ts` | `/#/tournament/new` |
-| Wizard Schritt 5 (Teams) | `wizard-step5.visual.spec.ts` | `/#/tournament/new?step=5` |
+| Wizard letzter Schritt (Übersicht) | `wizard-overview.visual.spec.ts` | `/#/tournament/new?step=6` |
 | Turnier-Admin (Dashboard-Kategorie) | `admin.visual.spec.ts` | `/#/tournament/:id/admin/dashboard` |
 | Live-Cockpit (laufendes Spiel) | `cockpit-running.visual.spec.ts` | `/#/tournament/:id/live` |
 | Monitor | `monitor.visual.spec.ts` | `/#/display/:id/:monitorId` |
-| Public View | `public-view.visual.spec.ts` | `/#/public/:id` |
+| Öffentliche Turnierseite | `public-tournament-page.visual.spec.ts` | `/#/public/:id` |
 | Login | `login.visual.spec.ts` | `/#/login` |
 
 Macht 8 × 3 = 24 Vorlagen, wie im Plan vorgegeben.
+
+**Fixrunde 1 (T5-Review, Ruling AD):** Der zweite Wizard-Screen war ursprünglich Schritt 5
+("Teams"), das entsprach aber nicht der Plan-Absicht „erster und letzter Schritt" — der Wizard
+hat 6 Schritte, der letzte ist „Übersicht" (Schritt 6). Datei entsprechend umbenannt
+(`wizard-step5.visual.spec.ts` → `wizard-overview.visual.spec.ts`), alte Vorlagen aus
+`__screenshots__` gelöscht.
+
+**Noch nicht abgedeckt — eine echte Lücke (T5-Review, Ruling AE):** die Zuschauersicht
+`/live/:shareCode` (`LiveViewScreen`, `src/screens/LiveViewScreen.tsx`) ist **kein** Bildvergleich-
+Screen. `tests/e2e/visual/live-view.visual.spec.ts` hält das als `test.fixme` fest, mit
+Begründung im Datei-Kommentar. Grund: `LiveViewScreen` braucht einen echten Supabase-Stack zur
+Share-Code-Auflösung, der Visual-Job hat bewusst keinen (Ruling Y, Punkt 2 — „kein Supabase im
+Container nötig"). Die „Öffentliche Turnierseite" (`/public/:tournamentId`,
+`PublicTournamentViewScreen`) ist **nicht** derselbe Screen wie `/live/:shareCode` — eigener
+State, eigene Komponente (`src/App.tsx:706-716`, Kommentar dort bestätigt die bewusste Trennung)
+— und deckt diese Lücke deshalb NICHT ab, auch wenn sie oberflächlich ähnlich aussieht. (Der
+ursprüngliche T5-Report hatte das fälschlich als „keine Lücke" behauptet — korrigiert in
+Fixrunde 1.)
 
 ### Warum ein eigener Ordner, eigene Projekte
 
@@ -251,6 +281,20 @@ Chromium beweisen, dass Selektoren, Fixtures, Masken und `page.clock` funktionie
 Mac-Bilder einzuchecken. Ergebnis und Laufzeiten: siehe
 `.superpowers/sdd/2026-09-24-testumgebung/task-T5-report.md`.
 
+### Wartebedingung: lazy geladener Inhalt statt synchrones Chrome
+
+Wiederkehrendes Flake-Muster (zuerst gefunden bei `admin.visual.spec.ts`/`visual-mobile`, dann im
+T5-Review bei `wizard-step5` — jetzt `wizard-overview` — als unbehoben benannt, Issue #2): Wartet
+ein Screenshot-Test auf einen Text, der SOWOHL in der sofort verfügbaren Navigations-/
+Fortschritts-Chrome (Breadcrumb, `ProgressBar`-Step-Label) ALS AUCH im tatsächlichen,
+lazy-geladenen Inhalt vorkommt, kann `.first()`/eine ungenaue Textsuche den Screenshot noch im
+Lade-/Skeleton-Zustand erwischen — nicht zuverlässig bei jedem Lauf, sondern zufällig je nach
+Timing. Deshalb: pro Screen entweder ein `data-testid`, das ausschließlich im echten Inhalt
+existiert (z. B. `wizard-show-preview`, `match-timer-display`), oder eine rollen-eingeschränkte
+Bedingung (`getByRole('heading', ...)`), die mit der Navigations-Chrome nicht kollidiert — nie
+eine ungeschützte `getByText(...).first()` auf einen Text, der auch außerhalb des eigentlichen
+Inhalts vorkommen könnte.
+
 ### Uhrzeit einfrieren statt maskieren, wo möglich
 
 `tests/e2e/visual/helpers.ts#freezeClock()` setzt `page.clock.setFixedTime()` auf ein festes
@@ -264,18 +308,30 @@ Hänge-Risiko hätten (siehe ausführliche Begründung im Datei-Kommentar von `h
 feuern).
 
 Zusätzlich, defensiv per `mask` (Playwright deckt den Bereich grau ab, matcht ein Screen das
-Element nicht, wird es einfach ignoriert): Toast-Container, Sync-Status-Badge, QR-Code
-(`commonMasks()` in `helpers.ts`) — auf den gewählten acht Screens kommen QR-/Share-Codes aktuell
-nicht vor (die Maske ist ein Sicherheitsnetz für spätere Screens, nicht aktuell wirksam).
+Element nicht, wird es einfach ignoriert): Toast-Container und Sync-Status-Badge
+(`commonMasks()` in `helpers.ts`) — beide existieren als echte `data-testid`/`aria-label`-Ziele,
+matchen auf den meisten der acht Screens aber 0 Elemente. Die QR-Code-Maske (`[data-testid="qr-code"]`)
+ist demgegenüber **rein aspirational**: dieses Testid existiert nirgends im Repo (der QR-Code in
+`src/components/dialogs/ShareDialog.tsx` hat keines) — Fund aus dem T5-Review (Issue #4),
+Kommentar in `helpers.ts` entsprechend präzisiert.
 
 ### Datenquelle: Offline-Fixtures statt Supabase
 
-Alle acht Screens laufen offline (IndexedDB-Fixtures über `seedIndexedDB`, wie die bestehenden
-`tests/e2e/flows/*.spec.ts`). Für „Public View" gibt es zwei Routen mit unterschiedlicher
-Datenquelle (`src/core/routing/routeRegistry.ts`): `/live/:shareCode` braucht einen echten
-Supabase-Stack, `/public/:tournamentId` rendert denselben Screen (`PublicTournamentViewScreen`)
-komplett aus IndexedDB. Die Visual-Specs nutzen `/public/:tournamentId` — keine Lücke, kein
-`test.fixme` nötig (Ruling Y, Punkt 2 im Task-Brief).
+Alle acht echten Screens laufen offline (IndexedDB-Fixtures über `seedIndexedDB`, wie die
+bestehenden `tests/e2e/flows/*.spec.ts`). Für die Zuschauersicht gibt es zwei Routen mit
+unterschiedlicher Datenquelle UND unterschiedlichem Screen (`src/core/routing/routeRegistry.ts`,
+`src/App.tsx:706-716`):
+- `/live/:shareCode` (`LiveViewScreen`) — braucht einen echten Supabase-Stack, eigenständige
+  Komponente (Pull-to-Refresh, „Mein Team", Theme-Umschalter, eigene URL-Filter).
+- `/public/:tournamentId` (`PublicTournamentViewScreen`) — rendert komplett aus IndexedDB, aber
+  ein ANDERER, eigenständiger Screen (u. a. mit `ScheduleActionButtons` für Share/PDF).
+
+**Korrektur (T5-Review, Fixrunde 1):** Diese beiden Routen sind NICHT austauschbar. Die
+Visual-Specs decken deshalb nur `/public/:tournamentId` als eigenen Screen „Öffentliche
+Turnierseite" ab (`public-tournament-page.visual.spec.ts`) — `/live/:shareCode` bleibt eine offen
+benannte Lücke (`live-view.visual.spec.ts`, `test.fixme`), siehe Tabelle oben. Der ursprüngliche
+Report hatte `/public/:tournamentId` fälschlich als vollwertigen Ersatz für `/live/:shareCode`
+dargestellt.
 
 Das Live-Cockpit braucht zusätzlich einen Eintrag in der `liveMatches-<tournamentId>`-
 localStorage-Quelle (`src/hooks/useLiveMatches.ts`, getrennt vom IndexedDB-Turnier-Blob) — dafür
