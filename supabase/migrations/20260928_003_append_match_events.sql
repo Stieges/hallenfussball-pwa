@@ -36,10 +36,17 @@
 --   R16     p_device_id -> match_event_authors.device_id, controlEpoch -> control_epoch (ungeprueft
 --           bis E), baseState -> match_event_authors.base_state.
 --   R17     EXECUTE nur authenticated (REVOKE PUBLIC, anon), Muster 20260716_001_heartbeat_rpc.sql.
---   S9      Umschlag: id uuid, type bekannt, at Ganzzahl, section null|1-4 (CHECK aus B2),
+--   S9      Umschlag: id uuid, type bekannt, at Ganzzahl, section null|1-5 (CHECK aus B2, S13),
 --           clockMs null|0..2147483647 (Spalte integer), payload Objekt, teamId null|Team A/B,
---           targetId null|uuid und nur bei RETRACT/REVIEW_*, controlEpoch null|int4 -> sonst
---           INVALID_PAYLOAD.
+--           targetId null|uuid und nur bei RETRACT/REVIEW_*, controlEpoch null|int4, payload und
+--           baseState je <= 16 KB -> sonst INVALID_PAYLOAD. (Fixrunde 1: section 1-5 nach S13,
+--           Groessengrenze nach S15/M1.)
+--   S14     fehlender oder ungueltiger finals_config.tiebreaker -> 'shootout' (nie NULL; decision_pending
+--           bleibt Rueckfall der Rechenfunktion, der Server erzeugt es nicht mehr).
+--   S15     Fixrunde 1: scheduled/skipped -> Stand-Spalten NULL (I1); hoechstens 2000 gespeicherte
+--           Engine-Ereignisse je Spiel, sonst Aufruf-Fehler 54000 (M1); soft-geloeschtes Turnier und
+--           nicht existierendes Spiel -> dieselbe Antwort wie fehlendes Recht (M3, M6); live_state
+--           wird zusammengefuehrt statt ueberschrieben (M4); service_role ohne EXECUTE (C3).
 --   S10     id, targetId, teamId, payload.basedOn werden kleingeschrieben-kanonisch normalisiert
 --           (ungueltig -> INVALID_PAYLOAD) und so gespeichert.
 --   Definer-Kontext (B3a-Review I1/M5): die gespeicherten Ereignisse liest die Funktion selbst
@@ -137,9 +144,10 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- section: null oder 1-4 (match_events_section_check aus B2).
+  -- section: null oder 1-5 (match_events_section_check aus B2; Ruling S13: die Verlaengerung ist
+  -- Abschnitt sections+1, bei vier Abschnitten also 5).
   IF coalesce(jsonb_typeof(p_event -> 'section'), 'null') <> 'null'
-     AND NOT (match_engine.is_int(p_event -> 'section') AND (p_event -> 'section')::numeric BETWEEN 1 AND 4) THEN
+     AND NOT (match_engine.is_int(p_event -> 'section') AND (p_event -> 'section')::numeric BETWEEN 1 AND 5) THEN
     RETURN NULL;
   END IF;
 
@@ -153,6 +161,13 @@ BEGIN
     RETURN NULL;
   END IF;
   v_payload := p_event -> 'payload';
+
+  -- Ruling S15/M1: payload und baseState je hoechstens 16 KB (Textform) -- match_events ist fuer
+  -- oeffentliche Turniere lesbar und in der Realtime-Publikation, jeder Aufruf reduziert das Log.
+  IF octet_length(v_payload::text) > 16384
+     OR octet_length(coalesce(p_event -> 'baseState', 'null'::jsonb)::text) > 16384 THEN
+    RETURN NULL;
+  END IF;
 
   -- teamId: null oder eines der beiden Teams des Spiels (sonst verletzte ein gespeichertes
   -- Ereignis den Fremdschluessel bzw. zeigte auf ein fremdes Team).
@@ -222,7 +237,8 @@ $$;
 --   sectionSeconds   floor(Gesamtdauer*60 / sections)
 --   breakSeconds     config->halftimeBreak (Minuten, Standard 1) * 60
 --   knockout         matches.phase <> 'groupStage'
---   tiebreak         finals_config->tiebreaker (FinalsConfig.tiebreaker, R4b) -- nur die drei Werte, sonst NULL
+--   tiebreak         finals_config->tiebreaker (FinalsConfig.tiebreaker, R4b) -- nur die drei Werte, sonst
+--                    'shootout' (Ruling S14: "normal Strafstossschiessen")
 --   overtimeSeconds  finals_config->tiebreakerDuration (Minuten, Standard 5) * 60
 --   shootersPerTeam  config->matchCockpitSettings->penaltyShootersPerTeam (Standard 5)
 --   suddenDeathAfter config->matchCockpitSettings->penaltySuddenDeathAfter (Standard 6)
@@ -240,7 +256,7 @@ DECLARE
   v_total numeric;
   v_settings jsonb := CASE WHEN jsonb_typeof(p_config) = 'object' THEN p_config -> 'matchCockpitSettings' END;
   v_finals jsonb := CASE WHEN jsonb_typeof(p_finals) = 'object' THEN p_finals END;
-  v_tiebreak text;
+  v_tiebreak text := 'shootout';
 BEGIN
   v_sections := least(4, greatest(1, floor(coalesce(match_engine.cfg_num(
                   CASE WHEN jsonb_typeof(p_config) = 'object' THEN p_config -> 'gamePeriods' END), 1))))::integer;
@@ -277,6 +293,7 @@ $$;
 --   penalty_score    Strafstosstreffer, wenn das Spiel im Strafstossschiessen ist/war (Phase shootout)
 --   decided_by       nur bei finished: shootout -> penalty, correction/direct -> regular (CHECK
 --                    matches_decided_by_check), sonst gleichnamig
+--   Stand-Spalten    bei scheduled/skipped alle NULL (Fixrunde 1, I1)
 --   live_state       NULL fuer scheduled/skipped/finished (wie der alte Schreibweg bei FINISHED --
 --                    isMatchActive() liest ein Spiel mit live_state als aktiv), sonst Engine-Ausschnitt
 --                    plus die Schluessel, die liveMatchMappers.ts#LiveStateJson schon kennt
@@ -297,22 +314,25 @@ DECLARE
   v_elapsed numeric := coalesce(match_engine.num(p_state -> 'clock' -> 'elapsedMs'), 0);
   v_rules jsonb := p_state -> 'rules';
   v_decided text := p_state ->> 'decidedBy';
+  v_unplayed boolean := p_state ->> 'status' IN ('scheduled', 'skipped');
 BEGIN
   v_overtime := v_phase = 'overtime'
                 OR coalesce((p_state -> 'scores' -> v_a -> 'overtime')::numeric, 0)
                    + coalesce((p_state -> 'scores' -> v_b -> 'overtime')::numeric, 0) > 0
                 OR coalesce(p_state ->> 'baseDecidedBy' IN ('overtime', 'goldenGoal'), false);
   RETURN jsonb_build_object(
-    'score_a', CASE WHEN v_override THEN match_engine.effective_score(p_state, v_a)
+    -- I1 (Fixrunde 1): ein nicht gespieltes Spiel (scheduled/skipped) hat keinen Stand -- NULL wie
+    -- beim alten Weg; sonst zaehlten alte Leser (calculateStandings) es als 0:0.
+    'score_a', CASE WHEN v_unplayed THEN NULL WHEN v_override THEN match_engine.effective_score(p_state, v_a)
                     ELSE (p_state -> 'scores' -> v_a -> 'regular')::numeric END,
-    'score_b', CASE WHEN v_override THEN match_engine.effective_score(p_state, v_b)
+    'score_b', CASE WHEN v_unplayed THEN NULL WHEN v_override THEN match_engine.effective_score(p_state, v_b)
                     ELSE (p_state -> 'scores' -> v_b -> 'regular')::numeric END,
-    'overtime_score_a', CASE WHEN NOT v_overtime THEN NULL WHEN v_override THEN 0
+    'overtime_score_a', CASE WHEN v_unplayed OR NOT v_overtime THEN NULL WHEN v_override THEN 0
                              ELSE (p_state -> 'scores' -> v_a -> 'overtime')::numeric END,
-    'overtime_score_b', CASE WHEN NOT v_overtime THEN NULL WHEN v_override THEN 0
+    'overtime_score_b', CASE WHEN v_unplayed OR NOT v_overtime THEN NULL WHEN v_override THEN 0
                              ELSE (p_state -> 'scores' -> v_b -> 'overtime')::numeric END,
-    'penalty_score_a', CASE WHEN v_phase = 'shootout' THEN (p_state -> 'scores' -> v_a -> 'shootout')::numeric END,
-    'penalty_score_b', CASE WHEN v_phase = 'shootout' THEN (p_state -> 'scores' -> v_b -> 'shootout')::numeric END,
+    'penalty_score_a', CASE WHEN v_phase = 'shootout' AND NOT v_unplayed THEN (p_state -> 'scores' -> v_a -> 'shootout')::numeric END,
+    'penalty_score_b', CASE WHEN v_phase = 'shootout' AND NOT v_unplayed THEN (p_state -> 'scores' -> v_b -> 'shootout')::numeric END,
     'match_status', CASE WHEN v_status IN ('section_break', 'decision_pending', 'shootout') THEN 'paused' ELSE v_status END,
     'decided_by', CASE WHEN v_status <> 'finished' THEN NULL
                        WHEN v_decided = 'shootout' THEN 'penalty'
@@ -387,6 +407,7 @@ DECLARE
   v_accepted integer := 0;
   v_started_now boolean := false;
   v_cache jsonb;
+  v_stored_count integer;
 BEGIN
   -- 1. Aufrufer, Eingabe, Client-Format.
   IF v_uid IS NULL THEN
@@ -411,15 +432,18 @@ BEGIN
   END IF;
 
   -- 2./3. Spiel und Akteursklasse (R7). Rechtepruefung VOR der Sperre: wer kein Recht hat, darf
-  -- das Spiel auch nicht sperren.
-  SELECT m.tournament_id INTO v_tournament_id FROM public.matches m WHERE m.id = p_match_id;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'append_match_events: Spiel % nicht gefunden', p_match_id USING ERRCODE = 'P0002';
-  END IF;
+  -- das Spiel auch nicht sperren. Fixrunde 1 (M3, M6): ein nicht existierendes Spiel und ein
+  -- soft-geloeschtes Turnier (tournaments.deleted_at) ergeben dieselbe Antwort wie ein fehlendes
+  -- Recht -- kein Existenz-Orakel, kein Schreiben in den Papierkorb.
+  SELECT m.tournament_id INTO v_tournament_id
+    FROM public.matches m
+    JOIN public.tournaments t ON t.id = m.tournament_id
+   WHERE m.id = p_match_id
+     AND t.deleted_at IS NULL;
 
-  IF public.has_tournament_permission(v_tournament_id, 'leadMatches') THEN
+  IF v_tournament_id IS NOT NULL AND public.has_tournament_permission(v_tournament_id, 'leadMatches') THEN
     v_actor := 'leitung';
-  ELSIF public.has_tournament_permission(v_tournament_id, 'writeMatchData') THEN
+  ELSIF v_tournament_id IS NOT NULL AND public.has_tournament_permission(v_tournament_id, 'writeMatchData') THEN
     v_actor := 'helper';
   ELSE
     SELECT jsonb_agg(jsonb_build_object(
@@ -434,6 +458,10 @@ BEGIN
   -- R12/R3: ein Spiel je Aufruf, Geraete werden je Spiel serialisiert.
   SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;
   SELECT * INTO v_tournament FROM public.tournaments WHERE id = v_match.tournament_id;
+  IF v_match.id IS NULL OR v_tournament.deleted_at IS NOT NULL THEN
+    -- Zwischen Rechtepruefung und Sperre geloescht (sehr selten): nichts schreiben.
+    RAISE EXCEPTION 'append_match_events: Spiel % nicht mehr beschreibbar', p_match_id USING ERRCODE = '55000';
+  END IF;
   IF v_match.team_a_id IS NULL OR v_match.team_b_id IS NULL THEN
     RAISE EXCEPTION 'append_match_events: Spiel % hat noch keine zwei Teams', p_match_id USING ERRCODE = '22023';
   END IF;
@@ -473,6 +501,8 @@ BEGIN
   v_last_at := (SELECT (x.e ->> 'at')::bigint FROM jsonb_array_elements(v_stored) WITH ORDINALITY AS x(e, ord)
                 ORDER BY x.ord DESC LIMIT 1);
   SELECT coalesce(max(e.seq), 0) INTO v_base_seq FROM public.match_events e WHERE e.match_id = p_match_id;
+
+  v_stored_count := jsonb_array_length(v_stored);
 
   -- Einmal reduzieren, danach je Ereignis anschliessen (B3a-Review M3).
   v_state := public.match_reduce(v_stored, v_ctx, v_transitions, 'log') -> 'state';
@@ -528,6 +558,13 @@ BEGIN
         v_result := v_step -> 'results' -> 0;
 
         IF v_result ->> 'status' = 'accepted' THEN
+          -- Ruling S15/M1: hoechstens 2000 gespeicherte Engine-Ereignisse je Spiel -- danach bricht
+          -- der ganze Aufruf ab (nichts gespeichert), statt das Spiel ueber statement_timeout zu treiben.
+          IF v_stored_count >= 2000 THEN
+            RAISE EXCEPTION 'append_match_events: Spiel % hat bereits % gespeicherte Ereignisse (Obergrenze 2000)',
+              p_match_id, v_stored_count USING ERRCODE = '54000';
+          END IF;
+          v_stored_count := v_stored_count + 1;
           v_state := v_step -> 'state';
           -- f. Speichern (R14, R16).
           INSERT INTO public.match_events (
@@ -589,7 +626,11 @@ BEGIN
       actual_start = CASE WHEN v_started_now THEN coalesce(m.actual_start, v_now) ELSE m.actual_start END,
       actual_end = CASE WHEN v_cache ->> 'match_status' = 'finished'
                         THEN to_timestamp(coalesce((v_cache ->> 'finished_at')::numeric, v_now_ms) / 1000.0) END,
-      live_state = CASE WHEN jsonb_typeof(v_cache -> 'live_state') = 'object' THEN v_cache -> 'live_state' END,
+      -- M4 (Fixrunde 1): zusammenfuehren statt ueberschreiben -- fremde Schluessel des alten
+      -- Schreibwegs (z. B. refereeName) bleiben erhalten. Nicht mehr aktiv -> NULL wie bisher.
+      live_state = CASE WHEN jsonb_typeof(v_cache -> 'live_state') = 'object'
+                        THEN CASE WHEN jsonb_typeof(m.live_state) = 'object' THEN m.live_state ELSE '{}'::jsonb END
+                             || (v_cache -> 'live_state') END,
       version = coalesce(m.version, 0) + 1,
       last_modified_by = v_uid,
       updated_at = v_now
@@ -631,7 +672,9 @@ COMMENT ON FUNCTION public.server_time() IS
 -- 4. Rechte (R17)
 -- ============================================================================================
 
-REVOKE ALL ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) FROM PUBLIC, anon;
+-- C3 (Fixrunde 1): auch service_role nicht -- ohne auth.uid() waere der Aufruf wirkungslos (42501),
+-- der Schreibweg ist ausschliesslich fuer angemeldete Geraete.
+REVOKE ALL ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) TO authenticated;
 
 REVOKE ALL ON FUNCTION public.server_time() FROM PUBLIC;

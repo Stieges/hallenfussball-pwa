@@ -104,10 +104,12 @@ ALTER TABLE "public"."match_events"
 ALTER TABLE "public"."match_events"
   ADD COLUMN IF NOT EXISTS "section" smallint;
 
+-- Ruling S13 (B3b-Fixrunde 1, Migration noch nicht live -> hier direkt geaendert): 1-5, weil die
+-- Verlaengerung Abschnitt sections+1 ist (B-U2) -- bei vier Abschnitten also 5.
 ALTER TABLE "public"."match_events"
   DROP CONSTRAINT IF EXISTS "match_events_section_check";
 ALTER TABLE "public"."match_events"
-  ADD CONSTRAINT "match_events_section_check" CHECK ("section" IS NULL OR "section" BETWEEN 1 AND 4);
+  ADD CONSTRAINT "match_events_section_check" CHECK ("section" IS NULL OR "section" BETWEEN 1 AND 5);
 
 ALTER TABLE "public"."match_events"
   ADD COLUMN IF NOT EXISTS "target_event_id" uuid REFERENCES "public"."match_events"("id") ON DELETE RESTRICT;
