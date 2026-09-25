@@ -44,6 +44,10 @@ const hoisted = vi.hoisted(() => {
   const teamsDeleteMock = vi.fn(() => ({ in: teamsDeleteInMock }));
   const teamsUpsertMock = vi.fn();
 
+  // A6 Fixrunde 1 (I2, Ruling AN): save() no longer throws for a protected match -- it notifies
+  // instead. Spy on the notification channel (core/services/matchProtectionNotices.ts).
+  const notifyMatchesProtectedMock = vi.fn();
+
   // matches: same shape as teams, PLUS update (A2: existing matches are updated with
   // schedule-only columns instead of upserted with the full row -- see task-A2-brief.md).
   const matchesSelectEqMock = vi.fn();
@@ -95,7 +99,9 @@ const hoisted = vi.hoisted(() => {
     tournamentsUpsertMock,
     teamsSelectEqMock,
     teamsDeleteSelectMock,
+    teamsDeleteMock,
     teamsUpsertMock,
+    notifyMatchesProtectedMock,
     matchesSelectEqMock,
     matchesDeleteSelectMock,
     matchesDeleteMock,
@@ -114,6 +120,10 @@ vi.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
 }));
 
+vi.mock('../../services/matchProtectionNotices', () => ({
+  notifyMatchesProtected: hoisted.notifyMatchesProtectedMock,
+}));
+
 import { SupabaseRepository } from '../SupabaseRepository';
 
 const {
@@ -121,7 +131,9 @@ const {
   tournamentsUpsertMock,
   teamsSelectEqMock,
   teamsDeleteSelectMock,
+  teamsDeleteMock,
   teamsUpsertMock,
+  notifyMatchesProtectedMock,
   matchesSelectEqMock,
   matchesDeleteSelectMock,
   matchesDeleteMock,
@@ -165,8 +177,8 @@ beforeEach(() => {
   });
   matchesSelectEqMock.mockResolvedValue({
     data: [
-      { id: 'match-survivor', match_status: 'scheduled', match_number: 1 },
-      { id: 'match-removed', match_status: 'scheduled', match_number: 2 },
+      { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+      { id: 'match-removed', match_status: 'scheduled', match_number: 2, team_a_id: 'team-removed', team_b_id: null },
     ],
     error: null,
   });
@@ -236,41 +248,89 @@ describe('SupabaseRepository.save() — R5-H1: counts deleted rows instead of tr
 });
 
 // ============================================================================================
-// A6 (task-A6-brief.md, C-K6): a match missing from the local tournament is only ever deleted
-// when it has NO match_events AND is still 'scheduled' (or NULL) -- otherwise save() throws
-// instead of silently deleting it (or silently keeping it without telling the user).
+// A6 (task-A6-brief.md, C-K6; Fixrunde 1, task-A6-review.md I1/I2 Ruling AN): a match missing
+// from the local tournament is only ever deleted when it has NO match_events AND is still
+// 'scheduled' (or NULL) -- otherwise it is KEPT (not deleted) and `notifyMatchesProtected()` is
+// called, but save() itself completes successfully (Ruling AN: NOT an error, or the queue would
+// dead-letter this mutation after MAX_RETRIES and permanently block every later sync of this
+// tournament). I1: the whole check runs BEFORE any write, and a team referenced by a protected
+// match is preserved too (else `matches.team_a_id`/`team_b_id`, ON DELETE SET NULL, would still
+// lose the pairing even though the match row survived).
 // ============================================================================================
 
-describe('SupabaseRepository.save() — A6: never silently deletes a match with events', () => {
-  it('RED-GUARD: a match-to-delete that already has match_events is NOT deleted, save() throws', async () => {
+describe('SupabaseRepository.save() — A6: protects matches with events or a non-"scheduled" status', () => {
+  it('RED-GUARD (Ruling AN): a match-to-delete with match_events is KEPT, save() resolves (does not throw)', async () => {
     matchEventsSelectInMock.mockResolvedValue({ data: [{ match_id: 'match-removed' }], error: null });
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).rejects.toThrow(
-      /Spiel 2 hat Einträge – nur die Turnierleitung kann es absetzen\./
-    );
+    const tournament = makeTournamentWithOneTeamAndMatch();
+    await expect(repo.save(tournament)).resolves.toBeUndefined();
 
-    // Fail-fast for the matches batch: the delete is never attempted once any match is blocked.
-    // Teams are handled in an earlier, independent step (2) and are unaffected by this guard.
+    // 'match-removed' was the only delete candidate -- once it's protected, nothing is left to
+    // delete at all.
     expect(matchesDeleteMock).not.toHaveBeenCalled();
+    // The rest of the save still completes (Ruling AN: not an error).
+    expect(teamsUpsertMock).toHaveBeenCalledTimes(1);
+    expect(tournamentsUpsertMock).toHaveBeenCalledTimes(1);
+
+    expect(notifyMatchesProtectedMock).toHaveBeenCalledTimes(1);
+    expect(notifyMatchesProtectedMock).toHaveBeenCalledWith({
+      tournamentId: tournament.id,
+      matches: [{ id: 'match-removed', matchNumber: 2 }],
+    });
   });
 
-  it('RED-GUARD: a match-to-delete that is no longer "scheduled" is NOT deleted, save() throws', async () => {
+  it('RED-GUARD: a match-to-delete that is no longer "scheduled" is also KEPT, save() resolves', async () => {
     matchesSelectEqMock.mockResolvedValue({
       data: [
-        { id: 'match-survivor', match_status: 'scheduled', match_number: 1 },
-        { id: 'match-removed', match_status: 'finished', match_number: 2 },
+        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+        { id: 'match-removed', match_status: 'finished', match_number: 2, team_a_id: null, team_b_id: null },
       ],
       error: null,
     });
     matchEventsSelectInMock.mockResolvedValue({ data: [], error: null }); // no events, status alone blocks it
 
     const repo = new SupabaseRepository();
-    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).rejects.toThrow(
-      /Spiel 2 hat Einträge – nur die Turnierleitung kann es absetzen\./
-    );
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
 
     expect(matchesDeleteMock).not.toHaveBeenCalled();
+    expect(notifyMatchesProtectedMock).toHaveBeenCalledWith(
+      expect.objectContaining({ matches: [{ id: 'match-removed', matchNumber: 2 }] })
+    );
+  });
+
+  it('I1: a team referenced ONLY by a protected match is not deleted either (pairing survives)', async () => {
+    // Default fixture (beforeEach) already has 'match-removed' with team_a_id: 'team-removed' --
+    // both 'match-removed' AND 'team-removed' are missing from the local tournament.
+    matchEventsSelectInMock.mockResolvedValue({ data: [{ match_id: 'match-removed' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    // 'team-removed' is referenced by the protected match -- must survive, or the FK
+    // (ON DELETE SET NULL) would silently null out team_a_id on the match that was "kept".
+    expect(teamsDeleteMock).not.toHaveBeenCalled();
+    expect(teamsUpsertMock).toHaveBeenCalledTimes(1); // rest of the save still completes
+  });
+
+  it('I1 order: match_events is queried (the A6 check) before the tournament row is written', async () => {
+    const callOrder: string[] = [];
+    matchEventsSelectInMock.mockImplementation(async () => {
+      callOrder.push('match_events');
+      return { data: [], error: null };
+    });
+    tournamentsUpsertMock.mockImplementation(async () => {
+      callOrder.push('tournaments');
+      return { error: null };
+    });
+    teamsDeleteSelectMock.mockResolvedValue({ data: [{ id: 'team-removed' }], error: null });
+    matchesDeleteSelectMock.mockResolvedValue({ data: [{ id: 'match-removed' }], error: null });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
+
+    expect(callOrder[0]).toBe('match_events');
+    expect(callOrder).toContain('tournaments');
   });
 
   it('a match-to-delete with NO events and match_status "scheduled" is deleted as before', async () => {
@@ -283,13 +343,14 @@ describe('SupabaseRepository.save() — A6: never silently deletes a match with 
 
     expect(matchesDeleteMock).toHaveBeenCalledTimes(1);
     expect(matchEventsSelectInMock).toHaveBeenCalledWith('match_id', ['match-removed']);
+    expect(notifyMatchesProtectedMock).not.toHaveBeenCalled();
   });
 
   it('a match-to-delete with match_status NULL and no events is still deleted (treated like "scheduled")', async () => {
     matchesSelectEqMock.mockResolvedValue({
       data: [
-        { id: 'match-survivor', match_status: 'scheduled', match_number: 1 },
-        { id: 'match-removed', match_status: null, match_number: 2 },
+        { id: 'match-survivor', match_status: 'scheduled', match_number: 1, team_a_id: 'team-survivor', team_b_id: null },
+        { id: 'match-removed', match_status: null, match_number: 2, team_a_id: null, team_b_id: null },
       ],
       error: null,
     });
@@ -301,6 +362,7 @@ describe('SupabaseRepository.save() — A6: never silently deletes a match with 
     await expect(repo.save(makeTournamentWithOneTeamAndMatch())).resolves.toBeUndefined();
 
     expect(matchesDeleteMock).toHaveBeenCalledTimes(1);
+    expect(notifyMatchesProtectedMock).not.toHaveBeenCalled();
   });
 });
 

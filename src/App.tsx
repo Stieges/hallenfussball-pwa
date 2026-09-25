@@ -15,6 +15,7 @@ import { useSyncOnReconnect } from './hooks/useSyncOnReconnect';
 import { useInitialSync } from './hooks/useInitialSync';
 import { useAuthTimeoutToast } from './hooks/useAuthTimeoutToast';
 import { useSwAutoReload } from './hooks/useSwAutoReload';
+import { useMatchProtectionNotices } from './hooks/useMatchProtectionNotices';
 import { useRouteMatch } from './hooks/useRouteMatch';
 import { matchRoute } from './core/routing';
 import { AuthProvider } from './features/auth/context/AuthContext';
@@ -144,6 +145,11 @@ function AppContent() {
   // available → toast + hard reload" semantics so users never linger on a
   // stale precached bundle (root cause of the 2026-05-24 login-bug).
   useSwAutoReload();
+
+  // A6 (task-A6-review.md, I2/Ruling AN): toast when save() kept a protected match instead of
+  // silently deleting it -- see core/services/matchProtectionNotices.ts for why this can't just
+  // be a return value or thrown error.
+  useMatchProtectionNotices();
 
   // Central route match — replaces the individual location.pathname regex
   // matchers below (derivations only; render blocks stay untouched).

@@ -97,6 +97,7 @@
     "failedListTitle": "Gescheiterte Übertragungen",
     "failedListEmpty": "Keine gescheiterten Übertragungen.",
     "failedReasonUnknown": "Unbekannter Fehler",
+    "matchProtectedHint": "Spiel {{matchLabel}} hat Einträge und wurde nicht gelöscht.",
     "retry": "Erneut versuchen",
     "retryAriaLabel": "Übertragung erneut versuchen",
     "discard": "Verwerfen",

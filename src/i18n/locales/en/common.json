@@ -97,6 +97,7 @@
     "failedListTitle": "Failed transfers",
     "failedListEmpty": "No failed transfers.",
     "failedReasonUnknown": "Unknown error",
+    "matchProtectedHint": "Match {{matchLabel}} has entries and was not deleted.",
     "retry": "Try again",
     "retryAriaLabel": "Retry transfer",
     "discard": "Discard",

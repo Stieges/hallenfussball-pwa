@@ -14,9 +14,12 @@
 #
 # Was gemessen wird:
 #   1. Eigentuemer loescht DIREKT ein Spiel MIT Ereignis                -> muss ABGELEHNT werden.
+#   1b. (Fixrunde 1/M7) Die Ablehnung muss vom TRIGGER kommen (Fehlertext "Ereignis"), nicht von
+#       einer unabhaengigen RLS-Ablehnung -- der Eigentuemer hat sonst volle DELETE-Rechte.
 #   2. Eigentuemer loescht DIREKT ein Spiel OHNE Ereignis                -> muss ERLAUBT sein.
 #   3. Co-Admin (role='co-admin', 'restructure' laut role_permissions)
 #      loescht DIREKT ein Spiel MIT Ereignis                            -> muss ABGELEHNT werden.
+#   3b. Wie 1b, fuer den Co-Admin-Fall.
 #   4. Co-Admin loescht DIREKT ein Spiel OHNE Ereignis                   -> muss ERLAUBT sein.
 #   5. Eigentuemer loescht das GESAMTE Turnier (Spiele UND Ereignisse
 #      vorhanden) ueber DELETE FROM tournaments (kein separates
@@ -25,6 +28,11 @@
 #      (Kaskade: pg_trigger_depth() > 1 im Trigger).
 #   Co-Admin kann Turniere nicht loeschen (tournaments_delete_v2 ist Eigentuemer-only,
 #   Baseline Zeile 1750) — dafuer gibt es hier bewusst keine Probe.
+#
+# Fixrunde 1 (task-A6-review.md): die Migration ist jetzt SECURITY DEFINER (M1) -- dieses Skript
+# misst dieselben fuenf Proben, das Verhalten aendert sich dadurch nicht (SECURITY DEFINER
+# entkoppelt nur die Ereignis-Zaehlung von der Lese-Policy des Aufrufers, siehe Kopfkommentar der
+# Migration). M7: E_3 (unbenutzte Variable) entfernt, Proben 1b/3b neu.
 #
 # Aendert NICHTS an der Produktionsdatenbank — Wegwerf-Container, wird am Ende entfernt (trap).
 #
@@ -122,7 +130,6 @@ M_CASCADE_1="$(uuid_for match:cascade-1)"
 M_CASCADE_2="$(uuid_for match:cascade-2)"
 E_1="$(uuid_for event:1)"
 E_2="$(uuid_for event:2)"
-E_3="$(uuid_for event:3)"
 E_CASCADE_1="$(uuid_for event:cascade-1)"
 E_CASCADE_2="$(uuid_for event:cascade-2)"
 
@@ -161,8 +168,6 @@ VALUES
   ('$E_2', '$M_COADMIN_WITH_EVENT', 'GOAL', 10, 1, 0),
   ('$E_CASCADE_1', '$M_CASCADE_1', 'GOAL', 10, 1, 0),
   ('$E_CASCADE_2', '$M_CASCADE_2', 'GOAL', 20, 2, 0);
--- E_3 bewusst ungenutzt gelassen (keine dritte Probe braucht ein drittes Event) -- entfernt, um
--- keine tote Variable zu deklarieren.
 
 COMMIT;
 SQL
@@ -170,6 +175,18 @@ SQL
 # run_write(): wie rls-role-matrix.sh — eigene, nie committete Transaktion pro Probe, echte RLS-
 # Rolle + JWT-Claim, wertet den psql-Befehls-Tag aus ("DELETE 1" = durchgelassen, kein Tag/Fehler
 # = abgelehnt).
+#
+# M7 (task-A6-review.md): setzt zusaetzlich LAST_DELETE_OUTPUT (die volle psql-Ausgabe inkl. eines
+# eventuellen Fehlertexts) -- Aufrufer koennen damit unterscheiden, WARUM eine Anweisung abgelehnt
+# wurde (Trigger-Text "Ereignis" vs. eine unabhaengige RLS-Ablehnung), statt jeden Fehler unbesehen
+# als "der Trigger hat gegriffen" zu werten. WICHTIG: run_delete wird deshalb NIE per
+# Kommando-Substitution aufgerufen ("$(run_delete ...)") -- das liefe in einer Subshell, in der
+# eine Variablenzuweisung wie LAST_DELETE_OUTPUT den Aufrufer nie erreicht (genau darauf ist eine
+# erste Fassung dieses Skripts hereingefallen: LAST_DELETE_OUTPUT blieb im Elternprozess leer,
+# obwohl die Funktion sie sichtbar korrekt setzte). Stattdessen: LAST_DELETE_RESULT als zweiter
+# globaler Ausgang, Aufruf als normale Anweisung.
+LAST_DELETE_OUTPUT=""
+LAST_DELETE_RESULT=""
 run_delete() {
   local user_id="$1" sql="$2"
   local out ec
@@ -183,12 +200,13 @@ SQL
 )"
   ec=$?
   set -e
+  LAST_DELETE_OUTPUT="$out"
   if [[ $ec -ne 0 ]]; then
-    echo "denied"
+    LAST_DELETE_RESULT="denied"
   elif grep -qE '^DELETE [1-9][0-9]*$' <<<"$out"; then
-    echo "allowed"
+    LAST_DELETE_RESULT="allowed"
   else
-    echo "denied"
+    LAST_DELETE_RESULT="denied"
   fi
 }
 
@@ -205,17 +223,30 @@ check() {
 
 echo "Proben laufen..." >&2
 
-R1="$(run_delete "$U_OWNER" "DELETE FROM public.matches WHERE id = '$M_WITH_EVENT';")"
-check "1. Eigentuemer loescht Spiel MIT Ereignis (direkt)" "denied" "$R1"
+run_delete "$U_OWNER" "DELETE FROM public.matches WHERE id = '$M_WITH_EVENT';"
+check "1. Eigentuemer loescht Spiel MIT Ereignis (direkt)" "denied" "$LAST_DELETE_RESULT"
+# M7: die Ablehnung muss vom TRIGGER kommen (Text "Ereignis"), nicht von einer unabhaengigen
+# RLS-Ablehnung -- der Eigentuemer hat volle DELETE-Rechte (matches_delete_v2), ein Fehler hier
+# OHNE diesen Text waere ein falsch-positives "OK".
+if [[ "$LAST_DELETE_RESULT" == "denied" ]]; then
+  R1_REASON="fail"
+  grep -q "Ereignis" <<<"$LAST_DELETE_OUTPUT" && R1_REASON="trigger"
+  check "1b. Ablehnung kommt vom Trigger (Text 'Ereignis'), nicht von RLS" "trigger" "$R1_REASON"
+fi
 
-R2="$(run_delete "$U_OWNER" "DELETE FROM public.matches WHERE id = '$M_NO_EVENT';")"
-check "2. Eigentuemer loescht Spiel OHNE Ereignis (direkt)" "allowed" "$R2"
+run_delete "$U_OWNER" "DELETE FROM public.matches WHERE id = '$M_NO_EVENT';"
+check "2. Eigentuemer loescht Spiel OHNE Ereignis (direkt)" "allowed" "$LAST_DELETE_RESULT"
 
-R3="$(run_delete "$U_COADMIN" "DELETE FROM public.matches WHERE id = '$M_COADMIN_WITH_EVENT';")"
-check "3. Co-Admin loescht Spiel MIT Ereignis (direkt)" "denied" "$R3"
+run_delete "$U_COADMIN" "DELETE FROM public.matches WHERE id = '$M_COADMIN_WITH_EVENT';"
+check "3. Co-Admin loescht Spiel MIT Ereignis (direkt)" "denied" "$LAST_DELETE_RESULT"
+if [[ "$LAST_DELETE_RESULT" == "denied" ]]; then
+  R3_REASON="fail"
+  grep -q "Ereignis" <<<"$LAST_DELETE_OUTPUT" && R3_REASON="trigger"
+  check "3b. Ablehnung kommt vom Trigger (Text 'Ereignis'), nicht von RLS" "trigger" "$R3_REASON"
+fi
 
-R4="$(run_delete "$U_COADMIN" "DELETE FROM public.matches WHERE id = '$M_COADMIN_NO_EVENT';")"
-check "4. Co-Admin loescht Spiel OHNE Ereignis (direkt)" "allowed" "$R4"
+run_delete "$U_COADMIN" "DELETE FROM public.matches WHERE id = '$M_COADMIN_NO_EVENT';"
+check "4. Co-Admin loescht Spiel OHNE Ereignis (direkt)" "allowed" "$LAST_DELETE_RESULT"
 
 # 5. Eigentuemer loescht das GESAMTE Turnier — matches_tournament_id_fkey/teams_tournament_id_fkey
 # sind ON DELETE CASCADE (Baseline :1493/:1525), match_events/match_corrections haengen

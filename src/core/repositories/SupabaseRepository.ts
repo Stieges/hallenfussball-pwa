@@ -12,6 +12,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { ITournamentRepository } from './ITournamentRepository';
 import { Tournament, MatchUpdate } from '../models/types';
 import { OptimisticLockError, RepositoryError, AuthenticationError, isAbortError } from '../errors';
+import { notifyMatchesProtected } from '../services/matchProtectionNotices';
 import {
   mapTournamentFromSupabase,
   mapTournamentToSupabase,
@@ -188,6 +189,79 @@ export class SupabaseRepository implements ITournamentRepository {
       user.id
     );
 
+    // =========================================================================================
+    // A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md, C-K6; Fixrunde 1,
+    // task-A6-review.md I1/I2, Ruling AN): find PROTECTED matches -- missing from the local
+    // tournament (stale device, a regenerated schedule, ...) but already having match_events, or
+    // a match_status other than 'scheduled'/NULL -- BEFORE any write happens.
+    //
+    // I1: this must run before the tournament row, teams, AND matches are touched. The earlier
+    // version (Fixrunde 0) ran this check only inside step 3 (matches), AFTER step 2 had already
+    // deleted teams missing from the local state. If a protected match's own team was ALSO
+    // missing locally, that team was deleted before the match-level check ever ran -- the match
+    // row itself survived, but `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL, baseline
+    // :1485/:1489) were wiped by the team deletion anyway, silently losing the pairing (and, via
+    // `match_events.team_id`/`team_players`, the scorer attribution) despite the match "surviving".
+    // Fix: compute `protectedTeamIds` here too and exclude them from `teamsToDelete` below.
+    //
+    // I2 (Ruling AN): a protected match no longer makes save() THROW. `save()` completes the
+    // rest of the tournament normally; only the protected match(es) are excluded from
+    // `matchesToDelete`. The caller (MutationQueue) sees this SAVE_TOURNAMENT mutation as a
+    // SUCCESS -- throwing here would count as a failed attempt and, after MAX_RETRIES, dead-letter
+    // the mutation, permanently blocking every later save of this tournament (the queue is FIFO
+    // and keeps re-trying the SAME stale payload). The caller instead learns about the kept
+    // match(es) via `notifyMatchesProtected()` (see `core/services/matchProtectionNotices.ts` for
+    // why this needs its own channel instead of a return value or thrown error) once the save
+    // actually succeeds, below.
+    const { data: existingMatches } = await getSupabase()
+      .from('matches')
+      .select('id, match_status, match_number, team_a_id, team_b_id')
+      .eq('tournament_id', tournament.id);
+
+    const existingMatchIds = new Set((existingMatches ?? []).map((m) => m.id));
+    const newMatchIds = new Set(matchRows.map((m) => m.id));
+    const candidateMatchesToDelete = [...existingMatchIds].filter((id) => !newMatchIds.has(id));
+
+    const matchNumberById = new Map(
+      (existingMatches ?? []).map((m) => [m.id, m.match_number] as const)
+    );
+    let blockedMatchIds: string[] = [];
+    const protectedTeamIds = new Set<string>();
+
+    if (candidateMatchesToDelete.length > 0) {
+      const matchStatusById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, m.match_status] as const)
+      );
+      const matchTeamsById = new Map(
+        (existingMatches ?? []).map((m) => [m.id, [m.team_a_id, m.team_b_id] as const])
+      );
+
+      const { data: eventRows, error: eventsError } = await getSupabase()
+        .from('match_events')
+        .select('match_id')
+        .in('match_id', candidateMatchesToDelete);
+
+      if (eventsError) {
+        console.error('Failed to check match_events before deleting matches:', eventsError);
+        throw new RepositoryError('saveMatches', eventsError.message, eventsError);
+      }
+
+      const matchIdsWithEvents = new Set((eventRows ?? []).map((e) => e.match_id));
+      blockedMatchIds = candidateMatchesToDelete.filter((id) => {
+        const status = matchStatusById.get(id);
+        const isScheduledOrNull = status === 'scheduled' || status === null || status === undefined;
+        return matchIdsWithEvents.has(id) || !isScheduledOrNull;
+      });
+
+      for (const id of blockedMatchIds) {
+        const [teamAId, teamBId] = matchTeamsById.get(id) ?? [null, null];
+        if (teamAId) { protectedTeamIds.add(teamAId); }
+        if (teamBId) { protectedTeamIds.add(teamBId); }
+      }
+    }
+
+    const matchesToDelete = candidateMatchesToDelete.filter((id) => !blockedMatchIds.includes(id));
+
     // Start transaction-like operation
     // Note: Supabase doesn't support true transactions in the client,
     // but we can use RPC for atomic operations if needed
@@ -263,8 +337,12 @@ export class SupabaseRepository implements ITournamentRepository {
     // once the subsequent upsert (INSERT ... ON CONFLICT DO UPDATE) succeeded for that same
     // caller. Counting the actually-deleted rows and throwing on a mismatch converts this into a
     // loud error that reaches the existing MutationQueue retry/dead-letter path instead.
+    // I1 (task-A6-review.md, Fixrunde 1): a team referenced by a PROTECTED match (computed above,
+    // before any write) is excluded here too -- otherwise the team gets deleted (missing locally,
+    // same as the match), and `matches.team_a_id`/`team_b_id` (ON DELETE SET NULL) silently loses
+    // the pairing on the match that was supposedly "kept".
     const teamsToDelete = [...existingTeamIds].filter(
-      (id) => !newTeamIds.has(id)
+      (id) => !newTeamIds.has(id) && !protectedTeamIds.has(id)
     );
     if (teamsToDelete.length > 0) {
       const { data: deletedTeams, error: deleteError } = await getSupabase()
@@ -297,63 +375,10 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // 3. Handle matches - delete removed, upsert existing
-    const { data: existingMatches } = await getSupabase()
-      .from('matches')
-      .select('id, match_status, match_number')
-      .eq('tournament_id', tournament.id);
-
-    const existingMatchIds = new Set(existingMatches?.map((m) => m.id) ?? []);
-    const newMatchIds = new Set(matchRows.map((m) => m.id));
-
-    // Delete matches that are no longer in the tournament (R5b/R5-H1, same reasoning as teams
-    // above -- matches_delete_v2 gates on 'restructure' too).
-    const matchesToDelete = [...existingMatchIds].filter(
-      (id) => !newMatchIds.has(id)
-    );
+    // 3. Handle matches - delete removed (excluding protected, computed above), upsert existing.
+    // R5b/R5-H1, same reasoning as teams above -- matches_delete_v2 gates on 'restructure' too.
+    // `matchesToDelete` already excludes `blockedMatchIds` (A6, computed before any write above).
     if (matchesToDelete.length > 0) {
-      // A6 (.superpowers/sdd/2026-09-25-oktober-fundament-helfer/task-A6-brief.md, C-K6): a match
-      // that is missing from the locally-held tournament (stale device, a schedule regenerated
-      // without it, ...) must NEVER be silently deleted once it has match_events -- match_events
-      // and match_corrections cascade-delete with the match (ON DELETE CASCADE, baseline
-      // :1461/:1465), so this would erase a real referee/goal log without anyone seeing it. Same
-      // for a match that is no longer 'scheduled' (running/finished/...): its result would vanish
-      // too. Checked BEFORE any delete is attempted (all-or-nothing for this batch, same fail-fast
-      // shape as the delete-count check below) -- the user sees a clear error via the existing
-      // MutationQueue dead-letter path (A4, SyncFailedList shows `RepositoryError.message`
-      // verbatim as the failure reason) instead of the save silently "succeeding" while quietly
-      // keeping a match around, or silently dropping its events.
-      const matchStatusById = new Map(
-        (existingMatches ?? []).map((m) => [m.id, m.match_status] as const)
-      );
-      const matchNumberById = new Map(
-        (existingMatches ?? []).map((m) => [m.id, m.match_number] as const)
-      );
-
-      const { data: eventRows, error: eventsError } = await getSupabase()
-        .from('match_events')
-        .select('match_id')
-        .in('match_id', matchesToDelete);
-
-      if (eventsError) {
-        console.error('Failed to check match_events before deleting matches:', eventsError);
-        throw new RepositoryError('saveMatches', eventsError.message, eventsError);
-      }
-
-      const matchIdsWithEvents = new Set((eventRows ?? []).map((e) => e.match_id));
-      const blockedMatchIds = matchesToDelete.filter((id) => {
-        const status = matchStatusById.get(id);
-        const isScheduledOrNull = status === 'scheduled' || status === null || status === undefined;
-        return matchIdsWithEvents.has(id) || !isScheduledOrNull;
-      });
-
-      if (blockedMatchIds.length > 0) {
-        const labels = blockedMatchIds.map((id) => matchNumberById.get(id) ?? id);
-        const message = `Spiel ${labels.join(', ')} hat Einträge – nur die Turnierleitung kann es absetzen.`;
-        console.error(message);
-        throw new RepositoryError('saveMatches', message);
-      }
-
       const { data: deletedMatches, error: deleteError } = await getSupabase()
         .from('matches')
         .delete()
@@ -449,6 +474,16 @@ export class SupabaseRepository implements ITournamentRepository {
             .join('; ')}`
         );
       }
+    }
+
+    // A6 (I2, Ruling AN): the save succeeded in full -- if any match was kept instead of deleted,
+    // tell whoever is listening (see core/services/matchProtectionNotices.ts for why this can't
+    // be the return value or a thrown error).
+    if (blockedMatchIds.length > 0) {
+      notifyMatchesProtected({
+        tournamentId: tournament.id,
+        matches: blockedMatchIds.map((id) => ({ id, matchNumber: matchNumberById.get(id) ?? null })),
+      });
     }
   }
 
