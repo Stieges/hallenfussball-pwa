@@ -2,14 +2,15 @@
  * Supabase Database Types
  *
  * Auto-generiert aus dem Live-Schema (project: amtlqicosscsjnnthvzm)
- * Letzte Regeneration: 2026-09-28 (B3a, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3a-brief.md:
- * Funktionen der SQL-Rechenfunktion aus 20260928_002_match_engine.sql -- Fixrunde 1/Ruling S12: nur die
- * sechs public-Funktionen, die internen Helfer liegen im nicht exponierten Schema match_engine;
- * davor B2 Fixrunde 1, Ruling G4)
+ * Letzte Regeneration: 2026-09-28 (B3b, .superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md:
+ * append_match_events + server_time aus 20260928_003_append_match_events.sql; davor B3a -- Funktionen
+ * der SQL-Rechenfunktion aus 20260928_002_match_engine.sql, Fixrunde 1/Ruling S12: nur die sechs
+ * public-Funktionen, die internen Helfer liegen im nicht exponierten Schema match_engine; davor B2
+ * Fixrunde 1, Ruling G4)
  * -- ausnahmsweise NICHT aus Produktion (B2: `--local`; B3a: `--db-url` gegen einen Wegwerf-Container
  * supabase/postgres mit Baseline + allen neueren Migrationen; nicht `--project-id`), weil
- * supabase/migrations/20260928_001_match_event_log.sql und 20260928_002_match_engine.sql noch NICHT
- * in Produktion eingespielt sind
+ * supabase/migrations/20260928_001_match_event_log.sql, 20260928_002_match_engine.sql und
+ * 20260928_003_append_match_events.sql noch NICHT in Produktion eingespielt sind
  * (nur lokal/Container, siehe Kopfkommentar dieser Migration). Diese Datei ist damit bewusst der
  * Produktion voraus (match_event_authors/match_transitions/app_config + neue match_events-Spalten).
  * WICHTIG (I4, korrigiert): Der Typ-Drift-Check (.github/workflows/supabase-drift-check.yml, Job
@@ -1107,6 +1108,15 @@ export type Database = {
     }
     Functions: {
       anonymous_tournament_limit: { Args: never; Returns: number }
+      append_match_events: {
+        Args: {
+          p_client_format: number
+          p_device_id?: string
+          p_events: Json
+          p_match_id: string
+        }
+        Returns: Json
+      }
       auth_provider_for_email: { Args: { p_email: string }; Returns: string }
       can_create_tournament: { Args: never; Returns: Json }
       compute_match_state: { Args: { p_match_id: string }; Returns: Json }
@@ -1189,6 +1199,7 @@ export type Database = {
           share_code_created_at: string
         }[]
       }
+      server_time: { Args: never; Returns: Json }
       tournament_limit_error_message: { Args: never; Returns: string }
       user_owns_tournament: {
         Args: { p_tournament_id: string }

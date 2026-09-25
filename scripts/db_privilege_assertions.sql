@@ -205,7 +205,8 @@ UNION ALL
 -- alle haben search_path=public, pg_temp; keine hat EXECUTE fuer PUBLIC (auch nicht implizit:
 -- proacl IS NULL hiesse Standard-EXECUTE fuer PUBLIC); das Schema match_engine hat kein USAGE fuer
 -- PUBLIC; in public liegt kein match__-Helfer mehr. Die Zahlen sind fest, damit ein fehlender
--- Einspielvorgang nicht vakuum-gruen wird -- neue Helfer (B3b) muessen sie mitziehen.
+-- Einspielvorgang nicht vakuum-gruen wird -- neue Helfer muessen sie mitziehen. B3b
+-- (20260928_003) fuegt sechs IMMUTABLE-Helfer in match_engine hinzu: 41 + 6 = 47 (46 IMMUTABLE).
 SELECT 'compute-match-state-security-invoker',
        NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
 UNION ALL
@@ -216,14 +217,14 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
-SELECT 'match-engine-function-count-41',
-       (SELECT count(*) = 41 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-function-count-47',
+       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
-SELECT 'match-engine-immutable-count-40',
-       (SELECT count(*) = 40 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-immutable-count-46',
+       (SELECT count(*) = 46 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
@@ -234,8 +235,8 @@ SELECT 'match-engine-no-security-definer',
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.prosecdef)
 UNION ALL
-SELECT 'match-engine-search-path-all-41',
-       (SELECT count(*) = 41 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-search-path-all-47',
+       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
@@ -268,4 +269,42 @@ SELECT 'positive-anon-usage-match-engine',
 UNION ALL
 SELECT 'positive-anon-execute-match-engine-payload-valid',
        has_function_privilege('anon', 'match_engine.payload_valid(jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+-- B3b (.superpowers/sdd/2026-09-25-pr-b-schreibweg/task-B3b-brief.md, R17) -- Schreibweg
+-- (supabase/migrations/20260928_003_append_match_events.sql): append_match_events ist SECURITY
+-- DEFINER mit festem search_path, EXECUTE nur authenticated (nicht PUBLIC, nicht anon);
+-- server_time ist STABLE und fuer anon + authenticated ausfuehrbar; die sechs B3b-Helfer in
+-- match_engine braucht nur der Definer (kein EXECUTE fuer anon/authenticated).
+SELECT 'append-match-events-security-definer',
+       (SELECT p.prosecdef FROM pg_proc p
+         WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'append-match-events-search-path',
+       (SELECT p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+         WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'append-match-events-no-public-execute',
+       (SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+          FROM pg_proc p WHERE p.oid = 'public.append_match_events(uuid,jsonb,integer,uuid)'::regprocedure)
+UNION ALL
+SELECT 'anon-no-execute-append-match-events',
+       NOT has_function_privilege('anon', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'server-time-stable',
+       (SELECT p.provolatile = 's' AND NOT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.server_time()'::regprocedure)
+UNION ALL
+SELECT 'anon-no-execute-match-engine-envelope',
+       NOT has_function_privilege('anon', 'match_engine.envelope(jsonb,text,text)', 'EXECUTE')
+UNION ALL
+SELECT 'authenticated-no-execute-match-engine-cache-columns',
+       NOT has_function_privilege('authenticated', 'match_engine.cache_columns(jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-append-match-events',
+       has_function_privilege('authenticated', 'public.append_match_events(uuid,jsonb,integer,uuid)', 'EXECUTE')
+UNION ALL
+SELECT 'positive-anon-execute-server-time',
+       has_function_privilege('anon', 'public.server_time()', 'EXECUTE')
+UNION ALL
+SELECT 'positive-authenticated-execute-server-time',
+       has_function_privilege('authenticated', 'public.server_time()', 'EXECUTE')
 ;
