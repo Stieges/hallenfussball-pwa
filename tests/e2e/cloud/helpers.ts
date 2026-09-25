@@ -116,7 +116,8 @@ export async function waitForSync(page: Page, options: WaitForSyncOptions = {}):
 }
 
 // =============================================================================
-// LIVE-COCKPIT (Task T4: two-devices.cloud.spec.ts, offline.cloud.spec.ts)
+// LIVE-COCKPIT (Task T4: two-devices.cloud.spec.ts -- inkl. des ehemals eigenständigen
+// offline.cloud.spec.ts, siehe Fixrunde 2/N4)
 // =============================================================================
 
 /**
@@ -148,9 +149,10 @@ export async function enterGoal(page: Page, side: 'home' | 'away'): Promise<void
 
 /**
  * I6 (Fixrunde 1): Setzt den Spielstand des aktuell LAUFENDEN Spiels eines Turniers auf den
- * übergebenen Seed-Ausgangswert zurück -- gebraucht von `two-devices.cloud.spec.ts` und
- * `offline.cloud.spec.ts`, die beide dasselbe laufende Live-Cup-Spiel für ihren Echtzeit-Nachweis
- * verwenden. Seit die Realtime-Publikation lokal korrekt gesetzt ist (Ruling W), schreibt ein
+ * übergebenen Seed-Ausgangswert zurück -- gebraucht von allen vier Tests in
+ * `two-devices.cloud.spec.ts` (Fixrunde 2/N4: darunter der ehemals eigenständige Offline-Test),
+ * die alle dasselbe laufende Live-Cup-Spiel für ihren Echtzeit-Nachweis verwenden. Seit die
+ * Realtime-Publikation lokal korrekt gesetzt ist (Ruling W), schreibt ein
  * Tor den `matches`-Zeilen-Score tatsächlich durch (nur der `match_events`-Insert scheitert
  * weiter an Fehler A) -- ohne Rückbau würden sich aufeinanderfolgende Testläufe im selben
  * `test:e2e:cloud`-Lauf gegenseitig verkoppeln (I6).

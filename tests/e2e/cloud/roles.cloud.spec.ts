@@ -49,7 +49,19 @@ const ROLE_PERMISSIONS_PATH = path.join(
 );
 const rolePermissionsJson = JSON.parse(readFileSync(ROLE_PERMISSIONS_PATH, 'utf8')) as {
   roles: Record<string, string[]>;
+  capabilities: Record<string, string>;
 };
+
+/**
+ * N7 (Fixrunde 2): ALLE Capability-Schlüssel aus `rolePermissionsJson.capabilities` -- vorher
+ * deckte das zweite Orakel (I5/Ruling T, Server-RPC vs. JSON) nur die 3 Capabilities ab, die
+ * auch ein UI-Element haben (`deleteTournament`, `manageMembers`, `writeMatchData`).
+ * `correctEvents`/`tournamentSettings`/`teams`/`restructure` blieben ohne jede RPC-Gegenprobe --
+ * eine Drift zwischen JSON und `role_permissions`-Tabelle bei GENAU diesen vier Rechten wäre nie
+ * aufgefallen. Die Gegenprobe braucht kein UI-Element (nur die RPC), ist also billig
+ * nachzuziehen.
+ */
+const ALL_CAPABILITY_KEYS = Object.keys(rolePermissionsJson.capabilities);
 
 // =============================================================================
 // AUS DER JSON ABGELEITET (kein Hardcoding der Rollen-Erwartungen)
@@ -150,6 +162,15 @@ for (const role of ALL_ROLES) {
   const canWrite = hasPermission(role, 'writeMatchData');
 
   test.describe(`Rolle ${role}`, () => {
+    // N7 (Fixrunde 2): Rechte-Orakel für ALLE Capabilities, nicht nur die drei mit UI-Element --
+    // reine Server-RPC-Gegenprobe (I5/Ruling T-Muster), kein neues UI-Assertion nötig.
+    test(`Rechte-Orakel: alle Capabilities stimmen mit der DB überein`, async () => {
+      for (const capability of ALL_CAPABILITY_KEYS) {
+        const serverResult = await serverHasTournamentPermission(userKey, E2E_LIVE_CUP_ID, capability);
+        expect(serverResult, `Capability "${capability}" für Rolle "${role}"`).toBe(hasPermission(role, capability));
+      }
+    });
+
     test(`role-badge zeigt "${role}"`, async ({ asRole }) => {
       const page = await asRole(userKey);
       await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/admin/team-helpers`);
@@ -236,6 +257,29 @@ for (const role of ALL_ROLES) {
 // =============================================================================
 
 test.describe('Widerruf / Fremde', () => {
+  test('revoked hat laut Server-RPC KEIN Recht mehr im Live-Cup (alle Capabilities)', async () => {
+    // N7 (Fixrunde 2): zweites Orakel auch für revoked/stranger -- vorher nur UI-Abwesenheit
+    // geprüft (Dashboard-Karte, Direktlink), nie ob die RPC selbst (die die App tatsächlich
+    // befragt, siehe I5/Ruling T) für einen WIDERRUFENEN Co-Admin ebenfalls "nein" sagt. `revoked`
+    // ist laut `E2E_LIVE_CUP_COLLABORATORS` nominell co-admin -- ohne diese Prüfung könnte ein
+    // Regressions-Fehler in `is_active_tournament_member()` (die Widerruf-Prüfung,
+    // `role_permissions.json`-Kopfkommentar) unbemerkt bleiben, weil kein UI-Test die RPC direkt
+    // befragt.
+    for (const capability of ALL_CAPABILITY_KEYS) {
+      const serverResult = await serverHasTournamentPermission('revoked', E2E_LIVE_CUP_ID, capability);
+      expect(serverResult, `Capability "${capability}" für revoked`).toBe(false);
+    }
+  });
+
+  test('stranger hat laut Server-RPC KEIN Recht im Live-Cup (alle Capabilities)', async () => {
+    // N7 (Fixrunde 2): analog zu revoked -- stranger ist gar nicht Mitglied, die RPC muss für
+    // JEDE Capability false liefern.
+    for (const capability of ALL_CAPABILITY_KEYS) {
+      const serverResult = await serverHasTournamentPermission('stranger', E2E_LIVE_CUP_ID, capability);
+      expect(serverResult, `Capability "${capability}" für stranger`).toBe(false);
+    }
+  });
+
   test('revoked sieht den Live-Cup nicht (Dashboard, Direktlink)', async ({ asRole }) => {
     const page = await asRole('revoked');
 
@@ -248,10 +292,15 @@ test.describe('Widerruf / Fremde', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator(`[data-testid="tournament-card-${E2E_LIVE_CUP_ID}"]`)).toHaveCount(0);
 
-    // Direktlink: revoked ist zwar (widerrufenes) Mitglied, RLS lässt ihn trotzdem nicht rein --
-    // "Turnier nicht gefunden" ist derselbe positive Anker wie in public-view.cloud.spec.ts.
+    // Direktlink: revoked ist zwar (widerrufenes) Mitglied, RLS lässt ihn trotzdem nicht rein.
+    // N2 (Fixrunde 2): "Turnier nicht gefunden" ist ein POSITIVER Anker -- vorher stand hier nur
+    // die negative Prüfung unten (`toHaveCount(0)`), die auch grün wäre, wenn die Seite noch lädt
+    // oder gar leer bleibt. `TournamentManagementScreen.tsx:161` rendert exakt diesen Text
+    // (`loadingError ?? 'Turnier nicht gefunden'`), sobald das Laden fertig ist, aber `tournament`
+    // durch RLS nie ankommt.
     await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
     await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true })).toHaveCount(0);
   });
 
@@ -268,8 +317,11 @@ test.describe('Widerruf / Fremde', () => {
     await expect(page.getByText(E2E_STRANGER_CUP_TITLE, { exact: true })).toBeVisible();
     await expect(page.locator(`[data-testid="tournament-card-${E2E_LIVE_CUP_ID}"]`)).toHaveCount(0);
 
+    // N2 (Fixrunde 2): derselbe positive Anker wie oben bei revoked, vorher fehlte er hier
+    // ebenfalls.
     await page.goto(`/#/tournament/${E2E_LIVE_CUP_ID}`);
     await page.waitForLoadState('networkidle');
+    await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(E2E_LIVE_CUP_TITLE, { exact: true })).toHaveCount(0);
   });
 });

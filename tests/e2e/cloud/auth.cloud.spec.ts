@@ -16,6 +16,11 @@
  * das war die wahrscheinliche Ursache der "Owner-Flakiness" im Volllauf (siehe Report). Statt das
  * App-Verhalten zu ändern (Produktfrage, siehe Report), bekommt der Logout-Test einen EIGENEN
  * Seed-Nutzer (`logouttest`, `testData.ts`), den kein anderer Spec über `asRole()` verwendet.
+ *
+ * Fixrunde 2 (N9): UND einen zweiten, eigenen Nutzer NUR für `cloud-mobile`
+ * (`logouttestMobile`) -- derselbe Grund wie oben, nur zwischen den beiden PROJEKTEN
+ * (`cloud-desktop`/`cloud-mobile`), die diesen Test `fullyParallel` gleichzeitig ausführen,
+ * statt zwischen Dateien.
  */
 
 import { test, expect } from './fixtures';
@@ -49,13 +54,25 @@ interface MailpitMessagesResponse {
   messages: MailpitMessage[];
 }
 
+// N6 (Fixrunde 2): ein paar Sekunden Toleranz gegen Uhr-Versatz zwischen Testprozess und dem
+// Mailpit-Container -- ohne Toleranz könnte eine Mail, die tatsächlich NACH `sinceIso`
+// verschickt wurde, knapp herausfallen, wenn die Container-Uhr minimal nachgeht.
+const MAILPIT_CLOCK_TOLERANCE_MS = 3000;
+
 async function listMailpitMessagesSince(mailpitUrl: string, sinceIso: string): Promise<MailpitMessage[]> {
   const res = await fetch(`${mailpitUrl}/api/v1/messages`);
   if (!res.ok) {
     throw new Error(`Mailpit-Abfrage fehlgeschlagen: ${res.status} ${res.statusText}`);
   }
   const data = (await res.json()) as MailpitMessagesResponse;
-  return data.messages.filter((m) => m.Created >= sinceIso);
+  // N6 (Fixrunde 2): `Date.parse()` statt eines lexikographischen String-Vergleichs
+  // (`m.Created >= sinceIso`) -- Mailpits `Created`-Feld hat mehr Nachkommastellen (Nanosekunden)
+  // als `new Date().toISOString()` (Millisekunden). Bei UNTERSCHIEDLICHER Nachkommastellen-Länge
+  // ist ein reiner String-Vergleich falsch: z.B. ist "10:15:30.123456789Z" lexikographisch
+  // KLEINER als "10:15:30.123Z" (weil "4" < "Z"), obwohl 0.123456789s der spätere Zeitpunkt ist.
+  // `Date.parse()` vergleicht echte Zeitstempel, nicht Zeichenketten.
+  const sinceMs = Date.parse(sinceIso) - MAILPIT_CLOCK_TOLERANCE_MS;
+  return data.messages.filter((m) => Date.parse(m.Created) >= sinceMs);
 }
 
 /** Wartet bis zu `timeoutMs` auf eine Mail an `toEmail`, verschickt NACH `sinceIso`. */
@@ -96,10 +113,15 @@ const RESET_PASSWORD_DIALOG_NAME = /E-Mail gesendet|Passwort zurücksetzen/i;
 // =============================================================================
 
 test.describe('Cloud-Auth', () => {
-  test('Anmelden und Abmelden mit Passwort', async ({ page }) => {
-    // C1/Ruling U: eigener Seed-Nutzer, den kein anderer Spec über asRole() teilt -- signOut()
+  test('Anmelden und Abmelden mit Passwort', async ({ page }, testInfo) => {
+    // C1/Ruling U: eigener Seed-Nutzer, den kein anderer SPEC über asRole() teilt -- signOut()
     // (scope: 'global', unverändert) darf hier niemand anderen betreffen.
-    await loginAsRole(page, 'logouttest');
+    // N9 (Fixrunde 2): UND ein je PROJEKT eigener Nutzer -- dieser Test läuft `fullyParallel`
+    // gleichzeitig auf cloud-desktop UND cloud-mobile; derselbe Nutzer in beiden Instanzen hätte
+    // dieselbe globale-signOut()-Kopplung, nur zwischen Projekten statt zwischen Dateien (siehe
+    // `testData.ts#logouttestMobile`-Kommentar).
+    const userKey = testInfo.project.name.includes('mobile') ? 'logouttestMobile' : 'logouttest';
+    await loginAsRole(page, userKey);
     await logoutViaUi(page);
   });
 

@@ -397,11 +397,18 @@ fi
 # GENAU public.match_events, public.matches, public.monitor_heartbeats, public.teams.
 # scripts/local-db-apply.sh setzt denselben Satz lokal (idempotent), dieser Abschnitt prüft,
 # dass Produktion nicht abgewichen ist.
+#
+# Fixrunde 2 (N10): Liste UND Abfrage jetzt schema-QUALIFIZIERT (`schema.tabelle`), OHNE
+# `WHERE schemaname = 'public'`-Filter -- Ruling W verlangt wörtlich "Publikation = genau diese
+# vier Tabellen". Der vorherige Filter blendete jede Tabelle aus einem ANDEREN Schema (z.B.
+# `auth.users`), die zusätzlich zur Publikation hinzugefügt worden wäre, VOR dem Vergleich aus --
+# genau so eine Abweichung wäre unsichtbar geblieben, nicht "grün, weil geprüft", sondern
+# "grün, weil nie hingeschaut".
 REALTIME_PUBLICATION_TABLES=(
-  "match_events"
-  "matches"
-  "monitor_heartbeats"
-  "teams"
+  "public.match_events"
+  "public.matches"
+  "public.monitor_heartbeats"
+  "public.teams"
 )
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   echo ""
@@ -409,7 +416,7 @@ if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then
   PUB_OUT="$WORKDIR/realtime_publication.out"
   docker exec "$CONTAINER_NAME" \
     psql --dbname="$SUPABASE_DB_READONLY_URL" -X -q -tA -v ON_ERROR_STOP=1 \
-    -c "SELECT tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' ORDER BY tablename;" \
+    -c "SELECT schemaname || '.' || tablename FROM pg_publication_tables WHERE pubname = 'supabase_realtime' ORDER BY 1;" \
     > "$PUB_OUT" 2>"$WORKDIR/realtime_publication.log" \
     || { echo "::error::Konnte supabase_realtime nicht live lesen:" >&2
          cat "$WORKDIR/realtime_publication.log" >&2; exit 1; }

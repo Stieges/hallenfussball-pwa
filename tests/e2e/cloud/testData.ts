@@ -58,7 +58,8 @@ export type E2EUserKey =
   | 'revoked'
   | 'stranger'
   | 'google'
-  | 'logouttest';
+  | 'logouttest'
+  | 'logouttestMobile';
 
 export interface E2EUserSpec {
   key: E2EUserKey;
@@ -89,6 +90,16 @@ export const E2E_USERS: Record<E2EUserKey, E2EUserSpec> = {
   // (= dieselbe Session) teilt, mitten im Volllauf seine Anmeldung. Kein Turnier-Bezug nötig --
   // dieser Nutzer ist NIRGENDWO Mitglied, taucht in KEINEM anderen Spec über `asRole()` auf.
   logouttest: { key: 'logouttest', email: 'logouttest@test.local', displayName: 'Lena Logouttest' },
+  // Fixrunde 2 (N9): ZWEITER, eigener Nutzer NUR für cloud-mobile -- derselbe Logout-Test
+  // (`auth.cloud.spec.ts`) läuft `fullyParallel` auf `cloud-desktop` UND `cloud-mobile`
+  // gleichzeitig. Hätten beide Projekt-Instanzen denselben `logouttest`-Nutzer angemeldet, würde
+  // die `signOut()`-Instanz der EINEN Projekt-Instanz (scope: 'global', s.o.) die Session der
+  // ANDEREN, noch laufenden Instanz global widerrufen -- genau die C1-Fehlerklasse, nur zwischen
+  // Projekten statt zwischen Spec-Dateien. War vorher nur als "unwahrscheinlich" eingestuft
+  // (keine Turnier-Mitgliedschaft, also kein Datenzugriff, der dadurch bräche) -- aber der
+  // Logout-Test selbst prüft genau das UI-Verhalten von signOut(), also die einzige Prüfung, bei
+  // der das tatsächlich etwas kaputt machen könnte.
+  logouttestMobile: { key: 'logouttestMobile', email: 'logouttest-mobile@test.local', displayName: 'Mona Logouttest' },
 };
 
 /** Adressen für offene/abgelaufene/widerrufene Einladungen OHNE eigenes Konto. */
@@ -104,13 +115,27 @@ export const E2E_LIVE_CUP_ID = e2eUuid('tournament:live-cup');
 export const E2E_PUBLIC_CUP_ID = e2eUuid('tournament:public-cup');
 export const E2E_DRAFT_CUP_ID = e2eUuid('tournament:draft-cup');
 export const E2E_STRANGER_CUP_ID = e2eUuid('tournament:stranger-cup');
+/**
+ * Fixrunde 2 (N3, Ruling AA): FÜNFTES Testturnier, NUR für `publish-coadmin.cloud.spec.ts` --
+ * der T2-Brief verlangt den Entwurf-Cup wörtlich als "Entwurf, privat, ohne `publishedAt`"
+ * (`task-T2-brief.md`, Abschnitt "Testturniere (verbindlich)"); Fixrunde 1 hatte ihm
+ * `publishedAt` gegeben, um die Veröffentlichen-RPC (N1) testen zu können -- das widersprach dem
+ * Brief (kein Ruling dafür). Der Entwurf-Cup ist seit Fixrunde 2 wieder ein reiner Entwurf (kein
+ * `publishedAt`, kein Sponsor/Monitor, kein Co-Admin). Der "Freigabe-Cup" trägt stattdessen
+ * genau den Zustand, den `publish-coadmin.cloud.spec.ts` braucht: veröffentlicht
+ * (`publishedAt` gesetzt), privat (`is_public=false`), coadmin als Co-Admin, ein Sponsor + ein
+ * Monitor.
+ */
+export const E2E_RELEASE_CUP_ID = e2eUuid('tournament:release-cup');
 
-/** Titel der vier Testturniere (`scripts/e2e-seed.ts` UND `tests/e2e/cloud/smoke.spec.ts`
+/** Titel der Testturniere (`scripts/e2e-seed.ts` UND `tests/e2e/cloud/smoke.spec.ts`
  *  importieren von hier — keine literale Zweitstelle). */
 export const E2E_LIVE_CUP_TITLE = 'Live-Cup';
 export const E2E_PUBLIC_CUP_TITLE = 'Public-Cup';
 export const E2E_DRAFT_CUP_TITLE = 'Entwurf-Cup';
 export const E2E_STRANGER_CUP_TITLE = 'Fremd-Cup';
+/** Fixrunde 2 (N3, Ruling AA). */
+export const E2E_RELEASE_CUP_TITLE = 'Freigabe-Cup';
 
 /** Fester Share-Code des Public-Cup (Nachweis 3: anonymer Zugriff per Share-Code). */
 export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
@@ -125,15 +150,15 @@ export const E2E_PUBLIC_CUP_SHARE_CODE = 'E2EPUB';
 export const E2E_PUBLIC_CUP_MONITOR_ID = e2eUuid('monitor:public-cup:1');
 
 /**
- * Fixrunde 1 (I2, Ruling V): Sponsor + Monitor des Entwurf-Cup, für den Nachweis "Sponsor und
- * Monitor folgen" in `publish-coadmin.cloud.spec.ts` -- der Monitor zeigt EINEN `sponsor`-Slide
- * auf genau diesen Sponsor, damit ein anonymer Monitor-Aufruf nach dem (gewollten)
- * Veröffentlichen den Sponsor-Namen zeigt. Analog zum bereits vorhandenen
- * `E2E_PUBLIC_CUP_MONITOR_ID`-Muster.
+ * Fixrunde 2 (N3, Ruling AA; vorher Fixrunde 1/I2/Ruling V, damals noch am Entwurf-Cup):
+ * Sponsor + Monitor des Freigabe-Cup, für den Nachweis "Sponsor und Monitor folgen" in
+ * `publish-coadmin.cloud.spec.ts` -- der Monitor zeigt EINEN `sponsor`-Slide auf genau diesen
+ * Sponsor, damit ein anonymer Monitor-Aufruf nach dem (gewollten) Veröffentlichen den
+ * Sponsor-Namen zeigt. Analog zum bereits vorhandenen `E2E_PUBLIC_CUP_MONITOR_ID`-Muster.
  */
-export const E2E_DRAFT_CUP_MONITOR_ID = e2eUuid('monitor:draft-cup:1');
-export const E2E_DRAFT_CUP_SPONSOR_ID = e2eUuid('sponsor:draft-cup:1');
-export const E2E_DRAFT_CUP_SPONSOR_NAME = 'Entwurf-Sponsor GmbH';
+export const E2E_RELEASE_CUP_MONITOR_ID = e2eUuid('monitor:release-cup:1');
+export const E2E_RELEASE_CUP_SPONSOR_ID = e2eUuid('sponsor:release-cup:1');
+export const E2E_RELEASE_CUP_SPONSOR_NAME = 'Freigabe-Sponsor GmbH';
 
 /** Team-Namen des Live-Cup: 8 Teams (A–H), erste Hälfte Gruppe A, zweite Hälfte Gruppe B. */
 export const E2E_LIVE_CUP_TEAM_NAMES = [
@@ -149,6 +174,14 @@ export const E2E_LIVE_CUP_TEAM_NAMES = [
 
 export const E2E_LIVE_CUP_GROUP_A = E2E_LIVE_CUP_TEAM_NAMES.slice(0, 4);
 export const E2E_LIVE_CUP_GROUP_B = E2E_LIVE_CUP_TEAM_NAMES.slice(4, 8);
+
+/**
+ * Fixrunde 2 (N8): Seed-Ausgangsstand des EINEN laufenden Live-Cup-Spiels (`scripts/e2e-seed.ts`,
+ * Abschnitt "Live-Cup"). Alle vier Tests in `two-devices.cloud.spec.ts` (N4: inkl. des ehemals
+ * eigenständigen Offline-Tests) bauen ihren Spielstand in `finally` darauf zurück -- vorher
+ * dreimal literal `1, 0` im Code, jetzt EINE Quelle.
+ */
+export const E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE = { home: 1, away: 0 } as const;
 
 /** Team-Namen des Public-Cup (kleiner, für "einige Ergebnisse"). */
 export const E2E_PUBLIC_CUP_TEAM_NAMES = ['Public Löwen', 'Public Adler', 'Public Falken', 'Public Bären'] as const;

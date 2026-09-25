@@ -62,11 +62,36 @@
  * Anders als bei `public-view.cloud.spec.ts` (zwei unabhängige, per Projekt wählbare Spiele) hat
  * der Live-Cup nur EIN laufendes Spiel -- kein Offset möglich, ohne den Seed künstlich um ein
  * zweites laufendes Spiel zu erweitern (out of scope für diese Fixrunde).
+ *
+ * Fixrunde 2 (N4): Test 4 ("helper geht offline...", vorher eine eigene Datei
+ * `offline.cloud.spec.ts`, Spec 4 des Briefs) ist jetzt Teil DIESER `describe`-Gruppe statt einer
+ * eigenen Datei. Begründung für "dieselbe Datei/dasselbe describe" statt einer
+ * Playwright-Projekt-Abhängigkeit (`dependencies` in `playwright.config.ts`): beide Dateien
+ * änderten bereits VOR diesem Fix denselben Datensatz (das eine laufende Live-Cup-Spiel, siehe
+ * "Nebenbefund" oben) und mussten deshalb schon vorher unabhängig voneinander per
+ * `test.skip(!testInfo.project.name.includes('desktop'))` auf `cloud-desktop` beschränkt werden
+ * -- reiner Zufall der Ausführungsreihenfolge zwischen zwei Dateien war nie eine echte
+ * Serialisierung, nur zwei getrennte Einzelsperren auf dieselbe Ressource, die sich weiterhin
+ * gegenseitig überholen konnten (Playwright ordnet Dateien nicht alphabetisch, `offline` vor
+ * `two-devices` ist keine Garantie). Eine Projekt-Abhängigkeit würde zwei GANZE Projekte
+ * verketten (overkill für eine einzelne Datei, und `cloud-desktop`/`cloud-mobile` sind bereits
+ * über `cloud-setup` verkettet, siehe `playwright.config.ts`) und würde am eigentlichen Problem
+ * nichts ändern -- die vier Tests bräuchten innerhalb ihres Projekts weiterhin `serial`, sonst
+ * liefe `fullyParallel` sie trotzdem gegeneinander. `test.describe.configure({ mode: 'serial' })`
+ * (bereits vorhanden) serialisiert dagegen ALLE vier Tests inklusive des ehemaligen
+ * Offline-Tests in einer einzigen, garantierten Reihenfolge -- exakt das, was gebraucht wird.
  */
 
 import { test, expect } from './fixtures';
-import { ensureMatchRunning, enterGoal, resetRunningMatchScore } from './helpers';
-import { E2E_LIVE_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_PUBLIC_CUP_MONITOR_ID } from './testData';
+import { AUTH_DIR } from './fixtures';
+import { ensureMatchRunning, enterGoal, resetRunningMatchScore, waitForSync } from './helpers';
+import {
+  E2E_LIVE_CUP_ID,
+  E2E_PUBLIC_CUP_ID,
+  E2E_PUBLIC_CUP_MONITOR_ID,
+  E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE,
+} from './testData';
+import path from 'node:path';
 
 test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
   test.describe.configure({ mode: 'serial' });
@@ -104,9 +129,14 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       // Neuladen innerhalb von 3s" (Fundament-Zielgröße).
       await expect(ownerHomeScore).toHaveText(String(before + 1), { timeout: 3000 });
     } finally {
-      // I6: Rückbau -- sonst koppelt dieser Test mit offline.cloud.spec.ts (dasselbe laufende
-      // Live-Cup-Spiel) und mit sich selbst über aufeinanderfolgende Läufe hinweg.
-      await resetRunningMatchScore(E2E_LIVE_CUP_ID, 1, 0);
+      // I6: Rückbau -- sonst koppelt dieser Test mit Test 4 (ehemals offline.cloud.spec.ts,
+      // dasselbe laufende Live-Cup-Spiel) und mit sich selbst über aufeinanderfolgende Läufe
+      // hinweg. N8: Konstante statt literaler `1, 0`.
+      await resetRunningMatchScore(
+        E2E_LIVE_CUP_ID,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      );
     }
   });
 
@@ -115,6 +145,18 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
 
     await ownerPage.goto(`/#/tournament/${E2E_PUBLIC_CUP_ID}/live`);
     await ownerPage.waitForLoadState('networkidle');
+
+    // N5(3): positiver Seiten-Anker VOR test.fail() -- beweist, dass die Navigation zur
+    // Live-Cockpit-Route des Public-Cup tatsächlich ankam (Titel sichtbar), bevor der bekannte
+    // Bruchpunkt (Fehler B) greift. WICHTIG: der Anker darf NICHT `match-status-badge` prüfen --
+    // das ist genau die erste Zeile in `ensureMatchRunning()` (`helpers.ts:129`) und damit
+    // bereits TEIL von Fehler B selbst (empirisch geprüft: die Public-Cup-Route zeigt "Keine
+    // Spiele auf diesem Feld vorhanden" + KEIN `match-status-badge`, weil die
+    // Automatik-Auswahl kein noch nie initialisiertes Spiel anzeigen kann -- ein Anker auf
+    // `match-status-badge` würde den Bruchpunkt selbst VOR `test.fail()` ziehen und ihn dadurch
+    // fälschlich zu einem "unerwarteten" statt einem "erwarteten" Fehlschlag machen). Der
+    // Turniertitel dagegen lädt unabhängig von der Spielauswahl.
+    await expect(ownerPage.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
     // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- `ensureMatchRunning` ist hier der
     // Bruchpunkt selbst (Fehler B: ein noch nie initialisiertes Spiel lässt sich nicht starten),
@@ -177,8 +219,77 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect(helperHomeScore).toHaveText(String(before));
       await expect(ownerHomeScore).toHaveText(String(before), { timeout: 5000 });
     } finally {
-      // I6: Rückbau, unabhängig vom Ausgang.
-      await resetRunningMatchScore(E2E_LIVE_CUP_ID, 1, 0);
+      // I6: Rückbau, unabhängig vom Ausgang. N8: Konstante statt literaler `1, 0`.
+      await resetRunningMatchScore(
+        E2E_LIVE_CUP_ID,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      );
+    }
+  });
+
+  test('helper geht offline, trägt zwei Tore ein, geht online -- owner sieht beide', async ({ asRole, browser }) => {
+    // Fixrunde 2 (N4): vorher eine eigene Datei (`offline.cloud.spec.ts`, Brief-Spec 4), jetzt
+    // Test 4 dieser `describe`-Gruppe -- siehe Kopfkommentar für die Begründung. Der
+    // Projekt-Skip (`!testInfo.project.name.includes('desktop')`) läuft jetzt über das
+    // gemeinsame `beforeEach` oben, keine eigene Prüfung mehr nötig.
+    let helperContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
+    try {
+      const ownerPage = await asRole('owner');
+      await ownerPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+      await ownerPage.waitForLoadState('networkidle');
+      await ensureMatchRunning(ownerPage);
+      const ownerHomeScore = ownerPage.locator('[data-testid="score-home"]');
+      const before = Number(await ownerHomeScore.textContent());
+      expect(Number.isFinite(before)).toBe(true); // I4: Guard, ein NaN darf nie als "erwartet rot" durchgehen.
+
+      // Eigener Context für helper (statt asRole()): braucht direkten Zugriff auf `context()`, um
+      // `setOffline(true)` aufzurufen -- asRole() gibt nur die Page zurück. M3: `AUTH_DIR` aus
+      // `fixtures.ts` statt eines zweiten, literal duplizierten Pfads.
+      helperContext = await browser.newContext({
+        storageState: path.join(AUTH_DIR, 'helper.json'),
+      });
+      const helperPage = await helperContext.newPage();
+      await helperPage.goto(`/#/tournament/${E2E_LIVE_CUP_ID}/live`);
+      await helperPage.waitForLoadState('networkidle');
+      await expect(helperPage.locator('[data-testid="match-pause-button"]')).toBeVisible({ timeout: 15000 });
+      const helperHomeScore = helperPage.locator('[data-testid="score-home"]');
+
+      // I4: test.fail() direkt vor dem bekannten Bruchpunkt (Offline schalten + erstes Tor) --
+      // alles oben (Match läuft, helper sieht das Cockpit) ist ein ECHTER Fehlschlag, kein
+      // fälschlich "erwarteter".
+      test.fail();
+
+      await helperContext.setOffline(true);
+
+      await enterGoal(helperPage, 'home');
+      await enterGoal(helperPage, 'home');
+
+      // Gewolltes Verhalten: beide Tore stehen lokal als "ausstehend" -- sync-status zeigt 2
+      // ausstehende Einträge (Brief). Strukturell nicht nachweisbar (Grund 2, Brief Abschnitt 3
+      // -- `showSyncStatus` wird der `AdminHeader` nirgends übergeben), aber die Erwartung bleibt
+      // formuliert.
+      await expect(helperPage.locator('[data-testid="sync-status"]')).toHaveAttribute('data-pending', '2', {
+        timeout: 5000,
+      });
+      await expect(helperHomeScore).toHaveText(String(before + 2));
+
+      await helperContext.setOffline(false);
+      await waitForSync(helperPage);
+
+      await expect(ownerHomeScore).toHaveText(String(before + 2), { timeout: 5000 });
+    } finally {
+      // M3: Context-Schluss IMMER, auch beim erwarteten Fehlschlag (vorher nie erreicht).
+      if (helperContext) {
+        await helperContext.close();
+      }
+      // I6: Rückbau -- falls doch etwas durchschrieb (z.B. nach einem künftigen Fundament-Fix),
+      // darf der Live-Cup-Score nicht dauerhaft verändert bleiben. N8: Konstante statt `1, 0`.
+      await resetRunningMatchScore(
+        E2E_LIVE_CUP_ID,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      );
     }
   });
 });

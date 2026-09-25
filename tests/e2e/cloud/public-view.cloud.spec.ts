@@ -23,48 +23,111 @@ import {
 // erst starten, das würde diesen von Z1 unabhängigen Test verfälschen).
 // Fixrunde 1 (M1): `getLocalServiceRoleClient()` statt eigener `execSync`-Kopie.
 //
-// Fixrunde 1 (Review-Fund während der Fehlermeldungs-Erhebung, kein nummerierter Punkt): dieser
-// Test läuft `fullyParallel` gleichzeitig als `cloud-desktop` UND `cloud-mobile` -- ohne
-// `offset` griffen beide Projekt-Instanzen auf DASSELBE beendete Spiel zu (Seed hat genau zwei),
-// eine Instanz sah dadurch gelegentlich die Änderung DER ANDEREN Instanz und der eigentlich
-// erwartete `test.fail()` wurde fälschlich grün ("Expected to fail, but passed", beobachtet auf
-// cloud-mobile bei gleichzeitigem Lauf mit cloud-desktop, 1/1 Reproduktion). `offset` wählt je
-// Projekt ein ANDERES der zwei beendeten Spiele.
+// Fixrunde 2 (N1, Ruling AB): Der Fixrunde-1-"Offset" (je Projekt ein anderes Spiel) behob das
+// beobachtete Falsch-Grün NICHT -- beide beendeten Public-Cup-Spiele stehen im Seed auf 2:0, ein
+// `getByText('<score>:0')` ohne Bindung an EIN bestimmtes Spiel findet immer irgendein
+// passendes Ergebnis, auch das der jeweils ANDEREN, gleichzeitig laufenden Projekt-Instanz.
+// Zwei unabhängige Fixes: (a) dieser Test läuft jetzt NUR auf `cloud-desktop` (wie
+// `two-devices`/`offline`/`publish-coadmin`) -- keine zweite, gleichzeitige Instanz mehr, die
+// denselben Datensatz ändert. (b) Der Zielwert ist nicht mehr "+1" (2:0 -> 3:0, ein Wert, der
+// im Seed bereits zweimal vorkommt), sondern ein Wert, der in KEINEM Public-Cup-Spiel vorkommen
+// kann (`97`), UND die Prüfung ist an die Zeile DES GEÄNDERTEN SPIELS gebunden (`role="row"` +
+// `aria-label` mit beiden Team-Namen, `MatchCardDesktop.tsx:218-219`), nicht an einen freien
+// Text irgendwo auf der Seite. `role="row"` ist NUR die Desktop-Kartenvariante (Mobile nutzt
+// `role="article"`, `MatchCard.tsx:230`) -- exakt EIN Treffer, kein `:visible`-Filter nötig.
 // =============================================================================
 
-async function bumpFinishedMatchScore(
-  tournamentId: string,
-  offset: 0 | 1
-): Promise<{ matchId: string; oldScoreA: number; newScoreA: number }> {
+/** Ziel-Heimtore für Test 3 -- kann in keinem Public-Cup-Spiel natürlich vorkommen (N1). */
+const UNIQUE_TARGET_SCORE_A = 97;
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+interface FinishedMatchWithTeams {
+  matchId: string;
+  oldScoreA: number;
+  homeTeamName: string;
+  awayTeamName: string;
+}
+
+/**
+ * Liest das erste beendete Public-Cup-Spiel INKLUSIVE der Team-Namen (für die Zeilen-Bindung).
+ *
+ * Empirisch geprüft (per Probe-Test gegen die echte Seite, siehe Report): der Public-Cup-Seed
+ * (`scripts/e2e-seed.ts`, bestehender Zustand, nicht Teil dieser Fixrunde) lässt `matches.
+ * team_a_id`/`team_b_id` NULL, weil `mapMatchToSupabase()` (`supabaseMappers.ts:191`) das
+ * Domain-Feld `match.teamA` fälschlich als TEAM-NAMEN behandelt (`teamNameToId.get(match.teamA)`)
+ * -- der Schedule-Generator befüllt `match.teamA` aber mit der Team-ID (`originalTeamA`,
+ * `scripts/e2e-seed.ts:601` `teamA: scheduledMatch.originalTeamA`). Die ID landet deshalb in
+ * `team_a_placeholder`/`team_b_placeholder` STATT in `team_a_id`/`team_b_id` (leer). Beim
+ * Rück-Lesen wird `team_a_placeholder` genauso in `match.teamA`/`originalTeamA` zurückgespiegelt
+ * (`supabaseMappers.ts:124-126`) -- und `getTeamForDisplay()` (`GroupStageSchedule.tsx:392`)
+ * löst `match.originalTeamA` GENAUSO gegen `tournament.teams` auf, egal ob der Wert ursprünglich
+ * aus `team_a_id` ODER `team_a_placeholder` kam. Deshalb zeigt die UI trotzdem die echten
+ * Team-Namen ("Public Bären" statt der rohen ID) -- diese Funktion bildet das nach: BEIDE Felder
+ * (`team_a_id` UND `team_a_placeholder`) werden als mögliche Team-ID versucht, nicht nur
+ * `team_a_id`. Eine naive Fassung (nur `team_a_id`, `team_a_placeholder` als literaler
+ * Namens-Fallback) wurde per Probe widerlegt: sie hätte an die ROHE UUID statt an "Public Bären"
+ * gebunden, der Row-Locator hätte nie etwas gefunden (in Fixrunde 2 selbst beobachtet, siehe
+ * Report).
+ */
+async function getFirstFinishedMatchWithTeams(tournamentId: string): Promise<FinishedMatchWithTeams> {
   const { url, headers } = getLocalServiceRoleClient();
 
   const listRes = await fetch(
-    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.finished&select=id,score_a&order=id&limit=2`,
+    `${url}/rest/v1/matches?tournament_id=eq.${tournamentId}&match_status=eq.finished&select=id,score_a,team_a_id,team_b_id,team_a_placeholder,team_b_placeholder&order=id&limit=1`,
     { headers }
   );
   if (!listRes.ok) {
     throw new Error(`Matches-Abfrage fehlgeschlagen: ${listRes.status} ${await listRes.text()}`);
   }
-  const rows = (await listRes.json()) as Array<{ id: string; score_a: number }>;
-  if (rows.length <= offset) {
-    throw new Error(`Kein beendetes Spiel mit Offset ${offset} in Turnier ${tournamentId} gefunden (${rows.length} gefunden).`);
+  const rows = (await listRes.json()) as Array<{
+    id: string;
+    score_a: number;
+    team_a_id: string | null;
+    team_b_id: string | null;
+    team_a_placeholder: string | null;
+    team_b_placeholder: string | null;
+  }>;
+  if (rows.length === 0) {
+    throw new Error(`Kein beendetes Spiel in Turnier ${tournamentId} gefunden.`);
   }
-  const { id: matchId, score_a: oldScoreA } = rows[offset];
-  const newScoreA = oldScoreA + 1;
+  const { id: matchId, score_a: oldScoreA, team_a_id: teamAId, team_b_id: teamBId, team_a_placeholder: teamAPlaceholder, team_b_placeholder: teamBPlaceholder } = rows[0];
 
-  const patchRes = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}`, {
-    method: 'PATCH',
-    headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ score_a: newScoreA }),
-  });
-  if (!patchRes.ok) {
-    throw new Error(`Score-Update fehlgeschlagen: ${patchRes.status} ${await patchRes.text()}`);
+  // Beide möglichen ID-Quellen versuchen (siehe Kommentar oben) -- `team_a_id` zuerst, falls die
+  // App das je wieder korrekt befüllt, sonst `team_a_placeholder`.
+  const candidateIds = [teamAId, teamBId, teamAPlaceholder, teamBPlaceholder].filter(
+    (id): id is string => id !== null
+  );
+  const teamNameById = new Map<string, string>();
+  if (candidateIds.length > 0) {
+    const teamsRes = await fetch(`${url}/rest/v1/teams?id=in.(${candidateIds.join(',')})&select=id,name`, { headers });
+    if (!teamsRes.ok) {
+      throw new Error(`Teams-Abfrage fehlgeschlagen: ${teamsRes.status} ${await teamsRes.text()}`);
+    }
+    const teamRows = (await teamsRes.json()) as Array<{ id: string; name: string }>;
+    for (const t of teamRows) {
+      teamNameById.set(t.id, t.name);
+    }
   }
-  return { matchId, oldScoreA, newScoreA };
+
+  const resolve = (id: string | null, placeholder: string | null): string | undefined =>
+    (id ? teamNameById.get(id) : undefined) ?? (placeholder ? teamNameById.get(placeholder) : undefined) ?? placeholder ?? undefined;
+
+  const homeTeamName = resolve(teamAId, teamAPlaceholder);
+  const awayTeamName = resolve(teamBId, teamBPlaceholder);
+  if (!homeTeamName || !awayTeamName) {
+    throw new Error(
+      `Team-Namen für Spiel ${matchId} nicht auflösbar (teamAId=${teamAId}, teamBId=${teamBId}, ` +
+      `teamAPlaceholder=${teamAPlaceholder}, teamBPlaceholder=${teamBPlaceholder}).`
+    );
+  }
+
+  return { matchId, oldScoreA, homeTeamName, awayTeamName };
 }
 
-/** I6: setzt den per Service-Role geänderten Spielstand auf den Seed-Ausgangswert zurück. */
-async function restoreMatchScore(matchId: string, scoreA: number): Promise<void> {
+async function setMatchScoreA(matchId: string, scoreA: number): Promise<void> {
   const { url, headers } = getLocalServiceRoleClient();
   const res = await fetch(`${url}/rest/v1/matches?id=eq.${matchId}`, {
     method: 'PATCH',
@@ -72,7 +135,7 @@ async function restoreMatchScore(matchId: string, scoreA: number): Promise<void>
     body: JSON.stringify({ score_a: scoreA }),
   });
   if (!res.ok) {
-    throw new Error(`Zurücksetzen des Spielstands fehlgeschlagen: ${res.status} ${await res.text()}`);
+    throw new Error(`Score-Update fehlgeschlagen (Match ${matchId}, score_a=${scoreA}): ${res.status} ${await res.text()}`);
   }
 }
 
@@ -94,7 +157,9 @@ test.describe('Public-View', () => {
     // im DOM, nur eine ist per CSS sichtbar -- unter cloud-mobile war ausgerechnet die per
     // DOM-Reihenfolge erste ausgeblendet (beobachtet, siehe Report). Der `:visible`-Filter wählt
     // zuverlässig eine tatsächlich sichtbare Kopie. `exact: true` (M10) vermeidet einen
-    // Teilstring-Treffer wie "12:00".
+    // Teilstring-Treffer wie "12:00". Dieser Test bleibt bewusst frei-textlich und auf beiden
+    // Projekten -- er behauptet nur "irgendein Ergebnis ist sichtbar", ändert selbst nichts, und
+    // ist deshalb von der Race-Problematik aus Test 3 nicht betroffen (siehe Kopfkommentar).
     await expect(page.getByText('2:0', { exact: true }).filter({ visible: true }).first()).toBeVisible({
       timeout: 15000,
     });
@@ -104,9 +169,9 @@ test.describe('Public-View', () => {
     // Beide haben laut Seed keinen share_code (T2) -- der einzige Direktlink ist die
     // ID-Route /#/public/:tournamentId (PublicTournamentViewScreen, versucht Share-Code-Format
     // ZUERST, fällt dann auf `repo.get(tournamentId)` zurück -- RLS lässt anonym nur
-    // `is_public=true`-Turniere durch). Der Entwurf-Cup hat seit Fixrunde 1 zwar `publishedAt`
-    // (siehe Seed-Kommentar, I2/Ruling V), aber weiterhin `is_public=false` -- dieser Test bleibt
-    // davon unberührt.
+    // `is_public=true`-Turniere durch). Fixrunde 2 (N3): der Entwurf-Cup ist wieder ein reiner
+    // Entwurf (kein `publishedAt`, Ruling AA) -- dieser Test bleibt davon unberührt, er prüfte
+    // ohnehin nur `is_public=false`.
     await page.goto(`/#/public/${E2E_DRAFT_CUP_ID}`);
     await page.waitForLoadState('networkidle');
     await expect(page.getByText('Turnier nicht gefunden')).toBeVisible({ timeout: 15000 });
@@ -119,15 +184,28 @@ test.describe('Public-View', () => {
   });
 
   test('Ein Tor, das owner einträgt, erscheint ohne Neuladen', async ({ page }, testInfo) => {
-    let matchId: string | null = null;
-    let oldScoreA = 0;
+    // Ruling AB: nur auf cloud-desktop -- dieser Test ändert per Service-Role EINE Zeile im
+    // Public-Cup; eine gleichzeitige zweite Projekt-Instanz (cloud-mobile) würde entweder
+    // dieselbe Zeile treffen (Konflikt) oder ihre eigene Vorbedingung ("2:0 sichtbar", Test 1
+    // oben) durch den fremden Zwischenzustand gefährden. Siehe Kopfkommentar (N1).
+    test.skip(
+      !testInfo.project.name.includes('desktop'),
+      'Ändert per Service-Role eine Public-Cup-Zeile -- nur auf einem Projekt ausgeführt, siehe Kopfkommentar (N1).'
+    );
+
+    let matchInfo: FinishedMatchWithTeams | null = null;
     try {
       await page.goto(`/#/live/${E2E_PUBLIC_CUP_SHARE_CODE}`);
       await page.waitForLoadState('networkidle');
       await expect(page.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- die Vorbedingung oben (Seite
-      // zeigt den Public-Cup) ist ein echter Fehlschlag, kein fälschlich "erwarteter". Bekannte
+      // N5(1): PATCH steht VOR test.fail() -- ein scheiternder PATCH (z.B. Matches-/Teams-Abfrage
+      // liefert nichts) ist ein echter Fehlschlag, kein fälschlich "erwarteter".
+      matchInfo = await getFirstFinishedMatchWithTeams(E2E_PUBLIC_CUP_ID);
+      await setMatchScoreA(matchInfo.matchId, UNIQUE_TARGET_SCORE_A);
+
+      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- die Vorbedingungen oben (Seite
+      // zeigt den Public-Cup, PATCH erfolgreich) sind jetzt echte Fehlschläge. Bekannte
       // Abweichung (Brief, Katalog-Schnitt Z1, docs/anforderungen/
       // 2026-09-24_zielbild-einzelturnier.md): PublicTournamentViewScreen lädt das Turnier NUR
       // einmalig beim Mount (ein `useEffect` mit `[tournamentId]`-Deps, keine Polling-/
@@ -135,22 +213,17 @@ test.describe('Public-View', () => {
       // Ergebnisänderung erscheint nie ohne Neuladen.
       test.fail();
 
-      // offset: cloud-desktop und cloud-mobile laufen `fullyParallel` -- jedes Projekt ändert
-      // ein ANDERES der zwei beendeten Public-Cup-Spiele (siehe Kommentar an der Funktion).
-      const offset = testInfo.project.name.includes('mobile') ? 1 : 0;
-      const bumped = await bumpFinishedMatchScore(E2E_PUBLIC_CUP_ID, offset);
-      matchId = bumped.matchId;
-      oldScoreA = bumped.oldScoreA;
-
-      // I3: derselbe `:visible`-Filter wie oben -- ohne ihn kann dieser Test auf cloud-mobile
-      // NIE grün werden (falscher DOM-Treffer), selbst wenn Z1 behoben wird.
-      await expect(
-        page.getByText(`${bumped.newScoreA}:0`, { exact: true }).filter({ visible: true }).first()
-      ).toBeVisible({ timeout: 3000 });
+      // N1: an die Zeile DES GEÄNDERTEN SPIELS gebunden (role="row" + beide Team-Namen im
+      // aria-label), nicht an freien Text -- UND ein Zielwert, der in keinem anderen
+      // Public-Cup-Spiel vorkommen kann.
+      const matchRow = page.getByRole('row', {
+        name: new RegExp(`${escapeRegExp(matchInfo.homeTeamName)}.*${escapeRegExp(matchInfo.awayTeamName)}`, 'i'),
+      });
+      await expect(matchRow.getByText(`${UNIQUE_TARGET_SCORE_A}:0`, { exact: true })).toBeVisible({ timeout: 3000 });
     } finally {
       // I6: Service-Role-Änderung IMMER zurückbauen, unabhängig vom Testausgang.
-      if (matchId) {
-        await restoreMatchScore(matchId, oldScoreA);
+      if (matchInfo) {
+        await setMatchScoreA(matchInfo.matchId, matchInfo.oldScoreA);
       }
     }
   });

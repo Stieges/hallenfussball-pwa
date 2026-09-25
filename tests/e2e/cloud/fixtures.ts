@@ -13,10 +13,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-/** Exportiert (Fixrunde 1, M3): `offline.cloud.spec.ts` braucht denselben Pfad für einen
- *  eigenen `browser.newContext({ storageState })`-Aufruf (offline-Test, `asRole()` gibt keinen
- *  Zugriff auf den Context selbst) -- EINE Quelle statt einer zweiten, literal duplizierten
- *  Pfad-Konstruktion. */
+/** Exportiert (Fixrunde 1, M3): der Offline-Test in `two-devices.cloud.spec.ts` (Fixrunde 2, N4:
+ *  vorher eine eigene Datei `offline.cloud.spec.ts`) braucht denselben Pfad für einen eigenen
+ *  `browser.newContext({ storageState })`-Aufruf (`asRole()` gibt keinen Zugriff auf den Context
+ *  selbst) -- EINE Quelle statt einer zweiten, literal duplizierten Pfad-Konstruktion. */
 export const AUTH_DIR = path.join(__dirname, '..', '..', '..', 'playwright', '.auth');
 
 /**

@@ -55,15 +55,17 @@ import {
   E2E_PUBLIC_CUP_ID,
   E2E_DRAFT_CUP_ID,
   E2E_STRANGER_CUP_ID,
+  E2E_RELEASE_CUP_ID,
   E2E_LIVE_CUP_TITLE,
   E2E_PUBLIC_CUP_TITLE,
   E2E_DRAFT_CUP_TITLE,
   E2E_STRANGER_CUP_TITLE,
+  E2E_RELEASE_CUP_TITLE,
   E2E_PUBLIC_CUP_SHARE_CODE,
   E2E_PUBLIC_CUP_MONITOR_ID,
-  E2E_DRAFT_CUP_MONITOR_ID,
-  E2E_DRAFT_CUP_SPONSOR_ID,
-  E2E_DRAFT_CUP_SPONSOR_NAME,
+  E2E_RELEASE_CUP_MONITOR_ID,
+  E2E_RELEASE_CUP_SPONSOR_ID,
+  E2E_RELEASE_CUP_SPONSOR_NAME,
   E2E_LIVE_CUP_TEAM_NAMES,
   E2E_PUBLIC_CUP_TEAM_NAMES,
   E2E_LIVE_CUP_COLLABORATORS,
@@ -326,7 +328,7 @@ async function main(): Promise<void> {
   // Collaborator-Zeilen weg, bevor die Nutzer verschwinden.)
   // ---------------------------------------------------------------------------
   log('Lösche bestehende Test-Turniere (falls vorhanden)…');
-  const allTournamentIds = [E2E_LIVE_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_DRAFT_CUP_ID, E2E_STRANGER_CUP_ID];
+  const allTournamentIds = [E2E_LIVE_CUP_ID, E2E_PUBLIC_CUP_ID, E2E_DRAFT_CUP_ID, E2E_STRANGER_CUP_ID, E2E_RELEASE_CUP_ID];
   const { error: deleteTournamentsError } = await admin.from('tournaments').delete().in('id', allTournamentIds);
   if (deleteTournamentsError) {
     throw new Error(`Löschen bestehender Turniere: ${deleteTournamentsError.message}`);
@@ -648,7 +650,11 @@ async function main(): Promise<void> {
   );
 
   // ---------------------------------------------------------------------------
-  // 3.6 Entwurf-Cup: Entwurf, privat, MIT publishedAt (Fixrunde 1, I2/Ruling V) + Co-Admin
+  // 3.6 Entwurf-Cup: Entwurf, privat, OHNE publishedAt (Fixrunde 2, N3/Ruling AA -- wieder
+  // wörtlich wie im T2-Brief: "Entwurf-Cup | Entwurf, privat, ohne publishedAt". Fixrunde 1
+  // hatte hier probeweise publishedAt gesetzt, um die Veröffentlichen-RPC prüfbar zu machen --
+  // das ging über Ruling V hinaus und widersprach dem Brief. Der dafür nötige Zustand
+  // (veröffentlicht + privat + coadmin) steht jetzt im eigenen Freigabe-Cup, siehe 3.7.)
   // ---------------------------------------------------------------------------
   log('Lege Entwurf-Cup an…');
   const draftCup = service.createDraft({
@@ -664,79 +670,89 @@ async function main(): Promise<void> {
       { id: e2eUuid('team:draft-cup:1'), name: 'Entwurf Team 1' },
       { id: e2eUuid('team:draft-cup:2'), name: 'Entwurf Team 2' },
     ],
-    // Fixrunde 1 (I2, Ruling V): `publish-coadmin.cloud.spec.ts` prüft das Brief-Szenario
-    // wörtlich ("coadmin veröffentlicht den Entwurf-Cup") -- dafür ein Sponsor + ein Monitor
-    // mit `sponsor`-Slide auf genau diesen Sponsor, damit "Sponsor und Monitor folgen" (Brief)
-    // nach dem (gewollten) Veröffentlichen tatsächlich sichtbar geprüft werden kann.
-    sponsors: [
-      {
-        id: E2E_DRAFT_CUP_SPONSOR_ID,
-        name: E2E_DRAFT_CUP_SPONSOR_NAME,
-        tier: 'gold',
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
-    monitors: [
-      {
-        id: E2E_DRAFT_CUP_MONITOR_ID,
-        name: 'Entwurf-Monitor',
-        defaultSlideDuration: 15,
-        transition: 'fade',
-        transitionDuration: 500,
-        theme: 'dark',
-        performanceMode: 'auto',
-        slides: [
-          {
-            id: e2eUuid('monitor:draft-cup:1:slide:sponsor'),
-            type: 'sponsor',
-            config: { sponsorId: E2E_DRAFT_CUP_SPONSOR_ID, showQrCode: false },
-            duration: null,
-            order: 0,
-          },
-        ],
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      },
-    ],
   });
-  // status bleibt 'draft' (createDraft-Default, matches bleiben [] -- kein Spielplan) -- ABER
-  // `publishedAt` wird gesetzt (anders als vorher, T2). Begründung: `VisibilityCategory`
-  // (`src/features/tournament-admin/categories/Visibility/index.tsx`) gated die GESAMTE
-  // Sichtbarkeits-Sektion über `isDraft = !tournament.publishedAt` (disabled-Radios,
-  // `handleMakePublic`/`handleMakePrivate` brechen früh ab) -- die eigene Kopfkommentar-Regel
-  // der Komponente ist ausdrücklich "Gate auf publishedAt, NICHT status", ein Turnier kann also
-  // 'draft' UND schon veröffentlicht/teilbar sein (`status` ist "ein transienter
-  // Wizard-Marker"). Ohne `publishedAt` könnte `publish-coadmin.cloud.spec.ts` die
-  // Veröffentlichen-RPC (N1) an KEINEM Turnier prüfen -- auch nicht am Live-Cup (der hatte
-  // `publishedAt` bis Fixrunde 1 ebenfalls nie gesetzt, hätte also denselben Effekt gehabt,
-  // einfach unbemerkt hinter I1 versteckt). is_public bleibt false (Seed setzt es nicht,
-  // mapTournamentToSupabase() schreibt is_public ohnehin nie, siehe K1-Kommentar unten) --
-  // "privat" im Sinne des Briefs bleibt also erhalten, nur "noch nie im Wizard veröffentlicht"
-  // (status='draft') und "schon veröffentlicht/teilbar-fähig" (publishedAt gesetzt) sind jetzt
-  // bewusst unterschieden, wie die App es selbst vorsieht.
-  draftCup.publishedAt = nowIso;
+  // status bleibt 'draft' (createDraft-Default), matches bleiben [] — kein publish(), also
+  // auch kein publishedAt in config (Brief: "ohne publishedAt").
   await ownerRepo.save(draftCup);
 
-  // Fixrunde 1 (I2, Ruling V): coadmin als Co-Admin des Entwurf-Cup -- minimale, begründete
-  // Seed-Ergänzung (wie schon der Public-Cup-Monitor-Slide in T4), damit
-  // `publish-coadmin.cloud.spec.ts` das Brief-Szenario ("coadmin veröffentlicht den
-  // Entwurf-Cup") wörtlich statt am Live-Cup prüfen kann (dort war coadmin schon Mitglied,
-  // aber das ist ein anderes Turnier als der Brief nennt).
-  const { error: draftCoadminError } = await admin.from('tournament_collaborators').insert(
+  // ---------------------------------------------------------------------------
+  // 3.7 Freigabe-Cup: veröffentlicht (publishedAt gesetzt), privat (is_public=false), coadmin
+  // als Co-Admin, 1 Sponsor + 1 Monitor (Fixrunde 2, N3/Ruling AA -- neues, fünftes
+  // Testturnier NUR für `publish-coadmin.cloud.spec.ts`, das Brief-Szenario "coadmin
+  // veröffentlicht [ein Turnier]" braucht ein Turnier, das schon veröffentlicht (publishedAt
+  // gesetzt -- sonst blockiert `VisibilityCategory`s `isDraft`-Gate die ganze
+  // Sichtbarkeits-Sektion, disabled-Radios, `handleMakePublic()` bricht früh ab, siehe I1/N5)
+  // aber noch NICHT öffentlich (is_public=false) ist -- genau der Zustand, den der Entwurf-Cup
+  // laut Brief NICHT haben darf. `buildScheduledTournament()` (s. o.) setzt `status='published'`
+  // aber NIE `publishedAt` -- deshalb hier wie beim Public-Cup ein expliziter Nachtrag.)
+  // ---------------------------------------------------------------------------
+  log('Lege Freigabe-Cup an…');
+  const releaseCup = buildScheduledTournament(
+    service,
+    {
+      id: E2E_RELEASE_CUP_ID,
+      title: E2E_RELEASE_CUP_TITLE,
+      ageClass: 'U15',
+      date: new Date().toISOString().split('T')[0],
+      timeSlot: '09:00 - 16:00',
+      startTime: '09:00',
+      location: { name: 'Sporthalle Testumgebung' },
+      numberOfTeams: 2,
+      teams: [
+        { id: e2eUuid('team:release-cup:1'), name: 'Freigabe Team 1' },
+        { id: e2eUuid('team:release-cup:2'), name: 'Freigabe Team 2' },
+      ],
+      sponsors: [
+        {
+          id: E2E_RELEASE_CUP_SPONSOR_ID,
+          name: E2E_RELEASE_CUP_SPONSOR_NAME,
+          tier: 'gold',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
+      ],
+      monitors: [
+        {
+          id: E2E_RELEASE_CUP_MONITOR_ID,
+          name: 'Freigabe-Monitor',
+          defaultSlideDuration: 15,
+          transition: 'fade',
+          transitionDuration: 500,
+          theme: 'dark',
+          performanceMode: 'auto',
+          slides: [
+            {
+              id: e2eUuid('monitor:release-cup:1:slide:sponsor'),
+              type: 'sponsor',
+              config: { sponsorId: E2E_RELEASE_CUP_SPONSOR_ID, showQrCode: false },
+              duration: null,
+              order: 0,
+            },
+          ],
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        },
+      ],
+    },
+    /* isPublic */ false
+  );
+  releaseCup.publishedAt = nowIso; // s. Kommentar oben -- Backstop, wie beim Public-Cup.
+  await ownerRepo.save(releaseCup);
+
+  const { error: releaseCoadminError } = await admin.from('tournament_collaborators').insert(
     mapMembershipInsertToSupabase({
-      tournamentId: E2E_DRAFT_CUP_ID,
+      tournamentId: E2E_RELEASE_CUP_ID,
       userId: userIds.coadmin,
       role: 'co-admin',
       teamIds: [],
     })
   );
-  if (draftCoadminError) {
-    throw new Error(`Mitgliedschaft coadmin (Entwurf-Cup): ${draftCoadminError.message}`);
+  if (releaseCoadminError) {
+    throw new Error(`Mitgliedschaft coadmin (Freigabe-Cup): ${releaseCoadminError.message}`);
   }
 
   // ---------------------------------------------------------------------------
-  // 3.7 Fremd-Cup: Eigentümer stranger, privat
+  // 3.8 Fremd-Cup: Eigentümer stranger, privat
   // ---------------------------------------------------------------------------
   log('Lege Fremd-Cup an…');
   const strangerCup = strangerService.createDraft({

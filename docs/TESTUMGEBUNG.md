@@ -39,6 +39,41 @@ wie `scripts/db-drift-check.sh` und `scripts/rls-role-matrix.sh`
 Deshalb ist in `supabase/config.toml` `[db.migrations] enabled = false` gesetzt — sonst würde
 `supabase start`/`db reset` das automatische (scheiternde) Einspielen selbst versuchen.
 
+## Testnutzer und Testdaten
+
+Einzige Quelle: `tests/e2e/cloud/testData.ts` (E-Mails, Passwort, Turnier-IDs, Rollen). Acht
+Testnutzer mit Konto (`owner`, `coadmin`, `helper`, `trainer`, `viewer`, `revoked`, `stranger`,
+`google` — ohne Passwort, OAuth-Marker) plus `logouttest` und `logouttestMobile` (je ein eigener
+Nutzer für den Anmelden/Abmelden-Test, einer je Playwright-Projekt, s. u.), alle mit Passwort
+`E2E_TEST_PASSWORD` außer `google`.
+
+Fünf Testturniere (Task T2 + Fixrunde 2, N3/Ruling AA):
+
+| Turnier | Status | `publishedAt` | `is_public` | Mitglieder (über owner hinaus) |
+|---|---|---|---|---|
+| Live-Cup | published | gesetzt | `false` | coadmin, helper, trainer, viewer, revoked (widerrufen) |
+| Public-Cup | published | gesetzt | `true`, Share-Code `E2EPUB` | — |
+| Entwurf-Cup | draft | **nicht gesetzt** | `false` | — |
+| Freigabe-Cup | published | gesetzt | `false` | coadmin (Co-Admin) |
+| Fremd-Cup | draft | nicht gesetzt | `false` | Eigentümer: `stranger` |
+
+Der Entwurf-Cup bleibt bewusst ein reiner Entwurf (kein `publishedAt`) — das prüft, dass ein noch
+nie freigegebenes Turnier weder per Direktlink noch über die Sichtbarkeits-RPC erreichbar ist.
+Der Freigabe-Cup ist das Gegenstück dafür, wo eine Freigabe schon stattgefunden hat
+(`publishedAt` gesetzt), das Turnier aber noch nicht öffentlich geteilt ist (`is_public=false`)
+— genau der Zustand, den `publish-coadmin.cloud.spec.ts` braucht, um die
+Co-Admin-Veröffentlichung zu prüfen, ohne den Entwurf-Cup dafür zweckzuentfremden. Er trägt
+außerdem einen Sponsor und einen Monitor mit `sponsor`-Slide (`E2E_RELEASE_CUP_*`-Konstanten),
+damit "Sponsor und Monitor folgen" nach einer (gewollten) Freigabe konkret geprüft werden kann.
+
+`logouttest`/`logouttestMobile` haben bewusst KEINE Turnier-Mitgliedschaft und werden von keinem
+anderen Spec über `asRole()` verwendet — `supabase.auth.signOut()` läuft ohne `scope`-Option
+(Supabase-JS-Standard `scope: 'global'`) und würde sonst jede andere Session desselben Kontos mit
+beenden. Zwei getrennte Nutzer (Fixrunde 2, N9), weil `auth.cloud.spec.ts` denselben
+Anmelden/Abmelden-Test `fullyParallel` gleichzeitig auf `cloud-desktop` UND `cloud-mobile`
+ausführt — ein gemeinsamer Nutzer hätte dieselbe globale-signOut()-Kopplung zwischen den beiden
+Projekten.
+
 ## Ports (aus `supabase/config.toml`)
 
 | Dienst | Port | URL |
