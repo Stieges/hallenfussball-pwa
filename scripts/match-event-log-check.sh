@@ -586,8 +586,57 @@ SQL
   check "4g. (I2-Fix) owner_id einer Engine-Zeile per Definer-UPDATE (Proxy merge_user_data) -> erlaubt" "ok" "$R4G"
   OWNER_AFTER="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT owner_id FROM public.match_events WHERE id = '$E_OWNERCHG';")"
   check "4g2. owner_id tatsaechlich uebernommen" "$U_STRANGER" "$OWNER_AFTER"
+
+  # --- Probe 4h: Ruling G5 (Fixrunde 2, MR1) — ein Collaborator (Client-Rolle, current_user =
+  # authenticated) darf is_public einer Engine-Zeile NICHT direkt setzen -- vorher (G2c ohne G5)
+  # war das erlaubt, weil owner_id/is_public fuer JEDE Rolle ausgenommen waren. Braucht ein
+  # eigenes Turnier/Spiel mit U_COLLAB als 'collaborator' (correctEvents), damit RLS die Zeile
+  # ueberhaupt durchlaesst -- sonst (wie im ersten Fixrunde-1-Bug) ein stilles "UPDATE 0" statt
+  # einer echten Ablehnung.
+  T_MR1="$(uuid_for tournament:mr1)"
+  M_MR1="$(uuid_for match:mr1)"
+  E_MR1="$(uuid_for event:mr1)"
+  psql_stdin <<SQL
+BEGIN;
+INSERT INTO public.tournaments (id, owner_id, title, date, number_of_teams, group_phase_duration, config, is_public)
+VALUES ('$T_MR1', '$U_OWNER', 'Match-Event-Log — MR1', '2026-09-28', 8, 15, '{"publishedAt":"2026-09-28T00:00:00.000Z"}'::jsonb, false);
+INSERT INTO public.tournament_collaborators (id, tournament_id, user_id, role, accepted_at)
+VALUES ('$(uuid_for membership:mr1-collab)', '$T_MR1', '$U_COLLAB', 'collaborator', now());
+INSERT INTO public.matches (id, tournament_id, round, field, match_status)
+VALUES ('$M_MR1', '$T_MR1', 1, 1, 'running');
+COMMIT;
+SQL
+  docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 >/dev/null <<SQL
+SELECT public.__test_insert_engine_event('$E_MR1', '$M_MR1', 'MATCH_START', 0, 0);
+SQL
+  # run_sql_committed (nicht run_sql!): eine denied-Probe rollt ohnehin nichts zurueck, aber eine
+  # FAELSCHLICH erlaubte Probe MUSS committen, sonst zeigt die Nachprobe 4h2 (separate Abfrage)
+  # immer den Ausgangswert -- unabhaengig davon, ob der Guard tatsaechlich blockiert hat.
+  run_sql_committed "$U_COLLAB" "UPDATE public.match_events SET is_public = true WHERE id = '$E_MR1';"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "4h(Gegenprobe B, MR1/G5): Collaborator UPDATE is_public auf Engine-Zeile -> jetzt erlaubt" "ok" "$LAST_RESULT"
+  else
+    check "4h. (MR1-Fix, Ruling G5) Collaborator UPDATE is_public direkt auf Engine-Zeile -> abgelehnt" "denied" "$LAST_RESULT"
+    assert_guard_message "4h"
+  fi
+  IS_PUBLIC_AFTER_4H="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT is_public FROM public.match_events WHERE id = '$E_MR1';")"
+  if [[ "$MODE" == "without-guard" ]]; then
+    check "4h2. is_public tatsaechlich auf true gesetzt (ohne Guard)" "t" "$IS_PUBLIC_AFTER_4H"
+  else
+    check "4h2. is_public unveraendert (Guard hat abgelehnt)" "f" "$IS_PUBLIC_AFTER_4H"
+  fi
+
+  # --- Probe 4i: Regression -- die Sichtbarkeits-Kaskade (cascade_tournament_visibility,
+  # SECURITY DEFINER, current_user NICHT authenticated/anon) muss Engine-Zeilen WEITERHIN
+  # erreichen -- G5 schraenkt nur Client-Rollen ein. Echter App-Pfad (kein Proxy): Eigentuemer
+  # veroeffentlicht das MR1-Turnier (tournamentSettings) -> AFTER-UPDATE-Trigger auf tournaments
+  # setzt is_public auf allen Kindern, inkl. der Engine-Zeile E_MR1.
+  run_sql_committed "$U_OWNER" "UPDATE public.tournaments SET is_public = true WHERE id = '$T_MR1';"
+  check "4i. Eigentuemer veroeffentlicht Turnier (tournamentSettings) -> erlaubt" "ok" "$LAST_RESULT"
+  IS_PUBLIC_AFTER_CASCADE="$(docker exec "$CONTAINER_NAME" psql -U postgres -tAc "SELECT is_public FROM public.match_events WHERE id = '$E_MR1';")"
+  check "4i2. Sichtbarkeits-Kaskade erreicht die Engine-Zeile (is_public=true)" "t" "$IS_PUBLIC_AFTER_CASCADE"
 else
-  echo "SKIP  4f-4g. ohne Migration: Guard-Trigger/Spalten existieren nicht -> kein sinnvoller Vergleich" >&2
+  echo "SKIP  4f-4i. ohne Migration: Guard-Trigger/Spalten existieren nicht -> kein sinnvoller Vergleich" >&2
 fi
 
 # --- Probe 5: Alte App-Wege unveraendert -- Helfer-INSERT alter Typ ohne event_format erlaubt;

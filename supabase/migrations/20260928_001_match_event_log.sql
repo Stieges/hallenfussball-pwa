@@ -207,17 +207,28 @@ ALTER TABLE "public"."match_events" ADD CONSTRAINT "match_events_type_check"
 --       Engine-Spalten muessen UNVERAENDERT bleiben (IS NOT DISTINCT FROM OLD) -- das schliesst
 --       den C1-Umbauweg (Alt-Zeile -> Engine-Zeile per UPDATE). Fuer Nicht-Client-Rollen (z.B.
 --       merge_user_data auf einer Alt-Zeile) gilt keine Einschraenkung -- unveraendert wie vor B2.
---   (c) UPDATE einer ENGINE-Zeile (OLD.event_format IS NOT NULL), JEDE Rolle (kein current_user-
---       Zweig -- I2: die Kaskaden-Ausnahme war zu grob): erlaubt sind AUSSCHLIESSLICH Aenderungen
---       an owner_id/is_public/version (merge_user_data, cascade_tournament_visibility,
---       increment_match_event_version -- alle drei laufen unabhaengig von pg_trigger_depth()).
---       ZUSAETZLICH duerfen team_id/player_id auf NULL gesetzt werden, aber NUR wenn
+--   (c) UPDATE einer ENGINE-Zeile (OLD.event_format IS NOT NULL): `version` ist IMMER
+--       ausgenommen (increment_match_event_version laeuft unabhaengig von der Rolle vor diesem
+--       Guard). `owner_id`/`is_public` sind NUR fuer Nicht-Client-Rollen ausgenommen
+--       (merge_user_data, cascade_tournament_visibility -- beide SECURITY DEFINER, current_user
+--       NICHT authenticated/anon -- verschaerft in Fixrunde 2, Ruling G5, nach MR1: ohne diese
+--       Einschraenkung konnte ein Client owner_id/is_public einer Engine-Zeile direkt aendern,
+--       z.B. is_public=true auf einer einzelnen Zeile eines privaten Turniers setzen). Fuer JEDE
+--       Rolle duerfen ZUSAETZLICH team_id/player_id auf NULL gesetzt werden, aber NUR wenn
 --       pg_trigger_depth() > 1 gilt (die ON-DELETE-SET-NULL-Fremdschluessel-Trigger beim Loeschen
 --       eines Teams/Spielers -- Baseline :1469/:1473 -- laufen selbst als Trigger, das UPDATE auf
---       match_events darin hat deshalb Tiefe > 1, siehe Harness-Probe). Jede andere Spaltenaenderung
---       wird abgelehnt, exakt wie zuvor.
+--       match_events darin hat deshalb Tiefe > 1, siehe Harness-Probe) -- das bleibt ein reiner
+--       Client-Vorgang (Team-/Spieler-Loeschung ist kein SECURITY-DEFINER-Aufruf), deshalb kein
+--       current_user-Zweig hier. Jede andere Spaltenaenderung wird abgelehnt.
 --   (d) DELETE einer Engine-Zeile: unveraendert -- nur erlaubt, wenn pg_trigger_depth() > 1 (die
 --       Turnier-Loeschungs-Kaskade, siehe Herleitung unten). Gilt fuer JEDE Rolle, wie zuvor.
+--
+-- Ruling G5 (Fixrunde 2, MR1 aus task-B2-review.md Re-Review 1): (c) verschaerft wie oben --
+-- owner_id/is_public duerfen nur noch von Nicht-Client-Rollen geaendert werden. Vorher liess G2c
+-- ALLE Rollen owner_id/is_public aendern (Begruendung war die Kaskade/merge_user_data, beide
+-- SECURITY DEFINER) -- ein Collaborator konnte dieselbe Freiheit direkt per UPDATE nutzen und
+-- is_public=true auf einer einzelnen Engine-Zeile setzen, unabhaengig von der eigentlichen
+-- Sichtbarkeits-Kaskade des Turniers (anon liest sie danach ueber match_events_select_v3).
 --
 -- Wechselwirkung mit vorhandenen Triggern auf match_events (geprueft, alle BEFORE, alle bleiben
 -- unveraendert und laufen unabhaengig vom neuen Guard weiter):
@@ -287,11 +298,25 @@ BEGIN
 
   IF TG_OP = 'UPDATE' THEN
     IF OLD.event_format IS NOT NULL THEN
-      -- Ruling G2(c): Engine-Zeile, JEDE Rolle. Erlaubt: owner_id/is_public/version immer;
-      -- team_id/player_id -> NULL nur bei pg_trigger_depth() > 1 (FK-Kaskade). Alles andere muss
-      -- unveraendert bleiben.
-      old_cmp := to_jsonb(OLD) - ARRAY['owner_id', 'is_public', 'version'];
-      new_cmp := to_jsonb(NEW) - ARRAY['owner_id', 'is_public', 'version'];
+      -- Ruling G2(c), verschaerft in Fixrunde 2 durch Ruling G5 (MR1, task-B2-review.md
+      -- Re-Review 1): Engine-Zeile. `version` ist IMMER ausgenommen (increment_match_event_
+      -- version laeuft vor diesem Guard, unabhaengig von der Rolle -- siehe Abschnitt-
+      -- Kommentar oben). `owner_id`/`is_public` sind NUR fuer Nicht-Client-Rollen ausgenommen
+      -- (current_user NICHT authenticated/anon) -- die beiden legitimen Schreiber
+      -- (merge_user_data, cascade_tournament_visibility) sind SECURITY DEFINER. Ohne diese
+      -- Verschaerfung konnte ein Collaborator is_public einer EINZELNEN Engine-Zeile eines
+      -- privaten Turniers auf true setzen (MR1: reproduziert, anon liest sie danach ueber
+      -- match_events_select_v3) -- die Klasse gab es zwar vorher schon bei Alt-Zeilen, aber
+      -- R13 soll fuer Engine-Zeilen keine neue Angriffsflaeche eroeffnen. team_id/player_id ->
+      -- NULL bleiben unveraendert nur bei pg_trigger_depth() > 1 (FK-Kaskade) erlaubt, fuer
+      -- JEDE Rolle (Teamloeschung ist ein Client-Vorgang, kein SECURITY-DEFINER-Aufruf).
+      -- Alles andere muss unveraendert bleiben.
+      old_cmp := to_jsonb(OLD) - ARRAY['version'];
+      new_cmp := to_jsonb(NEW) - ARRAY['version'];
+      IF NOT is_client THEN
+        old_cmp := old_cmp - ARRAY['owner_id', 'is_public'];
+        new_cmp := new_cmp - ARRAY['owner_id', 'is_public'];
+      END IF;
       IF pg_trigger_depth() > 1 THEN
         IF NEW.team_id IS NULL THEN
           old_cmp := old_cmp - 'team_id';
@@ -304,7 +329,7 @@ BEGIN
       END IF;
       IF old_cmp IS DISTINCT FROM new_cmp THEN
         RAISE EXCEPTION
-          'Nicht erlaubt: Ereignis-Zeilen der neuen Rechenfunktion (event_format gesetzt) sind unveraenderlich (ausser owner_id/is_public/version sowie team_id/player_id bei Team-/Turnier-Loeschung).'
+          'Nicht erlaubt: Ereignis-Zeilen der neuen Rechenfunktion (event_format gesetzt) sind unveraenderlich (ausser version immer, owner_id/is_public nur fuer Nicht-Client-Rollen, sowie team_id/player_id bei Team-/Turnier-Loeschung).'
           USING ERRCODE = 'insufficient_privilege';
       END IF;
       RETURN NEW;
@@ -347,17 +372,19 @@ END;
 $$;
 
 COMMENT ON FUNCTION "public"."match_events_guard_engine_rows"() IS
-  'B2 (R13, Ruling G1, neu gefasst in Fixrunde 1 als Ruling G2 nach Review-Funden C1/I1/I2):
-   dichtet den Direktweg fuer die neue Rechenfunktion ab. INSERT: Client-Rollen (authenticated/
-   anon) duerfen nur legacy Typen MIT durchgaengig NULL Engine-Spalten schreiben (G2a). UPDATE
-   einer bestehenden Alt-Zeile: Client-Rollen duerfen weder den Typ auf einen neuen Typ noch eine
-   Engine-Spalte aendern (G2b, schliesst C1). UPDATE einer Engine-Zeile: JEDE Rolle darf
-   ausschliesslich owner_id/is_public/version aendern, zusaetzlich team_id/player_id -> NULL nur
-   bei pg_trigger_depth() > 1 -- FK-Kaskade beim Team-/Spieler-Loeschen (G2c, loest I2). DELETE
-   einer Engine-Zeile nur bei pg_trigger_depth() > 1 -- Turnier-Loeschungs-Kaskade (G2d,
-   unveraendert). Bewusste Grenze (Review M7): current_user unterscheidet nur
-   authenticated/anon von allem anderen, keine feinere Rollenprüfung. Alte Zeilen
-   (event_format IS NULL) und alte Typen bleiben ansonsten unberuehrt bis D3.';
+  'B2 (R13, Ruling G1, neu gefasst in Fixrunde 1 als Ruling G2 nach Review-Funden C1/I1/I2,
+   verschaerft in Fixrunde 2 als Ruling G5 nach Review-Fund MR1): dichtet den Direktweg fuer die
+   neue Rechenfunktion ab. INSERT: Client-Rollen (authenticated/anon) duerfen nur legacy Typen MIT
+   durchgaengig NULL Engine-Spalten schreiben (G2a). UPDATE einer bestehenden Alt-Zeile:
+   Client-Rollen duerfen weder den Typ auf einen neuen Typ noch eine Engine-Spalte aendern (G2b,
+   schliesst C1). UPDATE einer Engine-Zeile: version ist IMMER ausgenommen, owner_id/is_public NUR
+   fuer Nicht-Client-Rollen (G5, loest MR1 -- vorher durfte JEDE Rolle sie aendern), zusaetzlich
+   team_id/player_id -> NULL fuer JEDE Rolle nur bei pg_trigger_depth() > 1 -- FK-Kaskade beim
+   Team-/Spieler-Loeschen (G2c, loest I2). DELETE einer Engine-Zeile nur bei
+   pg_trigger_depth() > 1 -- Turnier-Loeschungs-Kaskade (G2d, unveraendert). Bewusste Grenze
+   (Review M7): current_user unterscheidet nur authenticated/anon von allem anderen, keine
+   feinere Rollenprüfung. Alte Zeilen (event_format IS NULL) und alte Typen bleiben ansonsten
+   unberuehrt bis D3.';
 
 DROP TRIGGER IF EXISTS "match_events_guard_engine_rows" ON "public"."match_events";
 
