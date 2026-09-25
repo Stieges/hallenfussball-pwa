@@ -1,0 +1,164 @@
+{
+  "title": "MATCH_END in section_break, decision_pending und shootout -> noop (K8/B-U7)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-27-",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "00000027-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": true,
+          "tiebreak": null,
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000002",
+      "type": "SECTION_END",
+      "actor": "helper",
+      "at": 601000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000003",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 610000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000004",
+      "type": "SECTION_START",
+      "actor": "helper",
+      "at": 661000,
+      "section": 2,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000005",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 1261000,
+      "section": 2,
+      "clockMs": 1200000,
+      "payload": {}
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000006",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 1270000,
+      "section": 2,
+      "clockMs": 1200000,
+      "payload": {}
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000007",
+      "type": "TIEBREAK_CHOICE",
+      "actor": "helper",
+      "at": 1280000,
+      "section": 2,
+      "clockMs": null,
+      "payload": {
+        "choice": "shootout"
+      }
+    },
+    {
+      "id": "00000027-0000-4000-8000-000000000008",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 1290000,
+      "section": 2,
+      "clockMs": 1200000,
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000027-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000003",
+        "status": "noop"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000006",
+        "status": "noop"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000007",
+        "status": "accepted"
+      },
+      {
+        "id": "00000027-0000-4000-8000-000000000008",
+        "status": "noop"
+      }
+    ],
+    "serverState": {
+      "status": "shootout",
+      "phase": "shootout",
+      "section": 2,
+      "clock": {
+        "running": false,
+        "elapsedMs": 1200000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    }
+  }
+}

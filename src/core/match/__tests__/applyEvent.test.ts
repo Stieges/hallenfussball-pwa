@@ -86,6 +86,10 @@ describe('Kein Date.now() im Match-Engine-Modul', () => {
     'handlers/correction.ts',
     'handlers/retract.ts',
     'handlers/endcheck.ts',
+    'handlers/sections.ts',
+    'handlers/tiebreak.ts',
+    'handlers/shootout.ts',
+    'penalties.ts',
   ];
 
   it.each(moduleFiles)('%s enthält kein Date.now()', (fileName) => {

@@ -5,7 +5,7 @@
  *
  * Prüfreihenfolge (verbindlich):
  * 1. Zod-Payload -> INVALID_PAYLOAD
- * 2. MATCH_END in `finished` -> noop (R9)
+ * 2. MATCH_END in `finished`, `section_break`, `decision_pending`, `shootout` -> noop (R9, K8/B-U7)
  * 3. Übergangszeile suchen -> INVALID_TRANSITION / MATCH_FINISHED
  * 4. Akteur-Check -> FORBIDDEN_ACTOR
  * 5. Typspezifische Wirkung, dann `to` anwenden (inkl. `@endcheck`)
@@ -16,6 +16,9 @@ import { adjustClock, resumeClock, startClock, stopClock } from './handlers/cloc
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
 import { applyRetract } from './handlers/retract';
 import { runEndCheck } from './handlers/endcheck';
+import { applySectionEnd, applySectionStart } from './handlers/sections';
+import { applyShootoutEnd, applyShootoutKick } from './handlers/shootout';
+import { applyTiebreakChoice } from './handlers/tiebreak';
 import {
   decidedByFor,
   ERROR_CODES,
@@ -24,6 +27,7 @@ import {
   type ErrorCode,
   type MatchContext,
   type MatchState,
+  type MatchStatus,
 } from './types';
 import { isPayloadValid } from './payloadValidation';
 
@@ -45,6 +49,7 @@ export function initialState(ctx: MatchContext): MatchState {
     phase: 'regular',
     section: 1,
     rules: null,
+    tiebreakMode: null,
     clock: { running: false, elapsedMs: 0, anchorAt: null },
     scores: {
       [ctx.teamAId]: { ...zeroBreakdown },
@@ -69,12 +74,31 @@ export function initialState(ctx: MatchContext): MatchState {
 
 type EffectResult = { status: 'ok'; state: MatchState } | { status: 'rejected'; code: ErrorCode; detail?: unknown };
 
+/** B-U7 (Ruling K8): ein weiteres Spielende in diesen Zuständen ist kein Fehler, sondern noop (R9). */
+const MATCH_END_NOOP_STATUSES: ReadonlySet<MatchStatus> = new Set(['finished', 'section_break', 'decision_pending', 'shootout']);
+
+/**
+ * GOAL/OWN_GOAL; B-U3 Golden Goal: in der Verlängerung mit Modus goldenGoal stoppt das Tor die Uhr
+ * (wie MATCH_END) und löst sofort die Spielende-Prüfung aus.
+ */
+function applyGoalEvent(state: MatchState, event: EngineEvent, ctx: MatchContext): MatchState {
+  const scored = applyGoal(state, event, ctx);
+  if (scored.phase !== 'overtime' || scored.tiebreakMode !== 'goldenGoal') {
+    return scored;
+  }
+  return runEndCheck({ ...scored, clock: stopClock(scored.clock, event) }, event, ctx);
+}
+
 /** Typspezifische Wirkung vor Anwendung von `to` (Brief Abschnitt 3). */
 function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: MatchContext): EffectResult {
   switch (event.type) {
     case 'MATCH_START': {
       const payload = event.payload as { rules: MatchState['rules'] };
-      return { status: 'ok', state: { ...state, rules: payload.rules, phase: 'regular', section: 1, clock: startClock(event) } };
+      const rules = payload.rules;
+      return {
+        status: 'ok',
+        state: { ...state, rules, tiebreakMode: rules?.tiebreak ?? null, phase: 'regular', section: 1, clock: startClock(event) },
+      };
     }
     case 'PAUSE':
     case 'MATCH_END':
@@ -92,7 +116,7 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
       return { status: 'ok', state: { ...state, clock: adjustClock(state.clock, event) } };
     case 'GOAL':
     case 'OWN_GOAL':
-      return { status: 'ok', state: applyGoal(state, event, ctx) };
+      return { status: 'ok', state: applyGoalEvent(state, event, ctx) };
     case 'YELLOW_CARD':
     case 'YELLOW_RED_CARD':
     case 'RED_CARD':
@@ -103,23 +127,24 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
       return { status: 'ok', state: applyFoul(state, event) };
     case 'SUBSTITUTION':
       return { status: 'ok', state: applySubstitution(state, event) };
-    case 'RETRACT': {
-      const outcome = applyRetract(state, event, ctx);
-      return outcome.status === 'ok'
-        ? { status: 'ok', state: outcome.state }
-        : { status: 'rejected', code: outcome.code, detail: outcome.detail };
-    }
-    case 'CORRECTION': {
-      const outcome = applyCorrection(state, event, ctx);
-      return outcome.status === 'ok'
-        ? { status: 'ok', state: outcome.state }
-        : { status: 'rejected', code: outcome.code, detail: outcome.detail };
-    }
+    case 'RETRACT':
+      return applyRetract(state, event, ctx);
+    case 'CORRECTION':
+      return applyCorrection(state, event, ctx);
+    case 'SECTION_END':
+      return applySectionEnd(state, event);
+    case 'SECTION_START':
+      return { status: 'ok', state: applySectionStart(state, event) };
+    case 'TIEBREAK_CHOICE':
+      return { status: 'ok', state: applyTiebreakChoice(state, event) };
+    case 'SHOOTOUT_KICK':
+      return { status: 'ok', state: applyShootoutKick(state, event) };
+    case 'SHOOTOUT_END':
+      return applyShootoutEnd(state, event, ctx);
     case 'RESULT_ENTRY':
       return { status: 'ok', state: applyResultEntry(state, event, ctx) };
     default:
-      // SKIP/UNSKIP sowie die B1b-Zeilen (SECTION_END, SECTION_START, TIEBREAK_CHOICE,
-      // SHOOTOUT_KICK, SHOOTOUT_END): in B1a nur der reine Statuswechsel via `to`.
+      // SKIP/UNSKIP: nur der reine Statuswechsel via `to`.
       return { status: 'ok', state };
   }
 }
@@ -129,7 +154,7 @@ export function applyEvent(state: MatchState, event: EngineEvent, ctx: MatchCont
     return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
   }
 
-  if (event.type === 'MATCH_END' && state.status === 'finished') {
+  if (event.type === 'MATCH_END' && MATCH_END_NOOP_STATUSES.has(state.status)) {
     return { status: 'noop', state };
   }
 

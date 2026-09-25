@@ -101,6 +101,8 @@ export const MatchRulesSchema = z.object({
   penaltySeconds: z.number().int().nonnegative(),
 });
 export type MatchRules = z.infer<typeof MatchRulesSchema>;
+/** Entscheidungsmodus bei K.o.-Remis (R4b): konfiguriert (rules.tiebreak) oder per TIEBREAK_CHOICE gewählt. */
+export type TiebreakMode = NonNullable<MatchRules['tiebreak']>;
 
 // ============================================
 // Ereignis (EngineEvent)
@@ -167,13 +169,16 @@ export interface FoulRecord {
   section: number | null;
 }
 
+/**
+ * Zeitstrafe (B1b, B-U5, TS-only -- nicht im serverState). `startMs` = Spieluhr bei Beginn
+ * (kumulativ, B-U1), `durationMs` Ganzzahl-ms. Rest: `penaltyRemainingMs` in penalties.ts.
+ */
 export interface PenaltyRecord {
   id: string;
   teamId: string;
   playerNumber?: number;
-  durationSeconds: number;
-  clockMs: number | null;
-  section: number | null;
+  startMs: number;
+  durationMs: number;
 }
 
 export interface SubstitutionRecord {
@@ -225,6 +230,8 @@ export interface MatchState {
   phase: Phase;
   section: number;
   rules: MatchRules | null;
+  /** B-U3: Modus der K.o.-Entscheidung (aus rules.tiebreak oder TIEBREAK_CHOICE), nicht im serverState. */
+  tiebreakMode: TiebreakMode | null;
   clock: ClockState;
   scores: Record<string, TeamScoreBreakdown>;
   goals: GoalRecord[];

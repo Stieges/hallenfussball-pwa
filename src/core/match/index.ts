@@ -15,4 +15,6 @@ export {
   type ReduceResult,
 } from './reduceMatch';
 export { toServerState, type ServerMatchState } from './serverState';
+export { activePenalties, elapsedAt, penaltyRemainingMs } from './penalties';
+export { shootoutWinner } from './handlers/shootout';
 export { transitions, findTransition, isActorAllowed, type TransitionRow } from './transitions';

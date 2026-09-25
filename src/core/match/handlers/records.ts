@@ -1,8 +1,16 @@
 /**
- * Tor/Eigentor sowie Karten/Zeitstrafe/Foul/Wechsel -- reine Zustandsanreicherung,
- * die Strafen-Countdown-Semantik selbst kommt erst in B1b (Brief Abschnitt 3).
+ * Tor/Eigentor sowie Karten/Zeitstrafe/Foul/Wechsel -- reine Zustandsanreicherung. Den
+ * Strafen-Countdown rechnet penalties.ts (B1b).
  */
-import { otherTeamId, type CardRecord, type EngineEvent, type MatchContext, type MatchState } from '../types';
+import { elapsedAt } from '../penalties';
+import {
+  otherTeamId,
+  type CardRecord,
+  type EngineEvent,
+  type MatchContext,
+  type MatchState,
+  type PenaltyRecord,
+} from '../types';
 
 const CARD_TYPES = new Set(['YELLOW_CARD', 'YELLOW_RED_CARD', 'RED_CARD']);
 
@@ -81,22 +89,20 @@ export function applyFoul(state: MatchState, event: EngineEvent): MatchState {
   };
 }
 
+/**
+ * TIME_PENALTY (B1b, B-U5): `startMs = clockMs ?? aktuelle Spielzeit`, `durationMs =
+ * (payload.durationSeconds ?? rules.penaltySeconds) * 1000` -- Ganzzahl-ms.
+ */
 export function applyTimePenalty(state: MatchState, event: EngineEvent): MatchState {
   const durationSeconds = (event.payload.durationSeconds as number | undefined) ?? state.rules?.penaltySeconds ?? 0;
-  return {
-    ...state,
-    penalties: [
-      ...state.penalties,
-      {
-        id: event.id,
-        teamId: event.teamId ?? '',
-        ...(event.payload.playerNumber !== undefined ? { playerNumber: event.payload.playerNumber as number } : {}),
-        durationSeconds,
-        clockMs: event.clockMs,
-        section: event.section,
-      },
-    ],
+  const record: PenaltyRecord = {
+    id: event.id,
+    teamId: event.teamId ?? '',
+    ...(event.payload.playerNumber !== undefined ? { playerNumber: event.payload.playerNumber as number } : {}),
+    startMs: event.clockMs ?? elapsedAt(state.clock, event.at),
+    durationMs: durationSeconds * 1000,
   };
+  return { ...state, penalties: [...state.penalties, record] };
 }
 
 export function applySubstitution(state: MatchState, event: EngineEvent): MatchState {

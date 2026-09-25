@@ -7,6 +7,7 @@ import { RETRACTABLE_EVENT_TYPES } from '../payloadValidation';
 import { ERROR_CODES, effectiveScoreFor } from '../types';
 import type { EngineEvent, ErrorCode, MatchContext, MatchState } from '../types';
 import { reverseGoal } from './records';
+import { reverseShootoutKick } from './shootout';
 
 export type RetractOutcome =
   | { status: 'ok'; state: MatchState }
@@ -91,10 +92,11 @@ export function applyRetract(state: MatchState, event: EngineEvent, ctx: MatchCo
     };
   }
 
-  // SHOOTOUT_KICK⁽ᵇ⁾: in B1a wird nie ein Kick gespeichert (Semantik folgt in B1b),
-  // die Rücknahme entfernt daher höchstens einen (in B1a nie vorhandenen) Eintrag.
-  return {
-    status: 'ok',
-    state: { ...state, shootoutKicks: state.shootoutKicks.filter((k) => k.id !== targetId), retracted },
-  };
+  // SHOOTOUT_KICK (B1b, B-U6): nur im laufenden Strafstoßschießen zurücknehmbar, sonst
+  // INVALID_PAYLOAD; nimmt einen Treffer zurück. lastScoreEventId bleibt: Schüsse ändern den
+  // effektiven Stand (regular+overtime) nicht.
+  if (state.status !== 'shootout') {
+    return { status: 'rejected', code: ERROR_CODES.INVALID_PAYLOAD };
+  }
+  return { status: 'ok', state: { ...reverseShootoutKick(state, targetId), retracted } };
 }

@@ -21,6 +21,7 @@ import { describe, expect, it } from 'vitest';
 import { applyBatch, continueLog } from '../reduceMatch';
 import { applyEvent, initialState } from '../applyEvent';
 import { toServerState } from '../serverState';
+import { activePenalties, elapsedAt, penaltyRemainingMs } from '../penalties';
 import type { EngineEvent, MatchContext } from '../types';
 import { deepFreeze } from './deepFreeze';
 
@@ -29,6 +30,17 @@ interface ExpectedResult {
   status: 'accepted' | 'noop' | 'duplicate' | 'rejected';
   code?: string;
   detail?: unknown;
+}
+
+/**
+ * B1b: optionale Strafen-Prüfungen (TS-only, R18 -- B3a ignoriert sie). Spielzeit der Prüfung:
+ * `elapsedMs` explizit, sonst `elapsedAt(clock, at)` bei gegebenem `at`, sonst der Uhrstand.
+ */
+interface PenaltyCheck {
+  elapsedMs?: number;
+  at?: number;
+  remaining: Record<string, number>;
+  active: string[];
 }
 
 interface Fixture {
@@ -42,6 +54,7 @@ interface Fixture {
     results: ExpectedResult[];
     serverState: unknown;
     state?: Record<string, unknown>;
+    penaltyChecks?: PenaltyCheck[];
   };
 }
 
@@ -106,6 +119,17 @@ describe('Match-Engine Fixtures', () => {
       expect(toServerState(outcome.state)).toEqual(fixture.expect.serverState);
       if (fixture.expect.state) {
         expect(outcome.state).toMatchObject(fixture.expect.state);
+      }
+
+      for (const check of fixture.expect.penaltyChecks ?? []) {
+        const clock = outcome.state.clock;
+        const elapsedMs = check.elapsedMs ?? (check.at !== undefined ? elapsedAt(clock, check.at) : clock.elapsedMs);
+        const remaining: Record<string, number> = {};
+        for (const penalty of outcome.state.penalties) {
+          remaining[penalty.id] = penaltyRemainingMs(penalty, elapsedMs);
+        }
+        expect(remaining).toEqual(check.remaining);
+        expect(activePenalties(outcome.state, elapsedMs).map((penalty) => penalty.id)).toEqual(check.active);
       }
 
       assertNoStepMutatesFrozenInput(initialState(fixture.ctx), [...priorEvents, ...fixture.events], fixture.ctx);

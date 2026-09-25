@@ -1,0 +1,166 @@
+{
+  "title": "Zeitstrafe läuft in die Verlängerung weiter (30 s vor Ende, K.o.-Remis -> nach Anpfiff Verlängerung 1:30)",
+  "szenario": "Zeitstrafe läuft in die Verlängerung weiter",
+  "ctx": {
+    "matchId": "match-23-",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "00000023-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": true,
+          "tiebreak": "overtime-then-shootout",
+          "overtimeSeconds": 300,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000023-0000-4000-8000-000000000002",
+      "type": "SECTION_END",
+      "actor": "helper",
+      "at": 601000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000023-0000-4000-8000-000000000003",
+      "type": "SECTION_START",
+      "actor": "helper",
+      "at": 661000,
+      "section": 2,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "00000023-0000-4000-8000-000000000004",
+      "type": "TIME_PENALTY",
+      "actor": "helper",
+      "at": 1231000,
+      "section": 2,
+      "clockMs": 1170000,
+      "teamId": "teamB",
+      "payload": {}
+    },
+    {
+      "id": "00000023-0000-4000-8000-000000000005",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "at": 1261000,
+      "section": 2,
+      "clockMs": 1200000,
+      "payload": {}
+    },
+    {
+      "id": "00000023-0000-4000-8000-000000000006",
+      "type": "SECTION_START",
+      "actor": "helper",
+      "at": 1321000,
+      "section": 3,
+      "clockMs": 1200000,
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000023-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "00000023-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "00000023-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "00000023-0000-4000-8000-000000000004",
+        "status": "accepted"
+      },
+      {
+        "id": "00000023-0000-4000-8000-000000000005",
+        "status": "accepted"
+      },
+      {
+        "id": "00000023-0000-4000-8000-000000000006",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "overtime",
+      "section": 3,
+      "clock": {
+        "running": true,
+        "elapsedMs": 1200000,
+        "anchorAt": 1321000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "tiebreakMode": "overtime-then-shootout",
+      "penalties": [
+        {
+          "id": "00000023-0000-4000-8000-000000000004",
+          "teamId": "teamB",
+          "startMs": 1170000,
+          "durationMs": 120000
+        }
+      ]
+    },
+    "penaltyChecks": [
+      {
+        "elapsedMs": 1200000,
+        "remaining": {
+          "00000023-0000-4000-8000-000000000004": 90000
+        },
+        "active": [
+          "00000023-0000-4000-8000-000000000004"
+        ]
+      },
+      {
+        "at": 1411000,
+        "remaining": {
+          "00000023-0000-4000-8000-000000000004": 0
+        },
+        "active": []
+      }
+    ]
+  }
+}
