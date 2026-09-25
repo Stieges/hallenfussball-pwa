@@ -5,9 +5,10 @@
  * `npx tsx scripts/e2e-seed.ts` bzw. `npm run test:env:seed` / `npm run test:env:reset`
  * (reset ruft dieses Skript automatisch danach auf).
  *
- * Idempotent: löscht die vier festen Test-Turniere (kaskadiert auf Teams/Spiele/Ereignisse/
- * Mitarbeiter) und die acht Testnutzer-Konten (kaskadiert auf Profile) VOR dem Neuanlegen.
- * Ein zweiter Lauf ergibt denselben Stand (Task-T2-Nachweis 2).
+ * Idempotent: löscht die fünf festen Test-Turniere (kaskadiert auf Teams/Spiele/Ereignisse/
+ * Mitarbeiter, Fixrunde 2/N3: Freigabe-Cup als fünftes hinzugekommen) und die zehn
+ * Testnutzer-Konten (kaskadiert auf Profile, Fixrunde 2/N9: `logouttestMobile` als zehntes
+ * hinzugekommen) VOR dem Neuanlegen. Ein zweiter Lauf ergibt denselben Stand (Task-T2-Nachweis 2).
  *
  * Architektur-Entscheidung (Brief, Abschnitt "Testturniere"): "Turniere, Teams, Spiele und
  * Ereignisse über die Mapper-/Repository-Schicht der App erzeugen (…), nicht per handgeschriebenem
@@ -680,11 +681,20 @@ async function main(): Promise<void> {
   // als Co-Admin, 1 Sponsor + 1 Monitor (Fixrunde 2, N3/Ruling AA -- neues, fünftes
   // Testturnier NUR für `publish-coadmin.cloud.spec.ts`, das Brief-Szenario "coadmin
   // veröffentlicht [ein Turnier]" braucht ein Turnier, das schon veröffentlicht (publishedAt
-  // gesetzt -- sonst blockiert `VisibilityCategory`s `isDraft`-Gate die ganze
-  // Sichtbarkeits-Sektion, disabled-Radios, `handleMakePublic()` bricht früh ab, siehe I1/N5)
-  // aber noch NICHT öffentlich (is_public=false) ist -- genau der Zustand, den der Entwurf-Cup
-  // laut Brief NICHT haben darf. `buildScheduledTournament()` (s. o.) setzt `status='published'`
-  // aber NIE `publishedAt` -- deshalb hier wie beim Public-Cup ein expliziter Nachtrag.)
+  // gesetzt) aber noch NICHT öffentlich (is_public=false) ist -- genau der Zustand, den der
+  // Entwurf-Cup laut Brief NICHT haben darf. `buildScheduledTournament()` (s. o.) setzt
+  // `status='published'` aber NIE `publishedAt` -- deshalb hier wie beim Public-Cup ein
+  // expliziter Nachtrag.
+  //
+  // Fixrunde 3 (N15, Begründung geschärft): `publishedAt` in `config` ist NICHT primär wegen des
+  // `isDraft`-UI-Gates nötig -- ein bloßes `status='published'` würde dafür schon reichen, weil
+  // die App `publishedAt` beim LESEN aus `status` rückwirkend ableitet, falls `config.publishedAt`
+  // fehlt (`supabaseMappers.ts:545-547`, reines Anzeige-Backfill). Zwingend ist der Wert in
+  // `config` für den DB-TRIGGER `enforce_release_before_public` (HF001,
+  // `20260921_001_enforce_release_before_public.sql`), der beim Übergang zu `is_public=true`
+  // direkt `config ? 'publishedAt'` in SQL prüft -- der kennt das clientseitige Backfill nicht.
+  // Ohne diesen Nachtrag würde also nicht die UI-Sektion blockieren (die zeigt sich trotzdem
+  // offen), sondern der spätere `UPDATE ... SET is_public=true` mit HF001 abgelehnt.
   // ---------------------------------------------------------------------------
   log('Lege Freigabe-Cup an…');
   const releaseCup = buildScheduledTournament(

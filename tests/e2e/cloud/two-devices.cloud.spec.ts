@@ -56,7 +56,9 @@
  * `fullyParallel` gleichzeitig -- ohne Serialisierung interferieren bis zu vier parallele
  * Instanzen (2 Tests × 2 Projekte) mit demselben Datensatz (beobachtet: Test 3 scheiterte auf
  * `cloud-desktop` an einer Vorbedingung, weil `cloud-mobile`s Instanz zeitgleich denselben Score
- * veränderte). `test.describe.configure({ mode: 'serial' })` serialisiert die drei Tests
+ * veränderte). `test.describe.configure({ mode: 'serial' })` serialisiert die vier Tests (N15,
+ * Fixrunde 3: korrigiert -- waren zum Zeitpunkt dieses Nebenbefunds noch drei, seit N4/Fixrunde 2
+ * ist der ehemalige Offline-Test als vierter Test Teil derselben Gruppe, siehe dort)
  * INNERHALB eines Projekt-Laufs; `test.skip` beschränkt die Datei zusätzlich auf `cloud-desktop`
  * -- es gäbe sonst zwei GLEICHZEITIGE serielle Ketten (je Projekt eine) auf demselben Turnier.
  * Anders als bei `public-view.cloud.spec.ts` (zwei unabhängige, per Projekt wählbare Spiele) hat
@@ -84,7 +86,7 @@
 
 import { test, expect } from './fixtures';
 import { AUTH_DIR } from './fixtures';
-import { ensureMatchRunning, enterGoal, resetRunningMatchScore, waitForSync } from './helpers';
+import { ensureMatchRunning, enterGoal, resetRunningMatchScore, safeCleanup, waitForSync } from './helpers';
 import {
   E2E_LIVE_CUP_ID,
   E2E_PUBLIC_CUP_ID,
@@ -131,11 +133,15 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
     } finally {
       // I6: Rückbau -- sonst koppelt dieser Test mit Test 4 (ehemals offline.cloud.spec.ts,
       // dasselbe laufende Live-Cup-Spiel) und mit sich selbst über aufeinanderfolgende Läufe
-      // hinweg. N8: Konstante statt literaler `1, 0`.
-      await resetRunningMatchScore(
-        E2E_LIVE_CUP_ID,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      // hinweg. N8: Konstante statt literaler `1, 0`. N16: `safeCleanup()` statt direktem Aufruf
+      // -- ein scheiternder Rückbau darf die eigentliche Fehlermeldung dieses Tests nicht
+      // verdecken (siehe `helpers.ts#safeCleanup`).
+      await safeCleanup('Live-Cup Score zurücksetzen (Test 1)', () =>
+        resetRunningMatchScore(
+          E2E_LIVE_CUP_ID,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
       );
     }
   });
@@ -219,11 +225,14 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       await expect(helperHomeScore).toHaveText(String(before));
       await expect(ownerHomeScore).toHaveText(String(before), { timeout: 5000 });
     } finally {
-      // I6: Rückbau, unabhängig vom Ausgang. N8: Konstante statt literaler `1, 0`.
-      await resetRunningMatchScore(
-        E2E_LIVE_CUP_ID,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      // I6: Rückbau, unabhängig vom Ausgang. N8: Konstante statt literaler `1, 0`. N16:
+      // `safeCleanup()`, s. Test 1.
+      await safeCleanup('Live-Cup Score zurücksetzen (Test 3, Ereignis löschen)', () =>
+        resetRunningMatchScore(
+          E2E_LIVE_CUP_ID,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
       );
     }
   });
@@ -285,10 +294,13 @@ test.describe('Zwei Geräte: Echtzeit ohne Neuladen', () => {
       }
       // I6: Rückbau -- falls doch etwas durchschrieb (z.B. nach einem künftigen Fundament-Fix),
       // darf der Live-Cup-Score nicht dauerhaft verändert bleiben. N8: Konstante statt `1, 0`.
-      await resetRunningMatchScore(
-        E2E_LIVE_CUP_ID,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
-        E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+      // N16: `safeCleanup()`, s. Test 1.
+      await safeCleanup('Live-Cup Score zurücksetzen (Test 4, ehem. offline)', () =>
+        resetRunningMatchScore(
+          E2E_LIVE_CUP_ID,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.home,
+          E2E_LIVE_CUP_RUNNING_MATCH_SEED_SCORE.away
+        )
       );
     }
   });

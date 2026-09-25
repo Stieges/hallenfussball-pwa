@@ -81,6 +81,35 @@ export async function logoutViaUi(page: Page): Promise<void> {
 }
 
 // =============================================================================
+// RÜCKBAU IN `finally` (Fixrunde 3, N16)
+// =============================================================================
+
+/**
+ * N16: Führt einen Rückbau-Aufruf (Service-Role-PATCH in einem `finally`-Block) sicher aus --
+ * schlägt er fehl, wird das LAUT geloggt, aber NICHT erneut geworfen.
+ *
+ * Begründung für "loggen statt werfen" (die beiden Optionen aus dem Auftrag): Ein `finally`-Block,
+ * der selbst wirft, ÜBERSCHREIBT in JavaScript einen bereits aus dem `try`-Block propagierenden
+ * Fehler (Sprachsemantik, kein Playwright-Spezifikum) -- genau die eigentliche, aussagekräftige
+ * Fehlermeldung (z. B. die Z1- oder Fehler-B-Assertion, die den Test überhaupt erst `test.fail()`
+ * erfüllt) würde dann durch eine generische "Rückbau fehlgeschlagen"-Meldung ERSETZT und wäre aus
+ * dem Testprotokoll nicht mehr ablesbar -- ein Rückschritt gegenüber I4 (Fehlermeldungen müssen
+ * den tatsächlichen Bruchpunkt zeigen). Ein lauter `console.error()` macht den verschmutzten
+ * Zustand trotzdem sichtbar (CI-Protokoll, Playwright hängt Konsolen-Ausgaben an den jeweiligen
+ * Testfall an) UND verdeckt nicht, woran der Test eigentlich lag.
+ */
+export async function safeCleanup(description: string, fn: () => Promise<void>): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    console.error(
+      `[N16] RÜCKBAU FEHLGESCHLAGEN (${description}) -- Zustand bleibt VERSCHMUTZT, der nächste Lauf startet ggf. darauf auf. Ursache:`,
+      error
+    );
+  }
+}
+
+// =============================================================================
 // SYNC-STATUS (Brief Abschnitt 3)
 // =============================================================================
 

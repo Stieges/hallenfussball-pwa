@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from './fixtures';
-import { getLocalServiceRoleClient } from './helpers';
+import { getLocalServiceRoleClient, safeCleanup } from './helpers';
 import {
   E2E_LIVE_CUP_ID,
   E2E_PUBLIC_CUP_ID,
@@ -112,8 +112,18 @@ async function getFirstFinishedMatchWithTeams(tournamentId: string): Promise<Fin
     }
   }
 
+  // N14 (Fixrunde 3): KEIN stiller Rückfall mehr auf den rohen Platzhalter-STRING (vorher
+  // `?? placeholder`) -- das hätte bei einem künftigen Fix an `mapMatchToSupabase()` (der die
+  // ID-Verwechslung oben behebt) oder einer geänderten Übersetzung STILL einen falschen "Namen"
+  // (eine rohe UUID) statt eines echten Team-Namens geliefert, ohne dass diese Funktion selbst
+  // das bemerkt hätte -- der Fehler wäre erst indirekt sichtbar geworden, wenn der Row-Locator
+  // unten nichts findet, und das läge NACH `test.fail()` (s. dort), also fälschlich als
+  // "erwartet rot" durchgegangen (die eigentliche Absicherung dagegen ist ohnehin schon die
+  // Vorbedingungsprüfung dort). `resolve()` liefert jetzt NUR einen Namen, der tatsächlich in
+  // `teams` gefunden wurde -- sonst `undefined`, und der Aufrufer unten wirft dann selbst (siehe
+  // `if (!homeTeamName || !awayTeamName)`).
   const resolve = (id: string | null, placeholder: string | null): string | undefined =>
-    (id ? teamNameById.get(id) : undefined) ?? (placeholder ? teamNameById.get(placeholder) : undefined) ?? placeholder ?? undefined;
+    (id ? teamNameById.get(id) : undefined) ?? (placeholder ? teamNameById.get(placeholder) : undefined);
 
   const homeTeamName = resolve(teamAId, teamAPlaceholder);
   const awayTeamName = resolve(teamBId, teamBPlaceholder);
@@ -199,19 +209,7 @@ test.describe('Public-View', () => {
       await page.waitForLoadState('networkidle');
       await expect(page.getByText('Public-Cup', { exact: true }).first()).toBeVisible({ timeout: 15000 });
 
-      // N5(1): PATCH steht VOR test.fail() -- ein scheiternder PATCH (z.B. Matches-/Teams-Abfrage
-      // liefert nichts) ist ein echter Fehlschlag, kein fälschlich "erwarteter".
       matchInfo = await getFirstFinishedMatchWithTeams(E2E_PUBLIC_CUP_ID);
-      await setMatchScoreA(matchInfo.matchId, UNIQUE_TARGET_SCORE_A);
-
-      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- die Vorbedingungen oben (Seite
-      // zeigt den Public-Cup, PATCH erfolgreich) sind jetzt echte Fehlschläge. Bekannte
-      // Abweichung (Brief, Katalog-Schnitt Z1, docs/anforderungen/
-      // 2026-09-24_zielbild-einzelturnier.md): PublicTournamentViewScreen lädt das Turnier NUR
-      // einmalig beim Mount (ein `useEffect` mit `[tournamentId]`-Deps, keine Polling-/
-      // Realtime-Subscription, src/screens/PublicTournamentViewScreen.tsx) -- eine
-      // Ergebnisänderung erscheint nie ohne Neuladen.
-      test.fail();
 
       // N1: an die Zeile DES GEÄNDERTEN SPIELS gebunden (role="row" + beide Team-Namen im
       // aria-label), nicht an freien Text -- UND ein Zielwert, der in keinem anderen
@@ -219,11 +217,38 @@ test.describe('Public-View', () => {
       const matchRow = page.getByRole('row', {
         name: new RegExp(`${escapeRegExp(matchInfo.homeTeamName)}.*${escapeRegExp(matchInfo.awayTeamName)}`, 'i'),
       });
+
+      // N14 (Fixrunde 3): Zeilenbindung UND Ausgangszustand VOR dem PATCH beweisen -- nicht erst
+      // nach `test.fail()`. Fände der Zeilen-Locator NACH `test.fail()` nichts (z.B. weil eine
+      // geänderte aria-label-Übersetzung, ein Fix an `mapMatchToSupabase()` oder ein anderer,
+      // hier nicht vorgesehener Grund die Bindung bricht), würde das fälschlich als "erwartet
+      // rot" (Z1) durchgehen, statt als kaputte Testinfrastruktur aufzufallen -- genau der Fehler,
+      // den der Implementer beim ersten Entwurf selbst erlebt hat (nur eine einmalige Probe deckte
+      // ihn auf, der Test selbst schützte nicht davor, siehe Report).
+      await expect(matchRow).toBeVisible({ timeout: 15000 });
+      await expect(matchRow.getByText('2:0', { exact: true })).toBeVisible({ timeout: 15000 });
+
+      // N5(1): PATCH steht VOR test.fail() -- ein scheiternder PATCH ist ein echter Fehlschlag,
+      // kein fälschlich "erwarteter".
+      await setMatchScoreA(matchInfo.matchId, UNIQUE_TARGET_SCORE_A);
+
+      // I4: test.fail() direkt vor dem bekannten Bruchpunkt -- die Vorbedingungen oben (Seite
+      // zeigt den Public-Cup, Zeile gefunden, Ausgangs-Score gesehen, PATCH erfolgreich) sind
+      // jetzt echte Fehlschläge. Bekannte Abweichung (Brief, Katalog-Schnitt Z1, docs/anforderungen/
+      // 2026-09-24_zielbild-einzelturnier.md): PublicTournamentViewScreen lädt das Turnier NUR
+      // einmalig beim Mount (ein `useEffect` mit `[tournamentId]`-Deps, keine Polling-/
+      // Realtime-Subscription, src/screens/PublicTournamentViewScreen.tsx) -- eine
+      // Ergebnisänderung erscheint nie ohne Neuladen.
+      test.fail();
+
       await expect(matchRow.getByText(`${UNIQUE_TARGET_SCORE_A}:0`, { exact: true })).toBeVisible({ timeout: 3000 });
     } finally {
-      // I6: Service-Role-Änderung IMMER zurückbauen, unabhängig vom Testausgang.
+      // I6: Service-Role-Änderung IMMER zurückbauen, unabhängig vom Testausgang. N16 (Fixrunde 3):
+      // `safeCleanup()` -- ein scheiternder Rückbau darf die eigentliche Z1-Fehlermeldung dieses
+      // Tests nicht verdecken (siehe `helpers.ts#safeCleanup`).
       if (matchInfo) {
-        await setMatchScoreA(matchInfo.matchId, matchInfo.oldScoreA);
+        const info = matchInfo;
+        await safeCleanup('Public-Cup Score zurücksetzen', () => setMatchScoreA(info.matchId, info.oldScoreA));
       }
     }
   });

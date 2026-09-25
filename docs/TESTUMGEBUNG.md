@@ -49,16 +49,26 @@ Nutzer für den Anmelden/Abmelden-Test, einer je Playwright-Projekt, s. u.), all
 
 Fünf Testturniere (Task T2 + Fixrunde 2, N3/Ruling AA):
 
-| Turnier | Status | `publishedAt` | `is_public` | Mitglieder (über owner hinaus) |
+| Turnier | Status | `config.publishedAt` | `is_public` | Mitglieder (über owner hinaus) |
 |---|---|---|---|---|
-| Live-Cup | published | gesetzt | `false` | coadmin, helper, trainer, viewer, revoked (widerrufen) |
+| Live-Cup | published | **nicht gesetzt** (¹) | `false` | coadmin, helper, trainer, viewer, revoked (widerrufen) |
 | Public-Cup | published | gesetzt | `true`, Share-Code `E2EPUB` | — |
-| Entwurf-Cup | draft | **nicht gesetzt** | `false` | — |
+| Entwurf-Cup | draft | nicht gesetzt | `false` | — |
 | Freigabe-Cup | published | gesetzt | `false` | coadmin (Co-Admin) |
 | Fremd-Cup | draft | nicht gesetzt | `false` | Eigentümer: `stranger` |
 
+(¹) Fixrunde 3 (N15, korrigiert): der Seed setzt `config.publishedAt` NUR beim Public-Cup und beim
+Freigabe-Cup explizit (`e2e-seed.ts`, Backstop, s. u.). Beim Live-Cup fehlt der Wert in der
+gespeicherten `config` — die App leitet ihn beim LESEN lediglich aus `status='published'` ab
+(`supabaseMappers.ts:545-547`, reines Anzeige-Backfill, nicht persistiert). Für den DB-Trigger
+`enforce_release_before_public` (HF001), der `config->>'publishedAt'` direkt prüft, zählt nur der
+gespeicherte Wert — der Live-Cup dürfte deshalb nicht ohne Weiteres auf `is_public=true`
+umgestellt werden, obwohl die Oberfläche ihn als veröffentlicht anzeigt.
+
 Der Entwurf-Cup bleibt bewusst ein reiner Entwurf (kein `publishedAt`) — das prüft, dass ein noch
-nie freigegebenes Turnier weder per Direktlink noch über die Sichtbarkeits-RPC erreichbar ist.
+nie freigegebenes Turnier per Direktlink nicht erreichbar ist (`public-view.cloud.spec.ts`; eine
+gesonderte Prüfung über die Veröffentlichen-RPC/`make_tournament_public` existiert dafür NICHT,
+nur der Direktlink-Weg ist getestet).
 Der Freigabe-Cup ist das Gegenstück dafür, wo eine Freigabe schon stattgefunden hat
 (`publishedAt` gesetzt), das Turnier aber noch nicht öffentlich geteilt ist (`is_public=false`)
 — genau der Zustand, den `publish-coadmin.cloud.spec.ts` braucht, um die
