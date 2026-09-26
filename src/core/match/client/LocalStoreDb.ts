@@ -15,6 +15,13 @@ export interface StoredRecord<T> {
   value: T;
 }
 
+/**
+ * Upgrade-Kette (I9, RC6): laeuft in der `versionchange`-Transaktion mit
+ * `oldVersion` und kann vorhandene Datensaetze mitziehen. Fehlschlag bricht
+ * das Upgrade ab (`tx.abort()`), dann oeffnet die DB nicht.
+ */
+export type UpgradeHandler = (store: IDBObjectStore, tx: IDBTransaction, oldVersion: number) => void;
+
 function errorName(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'name' in error) {
     const name = error.name;
@@ -68,6 +75,7 @@ export class StoreDb {
     private readonly dbName: string,
     private readonly storeName: string,
     private readonly version: number,
+    private readonly onUpgrade?: UpgradeHandler,
   ) {}
 
   open(): Promise<IDBDatabase> {
@@ -87,6 +95,7 @@ export class StoreDb {
       // Upgrade-Kette: spaetere Versionen als weitere Cases ergaenzen (I9).
       req.onupgradeneeded = (e) => {
         const db = req.result;
+        const tx = req.transaction;
         switch (e.oldVersion) {
           case 0: {
             db.createObjectStore(this.storeName, { keyPath: 'key' });
@@ -98,6 +107,9 @@ export class StoreDb {
             }
             break;
           }
+        }
+        if (this.onUpgrade && tx) {
+          this.onUpgrade(tx.objectStore(this.storeName), tx, e.oldVersion);
         }
       };
       // N9: haelt eine andere Verbindung eine alte Version offen, meldet das

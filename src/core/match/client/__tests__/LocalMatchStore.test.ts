@@ -20,7 +20,7 @@ describe('LocalMatchStore', () => {
     const copy = await store.load('guest', 'lms-1');
     expect(copy).not.toBeNull();
     expect(copy?.matchId).toBe('lms-1');
-    expect(copy?.formatVersion).toBe(1);
+    expect(copy?.formatVersion).toBe(2);
   });
 
   it('Lebenszyklus: pending -> acked -> confirmed', async () => {

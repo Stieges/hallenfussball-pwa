@@ -2,6 +2,7 @@
  * Lokale Spielkopie (RC2, RC3, V3, V14) -- eigene IndexedDB `hallenfussball-matches`.
  * Jede Aenderung laeuft in einer Transaktion; aufgeloest wird erst nach `tx.oncomplete`
  * (I5), damit ein Abbruch beim Commit (typisch Quota) nicht als Erfolg gemeldet wird.
+ * DB-Version 2 (C2a/PC7): `rejected`, `review`, `tournamentId`, Upgrade-Kette.
  */
 import { type EngineEventWithSeq } from './catchUp';
 import { type EngineEvent, type MatchContext } from '../types';
@@ -13,29 +14,61 @@ import {
   putRecord,
   type StoredRecord,
 } from './LocalStoreDb';
+import {
+  MATCH_COPY_FORMAT_VERSION,
+  applyResolution,
+  dismissRejectedEntries,
+  matchCopyKey,
+  normalizeCopy,
+  rejectAllPendingEntries,
+  type BatchResolution,
+  type LegacyMatchCopy,
+  type MatchCopy,
+  type RejectedEntry,
+} from './matchCopy';
 
-export { LocalStoreFullError };
-export type { StoredRecord };
+export { LocalStoreFullError, matchCopyKey };
+export type { StoredRecord, MatchCopy, RejectedEntry, BatchResolution };
 
-export interface MatchCopy {
-  formatVersion: number;
-  accountId: string;
-  matchId: string;
-  ctx: MatchContext;
-  /** Bestaetigte Ereignisse mit Server-`seq` (Wasserstand). */
-  confirmed: EngineEventWithSeq[];
-  watermarkSeq: number;
-  /** Offener Ausgang (RC1): ohne `seq`, sie ist nur den bestätigten Ereignissen vorbehalten (N5). */
-  acked: EngineEvent[];
-  pending: EngineEvent[];
-  updatedAt: number;
+/** Version 1 -> 2: vorhandene Kopien um die neuen Listen ergaenzen, nichts verlieren (RC6). */
+function migrateRecords(store: IDBObjectStore, tx: IDBTransaction, oldVersion: number): void {
+  if (oldVersion >= MATCH_COPY_FORMAT_VERSION) {
+    return;
+  }
+  const req = getAllStored<LegacyMatchCopy>(store);
+  req.onsuccess = () => {
+    for (const record of req.result) {
+      putRecord(store, () => tx.abort(), { key: record.key, value: normalizeCopy(record.value) });
+    }
+  };
+  req.onerror = () => tx.abort();
 }
 
 export class LocalMatchStore {
-  private readonly db = new StoreDb('hallenfussball-matches', 'matches', 1);
+  private readonly db = new StoreDb('hallenfussball-matches', 'matches', MATCH_COPY_FORMAT_VERSION, migrateRecords);
 
   private key(accountId: string, matchId: string): string {
-    return `${accountId}|${matchId}`;
+    return matchCopyKey(accountId, matchId);
+  }
+
+  /** Liest die Kopie, aendert sie in-place und schreibt sie zurueck -- eine Transaktion (I5). */
+  private async update(key: string, mutate: (copy: MatchCopy) => void): Promise<void> {
+    await this.db.run(
+      'readwrite',
+      (store, fail) => {
+        const req = getStored<MatchCopy>(store, key);
+        req.onsuccess = () => {
+          const existing = req.result?.value ?? null;
+          if (!existing) {
+            fail(new Error('Match copy not found'));
+            return;
+          }
+          mutate(existing);
+          putRecord(store, fail, { key, value: existing });
+        };
+      },
+      () => undefined,
+    );
   }
 
   async load(accountId: string, matchId: string): Promise<MatchCopy | null> {
@@ -56,11 +89,11 @@ export class LocalMatchStore {
 
   /**
    * Legt die Kopie an oder aktualisiert bei einer vorhandenen Kopie nur `ctx`
-   * und `updatedAt` -- `confirmed`, `acked`, `pending` und `watermarkSeq`
-   * bleiben erhalten (N2: der Ausgang wird nie still ueberschrieben, RC1/V3).
-   * Eine Transaktion.
+   * (und `tournamentId`, wenn uebergeben) und `updatedAt` -- `confirmed`, `acked`,
+   * `pending`, `rejected`, `review` und `watermarkSeq` bleiben erhalten
+   * (N2: der Ausgang wird nie still ueberschrieben, RC1/V3). Eine Transaktion.
    */
-  async create(accountId: string, matchId: string, ctx: MatchContext): Promise<void> {
+  async create(accountId: string, matchId: string, ctx: MatchContext, tournamentId?: string): Promise<void> {
     const key = this.key(accountId, matchId);
     await this.db.run(
       'readwrite',
@@ -69,20 +102,31 @@ export class LocalMatchStore {
         req.onsuccess = () => {
           const existing = req.result?.value ?? null;
           if (existing) {
-            putRecord(store, fail, { key, value: { ...existing, ctx, updatedAt: Date.now() } });
+            putRecord(store, fail, {
+              key,
+              value: {
+                ...existing,
+                ctx,
+                ...(tournamentId !== undefined ? { tournamentId } : {}),
+                updatedAt: Date.now(),
+              },
+            });
             return;
           }
           putRecord(store, fail, {
             key,
             value: {
-              formatVersion: 1,
+              formatVersion: MATCH_COPY_FORMAT_VERSION,
               accountId,
               matchId,
+              ...(tournamentId !== undefined ? { tournamentId } : {}),
               ctx,
               confirmed: [],
               watermarkSeq: 0,
               acked: [],
               pending: [],
+              rejected: [],
+              review: [],
               updatedAt: Date.now(),
             },
           });
@@ -93,48 +137,20 @@ export class LocalMatchStore {
   }
 
   async addPending(accountId: string, matchId: string, event: EngineEvent): Promise<void> {
-    const key = this.key(accountId, matchId);
-    await this.db.run(
-      'readwrite',
-      (store, fail) => {
-        const req = getStored<MatchCopy>(store, key);
-        req.onsuccess = () => {
-          const existing = req.result?.value ?? null;
-          if (!existing) {
-            fail(new Error('Match copy not found'));
-            return;
-          }
-          existing.pending.push(event);
-          existing.updatedAt = Date.now();
-          putRecord(store, fail, { key, value: existing });
-        };
-      },
-      () => undefined,
-    );
+    await this.update(this.key(accountId, matchId), (copy) => {
+      copy.pending.push(event);
+      copy.updatedAt = Date.now();
+    });
   }
 
   async markAcked(accountId: string, matchId: string, ids: string[]): Promise<void> {
-    const key = this.key(accountId, matchId);
     const marked = new Set(ids);
-    await this.db.run(
-      'readwrite',
-      (store, fail) => {
-        const req = getStored<MatchCopy>(store, key);
-        req.onsuccess = () => {
-          const existing = req.result?.value ?? null;
-          if (!existing) {
-            fail(new Error('Match copy not found'));
-            return;
-          }
-          const moved = existing.pending.filter((event) => marked.has(event.id));
-          existing.pending = existing.pending.filter((event) => !marked.has(event.id));
-          existing.acked = existing.acked.filter((event) => !marked.has(event.id)).concat(moved);
-          existing.updatedAt = Date.now();
-          putRecord(store, fail, { key, value: existing });
-        };
-      },
-      () => undefined,
-    );
+    await this.update(this.key(accountId, matchId), (copy) => {
+      const moved = copy.pending.filter((event) => marked.has(event.id));
+      copy.pending = copy.pending.filter((event) => !marked.has(event.id));
+      copy.acked = copy.acked.filter((event) => !marked.has(event.id)).concat(moved);
+      copy.updatedAt = Date.now();
+    });
   }
 
   async applyConfirmed(
@@ -143,61 +159,51 @@ export class LocalMatchStore {
     events: EngineEventWithSeq[],
     newWatermark: number,
   ): Promise<void> {
-    const key = this.key(accountId, matchId);
     const removedIds = new Set(events.map((event) => event.id));
-    await this.db.run(
-      'readwrite',
-      (store, fail) => {
-        const req = getStored<MatchCopy>(store, key);
-        req.onsuccess = () => {
-          const existing = req.result?.value ?? null;
-          if (!existing) {
-            fail(new Error('Match copy not found'));
-            return;
-          }
-          const confirmedIds = new Set(existing.confirmed.map((event) => event.id));
-          for (const event of events) {
-            if (!confirmedIds.has(event.id)) {
-              existing.confirmed.push(event);
-              confirmedIds.add(event.id);
-            }
-          }
-          existing.confirmed.sort((a, b) => a.seq - b.seq);
-          existing.acked = existing.acked.filter((event) => !removedIds.has(event.id));
-          existing.pending = existing.pending.filter((event) => !removedIds.has(event.id));
-          // M-7: ein spaet eingetroffenes, aelteres Nachladen darf den Wasserstand nicht senken.
-          existing.watermarkSeq = Math.max(existing.watermarkSeq, newWatermark);
-          existing.updatedAt = Date.now();
-          putRecord(store, fail, { key, value: existing });
-        };
-      },
-      () => undefined,
-    );
+    await this.update(this.key(accountId, matchId), (copy) => {
+      const confirmedIds = new Set(copy.confirmed.map((event) => event.id));
+      for (const event of events) {
+        if (!confirmedIds.has(event.id)) {
+          copy.confirmed.push(event);
+          confirmedIds.add(event.id);
+        }
+      }
+      copy.confirmed.sort((a, b) => a.seq - b.seq);
+      copy.acked = copy.acked.filter((event) => !removedIds.has(event.id));
+      copy.pending = copy.pending.filter((event) => !removedIds.has(event.id));
+      // M-7: ein spaet eingetroffenes, aelteres Nachladen darf den Wasserstand nicht senken.
+      copy.watermarkSeq = Math.max(copy.watermarkSeq, newWatermark);
+      copy.updatedAt = Date.now();
+    });
   }
 
   async removePending(accountId: string, matchId: string, ids: string[]): Promise<EngineEvent[]> {
-    const key = this.key(accountId, matchId);
     const removedIds = new Set(ids);
     let removed: EngineEvent[] = [];
-    await this.db.run(
-      'readwrite',
-      (store, fail) => {
-        const req = getStored<MatchCopy>(store, key);
-        req.onsuccess = () => {
-          const existing = req.result?.value ?? null;
-          if (!existing) {
-            fail(new Error('Match copy not found'));
-            return;
-          }
-          removed = existing.pending.filter((event) => removedIds.has(event.id));
-          existing.pending = existing.pending.filter((event) => !removedIds.has(event.id));
-          existing.updatedAt = Date.now();
-          putRecord(store, fail, { key, value: existing });
-        };
-      },
-      () => removed,
-    );
+    await this.update(this.key(accountId, matchId), (copy) => {
+      removed = copy.pending.filter((event) => removedIds.has(event.id));
+      copy.pending = copy.pending.filter((event) => !removedIds.has(event.id));
+      copy.updatedAt = Date.now();
+    });
     return removed;
+  }
+
+  /**
+   * Ein Ergebnis-Stapel: pending -> acked/rejected/review in EINER Transaktion (V3, PC7).
+   * `rejected` traegt Code, Detail und Ablehnungszeit (D-C1); IDs ausserhalb `pending` zaehlen nicht.
+   */
+  async resolveBatch(key: string, resolution: BatchResolution): Promise<void> {
+    await this.update(key, (copy) => applyResolution(copy, resolution));
+  }
+
+  /** Alle offenen Eintraege ablehnen (54000 „Spiel voll", 55000 „Spiel weg"). */
+  async rejectAllPending(key: string, code: string): Promise<void> {
+    await this.update(key, (copy) => rejectAllPendingEntries(copy, code, Date.now()));
+  }
+
+  /** „Verstanden" (D-C1): bestaetigte Ablehnungen aus der Liste nehmen. */
+  async dismissRejected(key: string, ids: string[]): Promise<void> {
+    await this.update(key, (copy) => dismissRejectedEntries(copy, ids));
   }
 
   async forAccount(accountId: string): Promise<MatchCopy[]> {
@@ -222,26 +228,12 @@ export class LocalMatchStore {
     if (accountId !== 'guest') {
       throw new Error('addConfirmedLocal ist nur fuer den Gastmodus (guest) erlaubt');
     }
-    const key = this.key(accountId, matchId);
-    await this.db.run(
-      'readwrite',
-      (store, fail) => {
-        const req = getStored<MatchCopy>(store, key);
-        req.onsuccess = () => {
-          const existing = req.result?.value ?? null;
-          if (!existing) {
-            fail(new Error('Match copy not found'));
-            return;
-          }
-          const maxSeq = existing.confirmed.reduce((max, entry) => Math.max(max, entry.seq), 0);
-          const stored: EngineEventWithSeq = { ...event, seq: maxSeq + 1 };
-          existing.confirmed.push(stored);
-          existing.watermarkSeq = Math.max(existing.watermarkSeq, stored.seq);
-          existing.updatedAt = Date.now();
-          putRecord(store, fail, { key, value: existing });
-        };
-      },
-      () => undefined,
-    );
+    await this.update(this.key(accountId, matchId), (copy) => {
+      const maxSeq = copy.confirmed.reduce((max, entry) => Math.max(max, entry.seq), 0);
+      const stored: EngineEventWithSeq = { ...event, seq: maxSeq + 1 };
+      copy.confirmed.push(stored);
+      copy.watermarkSeq = Math.max(copy.watermarkSeq, stored.seq);
+      copy.updatedAt = Date.now();
+    });
   }
 }

@@ -1,6 +1,24 @@
 export * from './catchUp';
 export { ClockSync, type ClockStorage, type ClockSyncData } from './ClockSync';
-export { LocalMatchStore, LocalStoreFullError, type MatchCopy } from './LocalMatchStore';
+export {
+  LocalMatchStore,
+  LocalStoreFullError,
+  matchCopyKey,
+  type BatchResolution,
+  type MatchCopy,
+  type RejectedEntry,
+} from './LocalMatchStore';
+export { classifySendFailure, sqlStateOf, type SendFailure } from './sendErrors';
+export { OutboxSender } from './OutboxSender';
+export {
+  emptyOutboxStatus,
+  type OutboxApi,
+  type OutboxPause,
+  type OutboxSenderDeps,
+  type OutboxStatus,
+  type OutboxTimers,
+  type TimeoutHandle,
+} from './outboxTypes';
 export {
   toLiveMatchView,
   toRuntimeEvents,
