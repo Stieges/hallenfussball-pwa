@@ -1,6 +1,9 @@
 /**
  * Eine Spiel-Warteschlange des Ausgangs (C2a, RC8): je Spiel ein eigener Lauf,
  * eigener Backoff und eine eigene Pause -- ein haengendes Spiel blockiert kein anderes.
+ * Die Warteschlange gehoert zu genau einem Konto (`accountId`, Fixrunde 1 I1): sie wird
+ * beim Start/Stop/Kontowechsel NICHT verworfen, solange ein Lauf noch aussteht -- sonst
+ * koennte ein zweiter, unabhaengiger Lauf fuer dasselbe Spiel entstehen.
  */
 import type { OutboxPause, OutboxTimers, TimeoutHandle } from './outboxTypes';
 
@@ -17,6 +20,8 @@ export class MatchQueue {
   constructor(
     readonly matchId: string,
     readonly key: string,
+    /** Konto, fuer das diese Warteschlange angelegt wurde (I1) -- unveraenderlich. */
+    readonly accountId: string,
     private readonly timers: OutboxTimers,
     /** Startet den naechsten Versuch (Rueckruf des Senders, darf asynchron sein). */
     private readonly onRetry: (queue: MatchQueue) => Promise<void>,

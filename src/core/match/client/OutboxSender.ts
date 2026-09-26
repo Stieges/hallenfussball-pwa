@@ -47,10 +47,14 @@ export class OutboxSender {
     this.requestCatchUp = deps.requestCatchUp;
   }
 
-  /** Startet fuer ein Konto (D-C2: andere Konten bleiben unangetastet). Gast tut nichts (V14). */
+  /**
+   * Startet fuer ein Konto (D-C2: andere Konten bleiben unangetastet). Gast tut nichts (V14).
+   * Verwirft KEINE Warteschlangen (Fixrunde 1, I1): ein noch laufender Aufruf einer frueheren
+   * `start()`/`stop()`-Runde desselben Spiels muss zu Ende laufen duerfen, statt durch einen
+   * zweiten, parallelen Aufruf ueberholt zu werden. `haltAll()` hebt nur ausstehende Pausen auf.
+   */
   async start(accountId: string): Promise<void> {
     this.haltAll();
-    this.queues.clear();
     this.accountId = accountId;
     this.started = true;
     this.book.set({ clientOutdated: false });
@@ -62,11 +66,10 @@ export class OutboxSender {
     await this.kick();
   }
 
-  /** Haelt an und loescht nichts -- weder Eintraege noch andere Konten (D-C2). */
+  /** Haelt an und loescht nichts -- weder Eintraege noch andere Konten (D-C2) noch Warteschlangen (I1). */
   stop(): void {
     this.started = false;
     this.haltAll();
-    this.queues.clear();
     this.book.set({ pausedMatches: {} });
   }
 
@@ -95,7 +98,7 @@ export class OutboxSender {
     if (!this.started || this.isGuest()) {
       return;
     }
-    const queue = this.queues.get(matchId);
+    const queue = this.queues.get(this.queueKeyFor(matchId));
     if (queue?.pause !== 'notReady') {
       return;
     }
@@ -128,19 +131,24 @@ export class OutboxSender {
     return this.started && !this.isGuest() && !this.book.authRequired && !this.book.clientOutdated;
   }
 
+  /** Schluessel der Warteschlange: Konto UND Spiel (I1) -- ein Kontowechsel legt eine neue an,
+   * statt eine noch laufende zu ueberschreiben oder zwischen Konten zu verwechseln. */
+  private queueKeyFor(matchId: string): string {
+    return matchCopyKey(this.accountId ?? '', matchId);
+  }
+
   private queueFor(matchId: string): MatchQueue {
-    const existing = this.queues.get(matchId);
+    const key = this.queueKeyFor(matchId);
+    const existing = this.queues.get(key);
     if (existing) {
       return existing;
     }
-    const queue = new MatchQueue(matchId, matchCopyKey(this.accountId ?? '', matchId), this.timers, (next) =>
-      this.pump(next),
-    );
-    this.queues.set(matchId, queue);
+    const queue = new MatchQueue(matchId, key, this.accountId ?? '', this.timers, (next) => this.pump(next));
+    this.queues.set(key, queue);
     return queue;
   }
 
-  /** Startet die Warteschlange eines Spiels (hoestens ein Aufruf gleichzeitig). */
+  /** Startet die Warteschlange eines Spiels (hoechstens ein Aufruf gleichzeitig, I1). */
   private pump(queue: MatchQueue): Promise<void> {
     queue.wantsRun = true;
     if (queue.running) {
@@ -149,7 +157,9 @@ export class OutboxSender {
     const run = (async () => {
       while (queue.wantsRun) {
         queue.wantsRun = false;
-        if (!this.canSend() || queue.pause !== null) {
+        // I1: eine Warteschlange eines frueheren/anderen Kontos treibt nichts mehr an --
+        // ein noch laufender Aufruf darf zu Ende laufen, aber keinen neuen anstossen.
+        if (!this.canSend() || queue.accountId !== this.accountId || queue.pause !== null) {
           break;
         }
         const outcome = await this.sendOneBatch(queue);
@@ -187,7 +197,9 @@ export class OutboxSender {
   }
 
   private async tryOneBatch(queue: MatchQueue): Promise<BatchOutcome> {
-    const copy = await this.store.load(this.accountId ?? '', queue.matchId);
+    // I1: immer mit dem Konto DIESER Warteschlange laden/buchen -- nie mit `this.accountId`,
+    // das sich waehrend eines laufenden Aufrufs schon auf ein anderes Konto geaendert haben kann.
+    const copy = await this.store.load(queue.accountId, queue.matchId);
     if (!copy || copy.pending.length === 0) {
       return 'done';
     }
@@ -260,7 +272,9 @@ export class OutboxSender {
   private async refresh(): Promise<void> {
     const pausedMatches: Record<string, OutboxPause> = {};
     for (const queue of this.queues.values()) {
-      if (queue.pause !== null) {
+      // Nur die Pausen des AKTUELLEN Kontos anzeigen (D-C2) -- andere Konten bleiben
+      // im Status unsichtbar, auch wenn ihre Warteschlangen noch im Speicher stehen (I1).
+      if (queue.accountId === this.accountId && queue.pause !== null) {
         pausedMatches[queue.matchId] = queue.pause;
       }
     }
