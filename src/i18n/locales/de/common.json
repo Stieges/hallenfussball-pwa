@@ -175,7 +175,8 @@
       "header_one": "1 Eintrag $t(sport:outbox.rejectedEntry)",
       "header_other": "{{count}} Einträge $t(sport:outbox.rejectedEntry)",
       "dismissAll": "Alle verstanden",
-      "unknownCodeHint": "Code: {{code}}"
+      "unknownCodeHint": "Code: {{code}}",
+      "countLabel": "{{count}} $t(sport:outbox.rejectedEntry)"
     },
     "notice": {
       "clientOutdated": "App aktualisieren",

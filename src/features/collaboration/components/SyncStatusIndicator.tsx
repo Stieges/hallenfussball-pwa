@@ -18,6 +18,10 @@ export interface SyncStatusIndicatorProps {
     tournamentId?: string;
     /** Compact mode (icon only, no label) — default true for header use */
     compact?: boolean;
+    /** C2b: nur Durchreichung an die SyncStatusBar, die Datenquelle verdrahtet C3a */
+    rejectedCount?: number;
+    reviewCount?: number;
+    onShowRejected?: () => void;
 }
 
 const containerStyle: CSSProperties = {
@@ -25,7 +29,13 @@ const containerStyle: CSSProperties = {
     display: 'inline-flex',
 };
 
-export function SyncStatusIndicator({ tournamentId, compact = true }: SyncStatusIndicatorProps) {
+export function SyncStatusIndicator({
+    tournamentId,
+    compact = true,
+    rejectedCount = 0,
+    reviewCount = 0,
+    onShowRejected,
+}: SyncStatusIndicatorProps) {
     const {
         status,
         isSyncing,
@@ -89,6 +99,9 @@ export function SyncStatusIndicator({ tournamentId, compact = true }: SyncStatus
                 failedCount={failedChanges}
                 onSyncClick={handleClick}
                 compact={compact}
+                rejectedCount={rejectedCount}
+                reviewCount={reviewCount}
+                onShowRejected={onShowRejected}
             />
 
             {showFailedList && (

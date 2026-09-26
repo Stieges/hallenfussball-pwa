@@ -35,6 +35,12 @@ export interface SyncStatusBarProps {
     pendingCount?: number;
     /** Number of failed mutations in dead-letter queue */
     failedCount?: number;
+    /** C2b: Eintraege, die der Server nicht uebernommen hat (nicht uebernommen) */
+    rejectedCount?: number;
+    /** C2b: Eintraege, die auf die Turnierleitung warten (wartet auf Turnierleitung) */
+    reviewCount?: number;
+    /** C2b: zeigt die Ablehnungsliste an (RejectedEntriesPanel) */
+    onShowRejected?: () => void;
 }
 
 // =============================================================================
@@ -157,6 +163,24 @@ const createStyles = (config: StatusConfig, compact: boolean) => ({
         fontWeight: cssVars.fontWeights.semibold,
         lineHeight: 1,
     } as CSSProperties,
+
+    // C2b: Hinweis auf nicht uebernommene Eintraege -- eigener Knopf NEBEN dem Statusfeld
+    // (kein verschachtelter Knopf), Touch-Ziel nach WCAG 2.5.5.
+    rejected: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: cssVars.spacing.xs,
+        minHeight: cssVars.touchTargets.minimum,
+        minWidth: cssVars.touchTargets.minimum,
+        padding: `${cssVars.spacing.xs} ${cssVars.spacing.sm}`,
+        border: `1px solid ${cssVars.colors.error}`,
+        borderRadius: cssVars.borderRadius.md,
+        background: cssVars.colors.errorLight,
+        color: cssVars.colors.onError,
+        fontSize: cssVars.fontSizes.bodySm,
+        fontWeight: cssVars.fontWeights.semibold,
+        cursor: 'pointer',
+    } as CSSProperties,
 });
 
 // =============================================================================
@@ -172,10 +196,15 @@ export function SyncStatusBar({
     compact = false,
     pendingCount = 0,
     failedCount = 0,
+    rejectedCount = 0,
+    reviewCount = 0,
+    onShowRejected,
 }: SyncStatusBarProps) {
     const { t } = useTranslation('common');
     const hasPending = pendingCount > 0;
     const hasFailed = failedCount > 0;
+    const hasReview = reviewCount > 0;
+    const hasRejected = rejectedCount > 0;
 
     // Fixrunde 1 (Review C1): `failedCount > 0` muss die DARSTELLUNG selbst umschalten (Symbol,
     // Farbe, Hintergrund), nicht nur `data-state` (siehe testState unten). Vorher blieb
@@ -323,6 +352,17 @@ export function SyncStatusBar({
                     </span>
                 )}
 
+                {/* C2b: Eintraege, die auf die Turnierleitung warten */}
+                {!compact && hasReview && !isSyncing && (
+                    <span style={{
+                        ...styles.label,
+                        color: cssVars.colors.textMuted,
+                        fontSize: cssVars.fontSizes.xs,
+                    }}>
+                        {t('outbox.notice.review', { count: reviewCount })}
+                    </span>
+                )}
+
                 {!compact && lastSyncText && !isSyncing && status === 'synced' && !hasPending && !hasFailed && (
                     <span style={styles.lastSync}>
                         {lastSyncText}
@@ -344,6 +384,28 @@ export function SyncStatusBar({
                     </span>
                 )}
             </button>
+
+            {/* C2b: Hinweis/Badge auf nicht uebernommene Eintraege (D-C1) -- eigener Knopf
+                neben dem Statusfeld, damit der Klick die Ablehnungsliste zeigt. */}
+            {hasRejected && (onShowRejected ? (
+                <button
+                    type="button"
+                    data-testid="sync-status-rejected"
+                    data-rejected={rejectedCount}
+                    style={styles.rejected}
+                    onClick={onShowRejected}
+                >
+                    {t('outbox.rejected.countLabel', { count: rejectedCount })}
+                </button>
+            ) : (
+                <span
+                    data-testid="sync-status-rejected"
+                    data-rejected={rejectedCount}
+                    style={{ ...styles.rejected, cursor: 'default' }}
+                >
+                    {t('outbox.rejected.countLabel', { count: rejectedCount })}
+                </span>
+            ))}
 
             {/* CSS Animation for spinning icon */}
             <style>{`
