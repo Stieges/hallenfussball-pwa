@@ -125,5 +125,9 @@
     "Ü40": "Over 40",
     "Ü45": "Over 45",
     "Ü50": "Over 50"
+  },
+  "outbox": {
+    "rejectedEntry": "rejected entry",
+    "awaitingReview": "awaiting review"
   }
 }

@@ -125,5 +125,9 @@
     "Ü40": "Ü40",
     "Ü45": "Ü45",
     "Ü50": "Ü50"
+  },
+  "outbox": {
+    "rejectedEntry": "nicht übernommen",
+    "awaitingReview": "wartet auf Turnierleitung"
   }
 }

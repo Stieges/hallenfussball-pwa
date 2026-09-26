@@ -53,6 +53,20 @@
       "forbidden_de": ["Hinausstellung"],
       "reason": "Bereits einheitlich verwendet; wird hier festgeschrieben, damit spätere Änderungen nicht unbemerkt davon abweichen.",
       "i18nKey": "events.timePenalty"
+    },
+    "rejectedEntry": {
+      "de": "nicht übernommen",
+      "en": "rejected entry",
+      "forbidden_de": ["abgelehnt", "Ablehnung"],
+      "reason": "D-C1: Eintrag, den der Server nicht angenommen hat – ohne Wertung beschrieben, damit Helfer:innen ihn verstehen und bestätigen können.",
+      "i18nKey": "outbox.rejectedEntry"
+    },
+    "awaitingReview": {
+      "de": "wartet auf Turnierleitung",
+      "en": "awaiting review",
+      "forbidden_de": ["in Prüfung", "Review offen"],
+      "reason": "Der Server nimmt den Eintrag vorerst an, die Turnierleitung entscheidet später darüber.",
+      "i18nKey": "outbox.awaitingReview"
     }
   }
 }
