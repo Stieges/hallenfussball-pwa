@@ -184,6 +184,11 @@
       "authRequired": "Please sign in again",
       "notReady": "Game not ready yet (teams open)",
       "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+    },
+    "logoutWarning": {
+      "title": "Sign out?",
+      "message": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
+      "confirm": "Sign out anyway"
     }
   }
 }

@@ -184,6 +184,11 @@
       "authRequired": "Bitte neu anmelden",
       "notReady": "Spiel noch nicht bereit (Teams offen)",
       "review": "$t(sport:outbox.awaitingReview) ({{count}})"
+    },
+    "logoutWarning": {
+      "title": "Abmelden?",
+      "message": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
+      "confirm": "Trotzdem abmelden"
     }
   }
 }
