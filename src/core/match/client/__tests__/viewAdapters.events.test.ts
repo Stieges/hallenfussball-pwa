@@ -97,6 +97,37 @@ describe('toRuntimeEvents (I2)', () => {
     expect(toRuntimeEvents(state, log, ctx).map((e) => e.id)).toEqual([]);
   });
 
+  it('zeigt doppelte Log-IDs nur einmal und nimmt den Inhalt aus state.accepted (N7)', () => {
+    const accepted = goal('g1', 'teamA', 2000, 10_000, { playerNumber: 7 });
+    const variant = goal('g1', 'teamA', 2000, 10_000, { playerNumber: 99 });
+    const log = [start(), accepted, variant];
+    const state = reduceMatch(log, ctx).state;
+    const events = toRuntimeEvents(state, log, ctx);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.payload.playerNumber).toBe(7);
+  });
+
+  it('scoreAfter der letzten Zeile entspricht dem Kopfstand auch nach einer Korrektur (N8)', () => {
+    const log = [
+      start(),
+      goal('g1', 'teamA', 2000, 10_000),
+      ev({ id: 'end', type: 'MATCH_END', at: 3000, clockMs: 30_000 }),
+      ev({ id: 'c1', type: 'CORRECTION', actor: 'leitung', at: 3500, payload: { scores: { teamA: 5, teamB: 0 }, reason: 'Tore vergessen', basedOn: 'g1' } }),
+      ev({ id: 're', type: 'REOPEN', actor: 'leitung', at: 3600, clockMs: 30_000 }),
+      goal('g2', 'teamB', 4000, 40_000),
+    ];
+    const state = reduceMatch(log, ctx).state;
+    const events = toRuntimeEvents(state, log, ctx);
+    const view = toLiveMatchView(state, meta, { serverNow: T, offsetMs: 0 }, log);
+
+    expect(view.homeScore).toBe(5);
+    expect(view.awayScore).toBe(1);
+    expect(events.map((e) => e.id)).toEqual(['g1', 'g2']);
+    expect(events[events.length - 1]?.scoreAfter).toEqual({ home: 5, away: 1 });
+    expect(events[0]?.scoreAfter).toEqual({ home: 5, away: 0 });
+  });
+
   it('toRuntimeEvents mit leerem Log liefert leere Ereignisliste', () => {
     const state = reduceMatch([start()], ctx).state;
     expect(toRuntimeEvents(state, [], ctx)).toEqual([]);

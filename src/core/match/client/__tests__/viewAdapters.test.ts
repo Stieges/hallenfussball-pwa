@@ -79,6 +79,19 @@ describe('toLiveMatchView: Uhr mit Serverzeit und Offset (I1)', () => {
     expect(view.version).toBe(3);
   });
 
+  it('kompensiert den Sekundenrest in timerStartTime (kein doppeltes Abrunden, N6)', () => {
+    // elapsedMs = 61_500: floor(elapsedMs/1000) = 61, die 500 ms gehen bei
+    // timerStartTime verloren, wenn nicht kompensiert wird.
+    const state = runningState({ running: true, elapsedMs: 61_500, anchorAt: T });
+    const view = toLiveMatchView(state, meta, { serverNow: T + 800, offsetMs: 0 });
+
+    expect(view.elapsedSeconds).toBe(62);
+    expect(view.timerElapsedSeconds).toBe(61);
+    const deviceNow = T + 800;
+    const hookTotal = (view.timerElapsedSeconds ?? 0) + Math.floor((deviceNow - Date.parse(view.timerStartTime ?? '')) / 1000);
+    expect(hookTotal).toBe(view.elapsedSeconds);
+  });
+
   it('dauert ohne Regeln 0 Sekunden', () => {
     const state: MatchState = { ...initialState(ctx), status: 'scheduled' };
     const view = toLiveMatchView(state, meta, { serverNow: T, offsetMs: 0 });

@@ -6,6 +6,7 @@
 import {
   activePenalties,
   cacheColumns,
+  effectiveScoreFor,
   elapsedAt,
   otherTeamId,
   penaltyRemainingMs,
@@ -64,8 +65,10 @@ export function toLiveMatchView(
     elapsedSeconds: Math.floor(elapsedAt(state.clock, clock.serverNow) / 1000),
     durationSeconds: rules ? rules.sections * rules.sectionSeconds : 0,
     // timerStartTime in Geraetezeit: useMatchTimerExtended rechnet mit Date.now() (I1).
+    // N6: der Millisekunden-Rest von elapsedMs wird mit abgezogen, damit
+    // timerElapsedSeconds + Geraetelaufzeit nicht doppelt abrundet.
     timerStartTime: state.clock.anchorAt !== null
-      ? new Date(state.clock.anchorAt - clock.offsetMs).toISOString()
+      ? new Date(state.clock.anchorAt - clock.offsetMs - (state.clock.elapsedMs % 1000)).toISOString()
       : undefined,
     timerPausedAt: state.clock.running
       ? undefined
@@ -181,46 +184,67 @@ function buildPayload(state: MatchState, event: EngineEvent, ctx: MatchContext):
   return payload;
 }
 
+interface ShownEntry {
+  id: string;
+  source: EngineEvent;
+  type: RuntimeMatchEvent['type'];
+}
+
 /**
  * Nur angenommene, nicht zurueckgenommene Ereignisse der UI-Typen, in
- * Log-Reihenfolge; `scoreAfter` laeuft aus den Toren mit (home = ctx.teamAId).
+ * Log-Reihenfolge. Der Inhalt kommt aus `state.accepted` (nicht aus dem Log),
+ * doppelte IDs erscheinen nur einmal (N7). `scoreAfter` laeuft vom wirksamen
+ * Kopfstand (inkl. Korrekturen) rueckwaerts aus den Toren (N8) -- home ist
+ * `ctx.teamAId`.
  */
 export function toRuntimeEvents(
   state: MatchState,
   log: readonly EngineEvent[],
   ctx: MatchContext,
 ): LiveRuntimeEvent[] {
-  const events: LiveRuntimeEvent[] = [];
-  let homeGoals = 0;
-  let awayGoals = 0;
-
+  const entries: ShownEntry[] = [];
+  const seen = new Set<string>();
   for (const event of log) {
-    const type = mapEventType(event.type);
+    if (seen.has(event.id)) {
+      continue;
+    }
+    const source = Object.hasOwn(state.accepted, event.id) ? state.accepted[event.id] : undefined;
+    if (!source || state.retracted.includes(event.id)) {
+      continue;
+    }
+    const type = mapEventType(source.type);
     if (type === null) {
       continue;
     }
-    if (!Object.hasOwn(state.accepted, event.id) || state.retracted.includes(event.id)) {
-      continue;
-    }
-    if (event.type === 'GOAL' || event.type === 'OWN_GOAL') {
-      const scoringTeamId = event.type === 'OWN_GOAL' ? otherTeamId(ctx, event.teamId ?? '') : event.teamId;
+    seen.add(event.id);
+    entries.push({ id: event.id, source, type });
+  }
+
+  let home = effectiveScoreFor(state, ctx.teamAId);
+  let away = effectiveScoreFor(state, ctx.teamBId);
+  const events: LiveRuntimeEvent[] = new Array<LiveRuntimeEvent>(entries.length);
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    const details = state.details[entry.id];
+    const incomplete = details ? details.incomplete : entry.source.payload.incomplete;
+    events[i] = {
+      id: entry.id,
+      matchId: ctx.matchId,
+      timestampSeconds: Math.floor((entry.source.clockMs ?? 0) / 1000),
+      type: entry.type,
+      payload: buildPayload(state, entry.source, ctx),
+      scoreAfter: { home, away },
+      ...(isBoolean(incomplete) ? { incomplete } : {}),
+    };
+    if (entry.source.type === 'GOAL' || entry.source.type === 'OWN_GOAL') {
+      const scoringTeamId =
+        entry.source.type === 'OWN_GOAL' ? otherTeamId(ctx, entry.source.teamId ?? '') : entry.source.teamId;
       if (scoringTeamId === ctx.teamAId) {
-        homeGoals += 1;
+        home = Math.max(0, home - 1);
       } else if (scoringTeamId === ctx.teamBId) {
-        awayGoals += 1;
+        away = Math.max(0, away - 1);
       }
     }
-    const details = state.details[event.id];
-    const incomplete = details ? details.incomplete : event.payload.incomplete;
-    events.push({
-      id: event.id,
-      matchId: ctx.matchId,
-      timestampSeconds: Math.floor((event.clockMs ?? 0) / 1000),
-      type,
-      payload: buildPayload(state, event, ctx),
-      scoreAfter: { home: homeGoals, away: awayGoals },
-      ...(isBoolean(incomplete) ? { incomplete } : {}),
-    });
   }
   return events;
 }
