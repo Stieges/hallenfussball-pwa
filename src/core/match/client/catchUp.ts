@@ -31,7 +31,7 @@ export function rowToEngineEvent(row: ConfirmedRow): EngineEventWithSeq {
   );
   return {
     id,
-    type: row.type as EngineEvent['type'],
+    type: row.type as EngineEventWithSeq['type'],
     actor: 'leitung',
     at,
     section: row.section ?? null,
@@ -81,7 +81,10 @@ export async function fetchConfirmedSince(
       .gt('seq', currentWatermark)
       .order('seq')
       .limit(pageSize);
-    const rows = (result.data ?? []);
+    if (result.error) {
+      throw result.error;
+    }
+    const rows: ConfirmedRow[] = result.data ?? [];
     if (rows.length < pageSize) {
       hasMore = false;
     }

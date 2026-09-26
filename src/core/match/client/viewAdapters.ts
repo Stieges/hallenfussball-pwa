@@ -80,7 +80,7 @@ export function toRuntimeEvents(state: MatchState, log: EngineEventWithSeq[]): R
   );
   const result: RuntimeMatchEvent[] = filtered.map((e: EngineEventWithSeq) => {
     const eventId: string = e.id;
-    const eventTypeStr: string = e.type;
+    const eventTypeStr: RuntimeMatchEvent['type'] = e.type as RuntimeMatchEvent['type'];
     const eventAt: number = e.at;
     const eventPayload: Record<string, unknown> = e.payload;
     const eventTeamId: string | null | undefined = e.teamId;
@@ -88,7 +88,7 @@ export function toRuntimeEvents(state: MatchState, log: EngineEventWithSeq[]): R
       id: eventId,
       matchId: '',
       timestampSeconds: Math.floor(eventAt / 1000),
-      type: eventTypeStr as RuntimeMatchEvent['type'],
+      type: eventTypeStr,
       payload: { ...eventPayload, teamId: eventTeamId ?? undefined },
       scoreAfter: { home: 0, away: 0 },
     };
