@@ -7,7 +7,7 @@ import {
   type MatchState,
   ERROR_CODES,
 } from '../../';
-import { computeView } from '../view';
+import { computeView, clearViewCache, viewCacheSize, VIEW_CACHE_LIMIT } from '../view';
 
 const hoisted = vi.hoisted(() => {
   const reduceMatchLengths: number[] = [];
@@ -48,8 +48,14 @@ function ev(partial: Partial<EngineEvent> & Pick<EngineEvent, 'id' | 'type' | 'a
   return { actor: 'helper', section: 1, clockMs: null, payload: {}, ...partial };
 }
 
-function copyOf(matchId: string, confirmed: EngineEvent[], acked: EngineEvent[] = [], pending: EngineEvent[] = []) {
-  return { matchId, confirmed, acked, pending };
+function copyOf(
+  matchId: string,
+  confirmed: EngineEvent[],
+  acked: EngineEvent[] = [],
+  pending: EngineEvent[] = [],
+  accountId = 'acc-view',
+) {
+  return { accountId, matchId, confirmed, acked, pending };
 }
 
 const start = () => ev({ id: 's', type: 'MATCH_START', at: 1000, payload: { rules: RULES } });
@@ -59,6 +65,7 @@ describe('computeView', () => {
   beforeEach(() => {
     hoisted.reduceMatchLengths.length = 0;
     hoisted.continueLogIds.length = 0;
+    clearViewCache();
   });
 
   it('rechnet fremde Ereignisse dazwischen ein (anderes Gerät hat Tore eingetragen)', () => {
@@ -207,5 +214,39 @@ describe('computeView', () => {
     const expected = reduceMatch(confirmed, ctx).state;
     const result = computeView(copyOf('view-6', confirmed, [], []), ctx);
     expect(result.state).toEqual(expected);
+  });
+
+  it('rechnet bei ctx-Wechsel neu (Platzhalter-Teams → echte Teams, N1)', () => {
+    const ctxPlaceholder: MatchContext = { matchId: 'match-view', teamAId: 'placeholder-a', teamBId: 'placeholder-b' };
+    // Erster Aufruf legt den Cache mit dem Platzhalter-ctx an (leerer bestätigter Log).
+    const before = computeView(copyOf('view-ctx', [], [], []), ctxPlaceholder);
+    expect(before.state.scores['placeholder-a']?.regular).toBe(0);
+
+    // Zweiter Aufruf mit echten Teams: der gecachte Zustand kennt teamA/teamB nicht.
+    const result = computeView(copyOf('view-ctx', [], [], [start(), goal('cg1', 'teamA', 2000)]), ctx);
+    expect(result.state.scores['teamA']?.regular).toBe(1);
+    expect(result.state.scores['teamB']?.regular).toBe(0);
+  });
+
+  it('trennt den Cache nach Konto (gleiche matchId, Gast- und Kontokopie, N1)', () => {
+    computeView(copyOf('view-konto', [start()], [], [], 'guest'), ctx);
+    computeView(copyOf('view-konto', [start(), goal('kg1', 'teamA', 2000)], [], [], 'acc-1'), ctx);
+
+    // Zwei kalte Berechnungen: ohne Konten-Schlüssel würde der zweite Aufruf
+    // den Cache des ersten treffen (genau eine reduceMatch-Ausführung).
+    expect(hoisted.reduceMatchLengths).toEqual([1, 2]);
+    expect(hoisted.continueLogIds).toEqual([]);
+  });
+
+  it('begrenzt den Cache (ältester Eintrag wird verworfen, N1)', () => {
+    for (let i = 0; i < 40; i++) {
+      computeView(copyOf(`view-lru-${i}`, [start(), goal(`lru-${i}`, 'teamA', 2000)], [], [], 'acc-lru'), ctx);
+    }
+    expect(viewCacheSize()).toBe(VIEW_CACHE_LIMIT);
+    expect(hoisted.reduceMatchLengths).toHaveLength(40);
+
+    // Der älteste Eintrag ist raus: erneutes Ansehen muss neu rechnen.
+    computeView(copyOf('view-lru-0', [start(), goal('lru-0', 'teamA', 2000)], [], [], 'acc-lru'), ctx);
+    expect(hoisted.reduceMatchLengths).toHaveLength(41);
   });
 });

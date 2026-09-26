@@ -13,6 +13,9 @@ export {
 } from './viewAdapters';
 export {
   computeView,
+  clearViewCache,
+  viewCacheSize,
+  VIEW_CACHE_LIMIT,
   type LocalRejectedEntry,
   type ViewCopy,
   type ViewResult,

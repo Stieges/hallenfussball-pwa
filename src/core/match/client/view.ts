@@ -4,6 +4,10 @@
  * werden wie am Server als Stapel mit Folgeablehnung angewendet. Lokal
  * abgelehnte pending-Einträge werden mit Fehlercode gemeldet (V3: nichts
  * still verwerfen).
+ *
+ * Der Cache gilt je Konto und Spiel und prueft das Team-`ctx`; bei Abweichung
+ * (z. B. Platzhalter-Teams in der K.-o.-Runde) wird neu gerechnet (N1). Die
+ * Map ist auf `VIEW_CACHE_LIMIT` Eintraege begrenzt (aeltester zuerst raus).
  */
 import {
   reduceMatch,
@@ -16,6 +20,7 @@ import {
 } from '../';
 
 export interface ViewCopy {
+  accountId: string;
   matchId: string;
   confirmed: readonly EngineEvent[];
   acked: readonly EngineEvent[];
@@ -35,24 +40,62 @@ export interface ViewResult {
 }
 
 interface CachedBase {
+  teamAId: string;
+  teamBId: string;
   confirmedLength: number;
   lastConfirmedId: string | null;
   state: MatchState;
 }
 
+export const VIEW_CACHE_LIMIT = 32;
+
 const baseCache = new Map<string, CachedBase>();
+
+/** Fuer Tests: Cache verwerfen. */
+export function clearViewCache(): void {
+  baseCache.clear();
+}
+
+/** Fuer Tests: aktuelle Anzahl gecachter Basen. */
+export function viewCacheSize(): number {
+  return baseCache.size;
+}
+
+/** Cache-Treffer nur bei gleichem Team-`ctx`, passendem Praefix und nicht geschrumpftem Log (N1). */
+function isReusable(cached: CachedBase, confirmed: readonly EngineEvent[], ctx: MatchContext): boolean {
+  return (
+    cached.teamAId === ctx.teamAId &&
+    cached.teamBId === ctx.teamBId &&
+    cached.confirmedLength <= confirmed.length &&
+    (cached.confirmedLength === 0 || confirmed[cached.confirmedLength - 1].id === cached.lastConfirmedId)
+  );
+}
 
 /** Basis-Zustand zum bestaetigten Log; nur der neue Praefix wird weitergerechnet (I7). */
 function confirmedBase(copy: ViewCopy, ctx: MatchContext): MatchState {
   const confirmed = copy.confirmed;
   const lastConfirmedId = confirmed.length > 0 ? confirmed[confirmed.length - 1].id : null;
-  const cached = baseCache.get(copy.matchId);
-  const usable =
-    cached !== undefined &&
-    cached.confirmedLength <= confirmed.length &&
-    (cached.confirmedLength === 0 || confirmed[cached.confirmedLength - 1].id === cached.lastConfirmedId);
+  const key = `${copy.accountId}|${copy.matchId}`;
+  const cached = baseCache.get(key);
+  const usable = cached !== undefined && isReusable(cached, confirmed, ctx);
   const remember = (state: MatchState): MatchState => {
-    baseCache.set(copy.matchId, { confirmedLength: confirmed.length, lastConfirmedId, state });
+    if (baseCache.has(key)) {
+      baseCache.delete(key);
+    }
+    baseCache.set(key, {
+      teamAId: ctx.teamAId,
+      teamBId: ctx.teamBId,
+      confirmedLength: confirmed.length,
+      lastConfirmedId,
+      state,
+    });
+    while (baseCache.size > VIEW_CACHE_LIMIT) {
+      const oldest = baseCache.keys().next();
+      if (oldest.done) {
+        break;
+      }
+      baseCache.delete(oldest.value);
+    }
     return state;
   };
   if (cached && usable) {
