@@ -35,6 +35,15 @@ describe('ClockSync', () => {
     expect(sync.isKnown).toBe(true);
   });
 
+  it('Roundtrip: eine neue Instanz uebernimmt den gemessenen Offset aus dem Speicher', async () => {
+    const storage = makeStorage();
+    const first = new ClockSync(async () => 10000, scriptedNow([0, 20, 50, 60, 100, 130, 1000]), storage);
+    await first.sync();
+    const second = new ClockSync(async () => 0, () => 2000, storage);
+    expect(second.offsetMs).toBe(9945);
+    expect(second.serverNow()).toBe(11945);
+  });
+
   it('ignoriert defekten Speicherinhalt', () => {
     const storage = makeStorage({ 'clockSync:v1': '{ kaputt' });
     const sync = new ClockSync(async () => 0, () => 1000000, storage);
@@ -140,5 +149,33 @@ describe('ClockSync', () => {
     expect(first).toBe(true);
     expect(second).toBe(true);
     expect(fetchServerTime).toHaveBeenCalledTimes(3);
+  });
+
+  it('liefert ohne bekannten Offset die Geraetezeit als serverNow', () => {
+    const sync = new ClockSync(async () => 0, () => 123456, makeStorage());
+    expect(sync.serverNow()).toBe(123456);
+    expect(sync.isKnown).toBe(false);
+  });
+
+  it('start() ist idempotent und stop() ohne start() ist harmlos', async () => {
+    vi.useFakeTimers();
+    const fetchServerTime = vi.fn(async () => 5000);
+    const sync = new ClockSync(fetchServerTime, () => 1000, makeStorage());
+    sync.start(60000);
+    sync.start(60000);
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetchServerTime).toHaveBeenCalledTimes(3);
+    sync.stop();
+    sync.stop();
+    await vi.advanceTimersByTimeAsync(120000);
+    expect(fetchServerTime).toHaveBeenCalledTimes(3);
+  });
+
+  it('rundet den Offset auf ganze Millisekunden', async () => {
+    // Drei Messungen mit RTT 3 (0->3, 10->13, 20->23), Server 10000;
+    // erste Messung: offset 10000 - 1.5 = 9998.5 -> gerundet 9999.
+    const sync = new ClockSync(async () => 10000, scriptedNow([0, 3, 10, 13, 20, 23, 100]), makeStorage());
+    await sync.sync();
+    expect(sync.offsetMs).toBe(9999);
   });
 });

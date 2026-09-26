@@ -158,6 +158,50 @@ describe('computeView', () => {
     expect(incrementalDuration).toBeLessThan(200);
   });
 
+  it('meldet gleichzeitig acked- (needsFullReload) und pending-Ablehnungen (localRejected)', () => {
+    const confirmed = [start(), ev({ id: 'end', type: 'MATCH_END', at: 5000 })];
+    const result = computeView(
+      copyOf('view-7', confirmed, [goal('a-late', 'teamA', 6000)], [goal('p-late', 'teamB', 6100)]),
+      ctx,
+    );
+
+    expect(result.needsFullReload).toBe(true);
+    expect(result.localRejected.map((entry) => entry.event.id)).toEqual(['p-late']);
+  });
+
+  it('wendet offene Einträge in der Reihenfolge acked -> pending an', () => {
+    const result = computeView(
+      copyOf(
+        'view-8',
+        [start()],
+        [goal('order-a', 'teamA', 2000)],
+        [goal('order-p', 'teamB', 2100)],
+      ),
+      ctx,
+    );
+    expect(result.state.scores['teamA']?.regular).toBe(1);
+    expect(result.state.scores['teamB']?.regular).toBe(1);
+    const batchIds = Object.keys(result.state.accepted);
+    expect(batchIds.indexOf('order-a')).toBeLessThan(batchIds.indexOf('order-p'));
+  });
+
+  it('rechnet neu, wenn der bestaetigte Log nicht mehr zum Cache passt', () => {
+    computeView(copyOf('view-9', [start(), goal('old-1', 'teamA', 2000)], [], []), ctx);
+    const replaced = computeView(copyOf('view-9', [start(), goal('new-1', 'teamB', 2000)], [], []), ctx);
+    expect(replaced.state.scores['teamA']?.regular).toBe(0);
+    expect(replaced.state.scores['teamB']?.regular).toBe(1);
+    expect(hoisted.reduceMatchLengths).toEqual([2, 2]);
+  });
+
+  it('zaehlt ein MATCH_START-Duplikat mit abweichenden payload.rules nicht doppelt (V3)', () => {
+    const ownStart = ev({ id: 's', type: 'MATCH_START', at: 1100, payload: { rules: { ...RULES, sections: 4 } } });
+    const result = computeView(copyOf('view-10', [start()], [], [ownStart]), ctx);
+
+    expect(result.localRejected).toEqual([]);
+    expect(result.needsFullReload).toBe(false);
+    expect(result.state.rules?.sections).toBe(2);
+  });
+
   it('verwendet reduceMatch als Basis (fremder bestätigter Log ist die Wahrheit)', () => {
     const confirmed = [start(), goal('f1', 'teamB', 2000)];
     const expected = reduceMatch(confirmed, ctx).state;

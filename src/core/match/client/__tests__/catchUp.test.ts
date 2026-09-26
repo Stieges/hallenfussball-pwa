@@ -105,6 +105,16 @@ describe('catchUp', () => {
         rowToEngineEvent(row({ id: 'z1', type: 'GOAL', client_time: null, recorded_at: null, seq: 1 })),
       ).toThrow();
     });
+
+    it('wirft bei einem Ereignistyp ausserhalb der Engine-Enumeration', () => {
+      expect(() => rowToEngineEvent(row({ id: 'z2', type: 'NOT_A_TYPE', seq: 1 }))).toThrow();
+    });
+
+    it('laesst teamId und targetId bei null unveraendert', () => {
+      const event = rowToEngineEvent(row({ id: 'z3', type: 'GOAL', team_id: null, target_event_id: null, seq: 1 }));
+      expect(event.teamId).toBeNull();
+      expect(event.targetId).toBeNull();
+    });
   });
 
   describe('fetchConfirmedSince', () => {
@@ -117,6 +127,38 @@ describe('catchUp', () => {
       const result = await fetchConfirmedSince(mockQuery(pages), 'm1', 0, 1);
       expect(result.events.map((e) => e.id)).toEqual(['e1', 'e2', 'e3']);
       expect(result.newWatermark).toBe(3);
+    });
+
+    it('bricht ab, sobald weniger als pageSize Zeilen kommen (2 Seiten)', async () => {
+      const pages = [
+        { data: [row({ id: 'p1', type: 'GOAL', seq: 7 }), row({ id: 'p2', type: 'GOAL', seq: 8 })], error: null },
+        { data: [row({ id: 'p3', type: 'GOAL', seq: 9 })], error: null },
+      ];
+      let calls = 0;
+      const query = {
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              not: () => ({
+                is: () => ({
+                  gt: () => ({
+                    order: () => ({
+                      limit: async () => {
+                        calls += 1;
+                        return calls <= pages.length ? pages[calls - 1] : { data: [], error: null };
+                      },
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }),
+        }),
+      };
+      const result = await fetchConfirmedSince(query, 'm1', 6, 2);
+      expect(result.events.map((e) => e.seq)).toEqual([7, 8, 9]);
+      expect(result.newWatermark).toBe(9);
+      expect(calls).toBe(2);
     });
 
     it('liefert leeres Ergebnis bei keinen Daten', async () => {
