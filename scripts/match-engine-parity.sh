@@ -42,7 +42,9 @@
 #                                                     nicht (auch nicht per AMEND) -> Angaben rot; (5) cache_columns schreibt
 #                                                     breakStartedAt immer null -> Zwischenspeicher rot;
 #                                                     (6) cfg_num mit \s (Unicode-Leerraum, vor PC5)
-#                                                     -> Regeln rot. Phase B (B3a):
+#                                                     -> Regeln rot. Phase A2 (C0b-Fixrunde 1, M7):
+#                                                     (7) AMEND-Schritte 5/6 vertauscht -> genau
+#                                                     Fixture 55d rot (Pruefreihenfolge). Phase B (B3a):
 #                                                     (1) Tabellenzeile (running, GOAL) verlangt
 #                                                     'leitung' statt 'helper' -> Fixtures + Seed rot;
 #                                                     (2) compute_match_state ohne den review_state-
@@ -51,7 +53,7 @@
 #                                                     PUBLIC -> Rechte-Assertion rot. Die Phasen sind
 #                                                     getrennt, damit (1) die Kategorien Angaben/
 #                                                     Zwischenspeicher nicht verdeckt rot faerbt.
-#                                                     Exit 0 NUR, wenn JEDE der sieben Kategorien
+#                                                     Exit 0 NUR, wenn JEDE der acht Kategorien
 #                                                     einzeln rot ist; sonst Exit 1 (zahnlos).
 #
 # Aendert NICHTS an der Produktionsdatenbank -- Wegwerf-Container, wird am Ende entfernt (trap).
@@ -171,29 +173,40 @@ psql_stdin < "$APPEND_FILE"
 psql_stdin < "$AMEND_FILE"
 
 # C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
-# Muster genau einen Treffer). Die Mutationen sind voneinander unabhaengig: (4) wirkt nur auf
-# state.details, (5) nur auf cache_columns, (6) nur auf server_rules -- keine aendert Ergebnisse
-# oder serverState.
+# Muster genau einen Treffer). (4) wirkt auf state.details (und damit auch auf die Nachtrag-Regel,
+# z. B. Fixture 47b -- Ergebnisse werden in Phase A deshalb NICHT gezaehlt), (5) nur auf
+# cache_columns, (6) nur auf server_rules; die Kategorien Angaben/Zwischenspeicher/Regeln faerbt
+# jeweils nur ihre eigene Mutation rot.
 MUT_DETAILS="   WHERE p_payload ? f.name;"
 MUT_DETAILS_TO="   WHERE p_payload ? f.name AND f.name <> 'playerNumber';"
 MUT_CACHE="      'breakStartedAt', coalesce(p_state -> 'breakStartedAt', 'null'::jsonb))"
 MUT_CACHE_TO="      'breakStartedAt', 'null'::jsonb)"
 MUT_RULES="    WHEN 'string' THEN CASE WHEN (p_value #>> '{}') ~ '^[ \\t\\n\\r\\f\\v]*-?[0-9]+(\\.[0-9]+)?[ \\t\\n\\r\\f\\v]*\$'"
 MUT_RULES_TO="    WHEN 'string' THEN CASE WHEN (p_value #>> '{}') ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*\$'"
+# (7) C0b-Fixrunde 1 (Review M7): AMEND-Pruefschritte 5/6 vertauscht (ALREADY_RETRACTED vor der
+# Zieltyp-/Feldpruefung). Erwartet rot: GENAU die Grenz-Fixture 55d (zurueckgenommenes Ziel +
+# unzulaessiges Feld -> INVALID_PAYLOAD statt ALREADY_RETRACTED). Eigene Phase A2 auf einer sonst
+# unveraenderten Migration -- jede weitere rote Fixture dort ist ein Abbruch (Liste stimmt nicht).
+MUT_ORDER="  v_allowed := match_engine.detail_fields(v_target ->> 'type');"
+MUT_ORDER_TO="  IF (p_state -> 'retracted') ? v_target_id THEN RETURN match_engine.reject('ALREADY_RETRACTED'); END IF;
+  v_allowed := match_engine.detail_fields(v_target ->> 'type');"
+ORDER_EXPECTED_RED="55d-pruefreihenfolge-zieltyp-vor-zurueckgenommen.json"
+# apply_amend_mutations <Schluessel...>: 20261001 mit genau diesen Mutationen einspielen.
 apply_amend_mutations() {
-  local pattern hits
-  for pattern in "$MUT_DETAILS" "$MUT_CACHE" "$MUT_RULES"; do
+  local key pattern hits
+  for key in "$@"; do
+    pattern="${!key}"
     hits="$(grep -cF -- "$pattern" "$AMEND_FILE" || true)"
     if [[ "$hits" -ne 1 ]]; then
       echo "::error::Gegenprobe: Mutationszeile nicht genau einmal in $AMEND_MIGRATION ($hits): $pattern" >&2
       exit 1
     fi
   done
-  MUT_DETAILS="$MUT_DETAILS" MUT_DETAILS_TO="$MUT_DETAILS_TO" MUT_CACHE="$MUT_CACHE" MUT_CACHE_TO="$MUT_CACHE_TO" \
-  MUT_RULES="$MUT_RULES" MUT_RULES_TO="$MUT_RULES_TO" python3 -c '
+  MUT_KEYS="$*" MUT_DETAILS="$MUT_DETAILS" MUT_DETAILS_TO="$MUT_DETAILS_TO" MUT_CACHE="$MUT_CACHE" MUT_CACHE_TO="$MUT_CACHE_TO" \
+  MUT_RULES="$MUT_RULES" MUT_RULES_TO="$MUT_RULES_TO" MUT_ORDER="$MUT_ORDER" MUT_ORDER_TO="$MUT_ORDER_TO" python3 -c '
 import os, sys
 s = sys.stdin.read()
-for k in ("MUT_DETAILS", "MUT_CACHE", "MUT_RULES"):
+for k in os.environ["MUT_KEYS"].split():
     s = s.replace(os.environ[k], os.environ[k + "_TO"])
 sys.stdout.write(s)' < "$AMEND_FILE" | psql_stdin
 }
@@ -201,7 +214,7 @@ sys.stdout.write(s)' < "$AMEND_FILE" | psql_stdin
 if [[ "$MODE" == "gegenprobe" ]]; then
   echo "GEGENPROBE Phase A: (4) details ohne playerNumber; (5) live_state.breakStartedAt immer null;" \
        "(6) cfg_num mit \\s" >&2
-  apply_amend_mutations
+  apply_amend_mutations MUT_DETAILS MUT_CACHE MUT_RULES
 fi
 
 # --- 2a. Zaehler, Seed-Gleichheit match_transitions == matchTransitions.json (Review M9) --------
@@ -212,6 +225,8 @@ PRIV_DEV=0
 DETAILS_DEV=0
 CACHE_DEV=0
 RULES_DEV=0
+ORDER_DEV=0
+ORDER_UNEXPECTED=0
 check_seed() {
   local seed_db seed_json
   seed_db="$(psql_value <<'SQL'
@@ -288,7 +303,7 @@ psql_stdin < "$WORKDIR/load.sql"
 TABLE_ROWS=()
 OK_COUNT=0
 compare_pass() {
-  local count_fix="$1" count_extra="$2"
+  local count_fix="$1" count_extra="$2" count_order="${3:-0}"
   local pair file expect verdict sql_ts sql_expect details_ok cache_ok err sql_count
   psql_value > "$WORKDIR/sql.json" <<'SQL'
 WITH tr AS (
@@ -358,6 +373,16 @@ SQL
         fi
       fi
     fi
+    if [[ "$count_order" -eq 1 && ( "$sql_ts" != "true" || "$sql_expect" != "true" ) ]]; then
+      # Gegenprobe Phase A2: rote Ergebnis-Fixtures stammen nur von Mutation (7).
+      if [[ "$file" == "$ORDER_EXPECTED_RED" ]]; then
+        ORDER_DEV=$((ORDER_DEV + 1))
+        echo "ABWEICHUNG  Pruefreihenfolge $file (SQL==TS: $sql_ts, SQL==expect: $sql_expect) -- erwartet (Mutation 7)"
+      else
+        ORDER_UNEXPECTED=$((ORDER_UNEXPECTED + 1))
+        echo "ABWEICHUNG  Pruefreihenfolge $file -- NICHT erwartet (Liste der roten Fixtures stimmt nicht)"
+      fi
+    fi
     if [[ "$count_extra" -eq 1 ]]; then
       if [[ "$details_ok" == "true" ]]; then
         echo "OK          Angaben $file"
@@ -419,6 +444,10 @@ SQL
 if [[ "$MODE" == "gegenprobe" ]]; then
   echo "--- Gegenprobe Phase A (Angaben, Zwischenspeicher, Regeln) ---"
   compare_pass 0 1
+  echo "GEGENPROBE Phase A2: (7) AMEND-Schritte 5/6 vertauscht (sonst unveraenderte Migration)" >&2
+  apply_amend_mutations MUT_ORDER
+  echo "--- Gegenprobe Phase A2 (Pruefreihenfolge, erwartet rot genau: $ORDER_EXPECTED_RED) ---"
+  compare_pass 0 0 1
   echo "GEGENPROBE Phase B: (1) match_transitions (running, GOAL) actor helper -> leitung;" \
        "(2) compute_match_state ohne review_state-Filter; (3) match_engine.num EXECUTE fuer PUBLIC" >&2
   # (2) zuerst: die Migration ohne den Filter erneut einspielen (setzt dabei auch die Rechte neu,
@@ -605,9 +634,9 @@ echo ""
 echo "Gleichlauf-Tabelle (Fixture | SQL==TS | SQL==expect):"
 printf '%s\n' "${TABLE_ROWS[@]}"
 echo ""
-DEVIATIONS=$((FIX_DEV + SEED_DEV + PROBE_DEV + PRIV_DEV + DETAILS_DEV + CACHE_DEV + RULES_DEV))
+DEVIATIONS=$((FIX_DEV + SEED_DEV + PROBE_DEV + PRIV_DEV + DETAILS_DEV + CACHE_DEV + RULES_DEV + ORDER_DEV + ORDER_UNEXPECTED))
 echo "Fixtures: $FIXTURE_COUNT, OK: $OK_COUNT, Regel-Fixtures: $RULES_COUNT, Abweichungen gesamt (inkl. compute_match_state-Probe): $DEVIATIONS"
-echo "Abweichungen je Kategorie: Fixtures=$FIX_DEV Seed=$SEED_DEV compute_match_state-Probe=$PROBE_DEV Rechte=$PRIV_DEV Angaben=$DETAILS_DEV Zwischenspeicher=$CACHE_DEV Regeln=$RULES_DEV"
+echo "Abweichungen je Kategorie: Fixtures=$FIX_DEV Seed=$SEED_DEV compute_match_state-Probe=$PROBE_DEV Rechte=$PRIV_DEV Angaben=$DETAILS_DEV Zwischenspeicher=$CACHE_DEV Regeln=$RULES_DEV Pruefreihenfolge=$ORDER_DEV (unerwartet: $ORDER_UNEXPECTED)"
 
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Review M4: jede Kategorie muss EINZELN rot sein -- eine rote Kategorie darf eine zahnlos
@@ -620,8 +649,13 @@ if [[ "$MODE" == "gegenprobe" ]]; then
   [[ "$DETAILS_DEV" -gt 0 ]] || TOOTHLESS+=("Angaben")
   [[ "$CACHE_DEV" -gt 0 ]] || TOOTHLESS+=("Zwischenspeicher")
   [[ "$RULES_DEV" -gt 0 ]] || TOOTHLESS+=("Regeln")
+  [[ "$ORDER_DEV" -gt 0 ]] || TOOTHLESS+=("Pruefreihenfolge")
+  if [[ "$ORDER_UNEXPECTED" -gt 0 ]]; then
+    echo "::error::Gegenprobe Phase A2: $ORDER_UNEXPECTED unerwartet rote Ergebnis-Fixture(s) -- Mutationen nicht unabhaengig." >&2
+    exit 1
+  fi
   if [[ "${#TOOTHLESS[@]}" -eq 0 ]]; then
-    echo "Gegenprobe wie erwartet ROT in allen sieben Kategorien ($DEVIATIONS Abweichung(en))."
+    echo "Gegenprobe wie erwartet ROT in allen acht Kategorien ($DEVIATIONS Abweichung(en))."
     exit 0
   fi
   echo "::error::Gegenprobe: Mutation blieb UNBEMERKT in: ${TOOTHLESS[*]} -- dieser Teil des Checks ist zahnlos." >&2

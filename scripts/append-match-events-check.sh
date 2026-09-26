@@ -179,14 +179,15 @@ if [[ "$MODE" != "without-migration" ]]; then
 fi
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Genau die Akteursermittlung verfaelschen: wer writeMatchData hat, gilt als Turnierleitung.
-  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$TARGET_FILE" || true)"
+  # C0b-Fixrunde 1: 20261001 definiert append_match_events neu (skipped_at/-reason) -- die
+  # juengste Fassung steht dort, deshalb wird DIESE Datei mutiert (und nach 003 eingespielt).
+  HITS="$(grep -c "has_tournament_permission(v_tournament_id, 'leadMatches')" "$AMEND_FILE" || true)"
   if [[ "$HITS" -ne 1 ]]; then
     echo "::error::Gegenprobe: Akteurszeile nicht genau einmal gefunden ($HITS)." >&2
     exit 1
   fi
   echo "GEGENPROBE: Akteursermittlung leadMatches -> writeMatchData" >&2
-  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$TARGET_FILE" | psql_stdin
-  psql_stdin < "$AMEND_FILE"
+  sed "s/has_tournament_permission(v_tournament_id, 'leadMatches')/has_tournament_permission(v_tournament_id, 'writeMatchData')/" "$AMEND_FILE" | psql_stdin
 fi
 if [[ "$MODE" == "without-column-guard" ]]; then
   echo "GEGENPROBE C: DROP TRIGGER matches_guard_engine_columns" >&2
@@ -287,6 +288,7 @@ CREATE FUNCTION public.__b3b_cache(p_match uuid) RETURNS jsonb LANGUAGE sql AS $
     'timer_paused_at', m.timer_paused_at, 'actual_start', m.actual_start,
     'actual_end_ms', floor(extract(epoch FROM m.actual_end) * 1000)::bigint,
     'live_state', m.live_state, 'version', m.version, 'last_modified_by', m.last_modified_by,
+    'skipped_at_ms', floor(extract(epoch FROM m.skipped_at) * 1000)::bigint, 'skipped_reason', m.skipped_reason,
     'team_a', m.team_a_id, 'team_b', m.team_b_id)
   FROM public.matches m WHERE m.id = p_match;
 $fn$;
@@ -592,7 +594,7 @@ TB="$(uuid_for team:b)"
 {
   tournament_sql "$T_P" '{}' 'null' 10
   echo "INSERT INTO public.teams (id, tournament_id, name) VALUES ('$TA', '$T_P', 'A'), ('$TB', '$T_P', 'B');"
-  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1; do
+  for name in r1 r2 r3 r4 i1 i2 c1 c2 k1 k2 s10 s11 g1 perf o1 e1 m4 m1 a1 sk1 sk2; do
     echo "INSERT INTO public.matches (id, tournament_id, round, field, team_a_id, team_b_id, score_a, score_b) VALUES ('$(uuid_for "match:$name")', '$T_P', 1, 1, '$TA', '$TB', NULL, NULL);"
   done
 } | psql_stdin
@@ -1037,9 +1039,45 @@ res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.tournament
 vis="$(q "SELECT jsonb_build_object('match', (SELECT is_public FROM public.matches WHERE id = '$(M cg-engine)'), 'events', (SELECT bool_and(is_public) FROM public.match_events WHERE match_id = '$(M cg-engine)'), 'ref', (SELECT referee_number FROM public.matches WHERE id = '$(M cg-engine)'));")"
 check Spaltenschutz "is_public-Kaskade des Turniers erreicht Engine-Spiel und seine Ereignisse ($res)" \
   '.match == true and .events == true and .ref == 3' "$vis"
+# C0b-Fixrunde 1 (Review M1): der Schutz haengt NICHT an der Lese-RLS von match_events. Eine
+# zusaetzliche RESTRICTIVE-SELECT-Policy USING (false) versteckt dem Eigentuemer alle Ereignisse
+# (belegt: count = 0) -- der Trigger lehnt trotzdem ab, weil public.match_has_engine_events()
+# als SECURITY DEFINER zaehlt. Vor Fixrunde 1 (EXISTS als Aufrufer) ging das UPDATE durch.
+psql_stdin <<'SQL'
+CREATE POLICY "__c0b_hide_events" ON public.match_events AS RESTRICTIVE FOR SELECT TO authenticated, anon USING (false);
+SQL
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$SELECT 1 FROM public.match_events WHERE match_id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1-Vorbedingung: RESTRICTIVE-Policy versteckt dem Eigentuemer alle Ereignisse des Engine-Spiels" '. == "ok:0"' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET score_a = 9 WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1: Eigentuemer ohne Leserecht auf die Ereignisse: score_a am Engine-Spiel -> trotzdem 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+res="$(q "SELECT public.__b3b_exec_msg('$U_HELPER', \$S\$UPDATE public.matches SET match_status = 'finished' WHERE id = '$(M cg-engine)'\$S\$);")"
+check Spaltenschutz "M1: Helfer ohne Leserecht auf die Ereignisse: match_status am Engine-Spiel -> trotzdem 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+psql_stdin <<<'DROP POLICY "__c0b_hide_events" ON public.match_events;'
+
 out="$(q "SELECT string_agg(t.tgname, ',' ORDER BY t.tgname) FROM pg_trigger t WHERE t.tgrelid = 'public.matches'::regclass AND NOT t.tgisinternal AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16;")"
 check Spaltenschutz "BEFORE-UPDATE-Trigger auf matches (Feuerreihenfolge = Name): $out" \
   '. == "matches_guard_engine_columns,matches_protect_owner_id,matches_protect_tournament_id,matches_updated_at"' "$(jq -Rn --arg v "$out" '$v')"
+
+# --- 9e. C0b-Fixrunde 1 (Review M2, Ruling PC6): SKIP/UNSKIP pflegen skipped_at/skipped_reason --
+echo "Absetzen (skipped_at/skipped_reason)..." >&2
+out="$(call authenticated "$U_OWNER" "$(M sk1)" "$(arr "$(ev SKIP "$(E sk1-skip)" '{"at":1234,"payload":{"reason":"Halle gesperrt"}}')")")"
+check Spaltenschutz "SKIP mit Grund angenommen" '.results[0].status == "accepted"' "$out"
+cache="$(cache_of "$(M sk1)")"
+check Spaltenschutz "SKIP: skipped_at = at-Zeitpunkt (1234 ms), skipped_reason = payload.reason" \
+  '.match_status == "skipped" and .skipped_at_ms == 1234 and .skipped_reason == "Halle gesperrt"' "$cache"
+out="$(q "SELECT floor(extract(epoch FROM client_time) * 1000)::bigint FROM public.match_events WHERE id = '$(E sk1-skip)';")"
+check Spaltenschutz "skipped_at == client_time des gespeicherten SKIP (at_server)" ". == $(jq -r '.skipped_at_ms' <<<"$cache")" "$out"
+res="$(q "SELECT public.__b3b_exec_msg('$U_OWNER', \$S\$UPDATE public.matches SET skipped_reason = 'x' WHERE id = '$(M sk1)'\$S\$);")"
+check Spaltenschutz "Eigentuemer: skipped_reason am abgesetzten Engine-Spiel direkt -> 42501 (Guard)" \
+  'startswith("error:42501:") and contains("append_match_events")' "$(jq -Rn --arg v "$res" '$v')"
+call authenticated "$U_OWNER" "$(M sk1)" "$(arr "$(ev UNSKIP "$(E sk1-unskip)" '{"at":2000}')")" >/dev/null
+cache="$(cache_of "$(M sk1)")"
+check Spaltenschutz "UNSKIP: skipped_at und skipped_reason NULL" '.match_status == "scheduled" and .skipped_at_ms == null and .skipped_reason == null' "$cache"
+call authenticated "$U_OWNER" "$(M sk2)" "$(arr "$(ev SKIP "$(E sk2-skip)" '{"at":1500}')")" >/dev/null
+cache="$(cache_of "$(M sk2)")"
+check Spaltenschutz "SKIP ohne Grund: skipped_at gesetzt, skipped_reason NULL" '.match_status == "skipped" and .skipped_at_ms == 1500 and .skipped_reason == null' "$cache"
 
 # --- 10. Laufzeit: 1 Ereignis bei 100 gespeicherten (nur Ausgabe) -----------------------------
 if [[ "$MODE" == "normal" ]]; then

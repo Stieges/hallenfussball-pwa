@@ -4,8 +4,11 @@
  * (V2/RC12: `sections`, `sectionSeconds`, `breakSeconds`, `overtimeSeconds`, `sectionStartMs`,
  * `breakStartedAt`). Monitor und Cockpit rechnen daraus dieselbe Anzeige. Werte exakt wie SQL:
  * Ganzzahlen, `null` statt fehlender Schlüssel.
+ *
+ * C0b-Fixrunde 1 (Review M2, Ruling PC6): `skipped_at` (Epoch-ms = `at` des SKIP, der das Spiel
+ * abgesetzt hat) und `skipped_reason` (`payload.reason` oder `null`), nur im Status `skipped`.
  */
-import { effectiveScoreFor, type MatchContext, type MatchState, type MatchStatus, type Phase, type TiebreakMode } from '../types';
+import { effectiveScoreFor, type EngineEvent, type MatchContext, type MatchState, type MatchStatus, type Phase, type TiebreakMode } from '../types';
 
 export type CacheMatchStatus = Exclude<MatchStatus, 'section_break' | 'decision_pending' | 'shootout'>;
 export type CacheDecidedBy = 'regular' | 'overtime' | 'goldenGoal' | 'penalty';
@@ -47,6 +50,8 @@ export interface CacheColumns {
   timer_elapsed_seconds: number;
   finished_at: number | null;
   live_state: CacheLiveState | null;
+  skipped_at: number | null;
+  skipped_reason: string | null;
 }
 
 function cacheStatus(status: MatchStatus): CacheMatchStatus {
@@ -98,6 +103,15 @@ function liveStateOf(state: MatchState): CacheLiveState {
   };
 }
 
+/** Der SKIP, der das Spiel abgesetzt hat: der zuletzt angenommene (nur im Status skipped). */
+function activeSkip(state: MatchState): EngineEvent | null {
+  if (state.status !== 'skipped') {
+    return null;
+  }
+  const skips = Object.values(state.accepted).filter((event) => event.type === 'SKIP');
+  return skips.length > 0 ? skips[skips.length - 1] : null;
+}
+
 export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns {
   const { teamAId, teamBId } = ctx;
   const scoreA = state.scores[teamAId];
@@ -110,6 +124,7 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     state.baseDecidedBy === 'overtime' ||
     state.baseDecidedBy === 'goldenGoal';
   const inShootout = state.phase === 'shootout' && !unplayed;
+  const skip = activeSkip(state);
 
   const regularScore = (teamId: string, breakdown: MatchState['scores'][string]): number | null => {
     if (unplayed) {
@@ -139,5 +154,7 @@ export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns
     timer_elapsed_seconds: Math.floor(state.clock.elapsedMs / 1000),
     finished_at: state.finishedAt,
     live_state: unplayed || state.status === 'finished' ? null : liveStateOf(state),
+    skipped_at: skip ? skip.at : null,
+    skipped_reason: skip && typeof skip.payload.reason === 'string' ? skip.payload.reason : null,
   };
 }

@@ -352,10 +352,13 @@ PRIVILEGE_ASSERTION_NAMES=(
   "positive-anon-execute-server-time"
   "positive-authenticated-execute-server-time"
   "no-enter-decision-without-at"
+  "match-engine-non-b3b-executable-anon-authenticated"
   "positive-anon-execute-match-engine-apply-amend"
   "matches-guard-engine-columns-trigger-active"
   "matches-guard-engine-columns-invoker-search-path"
   "matches-guard-engine-columns-no-public-execute"
+  "match-has-engine-events-definer-search-path"
+  "match-has-engine-events-execute-only-anon-authenticated"
 )
 
 if [[ -n "${SUPABASE_DB_READONLY_URL:-}" ]]; then

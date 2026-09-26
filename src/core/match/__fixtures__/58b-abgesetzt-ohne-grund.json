@@ -1,0 +1,61 @@
+{
+  "title": "Abgesetzt ohne Grund: skipped_reason null (C0b-Fixrunde 1, M2)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-58b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000058b-0000-4000-8000-000000000001",
+      "type": "SKIP",
+      "actor": "leitung",
+      "at": 4321,
+      "section": null,
+      "clockMs": null,
+      "payload": {},
+      "actorUser": "owner"
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000058b-0000-4000-8000-000000000001",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "skipped",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "liveState": null
+  }
+}

@@ -26,14 +26,16 @@
 --      apply_amend.
 --   4. Schreibweg-Helfer (definer-only, B3b): cfg_num (PC5: nur ASCII-Leerraum), envelope (AMEND
 --      in der Typliste, targetId bei AMEND), cache_columns (sechs neue live_state-Schluessel).
---   5. Spalten-Schutz (V4, Ruling PC2): public.matches_guard_engine_columns() + BEFORE-UPDATE-Trigger.
+--   4b. append_match_events (Fixrunde 1, M2): Zwischenspeicher pflegt skipped_at/skipped_reason.
+--   5. Spalten-Schutz (V4, Ruling PC2): public.matches_guard_engine_columns() + BEFORE-UPDATE-Trigger,
+--      Fixrunde 1 (M1/M3): Definer-Helfer public.match_has_engine_events, CREATE OR REPLACE TRIGGER.
 --   6. Rechte.
 --
 -- Nicht geaendert (V15, belegt): match_events_guard_engine_rows (legacy_types bleiben -- AMEND ist
 -- ein NEUER Typ, darf also wie alle Engine-Typen nur ueber append_match_events geschrieben werden),
 -- retract_target_admissible/apply_retract (AMEND steht nicht in RETRACTABLE_EVENT_TYPES -> RETRACT
--- auf AMEND = INVALID_PAYLOAD, Fixture 53), compute_match_state, append_match_events (liest die
--- Uebergaenge aus der Tabelle und ruft envelope/match_continue/cache_columns -- alles oben).
+-- auf AMEND = INVALID_PAYLOAD, Fixture 53), compute_match_state. append_match_events erst ab
+-- Fixrunde 1 (4b, nur skipped_at/skipped_reason im Zwischenspeicher).
 --
 -- Bekannte Grenzen (kein Fix, Brief-Nachtrag):
 --   - targetId: TS vergleicht woertlich, SQL normalisiert per normalize_uuid auf Kleinbuchstaben
@@ -45,7 +47,7 @@
 -- REPLACE, DROP FUNCTION/TRIGGER IF EXISTS, REVOKE/GRANT. Rueckweg: die PR-B-Fassungen der
 -- Funktionen aus 20260928_002/_003 erneut einspielen, DROP der vier neuen Helfer und von
 -- match_engine.enter_decision(jsonb,text,numeric), DROP TRIGGER/FUNCTION
--- matches_guard_engine_columns, AMEND-Zeilen aus match_transitions loeschen (nur solange keine
+-- matches_guard_engine_columns und public.match_has_engine_events, AMEND-Zeilen aus match_transitions loeschen (nur solange keine
 -- AMEND-Zeile in match_events steht), Typ-CHECKs ohne AMEND. Produktion: erst am Ende von PR C
 -- zusammen mit Deploy + Merge (Ruling PC1), nach Daniels Freigabe des woertlichen SQL.
 
@@ -524,7 +526,7 @@ $$;
 -- ============================================================================================
 
 -- applyTypeSpecificEffect (applyEvent.ts). Gegenueber 20260928_002: MATCH_START/REOPEN mit
--- Abschnittsuhr, TIEBREAK_CHOICE mit `at`, AMEND.
+-- Abschnittsuhr, TIEBREAK_CHOICE mit `at`, AMEND; Fixrunde 1: SKIP/UNSKIP merken Zeitpunkt/Grund.
 CREATE OR REPLACE FUNCTION match_engine.apply_effect(p_state jsonb, p_event jsonb, p_ctx jsonb) RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE PARALLEL SAFE
 SET search_path = public, pg_temp
@@ -590,8 +592,18 @@ BEGIN
       RETURN match_engine.ok(match_engine.apply_result_entry(p_state, p_event, p_ctx));
     WHEN 'AMEND' THEN
       RETURN match_engine.apply_amend(p_state, p_event);
+    WHEN 'SKIP' THEN
+      -- Fixrunde 1 (Review M2, PC6): Zeitpunkt und Grund fuer cache_columns (skipped_at/
+      -- skipped_reason). Nur SQL-intern -- TS liest dasselbe aus dem angenommenen SKIP in
+      -- state.accepted (client/cacheColumns.ts); SQL fuehrt in accepted kein `at`.
+      RETURN match_engine.ok(p_state || jsonb_build_object(
+        'skippedAt', match_engine.num(p_event -> 'at'),
+        'skipReason', CASE WHEN jsonb_typeof(p_event -> 'payload' -> 'reason') = 'string'
+                           THEN p_event -> 'payload' -> 'reason' ELSE 'null'::jsonb END));
+    WHEN 'UNSKIP' THEN
+      RETURN match_engine.ok(p_state || '{"skippedAt": null, "skipReason": null}'::jsonb);
     ELSE
-      -- Karten/Zeitstrafe/Foul/Wechsel (nur TS-Listen, R18), SKIP/UNSKIP (reiner Statuswechsel).
+      -- Karten/Zeitstrafe/Foul/Wechsel (nur TS-Listen, R18).
       RETURN match_engine.ok(p_state);
   END CASE;
 END;
@@ -839,7 +851,8 @@ BEGIN
 END;
 $$;
 
--- R15 (20260928_003) + RC12/V2 (C0a-Vertrag §3.5): live_state bekommt sechs Schluessel --
+-- R15 (20260928_003) + RC12/V2 (C0a-Vertrag §3.5), Fixrunde 1: skipped_at/skipped_reason (M2).
+-- live_state bekommt sechs Schluessel --
 -- sections/sectionSeconds/breakSeconds/overtimeSeconds aus den Regeln (fehlend -> null) und die
 -- Abschnittsuhr sectionStartMs/breakStartedAt. Zwilling: src/core/match/client/cacheColumns.ts.
 CREATE OR REPLACE FUNCTION match_engine.cache_columns(p_state jsonb, p_ctx jsonb) RETURNS jsonb
@@ -910,9 +923,309 @@ BEGIN
       'breakSeconds', coalesce(v_rules -> 'breakSeconds', 'null'::jsonb),
       'overtimeSeconds', coalesce(v_rules -> 'overtimeSeconds', 'null'::jsonb),
       'sectionStartMs', p_state -> 'sectionStartMs',
-      'breakStartedAt', coalesce(p_state -> 'breakStartedAt', 'null'::jsonb)) END);
+      'breakStartedAt', coalesce(p_state -> 'breakStartedAt', 'null'::jsonb)) END,
+    -- Fixrunde 1 (Review M2, PC6): nur im Status skipped -- Zeitpunkt (Epoch-ms = at des SKIP,
+    -- beim Anhaengen der geklemmte at_server) und payload.reason; sonst NULL (UNSKIP).
+    'skipped_at', CASE WHEN v_status = 'skipped' THEN match_engine.num(p_state -> 'skippedAt') END,
+    'skipped_reason', CASE WHEN v_status = 'skipped' THEN p_state ->> 'skipReason' END);
 END;
 $$;
+
+
+-- ============================================================================================
+-- 4b. append_match_events (Fixrunde 1, Review M2, Ruling PC6)
+-- ============================================================================================
+--
+-- Unveraendert gegenueber 20260928_003 bis auf den Zwischenspeicher: skipped_at/skipped_reason aus
+-- cache_columns (vorher schuetzte der Spalten-Schutz die beiden Spalten, der Schreibweg pflegte
+-- sie aber nie). Rechte wie 003 (unten erneut ausdruecklich).
+
+CREATE OR REPLACE FUNCTION public.append_match_events(p_match_id uuid, p_events jsonb,
+                                                      p_client_format integer, p_device_id uuid DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  c_cascade_types constant text[] := ARRAY['MATCH_START', 'RESUME', 'SECTION_START', 'REOPEN', 'UNSKIP'];
+  v_uid uuid := auth.uid();
+  v_min_format integer;
+  v_tournament_id uuid;
+  v_actor text;
+  v_match public.matches%ROWTYPE;
+  v_tournament public.tournaments%ROWTYPE;
+  v_ctx jsonb;
+  v_transitions jsonb;
+  v_stored jsonb;
+  v_state jsonb;
+  v_base_seq bigint;
+  v_last_at bigint;
+  v_now timestamptz;
+  v_now_ms bigint;
+  v_results jsonb := '[]'::jsonb;
+  v_cascade boolean := false;
+  v_raw jsonb;
+  v_raw_type text;
+  v_event jsonb;
+  v_result_id jsonb;
+  v_result jsonb;
+  v_existing record;
+  v_at_server bigint;
+  v_at_eval bigint;
+  v_phase_before text;
+  v_step jsonb;
+  v_seq bigint;
+  v_accepted integer := 0;
+  v_started_now boolean := false;
+  v_cache jsonb;
+  v_stored_count integer;
+BEGIN
+  -- 1. Aufrufer, Eingabe, Client-Format.
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'append_match_events: nicht angemeldet (auth.uid() ist NULL)' USING ERRCODE = '42501';
+  END IF;
+  IF p_events IS NULL OR jsonb_typeof(p_events) IS DISTINCT FROM 'array' THEN
+    RAISE EXCEPTION 'append_match_events: p_events muss ein jsonb-Array sein' USING ERRCODE = '22023';
+  END IF;
+  IF jsonb_array_length(p_events) NOT BETWEEN 1 AND 200 THEN
+    RAISE EXCEPTION 'append_match_events: p_events braucht 1 bis 200 Ereignisse (war: %)', jsonb_array_length(p_events)
+      USING ERRCODE = '22023';
+  END IF;
+
+  SELECT CASE WHEN jsonb_typeof(c.value) = 'number' THEN c.value::numeric::integer END
+    INTO v_min_format
+    FROM public.app_config c
+   WHERE c.key = 'min_client_format';
+  v_min_format := coalesce(v_min_format, 1);
+  IF p_client_format IS NULL OR p_client_format < v_min_format THEN
+    RETURN jsonb_build_object('error', 'CLIENT_OUTDATED', 'minClientFormat', v_min_format,
+                              'serverTime', floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint);
+  END IF;
+
+  -- 2./3. Spiel und Akteursklasse (R7). Rechtepruefung VOR der Sperre: wer kein Recht hat, darf
+  -- das Spiel auch nicht sperren. Fixrunde 1 (M3, M6): ein nicht existierendes Spiel und ein
+  -- soft-geloeschtes Turnier (tournaments.deleted_at) ergeben dieselbe Antwort wie ein fehlendes
+  -- Recht -- kein Existenz-Orakel, kein Schreiben in den Papierkorb.
+  SELECT m.tournament_id INTO v_tournament_id
+    FROM public.matches m
+    JOIN public.tournaments t ON t.id = m.tournament_id
+   WHERE m.id = p_match_id
+     AND t.deleted_at IS NULL;
+
+  IF v_tournament_id IS NOT NULL AND public.has_tournament_permission(v_tournament_id, 'leadMatches') THEN
+    v_actor := 'leitung';
+  ELSIF v_tournament_id IS NOT NULL AND public.has_tournament_permission(v_tournament_id, 'writeMatchData') THEN
+    v_actor := 'helper';
+  ELSE
+    SELECT jsonb_agg(jsonb_build_object(
+             'id', coalesce(to_jsonb(match_engine.normalize_uuid(e -> 'id')), e -> 'id', 'null'::jsonb),
+             'status', 'rejected', 'code', 'FORBIDDEN_ACTOR') ORDER BY ord)
+      INTO v_results
+      FROM jsonb_array_elements(p_events) WITH ORDINALITY AS x(e, ord);
+    RETURN jsonb_build_object('results', v_results, 'state', NULL,
+                              'serverTime', floor(extract(epoch FROM clock_timestamp()) * 1000)::bigint);
+  END IF;
+
+  -- R12/R3: ein Spiel je Aufruf, Geraete werden je Spiel serialisiert.
+  SELECT * INTO v_match FROM public.matches WHERE id = p_match_id FOR UPDATE;
+  SELECT * INTO v_tournament FROM public.tournaments WHERE id = v_match.tournament_id;
+  IF v_match.id IS NULL OR v_tournament.deleted_at IS NOT NULL THEN
+    -- Zwischen Rechtepruefung und Sperre geloescht (sehr selten): nichts schreiben.
+    RAISE EXCEPTION 'append_match_events: Spiel % nicht mehr beschreibbar', p_match_id USING ERRCODE = '55000';
+  END IF;
+  IF v_match.team_a_id IS NULL OR v_match.team_b_id IS NULL THEN
+    RAISE EXCEPTION 'append_match_events: Spiel % hat noch keine zwei Teams', p_match_id USING ERRCODE = '22023';
+  END IF;
+
+  -- Serverzeit NACH der Sperre: ein wartender Aufruf klemmt nicht hinter einen spaeter
+  -- gespeicherten Vorgaenger.
+  v_now := clock_timestamp();
+  v_now_ms := floor(extract(epoch FROM v_now) * 1000)::bigint;
+  v_ctx := jsonb_build_object('matchId', p_match_id::text,
+                              'teamAId', v_match.team_a_id::text,
+                              'teamBId', v_match.team_b_id::text);
+
+  -- 4. Aktueller Zustand: gespeicherte Engine-Ereignisse, genau wie compute_match_state sie liest
+  -- (S1 actor = leitung, S2 at aus client_time), aber im Definer-Kontext (alle Zeilen).
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+           'from', t.from_status, 'type', t.event_type, 'actor', t.actor, 'to', t.to_status)
+           ORDER BY t.from_status, t.event_type), '[]'::jsonb)
+    INTO v_transitions
+    FROM public.match_transitions t;
+
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+           'id', e.id::text,
+           'type', e.type,
+           'actor', 'leitung',
+           'at', floor(extract(epoch FROM coalesce(e.client_time, e.recorded_at)) * 1000)::bigint,
+           'section', e.section,
+           'clockMs', e.clock_ms,
+           'teamId', e.team_id::text,
+           'targetId', e.target_event_id::text,
+           'payload', e.payload) ORDER BY e.seq), '[]'::jsonb)
+    INTO v_stored
+    FROM public.match_events e
+   WHERE e.match_id = p_match_id
+     AND e.event_format IS NOT NULL
+     AND e.review_state IS NULL;
+
+  v_last_at := (SELECT (x.e ->> 'at')::bigint FROM jsonb_array_elements(v_stored) WITH ORDINALITY AS x(e, ord)
+                ORDER BY x.ord DESC LIMIT 1);
+  SELECT coalesce(max(e.seq), 0) INTO v_base_seq FROM public.match_events e WHERE e.match_id = p_match_id;
+
+  v_stored_count := jsonb_array_length(v_stored);
+
+  -- Einmal reduzieren, danach je Ereignis anschliessen (B3a-Review M3).
+  v_state := public.match_reduce(v_stored, v_ctx, v_transitions, 'log') -> 'state';
+
+  -- 5. Je Ereignis in Array-Reihenfolge.
+  FOR v_raw IN
+    SELECT x.e FROM jsonb_array_elements(p_events) WITH ORDINALITY AS x(e, ord) ORDER BY x.ord
+  LOOP
+    v_raw_type := CASE WHEN jsonb_typeof(v_raw) = 'object' AND jsonb_typeof(v_raw -> 'type') = 'string'
+                       THEN v_raw ->> 'type' END;
+    -- a. Umschlag (S9/S10).
+    v_event := match_engine.envelope(v_raw, v_ctx ->> 'teamAId', v_ctx ->> 'teamBId');
+    v_result_id := coalesce(v_event -> 'id',
+                            CASE WHEN jsonb_typeof(v_raw) = 'object' THEN v_raw -> 'id' END,
+                            'null'::jsonb);
+
+    IF v_cascade THEN
+      v_result := jsonb_build_object('id', v_result_id, 'status', 'rejected', 'code', 'DEPENDS_ON_REJECTED');
+    ELSIF v_event IS NULL THEN
+      v_result := jsonb_build_object('id', v_result_id, 'status', 'rejected', 'code', 'INVALID_PAYLOAD');
+    ELSE
+      -- b. Idempotenz (R11/K3) gegen die Tabelle.
+      SELECT e.match_id, e.seq,
+             match_engine.dedupe_key(jsonb_build_object(
+               'type', e.type, 'teamId', e.team_id::text, 'targetId', e.target_event_id::text,
+               'section', e.section, 'clockMs', e.clock_ms, 'payload', e.payload)) AS content
+        INTO v_existing
+        FROM public.match_events e
+       WHERE e.id = (v_event ->> 'id')::uuid;
+
+      IF FOUND THEN
+        IF v_existing.match_id = p_match_id AND v_existing.content = match_engine.dedupe_key(v_event) THEN
+          v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'duplicate', 'seq', v_existing.seq);
+        ELSE
+          v_result := jsonb_build_object('id', v_event -> 'id', 'status', 'rejected', 'code', 'ID_CONFLICT');
+        END IF;
+      ELSE
+        -- c. Zeit (R2, S11).
+        v_at_server := greatest(coalesce(v_last_at, 0), least((v_event -> 'at')::numeric, v_now_ms))::bigint;
+        v_at_eval := floor(extract(epoch FROM to_timestamp(v_at_server / 1000.0)) * 1000)::bigint;
+        v_event := v_event || jsonb_build_object('at', v_at_eval, 'actor', v_actor);
+
+        -- d. Regeln setzt der Server (R4/R4b).
+        IF v_event ->> 'type' = 'MATCH_START' THEN
+          v_event := jsonb_set(v_event, '{payload,rules}', match_engine.server_rules(
+            v_match.duration_minutes, v_match.phase, v_tournament.group_phase_duration,
+            v_tournament.final_round_duration, v_tournament.config, v_tournament.finals_config));
+        END IF;
+
+        -- e. Rechenfunktion.
+        v_phase_before := v_state ->> 'phase';
+        v_step := public.match_continue(v_state, jsonb_build_array(v_event), v_ctx, v_transitions, 'log');
+        v_result := v_step -> 'results' -> 0;
+
+        IF v_result ->> 'status' = 'accepted' THEN
+          -- Ruling S15/M1: hoechstens 2000 gespeicherte Engine-Ereignisse je Spiel -- danach bricht
+          -- der ganze Aufruf ab (nichts gespeichert), statt das Spiel ueber statement_timeout zu treiben.
+          IF v_stored_count >= 2000 THEN
+            RAISE EXCEPTION 'append_match_events: Spiel % hat bereits % gespeicherte Ereignisse (Obergrenze 2000)',
+              p_match_id, v_stored_count USING ERRCODE = '54000';
+          END IF;
+          v_stored_count := v_stored_count + 1;
+          v_state := v_step -> 'state';
+          -- f. Speichern (R14, R16).
+          INSERT INTO public.match_events (
+            id, match_id, type, team_id, player_id, timestamp_seconds, period, payload,
+            score_home, score_away, event_format, recorded_at, client_time, clock_ms, section,
+            target_event_id, base_seq, control_epoch)
+          VALUES (
+            (v_event ->> 'id')::uuid, p_match_id, v_event ->> 'type', (v_event ->> 'teamId')::uuid, NULL,
+            coalesce((v_event ->> 'clockMs')::numeric, 0) / 1000.0,
+            CASE v_phase_before WHEN 'overtime' THEN 'overtime' WHEN 'shootout' THEN 'penalty' ELSE 'regular' END,
+            v_event -> 'payload',
+            match_engine.effective_score(v_state, v_ctx ->> 'teamAId')::integer,
+            match_engine.effective_score(v_state, v_ctx ->> 'teamBId')::integer,
+            1, v_now, to_timestamp(v_at_server / 1000.0),
+            (v_event ->> 'clockMs')::integer, (v_event ->> 'section')::smallint,
+            (v_event ->> 'targetId')::uuid, v_base_seq, (v_event ->> 'controlEpoch')::integer)
+          RETURNING seq INTO v_seq;
+
+          INSERT INTO public.match_event_authors (event_id, tournament_id, user_id, device_id, base_state)
+          VALUES ((v_event ->> 'id')::uuid, v_match.tournament_id, v_uid, p_device_id,
+                  nullif(v_event -> 'baseState', 'null'::jsonb));
+
+          v_last_at := v_at_eval;
+          v_accepted := v_accepted + 1;
+          v_started_now := v_started_now OR v_event ->> 'type' = 'MATCH_START';
+          v_result := v_result || jsonb_build_object('seq', v_seq);
+        ELSIF v_result ->> 'status' = 'noop' THEN
+          -- g. noop wird nie gespeichert (K7).
+          v_state := v_step -> 'state';
+        END IF;
+      END IF;
+    END IF;
+
+    v_results := v_results || jsonb_build_array(v_result);
+    -- R12: abgelehnter zustandsaendernder Schritt -> Rest des Stapels DEPENDS_ON_REJECTED.
+    IF v_result ->> 'status' = 'rejected' AND v_raw_type = ANY (c_cascade_types) THEN
+      v_cascade := true;
+    END IF;
+  END LOOP;
+
+  -- 6. Zwischenspeicher einmal je Aufruf (R15).
+  IF v_accepted > 0 THEN
+    v_cache := match_engine.cache_columns(v_state, v_ctx);
+    UPDATE public.matches m SET
+      score_a = (v_cache ->> 'score_a')::numeric::integer,
+      score_b = (v_cache ->> 'score_b')::numeric::integer,
+      overtime_score_a = (v_cache ->> 'overtime_score_a')::numeric::integer,
+      overtime_score_b = (v_cache ->> 'overtime_score_b')::numeric::integer,
+      penalty_score_a = (v_cache ->> 'penalty_score_a')::numeric::integer,
+      penalty_score_b = (v_cache ->> 'penalty_score_b')::numeric::integer,
+      match_status = v_cache ->> 'match_status',
+      decided_by = v_cache ->> 'decided_by',
+      timer_elapsed_seconds = (v_cache ->> 'timer_elapsed_seconds')::numeric::integer,
+      timer_start_time = CASE WHEN (v_cache ->> 'running')::boolean
+                              THEN to_timestamp((v_cache ->> 'anchor_at')::numeric / 1000.0) END,
+      -- Pausenbeginn: bleibt stehen, solange die Uhr schon vorher stand; sonst jetzt.
+      timer_paused_at = CASE WHEN (v_cache ->> 'running')::boolean OR NOT (v_cache ->> 'started')::boolean THEN NULL
+                             ELSE coalesce(CASE WHEN m.timer_start_time IS NULL THEN m.timer_paused_at END, v_now) END,
+      actual_start = CASE WHEN v_started_now THEN coalesce(m.actual_start, v_now) ELSE m.actual_start END,
+      actual_end = CASE WHEN v_cache ->> 'match_status' = 'finished'
+                        THEN to_timestamp(coalesce((v_cache ->> 'finished_at')::numeric, v_now_ms) / 1000.0) END,
+      -- M4 (Fixrunde 1): zusammenfuehren statt ueberschreiben -- fremde Schluessel des alten
+      -- Schreibwegs (z. B. refereeName) bleiben erhalten. Nicht mehr aktiv -> NULL wie bisher.
+      live_state = CASE WHEN jsonb_typeof(v_cache -> 'live_state') = 'object'
+                        THEN CASE WHEN jsonb_typeof(m.live_state) = 'object' THEN m.live_state ELSE '{}'::jsonb END
+                             || (v_cache -> 'live_state') END,
+      -- C0b-Fixrunde 1 (Review M2, PC6): SKIP -> skipped_at = at_server des SKIP (ueber at_eval,
+      -- dieselbe Rundreise wie client_time), skipped_reason = payload.reason; sonst (UNSKIP) NULL.
+      skipped_at = CASE WHEN jsonb_typeof(v_cache -> 'skipped_at') = 'number'
+                        THEN to_timestamp((v_cache ->> 'skipped_at')::numeric / 1000.0) END,
+      skipped_reason = v_cache ->> 'skipped_reason',
+      version = coalesce(m.version, 0) + 1,
+      last_modified_by = v_uid,
+      updated_at = v_now
+    WHERE m.id = p_match_id;
+  END IF;
+
+  -- 7. Antwort.
+  RETURN jsonb_build_object('results', v_results,
+                            'state', public.match_server_state(v_state),
+                            'serverTime', v_now_ms);
+END;
+$$;
+
+COMMENT ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) IS
+  'B3b: der einzige Schreibweg fuer Ereignisse der Rechenfunktion (event_format = 1). SECURITY
+   DEFINER, EXECUTE nur authenticated (R17). Prueft Recht (R7), Umschlag (S9/S10), Idempotenz
+   (R11), Zeit (R2/S11), setzt Regeln beim Anpfiff (R4), speichert angenommene Ereignisse,
+   Stapel-Kaskade (R12), Zwischenspeicher auf matches einmal je Aufruf (R15). Rueckgabe
+   {results:[{id,status,code?,detail?,seq?}], state, serverTime} oder {error:CLIENT_OUTDATED}.';
 
 
 -- ============================================================================================
@@ -932,12 +1245,18 @@ $$;
 -- der Zwischenspeicher wird weiter geschrieben. Kein SECURITY DEFINER hier: sonst waere
 -- current_user immer der Eigentuemer und die Rollenunterscheidung unmoeglich.
 --
--- Bewusste Grenze (SECURITY INVOKER): die EXISTS-Pruefung laeuft mit den Rechten des Aufrufers
--- (RLS match_events_select_v3). Wer UPDATE auf matches hat (matches_update_v3: has_tournament_
--- permission(writeMatchData) = Eigentuemer oder angenommenes Mitglied), sieht heute die
--- Ereignisse desselben Turniers (owner_id bzw. EXISTS tournament_collaborators accepted_at) --
--- belegt im Harness (Helfer UND Eigentuemer werden abgelehnt). Wird die Lese-Policy kuenftig
--- enger als die Schreib-Policy, muss dieser Trigger mitgezogen werden.
+-- Fixrunde 1 (Review M1, Ruling PC6): ob ein Spiel Engine-Ereignisse hat, zaehlt der Helfer
+-- public.match_has_engine_events (SECURITY DEFINER, fester search_path) -- unabhaengig von der
+-- Lese-RLS des Aufrufers auf match_events. Vorher lief EXISTS als Aufrufer: wuerde
+-- match_events_select_v3 kuenftig enger als matches_update_v3, zaehlte der Trigger still 0 und
+-- liesse das UPDATE durch (im Review mit einer RESTRICTIVE-Policy USING (false) belegt; der Harness
+-- prueft genau diesen Fall). Warum Definer hier sicher ist: kein Schreiben, nur ein Wahrheitswert
+-- zu einer uuid; kein dynamisches SQL; fester search_path. EXECUTE nur anon/authenticated -- die
+-- Trigger-Funktion bleibt SECURITY INVOKER (current_user muss unterscheidbar bleiben) und ruft den
+-- Helfer deshalb mit der Rolle des Aufrufers; sie ruft ihn NUR fuer diese beiden Rollen
+-- (verschachteltes IF), service_role/postgres brauchen kein EXECUTE. Preis: der Helfer ist per
+-- /rpc aufrufbar und verraet, ob ein Spiel mit bekannter uuid Engine-Ereignisse hat -- uuids sind
+-- nicht erratbar, bei oeffentlichen Turnieren sind die Ereignisse ohnehin lesbar.
 --
 -- Wechselwirkung mit den vorhandenen BEFORE-UPDATE-Triggern auf matches (Reihenfolge alphabetisch
 -- nach Name, Stand Baseline + Migrationen): matches_guard_engine_columns <
@@ -947,33 +1266,49 @@ $$;
 -- unerheblich (belegt im Harness: Trigger-Liste aus pg_trigger). match_version_trigger aus
 -- 20260120_enable_optimistic_locking.sql ist nicht Teil der Baseline (live nicht vorhanden). AFTER-Trigger auf tournaments
 -- (tournament_visibility_cascade) aendert nur matches.is_public -- frei.
+CREATE OR REPLACE FUNCTION "public"."match_has_engine_events"("p_match_id" "uuid") RETURNS boolean
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public', 'pg_temp'
+    AS $$
+  SELECT EXISTS (SELECT 1 FROM public.match_events e WHERE e.match_id = p_match_id AND e.event_format IS NOT NULL);
+$$;
+
+COMMENT ON FUNCTION "public"."match_has_engine_events"("uuid") IS
+  'C0b-Fixrunde 1 (Review M1): hat das Spiel Ereignisse der Rechenfunktion (event_format IS NOT
+   NULL)? SECURITY DEFINER, damit der Spalten-Schutz (matches_guard_engine_columns) nicht von der
+   Lese-RLS auf match_events abhaengt. EXECUTE nur anon/authenticated (Trigger laeuft als Aufrufer).';
+
 CREATE OR REPLACE FUNCTION "public"."matches_guard_engine_columns"() RETURNS "trigger"
     LANGUAGE "plpgsql"
     SET "search_path" TO 'public', 'pg_temp'
     AS $$
 BEGIN
-  IF current_user IN ('authenticated', 'anon')
-     AND (NEW.score_a IS DISTINCT FROM OLD.score_a
-          OR NEW.score_b IS DISTINCT FROM OLD.score_b
-          OR NEW.overtime_score_a IS DISTINCT FROM OLD.overtime_score_a
-          OR NEW.overtime_score_b IS DISTINCT FROM OLD.overtime_score_b
-          OR NEW.penalty_score_a IS DISTINCT FROM OLD.penalty_score_a
-          OR NEW.penalty_score_b IS DISTINCT FROM OLD.penalty_score_b
-          OR NEW.match_status IS DISTINCT FROM OLD.match_status
-          OR NEW.decided_by IS DISTINCT FROM OLD.decided_by
-          OR NEW.timer_start_time IS DISTINCT FROM OLD.timer_start_time
-          OR NEW.timer_paused_at IS DISTINCT FROM OLD.timer_paused_at
-          OR NEW.timer_elapsed_seconds IS DISTINCT FROM OLD.timer_elapsed_seconds
-          OR NEW.live_state IS DISTINCT FROM OLD.live_state
-          OR NEW.actual_start IS DISTINCT FROM OLD.actual_start
-          OR NEW.actual_end IS DISTINCT FROM OLD.actual_end
-          OR NEW.skipped_at IS DISTINCT FROM OLD.skipped_at
-          OR NEW.skipped_reason IS DISTINCT FROM OLD.skipped_reason)
-     AND EXISTS (SELECT 1 FROM public.match_events e WHERE e.match_id = OLD.id AND e.event_format IS NOT NULL) THEN
-    RAISE EXCEPTION
-      'Nicht erlaubt: Spielstand, Status, Uhr und live_state eines Spiels mit Ereignissen der Rechenfunktion aendert nur append_match_events (Spiel %).',
-      OLD.id
-      USING ERRCODE = 'insufficient_privilege';
+  -- Verschachtelt statt AND-Kette: der Definer-Helfer wird garantiert nur fuer Client-Rollen und
+  -- nur bei geaenderter Schutzspalte aufgerufen (keine Abhaengigkeit von der Auswertungsreihenfolge).
+  IF current_user IN ('authenticated', 'anon') THEN
+    IF NEW.score_a IS DISTINCT FROM OLD.score_a
+       OR NEW.score_b IS DISTINCT FROM OLD.score_b
+       OR NEW.overtime_score_a IS DISTINCT FROM OLD.overtime_score_a
+       OR NEW.overtime_score_b IS DISTINCT FROM OLD.overtime_score_b
+       OR NEW.penalty_score_a IS DISTINCT FROM OLD.penalty_score_a
+       OR NEW.penalty_score_b IS DISTINCT FROM OLD.penalty_score_b
+       OR NEW.match_status IS DISTINCT FROM OLD.match_status
+       OR NEW.decided_by IS DISTINCT FROM OLD.decided_by
+       OR NEW.timer_start_time IS DISTINCT FROM OLD.timer_start_time
+       OR NEW.timer_paused_at IS DISTINCT FROM OLD.timer_paused_at
+       OR NEW.timer_elapsed_seconds IS DISTINCT FROM OLD.timer_elapsed_seconds
+       OR NEW.live_state IS DISTINCT FROM OLD.live_state
+       OR NEW.actual_start IS DISTINCT FROM OLD.actual_start
+       OR NEW.actual_end IS DISTINCT FROM OLD.actual_end
+       OR NEW.skipped_at IS DISTINCT FROM OLD.skipped_at
+       OR NEW.skipped_reason IS DISTINCT FROM OLD.skipped_reason THEN
+      IF public.match_has_engine_events(OLD.id) THEN
+        RAISE EXCEPTION
+          'Nicht erlaubt: Spielstand, Status, Uhr und live_state eines Spiels mit Ereignissen der Rechenfunktion aendert nur append_match_events (Spiel %).',
+          OLD.id
+          USING ERRCODE = 'insufficient_privilege';
+      END IF;
+    END IF;
   END IF;
   RETURN NEW;
 END;
@@ -987,9 +1322,9 @@ COMMENT ON FUNCTION "public"."matches_guard_engine_columns"() IS
    event_format IS NOT NULL) nicht aendern -- nur append_match_events (SECURITY DEFINER) schreibt
    dort den Zwischenspeicher. Altspiele und alle anderen Spalten bleiben frei.';
 
-DROP TRIGGER IF EXISTS "matches_guard_engine_columns" ON "public"."matches";
-
-CREATE TRIGGER "matches_guard_engine_columns"
+-- Fixrunde 1 (Review M3): CREATE OR REPLACE TRIGGER (PG >= 14) statt DROP + CREATE -- kein
+-- zusaetzlicher DROP-Schritt auf der viel gelesenen Tabelle matches.
+CREATE OR REPLACE TRIGGER "matches_guard_engine_columns"
   BEFORE UPDATE ON "public"."matches"
   FOR EACH ROW EXECUTE FUNCTION "public"."matches_guard_engine_columns"();
 
@@ -1048,3 +1383,12 @@ REVOKE ALL ON FUNCTION
 FROM PUBLIC, anon, authenticated, service_role;
 
 REVOKE ALL ON FUNCTION "public"."matches_guard_engine_columns"() FROM PUBLIC, anon, authenticated, service_role;
+
+-- Fixrunde 1: Definer-Helfer des Spalten-Schutzes -- EXECUTE nur fuer die beiden Rollen, fuer die
+-- der (INVOKER-)Trigger ihn aufruft (Begruendung Abschnitt 5).
+REVOKE ALL ON FUNCTION "public"."match_has_engine_events"("uuid") FROM PUBLIC, anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION "public"."match_has_engine_events"("uuid") TO anon, authenticated;
+
+-- Fixrunde 1: append_match_events per CREATE OR REPLACE -- Rechte wie 20260928_003 (R17, C3).
+REVOKE ALL ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.append_match_events(uuid, jsonb, integer, uuid) TO authenticated;

@@ -52,6 +52,8 @@ const COLUMN_KEYS = [
   'timer_elapsed_seconds',
   'finished_at',
   'live_state',
+  'skipped_at',
+  'skipped_reason',
 ].sort();
 
 const LIVE_STATE_KEYS = [
@@ -77,6 +79,32 @@ const LIVE_STATE_KEYS = [
 ].sort();
 
 describe('cacheColumns', () => {
+  // C0b-Fixrunde 1 (Review M2, Ruling PC6): skipped_at (at des SKIP, Epoch-ms) und skipped_reason
+  // (payload.reason oder null) nur im Status skipped, sonst null.
+  it('abgesetzt mit Grund: skipped_at = at des SKIP, skipped_reason = payload.reason', () => {
+    const state = run([ev({ id: 'k', type: 'SKIP', actor: 'leitung', at: 4321, payload: { reason: 'Team fehlt' } })]);
+    expect(cacheColumns(state, ctx)).toMatchObject({ match_status: 'skipped', skipped_at: 4321, skipped_reason: 'Team fehlt', live_state: null });
+  });
+
+  it('abgesetzt ohne Grund: skipped_reason null', () => {
+    const state = run([ev({ id: 'k', type: 'SKIP', actor: 'leitung', at: 4321 })]);
+    expect(cacheColumns(state, ctx)).toMatchObject({ skipped_at: 4321, skipped_reason: null });
+  });
+
+  it('UNSKIP: beide null; erneuter SKIP: Zeit und Grund des letzten SKIP', () => {
+    const unskipped = run([
+      ev({ id: 'k1', type: 'SKIP', actor: 'leitung', at: 1000, payload: { reason: 'alt' } }),
+      ev({ id: 'u1', type: 'UNSKIP', actor: 'leitung', at: 2000 }),
+    ]);
+    expect(cacheColumns(unskipped, ctx)).toMatchObject({ match_status: 'scheduled', skipped_at: null, skipped_reason: null });
+    const again = run([
+      ev({ id: 'k1', type: 'SKIP', actor: 'leitung', at: 1000, payload: { reason: 'alt' } }),
+      ev({ id: 'u1', type: 'UNSKIP', actor: 'leitung', at: 2000 }),
+      ev({ id: 'k2', type: 'SKIP', actor: 'leitung', at: 3000, payload: { reason: 'neu' } }),
+    ]);
+    expect(cacheColumns(again, ctx)).toMatchObject({ skipped_at: 3000, skipped_reason: 'neu' });
+  });
+
   it('geplantes Spiel: keine Stände, kein live_state', () => {
     expect(cacheColumns(initialState(ctx), ctx)).toEqual({
       score_a: null,
@@ -93,6 +121,8 @@ describe('cacheColumns', () => {
       timer_elapsed_seconds: 0,
       finished_at: null,
       live_state: null,
+      skipped_at: null,
+      skipped_reason: null,
     });
   });
 
@@ -138,6 +168,8 @@ describe('cacheColumns', () => {
         sectionStartMs: 600000,
         breakStartedAt: null,
       },
+      skipped_at: null,
+      skipped_reason: null,
     });
   });
 
@@ -169,6 +201,8 @@ describe('cacheColumns', () => {
       timer_elapsed_seconds: 240,
       finished_at: 5000,
       live_state: null,
+      skipped_at: null,
+      skipped_reason: null,
     });
   });
 
@@ -190,6 +224,8 @@ describe('cacheColumns', () => {
       timer_elapsed_seconds: 639,
       finished_at: 700000,
       live_state: null,
+      skipped_at: null,
+      skipped_reason: null,
     });
   });
 
