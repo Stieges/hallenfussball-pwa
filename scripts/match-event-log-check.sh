@@ -60,6 +60,7 @@ fi
 
 FOUND_TARGET=0
 BEFORE_TARGET=()
+AFTER_TARGET=()
 TARGET_FILE=""
 for f in "${NEWER_MIGRATIONS[@]}"; do
   if [[ "$(basename "$f")" == "$TARGET_MIGRATION" ]]; then
@@ -67,6 +68,8 @@ for f in "${NEWER_MIGRATIONS[@]}"; do
     TARGET_FILE="$f"
   elif [[ "$FOUND_TARGET" -ne 1 ]]; then
     BEFORE_TARGET+=("$f")
+  else
+    AFTER_TARGET+=("$f")
   fi
 done
 if [[ "$FOUND_TARGET" -ne 1 ]]; then
@@ -193,6 +196,17 @@ if [[ "$TO_APPLY_TARGET" -eq 1 ]]; then
     exit 1
   fi
   echo "OK    M1-Idempotenz: zweite Anwendung Exit 0, seq-Werte unveraendert." >&2
+
+  # C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): die neueren Migrationen
+  # (20260928_002/_003, 20261001_001) ebenfalls einspielen -- 20261001_001 ergaenzt
+  # match_transitions und den Typ-CHECK um AMEND (Probe 7a/7c vergleichen gegen
+  # matchTransitions.json, die seit C0a AMEND enthaelt) und legt den Spalten-Schutz auf matches an.
+  # Sie bauen auf dieser Zielmigration auf (Fail-fast) und entfallen deshalb im Modus
+  # --without-migration.
+  for f in "${AFTER_TARGET[@]}"; do
+    echo "Neuere Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
 fi
 
 if [[ "$MODE" == "without-guard" ]]; then
@@ -856,6 +870,27 @@ SQL
   fi
 else
   echo "SKIP  11. ohne Migration: match_event_authors existiert nicht -> kein sinnvoller Vergleich" >&2
+fi
+
+# --- Probe 12 (C0b): scripts/db_privilege_assertions.sql gegen den migrierten Container, unter
+# SET ROLE ci_schema_reader wie in match-engine-parity.sh/append-match-events-check.sh (Begruendung
+# dort, Abschluss-Fixrunde B, I2). Jede Zeile muss "|t" sein. Ohne Zielmigration fehlen die
+# Engine-Funktionen -- dann nicht sinnvoll.
+if [[ "$MODE" != "without-migration" ]]; then
+  set +e
+  PRIV_OUT="$( { echo "GRANT ci_schema_reader TO postgres; SET ROLE ci_schema_reader;"; cat "$REPO_ROOT/scripts/db_privilege_assertions.sql"; } \
+    | docker exec -i "$CONTAINER_NAME" psql -U postgres -X -v ON_ERROR_STOP=1 -q -tA 2>&1)"
+  PRIV_EC=$?
+  set -e
+  PRIV_FAILED="$(grep -v '|t$' <<<"$PRIV_OUT" || true)"
+  if [[ $PRIV_EC -eq 0 && -z "$PRIV_FAILED" && -n "$PRIV_OUT" ]]; then
+    echo "OK    12. Rechte-Assertion (ci_schema_reader): $(wc -l <<<"$PRIV_OUT" | tr -d ' ') Zeilen |t" >&2
+  else
+    echo "FAIL  12. Rechte-Assertion (ci_schema_reader): Exit $PRIV_EC, $(head -c 600 <<<"$PRIV_FAILED")" >&2
+    MISMATCHES=$((MISMATCHES + 1))
+  fi
+else
+  echo "SKIP  12. ohne Migration: Engine-Funktionen fehlen -> Rechte-Assertion nicht sinnvoll" >&2
 fi
 
 echo "" >&2

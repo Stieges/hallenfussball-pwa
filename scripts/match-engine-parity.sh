@@ -16,6 +16,13 @@
 #                  expect angegeben -- exakt die Regel des Vitest-Runners; serverState vollstaendig
 # Ausgabe je Fixture OK/ABWEICHUNG (mit Diff), Exit != 0 bei jeder Abweichung.
 #
+# C0b (PC4, .superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): je Fixture zusaetzlich
+#   Angaben    state.details, state.sectionStartMs, state.breakStartedAt: SQL == TS (automatisch fuer
+#              JEDE Fixture, nicht im serverState); expect.details (falls vorhanden) exakt
+#   Zwischensp. match_engine.cache_columns(state, ctx) == cacheColumns(state, ctx) (TS, vollstaendig);
+#              expect.liveState (falls vorhanden): null exakt, sonst Teilvergleich je Schluessel
+#   Regeln     src/core/match/__fixtures__/rules/*.json: match_engine.server_rules(input) ==
+#              serverRules(input) (TS) == expect
 # Zusaetzlich (Abschnitt "compute_match_state-Probe"): fuer drei Fixtures (einfaches Spiel,
 # Korrektur-Stapel, Strafstossschiessen) werden die angenommenen Ereignisse als Engine-Zeilen
 # (event_format = 1) ueber eine SECURITY-DEFINER-Testfunktion eingefuegt (Muster B2-Harness
@@ -28,15 +35,24 @@
 #
 # Aufrufoptionen:
 #   bash scripts/match-engine-parity.sh               normaler Lauf -- 0 Abweichungen, Exit 0
-#   bash scripts/match-engine-parity.sh --gegenprobe  Drei Mutationen im Container (Review M4):
+#   bash scripts/match-engine-parity.sh --gegenprobe  Mutationen im Container (Review M4, C0b):
+#                                                     Phase A (C0b, eine gezielte Mutation je
+#                                                     Kategorie in 20261001_001_amend_event.sql):
+#                                                     (4) details_from_payload uebernimmt playerNumber
+#                                                     nicht (auch nicht per AMEND) -> Angaben rot; (5) cache_columns schreibt
+#                                                     breakStartedAt immer null -> Zwischenspeicher rot;
+#                                                     (6) cfg_num mit \s (Unicode-Leerraum, vor PC5)
+#                                                     -> Regeln rot. Phase B (B3a):
 #                                                     (1) Tabellenzeile (running, GOAL) verlangt
 #                                                     'leitung' statt 'helper' -> Fixtures + Seed rot;
 #                                                     (2) compute_match_state ohne den review_state-
 #                                                     Filter -> compute_match_state-Probe rot;
 #                                                     (3) match_engine.num(jsonb) bekommt EXECUTE fuer
-#                                                     PUBLIC -> Rechte-Assertion rot. Exit 0 NUR, wenn
-#                                                     JEDE der vier Kategorien (Fixtures, Seed, Probe,
-#                                                     Rechte) einzeln rot ist; sonst Exit 1 (zahnlos).
+#                                                     PUBLIC -> Rechte-Assertion rot. Die Phasen sind
+#                                                     getrennt, damit (1) die Kategorien Angaben/
+#                                                     Zwischenspeicher nicht verdeckt rot faerbt.
+#                                                     Exit 0 NUR, wenn JEDE der sieben Kategorien
+#                                                     einzeln rot ist; sonst Exit 1 (zahnlos).
 #
 # Aendert NICHTS an der Produktionsdatenbank -- Wegwerf-Container, wird am Ende entfernt (trap).
 #
@@ -55,7 +71,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="$REPO_ROOT/supabase/migrations"
 BASELINE_FILE="$MIGRATIONS_DIR/00000000000000_baseline_live_schema.sql"
 ENGINE_MIGRATION="20260928_002_match_engine.sql"
+APPEND_MIGRATION="20260928_003_append_match_events.sql"
+AMEND_MIGRATION="20261001_001_amend_event.sql"
 FIXTURES_DIR="$REPO_ROOT/src/core/match/__fixtures__"
+RULES_DIR="$FIXTURES_DIR/rules"
 CONTAINER_NAME="match-engine-parity-$$"
 WORKDIR="$(mktemp -d)"
 SQ="'"
@@ -77,13 +96,19 @@ source "$REPO_ROOT/scripts/lib/migrations-since-baseline.sh"
 NEWER_MIGRATIONS_RAW="$(migrations_newer_than_baseline "$MIGRATIONS_DIR" "$BASELINE_FILE")" || exit 1
 NEWER_MIGRATIONS=()
 ENGINE_FILE=""
+APPEND_FILE=""
+AMEND_FILE=""
 while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   NEWER_MIGRATIONS+=("$line")
-  [[ "$(basename "$line")" == "$ENGINE_MIGRATION" ]] && ENGINE_FILE="$line"
+  case "$(basename "$line")" in
+    "$ENGINE_MIGRATION") ENGINE_FILE="$line" ;;
+    "$APPEND_MIGRATION") APPEND_FILE="$line" ;;
+    "$AMEND_MIGRATION") AMEND_FILE="$line" ;;
+  esac
 done <<< "$NEWER_MIGRATIONS_RAW"
-if [[ -z "$ENGINE_FILE" ]]; then
-  echo "::error::$ENGINE_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
+if [[ -z "$ENGINE_FILE" || -z "$APPEND_FILE" || -z "$AMEND_FILE" ]]; then
+  echo "::error::$ENGINE_MIGRATION, $APPEND_MIGRATION oder $AMEND_MIGRATION nicht in der Liste 'neuer als Baseline' gefunden." >&2
   exit 1
 fi
 
@@ -94,6 +119,13 @@ FIXTURE_COUNT="$(find "$FIXTURES_DIR" -maxdepth 1 -name '*.json' | wc -l | tr -d
 TS_COUNT="$(jq 'length' "$WORKDIR/ts.json")"
 if [[ "$TS_COUNT" -ne "$FIXTURE_COUNT" ]]; then
   echo "::error::TS-Dump hat $TS_COUNT Eintraege, es gibt $FIXTURE_COUNT Fixtures." >&2
+  exit 1
+fi
+node "$REPO_ROOT/scripts/match-engine-ts-dump.ts" --rules > "$WORKDIR/ts-rules.json"
+for f in "$FIXTURES_DIR"/rules/*.json; do jq -c --arg file "$(basename "$f")" '{file: $file, expect}' "$f"; done | jq -cs . > "$WORKDIR/expect-rules.json"
+RULES_COUNT="$(find "$RULES_DIR" -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')"
+if [[ "$(jq 'length' "$WORKDIR/ts-rules.json")" -ne "$RULES_COUNT" || "$RULES_COUNT" -eq 0 ]]; then
+  echo "::error::TS-Regel-Dump passt nicht zu den $RULES_COUNT Regel-Fixtures." >&2
   exit 1
 fi
 
@@ -131,49 +163,80 @@ psql_stdin < "$BASELINE_FILE"
 for f in "${NEWER_MIGRATIONS[@]}"; do
   psql_stdin < "$f"
 done
-echo "Idempotenz: $ENGINE_MIGRATION ein zweites Mal einspielen..." >&2
+# C0b: 002 allein erneut einzuspielen ersetzte die in 20261001 geaenderten Funktionen durch den
+# PR-B-Stand -- die Idempotenz wird deshalb fuer die ganze Kette 002 -> 003 -> 20261001 belegt.
+echo "Idempotenz: $ENGINE_MIGRATION, $APPEND_MIGRATION, $AMEND_MIGRATION ein zweites Mal einspielen..." >&2
 psql_stdin < "$ENGINE_FILE"
+psql_stdin < "$APPEND_FILE"
+psql_stdin < "$AMEND_FILE"
+
+# C0b-Gegenprobe Phase A: je Kategorie genau eine gezielte Mutation in 20261001 (grep belegt je
+# Muster genau einen Treffer). Die Mutationen sind voneinander unabhaengig: (4) wirkt nur auf
+# state.details, (5) nur auf cache_columns, (6) nur auf server_rules -- keine aendert Ergebnisse
+# oder serverState.
+MUT_DETAILS="   WHERE p_payload ? f.name;"
+MUT_DETAILS_TO="   WHERE p_payload ? f.name AND f.name <> 'playerNumber';"
+MUT_CACHE="      'breakStartedAt', coalesce(p_state -> 'breakStartedAt', 'null'::jsonb))"
+MUT_CACHE_TO="      'breakStartedAt', 'null'::jsonb)"
+MUT_RULES="    WHEN 'string' THEN CASE WHEN (p_value #>> '{}') ~ '^[ \\t\\n\\r\\f\\v]*-?[0-9]+(\\.[0-9]+)?[ \\t\\n\\r\\f\\v]*\$'"
+MUT_RULES_TO="    WHEN 'string' THEN CASE WHEN (p_value #>> '{}') ~ '^\\s*-?[0-9]+(\\.[0-9]+)?\\s*\$'"
+apply_amend_mutations() {
+  local pattern hits
+  for pattern in "$MUT_DETAILS" "$MUT_CACHE" "$MUT_RULES"; do
+    hits="$(grep -cF -- "$pattern" "$AMEND_FILE" || true)"
+    if [[ "$hits" -ne 1 ]]; then
+      echo "::error::Gegenprobe: Mutationszeile nicht genau einmal in $AMEND_MIGRATION ($hits): $pattern" >&2
+      exit 1
+    fi
+  done
+  MUT_DETAILS="$MUT_DETAILS" MUT_DETAILS_TO="$MUT_DETAILS_TO" MUT_CACHE="$MUT_CACHE" MUT_CACHE_TO="$MUT_CACHE_TO" \
+  MUT_RULES="$MUT_RULES" MUT_RULES_TO="$MUT_RULES_TO" python3 -c '
+import os, sys
+s = sys.stdin.read()
+for k in ("MUT_DETAILS", "MUT_CACHE", "MUT_RULES"):
+    s = s.replace(os.environ[k], os.environ[k + "_TO"])
+sys.stdout.write(s)' < "$AMEND_FILE" | psql_stdin
+}
 
 if [[ "$MODE" == "gegenprobe" ]]; then
-  echo "GEGENPROBE: (1) match_transitions (running, GOAL) actor helper -> leitung;" \
-       "(2) compute_match_state ohne review_state-Filter; (3) match_engine.num EXECUTE fuer PUBLIC" >&2
-  # (2) zuerst: die Migration ohne den Filter erneut einspielen (setzt dabei auch die Rechte neu,
-  # deshalb vor (3)). grep belegt, dass die Filterzeile wirklich getroffen wird.
-  if ! grep -q '^     AND e.review_state IS NULL;$' "$ENGINE_FILE"; then
-    echo "::error::Gegenprobe (2): Filterzeile 'AND e.review_state IS NULL;' nicht gefunden." >&2
-    exit 1
-  fi
-  sed 's/^     AND e.review_state IS NULL;$/     ;/' "$ENGINE_FILE" | psql_stdin
-  psql_stdin <<'SQL'
-UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
-GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
-SQL
+  echo "GEGENPROBE Phase A: (4) details ohne playerNumber; (5) live_state.breakStartedAt immer null;" \
+       "(6) cfg_num mit \\s" >&2
+  apply_amend_mutations
 fi
 
-# --- 2a. Seed-Gleichheit match_transitions == matchTransitions.json (Review M9) ----------------
+# --- 2a. Zaehler, Seed-Gleichheit match_transitions == matchTransitions.json (Review M9) --------
 FIX_DEV=0
 SEED_DEV=0
 PROBE_DEV=0
 PRIV_DEV=0
-SEED_DB="$(psql_value <<'SQL'
+DETAILS_DEV=0
+CACHE_DEV=0
+RULES_DEV=0
+check_seed() {
+  local seed_db seed_json
+  seed_db="$(psql_value <<'SQL'
 SELECT from_status || '|' || event_type || '|' || actor || '|' || to_status FROM public.match_transitions ORDER BY 1;
 SQL
 )"
-SEED_JSON="$(jq -r '.transitions[] | "\(.from)|\(.type)|\(.actor)|\(.to)"' "$REPO_ROOT/src/core/match/matchTransitions.json" | LC_ALL=C sort)"
-SEED_DB="$(LC_ALL=C sort <<<"$SEED_DB")"
-if [[ "$SEED_DB" == "$SEED_JSON" ]]; then
-  echo "OK          Seed: match_transitions == matchTransitions.json ($(wc -l <<<"$SEED_DB" | tr -d ' ') Zeilen)"
-else
-  SEED_DEV=1
-  echo "ABWEICHUNG  Seed: match_transitions (Container) != matchTransitions.json"
-  diff -u --label "matchTransitions.json" --label "match_transitions" <(echo "$SEED_JSON") <(echo "$SEED_DB") | sed 's/^/    /' || true
-fi
+  seed_json="$(jq -r '.transitions[] | "\(.from)|\(.type)|\(.actor)|\(.to)"' "$REPO_ROOT/src/core/match/matchTransitions.json" | LC_ALL=C sort)"
+  seed_db="$(LC_ALL=C sort <<<"$seed_db")"
+  if [[ "$seed_db" == "$seed_json" ]]; then
+    echo "OK          Seed: match_transitions == matchTransitions.json ($(wc -l <<<"$seed_db" | tr -d ' ') Zeilen)"
+  else
+    SEED_DEV=1
+    echo "ABWEICHUNG  Seed: match_transitions (Container) != matchTransitions.json"
+    diff -u --label "matchTransitions.json" --label "match_transitions" <(echo "$seed_json") <(echo "$seed_db") | sed 's/^/    /' || true
+  fi
+}
 
-# --- 3. SQL-Seite -----------------------------------------------------------------------------
+# --- 3. SQL-Seite (Harness-Hilfen) ------------------------------------------------------------
 # Harness-Hilfen (nur im Wegwerf-Container): Fixture-Tabelle + Lauf je Fixture mit Fehlerfang,
 # damit eine werfende Fixture nicht den ganzen Vergleich abbricht (sondern als ABWEICHUNG zaehlt).
+# C0b: __parity_run liefert zusaetzlich details/sectionStartMs/breakStartedAt aus dem internen
+# Zustand und match_engine.cache_columns(state, ctx); __parity_rules_run ruft server_rules.
 psql_stdin <<'SQL'
 CREATE TABLE public.__parity_fixtures (file text PRIMARY KEY, doc jsonb NOT NULL);
+CREATE TABLE public.__parity_rules (file text PRIMARY KEY, doc jsonb NOT NULL);
 
 CREATE FUNCTION public.__parity_run(p_doc jsonb, p_transitions jsonb) RETURNS jsonb
 LANGUAGE plpgsql AS $fn$
@@ -183,7 +246,24 @@ DECLARE
 BEGIN
   v_prior := public.match_reduce(coalesce(p_doc->'prior', '[]'::jsonb), p_doc->'ctx', p_transitions, 'log');
   v_run := public.match_continue(v_prior->'state', p_doc->'events', p_doc->'ctx', p_transitions, p_doc->>'mode');
-  RETURN jsonb_build_object('results', v_run->'results', 'serverState', public.match_server_state(v_run->'state'));
+  RETURN jsonb_build_object(
+    'results', v_run->'results',
+    'serverState', public.match_server_state(v_run->'state'),
+    'details', coalesce(v_run->'state'->'details', 'null'::jsonb),
+    'sectionStartMs', coalesce(v_run->'state'->'sectionStartMs', 'null'::jsonb),
+    'breakStartedAt', coalesce(v_run->'state'->'breakStartedAt', '"fehlt"'::jsonb),
+    'cacheColumns', match_engine.cache_columns(v_run->'state', p_doc->'ctx'));
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('error', SQLSTATE || ': ' || SQLERRM);
+END;
+$fn$;
+
+CREATE FUNCTION public.__parity_rules_run(p_in jsonb) RETURNS jsonb
+LANGUAGE plpgsql AS $fn$
+BEGIN
+  RETURN jsonb_build_object('rules', match_engine.server_rules(
+    (p_in->>'durationMinutes')::integer, p_in->>'phase', (p_in->>'groupPhaseDuration')::integer,
+    (p_in->>'finalRoundDuration')::integer, p_in->'config', p_in->'finalsConfig'));
 EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('error', SQLSTATE || ': ' || SQLERRM);
 END;
@@ -196,9 +276,21 @@ for f in "$FIXTURES_DIR"/*.json; do
   doc="${doc//$SQ/$SQ$SQ}"
   printf "INSERT INTO public.__parity_fixtures (file, doc) VALUES ('%s', '%s'::jsonb);\n" "$(basename "$f")" "$doc" >> "$WORKDIR/load.sql"
 done
+for f in "$RULES_DIR"/*.json; do
+  doc="$(jq -c . "$f")"
+  doc="${doc//$SQ/$SQ$SQ}"
+  printf "INSERT INTO public.__parity_rules (file, doc) VALUES ('%s', '%s'::jsonb);\n" "$(basename "$f")" "$doc" >> "$WORKDIR/load.sql"
+done
 psql_stdin < "$WORKDIR/load.sql"
 
-psql_value > "$WORKDIR/sql.json" <<'SQL'
+# --- 4. Vergleich (ein Durchgang; $1 = Fixtures zaehlen 1/0, $2 = Angaben/Zwischenspeicher/Regeln
+#        zaehlen 1/0 -- die Gegenprobe zaehlt je Phase nur die Kategorien ihrer Mutationen) --------
+TABLE_ROWS=()
+OK_COUNT=0
+compare_pass() {
+  local count_fix="$1" count_extra="$2"
+  local pair file expect verdict sql_ts sql_expect details_ok cache_ok err sql_count
+  psql_value > "$WORKDIR/sql.json" <<'SQL'
 WITH tr AS (
   SELECT coalesce(jsonb_agg(jsonb_build_object('from', from_status, 'type', event_type, 'actor', actor, 'to', to_status)
                             ORDER BY from_status, event_type), '[]'::jsonb) AS t
@@ -208,60 +300,148 @@ SELECT jsonb_agg(jsonb_build_object('file', f.file) || public.__parity_run(f.doc
 FROM public.__parity_fixtures f CROSS JOIN tr;
 SQL
 
-# --- 4. Vergleich -----------------------------------------------------------------------------
-jq -cn --slurpfile ts "$WORKDIR/ts.json" --slurpfile sql "$WORKDIR/sql.json" --arg dir "$FIXTURES_DIR" '
-  ($ts[0] | map({key: .file, value: .}) | from_entries) as $tsmap
-  | $sql[0][]
-  | . as $s
-  | $tsmap[$s.file] as $t
-  | {file: $s.file, sql: $s, ts: $t}
-' > "$WORKDIR/pairs.jsonl"
+  jq -cn --slurpfile ts "$WORKDIR/ts.json" --slurpfile sql "$WORKDIR/sql.json" '
+    ($ts[0] | map({key: .file, value: .}) | from_entries) as $tsmap
+    | $sql[0][]
+    | . as $s
+    | $tsmap[$s.file] as $t
+    | {file: $s.file, sql: $s, ts: $t}
+  ' > "$WORKDIR/pairs.jsonl"
 
-OK_COUNT=0
-TABLE_ROWS=()
-while IFS= read -r pair; do
-  file="$(jq -r '.file' <<<"$pair")"
-  expect="$(jq -c '.expect' "$FIXTURES_DIR/$file")"
-  verdict="$(jq -c --argjson e "$expect" '
-    def project_expected($exp; $act):
-      [range(0; $exp | length) as $i
-        | ($exp[$i]) as $x | ($act[$i] // {}) as $a
-        | {id: $a.id, status: $a.status, code: $a.code}
-          + (if $x | has("detail") then {detail: $a.detail} else {} end)];
-    def norm_expected($exp):
-      [$exp[] | {id, status, code} + (if has("detail") then {detail} else {} end)];
-    {
-      error: (.sql.error // null),
-      sql_ts: ((.sql.results == .ts.results) and (.sql.serverState == .ts.serverState)),
-      sql_expect: (((.sql.results // []) | length) == ($e.results | length)
-                   and project_expected($e.results; (.sql.results // [])) == norm_expected($e.results)
-                   and .sql.serverState == $e.serverState)
-    }' <<<"$pair")"
-  sql_ts="$(jq -r '.sql_ts' <<<"$verdict")"
-  sql_expect="$(jq -r '.sql_expect' <<<"$verdict")"
-  err="$(jq -r '.error // empty' <<<"$verdict")"
-  if [[ "$sql_ts" == "true" && "$sql_expect" == "true" ]]; then
-    OK_COUNT=$((OK_COUNT + 1))
-    echo "OK          $file"
-    TABLE_ROWS+=("| $file | = | = |")
-  else
-    FIX_DEV=$((FIX_DEV + 1))
-    echo "ABWEICHUNG  $file  (SQL==TS: $sql_ts, SQL==expect: $sql_expect)"
-    TABLE_ROWS+=("| $file | $sql_ts | $sql_expect |")
-    if [[ -n "$err" ]]; then
-      echo "    SQL-Fehler: $err"
-    else
-      diff -u --label "TS/$file" --label "SQL/$file" \
-        <(jq -S '{results: .ts.results, serverState: .ts.serverState}' <<<"$pair") \
-        <(jq -S '{results: .sql.results, serverState: .sql.serverState}' <<<"$pair") | sed 's/^/    /' || true
+  while IFS= read -r pair; do
+    file="$(jq -r '.file' <<<"$pair")"
+    expect="$(jq -c '.expect' "$FIXTURES_DIR/$file")"
+    verdict="$(jq -c --argjson e "$expect" '
+      def project_expected($exp; $act):
+        [range(0; $exp | length) as $i
+          | ($exp[$i]) as $x | ($act[$i] // {}) as $a
+          | {id: $a.id, status: $a.status, code: $a.code}
+            + (if $x | has("detail") then {detail: $a.detail} else {} end)];
+      def norm_expected($exp):
+        [$exp[] | {id, status, code} + (if has("detail") then {detail} else {} end)];
+      {
+        error: (.sql.error // null),
+        sql_ts: ((.sql.results == .ts.results) and (.sql.serverState == .ts.serverState)),
+        sql_expect: (((.sql.results // []) | length) == ($e.results | length)
+                     and project_expected($e.results; (.sql.results // [])) == norm_expected($e.results)
+                     and .sql.serverState == $e.serverState),
+        details_ok: ((.sql.details == .ts.details)
+                     and (.sql.sectionStartMs == .ts.sectionStartMs)
+                     and (.sql.breakStartedAt == .ts.breakStartedAt)
+                     and (if $e | has("details") then .sql.details == $e.details else true end)),
+        cache_ok: ((.sql.cacheColumns == .ts.cacheColumns)
+                   and (if ($e | has("liveState")) | not then true
+                        elif $e.liveState == null then .sql.cacheColumns.live_state == null
+                        else (.sql.cacheColumns.live_state as $l
+                              | $l != null and ([$e.liveState | to_entries[] | $l[.key] == .value] | all)) end))
+      }' <<<"$pair")"
+    sql_ts="$(jq -r '.sql_ts' <<<"$verdict")"
+    sql_expect="$(jq -r '.sql_expect' <<<"$verdict")"
+    details_ok="$(jq -r '.details_ok' <<<"$verdict")"
+    cache_ok="$(jq -r '.cache_ok' <<<"$verdict")"
+    err="$(jq -r '.error // empty' <<<"$verdict")"
+    if [[ "$count_fix" -eq 1 ]]; then
+      if [[ "$sql_ts" == "true" && "$sql_expect" == "true" ]]; then
+        OK_COUNT=$((OK_COUNT + 1))
+        echo "OK          $file"
+        TABLE_ROWS+=("| $file | = | = |")
+      else
+        FIX_DEV=$((FIX_DEV + 1))
+        echo "ABWEICHUNG  $file  (SQL==TS: $sql_ts, SQL==expect: $sql_expect)"
+        TABLE_ROWS+=("| $file | $sql_ts | $sql_expect |")
+        if [[ -n "$err" ]]; then
+          echo "    SQL-Fehler: $err"
+        else
+          diff -u --label "TS/$file" --label "SQL/$file" \
+            <(jq -S '{results: .ts.results, serverState: .ts.serverState}' <<<"$pair") \
+            <(jq -S '{results: .sql.results, serverState: .sql.serverState}' <<<"$pair") | sed 's/^/    /' || true
+        fi
+      fi
+    fi
+    if [[ "$count_extra" -eq 1 ]]; then
+      if [[ "$details_ok" == "true" ]]; then
+        echo "OK          Angaben $file"
+      else
+        DETAILS_DEV=$((DETAILS_DEV + 1))
+        echo "ABWEICHUNG  Angaben $file (details/sectionStartMs/breakStartedAt: SQL != TS oder != expect.details)"
+        [[ -n "$err" ]] && echo "    SQL-Fehler: $err"
+        diff -u --label "TS/$file" --label "SQL/$file" \
+          <(jq -S '{details: .ts.details, sectionStartMs: .ts.sectionStartMs, breakStartedAt: .ts.breakStartedAt}' <<<"$pair") \
+          <(jq -S '{details: .sql.details, sectionStartMs: .sql.sectionStartMs, breakStartedAt: .sql.breakStartedAt}' <<<"$pair") | sed 's/^/    /' | head -40 || true
+      fi
+      if [[ "$cache_ok" == "true" ]]; then
+        echo "OK          Zwischenspeicher $file"
+      else
+        CACHE_DEV=$((CACHE_DEV + 1))
+        echo "ABWEICHUNG  Zwischenspeicher $file (cache_columns: SQL != TS oder != expect.liveState)"
+        [[ -n "$err" ]] && echo "    SQL-Fehler: $err"
+        diff -u --label "TS/$file" --label "SQL/$file" \
+          <(jq -S '.ts.cacheColumns' <<<"$pair") <(jq -S '.sql.cacheColumns' <<<"$pair") | sed 's/^/    /' | head -40 || true
+      fi
+    fi
+  done < "$WORKDIR/pairs.jsonl"
+
+  sql_count="$(jq 'length' "$WORKDIR/sql.json")"
+  if [[ "$sql_count" -ne "$FIXTURE_COUNT" ]]; then
+    echo "ABWEICHUNG  SQL-Seite lieferte $sql_count statt $FIXTURE_COUNT Fixtures"
+    [[ "$count_fix" -eq 1 ]] && FIX_DEV=$((FIX_DEV + 1))
+    [[ "$count_extra" -eq 1 ]] && DETAILS_DEV=$((DETAILS_DEV + 1))
+  fi
+
+  if [[ "$count_extra" -eq 1 ]]; then
+    # Regeln: server_rules (SQL) == serverRules (TS) == expect je Regel-Fixture.
+    psql_value > "$WORKDIR/sql-rules.json" <<'SQL'
+SELECT jsonb_agg(jsonb_build_object('file', r.file) || public.__parity_rules_run(r.doc->'input') ORDER BY r.file)
+FROM public.__parity_rules r;
+SQL
+    while IFS= read -r rline; do
+      file="$(jq -r '.file' <<<"$rline")"
+      if jq -e '.ok' <<<"$rline" >/dev/null; then
+        echo "OK          Regeln $file"
+      else
+        RULES_DEV=$((RULES_DEV + 1))
+        echo "ABWEICHUNG  Regeln $file (SQL==TS: $(jq -r '.sql == .ts' <<<"$rline"), SQL==expect: $(jq -r '.sql == .expect' <<<"$rline"))"
+        jq -c '{sql, ts, expect}' <<<"$rline" | sed 's/^/    /'
+      fi
+    done < <(jq -cn --slurpfile ts "$WORKDIR/ts-rules.json" --slurpfile sql "$WORKDIR/sql-rules.json" \
+                   --slurpfile exp "$WORKDIR/expect-rules.json" '
+      ($ts[0] | map({key: .file, value: .rules}) | from_entries) as $tsmap
+      | ($exp[0] | map({key: .file, value: .expect}) | from_entries) as $emap
+      | $sql[0][] | {file, sql: (.rules // .error), ts: $tsmap[.file], expect: $emap[.file]}
+      | . + {ok: (.sql == .ts and .sql == .expect)}')
+    if [[ "$(jq 'length' "$WORKDIR/sql-rules.json")" -ne "$RULES_COUNT" ]]; then
+      RULES_DEV=$((RULES_DEV + 1))
+      echo "ABWEICHUNG  Regeln: SQL-Seite lieferte nicht $RULES_COUNT Regel-Fixtures"
     fi
   fi
-done < "$WORKDIR/pairs.jsonl"
+}
 
-SQL_COUNT="$(jq 'length' "$WORKDIR/sql.json")"
-if [[ "$SQL_COUNT" -ne "$FIXTURE_COUNT" ]]; then
-  echo "ABWEICHUNG  SQL-Seite lieferte $SQL_COUNT statt $FIXTURE_COUNT Fixtures"
-  FIX_DEV=$((FIX_DEV + 1))
+if [[ "$MODE" == "gegenprobe" ]]; then
+  echo "--- Gegenprobe Phase A (Angaben, Zwischenspeicher, Regeln) ---"
+  compare_pass 0 1
+  echo "GEGENPROBE Phase B: (1) match_transitions (running, GOAL) actor helper -> leitung;" \
+       "(2) compute_match_state ohne review_state-Filter; (3) match_engine.num EXECUTE fuer PUBLIC" >&2
+  # (2) zuerst: die Migration ohne den Filter erneut einspielen (setzt dabei auch die Rechte neu,
+  # deshalb vor (3)). grep belegt, dass die Filterzeile wirklich getroffen wird. C0b: danach 003
+  # und 20261001 erneut, sonst stuenden die PR-B-Fassungen der geaenderten Funktionen im Container
+  # und (1) waere nicht mehr die einzige Ursache fuer rote Fixtures.
+  if ! grep -q '^     AND e.review_state IS NULL;$' "$ENGINE_FILE"; then
+    echo "::error::Gegenprobe (2): Filterzeile 'AND e.review_state IS NULL;' nicht gefunden." >&2
+    exit 1
+  fi
+  sed 's/^     AND e.review_state IS NULL;$/     ;/' "$ENGINE_FILE" | psql_stdin
+  psql_stdin < "$APPEND_FILE"
+  psql_stdin < "$AMEND_FILE"
+  psql_stdin <<'SQL'
+UPDATE public.match_transitions SET actor = 'leitung' WHERE from_status = 'running' AND event_type = 'GOAL';
+GRANT EXECUTE ON FUNCTION match_engine.num(jsonb) TO PUBLIC;
+SQL
+  echo "--- Gegenprobe Phase B (Seed, Fixtures, compute_match_state-Probe, Rechte) ---"
+  check_seed
+  compare_pass 1 0
+else
+  check_seed
+  compare_pass 1 1
 fi
 
 # --- 5. compute_match_state-Probe -------------------------------------------------------------
@@ -425,20 +605,23 @@ echo ""
 echo "Gleichlauf-Tabelle (Fixture | SQL==TS | SQL==expect):"
 printf '%s\n' "${TABLE_ROWS[@]}"
 echo ""
-DEVIATIONS=$((FIX_DEV + SEED_DEV + PROBE_DEV + PRIV_DEV))
-echo "Fixtures: $FIXTURE_COUNT, OK: $OK_COUNT, Abweichungen gesamt (inkl. compute_match_state-Probe): $DEVIATIONS"
-echo "Abweichungen je Kategorie: Fixtures=$FIX_DEV Seed=$SEED_DEV compute_match_state-Probe=$PROBE_DEV Rechte=$PRIV_DEV"
+DEVIATIONS=$((FIX_DEV + SEED_DEV + PROBE_DEV + PRIV_DEV + DETAILS_DEV + CACHE_DEV + RULES_DEV))
+echo "Fixtures: $FIXTURE_COUNT, OK: $OK_COUNT, Regel-Fixtures: $RULES_COUNT, Abweichungen gesamt (inkl. compute_match_state-Probe): $DEVIATIONS"
+echo "Abweichungen je Kategorie: Fixtures=$FIX_DEV Seed=$SEED_DEV compute_match_state-Probe=$PROBE_DEV Rechte=$PRIV_DEV Angaben=$DETAILS_DEV Zwischenspeicher=$CACHE_DEV Regeln=$RULES_DEV"
 
 if [[ "$MODE" == "gegenprobe" ]]; then
   # Review M4: jede Kategorie muss EINZELN rot sein -- eine rote Kategorie darf eine zahnlos
-  # gewordene andere nicht verdecken.
+  # gewordene andere nicht verdecken (C0b: deshalb zwei Phasen, siehe Kopfkommentar).
   TOOTHLESS=()
   [[ "$FIX_DEV" -gt 0 ]] || TOOTHLESS+=("Fixtures")
   [[ "$SEED_DEV" -gt 0 ]] || TOOTHLESS+=("Seed")
   [[ "$PROBE_DEV" -gt 0 ]] || TOOTHLESS+=("compute_match_state-Probe")
   [[ "$PRIV_DEV" -gt 0 ]] || TOOTHLESS+=("Rechte")
+  [[ "$DETAILS_DEV" -gt 0 ]] || TOOTHLESS+=("Angaben")
+  [[ "$CACHE_DEV" -gt 0 ]] || TOOTHLESS+=("Zwischenspeicher")
+  [[ "$RULES_DEV" -gt 0 ]] || TOOTHLESS+=("Regeln")
   if [[ "${#TOOTHLESS[@]}" -eq 0 ]]; then
-    echo "Gegenprobe wie erwartet ROT in allen vier Kategorien ($DEVIATIONS Abweichung(en))."
+    echo "Gegenprobe wie erwartet ROT in allen sieben Kategorien ($DEVIATIONS Abweichung(en))."
     exit 0
   fi
   echo "::error::Gegenprobe: Mutation blieb UNBEMERKT in: ${TOOTHLESS[*]} -- dieser Teil des Checks ist zahnlos." >&2
@@ -449,5 +632,5 @@ if [[ "$DEVIATIONS" -gt 0 ]]; then
   echo "::error::$DEVIATIONS Abweichung(en) zwischen SQL-Zwilling, TS-Rechenfunktion und Fixture-Erwartung." >&2
   exit 1
 fi
-echo "Gleichlauf gruen: SQL == TS == expect fuer alle $FIXTURE_COUNT Fixtures, compute_match_state-Probe gruen."
+echo "Gleichlauf gruen: SQL == TS == expect fuer alle $FIXTURE_COUNT Fixtures (Ergebnisse, serverState, Angaben, Zwischenspeicher) und $RULES_COUNT Regel-Fixtures, compute_match_state-Probe gruen."
 exit 0

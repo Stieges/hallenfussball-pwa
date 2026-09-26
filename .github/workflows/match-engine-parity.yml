@@ -47,6 +47,7 @@ jobs:
         run: bash scripts/match-engine-parity.sh
 
       - name: Gegenprobe (Mutation muss erkannt werden)
-        # Exit 0 NUR, wenn die Mutationen (Uebergangszeile, PUBLIC-EXECUTE) als Abweichung erkannt
+        # Exit 0 NUR, wenn die Mutationen (Uebergangszeile, review_state-Filter, PUBLIC-EXECUTE;
+        # C0b: details, live_state.breakStartedAt, cfg_num) je Kategorie als Abweichung erkannt
         # werden -- sonst waere der Check zahnlos.
         run: bash scripts/match-engine-parity.sh --gegenprobe

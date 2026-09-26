@@ -18,6 +18,11 @@
  * Die Rechenfunktion selbst bleibt unverändert (Brief: TS ist die Referenz).
  *
  * Nur erasable TS-Syntax (Type-Stripping), keine Laufzeit-Abhängigkeit außer der Rechenfunktion.
+ *
+ * C0b (PC4): je Fixture zusätzlich `details`, `sectionStartMs`, `breakStartedAt` (interner Zustand,
+ * nicht im serverState) und `cacheColumns(state, ctx)` -- der Gleichlauf vergleicht sie mit
+ * `state->'details'` usw. bzw. `match_engine.cache_columns`. Mit `--rules` stattdessen je Datei unter
+ * `__fixtures__/rules/*.json` `{file, rules: serverRules(input)}` (Zwilling von `match_engine.server_rules`).
  */
 import { registerHooks } from 'node:module';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -57,6 +62,19 @@ interface FixtureFile {
   events: unknown[];
 }
 
+if (process.argv.includes('--rules')) {
+  const rulesDir = join(fixturesDir, 'rules');
+  const ruleFiles = readdirSync(rulesDir)
+    .filter((name) => name.endsWith('.json'))
+    .sort();
+  const rulesOutput = ruleFiles.map((file) => {
+    const fixture = JSON.parse(readFileSync(join(rulesDir, file), 'utf-8')) as { input: unknown };
+    return { file, rules: engine.serverRules(fixture.input) };
+  });
+  process.stdout.write(`${JSON.stringify(rulesOutput)}\n`);
+  process.exit(0);
+}
+
 const fileNames = readdirSync(fixturesDir)
   .filter((name) => name.endsWith('.json'))
   .sort();
@@ -68,7 +86,15 @@ const output = fileNames.map((file) => {
     fixture.mode === 'log'
       ? engine.continueLog(prior.state, fixture.events, fixture.ctx)
       : engine.applyBatch(prior.state, fixture.events, fixture.ctx);
-  return { file, results: outcome.results, serverState: engine.toServerState(outcome.state) };
+  return {
+    file,
+    results: outcome.results,
+    serverState: engine.toServerState(outcome.state),
+    details: outcome.state.details,
+    sectionStartMs: outcome.state.sectionStartMs,
+    breakStartedAt: outcome.state.breakStartedAt,
+    cacheColumns: engine.cacheColumns(outcome.state, fixture.ctx),
+  };
 });
 
 process.stdout.write(`${JSON.stringify(output)}\n`);

@@ -189,6 +189,16 @@ AUTH_TRIGGER_FILE="$(find_migration 20260925_001)"
 # prüft dieser Lauf 20260928_001 also GAR NICHT -- die Gleichlauf-Prüfungen unten
 # (role_permissions/match_transitions vs. JSON) sind entsprechend ebenfalls an WITH_R5 gebunden.
 MATCH_EVENT_LOG_FILE="$(find_migration 20260928_001)"
+# C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md): 20261001_001 ergaenzt
+# public.match_transitions um die AMEND-Zeilen aus matchTransitions.json -- ohne sie weicht der
+# Gleichlauf-Check 7c4 unten seit C0a ab. Sie setzt die SQL-Rechenfunktion und den Schreibweg
+# voraus (Fail-fast), deshalb die ganze Kette 002 -> 003 -> 20261001, an WITH_R5 gebunden wie
+# MATCH_EVENT_LOG_FILE (dieselbe Abhaengigkeit ueber 20260928_001).
+MATCH_ENGINE_CHAIN_FILES=(
+  "$(find_migration 20260928_002)"
+  "$(find_migration 20260928_003)"
+  "$(find_migration 20261001_001)"
+)
 MATCH_TRANSITIONS_FILE="$REPO_ROOT/src/core/match/matchTransitions.json"
 ROLE_PERMISSIONS_FILE="$REPO_ROOT/src/features/auth/permissions/rolePermissions.json"
 CONTAINER_NAME="rls-role-matrix-$$"
@@ -256,6 +266,9 @@ done
 [[ -f "$DECLINED_EXPIRED_FILE" ]] || { echo "::error::Migration fehlt: $DECLINED_EXPIRED_FILE" >&2; exit 1; }
 [[ -f "$AUTH_TRIGGER_FILE" ]] || { echo "::error::Migration fehlt: $AUTH_TRIGGER_FILE" >&2; exit 1; }
 [[ -f "$MATCH_EVENT_LOG_FILE" ]] || { echo "::error::Migration fehlt: $MATCH_EVENT_LOG_FILE" >&2; exit 1; }
+for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+  [[ -f "$f" ]] || { echo "::error::Migration fehlt: $f" >&2; exit 1; }
+done
 [[ -f "$MATCH_TRANSITIONS_FILE" ]] || { echo "::error::Übergangstabelle fehlt: $MATCH_TRANSITIONS_FILE" >&2; exit 1; }
 
 cleanup() { docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true; }
@@ -387,6 +400,10 @@ fi
 if [[ "$WITH_R5" -eq 1 ]]; then
   echo "Migration einspielen: $(basename "$MATCH_EVENT_LOG_FILE")" >&2
   psql_stdin < "$MATCH_EVENT_LOG_FILE"
+  for f in "${MATCH_ENGINE_CHAIN_FILES[@]}"; do
+    echo "Migration einspielen: $(basename "$f")" >&2
+    psql_stdin < "$f"
+  done
 fi
 
 if [[ "$WITH_MIGRATION" -eq 1 && "$WITH_HARDENING" -eq 1 && "$WITH_PARENT_KEYS" -eq 1 && "$WITH_R6" -eq 1 && "$WITH_R5" -eq 1 && "$WITH_R7" -eq 1 ]]; then
