@@ -16,26 +16,64 @@ function row(partial: Partial<ConfirmedRow> & Pick<ConfirmedRow, 'id' | 'type' |
   };
 }
 
+/** Jeder Aufruf der Abfragekette wird aufgezeichnet (N3: Filterkette belegen). */
+type ChainStep =
+  | { op: 'from'; table: string }
+  | { op: 'select'; cols: string[] }
+  | { op: 'eq'; col: string; val: unknown }
+  | { op: 'not'; col: string; optr: string; val: unknown }
+  | { op: 'is'; col: string; val: unknown }
+  | { op: 'gt'; col: string; val: number }
+  | { op: 'order'; col: string }
+  | { op: 'limit'; n: number };
+
 /** Ketten-Mock in der Form des Supabase-Clients; `pages` werden von `limit()` nacheinander geliefert. */
 function mockQuery(pages: Array<{ data: ConfirmedRow[] | null; error: unknown }>) {
+  const steps: ChainStep[] = [];
   let index = 0;
-  return {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          not: () => ({
-            is: () => ({
-              gt: () => ({
-                order: () => ({
-                  limit: async () => (index < pages.length ? pages[index++] : { data: [], error: null }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      }),
-    }),
+  const query = {
+    from: (table: string) => {
+      steps.push({ op: 'from', table });
+      return {
+        select: (...cols: string[]) => {
+          steps.push({ op: 'select', cols });
+          return {
+            eq: (col: string, val: unknown) => {
+              steps.push({ op: 'eq', col, val });
+              return {
+                not: (col: string, optr: string, val: unknown) => {
+                  steps.push({ op: 'not', col, optr, val });
+                  return {
+                    is: (col: string, val: unknown) => {
+                      steps.push({ op: 'is', col, val });
+                      return {
+                        gt: (col: string, val: number) => {
+                          steps.push({ op: 'gt', col, val });
+                          return {
+                            order: (col: string) => {
+                              steps.push({ op: 'order', col });
+                              return {
+                                limit: async (n: number) => {
+                                  steps.push({ op: 'limit', n });
+                                  return index < pages.length ? pages[index++] : { data: [], error: null };
+                                },
+                              };
+                            },
+                          };
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
   };
+  const pageCalls = (): number => steps.filter((step) => step.op === 'limit').length;
+  return { query, steps, pageCalls };
 }
 
 describe('catchUp', () => {
@@ -124,7 +162,8 @@ describe('catchUp', () => {
         { data: [row({ id: 'e2', type: 'PAUSE', seq: 2 })], error: null },
         { data: [row({ id: 'e3', type: 'RESUME', seq: 3 })], error: null },
       ];
-      const result = await fetchConfirmedSince(mockQuery(pages), 'm1', 0, 1);
+      const { query } = mockQuery(pages);
+      const result = await fetchConfirmedSince(query, 'm1', 0, 1);
       expect(result.events.map((e) => e.id)).toEqual(['e1', 'e2', 'e3']);
       expect(result.newWatermark).toBe(3);
     });
@@ -134,43 +173,62 @@ describe('catchUp', () => {
         { data: [row({ id: 'p1', type: 'GOAL', seq: 7 }), row({ id: 'p2', type: 'GOAL', seq: 8 })], error: null },
         { data: [row({ id: 'p3', type: 'GOAL', seq: 9 })], error: null },
       ];
-      let calls = 0;
-      const query = {
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              not: () => ({
-                is: () => ({
-                  gt: () => ({
-                    order: () => ({
-                      limit: async () => {
-                        calls += 1;
-                        return calls <= pages.length ? pages[calls - 1] : { data: [], error: null };
-                      },
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          }),
-        }),
-      };
+      const { query, pageCalls } = mockQuery(pages);
       const result = await fetchConfirmedSince(query, 'm1', 6, 2);
       expect(result.events.map((e) => e.seq)).toEqual([7, 8, 9]);
       expect(result.newWatermark).toBe(9);
-      expect(calls).toBe(2);
+      expect(pageCalls()).toBe(2);
+    });
+
+    it('wendet die RC7-Filterkette an und steigert den Wasserstand je Seite (N3)', async () => {
+      const pages = [
+        { data: [row({ id: 'p1', type: 'GOAL', seq: 7 }), row({ id: 'p2', type: 'GOAL', seq: 8 })], error: null },
+        { data: [row({ id: 'p3', type: 'GOAL', seq: 9 })], error: null },
+      ];
+      const { query, steps } = mockQuery(pages);
+      await fetchConfirmedSince(query, 'm1', 6, 2);
+
+      expect(steps.filter((s) => s.op === 'from').map((s) => s.table)).toEqual(['match_events', 'match_events']);
+      expect(steps.filter((s) => s.op === 'select')).toEqual([
+        { op: 'select', cols: ['*'] },
+        { op: 'select', cols: ['*'] },
+      ]);
+      expect(steps.filter((s) => s.op === 'eq')).toEqual([
+        { op: 'eq', col: 'match_id', val: 'm1' },
+        { op: 'eq', col: 'match_id', val: 'm1' },
+      ]);
+      expect(steps.filter((s) => s.op === 'not')).toEqual([
+        { op: 'not', col: 'event_format', optr: 'is', val: null },
+        { op: 'not', col: 'event_format', optr: 'is', val: null },
+      ]);
+      expect(steps.filter((s) => s.op === 'is')).toEqual([
+        { op: 'is', col: 'review_state', val: null },
+        { op: 'is', col: 'review_state', val: null },
+      ]);
+      expect(steps.filter((s) => s.op === 'gt')).toEqual([
+        { op: 'gt', col: 'seq', val: 6 },
+        { op: 'gt', col: 'seq', val: 8 },
+      ]);
+      expect(steps.filter((s) => s.op === 'order')).toEqual([
+        { op: 'order', col: 'seq' },
+        { op: 'order', col: 'seq' },
+      ]);
+      expect(steps.filter((s) => s.op === 'limit')).toEqual([
+        { op: 'limit', n: 2 },
+        { op: 'limit', n: 2 },
+      ]);
     });
 
     it('liefert leeres Ergebnis bei keinen Daten', async () => {
-      const result = await fetchConfirmedSince(mockQuery([{ data: [], error: null }]), 'm1', 5, 500);
+      const { query } = mockQuery([{ data: [], error: null }]);
+      const result = await fetchConfirmedSince(query, 'm1', 5, 500);
       expect(result.events).toEqual([]);
       expect(result.newWatermark).toBe(5);
     });
 
     it('wirft bei einem Fehler der Abfrage (Netzfehler)', async () => {
-      await expect(
-        fetchConfirmedSince(mockQuery([{ data: null, error: { message: 'Failed to fetch' } }]), 'm1', 0, 500),
-      ).rejects.toThrow();
+      const { query } = mockQuery([{ data: null, error: { message: 'Failed to fetch' } }]);
+      await expect(fetchConfirmedSince(query, 'm1', 0, 500)).rejects.toThrow();
     });
 
     it('liefert bei einem Fehler mitten beim Blättern kein Teilergebnis zurück', async () => {
@@ -178,7 +236,8 @@ describe('catchUp', () => {
         { data: [row({ id: 'e1', type: 'GOAL', seq: 1 })], error: null },
         { data: null, error: { message: 'connection reset' } },
       ];
-      await expect(fetchConfirmedSince(mockQuery(pages), 'm1', 0, 1)).rejects.toThrow();
+      const { query } = mockQuery(pages);
+      await expect(fetchConfirmedSince(query, 'm1', 0, 1)).rejects.toThrow();
     });
   });
 });
