@@ -74,6 +74,22 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
     expect(r1Entry?.detail).toEqual({ dependsOnEventId: 'g1' });
   });
 
+  it('N-4: W4 verliert einen vorhandenen Server-detail NICHT -- dependsOnEventId wird nur angehaengt', () => {
+    const g1 = ev({ id: 'g1', type: 'GOAL', at: 1 });
+    const r1 = ev({ id: 'r1', type: 'RETRACT', at: 2, targetId: 'g1' });
+    const batch = [g1, r1];
+    const results = [
+      { id: g1.id, status: 'rejected' as const, code: 'INVALID_TRANSITION' },
+      // Der Server liefert hier bereits ein eigenes detail-Objekt (z. B. { reason: 'OVERTIME' }).
+      { id: r1.id, status: 'rejected' as const, code: 'UNKNOWN_TARGET', detail: { reason: 'OVERTIME' } },
+    ];
+
+    const resolution = buildResolution(batch, results, batch, NOW);
+
+    const r1Entry = resolution.rejected.find((entry) => entry.event.id === 'r1');
+    expect(r1Entry?.detail).toEqual({ reason: 'OVERTIME', dependsOnEventId: 'g1' });
+  });
+
   it('Minor (c): ein NICHT gesendeter, kaskadierter Eintrag bekommt weiterhin DEPENDS_ON_REJECTED (kein Server-Code vorhanden)', () => {
     const start = ev({ id: 's1', type: 'MATCH_START', at: 1 });
     const goal = ev({ id: 'g1', type: 'GOAL', at: 2 });

@@ -7,7 +7,7 @@ import { IDBFactory } from 'fake-indexeddb';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { OutboxStatus } from '../outboxTypes';
 import { ctx, ev } from './fixtures';
-import { acceptAll, makeHarness, sentIds, sentMatches, type Harness } from './outboxHarness';
+import { acceptAll, makeHarness, networkError, sentIds, sentMatches, type Harness } from './outboxHarness';
 
 async function seed(h: Harness, accountId: string, matchId: string, tournamentId?: string): Promise<void> {
   await h.store.create(accountId, matchId, ctx, tournamentId);
@@ -53,6 +53,44 @@ describe('OutboxSender: Status und Konten', () => {
     expect(sentMatches(h.api)[sentMatches(h.api).length - 1]).toBe('mA');
     const afterA = await h.store.load('accB', 'mB');
     expect(afterA?.acked.map((event) => event.id)).toEqual(['b1']);
+  });
+
+  it('N-3: pausedMatches zeigt nur Pausen des AKTUELLEN Kontos (Konto-Filter in refresh)', async () => {
+    const h = makeHarness();
+    await seed(h, 'accA', 'mA');
+    await h.store.addPending('accA', 'mA', ev({ id: 'a1', type: 'GOAL', at: 1 }));
+    await seed(h, 'accB', 'mB');
+    await h.store.addPending('accB', 'mB', ev({ id: 'b1', type: 'GOAL', at: 1 }));
+
+    let releaseA: () => void = () => undefined;
+    const gateA = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+    h.api.mockImplementation(async (matchId, events) => {
+      if (matchId === 'mA') {
+        await gateA;
+        throw networkError(); // -> transient, Backoff-Pause
+      }
+      return acceptAll(events);
+    });
+
+    const first = h.sender.start('accA');
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    await h.sender.start('accB'); // Kontowechsel, WAEHREND A's Aufruf noch haengt
+    expect(await h.store.load('accB', 'mB').then((copy) => copy?.acked.map((e) => e.id))).toEqual(['b1']);
+
+    releaseA(); // As (veralteter) Aufruf scheitert JETZT -- schedultRetry setzt queue.pause,
+    // aber (N-1) OHNE dass dafuer ein refresh() fuer das jetzt aktive Konto B laeuft.
+    await first;
+    await h.settle();
+
+    // Ein spaeterer, eigener refresh() von B (z. B. durch kick()) darf As Pause NICHT zeigen.
+    await h.store.addPending('accB', 'mB', ev({ id: 'b2', type: 'GOAL', at: 2 }));
+    await h.sender.kick('mB');
+
+    expect(h.sender.getStatus().pausedMatches).toEqual({});
   });
 
   it('17: pendingByTournament stimmt nach Einfuegen und Senden, jeder Listener wird gerufen', async () => {
