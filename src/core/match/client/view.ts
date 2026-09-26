@@ -1,39 +1,99 @@
 /**
  * computeView (RC3, V3): Ansicht aus lokaler Spielkopie berechnen.
+ * Basis ist der bestaetigte Log (inkrementell gecacht, I7); offene Eintraege
+ * werden wie am Server als Stapel mit Folgeablehnung angewendet. Lokal
+ * abgelehnte pending-Einträge werden mit Fehlercode gemeldet (V3: nichts
+ * still verwerfen).
  */
-import { reduceMatch, applyBatch, type EngineEvent, type MatchContext, type MatchState } from '../';
+import {
+  reduceMatch,
+  continueLog,
+  applyBatch,
+  type EngineEvent,
+  type ErrorCode,
+  type MatchContext,
+  type MatchState,
+} from '../';
+
+export interface ViewCopy {
+  matchId: string;
+  confirmed: readonly EngineEvent[];
+  acked: readonly EngineEvent[];
+  pending: readonly EngineEvent[];
+}
+
+export interface LocalRejectedEntry {
+  event: EngineEvent;
+  code: ErrorCode;
+  detail?: unknown;
+}
 
 export interface ViewResult {
   state: MatchState;
-  localRejected: EngineEvent[];
+  localRejected: LocalRejectedEntry[];
   needsFullReload: boolean;
 }
 
-export function computeView(copy: { ctx: MatchContext; confirmed: EngineEvent[]; acked: EngineEvent[]; pending: EngineEvent[] }, _serverNow?: number): ViewResult {
-  // Basis = reduceMatch auf bestätigtem Log
-  const baseResult = reduceMatch(copy.confirmed, copy.ctx);
-  const baseState = baseResult.state;
+interface CachedBase {
+  confirmedLength: number;
+  lastConfirmedId: string | null;
+  state: MatchState;
+}
 
-  const openEvents = [...copy.acked, ...copy.pending];
-  const openIds = new Set(copy.confirmed.map((e) => e.id));
-  const openWithoutDuplicates = openEvents.filter((e) => !openIds.has(e.id));
+const baseCache = new Map<string, CachedBase>();
 
-  const batchResult = applyBatch(baseState, openWithoutDuplicates, copy.ctx);
-  const state = batchResult.state;
+/** Basis-Zustand zum bestaetigten Log; nur der neue Praefix wird weitergerechnet (I7). */
+function confirmedBase(copy: ViewCopy, ctx: MatchContext): MatchState {
+  const confirmed = copy.confirmed;
+  const lastConfirmedId = confirmed.length > 0 ? confirmed[confirmed.length - 1].id : null;
+  const cached = baseCache.get(copy.matchId);
+  const usable =
+    cached !== undefined &&
+    cached.confirmedLength <= confirmed.length &&
+    (cached.confirmedLength === 0 || confirmed[cached.confirmedLength - 1].id === cached.lastConfirmedId);
+  const remember = (state: MatchState): MatchState => {
+    baseCache.set(copy.matchId, { confirmedLength: confirmed.length, lastConfirmedId, state });
+    return state;
+  };
+  if (cached && usable) {
+    const delta = confirmed.slice(cached.confirmedLength);
+    return remember(delta.length === 0 ? cached.state : continueLog(cached.state, delta, ctx).state);
+  }
+  return remember(reduceMatch(confirmed, ctx).state);
+}
 
-  // Lokale Ablehnung prüfen
-  const localRejected: EngineEvent[] = [];
+export function computeView(copy: ViewCopy, ctx: MatchContext): ViewResult {
+  const baseState = confirmedBase(copy, ctx);
+  const confirmedIds = new Set(copy.confirmed.map((event) => event.id));
+  const openWithoutDuplicates = [...copy.acked, ...copy.pending].filter((event) => !confirmedIds.has(event.id));
+
+  const batchResult = applyBatch(baseState, openWithoutDuplicates, ctx);
+  const ackedById = new Map(copy.acked.map((event) => [event.id, event]));
+  const pendingById = new Map(copy.pending.map((event) => [event.id, event]));
+
+  const localRejected: LocalRejectedEntry[] = [];
   let needsFullReload = false;
-
-  for (const ackEvent of copy.acked) {
-    const result = batchResult.results.find((r) => r.id === ackEvent.id);
-    if (result?.status === 'rejected') {
+  for (const result of batchResult.results) {
+    if (result.status !== 'rejected' || result.code === undefined) {
+      continue;
+    }
+    if (ackedById.has(result.id)) {
+      // V3: bestaetigte Eintraege duerfen lokal nicht still scheitern.
       needsFullReload = true;
+      continue;
+    }
+    const pendingEvent = pendingById.get(result.id);
+    if (pendingEvent) {
+      localRejected.push({
+        event: pendingEvent,
+        code: result.code,
+        ...(result.detail !== undefined ? { detail: result.detail } : {}),
+      });
     }
   }
 
   return {
-    state,
+    state: batchResult.state,
     localRejected,
     needsFullReload,
   };
