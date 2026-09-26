@@ -103,16 +103,17 @@ function liveStateOf(state: MatchState): CacheLiveState {
   };
 }
 
-/** Der SKIP, der das Spiel abgesetzt hat: der zuletzt angenommene (nur im Status skipped). */
+/** Der SKIP, der das Spiel abgesetzt hat: der mit groesstem `at`, bei Gleichstand der spaeter eingefuegte. */
 function activeSkip(state: MatchState): EngineEvent | null {
   if (state.status !== 'skipped') {
     return null;
   }
   const skips = Object.values(state.accepted).filter((event) => event.type === 'SKIP');
-  // RC16 / Fix: SKIP mit größtem `at` wählen (bei Gleichstand später eingefügter)
-  let latestSkip: typeof skips[0] | null = null;
+  // RC16 / M-1: unabhaengig von der ID-Schreibweise entscheidet `at`, bei Gleichstand
+  // die Einfuegereihenfolge (Iterationsreihenfolge von `state.accepted`).
+  let latestSkip: EngineEvent | null = null;
   for (const skip of skips) {
-    if (!latestSkip || skip.at > latestSkip.at || (skip.at === latestSkip.at && skip.id > latestSkip.id)) {
+    if (latestSkip === null || skip.at >= latestSkip.at) {
       latestSkip = skip;
     }
   }

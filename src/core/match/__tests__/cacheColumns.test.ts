@@ -37,6 +37,11 @@ function run(events: EngineEvent[]): MatchState {
   return state;
 }
 
+/** Abgesetztes Spiel mit den uebergebenen angenommenen SKIP-Ereignissen als Zustand. */
+function skippedState(accepted: Record<string, EngineEvent>): MatchState {
+  return { ...initialState(ctx), status: 'skipped', accepted };
+}
+
 const COLUMN_KEYS = [
   'score_a',
   'score_b',
@@ -207,67 +212,38 @@ describe('cacheColumns', () => {
   });
 
   it('SKIP: wählt den mit größtem at (bei Gleichstand später eingefügter, nicht einfach letzten)', () => {
-    // Manuell einen Zustand mit mehreren SKIP-Ereignissen aufbauen
-    const state: MatchState = {
-      ...initialState(ctx),
-      status: 'skipped',
-      accepted: {
-        k1: { id: 'k1', type: 'SKIP', actor: 'leitung', at: 2000, section: null, clockMs: null, teamId: null, targetId: null, payload: { reason: 'alt' } },
-        k2: { id: 'k2', type: 'SKIP', actor: 'leitung', at: 3000, section: null, clockMs: null, teamId: null, targetId: null, payload: { reason: 'neu' } },
-      } as Record<string, any>,
-      phase: 'regular',
-      clock: { running: false, elapsedMs: 0, anchorAt: null },
-      scores: { teamA: { regular: 0, overtime: 0, shootout: 0 }, teamB: { regular: 0, overtime: 0, shootout: 0 } },
-      goals: [],
-      overrides: [],
-      nextSeq: 0,
-      baseDecidedBy: null,
-      shootoutKicks: [],
-      cards: [],
-      fouls: [],
-      penalties: [],
-      substitutions: [],
-      retracted: [],
-      lastScoreEventId: null,
-      decidedBy: null,
-      finishedAt: null,
-      details: {},
-      sectionStartMs: 0,
-      breakStartedAt: null,
-    };
-    expect(cacheColumns(state, ctx).skipped_at).toBe(3000);
+    const state = skippedState({
+      k1: ev({ id: 'k1', type: 'SKIP', actor: 'leitung', at: 2000, payload: { reason: 'alt' } }),
+      k2: ev({ id: 'k2', type: 'SKIP', actor: 'leitung', at: 3000, payload: { reason: 'neu' } }),
+    });
+    expect(cacheColumns(state, ctx)).toMatchObject({ skipped_at: 3000, skipped_reason: 'neu' });
   });
 
-  it('SKIP mit Nicht-UUID-IDs: letzter (größter at) gewinnt', () => {
-    const state: MatchState = {
-      ...initialState(ctx),
-      status: 'skipped',
-      accepted: {
-        '1': { id: '1', type: 'SKIP', actor: 'leitung', at: 100, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
-        '2': { id: '2', type: 'SKIP', actor: 'leitung', at: 200, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
-        '3': { id: '3', type: 'SKIP', actor: 'leitung', at: 150, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
-      } as Record<string, any>,
-      phase: 'regular',
-      clock: { running: false, elapsedMs: 0, anchorAt: null },
-      scores: { teamA: { regular: 0, overtime: 0, shootout: 0 }, teamB: { regular: 0, overtime: 0, shootout: 0 } },
-      goals: [],
-      overrides: [],
-      nextSeq: 0,
-      baseDecidedBy: null,
-      shootoutKicks: [],
-      cards: [],
-      fouls: [],
-      penalties: [],
-      substitutions: [],
-      retracted: [],
-      lastScoreEventId: null,
-      decidedBy: null,
-      finishedAt: null,
-      details: {},
-      sectionStartMs: 0,
-      breakStartedAt: null,
-    };
-    expect(cacheColumns(state, ctx).skipped_at).toBe(200);
+  it('SKIP bei Gleichstand: der spaeter eingefuegte gewinnt (Einfuegereihenfolge, nicht ID-Reihenfolge)', () => {
+    // 'z' ist lexikographisch groesser als 'a', wird aber VORHER eingefuegt.
+    const state = skippedState({
+      z: ev({ id: 'z', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'zuerst' } }),
+      a: ev({ id: 'a', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'spaeter' } }),
+    });
+    expect(cacheColumns(state, ctx)).toMatchObject({ skipped_at: 100, skipped_reason: 'spaeter' });
+  });
+
+  it('SKIP mit Nicht-UUID-IDs 1,2,3 bei gleichem at: der letzte gewinnt', () => {
+    const state = skippedState({
+      '1': ev({ id: '1', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'erster' } }),
+      '2': ev({ id: '2', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'zweiter' } }),
+      '3': ev({ id: '3', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'dritter' } }),
+    });
+    expect(cacheColumns(state, ctx)).toMatchObject({ skipped_at: 100, skipped_reason: 'dritter' });
+  });
+
+  it('SKIP mit Nicht-UUID-IDs: groesstes at gewinnt unabhängig von der ID', () => {
+    const state = skippedState({
+      '1': ev({ id: '1', type: 'SKIP', actor: 'leitung', at: 100, payload: { reason: 'frueh' } }),
+      '2': ev({ id: '2', type: 'SKIP', actor: 'leitung', at: 200, payload: { reason: 'spaet' } }),
+      '3': ev({ id: '3', type: 'SKIP', actor: 'leitung', at: 150, payload: { reason: 'mittel' } }),
+    });
+    expect(cacheColumns(state, ctx)).toMatchObject({ skipped_at: 200, skipped_reason: 'spaet' });
   });
 
   it('Golden Goal: Verlängerungsstand getrennt, decided_by goldenGoal', () => {

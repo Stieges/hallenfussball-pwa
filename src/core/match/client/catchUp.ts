@@ -1,9 +1,8 @@
 /**
  * catchUp (RC7, V9): Nachladen bestätigter Ereignisse und Projektion
  * von match_events-Zeilen in EngineEvent (exakt wie Server in 003:490-503).
- * Hinweis: EngineEvent-Record erzeugt architekturbedingte TS-Warnungen.
  */
-import type { EngineEvent } from '../types';
+import { EventTypeSchema, type EngineEvent } from '../types';
 
 export interface EngineEventWithSeq extends EngineEvent {
   seq: number;
@@ -24,20 +23,28 @@ export interface ConfirmedRow {
   review_state?: string | null;
 }
 
+/** 003 liefert `team_id::text` und `target_event_id::text` in Kleinbuchstaben (I8). */
+function lowerOrNull(value: string | null | undefined): string | null {
+  return value === null || value === undefined ? null : value.toLowerCase();
+}
+
 export function rowToEngineEvent(row: ConfirmedRow): EngineEventWithSeq {
   const id = row.id.toString().toLowerCase();
-  const at = Math.floor(
-    Date.parse(row.client_time ?? row.recorded_at ?? new Date().toISOString())
-  );
+  // I8: keine erfundene Zeit -- `recorded_at` ist in der DB NOT NULL, fehlende Werte
+  // verdecken nur Fehler.
+  const time = row.client_time ?? row.recorded_at ?? null;
+  if (time === null) {
+    throw new Error(`match_events-Zeile ${id}: weder client_time noch recorded_at gesetzt`);
+  }
   return {
     id,
-    type: row.type as EngineEventWithSeq['type'],
+    type: EventTypeSchema.parse(row.type),
     actor: 'leitung',
-    at,
+    at: Math.floor(Date.parse(time)),
     section: row.section ?? null,
     clockMs: row.clock_ms ?? null,
-    teamId: row.team_id ?? null,
-    targetId: row.target_event_id ?? null,
+    teamId: lowerOrNull(row.team_id),
+    targetId: lowerOrNull(row.target_event_id),
     payload: row.payload,
     seq: row.seq,
   };
@@ -81,6 +88,9 @@ export async function fetchConfirmedSince(
       .gt('seq', currentWatermark)
       .order('seq')
       .limit(pageSize);
+    // C4: Netz- und RLS-Fehler werden vom Client als `error` geliefert, nicht als
+    // Ausnahme -- sie muessen trotzdem wirken. Ein Fehler mitten beim Blättern
+    // laesst die gesamte Lese scheitern, ein Teilergebnis wird nie ausgeliefert.
     if (result.error) {
       throw result.error;
     }

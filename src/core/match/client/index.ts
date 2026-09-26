@@ -1,6 +1,19 @@
 export * from './catchUp';
-export { type EngineEventWithSeq } from './catchUp';
-export { ClockSync } from './ClockSync';
-export { LocalMatchStore, LocalStoreFullError } from './LocalMatchStore';
-export { toLiveMatchView, toRuntimeEvents, stableEvents, activePenaltiesView, foulCounts } from './viewAdapters';
-export { computeView } from './view';
+export { ClockSync, type ClockStorage, type ClockSyncData } from './ClockSync';
+export { LocalMatchStore, LocalStoreFullError, type MatchCopy } from './LocalMatchStore';
+export {
+  toLiveMatchView,
+  toRuntimeEvents,
+  stableEvents,
+  activePenaltiesView,
+  foulCounts,
+  type LiveMatchMeta,
+  type LiveRuntimeEvent,
+  type ViewClock,
+} from './viewAdapters';
+export {
+  computeView,
+  type LocalRejectedEntry,
+  type ViewCopy,
+  type ViewResult,
+} from './view';

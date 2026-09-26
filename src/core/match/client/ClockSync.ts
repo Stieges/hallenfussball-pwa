@@ -13,11 +13,15 @@ export interface ClockSyncData {
   rttMs: number;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 export class ClockSync {
-  private offsetMs = 0;
-  private measuredAt = 0;
+  private currentOffsetMs = 0;
+  private lastMeasuredAt = 0;
   private timerId: ReturnType<typeof setInterval> | null = null;
-  private lastData: ClockSyncData | null = null;
+  private inFlight: Promise<boolean> | null = null;
 
   constructor(
     private fetchServerTime: () => Promise<number>,
@@ -27,41 +31,51 @@ export class ClockSync {
     const raw = this.storage.get('clockSync:v1');
     if (raw) {
       try {
-        const parsed = JSON.parse(raw) as Partial<ClockSyncData>;
-        if (typeof parsed.offsetMs === 'number') {
-          this.offsetMs = Math.round(parsed.offsetMs);
+        const parsed: unknown = JSON.parse(raw);
+        if (isRecord(parsed)) {
+          if (typeof parsed.offsetMs === 'number') {
+            this.currentOffsetMs = Math.round(parsed.offsetMs);
+          }
+          if (typeof parsed.measuredAt === 'number') {
+            this.lastMeasuredAt = parsed.measuredAt;
+          }
         }
-        if (typeof parsed.measuredAt === 'number') {
-          this.measuredAt = parsed.measuredAt;
-        }
-        this.lastData = {
-          offsetMs: this.offsetMs,
-          measuredAt: this.measuredAt,
-          rttMs: typeof parsed.rttMs === 'number' ? parsed.rttMs : 0,
-        };
       } catch {
         // Ignoriere defekten Speicherinhalt
       }
     }
   }
 
-  get offsetMsValue(): number {
-    return this.offsetMs;
+  get offsetMs(): number {
+    return this.currentOffsetMs;
+  }
+
+  get measuredAt(): number {
+    return this.lastMeasuredAt;
   }
 
   get isKnown(): boolean {
-    return this.measuredAt > 0 || this.offsetMs !== 0;
-  }
-
-  get measuredAtValue(): number {
-    return this.measuredAt;
+    return this.lastMeasuredAt > 0 || this.currentOffsetMs !== 0;
   }
 
   serverNow(): number {
-    return Math.round(this.now() + this.offsetMs);
+    return this.now() + this.currentOffsetMs;
   }
 
+  /** Misst den Abstand; parallele Aufrufe teilen eine Messreihe (M-5). */
   async sync(): Promise<boolean> {
+    if (this.inFlight) {
+      return this.inFlight;
+    }
+    this.inFlight = this.runSync();
+    try {
+      return await this.inFlight;
+    } finally {
+      this.inFlight = null;
+    }
+  }
+
+  private async runSync(): Promise<boolean> {
     const measurements: { rtt: number; offset: number }[] = [];
     const attempts = 3;
     for (let i = 0; i < attempts; i++) {
@@ -81,10 +95,13 @@ export class ClockSync {
     }
     // Es zählt die Messung mit der kleinsten RTT
     const best = measurements.reduce((min, m) => (m.rtt < min.rtt ? m : min));
-    this.offsetMs = Math.round(best.offset);
-    this.measuredAt = this.now();
-    this.lastData = { offsetMs: this.offsetMs, measuredAt: this.measuredAt, rttMs: best.rtt };
-    this.storage.set('clockSync:v1', JSON.stringify(this.lastData));
+    this.currentOffsetMs = Math.round(best.offset);
+    this.lastMeasuredAt = this.now();
+    this.storage.set('clockSync:v1', JSON.stringify({
+      offsetMs: this.currentOffsetMs,
+      measuredAt: this.lastMeasuredAt,
+      rttMs: best.rtt,
+    }));
     return true;
   }
 
