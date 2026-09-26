@@ -210,4 +210,99 @@ describe('OutboxSender: hoechstens ein Aufruf je Spiel (I1)', () => {
     expect(await idsIn(h, 'accB', matchId, 'acked')).toEqual(['b1']);
     expect(await idsIn(h, 'accB', matchId, 'pending')).toEqual([]);
   });
+
+  it('I1-R (a): stop() WAEHREND der store.load()-Leseanfrage -- danach KEIN Aufruf mehr', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm-ir1', ctx);
+    await h.store.addPending('acc', 'm-ir1', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+
+    let releaseLoad: () => void = () => undefined;
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve;
+    });
+    const originalLoad = h.store.load.bind(h.store);
+    vi.spyOn(h.store, 'load').mockImplementation(async (accountId: string, matchId: string) => {
+      await loadGate;
+      return originalLoad(accountId, matchId);
+    });
+
+    const first = h.sender.start('acc');
+    await flush(); // tryOneBatch haengt jetzt in store.load()
+
+    h.sender.stop(); // Zeitfenster: die Pruefung in pump() liegt VOR diesem load()
+
+    releaseLoad();
+    await first;
+    await h.settle();
+
+    // Die zweite Pruefung direkt vor appendMatchEvents (I1-R) muss abbrechen.
+    expect(h.api).not.toHaveBeenCalled();
+    expect(await idsIn(h, 'acc', 'm-ir1', 'pending')).toEqual(['e1']);
+  });
+
+  it('I1-R (b): Kontowechsel A->B WAEHREND der store.load()-Leseanfrage -- A ruft danach nicht mehr auf', async () => {
+    const h = makeHarness();
+    await h.store.create('accA', 'mA-ir2', ctx);
+    await h.store.addPending('accA', 'mA-ir2', ev({ id: 'a1', type: 'GOAL', at: 1 }));
+    await h.store.create('accB', 'mB-ir2', ctx);
+    await h.store.addPending('accB', 'mB-ir2', ev({ id: 'b1', type: 'GOAL', at: 1 }));
+
+    let releaseLoad: () => void = () => undefined;
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve;
+    });
+    const originalLoad = h.store.load.bind(h.store);
+    vi.spyOn(h.store, 'load').mockImplementation(async (accountId: string, matchId: string) => {
+      if (accountId === 'accA') {
+        await loadGate; // nur A's Leseanfrage haengt -- B darf ungehindert laufen
+      }
+      return originalLoad(accountId, matchId);
+    });
+
+    const first = h.sender.start('accA');
+    await flush(); // A haengt jetzt in store.load()
+
+    await h.sender.start('accB'); // Kontowechsel WAEHREND A's Leseanfrage noch aussteht
+
+    releaseLoad();
+    await first;
+    await h.settle();
+
+    // A darf nach dem Kontowechsel NICHT mehr senden -- weder ihr Eintrag noch ein Aufruf.
+    expect(sentMatches(h.api)).toEqual(['mB-ir2']);
+    expect(await idsIn(h, 'accA', 'mA-ir2', 'pending')).toEqual(['a1']);
+    expect(await idsIn(h, 'accB', 'mB-ir2', 'acked')).toEqual(['b1']);
+  });
+
+  it('N1: Kontowechsel ZWISCHEN zwei Staffeln desselben Spiels -- die zweite Staffel wird nicht mehr gesendet', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm-n1', ctx);
+    for (let i = 1; i <= 60; i += 1) {
+      await h.store.addPending('acc', 'm-n1', ev({ id: `p${i}`, type: 'GOAL', at: i }));
+    }
+
+    let releaseFirstBatch: () => void = () => undefined;
+    const firstBatchGate = new Promise<void>((resolve) => {
+      releaseFirstBatch = resolve;
+    });
+    h.api.mockImplementation(async (_matchId: string, events: readonly AppendableEvent[]) => {
+      await firstBatchGate;
+      return acceptAll(events);
+    });
+
+    const first = h.sender.start('acc');
+    await flush(); // erste Staffel (50) haengt im Aufruf
+    expect(h.api).toHaveBeenCalledTimes(1);
+
+    await h.sender.start('accB'); // Kontowechsel, WAEHREND die erste Staffel noch laeuft
+
+    releaseFirstBatch(); // erste Staffel wird jetzt angenommen -- die Schleife wuerde ohne
+    // die Konto-Pruefung in pump() (N1) sofort die zweite Staffel (10 Eintraege) senden.
+    await first;
+    await h.settle();
+
+    expect(h.api).toHaveBeenCalledTimes(1); // kein zweiter Aufruf fuer die restlichen 10
+    expect(await idsIn(h, 'acc', 'm-n1', 'acked')).toHaveLength(50);
+    expect(await idsIn(h, 'acc', 'm-n1', 'pending')).toHaveLength(10);
+  });
 });

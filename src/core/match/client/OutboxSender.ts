@@ -203,6 +203,12 @@ export class OutboxSender {
     if (!copy || copy.pending.length === 0) {
       return 'done';
     }
+    // Fixrunde 2, I1-R: `store.load` ist eine echte (asynchrone) IndexedDB-Anfrage --
+    // in diesem Zeitfenster kann `stop()` laufen oder das Konto wechseln. Direkt vor
+    // dem Netzaufruf deshalb ERNEUT pruefen, statt nur einmal am Schleifenanfang (:162).
+    if (!this.canSend() || queue.accountId !== this.accountId) {
+      return 'halt';
+    }
     const batch = copy.pending.slice(0, BATCH_LIMIT);
     const result = await this.api.appendMatchEvents(queue.matchId, batch, {
       clientFormat: this.clientFormat,
