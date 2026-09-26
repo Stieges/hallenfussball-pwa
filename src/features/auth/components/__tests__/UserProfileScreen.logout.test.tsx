@@ -51,7 +51,7 @@ vi.mock('../../../../components/ui/Toast', () => ({
 // irrelevant, deshalb still gestellt.
 vi.mock('../GuestBanner', () => ({ GuestBanner: () => null }));
 
-const CTX: MatchContext = { teamAId: 'team-a', teamBId: 'team-b' };
+const CTX: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
 function ev(id: string): EngineEvent {
   return { id, type: 'GOAL', actor: 'helper', at: 1000, section: 1, clockMs: 0, teamId: 'team-a', payload: {} };

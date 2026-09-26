@@ -9,7 +9,7 @@ import { LocalMatchStore } from '../../../../core/match/client/LocalMatchStore';
 import type { EngineEvent, MatchContext } from '../../../../core/match/types';
 import { countWaitingEntries } from '../countWaitingEntries';
 
-const CTX: MatchContext = { teamAId: 'team-a', teamBId: 'team-b' };
+const CTX: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
 function ev(id: string): EngineEvent {
   return { id, type: 'GOAL', actor: 'helper', at: 1000, section: 1, clockMs: 0, teamId: 'team-a', payload: {} };

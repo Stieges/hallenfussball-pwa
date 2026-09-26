@@ -50,9 +50,16 @@ function RejectedEntryRow({
   const reasonKey = rejectionReasonKey(entry.code);
   return (
     <li data-testid="outbox-rejected-item" style={styles.item}>
-      <span>{t(desc.key, { what: t(desc.values.typeKey), team: desc.values.team, minute: desc.values.minute })}</span>
+      <span>
+        {t(desc.key, {
+          defaultValue: desc.key,
+          what: t(desc.values.typeKey, { defaultValue: desc.values.typeKey }),
+          team: desc.values.team,
+          minute: desc.values.minute,
+        })}
+      </span>
       <span style={styles.reason}>
-        {t(reasonKey)}
+        {t(reasonKey, { defaultValue: reasonKey })}
         {isUnknownReason(reasonKey) ? ` (${String(t('outbox.rejected.unknownCodeHint', { code: entry.code }))})` : ''}
       </span>
       <Button data-testid="outbox-rejected-dismiss" variant="ghost" onClick={handleDismiss}>

@@ -9,7 +9,7 @@ import type { EngineEvent, MatchContext } from '../../../../core/match/types';
 import { touchTargets } from '../../../../design-tokens';
 import { RejectedEntriesPanel } from '../RejectedEntriesPanel';
 
-const TEAMS: MatchContext = { teamAId: 'team-a', teamBId: 'team-b' };
+const TEAMS: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
 function makeEvent(overrides: Partial<EngineEvent> = {}): EngineEvent {
   return {

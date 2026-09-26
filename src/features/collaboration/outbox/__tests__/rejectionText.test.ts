@@ -60,7 +60,7 @@ function makeEntry(overrides: Partial<EngineEvent> = {}): RejectedEntry {
   return { event: makeEvent(overrides), code: 'STALE_BASE', rejectedAt: 1727000001000 };
 }
 
-const TEAMS: MatchContext = { teamAId: 'team-a', teamBId: 'team-b' };
+const TEAMS: MatchContext = { matchId: 'm1', teamAId: 'team-a', teamBId: 'team-b' };
 
 describe('rejectionReasonKey', () => {
   it.each(REQUIRED_CODES)('hat fuer %s einen Schluessel in de und en', (code) => {
