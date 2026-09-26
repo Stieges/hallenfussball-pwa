@@ -97,6 +97,33 @@ describe('LocalMatchStore: Ausgang', () => {
     expect(copy?.review).toEqual([]);
   });
 
+  it('Fixrunde 1, M16: resolveBatch oeffnet genau EINE Transaktion (Atomaritaet)', async () => {
+    await store.create('acc-tx', 'ob-tx', ctx);
+    await store.addPending('acc-tx', 'ob-tx', ev({ id: 'a1', type: 'GOAL', at: 1 }));
+    await store.addPending('acc-tx', 'ob-tx', ev({ id: 'r1', type: 'FOUL', at: 2 }));
+
+    const originalTransaction = IDBDatabase.prototype.transaction;
+    let transactionCalls = 0;
+    vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (
+      this: IDBDatabase,
+      ...args: Parameters<IDBDatabase['transaction']>
+    ) {
+      transactionCalls += 1;
+      return originalTransaction.apply(this, args);
+    });
+
+    await store.resolveBatch(matchCopyKey('acc-tx', 'ob-tx'), {
+      ackedIds: ['a1'],
+      rejected: [rejectedEntry('r1', 'INVALID_TRANSITION')],
+      reviewIds: [],
+    });
+
+    expect(transactionCalls).toBe(1);
+    const copy = await store.load('acc-tx', 'ob-tx');
+    expect(copy?.acked.map((e) => e.id)).toEqual(['a1']);
+    expect(copy?.rejected.map((e) => e.event.id)).toEqual(['r1']);
+  });
+
   it('rejectAllPending verschiebt alle pending mit Code und rejectedAt', async () => {
     await store.create('acc-f', 'ob-5', ctx);
     await store.addPending('acc-f', 'ob-5', ev({ id: 'm1', type: 'MATCH_START', at: 1 }));

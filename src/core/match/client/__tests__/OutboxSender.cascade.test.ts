@@ -58,7 +58,7 @@ describe('OutboxSender: Stapel und Folgeablehnung', () => {
     expect(h.catchUps).toEqual([]);
   });
 
-  it('4a: W4 -- RETRACT auf ein abgelehntes Ziel derselben Sendung wird mit DEPENDS_ON_REJECTED gruppiert', async () => {
+  it('4a: W4 -- RETRACT auf ein abgelehntes Ziel derselben Sendung behaelt seinen eigenen Server-Code (Minor c)', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm4a', ctx);
     await h.store.addPending('acc', 'm4a', ev({ id: 'g1', type: 'GOAL', at: 1 }));
@@ -72,10 +72,15 @@ describe('OutboxSender: Stapel und Folgeablehnung', () => {
 
     await h.sender.start('acc');
 
+    // Der Server-Code von r1 (UNKNOWN_TARGET) bleibt erhalten -- W4 haengt nur einen
+    // Verweis auf den auslösenden Eintrag in `detail` an, statt den Grund zu verlieren.
     expect(await rejectedIn(h, 'acc', 'm4a')).toEqual([
       ['g1', 'INVALID_TRANSITION'],
-      ['r1', 'DEPENDS_ON_REJECTED'],
+      ['r1', 'UNKNOWN_TARGET'],
     ]);
+    const copy = await h.store.load('acc', 'm4a');
+    const r1Entry = copy?.rejected.find((entry) => entry.event.id === 'r1');
+    expect(r1Entry?.detail).toEqual({ dependsOnEventId: 'g1' });
   });
 
   it('4b: W4 -- RETRACT auf ein abgelehntes Ziel ausserhalb des Stapels wird abgelehnt und nicht gesendet', async () => {

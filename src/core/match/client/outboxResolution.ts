@@ -17,6 +17,19 @@ export const DEPENDS_ON_REJECTED = 'DEPENDS_ON_REJECTED';
 const FALLBACK_CODE = 'UNKNOWN';
 
 /**
+ * Fixrunde 1, Minor (c): haengt einen Verweis auf den AUSLOESENDEN Eintrag an, ohne
+ * einen vorhandenen `detail`-Wert zu verlieren. Server-Codes werden nie ueberschrieben --
+ * dieser Verweis dient nur der Erklaerung ("wegen welchem Eintrag").
+ */
+function withDependsOn(detail: unknown, dependsOnEventId: string | undefined): unknown {
+  if (dependsOnEventId === undefined) {
+    return detail;
+  }
+  const base = typeof detail === 'object' && detail !== null ? detail : {};
+  return { ...base, dependsOnEventId };
+}
+
+/**
  * Baut den Stapel-Uebergang fuer GENAU einen Aufruf. `pending` ist die vollstaendige
  * Ausgangsliste der Kopie VOR dem Senden -- alles ausserhalb `batch` wird bei B3/W4
  * mit abgelehnt. Wasserstand und `confirmed` bleiben unberuehrt.
@@ -52,29 +65,36 @@ export function buildResolution(
       reviewIds.push(event.id);
       continue;
     }
-    // W4: Ziel-Verweis auf einen im selben Lauf abgelehnten Eintrag -> mit ihm gruppiert.
-    const depends = typeof event.targetId === 'string' && rejectedIds.has(event.targetId);
+    // result.status === 'rejected': der Server hat DIESEN Eintrag beantwortet -- sein
+    // Code bleibt IMMER erhalten (Minor c/Fixrunde 1). W4 (Ziel-Verweis auf einen im
+    // selben Lauf abgelehnten Eintrag) haengt nur einen Verweis in `detail` an.
+    const dependsOnEventId =
+      typeof event.targetId === 'string' && rejectedIds.has(event.targetId) ? event.targetId : undefined;
+    const detail = withDependsOn(result.detail, dependsOnEventId);
     rejected.push({
       event,
-      code: depends ? DEPENDS_ON_REJECTED : (result.code ?? FALLBACK_CODE),
-      ...(result.detail !== undefined ? { detail: result.detail } : {}),
+      code: result.code ?? FALLBACK_CODE,
+      ...(detail !== undefined ? { detail } : {}),
       rejectedAt: now,
     });
   }
 
   // B3: ein abgelehnter Start-/Freigabe-Typ reisst ALLE uebrigen pending mit -- auch
   // die, die noch gar nicht gesendet wurden. W4 greift auch ohne B3 (Ziel-Verweis).
-  const cascade = batch.some((event) => rejectedIds.has(event.id) && CASCADE_TYPES.has(event.type));
+  // Diese Eintraege wurden nie gesendet -- es gibt keinen Server-Code zu erhalten,
+  // aber `detail` verweist auf den auslösenden Eintrag (Minor c/Fixrunde 1).
+  const cascadeRoot = batch.find((event) => rejectedIds.has(event.id) && CASCADE_TYPES.has(event.type));
   for (const event of pending) {
     if (sentIds.has(event.id)) {
       continue;
     }
-    const depends = typeof event.targetId === 'string' && rejectedIds.has(event.targetId);
-    if (!cascade && !depends) {
+    const dependsOnEventId =
+      typeof event.targetId === 'string' && rejectedIds.has(event.targetId) ? event.targetId : cascadeRoot?.id;
+    if (dependsOnEventId === undefined) {
       continue;
     }
     rejectedIds.add(event.id);
-    rejected.push({ event, code: DEPENDS_ON_REJECTED, rejectedAt: now });
+    rejected.push({ event, code: DEPENDS_ON_REJECTED, detail: { dependsOnEventId }, rejectedAt: now });
   }
 
   return { ackedIds, rejected, reviewIds };

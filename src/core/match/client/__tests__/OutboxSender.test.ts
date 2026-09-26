@@ -83,6 +83,22 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(h.catchUps).toEqual(['m2']);
   });
 
+  it('I2/M21: review -> Liste review, nicht acked, kein requestCatchUp, Status reviewByMatch', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm-review', ctx);
+    await h.store.addPending('acc', 'm-review', ev({ id: 'v1', type: 'FOUL', at: 1 }));
+    h.api.mockImplementation(async (_matchId, events) => success([resultOf(events[0].id, 'review')]));
+
+    await h.sender.start('acc');
+
+    expect(await idsIn(h, 'acc', 'm-review', 'review')).toEqual(['v1']);
+    expect(await idsIn(h, 'acc', 'm-review', 'acked')).toEqual([]);
+    expect(await idsIn(h, 'acc', 'm-review', 'pending')).toEqual([]);
+    // review ist kein "angenommen" -- kein Nachladen ausgeloest.
+    expect(h.catchUps).toEqual([]);
+    expect(h.sender.getStatus().reviewByMatch).toEqual({ 'm-review': 1 });
+  });
+
   it('6: ein dauerhaft gestoertes Spiel blockiert die anderen nicht', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'mA', ctx);
@@ -134,6 +150,24 @@ describe('OutboxSender: Grundverhalten', () => {
     });
     await h.sender.kick('m7');
     expect(h.delays[h.delays.length - 1]).toBe(1000);
+  });
+
+  it('M19: kick() hebt eine bestehende Backoff-Pause sofort auf, statt auf den Timer zu warten', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm19', ctx);
+    await h.store.addPending('acc', 'm19', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw networkError();
+    });
+
+    await h.sender.start('acc');
+    expect(h.delays).toEqual([1000]); // Backoff aktiv, Timer (1s) noch nicht gefeuert
+
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    await h.sender.kick('m19'); // muss SOFORT senden, nicht erst nach den 1000ms
+
+    expect(h.api).toHaveBeenCalledTimes(2);
+    expect(await idsIn(h, 'acc', 'm19', 'acked')).toEqual(['e1']);
   });
 
   it('13: Abbruch nach dem Senden -- erneuter Versuch, duplicate zaehlt wie accepted', async () => {
