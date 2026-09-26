@@ -9,7 +9,7 @@ import { isClientOutdated } from '../../repositories/appendMatchEventsRpc';
 import { MatchQueue } from './matchQueue';
 import { matchCopyKey } from './matchCopy';
 import { OutboxStatusBook } from './outboxStatus';
-import { buildResolution } from './outboxResolution';
+import { buildResolution, type IdMismatch } from './outboxResolution';
 import type { OutboxApi, OutboxPause, OutboxSenderDeps, OutboxStatus, OutboxTimers } from './outboxTypes';
 import type { LocalMatchStore } from './LocalMatchStore';
 import { classifySendFailure } from './sendErrors';
@@ -22,6 +22,14 @@ const MATCH_FULL_CODE = 'MATCH_FULL';
 const MATCH_GONE_CODE = 'MATCH_GONE';
 
 type BatchOutcome = 'continue' | 'done' | 'halt';
+
+/** M-f: Klartext fuer `lastError`, wenn der Server eine abweichende `id` liefert. */
+function describeIdMismatches(mismatches: readonly IdMismatch[]): string {
+  const details = mismatches
+    .map((m) => `Position ${m.index}: erwartet "${m.expectedId}", erhalten "${m.receivedId}"`)
+    .join('; ');
+  return `Antwort von append_match_events weicht bei der id ab (nach Position zugeordnet): ${details}`;
+}
 
 export class OutboxSender {
   private readonly store: LocalMatchStore;
@@ -232,11 +240,13 @@ export class OutboxSender {
       return 'halt';
     }
     // Zuordnung ueber den Index (id nur zur Kontrolle), alles in einer Transaktion.
-    const resolution = buildResolution(batch, result.results, copy.pending, this.now());
+    const { resolution, idMismatches } = buildResolution(batch, result.results, copy.pending, this.now());
     await this.store.resolveBatch(queue.key, resolution);
     queue.resetBackoff();
     if (isCurrent) {
-      this.book.set({ lastError: null });
+      // M-f: eine abweichende (nicht-null) `id` aendert die Zuordnung nicht (Index
+      // entscheidet), wird aber sichtbar gemacht -- nichts wird still verworfen.
+      this.book.set({ lastError: idMismatches.length > 0 ? describeIdMismatches(idMismatches) : null });
       if (resolution.ackedIds.length > 0) {
         this.requestCatchUp(queue.matchId);
       }

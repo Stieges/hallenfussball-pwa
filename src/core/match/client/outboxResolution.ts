@@ -29,6 +29,19 @@ function withDependsOn(detail: unknown, dependsOnEventId: string | undefined): u
   return { ...base, dependsOnEventId };
 }
 
+/** Fixrunde 2, M-f: Position i traegt eine (nicht-null) `id`, die von `batch[i].id` abweicht. */
+export interface IdMismatch {
+  index: number;
+  expectedId: string;
+  receivedId: string;
+}
+
+export interface BuildResolutionOutput {
+  resolution: BatchResolution;
+  /** Nichts wird deswegen anders zugeordnet (Index bleibt massgeblich) -- nur sichtbar gemacht. */
+  idMismatches: IdMismatch[];
+}
+
 /**
  * Baut den Stapel-Uebergang fuer GENAU einen Aufruf. `pending` ist die vollstaendige
  * Ausgangsliste der Kopie VOR dem Senden -- alles ausserhalb `batch` wird bei B3/W4
@@ -39,7 +52,7 @@ export function buildResolution(
   results: AppendEventResult[],
   pending: readonly EngineEvent[],
   now: number,
-): BatchResolution {
+): BuildResolutionOutput {
   if (results.length !== batch.length) {
     throw new Error(`append_match_events: ${results.length} Ergebnisse fuer ${batch.length} Ereignisse`);
   }
@@ -48,6 +61,16 @@ export function buildResolution(
   for (let i = 0; i < batch.length; i += 1) {
     if (results[i].status === 'rejected') {
       rejectedIds.add(batch[i].id);
+    }
+  }
+  // M-f: `id` ist laut Brief "nur zur Kontrolle" -- zugeordnet wird IMMER ueber den Index
+  // (siehe I2b), aber eine Abweichung ist wahrscheinlich ein Serverfehler und darf nicht
+  // still verworfen werden.
+  const idMismatches: IdMismatch[] = [];
+  for (let i = 0; i < batch.length; i += 1) {
+    const receivedId = results[i].id;
+    if (receivedId !== null && receivedId !== batch[i].id) {
+      idMismatches.push({ index: i, expectedId: batch[i].id, receivedId });
     }
   }
 
@@ -97,5 +120,5 @@ export function buildResolution(
     rejected.push({ event, code: DEPENDS_ON_REJECTED, detail: { dependsOnEventId }, rejectedAt: now });
   }
 
-  return { ackedIds, rejected, reviewIds };
+  return { resolution: { ackedIds, rejected, reviewIds }, idMismatches };
 }

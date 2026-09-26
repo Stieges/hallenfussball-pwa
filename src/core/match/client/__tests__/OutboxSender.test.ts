@@ -83,6 +83,22 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(h.catchUps).toEqual(['m2']);
   });
 
+  it('M-f: eine abweichende id im Ergebnis wird in lastError sichtbar, aendert aber nichts an der Buchung', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'm-mf', ctx);
+    await h.store.addPending('acc', 'm-mf', ev({ id: 'e1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => success([resultOf('unerwartete-id', 'accepted')]));
+
+    await h.sender.start('acc');
+
+    // Trotz abweichender id wird ueber den Index gebucht -- nichts geht verloren.
+    expect(await idsIn(h, 'acc', 'm-mf', 'acked')).toEqual(['e1']);
+    expect(await idsIn(h, 'acc', 'm-mf', 'pending')).toEqual([]);
+    // Die Abweichung ist im Status sichtbar (nicht still verworfen).
+    expect(h.sender.getStatus().lastError).toMatch(/e1/);
+    expect(h.sender.getStatus().lastError).toMatch(/unerwartete-id/);
+  });
+
   it('I2/M21: review -> Liste review, nicht acked, kein requestCatchUp, Status reviewByMatch', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm-review', ctx);
