@@ -117,5 +117,59 @@
     "stepLabel": "Step {{step}}: {{label}}",
     "errorTooltip": "Error: {{errors}}",
     "errorBadge": "Error"
+  },
+  "outbox": {
+    "rejection": {
+      "INVALID_TRANSITION": "The entry does not match the current state of the game.",
+      "FORBIDDEN_ACTOR": "You are not allowed to do this.",
+      "UNKNOWN_TARGET": "Game or person was not found.",
+      "ALREADY_RETRACTED": "The entry was already withdrawn.",
+      "STALE_BASE": "The score was changed on another device in the meantime.",
+      "INVALID_PAYLOAD": "The entry was incomplete or invalid.",
+      "MATCH_FINISHED": "The game had already ended at that point.",
+      "NO_WINNER": "The game cannot be completed without a winner.",
+      "DEPENDS_ON_REJECTED": "Another related entry was not accepted.",
+      "ID_CONFLICT": "The entry was sent twice.",
+      "NOT_CONTROLLER": "Only tournament control may change this.",
+      "MATCH_FULL": "The game is already fully booked.",
+      "MATCH_GONE": "The game no longer exists.",
+      "unknown": "Unknown reason"
+    },
+    "eventType": {
+      "matchStart": "Kick-off",
+      "pause": "Break",
+      "resume": "Resumed",
+      "sectionEnd": "End of playing time",
+      "sectionStart": "New playing time",
+      "clockAdjust": "Clock corrected",
+      "matchEnd": "Full time",
+      "tiebreakChoice": "Tie-break mode chosen",
+      "shootoutKick": "Penalty",
+      "shootoutEnd": "End of penalty shootout",
+      "retract": "Withdrawal",
+      "correction": "Correction",
+      "reopen": "Game reopened",
+      "skip": "Game skipped",
+      "unskip": "Game included again",
+      "resultEntry": "Result noted",
+      "reviewAccept": "Approved by tournament control",
+      "reviewDiscard": "Discarded by tournament control",
+      "goal": "Goal",
+      "ownGoal": "Own goal",
+      "yellowCard": "Yellow card",
+      "yellowRedCard": "Yellow-red card",
+      "redCard": "Red card",
+      "timePenalty": "Time penalty",
+      "substitution": "Substitution",
+      "foul": "Foul",
+      "amend": "Addendum",
+      "unknown": "Entry"
+    },
+    "eventLine": {
+      "teamAndMinute": "{{what}} team {{team}}, minute {{minute}}",
+      "team": "{{what}} team {{team}}",
+      "minute": "{{what}}, minute {{minute}}",
+      "plain": "{{what}}"
+    }
   }
 }

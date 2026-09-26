@@ -117,5 +117,59 @@
     "stepLabel": "Schritt {{step}}: {{label}}",
     "errorTooltip": "Fehler: {{errors}}",
     "errorBadge": "Fehler"
+  },
+  "outbox": {
+    "rejection": {
+      "INVALID_TRANSITION": "Die Eingabe passt nicht zum aktuellen Spielstand.",
+      "FORBIDDEN_ACTOR": "Dafür fehlt die Berechtigung.",
+      "UNKNOWN_TARGET": "Spiel oder Person wurde nicht gefunden.",
+      "ALREADY_RETRACTED": "Die Eingabe wurde schon zurückgenommen.",
+      "STALE_BASE": "Der Spielstand wurde inzwischen an einem anderen Gerät geändert.",
+      "INVALID_PAYLOAD": "Die Eingabe war unvollständig oder fehlerhaft.",
+      "MATCH_FINISHED": "Das Spiel war zu diesem Zeitpunkt schon beendet.",
+      "NO_WINNER": "Ohne Sieger lässt sich das Spiel nicht abschließen.",
+      "DEPENDS_ON_REJECTED": "Eine andere Eingabe dazu wurde nicht übernommen.",
+      "ID_CONFLICT": "Die Eingabe wurde doppelt gesendet.",
+      "NOT_CONTROLLER": "Das darf nur die Turnierleitung ändern.",
+      "MATCH_FULL": "Das Spiel ist schon vollständig belegt.",
+      "MATCH_GONE": "Das Spiel gibt es nicht mehr.",
+      "unknown": "Unbekannter Grund"
+    },
+    "eventType": {
+      "matchStart": "Spielbeginn",
+      "pause": "Pause",
+      "resume": "Weiter",
+      "sectionEnd": "Ende der Spielzeit",
+      "sectionStart": "Neue Spielzeit",
+      "clockAdjust": "Uhr korrigiert",
+      "matchEnd": "Schluss",
+      "tiebreakChoice": "Entscheidungsmodus gewählt",
+      "shootoutKick": "Strafstoß",
+      "shootoutEnd": "Ende des Strafstoßschießens",
+      "retract": "Zurücknahme",
+      "correction": "Korrektur",
+      "reopen": "Spiel wieder geöffnet",
+      "skip": "Spiel übersprungen",
+      "unskip": "Spiel wieder dabei",
+      "resultEntry": "Ergebnis vorgemerkt",
+      "reviewAccept": "Durch Turnierleitung freigegeben",
+      "reviewDiscard": "Durch Turnierleitung verworfen",
+      "goal": "Tor",
+      "ownGoal": "Eigentor",
+      "yellowCard": "Gelbe Karte",
+      "yellowRedCard": "Gelb-Rote Karte",
+      "redCard": "Rote Karte",
+      "timePenalty": "Zeitstrafe",
+      "substitution": "Wechsel",
+      "foul": "Foul",
+      "amend": "Ergänzung",
+      "unknown": "Eintrag"
+    },
+    "eventLine": {
+      "teamAndMinute": "{{what}} Team {{team}}, {{minute}}. Minute",
+      "team": "{{what}} Team {{team}}",
+      "minute": "{{what}}, {{minute}}. Minute",
+      "plain": "{{what}}"
+    }
   }
 }
