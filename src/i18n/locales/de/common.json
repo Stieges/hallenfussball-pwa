@@ -176,6 +176,13 @@
       "header_other": "{{count}} Einträge $t(sport:outbox.rejectedEntry)",
       "dismissAll": "Alle verstanden",
       "unknownCodeHint": "Code: {{code}}"
+    },
+    "notice": {
+      "clientOutdated": "App aktualisieren",
+      "reloadNow": "Jetzt aktualisieren",
+      "authRequired": "Bitte neu anmelden",
+      "notReady": "Spiel noch nicht bereit (Teams offen)",
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
     }
   }
 }

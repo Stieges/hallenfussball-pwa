@@ -176,6 +176,13 @@
       "header_other": "{{count}} entries not accepted",
       "dismissAll": "Understood all",
       "unknownCodeHint": "Code: {{code}}"
+    },
+    "notice": {
+      "clientOutdated": "Update the app",
+      "reloadNow": "Update now",
+      "authRequired": "Please sign in again",
+      "notReady": "Game not ready yet (teams open)",
+      "review": "$t(sport:outbox.awaitingReview) ({{count}})"
     }
   }
 }
