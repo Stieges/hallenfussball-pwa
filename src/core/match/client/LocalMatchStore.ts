@@ -22,14 +22,14 @@ export interface MatchCopy {
   accountId: string;
   matchId: string;
   ctx: MatchContext;
+  /** Bestaetigte Ereignisse mit Server-`seq` (Wasserstand). */
   confirmed: EngineEventWithSeq[];
   watermarkSeq: number;
-  acked: EngineEventWithSeq[];
-  pending: EngineEventWithSeq[];
+  /** Offener Ausgang (RC1): ohne `seq`, sie ist nur den bestätigten Ereignissen vorbehalten (N5). */
+  acked: EngineEvent[];
+  pending: EngineEvent[];
   updatedAt: number;
 }
-
-type StoredCopy = StoredRecord<MatchCopy>;
 
 export class LocalMatchStore {
   private readonly db = new StoreDb('hallenfussball-matches', 'matches', 1);
@@ -54,29 +54,45 @@ export class LocalMatchStore {
     return copy;
   }
 
+  /**
+   * Legt die Kopie an oder aktualisiert bei einer vorhandenen Kopie nur `ctx`
+   * und `updatedAt` -- `confirmed`, `acked`, `pending` und `watermarkSeq`
+   * bleiben erhalten (N2: der Ausgang wird nie still ueberschrieben, RC1/V3).
+   * Eine Transaktion.
+   */
   async create(accountId: string, matchId: string, ctx: MatchContext): Promise<void> {
-    const copy: MatchCopy = {
-      formatVersion: 1,
-      accountId,
-      matchId,
-      ctx,
-      confirmed: [],
-      watermarkSeq: 0,
-      acked: [],
-      pending: [],
-      updatedAt: Date.now(),
-    };
-    const record: StoredCopy = { key: this.key(accountId, matchId), value: copy };
+    const key = this.key(accountId, matchId);
     await this.db.run(
       'readwrite',
       (store, fail) => {
-        putRecord(store, fail, record);
+        const req = getStored<MatchCopy>(store, key);
+        req.onsuccess = () => {
+          const existing = req.result?.value ?? null;
+          if (existing) {
+            putRecord(store, fail, { key, value: { ...existing, ctx, updatedAt: Date.now() } });
+            return;
+          }
+          putRecord(store, fail, {
+            key,
+            value: {
+              formatVersion: 1,
+              accountId,
+              matchId,
+              ctx,
+              confirmed: [],
+              watermarkSeq: 0,
+              acked: [],
+              pending: [],
+              updatedAt: Date.now(),
+            },
+          });
+        };
       },
       () => undefined,
     );
   }
 
-  async addPending(accountId: string, matchId: string, event: EngineEventWithSeq): Promise<void> {
+  async addPending(accountId: string, matchId: string, event: EngineEvent): Promise<void> {
     const key = this.key(accountId, matchId);
     await this.db.run(
       'readwrite',
@@ -159,10 +175,10 @@ export class LocalMatchStore {
     );
   }
 
-  async removePending(accountId: string, matchId: string, ids: string[]): Promise<EngineEventWithSeq[]> {
+  async removePending(accountId: string, matchId: string, ids: string[]): Promise<EngineEvent[]> {
     const key = this.key(accountId, matchId);
     const removedIds = new Set(ids);
-    let removed: EngineEventWithSeq[] = [];
+    let removed: EngineEvent[] = [];
     await this.db.run(
       'readwrite',
       (store, fail) => {

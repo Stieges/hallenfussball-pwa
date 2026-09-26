@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { LocalMatchStore } from '../LocalMatchStore';
+import type { MatchContext } from '../../';
 import { ctx, ev, withSeq } from './fixtures';
 
 describe('LocalMatchStore', () => {
@@ -41,14 +42,13 @@ describe('LocalMatchStore', () => {
     expect(copy?.watermarkSeq).toBe(1);
   });
 
-  it('Neustart: eine neue Store-Instanz liest alles wieder', async () => {
+  it('Neustart: eine neue Store-Instanz liest alles wieder (pending ohne seq, N5)', async () => {
     await store.create('acc-restart', 'lms-3', ctx);
-    await store.addPending('acc-restart', 'lms-3', withSeq(ev({ id: 'r1', type: 'FOUL', at: 2000 }), 5));
+    await store.addPending('acc-restart', 'lms-3', ev({ id: 'r1', type: 'FOUL', at: 2000 }));
 
     const restarted = new LocalMatchStore();
     const copy = await restarted.load('acc-restart', 'lms-3');
     expect(copy?.pending.map((e) => e.id)).toEqual(['r1']);
-    expect(copy?.pending[0]?.seq).toBe(5);
   });
 
   it('trennt Konten korrekt', async () => {
@@ -92,6 +92,23 @@ describe('LocalMatchStore', () => {
     expect(copy?.watermarkSeq).toBe(10);
   });
 
+  it('addPending, markAcked und removePending lassen den Wasserstand unveraendert (RC7, N4)', async () => {
+    await store.create('acc-w', 'lms-23', ctx);
+    await store.applyConfirmed('acc-w', 'lms-23', [], 7);
+
+    await store.addPending('acc-w', 'lms-23', withSeq(ev({ id: 'w1', type: 'GOAL', at: 1 }), 8));
+    let copy = await store.load('acc-w', 'lms-23');
+    expect(copy?.watermarkSeq).toBe(7);
+
+    await store.markAcked('acc-w', 'lms-23', ['w1']);
+    copy = await store.load('acc-w', 'lms-23');
+    expect(copy?.watermarkSeq).toBe(7);
+
+    await store.removePending('acc-w', 'lms-23', ['w1']);
+    copy = await store.load('acc-w', 'lms-23');
+    expect(copy?.watermarkSeq).toBe(7);
+  });
+
   it('markAcked mit unbekannten IDs laesst pending und acked unveraendert', async () => {
     await store.create('acc6', 'lms-17', ctx);
     await store.addPending('acc6', 'lms-17', withSeq(ev({ id: 'u1', type: 'GOAL', at: 1 }), 1));
@@ -110,13 +127,22 @@ describe('LocalMatchStore', () => {
     expect(matches).toHaveLength(2);
   });
 
-  it('create setzt eine bestehende Kopie zurueck', async () => {
-    await store.create('acc-reset', 'lms-21', ctx);
-    await store.addPending('acc-reset', 'lms-21', withSeq(ev({ id: 'rs1', type: 'GOAL', at: 1 }), 1));
-    await store.create('acc-reset', 'lms-21', ctx);
-    const copy = await store.load('acc-reset', 'lms-21');
-    expect(copy?.pending).toEqual([]);
-    expect(copy?.confirmed).toEqual([]);
+  it('create ueberschreibt eine bestehende Kopie nie still (Ausgang bleibt erhalten, N2)', async () => {
+    await store.create('acc-keep', 'lms-21', ctx);
+    await store.addPending('acc-keep', 'lms-21', withSeq(ev({ id: 'k1', type: 'GOAL', at: 1 }), 1));
+    await store.markAcked('acc-keep', 'lms-21', ['k1']);
+    await store.addPending('acc-keep', 'lms-21', withSeq(ev({ id: 'k2', type: 'GOAL', at: 2 }), 2));
+    await store.applyConfirmed('acc-keep', 'lms-21', [withSeq(ev({ id: 'c9', type: 'GOAL', at: 0 }), 3)], 3);
+
+    const newCtx: MatchContext = { matchId: 'lms-21', teamAId: 't-x', teamBId: 't-y' };
+    await store.create('acc-keep', 'lms-21', newCtx);
+
+    const copy = await store.load('acc-keep', 'lms-21');
+    expect(copy?.confirmed.map((e) => e.id)).toEqual(['c9']);
+    expect(copy?.acked.map((e) => e.id)).toEqual(['k1']);
+    expect(copy?.pending.map((e) => e.id)).toEqual(['k2']);
+    expect(copy?.watermarkSeq).toBe(3);
+    expect(copy?.ctx).toEqual(newCtx);
   });
 
   it('applyConfirmed sortiert den bestaetigten Log nach seq', async () => {
