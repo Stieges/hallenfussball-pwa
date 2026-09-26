@@ -1,5 +1,5 @@
 {
-  "title": "Helfer ergänzt nach dem Abpfiff leere Felder -> accepted (Nachtrag-Regel)",
+  "title": "Helfer ergänzt nach dem Abpfiff leere Felder -> accepted (Nachtrag-Regel); A1: leeres clear neben gesetztem Feld ist erlaubt",
   "szenario": null,
   "ctx": {
     "matchId": "match-47a",
@@ -68,12 +68,30 @@
           11
         ]
       }
+    },
+    {
+      "id": "0000047a-0000-4000-8000-000000000011",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 6100,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "0000047a-0000-4000-8000-000000000002",
+      "payload": {
+        "incomplete": true,
+        "clear": []
+      }
     }
   ],
   "expect": {
     "results": [
       {
         "id": "0000047a-0000-4000-8000-000000000010",
+        "status": "accepted"
+      },
+      {
+        "id": "0000047a-0000-4000-8000-000000000011",
         "status": "accepted"
       }
     ],
@@ -112,7 +130,8 @@
         "playerNumber": 10,
         "assists": [
           11
-        ]
+        ],
+        "incomplete": true
       }
     }
   }

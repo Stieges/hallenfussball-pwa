@@ -1,5 +1,5 @@
 {
-  "title": "AMEND-Payload ungültig -> INVALID_PAYLOAD (leer, leeres clear, Feld + clear, unbekannter/doppelter clear-Name, Typfehler, fehlendes targetId, shooterNumber an GOAL, nur unbekannte Schlüssel)",
+  "title": "AMEND-Payload ungültig -> INVALID_PAYLOAD (leer, leeres clear, Feld + clear, unbekannter/doppelter clear-Name, Typfehler, fehlendes targetId, shooterNumber an GOAL, nur unbekannte Schlüssel); null-Elemente/-Werte und falsche Typen (clear:[null], assists:[null], playerId:123, incomplete:null)",
   "szenario": null,
   "ctx": {
     "matchId": "match-52",
@@ -270,6 +270,62 @@
       "payload": {
         "foo": 1
       }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000027",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3017,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "clear": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000028",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3018,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "assists": [
+          null
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000029",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3019,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerId": 123
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000030",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3020,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "incomplete": null
+      }
     }
   ],
   "expect": {
@@ -356,6 +412,26 @@
       },
       {
         "id": "00000052-0000-4000-8000-000000000026",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000027",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000028",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000029",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000030",
         "status": "rejected",
         "code": "INVALID_PAYLOAD"
       }

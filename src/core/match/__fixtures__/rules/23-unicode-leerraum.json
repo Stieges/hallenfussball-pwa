@@ -1,0 +1,32 @@
+{
+  "title": "Unicode-Leerraum (NBSP U+00A0, U+2003, U+3000) um Zahlentexte -> kein Zahlentext, Standardwerte (nur ASCII-Leerraum zaehlt; SQL cfg_num wird in C0b angeglichen, PC5)",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": "2\u00a0",
+      "halftimeBreak": "\u00a03",
+      "matchCockpitSettings": {
+        "penaltyShootersPerTeam": "\u20033",
+        "penaltySuddenDeathAfter": "4\u3000"
+      }
+    },
+    "finalsConfig": {
+      "tiebreaker": "goldenGoal",
+      "tiebreakerDuration": "\u00a07"
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 600,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "goldenGoal",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}
