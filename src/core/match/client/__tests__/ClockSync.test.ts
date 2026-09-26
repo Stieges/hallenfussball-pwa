@@ -178,4 +178,32 @@ describe('ClockSync', () => {
     await sync.sync();
     expect(sync.offsetMs).toBe(9999);
   });
+
+  it('bleibt erfolgreich, wenn das Speichern des Offsets scheitert (N10)', async () => {
+    const storage: ClockStorage = {
+      get: () => null,
+      set: () => {
+        throw new DOMException('quota exceeded', 'QuotaExceededError');
+      },
+    };
+    // Messung 2 (RTT 10) gewinnt: offset 10000 - (10 + 5) = 9985.
+    const sync = new ClockSync(async () => 10000, scriptedNow([0, 50, 10, 20, 20, 50, 100]), storage);
+    await expect(sync.sync()).resolves.toBe(true);
+    expect(sync.offsetMs).toBe(9985);
+    expect(sync.isKnown).toBe(true);
+  });
+
+  it('verwirft Messungen mit nicht endlicher Serverzeit (NaN, N10)', async () => {
+    let call = 0;
+    const fetchServerTime = async (): Promise<number> => {
+      call += 1;
+      return call === 1 ? Number.NaN : 10000;
+    };
+    // Messung 1 (NaN) wird verworfen; Messung 2 (RTT 10) gewinnt: offset 9985.
+    const sync = new ClockSync(fetchServerTime, scriptedNow([0, 0, 10, 20, 30, 60, 100]), makeStorage());
+    await sync.sync();
+    expect(Number.isFinite(sync.offsetMs)).toBe(true);
+    expect(sync.offsetMs).toBe(9985);
+    expect(sync.isKnown).toBe(true);
+  });
 });

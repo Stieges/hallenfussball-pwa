@@ -83,6 +83,10 @@ export class ClockSync {
         const t0 = this.now();
         const s = await this.fetchServerTime();
         const t1 = this.now();
+        // N10: eine nicht endliche Serverzeit (NaN/Infinity) ist keine Messung.
+        if (!Number.isFinite(s)) {
+          continue;
+        }
         const rtt = t1 - t0;
         const offset = s - (t0 + rtt / 2);
         measurements.push({ rtt, offset });
@@ -97,11 +101,16 @@ export class ClockSync {
     const best = measurements.reduce((min, m) => (m.rtt < min.rtt ? m : min));
     this.currentOffsetMs = Math.round(best.offset);
     this.lastMeasuredAt = this.now();
-    this.storage.set('clockSync:v1', JSON.stringify({
-      offsetMs: this.currentOffsetMs,
-      measuredAt: this.lastMeasuredAt,
-      rttMs: best.rtt,
-    }));
+    // N10: Speichern ist best effort (Safari privat, Quota) – die Messung bleibt gültig.
+    try {
+      this.storage.set('clockSync:v1', JSON.stringify({
+        offsetMs: this.currentOffsetMs,
+        measuredAt: this.lastMeasuredAt,
+        rttMs: best.rtt,
+      }));
+    } catch {
+      // Speichern gescheitert – Offset gilt trotzdem fuer diese Sitzung
+    }
     return true;
   }
 

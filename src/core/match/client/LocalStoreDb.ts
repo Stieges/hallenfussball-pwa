@@ -76,9 +76,13 @@ export class StoreDb {
     }
     this.dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
       const req = indexedDB.open(this.dbName, this.version);
+      let settled = false;
       req.onerror = () => {
         this.dbPromise = null;
-        reject(req.error ?? new Error('IndexedDB open failed'));
+        if (!settled) {
+          settled = true;
+          reject(req.error ?? new Error('IndexedDB open failed'));
+        }
       };
       // Upgrade-Kette: spaetere Versionen als weitere Cases ergaenzen (I9).
       req.onupgradeneeded = (e) => {
@@ -96,8 +100,22 @@ export class StoreDb {
           }
         }
       };
+      // N9: haelt eine andere Verbindung eine alte Version offen, meldet das
+      // `onblocked` -- statt unbegrenzt zu haengen, wird der Fehler gemeldet.
+      req.onblocked = () => {
+        this.dbPromise = null;
+        if (!settled) {
+          settled = true;
+          reject(new Error('IndexedDB open blocked: another connection holds an older version'));
+        }
+      };
       req.onsuccess = () => {
         const db = req.result;
+        if (settled) {
+          db.close();
+          return;
+        }
+        settled = true;
         db.onversionchange = () => {
           db.close();
           this.dbPromise = null;

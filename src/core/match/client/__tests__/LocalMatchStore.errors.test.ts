@@ -151,4 +151,39 @@ describe('LocalMatchStore: Datenbank-Lebenszyklus (I9)', () => {
     expect(copy?.matchId).toBe('lms-15');
     expect(openSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('meldet ein blockiertes Oeffnen als Fehler statt zu haengen (N9)', async () => {
+    vi.spyOn(indexedDB, 'open').mockImplementation(() => {
+      const request: {
+        error: null;
+        result: null;
+        onerror: ((ev: Event) => void) | null;
+        onsuccess: ((ev: Event) => void) | null;
+        onupgradeneeded: ((ev: Event) => void) | null;
+        onblocked: ((ev: Event) => void) | null;
+      } = {
+        error: null,
+        result: null,
+        onerror: null,
+        onsuccess: null,
+        onupgradeneeded: null,
+        onblocked: null,
+      };
+      queueMicrotask(() => {
+        request.onblocked?.(new Event('blocked'));
+      });
+      return request as unknown as IDBOpenDBRequest;
+    });
+
+    const store = new LocalMatchStore();
+    const outcome: unknown = await Promise.race([
+      store.create('acc-blocked', 'lms-24', ctx).then(() => 'resolved').catch((error: unknown) => error),
+      new Promise((resolve) => {
+        setTimeout(() => resolve('timeout'), 500);
+      }),
+    ]);
+
+    expect(outcome instanceof Error).toBe(true);
+    expect(outcome instanceof Error && outcome.message.includes('blocked')).toBe(true);
+  });
 });
