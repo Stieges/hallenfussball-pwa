@@ -206,6 +206,70 @@ describe('cacheColumns', () => {
     });
   });
 
+  it('SKIP: wählt den mit größtem at (bei Gleichstand später eingefügter, nicht einfach letzten)', () => {
+    // Manuell einen Zustand mit mehreren SKIP-Ereignissen aufbauen
+    const state: MatchState = {
+      ...initialState(ctx),
+      status: 'skipped',
+      accepted: {
+        k1: { id: 'k1', type: 'SKIP', actor: 'leitung', at: 2000, section: null, clockMs: null, teamId: null, targetId: null, payload: { reason: 'alt' } },
+        k2: { id: 'k2', type: 'SKIP', actor: 'leitung', at: 3000, section: null, clockMs: null, teamId: null, targetId: null, payload: { reason: 'neu' } },
+      } as Record<string, any>,
+      phase: 'regular',
+      clock: { running: false, elapsedMs: 0, anchorAt: null },
+      scores: { teamA: { regular: 0, overtime: 0, shootout: 0 }, teamB: { regular: 0, overtime: 0, shootout: 0 } },
+      goals: [],
+      overrides: [],
+      nextSeq: 0,
+      baseDecidedBy: null,
+      shootoutKicks: [],
+      cards: [],
+      fouls: [],
+      penalties: [],
+      substitutions: [],
+      retracted: [],
+      lastScoreEventId: null,
+      decidedBy: null,
+      finishedAt: null,
+      details: {},
+      sectionStartMs: 0,
+      breakStartedAt: null,
+    };
+    expect(cacheColumns(state, ctx).skipped_at).toBe(3000);
+  });
+
+  it('SKIP mit Nicht-UUID-IDs: letzter (größter at) gewinnt', () => {
+    const state: MatchState = {
+      ...initialState(ctx),
+      status: 'skipped',
+      accepted: {
+        '1': { id: '1', type: 'SKIP', actor: 'leitung', at: 100, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
+        '2': { id: '2', type: 'SKIP', actor: 'leitung', at: 200, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
+        '3': { id: '3', type: 'SKIP', actor: 'leitung', at: 150, section: null, clockMs: null, teamId: null, targetId: null, payload: {} },
+      } as Record<string, any>,
+      phase: 'regular',
+      clock: { running: false, elapsedMs: 0, anchorAt: null },
+      scores: { teamA: { regular: 0, overtime: 0, shootout: 0 }, teamB: { regular: 0, overtime: 0, shootout: 0 } },
+      goals: [],
+      overrides: [],
+      nextSeq: 0,
+      baseDecidedBy: null,
+      shootoutKicks: [],
+      cards: [],
+      fouls: [],
+      penalties: [],
+      substitutions: [],
+      retracted: [],
+      lastScoreEventId: null,
+      decidedBy: null,
+      finishedAt: null,
+      details: {},
+      sectionStartMs: 0,
+      breakStartedAt: null,
+    };
+    expect(cacheColumns(state, ctx).skipped_at).toBe(200);
+  });
+
   it('Golden Goal: Verlängerungsstand getrennt, decided_by goldenGoal', () => {
     const rules: MatchRules = { ...RULES, sections: 1, knockout: true, tiebreak: 'goldenGoal', overtimeSeconds: 300 };
     const state = run([

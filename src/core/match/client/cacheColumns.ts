@@ -109,7 +109,14 @@ function activeSkip(state: MatchState): EngineEvent | null {
     return null;
   }
   const skips = Object.values(state.accepted).filter((event) => event.type === 'SKIP');
-  return skips.length > 0 ? skips[skips.length - 1] : null;
+  // RC16 / Fix: SKIP mit größtem `at` wählen (bei Gleichstand später eingefügter)
+  let latestSkip: typeof skips[0] | null = null;
+  for (const skip of skips) {
+    if (!latestSkip || skip.at > latestSkip.at || (skip.at === latestSkip.at && skip.id > latestSkip.id)) {
+      latestSkip = skip;
+    }
+  }
+  return latestSkip;
 }
 
 export function cacheColumns(state: MatchState, ctx: MatchContext): CacheColumns {
