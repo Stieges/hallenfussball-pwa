@@ -170,6 +170,12 @@
       "team": "{{what}} Team {{team}}",
       "minute": "{{what}}, {{minute}}. Minute",
       "plain": "{{what}}"
+    },
+    "rejected": {
+      "header_one": "1 Eintrag $t(sport:outbox.rejectedEntry)",
+      "header_other": "{{count}} Einträge $t(sport:outbox.rejectedEntry)",
+      "dismissAll": "Alle verstanden",
+      "unknownCodeHint": "Code: {{code}}"
     }
   }
 }

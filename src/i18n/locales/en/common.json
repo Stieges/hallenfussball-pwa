@@ -170,6 +170,12 @@
       "team": "{{what}} team {{team}}",
       "minute": "{{what}}, minute {{minute}}",
       "plain": "{{what}}"
+    },
+    "rejected": {
+      "header_one": "1 entry not accepted",
+      "header_other": "{{count}} entries not accepted",
+      "dismissAll": "Understood all",
+      "unknownCodeHint": "Code: {{code}}"
     }
   }
 }
