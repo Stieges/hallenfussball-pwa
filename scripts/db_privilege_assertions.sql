@@ -215,6 +215,9 @@ UNION ALL
 -- PUBLIC; in public liegt kein match__-Helfer mehr. Die Zahlen sind fest, damit ein fehlender
 -- Einspielvorgang nicht vakuum-gruen wird -- neue Helfer muessen sie mitziehen. B3b
 -- (20260928_003) fuegt sechs IMMUTABLE-Helfer in match_engine hinzu: 41 + 6 = 47 (46 IMMUTABLE).
+-- C0b (20261001_001_amend_event.sql) fuegt vier IMMUTABLE-Helfer hinzu (detail_value_valid,
+-- detail_fields, details_from_payload, apply_amend) und ersetzt enter_decision(jsonb,text) durch
+-- enter_decision(jsonb,text,numeric): 47 + 4 = 51 (50 IMMUTABLE).
 SELECT 'compute-match-state-security-invoker',
        NOT (SELECT p.prosecdef FROM pg_proc p WHERE p.oid = 'public.compute_match_state(uuid)'::regprocedure)
 UNION ALL
@@ -225,14 +228,14 @@ SELECT 'match-apply-event-immutable',
        (SELECT p.provolatile = 'i' FROM pg_proc p
          WHERE p.oid = 'public.match_apply_event(jsonb,jsonb,jsonb,jsonb)'::regprocedure)
 UNION ALL
-SELECT 'match-engine-function-count-47',
-       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-function-count-51',
+       (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))))
 UNION ALL
-SELECT 'match-engine-immutable-count-46',
-       (SELECT count(*) = 46 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-immutable-count-50',
+       (SELECT count(*) = 50 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.provolatile = 'i')
@@ -243,8 +246,8 @@ SELECT 'match-engine-no-security-definer',
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.prosecdef)
 UNION ALL
-SELECT 'match-engine-search-path-all-47',
-       (SELECT count(*) = 47 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+SELECT 'match-engine-search-path-all-51',
+       (SELECT count(*) = 51 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
           WHERE (n.nspname = 'match_engine'
               OR (n.nspname = 'public' AND p.proname IN ('match_initial_state', 'match_apply_event',
                   'match_continue', 'match_reduce', 'match_server_state', 'compute_match_state'))) AND p.proconfig = ARRAY['search_path=public, pg_temp'])
@@ -325,4 +328,31 @@ SELECT 'positive-anon-execute-server-time',
 UNION ALL
 SELECT 'positive-authenticated-execute-server-time',
        has_function_privilege('authenticated', 'public.server_time()', 'EXECUTE')
+UNION ALL
+-- C0b (.superpowers/sdd/2026-09-26-pr-c-ausgang/task-C0b-brief.md, 20261001_001_amend_event.sql):
+-- die alte enter_decision-Signatur ist entfernt; der neue AMEND-Helfer ist wie alle Engine-
+-- Teilfunktionen fuer anon ausfuehrbar (compute_match_state ist SECURITY INVOKER); der Spalten-
+-- Schutz-Trigger auf matches (V4, Ruling PC2) existiert, ist aktiv, BEFORE UPDATE je Zeile, seine
+-- Funktion ist SECURITY INVOKER (current_user-Unterscheidung) mit festem search_path und ohne
+-- EXECUTE fuer PUBLIC.
+SELECT 'no-enter-decision-without-at',
+       to_regprocedure('match_engine.enter_decision(jsonb,text)') IS NULL
+UNION ALL
+SELECT 'positive-anon-execute-match-engine-apply-amend',
+       has_function_privilege('anon', 'match_engine.apply_amend(jsonb,jsonb)', 'EXECUTE')
+UNION ALL
+SELECT 'matches-guard-engine-columns-trigger-active',
+       EXISTS (SELECT 1 FROM pg_trigger t
+                WHERE t.tgrelid = 'public.matches'::regclass AND t.tgname = 'matches_guard_engine_columns'
+                  AND NOT t.tgisinternal AND t.tgenabled = 'O'
+                  AND t.tgfoid = 'public.matches_guard_engine_columns()'::regprocedure
+                  AND (t.tgtype & 1) = 1 AND (t.tgtype & 2) = 2 AND (t.tgtype & 16) = 16)
+UNION ALL
+SELECT 'matches-guard-engine-columns-invoker-search-path',
+       (SELECT NOT p.prosecdef AND p.proconfig = ARRAY['search_path=public, pg_temp'] FROM pg_proc p
+         WHERE p.oid = 'public.matches_guard_engine_columns()'::regprocedure)
+UNION ALL
+SELECT 'matches-guard-engine-columns-no-public-execute',
+       (SELECT p.proacl IS NOT NULL AND NOT EXISTS (SELECT 1 FROM aclexplode(p.proacl) a WHERE a.grantee = 0)
+          FROM pg_proc p WHERE p.oid = 'public.matches_guard_engine_columns()'::regprocedure)
 ;
