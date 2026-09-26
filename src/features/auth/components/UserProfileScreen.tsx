@@ -9,6 +9,9 @@
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
+import { LocalMatchStore } from '../../../core/match/client/LocalMatchStore';
+import { countWaitingEntries, type WaitingEntriesSource } from '../../collaboration/outbox/countWaitingEntries';
+import { LogoutWarningDialog } from '../../collaboration/outbox/LogoutWarningDialog';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
 import { useTheme } from '../../../hooks/useTheme';
@@ -31,7 +34,12 @@ interface UserProfileScreenProps {
   onCreateTournament?: () => void;
   /** Handler für Registrierung (nur für Gäste) */
   onRegister?: () => void;
+  /** C2b: kleine Fabrik für die lokale Spielkopie (Standard: neue LocalMatchStore-Instanz) */
+  createMatchStore?: () => WaitingEntriesSource;
 }
+
+/** Standard-Fabrik der lokalen Spielkopie (jeweils eine frische Instanz). */
+const defaultMatchStoreFactory = (): WaitingEntriesSource => new LocalMatchStore();
 
 // =============================================================================
 // SUB-COMPONENTS (Cards)
@@ -63,6 +71,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onOpenTournament,
   onCreateTournament,
   onRegister,
+  createMatchStore = defaultMatchStoreFactory,
 }) => {
   const { t } = useTranslation('auth');
   const { user, isGuest, logout, resetPassword } = useAuth();
@@ -73,6 +82,9 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
 
   // Password reset rate limiting state
   const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
+
+  // C2b: Anzahl der wartenden Eintraege, solange die Abmelde-Warnung offen ist
+  const [logoutWaiting, setLogoutWaiting] = useState<number | null>(null);
 
   // Check for existing cooldown on mount and handle countdown
   useEffect(() => {
@@ -135,15 +147,40 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     }
   }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError, t]);
 
+  // C2b (D-C2): abmelden mit Warnung, wenn Eintraege noch auf Uebertragung warten.
+  // Zaehlfehler duerfen das Abmelden nie blockieren; die lokalen Kopien bleiben erhalten.
+  const doLogout = useCallback(() => {
+    void logout();
+    onBack?.();
+  }, [logout, onBack]);
+
+  const handleLogout = useCallback(() => {
+    if (isGuest) {
+      doLogout();
+      return;
+    }
+    const accountId = user?.id ?? '';
+    void (async () => {
+      // Zaehler darf schlagen (DB nicht lesbar) -- dann direkt abmelden (D-C2)
+      const waiting = await countWaitingEntries(createMatchStore(), accountId).catch(() => 0);
+      if (waiting > 0) {
+        setLogoutWaiting(waiting);
+        return;
+      }
+      doLogout();
+    })();
+  }, [isGuest, user?.id, createMatchStore, doLogout]);
+
+  const cancelLogoutWarning = useCallback(() => setLogoutWaiting(null), []);
+  const confirmLogoutWarning = useCallback(() => {
+    setLogoutWaiting(null);
+    doLogout();
+  }, [doLogout]);
+
   // AuthGuard in App.tsx handles guest redirect
   if (!user) {
     return null;
   }
-
-  const handleLogout = () => {
-    void logout();
-    onBack?.();
-  };
 
   const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -221,6 +258,13 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
           />
         </div>
       </div>
+
+      <LogoutWarningDialog
+        isOpen={logoutWaiting !== null}
+        count={logoutWaiting ?? 0}
+        onCancel={cancelLogoutWarning}
+        onConfirm={confirmLogoutWarning}
+      />
     </div>
   );
 };
