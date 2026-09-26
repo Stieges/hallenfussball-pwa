@@ -1,0 +1,397 @@
+{
+  "title": "AMEND-Payload ungültig -> INVALID_PAYLOAD (leer, leeres clear, Feld + clear, unbekannter/doppelter clear-Name, Typfehler, fehlendes targetId, shooterNumber an GOAL, nur unbekannte Schlüssel)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-52",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "prior": [
+    {
+      "id": "00000052-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 60000,
+      "teamId": "teamA",
+      "payload": {}
+    }
+  ],
+  "events": [
+    {
+      "id": "00000052-0000-4000-8000-000000000010",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {}
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000011",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3001,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "clear": []
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000012",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3002,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": 3,
+        "clear": [
+          "playerNumber"
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000013",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3003,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "clear": [
+          "foo"
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000014",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3004,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "clear": [
+          "assists",
+          "assists"
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000015",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3005,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerId": "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000016",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3006,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerId": "spieler-7"
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000017",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3007,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": -1
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000018",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3008,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": 2.5
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000019",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3009,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "assists": [
+          1.5
+        ]
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000020",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3010,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "assists": 4
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000021",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3011,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": null
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000022",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3012,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "playerNumber": 3
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000023",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3013,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "shooterNumber": 3
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000024",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3014,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "incomplete": "ja"
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000025",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3015,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "clear": "assists"
+      }
+    },
+    {
+      "id": "00000052-0000-4000-8000-000000000026",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3016,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "00000052-0000-4000-8000-000000000002",
+      "payload": {
+        "foo": 1
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000052-0000-4000-8000-000000000010",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000011",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000012",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000013",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000014",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000015",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000016",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000017",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000018",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000019",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000020",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000021",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000022",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000023",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000024",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000025",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      },
+      {
+        "id": "00000052-0000-4000-8000-000000000026",
+        "status": "rejected",
+        "code": "INVALID_PAYLOAD"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "00000052-0000-4000-8000-000000000002",
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "details": {
+      "00000052-0000-4000-8000-000000000002": {}
+    }
+  }
+}

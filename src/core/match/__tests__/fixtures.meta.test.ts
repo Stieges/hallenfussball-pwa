@@ -46,9 +46,10 @@ const fixtures = fixtureFileNames.map((fileName) => ({ fileName, fixture: loadFi
  * Ausnahme von der Je-Datei-Eindeutigkeit der Event-IDs: `07-idempotency.json` testet absichtlich
  * die Idempotenz-Prüfung (R11) -- vier Ereignisse mit derselben ID (teils gleicher, teils
  * abweichender Inhalt), um `duplicate`/`ID_CONFLICT` zu erzwingen. Eine doppelte ID ist dort die
- * Fachlichkeit der Fixture, kein Autorenfehler.
+ * Fachlichkeit der Fixture, kein Autorenfehler. Ebenso `56-dedupe-match-start-ohne-regeln.json`
+ * (C0a, V3): derselbe MATCH_START erneut, einmal mit Geräte-Regeln statt Server-Regeln -> `duplicate`.
  */
-const DUPLICATE_ID_ALLOWLIST = new Set(['07-idempotency.json']);
+const DUPLICATE_ID_ALLOWLIST = new Set(['07-idempotency.json', '56-dedupe-match-start-ohne-regeln.json']);
 
 /** Erlaubte `actorUser`-Rollen (Brief Abschnitt 3): B3b mappt darauf echte Testnutzer. */
 const ALLOWED_ACTOR_USERS = new Set(['owner', 'coadmin', 'helper', 'trainer', 'stranger']);

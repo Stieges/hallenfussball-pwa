@@ -1,0 +1,31 @@
+{
+  "title": "Zu große Werte: höchstens 4 Abschnitte, Zahlen höchstens 2147483647",
+  "input": {
+    "durationMinutes": 2147483647,
+    "phase": null,
+    "groupPhaseDuration": null,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 7,
+      "halftimeBreak": 99999999999,
+      "matchCockpitSettings": {
+        "penaltyShootersPerTeam": 1e+30,
+        "penaltySuddenDeathAfter": "99999999999999999999"
+      }
+    },
+    "finalsConfig": {
+      "tiebreakerDuration": 40000000
+    }
+  },
+  "expect": {
+    "sections": 4,
+    "sectionSeconds": 2147483647,
+    "breakSeconds": 2147483647,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 2147483647,
+    "shootersPerTeam": 2147483647,
+    "suddenDeathAfter": 2147483647,
+    "penaltySeconds": 120
+  }
+}

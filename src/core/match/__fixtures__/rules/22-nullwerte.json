@@ -1,0 +1,27 @@
+{
+  "title": "Nullwerte: 0 Abschnitte -> 1, Pause 0, Dauer 0",
+  "input": {
+    "durationMinutes": 0,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 0,
+      "halftimeBreak": 0
+    },
+    "finalsConfig": {
+      "tiebreakerDuration": 0
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 0,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 0,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

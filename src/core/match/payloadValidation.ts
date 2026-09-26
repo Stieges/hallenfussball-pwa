@@ -4,14 +4,25 @@
  * 300-Zeilen-Grenze (`.claude/conventions/CODING.md`).
  */
 import { z } from 'zod';
+import { DETAIL_FIELDS } from './details';
 import { MatchRulesSchema, type EngineEvent, type EventType, type MatchContext } from './types';
 
 // Ruling K4 (Fixrunde 1, I5): kein Schema ist `.strict()` -- unbekannte Schlüssel werden
 // ignoriert (z.object()-Default "strip"), nicht abgelehnt. Nur Pflichtfelder werden geprüft.
 const EmptyPayloadSchema = z.object({});
-const OptionalPlayerPayloadSchema = z.object({ playerNumber: z.number().int().nonnegative().optional() });
+const NonNegativeIntSchema = z.number().int().nonnegative();
+/** C0a (V5): Spieler-ID steht in der Payload, kanonische kleingeschriebene UUID (wie S10). */
+const LowerUuidSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+/** C0a (V1): optionale Angaben an Tor/Karte/Strafe/Foul/Wechsel -- gleiche Felder wie in `details`. */
+const PlayerDetailFields = {
+  playerNumber: NonNegativeIntSchema.optional(),
+  playerId: LowerUuidSchema.optional(),
+  assists: z.array(NonNegativeIntSchema).optional(),
+  incomplete: z.boolean().optional(),
+};
+const OptionalPlayerPayloadSchema = z.object(PlayerDetailFields);
 const TimePenaltyPayloadSchema = z.object({
-  playerNumber: z.number().int().nonnegative().optional(),
+  ...PlayerDetailFields,
   durationSeconds: z.number().int().positive().optional(),
 });
 const RetractPayloadSchema = z.object({});
@@ -27,8 +38,29 @@ const ClockAdjustPayloadSchema = z.object({});
 const TiebreakChoicePayloadSchema = z.object({ choice: z.enum(['overtime', 'goldenGoal', 'shootout']) });
 const ShootoutKickPayloadSchema = z.object({
   scored: z.boolean(),
-  shooterNumber: z.number().int().nonnegative().optional(),
+  shooterNumber: NonNegativeIntSchema.optional(),
+  incomplete: z.boolean().optional(),
 });
+/**
+ * C0a (D-C4, V1): AMEND. Mindestens ein Feld gesetzt oder ein nicht-leeres `clear`; kein Feld
+ * zugleich gesetzt und in `clear`; `clear` nur bekannte Namen ohne Dubletten. Die Zulässigkeit je
+ * Zieltyp prüft handlers/amend.ts (Schritt 5), weil sie das Ziel kennen muss.
+ */
+const AmendPayloadSchema = z
+  .object({
+    ...PlayerDetailFields,
+    shooterNumber: NonNegativeIntSchema.optional(),
+    clear: z.array(z.enum(['playerNumber', 'playerId', 'assists', 'shooterNumber', 'incomplete'])).optional(),
+  })
+  .refine((payload) => {
+    const clear = payload.clear ?? [];
+    const setFields = DETAIL_FIELDS.filter((field) => payload[field] !== undefined);
+    return (
+      (setFields.length > 0 || clear.length > 0) &&
+      new Set(clear).size === clear.length &&
+      !setFields.some((field) => clear.includes(field))
+    );
+  });
 const MatchStartPayloadSchema = z.object({ rules: MatchRulesSchema });
 
 export const PAYLOAD_SCHEMAS: Record<EventType, z.ZodType> = {
@@ -58,6 +90,7 @@ export const PAYLOAD_SCHEMAS: Record<EventType, z.ZodType> = {
   TIME_PENALTY: TimePenaltyPayloadSchema,
   SUBSTITUTION: OptionalPlayerPayloadSchema,
   FOUL: OptionalPlayerPayloadSchema,
+  AMEND: AmendPayloadSchema,
 };
 
 /** Ereignistypen, die zwingend ein `teamId` aus {teamAId, teamBId} brauchen. */
@@ -112,7 +145,7 @@ export function isPayloadValid(event: EngineEvent, ctx: MatchContext): boolean {
     }
   }
 
-  if (event.type === 'RETRACT' && !event.targetId) {
+  if ((event.type === 'RETRACT' || event.type === 'AMEND') && !event.targetId) {
     return false;
   }
 

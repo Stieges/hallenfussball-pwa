@@ -1,0 +1,25 @@
+{
+  "title": "tiebreaker overtime-then-shootout mit Verlängerung 3 min",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": null,
+    "finalRoundDuration": null,
+    "config": {},
+    "finalsConfig": {
+      "tiebreaker": "overtime-then-shootout",
+      "tiebreakerDuration": 3
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "overtime-then-shootout",
+    "overtimeSeconds": 180,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

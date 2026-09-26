@@ -1,0 +1,24 @@
+{
+  "title": "tiebreaker goldenGoal",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": null,
+    "finalRoundDuration": null,
+    "config": {},
+    "finalsConfig": {
+      "tiebreaker": "goldenGoal"
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "goldenGoal",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

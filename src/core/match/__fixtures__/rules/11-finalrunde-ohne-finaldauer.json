@@ -1,0 +1,24 @@
+{
+  "title": "Finalrunde ohne finalRoundDuration: Dauer der Gruppenphase",
+  "input": {
+    "durationMinutes": null,
+    "phase": "semifinal",
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 2
+    },
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 2,
+    "sectionSeconds": 300,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

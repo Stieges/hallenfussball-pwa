@@ -1,0 +1,25 @@
+{
+  "title": "matchCockpitSettings fehlt -> 5 Schützen, Sudden Death nach 6",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 2,
+      "halftimeBreak": 1
+    },
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 2,
+    "sectionSeconds": 300,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

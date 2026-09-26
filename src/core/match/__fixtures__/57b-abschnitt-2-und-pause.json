@@ -1,0 +1,139 @@
+{
+  "title": "Abschnitt 2: SECTION_START setzt sectionStartMs = Uhrstand, breakStartedAt = null; PAUSE ändert beides nicht",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-57b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000057b-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000057b-0000-4000-8000-000000000002",
+      "type": "SECTION_END",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 601000,
+      "section": 1,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "0000057b-0000-4000-8000-000000000003",
+      "type": "SECTION_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 661000,
+      "section": 2,
+      "clockMs": 600000,
+      "payload": {}
+    },
+    {
+      "id": "0000057b-0000-4000-8000-000000000004",
+      "type": "PAUSE",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 700000,
+      "section": 2,
+      "clockMs": 639000,
+      "payload": {}
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000057b-0000-4000-8000-000000000001",
+        "status": "accepted"
+      },
+      {
+        "id": "0000057b-0000-4000-8000-000000000002",
+        "status": "accepted"
+      },
+      {
+        "id": "0000057b-0000-4000-8000-000000000003",
+        "status": "accepted"
+      },
+      {
+        "id": "0000057b-0000-4000-8000-000000000004",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "paused",
+      "phase": "regular",
+      "section": 2,
+      "clock": {
+        "running": false,
+        "elapsedMs": 639000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "sectionStartMs": 600000,
+      "breakStartedAt": null
+    },
+    "liveState": {
+      "engine": true,
+      "tiebreakerMode": null,
+      "awaitingTiebreakerChoice": false,
+      "sections": 2,
+      "sectionSeconds": 600,
+      "breakSeconds": 60,
+      "overtimeSeconds": 0,
+      "overtimeDurationSeconds": 0,
+      "durationSeconds": 1200,
+      "status": "paused",
+      "phase": "regular",
+      "section": 2,
+      "running": false,
+      "elapsedMs": 639000,
+      "anchorAt": null,
+      "elapsedSeconds": 639,
+      "playPhase": "regular",
+      "sectionStartMs": 600000,
+      "breakStartedAt": null
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "Prüfreihenfolge AMEND 2 vor 4: geplantes Spiel + unbekanntes Ziel -> INVALID_TRANSITION",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-55b",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "events": [
+    {
+      "id": "0000055b-0000-4000-8000-000000000010",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 3000,
+      "section": null,
+      "clockMs": null,
+      "targetId": "deadbeef-0000-4000-8000-000000000001",
+      "payload": {
+        "playerNumber": 1
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000055b-0000-4000-8000-000000000010",
+        "status": "rejected",
+        "code": "INVALID_TRANSITION"
+      }
+    ],
+    "serverState": {
+      "status": "scheduled",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 0,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "sectionStartMs": 0,
+      "breakStartedAt": null
+    },
+    "details": {}
+  }
+}

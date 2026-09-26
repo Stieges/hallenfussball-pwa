@@ -12,6 +12,9 @@
  * tiefgefrorenen Zustand über `applyEvent` wiederholt, um zu beweisen, dass kein Handler den
  * Eingangszustand mutiert -- das deckt praktisch alle Handler ab, nicht nur MATCH_START.
  *
+ * C0a (PC4): optional `expect.details` (exakt) und `expect.liveState` (`null` exakt, sonst
+ * Teilvergleich gegen `cacheColumns(state, ctx).live_state`).
+ *
  * Derselbe Fixture-Satz wird in B3a von der SQL-Zwillingsfunktion konsumiert
  * (Ruling P2/P3) -- das Format hier ist deshalb bindend für beide Seiten.
  */
@@ -21,6 +24,7 @@ import { describe, expect, it } from 'vitest';
 import { applyBatch, continueLog } from '../reduceMatch';
 import { applyEvent, initialState } from '../applyEvent';
 import { toServerState } from '../serverState';
+import { cacheColumns } from '../client/cacheColumns';
 import { activePenalties, elapsedAt, penaltyRemainingMs } from '../penalties';
 import type { EngineEvent, MatchContext } from '../types';
 import { deepFreeze } from './deepFreeze';
@@ -55,6 +59,10 @@ interface Fixture {
     serverState: unknown;
     state?: Record<string, unknown>;
     penaltyChecks?: PenaltyCheck[];
+    /** C0a (V1, PC4): exakter Vergleich von `state.details` (Angaben je Ereignis). */
+    details?: Record<string, unknown>;
+    /** C0a (V2, PC4): `cacheColumns(state).live_state` -- `null` exakt, sonst Teilvergleich. */
+    liveState?: Record<string, unknown> | null;
   };
 }
 
@@ -119,6 +127,17 @@ describe('Match-Engine Fixtures', () => {
       expect(toServerState(outcome.state)).toEqual(fixture.expect.serverState);
       if (fixture.expect.state) {
         expect(outcome.state).toMatchObject(fixture.expect.state);
+      }
+      if (fixture.expect.details !== undefined) {
+        expect(outcome.state.details).toEqual(fixture.expect.details);
+      }
+      if (fixture.expect.liveState !== undefined) {
+        const liveState = cacheColumns(outcome.state, fixture.ctx).live_state;
+        if (fixture.expect.liveState === null) {
+          expect(liveState).toBeNull();
+        } else {
+          expect(liveState).toMatchObject(fixture.expect.liveState);
+        }
       }
 
       for (const check of fixture.expect.penaltyChecks ?? []) {

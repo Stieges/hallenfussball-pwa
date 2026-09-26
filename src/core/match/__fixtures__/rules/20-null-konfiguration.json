@@ -1,0 +1,22 @@
+{
+  "title": "config und finalsConfig null",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": null,
+    "finalsConfig": null
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 600,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

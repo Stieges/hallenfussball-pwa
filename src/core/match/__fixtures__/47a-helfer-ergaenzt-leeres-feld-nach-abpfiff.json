@@ -1,0 +1,119 @@
+{
+  "title": "Helfer ergänzt nach dem Abpfiff leere Felder -> accepted (Nachtrag-Regel)",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-47a",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "prior": [
+    {
+      "id": "0000047a-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "0000047a-0000-4000-8000-000000000002",
+      "type": "GOAL",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 2000,
+      "section": 1,
+      "clockMs": 60000,
+      "teamId": "teamA",
+      "payload": {}
+    },
+    {
+      "id": "0000047a-0000-4000-8000-000000000003",
+      "type": "MATCH_END",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 5000,
+      "section": 1,
+      "clockMs": 240000,
+      "payload": {}
+    }
+  ],
+  "events": [
+    {
+      "id": "0000047a-0000-4000-8000-000000000010",
+      "type": "AMEND",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 6000,
+      "section": 1,
+      "clockMs": null,
+      "targetId": "0000047a-0000-4000-8000-000000000002",
+      "payload": {
+        "playerNumber": 10,
+        "assists": [
+          11
+        ]
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "0000047a-0000-4000-8000-000000000010",
+        "status": "accepted"
+      }
+    ],
+    "serverState": {
+      "status": "finished",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": false,
+        "elapsedMs": 240000,
+        "anchorAt": null
+      },
+      "scores": {
+        "teamA": {
+          "regular": 1,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 1,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": "0000047a-0000-4000-8000-000000000002",
+      "decidedBy": "regular",
+      "finishedAt": 5000
+    },
+    "details": {
+      "0000047a-0000-4000-8000-000000000002": {
+        "playerNumber": 10,
+        "assists": [
+          11
+        ]
+      }
+    }
+  }
+}

@@ -13,6 +13,8 @@
 import { findTransition, isActorAllowed } from './transitions';
 import { applyCorrection, applyResultEntry } from './handlers/correction';
 import { adjustClock, resumeClock, startClock, stopClock } from './handlers/clock';
+import { applyAmend } from './handlers/amend';
+import { AMENDABLE_EVENT_TYPES, detailsFromPayload } from './details';
 import { applyCard, applyFoul, applyGoal, applySubstitution, applyTimePenalty } from './handlers/records';
 import { applyRetract } from './handlers/retract';
 import { runEndCheck } from './handlers/endcheck';
@@ -69,6 +71,9 @@ export function initialState(ctx: MatchContext): MatchState {
     lastScoreEventId: null,
     decidedBy: null,
     finishedAt: null,
+    details: {},
+    sectionStartMs: 0,
+    breakStartedAt: null,
   };
 }
 
@@ -95,9 +100,20 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
     case 'MATCH_START': {
       const payload = event.payload as { rules: MatchState['rules'] };
       const rules = payload.rules;
+      const clock = startClock(event);
       return {
         status: 'ok',
-        state: { ...state, rules, tiebreakMode: rules?.tiebreak ?? null, phase: 'regular', section: 1, clock: startClock(event) },
+        state: {
+          ...state,
+          rules,
+          tiebreakMode: rules?.tiebreak ?? null,
+          phase: 'regular',
+          section: 1,
+          clock,
+          // C0a (V2): Abschnittsuhr beginnt beim Uhrstand des Anpfiffs.
+          sectionStartMs: clock.elapsedMs,
+          breakStartedAt: null,
+        },
       };
     }
     case 'PAUSE':
@@ -115,7 +131,8 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
       // Überschreibung (Korrektur/Direkteintrag) bleibt bestehen und bestimmt weiter decidedBy.
       return {
         status: 'ok',
-        state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, baseDecidedBy: null },
+        // C0a (V2): sectionStartMs bleibt, eine Pause ist nach REOPEN nicht offen.
+        state: { ...state, clock: resumeClock(state.clock, event), finishedAt: null, baseDecidedBy: null, breakStartedAt: null },
       };
     case 'CLOCK_ADJUST':
       return { status: 'ok', state: { ...state, clock: adjustClock(state.clock, event) } };
@@ -148,6 +165,8 @@ function applyTypeSpecificEffect(state: MatchState, event: EngineEvent, ctx: Mat
       return applyShootoutEnd(state, event, ctx);
     case 'RESULT_ENTRY':
       return { status: 'ok', state: applyResultEntry(state, event, ctx) };
+    case 'AMEND':
+      return applyAmend(state, event);
     default:
       // SKIP/UNSKIP: nur der reine Statuswechsel via `to`.
       return { status: 'ok', state };
@@ -193,6 +212,10 @@ export function applyEvent(state: MatchState, event: EngineEvent, ctx: MatchCont
     ...nextState,
     decidedBy: decidedByFor(nextState),
     accepted: { ...nextState.accepted, [event.id]: event },
+    // C0a (V1): ein angenommenes Zielereignis bringt seine Angaben aus der Payload mit.
+    ...(AMENDABLE_EVENT_TYPES.has(event.type)
+      ? { details: { ...nextState.details, [event.id]: detailsFromPayload(event) } }
+      : {}),
   };
 
   return { status: 'accepted', state: nextState };

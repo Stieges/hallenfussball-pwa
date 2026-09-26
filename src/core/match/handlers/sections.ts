@@ -22,7 +22,8 @@ export function applySectionEnd(state: MatchState, event: EngineEvent): SectionO
   if (state.section >= sections) {
     return { status: 'rejected', code: ERROR_CODES.INVALID_TRANSITION, detail: { reason: 'LAST_SECTION' } };
   }
-  return { status: 'ok', state: { ...state, clock: stopClock(state.clock, event) } };
+  // C0a (V2): Beginn der Abschnittspause in Wanduhr-ms.
+  return { status: 'ok', state: { ...state, clock: stopClock(state.clock, event), breakStartedAt: event.at } };
 }
 
 /**
@@ -31,5 +32,7 @@ export function applySectionEnd(state: MatchState, event: EngineEvent): SectionO
  */
 export function applySectionStart(state: MatchState, event: EngineEvent): MatchState {
   const section = state.phase === 'regular' ? state.section + 1 : state.section;
-  return { ...state, section, clock: resumeClock(state.clock, event) };
+  const clock = resumeClock(state.clock, event);
+  // C0a (V2): der neue Abschnitt beginnt beim Uhrstand nach dem Anpfiff, die Pause ist vorbei.
+  return { ...state, section, clock, sectionStartMs: clock.elapsedMs, breakStartedAt: null };
 }

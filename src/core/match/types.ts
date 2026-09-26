@@ -10,6 +10,7 @@
  * @see .superpowers/sdd/2026-09-25-pr-b-schreibweg/rulings.md (R1-R19)
  */
 import { z } from 'zod';
+import type { EventDetails } from './details';
 
 // ============================================
 // Zustände, Phasen, Akteure, Ereignistypen
@@ -60,6 +61,7 @@ export const EventTypeSchema = z.enum([
   'TIME_PENALTY',
   'SUBSTITUTION',
   'FOUL',
+  'AMEND', // C0a (D-C4): Angaben eines Ereignisses ergänzen/ändern, handlers/amend.ts
 ]);
 export type EventType = z.infer<typeof EventTypeSchema>;
 
@@ -251,6 +253,11 @@ export interface MatchState {
   /** Abgeleitet über `decidedByFor()`, nach jedem Ereignis neu berechnet (applyEvent.ts). */
   decidedBy: DecidedBy | null;
   finishedAt: number | null;
+  /** C0a (V1): Angaben je Ziel-Ereignis-ID (details.ts), per AMEND fortgeschrieben; nicht im serverState. */
+  details: Record<string, EventDetails>;
+  /** C0a (V2): Spieluhr-ms bei Beginn des Abschnitts / Wanduhr-`at` bei Beginn der Pause (sonst null). */
+  sectionStartMs: number;
+  breakStartedAt: number | null;
 }
 
 /** Aus Toren berechneter Stand eines Teams, ohne Überschreibungen (regular+overtime). */

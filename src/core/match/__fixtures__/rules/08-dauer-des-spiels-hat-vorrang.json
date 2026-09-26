@@ -1,0 +1,24 @@
+{
+  "title": "duration_minutes des Spiels hat Vorrang vor der Turnierdauer, 1 Abschnitt",
+  "input": {
+    "durationMinutes": 8,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": 1
+    },
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 480,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

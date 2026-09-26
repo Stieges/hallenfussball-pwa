@@ -1,0 +1,24 @@
+{
+  "title": "tiebreaker ungültig (unbekannter Text, Zahl) -> shootout",
+  "input": {
+    "durationMinutes": null,
+    "phase": "final",
+    "groupPhaseDuration": null,
+    "finalRoundDuration": null,
+    "config": {},
+    "finalsConfig": {
+      "tiebreaker": "penalty"
+    }
+  },
+  "expect": {
+    "sections": 1,
+    "sectionSeconds": 0,
+    "breakSeconds": 60,
+    "knockout": true,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}

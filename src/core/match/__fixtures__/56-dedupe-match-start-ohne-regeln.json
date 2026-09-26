@@ -1,0 +1,151 @@
+{
+  "title": "Duplikat-Vergleich MATCH_START ohne payload.rules (V3, wie dedupe_key): Geräte-Regeln oder keine Regeln gegen Server-Regeln -> duplicate; anderer Payload-Inhalt -> ID_CONFLICT",
+  "szenario": null,
+  "ctx": {
+    "matchId": "match-56",
+    "teamAId": "teamA",
+    "teamBId": "teamB"
+  },
+  "mode": "log",
+  "prior": [
+    {
+      "id": "00000056-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1000,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "id": "00000056-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1200,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 1,
+          "sectionSeconds": 420,
+          "breakSeconds": 0,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        }
+      }
+    },
+    {
+      "id": "00000056-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1300,
+      "section": 1,
+      "clockMs": null,
+      "payload": {}
+    },
+    {
+      "id": "00000056-0000-4000-8000-000000000001",
+      "type": "MATCH_START",
+      "actor": "helper",
+      "actorUser": "helper",
+      "at": 1400,
+      "section": 1,
+      "clockMs": null,
+      "payload": {
+        "rules": {
+          "sections": 2,
+          "sectionSeconds": 600,
+          "breakSeconds": 60,
+          "knockout": false,
+          "tiebreak": null,
+          "overtimeSeconds": 0,
+          "shootersPerTeam": 5,
+          "suddenDeathAfter": 5,
+          "penaltySeconds": 120
+        },
+        "extra": 1
+      }
+    }
+  ],
+  "expect": {
+    "results": [
+      {
+        "id": "00000056-0000-4000-8000-000000000001",
+        "status": "duplicate"
+      },
+      {
+        "id": "00000056-0000-4000-8000-000000000001",
+        "status": "duplicate"
+      },
+      {
+        "id": "00000056-0000-4000-8000-000000000001",
+        "status": "rejected",
+        "code": "ID_CONFLICT"
+      }
+    ],
+    "serverState": {
+      "status": "running",
+      "phase": "regular",
+      "section": 1,
+      "clock": {
+        "running": true,
+        "elapsedMs": 0,
+        "anchorAt": 1000
+      },
+      "scores": {
+        "teamA": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        },
+        "teamB": {
+          "regular": 0,
+          "overtime": 0,
+          "shootout": 0
+        }
+      },
+      "effectiveScores": {
+        "teamA": 0,
+        "teamB": 0
+      },
+      "shootoutKicks": [],
+      "lastScoreEventId": null,
+      "decidedBy": null,
+      "finishedAt": null
+    },
+    "state": {
+      "rules": {
+        "sections": 2,
+        "sectionSeconds": 600,
+        "breakSeconds": 60,
+        "knockout": false,
+        "tiebreak": null,
+        "overtimeSeconds": 0,
+        "shootersPerTeam": 5,
+        "suddenDeathAfter": 5,
+        "penaltySeconds": 120
+      }
+    }
+  }
+}

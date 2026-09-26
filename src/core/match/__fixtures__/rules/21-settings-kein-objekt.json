@@ -1,0 +1,27 @@
+{
+  "title": "matchCockpitSettings als Array bzw. Text -> Standardwerte",
+  "input": {
+    "durationMinutes": null,
+    "phase": null,
+    "groupPhaseDuration": 10,
+    "finalRoundDuration": null,
+    "config": {
+      "gamePeriods": "3",
+      "matchCockpitSettings": [
+        3
+      ]
+    },
+    "finalsConfig": {}
+  },
+  "expect": {
+    "sections": 3,
+    "sectionSeconds": 200,
+    "breakSeconds": 60,
+    "knockout": false,
+    "tiebreak": "shootout",
+    "overtimeSeconds": 300,
+    "shootersPerTeam": 5,
+    "suddenDeathAfter": 6,
+    "penaltySeconds": 120
+  }
+}
