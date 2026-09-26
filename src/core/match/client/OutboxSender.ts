@@ -159,7 +159,7 @@ export class OutboxSender {
         queue.wantsRun = false;
         // I1: eine Warteschlange eines frueheren/anderen Kontos treibt nichts mehr an --
         // ein noch laufender Aufruf darf zu Ende laufen, aber keinen neuen anstossen.
-        if (!this.canSend() || queue.accountId !== this.accountId || queue.pause !== null) {
+        if (!this.canSend() || !this.isCurrentQueue(queue) || queue.pause !== null) {
           break;
         }
         const outcome = await this.sendOneBatch(queue);
@@ -189,7 +189,9 @@ export class OutboxSender {
         return await this.handleFailure(queue, error);
       } catch {
         // Speicherfehler o. a.: Eintraege bleiben pending, spaeterer Versuch.
-        this.book.set({ lastError: classifySendFailure(error).message });
+        if (this.isCurrentQueue(queue)) {
+          this.book.set({ lastError: classifySendFailure(error).message });
+        }
         queue.scheduleRetry('backoff', PERMANENT_RETRY_MS);
         return 'done';
       }
@@ -206,7 +208,7 @@ export class OutboxSender {
     // Fixrunde 2, I1-R: `store.load` ist eine echte (asynchrone) IndexedDB-Anfrage --
     // in diesem Zeitfenster kann `stop()` laufen oder das Konto wechseln. Direkt vor
     // dem Netzaufruf deshalb ERNEUT pruefen, statt nur einmal am Schleifenanfang (:162).
-    if (!this.canSend() || queue.accountId !== this.accountId) {
+    if (!this.canSend() || !this.isCurrentQueue(queue)) {
       return 'halt';
     }
     const batch = copy.pending.slice(0, BATCH_LIMIT);
@@ -214,55 +216,84 @@ export class OutboxSender {
       clientFormat: this.clientFormat,
       ...(this.deviceId !== undefined ? { deviceId: this.deviceId } : {}),
     });
+    // Fixrunde 2, N-1: der Netzaufruf selbst braucht Zeit -- das Konto kann WAEHREND
+    // dieses Aufrufs gewechselt haben (auch wenn die Pruefung Z. 209 direkt davor noch
+    // aktuell war). Ein veralteter Lauf darf danach den GLOBALEN Status (authRequired,
+    // lastError, clientOutdated) nicht mehr setzen und kein requestCatchUp mehr ausloesen --
+    // die Buchung in den Store DIESES (eigenen) Kontos bleibt aber erlaubt.
+    const isCurrent = this.isCurrentQueue(queue);
     if (isClientOutdated(result)) {
       // Die neue App sendet dieselben IDs erneut -- bis `start()` neu nichts tun.
-      this.haltAll();
-      this.book.set({ clientOutdated: true });
-      await this.refresh();
+      if (isCurrent) {
+        this.haltAll();
+        this.book.set({ clientOutdated: true });
+        await this.refresh();
+      }
       return 'halt';
     }
     // Zuordnung ueber den Index (id nur zur Kontrolle), alles in einer Transaktion.
     const resolution = buildResolution(batch, result.results, copy.pending, this.now());
     await this.store.resolveBatch(queue.key, resolution);
     queue.resetBackoff();
-    this.book.set({ lastError: null });
-    if (resolution.ackedIds.length > 0) {
-      this.requestCatchUp(queue.matchId);
+    if (isCurrent) {
+      this.book.set({ lastError: null });
+      if (resolution.ackedIds.length > 0) {
+        this.requestCatchUp(queue.matchId);
+      }
+      await this.refresh();
     }
-    await this.refresh();
     return 'continue';
+  }
+
+  /** Fixrunde 2, N-1: gehoert diese Warteschlange (noch) zum aktiven Lauf/Konto? */
+  private isCurrentQueue(queue: MatchQueue): boolean {
+    return queue.accountId === this.accountId;
   }
 
   private async handleFailure(queue: MatchQueue, error: unknown): Promise<BatchOutcome> {
     const failure = classifySendFailure(error);
-    this.book.set({ lastError: failure.message });
+    const isCurrent = this.isCurrentQueue(queue);
+    if (isCurrent) {
+      this.book.set({ lastError: failure.message });
+    }
     switch (failure.kind) {
       case 'auth': {
-        this.haltAll();
-        this.book.set({ authRequired: true });
-        await this.refresh();
+        if (isCurrent) {
+          this.haltAll();
+          this.book.set({ authRequired: true });
+          await this.refresh();
+        }
         return 'halt';
       }
       case 'notReady': {
         // V8: nur dieses Spiel, Eintraege werden NICHT abgelehnt.
         queue.scheduleRetry('notReady', NOT_READY_RETRY_MS);
-        await this.refresh();
+        if (isCurrent) {
+          await this.refresh();
+        }
         return 'done';
       }
       case 'matchFull':
       case 'matchGone': {
+        // Buchung in den eigenen Store bleibt erlaubt, auch wenn der Lauf veraltet ist.
         await this.store.rejectAllPending(queue.key, failure.kind === 'matchFull' ? MATCH_FULL_CODE : MATCH_GONE_CODE);
-        await this.refresh();
+        if (isCurrent) {
+          await this.refresh();
+        }
         return 'continue';
       }
       case 'transient': {
         queue.scheduleRetry('backoff', queue.takeBackoffMs());
-        await this.refresh();
+        if (isCurrent) {
+          await this.refresh();
+        }
         return 'done';
       }
       case 'permanent': {
         queue.scheduleRetry('backoff', PERMANENT_RETRY_MS);
-        await this.refresh();
+        if (isCurrent) {
+          await this.refresh();
+        }
         return 'done';
       }
     }
@@ -280,7 +311,7 @@ export class OutboxSender {
     for (const queue of this.queues.values()) {
       // Nur die Pausen des AKTUELLEN Kontos anzeigen (D-C2) -- andere Konten bleiben
       // im Status unsichtbar, auch wenn ihre Warteschlangen noch im Speicher stehen (I1).
-      if (queue.accountId === this.accountId && queue.pause !== null) {
+      if (this.isCurrentQueue(queue) && queue.pause !== null) {
         pausedMatches[queue.matchId] = queue.pause;
       }
     }
