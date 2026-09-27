@@ -57,6 +57,13 @@ describe('SyncStatusBar — nicht uebernommene Eintraege (C2b, additiv)', () => 
     expect(screen.getByTestId('sync-status')).toHaveTextContent('common:outbox.notice.review');
   });
 
+  // Fixrunde 1 (Review m5): beide echten Einbauorte (AdminHeader, LiveCockpit via
+  // SyncStatusIndicator) nutzen `compact=true` -- der Review-Hinweis war dort nie sichtbar.
+  it('reviewCount ist auch im Kompaktmodus sichtbar', () => {
+    render(<SyncStatusBar status="synced" compact reviewCount={2} />);
+    expect(screen.getByTestId('sync-status-review-badge')).toHaveTextContent('2');
+  });
+
   // Fixrunde 1 (Review I2): color=onError (weiss) auf background=errorLight (fast weiss/leicht
   // transparent) ist im hellen Theme praktisch unlesbar (Kontrast weit unter WCAG 4.5:1). Beide
   // Tokens sind Theme-abhaengige CSS-Variablen -- der satte `error`-Ton auf der blassen

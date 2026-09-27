@@ -13,6 +13,7 @@ import { CSSProperties, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import { SyncStatus } from '../../../core/repositories/OfflineRepository';
+import { SyncRejectedHint } from './SyncRejectedHint';
 
 // =============================================================================
 // TYPES
@@ -386,29 +387,34 @@ export function SyncStatusBar({
                         {badgeCount}
                     </span>
                 )}
+
+                {/* Fixrunde 1 (Review m5): AdminHeader/LiveCockpit nutzen beide `compact` --
+                    ohne dieses Badge war "wartet auf Turnierleitung" dort nie sichtbar. Eigene
+                    Ecke (unten rechts), damit es sich nicht mit dem Pending/Failed-Badge oben
+                    rechts ueberlappt. */}
+                {compact && hasReview && !isSyncing && (
+                    <span
+                        data-testid="sync-status-review-badge"
+                        style={{
+                            ...styles.badge,
+                            top: 'auto',
+                            bottom: -4,
+                            background: cssVars.colors.info,
+                            color: cssVars.colors.onPrimary,
+                        }}
+                        aria-hidden="true"
+                        title={String(t('outbox.notice.review', { count: reviewCount }))}
+                    >
+                        {reviewCount}
+                    </span>
+                )}
             </button>
 
-            {/* C2b: Hinweis/Badge auf nicht uebernommene Eintraege (D-C1) -- eigener Knopf
-                neben dem Statusfeld, damit der Klick die Ablehnungsliste zeigt. */}
-            {hasRejected && (onShowRejected ? (
-                <button
-                    type="button"
-                    data-testid="sync-status-rejected"
-                    data-rejected={rejectedCount}
-                    style={styles.rejected}
-                    onClick={onShowRejected}
-                >
-                    {t('outbox.rejected.countLabel', { count: rejectedCount })}
-                </button>
-            ) : (
-                <span
-                    data-testid="sync-status-rejected"
-                    data-rejected={rejectedCount}
-                    style={{ ...styles.rejected, cursor: 'default' }}
-                >
-                    {t('outbox.rejected.countLabel', { count: rejectedCount })}
-                </span>
-            ))}
+            {/* C2b: Hinweis auf nicht uebernommene Eintraege (D-C1), Fixrunde 1 (Review m4):
+                als Unterkomponente ausgelagert, um SyncStatusBar zu verkleinern. */}
+            {hasRejected && (
+                <SyncRejectedHint count={rejectedCount} style={styles.rejected} onShowRejected={onShowRejected} />
+            )}
 
             {/* CSS Animation for spinning icon */}
             <style>{`
