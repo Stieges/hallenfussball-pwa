@@ -21,6 +21,8 @@ import { useMatchExecution } from '../../hooks/useMatchExecution';
 import { useTournamentMembers } from '../auth/hooks/useTournamentMembers';
 import { canEditResults } from '../auth/utils/permissions';
 import { toRuntimeMatchEvents } from '../../utils/matchEvents';
+import { useToast } from '../../components/ui/Toast/ToastContext';
+import { captureFeatureError } from '../../lib/sentry';
 import styles from './ManagementTab.module.css';
 
 interface ManagementTabProps {
@@ -48,9 +50,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   onInitialMatchConsumed,
 }) => {
   const { t } = useTranslation('tournament');
+  const { showError } = useToast();
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
+  // P7 (Fixrunde 3): `getLiveMatchData`/`ensureEngineMatchReady` kann werfen (Engine-Spiel ohne
+  // Ansicht, s. useEngineExecutionBridge.resolveEngineLiveMatchData) -- unterscheidet die
+  // Leeranzeige "kein Spiel auf diesem Feld" von "ein Spiel existiert, ist aber noch nicht bereit".
+  const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
 
   // Use extracted hook for live match management
   const {
@@ -237,10 +244,19 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     let cancelled = false;
 
     setIsInitializingMatch(true);
+    setEngineReadyError(false);
 
     void getLiveMatchData(currentMatchData)
-      .catch((error) => {
-        console.error('[ManagementTab] Match initialization failed:', error);
+      .catch((error: unknown) => {
+        if (cancelled) { return; }
+        // P7 (Fixrunde 3): bisher nur console.error + die irrefuehrende Leeranzeige "Keine Spiele
+        // auf diesem Feld" -- jetzt Toast + Sentry-Meldung, die Leeranzeige zeigt stattdessen
+        // "Spiel wird vorbereitet" (der Effekt laeuft erneut, sobald sich eine Abhaengigkeit
+        // aendert, z. B. die Engine-Kopie doch noch ankommt).
+        const normalizedError = error instanceof Error ? error : new Error(String(error));
+        captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
+        showError(t('management.engineReadyError'));
+        setEngineReadyError(true);
       })
       .finally(() => {
         // Only update state if this effect hasn't been cancelled
@@ -491,6 +507,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       ) : isInitializingMatch ? (
         <div className={styles.noMatches}>
           {t('management.matchLoading')}
+        </div>
+      ) : engineReadyError ? (
+        <div className={styles.noMatches}>
+          {t('management.enginePreparing')}
         </div>
       ) : (
         <div className={styles.noMatches}>

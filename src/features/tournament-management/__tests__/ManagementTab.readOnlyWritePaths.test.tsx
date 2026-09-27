@@ -41,6 +41,12 @@ vi.mock('../../../hooks/useMatchSound', () => ({
   }),
 }));
 
+// P7 (Fixrunde 3): ManagementTab braucht jetzt den App-weiten `useToast` (Fehler-Toast bei einem
+// gescheiterten `getLiveMatchData`) -- der wirft ohne `<ToastProvider>`-Vorfahren.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
+}));
+
 // Mutable Rolle des angemeldeten Nutzers — echte canEditResults()-Logik (aus permissions.ts)
 // entscheidet, ob checkCanEditMatch true/false liefert. owner/co-admin/collaborator: true.
 // trainer/viewer: false (unabhängig von teamIds, siehe permissions.ts:74-86).

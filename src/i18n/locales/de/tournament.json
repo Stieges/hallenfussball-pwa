@@ -371,7 +371,9 @@
     "selectMatch": "Spiel auswählen (optional - automatisch wird das nächste ausgewählt):",
     "autoNextMatch": "Automatisch (nächstes Spiel)",
     "matchLoading": "Spiel wird geladen...",
-    "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden"
+    "noMatchesOnField": "Keine Spiele auf diesem Feld vorhanden",
+    "enginePreparing": "Spiel wird vorbereitet …",
+    "engineReadyError": "Spiel konnte nicht vorbereitet werden — bitte erneut versuchen"
   },
   "tables": {
     "noGroups": "Dieses Turnier hat keine Gruppen.",

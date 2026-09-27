@@ -371,7 +371,9 @@
     "selectMatch": "Select match (optional - next match is selected automatically):",
     "autoNextMatch": "Automatic (next match)",
     "matchLoading": "Loading match...",
-    "noMatchesOnField": "No matches on this field"
+    "noMatchesOnField": "No matches on this field",
+    "enginePreparing": "Match is being prepared …",
+    "engineReadyError": "Match could not be prepared — please try again"
   },
   "tables": {
     "noGroups": "This tournament has no groups.",

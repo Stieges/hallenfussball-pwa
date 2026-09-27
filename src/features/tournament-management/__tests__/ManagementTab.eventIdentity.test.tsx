@@ -42,6 +42,12 @@ vi.mock('../../../hooks/useMatchSound', () => ({
   }),
 }));
 
+// P7 (Fixrunde 3): ManagementTab braucht jetzt den App-weiten `useToast` (Fehler-Toast bei einem
+// gescheiterten `getLiveMatchData`) -- der wirft ohne `<ToastProvider>`-Vorfahren.
+vi.mock('../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: vi.fn(), showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
+}));
+
 vi.mock('../../auth/hooks/useTournamentMembers', () => ({
   useTournamentMembers: () => ({
     members: [], isLoading: false, error: null,
