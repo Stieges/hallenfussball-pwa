@@ -30,6 +30,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useActorRole.test.ts',
   'src/hooks/__tests__/useDialogTimer.test.ts',
   'src/hooks/__tests__/useEngineCommandWiring.test.ts',
+  'src/hooks/__tests__/useEngineExecutionBridge.resolve.test.ts',
   'src/hooks/__tests__/useTournamentManager.applyRemote.test.ts',
   'src/hooks/__tests__/useTournamentManager.engineOverlay.test.ts',
   'src/hooks/__tests__/useMonitorTheme.test.ts',

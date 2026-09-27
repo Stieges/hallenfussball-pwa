@@ -155,8 +155,7 @@ export function useMatchExecution({
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
     // C3a-1/I5: Engine-Spiele kommen aus der MatchEngine (Bündelung in `useEngineExecutionBridge`, W11).
     const {
-        engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId,
-        isEngineDestinedMatchId, ensureEngineMatchReady,
+        engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId, resolveEngineLiveMatchData,
     } = useEngineExecutionBridge(tournament, isRealtimeEnabled, liveMatches);
     // H-1 FIX: Loading states for async operations to prevent double-taps
     const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -312,30 +311,19 @@ export function useMatchExecution({
     // HANDLERS
     // =========================================================================
 
+    // B4/W11 (Fixrunde 3, P1): `resolveEngineLiveMatchData` (Bridge) kapselt die B1/B4-Wache --
+    // `null` heisst Altspiel, Wurf heisst Engine-Spiel ohne (noch) bereite Ansicht (Fehlerweg s.
+    // ManagementTab/P7).
     const getLiveMatchData = useCallback(async (matchData: ScheduledMatch): Promise<LiveMatch> => {
-        // B4: für Engine-Spiele keine service.initializeMatch (kein liveMatchRepository.save).
-        const engineMatch = engineLiveMatches.get(matchData.id);
-        if (engineMatch) { return engineMatch; }
-        // B4 (Fixrunde 2, Item 2): ein Spiel, das laut B1-Klausel GLEICH zur Engine wechselt
-        // (scheduled + kein Ergebnis + kein laufendes Altspiel), darf niemals ueber
-        // service.initializeMatch/liveMatchRepository.save angelegt werden -- auch nicht in der
-        // kurzen Race zwischen diesem Mount und dem asynchronen `ensureMatch` (IDB) in
-        // useEngineMatches. `ensureEngineMatchReady` erzwingt/wartet auf genau dieses Spiel; der
-        // Rueckgabewert wird von der einzigen Aufrufstelle (ManagementTab-Mount-Effekt) nicht
-        // gelesen -- die Anzeige kommt reaktiv ueber `mergedLiveMatches`, sobald die Engine-Kopie
-        // steht. Ohne View zu werfen ist bewusst: der Altpfad bleibt so oder so gesperrt.
-        if (isEngineDestinedMatchId(matchData.id)) {
-            const ready = await ensureEngineMatchReady(matchData.id);
-            if (ready) { return ready; }
-            throw new Error(`Engine-Spiel ${matchData.id} ist noch nicht bereit.`);
-        }
+        const engine = await resolveEngineLiveMatchData(matchData.id);
+        if (engine) { return engine; }
         const existing = liveMatches.get(matchData.id);
         if (existing) { return existing; }
 
         const newMatch = await service.initializeMatch(tournament.id, matchData);
         setLiveMatches(prev => new Map(prev).set(matchData.id, newMatch));
         return newMatch;
-    }, [liveMatches, engineLiveMatches, service, tournament.id, isEngineDestinedMatchId, ensureEngineMatchReady]);
+    }, [liveMatches, resolveEngineLiveMatchData, service, tournament.id]);
 
     const handleStart = useCallback(async (matchId: string): Promise<boolean> => {
         const match = liveMatches.get(matchId);

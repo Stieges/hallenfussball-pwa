@@ -30,6 +30,11 @@ export interface UseEngineExecutionBridgeResult {
   /** Fixrunde 2, Item 2: fuer den B4-Guard in `useMatchExecution.getLiveMatchData` -- erzwingt
    * `ensureMatch` fuer EIN Spiel, statt auf den naechsten Engine-Notify zu warten. */
   ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
+  /** P1 (Fixrunde 3, W11): kapselt `engineLiveMatches.get` + `isEngineDestinedMatchId` +
+   * `ensureEngineMatchReady` an EINER Stelle -- `null` fuer ein reines Altspiel (Aufrufer weicht
+   * auf den Altpfad aus), die Engine-Ansicht direkt oder nach `ensureEngineMatchReady`, sonst ein
+   * Wurf (kein Fallback: das Spiel IST/WIRD ein Engine-Spiel, s. B1/B4). */
+  resolveEngineLiveMatchData: (externalMatchId: string) => Promise<LiveMatch | null>;
 }
 
 export function useEngineExecutionBridge(
@@ -73,6 +78,24 @@ export function useEngineExecutionBridge(
     [isEngineMatchId, isEngineDestinedMatch],
   );
 
+  const resolveEngineLiveMatchData = useCallback(
+    async (externalMatchId: string): Promise<LiveMatch | null> => {
+      const engineMatch = engineLiveMatchesRef.current.get(externalMatchId);
+      if (engineMatch) {
+        return engineMatch;
+      }
+      if (!isEngineDestinedMatchId(externalMatchId)) {
+        return null;
+      }
+      const ready = await ensureEngineMatchReady(externalMatchId);
+      if (ready) {
+        return ready;
+      }
+      throw new Error(`Engine-Spiel ${externalMatchId} ist noch nicht bereit.`);
+    },
+    [engineLiveMatchesRef, isEngineDestinedMatchId, ensureEngineMatchReady],
+  );
+
   return {
     engineLiveMatches,
     engineLiveMatchesRef,
@@ -81,5 +104,6 @@ export function useEngineExecutionBridge(
     isEngineMatchId,
     isEngineDestinedMatchId,
     ensureEngineMatchReady,
+    resolveEngineLiveMatchData,
   };
 }
