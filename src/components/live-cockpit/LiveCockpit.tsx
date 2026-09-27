@@ -204,14 +204,13 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   // C-2 FIX: Reset all dialog states when match changes to prevent stale data
-  // RC13/PC20 (C3a-2a Fixrunde 1, vorgezogen aus C3b): haengt NUR an `match.id` -- NICHT an
-  // `currentMatch?.events`. Der Engine-Lesepfad (useEngineMatches) baut fuer JEDEN Stand-/
-  // Uhr-Tick ein NEUES LiveMatch-Objekt (Timer laeuft jede Sekunde, `elapsedSeconds` aendert
-  // sich), also auch ein neues `events`-Array, OBWOHL sich am Spiel selbst nichts geaendert hat.
-  // Mit `currentMatch?.events` als Abhaengigkeit schloss dieser Effekt frueher bei JEDER dieser
-  // Neuberechnungen ALLE offenen Dialoge -- fuer ein neues Spiel (seit der B1-Umschaltung: JEDES
-  // neue Spiel) riss das den gerade offenen GoalScorerDialog waehrend der Torschuetzen-Eingabe
-  // weg (Tor doppelt gezaehlt/verloren, C1 Fixrunde 1).
+  // RC13/PC20 (C3a-2a, vorgezogen aus C3b): haengt NUR an `match.id` -- NICHT an
+  // `currentMatch?.events`. Grund (per Fixrunde 2 belegt, s. task-C3a-report.md "C3a-2a
+  // Fixrunde 2"): eine echte Engine-Aenderung AM SELBEN Spiel baut ein neues LiveMatch-Objekt
+  // inkl. neuem `events`-Array, obwohl sich am Spiel selbst nichts geaendert hat. Mit
+  // `currentMatch?.events` als Abhaengigkeit schloss dieser Effekt dabei ALLE offenen Dialoge --
+  // riss z. B. den gerade offenen GoalScorerDialog waehrend der Torschuetzen-Eingabe weg (C1).
+  // Regressionstest: `LiveCockpit.dialogReset.test.tsx`.
   const currentMatchId = currentMatch?.id;
   useEffect(() => {
     // Reset all dialog visibility states
