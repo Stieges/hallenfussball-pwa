@@ -146,10 +146,18 @@ export function useTournamentManager(tournamentId: string) {
     // Recht) schlägt ein voller Turnier-Save per RLS fehl (0 Zeilen → OptimisticLockError → nach
     // Retries Dead-Letter in der MutationQueue); der eigentliche Spielstand ist über
     // MatchExecutionService.persistFinalResult (updateMatch, per writeMatchData erlaubt) längst
-    // in der DB. `applyRemote` übernimmt nur den bereits frisch geladenen Tournament-State.
+    // in der DB.
+    // I3 Fixrunde 2 (Re-Review-Befund): `applyRemote` übernahm das übergebene Turnier bisher
+    // UNGESÄUBERT in den Roh-State (`tournament`) -- alle Aufrufer von `onLocalTournamentUpdate`
+    // (Schnelleingabe, ScheduleEditor, Korrekturmodus, DangerZone, `useMatchExecution`) übergeben
+    // aber eine Kopie der ÜBERLAGERTEN Ausgabe. Der verschmutzte Roh-State landete dann beim
+    // nächsten `handleTournamentUpdate` (Voll-Save) in `stripEngineOverlayFields` -- das stellt
+    // nur die Felder wieder her, die im ROHEN `tournament` selbst schon sauber waren; war der
+    // Roh-State bereits verschmutzt, half das nichts mehr. Fix: dieselbe Säuberung wie bei
+    // `handleTournamentUpdate`, gegen den ZULETZT bekannten sauberen Roh-Stand.
     const applyRemote = useCallback((updated: Tournament) => {
-        setTournament(updated);
-    }, []);
+        setTournament(stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current));
+    }, [tournament, overlaidMatchIdsRef]);
 
     // W7 (C3a-2a): Engine-Ergebnisse fliessen NUR lokal in JEDE Turnier-Ausgabe (Tabelle/Spielplan)
     // -- kein Versionssprung, kein syncUp, keine MutationQueue. `tournament` (State) bleibt die

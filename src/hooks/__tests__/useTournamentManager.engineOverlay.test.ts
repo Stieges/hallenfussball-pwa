@@ -288,4 +288,78 @@ describe('useTournamentManager x useEngineOverlayForTournament (W7)', () => {
     expect(persisted.matches[0].scoreB).toBe(0);
     expect(persisted.matches[0].matchStatus).toBe('scheduled');
   });
+
+  it('I3 Fixrunde 2 (Re-Review-Befund): applyRemote saeubert genauso -- ein Voll-Save NACH applyRemote persistiert Overlay-Werte NICHT', async () => {
+    // Nachstellung der Reviewer-Probe: Overlay m1 = 2:1/running (Engine-Tor), dann eine
+    // Schnelleingabe fuer ein ANDERES Spiel (m2) ueber applyRemote (liest die UEBERLAGERTE
+    // Ausgabe, aendert nur m2, gibt das GANZE Objekt weiter), danach ein Voll-Save
+    // (handleTournamentUpdate). Ohne Fix landete m1 = 2:1/running im Roh-State und damit in der
+    // MutationQueue/beim Server.
+    const t = makeTournament({
+      matches: [
+        ...makeTournament().matches,
+        { id: 'm2', round: 1, field: 2, teamA: 'teamA', teamB: 'teamB', scoreA: 0, scoreB: 0, matchStatus: 'finished' },
+      ],
+    });
+    mockLoadTournament.mockResolvedValue(t);
+    const { result, rerender } = renderHook(() => useTournamentManager('tour-overlay'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+
+    mockView.mockImplementation((matchId: string) => {
+      if (matchId !== 'm1') {
+        return null;
+      }
+      return {
+        result: {
+          state: {
+            status: 'running',
+            phase: 'regular',
+            scores: { teama: { regular: 2, overtime: 0, shootout: 0 }, teamb: { regular: 1, overtime: 0, shootout: 0 } },
+            overrides: [],
+            baseDecidedBy: null,
+            decidedBy: null,
+            finishedAt: null,
+            clock: { running: true, elapsedMs: 0, anchorAt: null },
+          },
+          localRejected: [],
+          needsFullReload: false,
+        },
+        log: [{ id: 'g1', type: 'GOAL' }],
+        confirmedCount: 1,
+      };
+    });
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(2));
+
+    // Schnelleingabe fuer m2: liest die ueberlagerte Ausgabe (inkl. m1 = 2:1/running), aendert
+    // NUR m2.scoreA, gibt das GANZE Objekt an applyRemote weiter (wie useScheduleTabActions.ts es
+    // ueber onLocalTournamentUpdate tut).
+    const overlaidSnapshot = result.current.tournament!;
+    const quickEntryUpdate: Tournament = {
+      ...overlaidSnapshot,
+      matches: overlaidSnapshot.matches.map((m) => (m.id === 'm2' ? { ...m, scoreA: 9 } : m)),
+    };
+    act(() => {
+      result.current.applyRemote(quickEntryUpdate);
+    });
+
+    // Ein anschliessender Voll-Save (z. B. Turniereinstellungen aendern) darf m1 NICHT mit den
+    // Overlay-Werten (2:1/running) an die MutationQueue/den Server weitergeben.
+    const fullSaveSnapshot = result.current.tournament!;
+    await act(async () => {
+      await result.current.handleTournamentUpdate({ ...fullSaveSnapshot, name: 'Neuer Name' } as Tournament);
+    });
+
+    expect(mockUpdateTournament).toHaveBeenCalledTimes(1);
+    const persisted = mockUpdateTournament.mock.calls[0][0] as Tournament;
+    const persistedM1 = persisted.matches.find((m) => m.id === 'm1')!;
+    const persistedM2 = persisted.matches.find((m) => m.id === 'm2')!;
+    expect(persistedM1.scoreA).toBe(0);
+    expect(persistedM1.matchStatus).toBe('scheduled');
+    // Die eigentliche Schnelleingabe (m2, ein Altspiel) bleibt erhalten.
+    expect(persistedM2.scoreA).toBe(9);
+  });
 });
