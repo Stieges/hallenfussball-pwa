@@ -16,7 +16,7 @@ vi.unmock('i18next');
 describe('outbox.logoutWarning.message — Ein-/Mehrzahl (Review m2)', () => {
   it('DE: Einzahl bei count=1, Mehrzahl sonst', async () => {
     const i18nextModule = await vi.importActual<typeof import('i18next')>('i18next');
-    const i18n = (i18nextModule as { default?: typeof import('i18next') }).default ?? i18nextModule;
+    const i18n = (i18nextModule as unknown as { default: typeof import('i18next').default }).default;
     await i18n.init({ lng: 'de', resources: { de: { common: deCommon } } });
 
     expect(i18n.t('common:outbox.logoutWarning.message', { count: 1 })).toBe(
@@ -29,7 +29,7 @@ describe('outbox.logoutWarning.message — Ein-/Mehrzahl (Review m2)', () => {
 
   it('EN: Einzahl bei count=1, Mehrzahl sonst', async () => {
     const i18nextModule = await vi.importActual<typeof import('i18next')>('i18next');
-    const i18n = (i18nextModule as { default?: typeof import('i18next') }).default ?? i18nextModule;
+    const i18n = (i18nextModule as unknown as { default: typeof import('i18next').default }).default;
     await i18n.init({ lng: 'en', resources: { en: { common: enCommon } } });
 
     expect(i18n.t('common:outbox.logoutWarning.message', { count: 1 })).toBe(

@@ -82,7 +82,7 @@ describe('outbox.eventType — Glossarbegriffe per $t-Referenz (Review m3)', () 
 
   it('loest ueber eine echte i18next-Instanz zum Glossarbegriff auf (de/en)', async () => {
     const i18nextModule = await vi.importActual<typeof import('i18next')>('i18next');
-    const i18n = (i18nextModule as { default?: typeof import('i18next') }).default ?? i18nextModule;
+    const i18n = (i18nextModule as unknown as { default: typeof import('i18next').default }).default;
     await i18n.init({
       lng: 'de',
       resources: { de: { common: deCommon, sport: deSport }, en: { common: enCommon, sport: enSport } },
