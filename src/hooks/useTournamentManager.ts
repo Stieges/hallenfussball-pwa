@@ -6,7 +6,56 @@ import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useRealtimeTournament } from './useRealtimeTournament';
-import { useEngineOverlayForTournament } from './useEngineOverlayForTournament';
+import { useEngineOverlayForTournament, useEngineOverlaidMatchIds } from './useEngineOverlayForTournament';
+
+/**
+ * I3 (C3a-2a Fixrunde 1, Review-Befund 4): `handleTournamentUpdate` bekommt von seinem Aufrufer
+ * ein Turnier-Objekt, das der Aufrufer typischerweise aus der UEBERLAGERTEN Ausgabe dieses Hooks
+ * gelesen und fuer EIN anderes Spiel geaendert hat (z. B. Spielplan-Schnelleingabe). Fuer JEDES
+ * Spiel, das die Engine gerade kontrolliert, werden die Ergebnis-/Status-Felder deshalb IMMER auf
+ * den ROHEN (nicht ueberlagerten) Stand zurueckgesetzt, bevor gespeichert wird -- sonst wuerden
+ * Overlay-Werte (und `pending`-Ereignisse, falls der Aufrufer sie mitgenommen haette) in die
+ * Rohdaten und die MutationQueue gelangen (bis V4/C3a-2b auch zum Server). Engine-Spiele haben
+ * ohnehin nie einen unterstuetzten Weg, ihr Ergebnis ueber `handleTournamentUpdate` zu aendern --
+ * das ist ausschliesslich der RPC/`MatchCommands` (B4/PC16).
+ */
+function stripEngineOverlayFields(
+    updated: Tournament,
+    raw: Tournament | null,
+    overlaidIds: ReadonlySet<string>,
+): Tournament {
+    if (!raw || overlaidIds.size === 0) {
+        return updated;
+    }
+    const rawById = new Map(raw.matches.map((m) => [m.id, m]));
+    let changed = false;
+    const matches = updated.matches.map((match) => {
+        if (!overlaidIds.has(match.id)) {
+            return match;
+        }
+        const rawMatch = rawById.get(match.id);
+        if (!rawMatch) {
+            return match;
+        }
+        const restored = {
+            ...match,
+            scoreA: rawMatch.scoreA,
+            scoreB: rawMatch.scoreB,
+            overtimeScoreA: rawMatch.overtimeScoreA,
+            overtimeScoreB: rawMatch.overtimeScoreB,
+            penaltyScoreA: rawMatch.penaltyScoreA,
+            penaltyScoreB: rawMatch.penaltyScoreB,
+            matchStatus: rawMatch.matchStatus,
+            decidedBy: rawMatch.decidedBy,
+            finishedAt: rawMatch.finishedAt,
+        };
+        if (JSON.stringify(restored) !== JSON.stringify(match)) {
+            changed = true;
+        }
+        return restored;
+    });
+    return changed ? { ...updated, matches } : updated;
+}
 
 /**
  * useTournamentManager Hook
@@ -72,18 +121,23 @@ export function useTournamentManager(tournamentId: string) {
         }
     );
 
+    // I3: welche Spiele die Engine GERADE kontrolliert (Ref, synchron waehrend des Renderns
+    // aktualisiert -- kein Effekt-/Render-Zyklus, s. useEngineOverlaidMatchIds).
+    const overlaidMatchIdsRef = useEngineOverlaidMatchIds(tournament);
+
     // Update Handler (matches signature of useTournamentSync)
     const handleTournamentUpdate = useCallback(async (updated: Tournament) => {
+        const sanitized = stripEngineOverlayFields(updated, tournament, overlaidMatchIdsRef.current);
         try {
-            await service.updateTournament(updated);
-            setTournament(updated);
+            await service.updateTournament(sanitized);
+            setTournament(sanitized);
         } catch (err) {
             console.error('Failed to update tournament:', err);
             setError('Speichern fehlgeschlagen');
             // Reload to get consistent state
             await loadTournament();
         }
-    }, [service, loadTournament]);
+    }, [service, loadTournament, tournament, overlaidMatchIdsRef]);
 
     // Task A1 (Sofortschutz): Gegenstück zu handleTournamentUpdate OHNE Speicherpfad. Manche
     // Aufrufer (z. B. useMatchExecution nach Spielende) wollen den lokalen Zustand nur mit dem

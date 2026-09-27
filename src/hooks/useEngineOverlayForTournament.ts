@@ -8,12 +8,44 @@
  *
  * Eigene Datei (W11): `useTournamentManager.ts` bindet nur diesen einen Hook ein.
  */
-import { useCallback, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore, type RefObject } from 'react';
 import type { Tournament } from '../types/tournament';
 import { applyEngineOverlay, engineOverlayFields, type EngineOverlayFields } from '../core/match/client';
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { buildValidMatches } from './useEngineMatches';
+
+/** externalId (Original-Schreibweise) -> Engine-Ansicht hat TATSAECHLICHEN Inhalt (`log.length > 0`,
+ * dasselbe Kriterium wie `computeOverlaidTournament`). Wiederverwendet fuer die Schreibpfad-
+ * Absicherung (I3, Nachtrag Fixrunde 1): `handleTournamentUpdate` darf Overlay-Werte fuer genau
+ * diese Spiele NIE aus einer (moeglicherweise veralteten) uebergebenen Kopie uebernehmen. */
+function overlaidExternalIds(tournament: Tournament, context: MatchEngineContextValue | null): Set<string> {
+  const ids = new Set<string>();
+  if (!context) {
+    return ids;
+  }
+  for (const entry of buildValidMatches(tournament)) {
+    const view = context.engine.view(entry.matchId);
+    if (view && view.log.length > 0) {
+      ids.add(entry.externalId);
+    }
+  }
+  return ids;
+}
+
+/**
+ * I3 (Nachtrag Fixrunde 1): liefert -- synchron waehrend des Renderns aktualisiert, OHNE eigenen
+ * Zustand/Renderzyklus -- die aktuelle Menge der Engine-kontrollierten Spiel-IDs. Ein Ref statt
+ * eines State-Werts: `handleTournamentUpdate` in `useTournamentManager.ts` liest ihn nur beim
+ * AUFRUF (nicht als Render-/Effekt-Abhaengigkeit), eine neue Referenz je Render waere hier
+ * unschaedlich, aber unnoetig (kein Verbraucher haengt sie in eine Abhaengigkeitsliste).
+ */
+export function useEngineOverlaidMatchIds(tournament: Tournament | null): RefObject<ReadonlySet<string>> {
+  const context = useMatchEngineContextOptional();
+  const ref = useRef<ReadonlySet<string>>(new Set());
+  ref.current = tournament ? overlaidExternalIds(tournament, context) : new Set();
+  return ref;
+}
 
 interface OverlayCache {
   tournament: Tournament;
@@ -68,9 +100,10 @@ export function useEngineOverlayForTournament(tournament: Tournament | null): To
     if (cache && !cache.dirty && cache.tournament === tournament && cache.context === context) {
       return cache.result;
     }
-    // Vergleichsbasis nur wiederverwenden, wenn die ROHEN Eingabedaten unveraendert sind (sonst
-    // waere ein echtes Neuladen/eine echte Aenderung faelschlich gegen eine veraltete Basis geprueft).
-    const previousResult = cache?.tournament === tournament ? cache.result : undefined;
+    // Vergleichsbasis nur wiederverwenden, wenn die ROHEN Eingabedaten UND das Konto (Kontext)
+    // unveraendert sind (Minor aus dem Review: sonst blieben nach einem Kontowechsel, solange das
+    // Roh-Turnier zufaellig dieselbe Referenz behaelt, Werte des ALTEN Kontos stehen).
+    const previousResult = cache?.tournament === tournament && cache.context === context ? cache.result : undefined;
     const result = computeOverlaidTournament(tournament, context, previousResult);
     cacheRef.current = { tournament, context, dirty: false, result };
     return result;

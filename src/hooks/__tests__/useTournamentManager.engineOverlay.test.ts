@@ -70,6 +70,7 @@ function makeTournament(overrides: Partial<Tournament> = {}): Tournament {
     groupPhaseGameDuration: 20,
     pointSystem: { win: 3, draw: 1, loss: 0 },
     numberOfFields: 1,
+    version: 5,
     ...overrides,
   } as unknown as Tournament;
 }
@@ -160,5 +161,131 @@ describe('useTournamentManager x useEngineOverlayForTournament (W7)', () => {
     rerender();
 
     expect(result.current.tournament?.matches).toBe(matchesAfterFirstNotify);
+  });
+
+  it('I3 (Pflichttest W7): kein Versionssprung -- version bleibt der ROHE Wert, egal was das Overlay schreibt', async () => {
+    mockLoadTournament.mockResolvedValue(makeTournament());
+    const { result, rerender } = renderHook(() => useTournamentManager('tour-overlay'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+    expect(result.current.tournament?.version).toBe(5);
+
+    mockView.mockReturnValue({
+      result: {
+        state: {
+          status: 'running',
+          phase: 'regular',
+          scores: { teama: { regular: 3, overtime: 0, shootout: 0 }, teamb: { regular: 0, overtime: 0, shootout: 0 } },
+          overrides: [],
+          baseDecidedBy: null,
+          decidedBy: null,
+          finishedAt: null,
+          clock: { running: true, elapsedMs: 0, anchorAt: null },
+        },
+        localRejected: [],
+        needsFullReload: false,
+      },
+      log: [{ id: 'g1', type: 'GOAL' }],
+      confirmedCount: 1,
+    });
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(3));
+    expect(result.current.tournament?.version).toBe(5);
+    expect(mockUpdateTournament).not.toHaveBeenCalled();
+  });
+
+  it('I3 (Pflichttest W7): Overlay nach Server-Laden (applyRemote) erneut aktiv', async () => {
+    mockLoadTournament.mockResolvedValue(makeTournament());
+    const { result, rerender } = renderHook(() => useTournamentManager('tour-overlay'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+
+    mockView.mockReturnValue({
+      result: {
+        state: {
+          status: 'finished',
+          phase: 'regular',
+          scores: { teama: { regular: 4, overtime: 0, shootout: 0 }, teamb: { regular: 2, overtime: 0, shootout: 0 } },
+          overrides: [],
+          baseDecidedBy: 'regular',
+          decidedBy: 'regular',
+          finishedAt: 12345,
+          clock: { running: false, elapsedMs: 0, anchorAt: null },
+        },
+        localRejected: [],
+        needsFullReload: false,
+      },
+      log: [{ id: 'g1', type: 'GOAL' }],
+      confirmedCount: 1,
+    });
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(4));
+
+    // Ein frisches Roh-Turnier vom Server (applyRemote, Task A1) -- die alten, unueberlagerten
+    // Rohdaten (0:0, scheduled). Die Engine-Kopie selbst (mockView) ist unabhaengig davon weiterhin
+    // vorhanden -- die Ueberlagerung muss sofort wieder greifen, statt bei der frischen Rohkopie
+    // (0:0) stehen zu bleiben.
+    act(() => {
+      result.current.applyRemote(makeTournament());
+    });
+    rerender();
+
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(4));
+    expect(result.current.tournament?.matches[0].matchStatus).toBe('finished');
+  });
+
+  it('I3 (Review-Befund 4): handleTournamentUpdate uebernimmt Overlay-Werte fuer ein Engine-Spiel NICHT (Schreibpfad saeubert auf den rohen Stand)', async () => {
+    mockLoadTournament.mockResolvedValue(makeTournament());
+    const { result, rerender } = renderHook(() => useTournamentManager('tour-overlay'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+
+    mockView.mockReturnValue({
+      result: {
+        state: {
+          status: 'running',
+          phase: 'regular',
+          scores: { teama: { regular: 5, overtime: 0, shootout: 0 }, teamb: { regular: 1, overtime: 0, shootout: 0 } },
+          overrides: [],
+          baseDecidedBy: null,
+          decidedBy: null,
+          finishedAt: null,
+          clock: { running: true, elapsedMs: 0, anchorAt: null },
+        },
+        localRejected: [],
+        needsFullReload: false,
+      },
+      log: [{ id: 'g1', type: 'GOAL' }],
+      confirmedCount: 1,
+    });
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(5));
+
+    // Ein Aufrufer (z. B. die Spielplan-Schnelleingabe fuer ein ANDERES Spiel) liest die
+    // UEBERLAGERTE Ausgabe, aendert nur einen Referee-Wert und gibt das GANZE Objekt (inkl. der
+    // Overlay-Werte fuer m1) an handleTournamentUpdate weiter.
+    const overlaidSnapshot = result.current.tournament!;
+    const callerUpdate: Tournament = { ...overlaidSnapshot, matches: [{ ...overlaidSnapshot.matches[0], referee: 7 }] };
+
+    await act(async () => {
+      await result.current.handleTournamentUpdate(callerUpdate);
+    });
+
+    expect(mockUpdateTournament).toHaveBeenCalledTimes(1);
+    const persisted = mockUpdateTournament.mock.calls[0][0] as Tournament;
+    // Das Referee-Feld (die eigentliche Absicht des Aufrufers) bleibt erhalten...
+    expect(persisted.matches[0].referee).toBe(7);
+    // ...aber die Engine-Ergebnis-/Statusfelder sind auf den ROHEN Stand (0:0/scheduled)
+    // zurueckgesetzt, NICHT die Overlay-Werte (5:1/running).
+    expect(persisted.matches[0].scoreA).toBe(0);
+    expect(persisted.matches[0].scoreB).toBe(0);
+    expect(persisted.matches[0].matchStatus).toBe('scheduled');
   });
 });
