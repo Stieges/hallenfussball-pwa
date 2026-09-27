@@ -269,6 +269,19 @@ describe('useEngineMatches', () => {
     expect(result.current.liveMatches.has('m-transition')).toBe(false);
   });
 
+  it('I1/K7 (Fixrunde 1): ein scheduled-Spiel MIT bereits eingetragenem Ergebnis (Spielplan-Schnelleingabe, kein matchStatus) bleibt Altspiel', async () => {
+    const t = tournament([
+      match({ id: 'm-quick-entry', teamA: 'teamA', teamB: 'teamB', scoreA: 3, scoreB: 1 }),
+    ]);
+    const { result } = renderHook(() => useEngineMatches(t, false, new Map()));
+
+    await waitFor(() => {
+      expect(mockContext.engine.view('m-quick-entry')).not.toBeNull();
+    });
+    expect(result.current.isEngineMatch('m-quick-entry')).toBe(false);
+    expect(result.current.liveMatches.has('m-quick-entry')).toBe(false);
+  });
+
   it('C-OFFUI: Tor ohne Netz sichtbar -- Kopie mit pending-GOAL zeigt das Tor ohne Server-Aufruf', async () => {
     const t = tournament([match({ id: 'm-offline-goal', teamA: 'teamA', teamB: 'teamB' })]);
     const { result, rerender } = renderHook(() => useEngineMatches(t, false, new Map()));

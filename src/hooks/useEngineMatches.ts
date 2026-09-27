@@ -39,6 +39,11 @@ interface ValidMatchEntry {
   phase: string | undefined;
   /** B1 (C3a-2a): Turnierkopie-Status (`match.matchStatus`), fehlend zaehlt als `'scheduled'`. */
   matchStatus: string | undefined;
+  /** I1/K7 (Fixrunde 1): ein bereits eingetragenes Ergebnis (z. B. Spielplan-Schnelleingabe,
+   * `useScheduleTabActions.ts` setzt NUR `scoreA/B`, kein `matchStatus`) -- ein solches Spiel darf
+   * NICHT als neues Engine-Spiel bei 0:0 anlaufen (das Overlay wuerde das eingetragene Ergebnis
+   * sonst ueberschreiben). */
+  hasExistingResult: boolean;
   /** W5: `toLiveMatchView` kennt kein Logo/Farben (Adapter unveraendert) -- der Hook traegt sie nach. */
   homeVisual: { logo?: Team['logo']; colors?: Team['colors'] };
   awayVisual: { logo?: Team['logo']; colors?: Team['colors'] };
@@ -95,6 +100,7 @@ export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       meta,
       phase: match.phase,
       matchStatus: match.matchStatus,
+      hasExistingResult: (match.scoreA ?? 0) > 0 || (match.scoreB ?? 0) > 0,
       homeVisual: { logo: homeTeam?.logo, colors: homeTeam?.colors },
       awayVisual: { logo: awayTeam?.logo, colors: awayTeam?.colors },
     });
@@ -154,7 +160,7 @@ interface LiveMatchesCache {
  */
 function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
   const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
-  if (!isScheduled) {
+  if (!isScheduled || entry.hasExistingResult) {
     return false;
   }
   const oldLiveMatch = localLiveMatches.get(entry.externalId);
