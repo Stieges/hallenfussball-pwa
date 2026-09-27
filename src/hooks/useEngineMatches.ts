@@ -24,7 +24,14 @@ export interface UseEngineMatchesResult {
 }
 
 interface ValidMatchEntry {
+  /** Kleingeschrieben -- Engine-interner Schluessel (Store/`engineMatchIds`, Server-Konvention). */
   matchId: string;
+  /** N-m2: die AUSSEN sichtbare ID (Original-Schreibweise aus `tournament.matches[].id`) -- der
+   * Schluessel der zurueckgegebenen `liveMatches`-Map. So finden Aufrufer (`useMatchExecution`s
+   * B4/B5-Wachen, `getLiveMatchData`, `handleReopenMatch`, ...), die mit `match.id`/`matchData.id`
+   * in Original-Schreibweise nachschlagen, den Eintrag auch dann, wenn eine Spiel-ID theoretisch
+   * Grossbuchstaben enthaelt (heutige Generatoren liefern durchgehend kleine UUIDs, s. Report). */
+  externalId: string;
   ctx: MatchContext;
   meta: LiveMatchMeta;
   /** I6/K3/W5: Phase (`groupStage`/Finalrunde) fuer `serverRules` -- eine Finalrunde hat eine andere
@@ -81,6 +88,7 @@ function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
     };
     entries.push({
       matchId,
+      externalId: match.id,
       ctx,
       meta,
       phase: match.phase,
@@ -142,7 +150,7 @@ function computeLiveMatches(
     const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
     const liveMatch = toLiveMatchView(state, meta, viewClock, view.log);
     // W5: Teamfarben/-logo traegt der Hook nach (Adapter kennt nur id/name).
-    map.set(entry.matchId, {
+    map.set(entry.externalId, {
       ...liveMatch,
       homeTeam: { ...liveMatch.homeTeam, ...entry.homeVisual },
       awayTeam: { ...liveMatch.awayTeam, ...entry.awayVisual },

@@ -69,6 +69,22 @@ describe('useEngineMatches', () => {
     await mockContext.engine.start('acc-engine-matches');
   });
 
+  it('N-m2: eine gross geschriebene Spiel-ID wird in der zurueckgegebenen Map unter der ORIGINAL-Schreibweise gefunden', async () => {
+    const upperId = 'M-Upper-Case-ID';
+    mockFetchEngineMatchIds.mockResolvedValue(new Set([upperId.toLowerCase()]));
+    const t = tournament([match({ id: upperId, teamA: 'teamA', teamB: 'teamB' })]);
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    rerender();
+
+    // Aufrufer (useMatchExecution) schlagen mit der ORIGINAL-ID aus tournament.matches nach --
+    // nicht mit der intern kleingeschriebenen Engine-/Server-ID.
+    await waitFor(() => expect(result.current.isEngineMatch(upperId)).toBe(true));
+    expect(result.current.liveMatches.has(upperId)).toBe(true);
+    expect(result.current.liveMatches.get(upperId)?.id).toBe(upperId);
+  });
+
   it('N-I3: die Sammelabfrage meldet Spiel X -- markEngineMatches/catchUpLoaded laden NUR X nach, andere Spiele nicht', async () => {
     mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-known']));
     const t = tournament([

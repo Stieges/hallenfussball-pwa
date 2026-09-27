@@ -161,7 +161,7 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
     const handleOnline = (): void => {
       void bundle.clock.sync();
       void bundle.sender.kick();
-      void bundle.engine.catchUpLoaded();
+      bundle.engine.catchUpLoaded().catch(() => undefined);
     };
     window.addEventListener('online', handleOnline);
     return () => {
