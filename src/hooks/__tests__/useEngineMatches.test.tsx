@@ -125,7 +125,9 @@ describe('useEngineMatches', () => {
       }, seq: 1 }],
       1,
     );
-    // Ein pending-GOAL landet -- ohne jeden Server-Aufruf -- direkt im Store.
+    // Ein pending-GOAL landet -- ohne jeden Server-Aufruf -- direkt im Store. Mit `playerNumber`,
+    // damit B2 (Log-Aufbau) end-to-end (Store -> MatchEngine.view -> toLiveMatchView) auch
+    // Torschuetze und `scoreAfter` bewiesen liefert, nicht nur den nackten Ereignistyp.
     await store.addPending('acc-engine-matches', 'm-offline-goal', {
       id: 'goal-1',
       type: 'GOAL',
@@ -134,7 +136,7 @@ describe('useEngineMatches', () => {
       section: 1,
       clockMs: 500,
       teamId: 'teama',
-      payload: {},
+      payload: { playerNumber: 9 },
     });
     // Die Engine cacht die Kopie im Speicher -- ausserhalb der Engine geschriebene Aenderungen
     // (hier: der Store direkt, wie es MatchCommands spaeter ueber addPending tut) werden erst nach
@@ -152,5 +154,7 @@ describe('useEngineMatches', () => {
     expect(live?.homeScore).toBe(1);
     expect(live?.events).toHaveLength(1);
     expect(live?.events[0].type).toBe('GOAL');
+    expect(live?.events[0].payload.playerNumber).toBe(9);
+    expect(live?.events[0].scoreAfter).toEqual({ home: 1, away: 0 });
   });
 });
