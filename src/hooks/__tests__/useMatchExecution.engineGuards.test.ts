@@ -37,10 +37,16 @@ const engineLiveMatch: LiveMatch = {
 // der sie in einer Abhaengigkeitsliste fuehrt (der Lade-Effekt in useMatchExecution), nie an.
 const engineLiveMatchesMap = new Map<string, LiveMatch>([[ENGINE_MATCH_ID, engineLiveMatch]]);
 
+const NEW_ENGINE_MATCH_ID = 'new-engine-match-1';
+
 const mockCatchUp = vi.fn().mockResolvedValue(undefined);
 // Referentiell stabil (s. o.) -- `matchEngineContext` steht als Dependency in
 // `handleRealtimeChange` (useCallback) in useMatchExecution.ts.
 const mockMatchEngineContext = { engine: { catchUp: mockCatchUp } };
+// Fixrunde 2, Item 2 (B4-Race): NEW_ENGINE_MATCH_ID steht bewusst NICHT in `engineLiveMatchesMap`
+// (so wie ein brandneues Engine-Spiel im allerersten Render, bevor `ensureMatch` eine lokale
+// Kopie angelegt hat) -- `isEngineDestinedMatch` markiert es trotzdem als Engine-Spiel.
+const mockEnsureEngineMatchReady = vi.fn<(id: string) => Promise<LiveMatch | null>>();
 vi.mock('../useEngineMatches', () => ({
   useEngineMatches: () => ({
     liveMatches: engineLiveMatchesMap,
@@ -52,6 +58,15 @@ vi.mock('../useEngineMatches', () => ({
   buildValidMatches: () => [
     { matchId: ENGINE_MATCH_ID, externalId: ENGINE_MATCH_ID, ctx: { matchId: ENGINE_MATCH_ID, teamAId: 'team-a', teamBId: 'team-b' } },
   ],
+}));
+// Fixrunde 2, Item 2 (B4-Race): `isEngineDestinedMatch`/`ensureEngineMatchReady` sitzen in einer
+// eigenen Datei (`useEngineMatchReadiness`, W11/Report-Auflage Item 7 -- `useEngineMatches.ts`
+// darf nicht weiter wachsen), deshalb ein eigener Mock statt im `useEngineMatches`-Mock oben.
+vi.mock('../useEngineMatchReadiness', () => ({
+  useEngineMatchReadiness: () => ({
+    isEngineDestinedMatch: (id: string) => id === NEW_ENGINE_MATCH_ID,
+    ensureEngineMatchReady: mockEnsureEngineMatchReady,
+  }),
 }));
 vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => mockMatchEngineContext,
@@ -147,6 +162,7 @@ async function renderAndFlush(tournament: Tournament = makeTournament()) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockLiveMatchRepository.getAll.mockResolvedValue(new Map());
+  mockEnsureEngineMatchReady.mockReset();
 });
 
 describe('useMatchExecution — B4: kein liveMatchRepository.save/initializeMatch fuer Engine-Spiele', () => {
@@ -190,6 +206,31 @@ describe('useMatchExecution — B4: kein liveMatchRepository.save/initializeMatc
   it('liveMatches (Rueckgabe) enthaelt die Engine-Ansicht fuer das Engine-Spiel', async () => {
     const { result } = await renderAndFlush();
     expect(result.current.liveMatches.get(ENGINE_MATCH_ID)).toBe(engineLiveMatch);
+  });
+
+  it('Fixrunde 2 (Item 2, B4-Race): ein NEUES Engine-Spiel (noch keine Engine-Kopie) ruft ensureEngineMatchReady statt initializeMatch/save auf', async () => {
+    const readyMatch: LiveMatch = { ...engineLiveMatch, id: NEW_ENGINE_MATCH_ID };
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(readyMatch);
+    const { result } = await renderAndFlush();
+    const scheduled = { id: NEW_ENGINE_MATCH_ID } as unknown as ScheduledMatch;
+
+    const data = await act(() => result.current.getLiveMatchData(scheduled));
+
+    expect(mockEnsureEngineMatchReady).toHaveBeenCalledWith(NEW_ENGINE_MATCH_ID);
+    expect(data).toBe(readyMatch);
+    expect(mockInitializeMatch).not.toHaveBeenCalled();
+    expect(mockLiveMatchRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('Fixrunde 2 (Item 2, B4-Race): loest die Engine noch keine Ansicht auf (ensureMatch noch nicht fertig), faellt getLiveMatchData TROTZDEM nicht auf initializeMatch/save zurueck', async () => {
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(null);
+    const { result } = await renderAndFlush();
+    const scheduled = { id: NEW_ENGINE_MATCH_ID } as unknown as ScheduledMatch;
+
+    await expect(act(() => result.current.getLiveMatchData(scheduled))).rejects.toThrow();
+
+    expect(mockInitializeMatch).not.toHaveBeenCalled();
+    expect(mockLiveMatchRepository.save).not.toHaveBeenCalled();
   });
 });
 

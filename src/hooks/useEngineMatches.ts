@@ -24,7 +24,7 @@ export interface UseEngineMatchesResult {
   isEngineMatch: (matchId: string) => boolean;
 }
 
-interface ValidMatchEntry {
+export interface ValidMatchEntry {
   /** Kleingeschrieben -- Engine-interner Schluessel (Store/`engineMatchIds`, Server-Konvention). */
   matchId: string;
   /** N-m2: die AUSSEN sichtbare ID (Original-Schreibweise aus `tournament.matches[].id`) -- der
@@ -159,7 +159,7 @@ interface LiveMatchesCache {
  * ODER dessen Status noch `NOT_STARTED`). Ein bereits laufendes/pausiertes Altspiel bleibt beim
  * Altpfad, bis es dort beendet ist (Uebergangsschutz aus dem Review).
  */
-function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
+export function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
   const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
   if (!isScheduled || entry.hasExistingResult) {
     return false;
@@ -168,7 +168,7 @@ function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Map<strin
   return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
 }
 
-function computeLiveMatches(
+export function computeLiveMatches(
   context: MatchEngineContextValue | null,
   validMatches: ValidMatchEntry[],
   engineMatchIds: Set<string>,

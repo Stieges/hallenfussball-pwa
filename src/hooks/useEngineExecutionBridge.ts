@@ -9,6 +9,7 @@ import { useCallback, useMemo, useRef, type RefObject } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { useEngineMatches } from './useEngineMatches';
+import { useEngineMatchReadiness } from './useEngineMatchReadiness';
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 
@@ -23,6 +24,12 @@ export interface UseEngineExecutionBridgeResult {
    * (useCallback auf einem Ref), damit `handleRealtimeChange` sich nicht bei jeder
    * Engine-Aenderung neu abonniert. */
   isEngineMatchId: (matchId: string) => boolean;
+  /** B4 (Fixrunde 2, Item 2): true, wenn ein Spiel BEREITS eine Engine-Kopie hat ODER laut B1-Klausel
+   * gleich eine bekommt (synchron aus den Turnierdaten, unabhaengig vom asynchronen `ensureMatch`). */
+  isEngineDestinedMatchId: (matchId: string) => boolean;
+  /** Fixrunde 2, Item 2: fuer den B4-Guard in `useMatchExecution.getLiveMatchData` -- erzwingt
+   * `ensureMatch` fuer EIN Spiel, statt auf den naechsten Engine-Notify zu warten. */
+  ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
 }
 
 export function useEngineExecutionBridge(
@@ -32,6 +39,11 @@ export function useEngineExecutionBridge(
 ): UseEngineExecutionBridgeResult {
   const { liveMatches: engineLiveMatches } = useEngineMatches(tournament, enabled, localLiveMatches);
   const matchEngineContext = useMatchEngineContextOptional();
+  const { isEngineDestinedMatch, ensureEngineMatchReady } = useEngineMatchReadiness(
+    tournament,
+    matchEngineContext,
+    localLiveMatches,
+  );
 
   const engineLiveMatchesRef = useRef(engineLiveMatches);
   engineLiveMatchesRef.current = engineLiveMatches;
@@ -56,5 +68,18 @@ export function useEngineExecutionBridge(
     [engineLiveMatchesRef],
   );
 
-  return { engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId };
+  const isEngineDestinedMatchId = useCallback(
+    (matchId: string): boolean => isEngineMatchId(matchId) || isEngineDestinedMatch(matchId),
+    [isEngineMatchId, isEngineDestinedMatch],
+  );
+
+  return {
+    engineLiveMatches,
+    engineLiveMatchesRef,
+    matchEngineContext,
+    mergedLiveMatches,
+    isEngineMatchId,
+    isEngineDestinedMatchId,
+    ensureEngineMatchReady,
+  };
 }
