@@ -127,7 +127,7 @@
     "Ü50": "Over 50"
   },
   "outbox": {
-    "rejectedEntry": "rejected entry",
+    "rejectedEntry": "not accepted",
     "awaitingReview": "awaiting review"
   }
 }

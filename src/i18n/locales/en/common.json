@@ -174,7 +174,7 @@
     "rejected": {
       "header_one": "1 entry not accepted",
       "header_other": "{{count}} entries not accepted",
-      "dismissAll": "Understood all",
+      "dismissAll": "Dismiss all",
       "unknownCodeHint": "Code: {{code}}",
       "countLabel": "{{count}} not accepted"
     },

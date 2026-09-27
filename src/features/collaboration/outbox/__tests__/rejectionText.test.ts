@@ -120,6 +120,20 @@ describe('rejectionReasonKey — korrigierte Klartexte (Review I1)', () => {
   });
 });
 
+// Fixrunde 1 (Review m6): "Weiter" (resume) ist als Substantiv in der Ereigniszeile holprig
+// ("Weiter, 12. Minute") und "Pause" ist mit der Halbzeitpause verwechselbar. En "Understood all"
+// klingt seltsam fuer einen Sammel-Knopf -- "Dismiss all" wie an anderen Stellen im Repo.
+describe('Wortwahl-Korrekturen (Review m6)', () => {
+  it('DE eventType.resume/pause sind fuer die Ereigniszeile eindeutig', () => {
+    expect(valueAt(deCommon, 'outbox.eventType.resume')).toBe('Spiel fortgesetzt');
+    expect(valueAt(deCommon, 'outbox.eventType.pause')).toBe('Unterbrechung');
+  });
+
+  it('EN dismissAll ist ein Sammel-Knopf-Text, kein Bestaetigungssatz', () => {
+    expect(valueAt(enCommon, 'outbox.rejected.dismissAll')).toBe('Dismiss all');
+  });
+});
+
 describe('describeEvent', () => {
   it('liefert Typ, Team A und Minute fuer Tor frueh im Spiel', () => {
     const desc = describeEvent(makeEntry(), TEAMS);

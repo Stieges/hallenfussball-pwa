@@ -137,8 +137,8 @@
     },
     "eventType": {
       "matchStart": "Spielbeginn",
-      "pause": "Pause",
-      "resume": "Weiter",
+      "pause": "Unterbrechung",
+      "resume": "Spiel fortgesetzt",
       "sectionEnd": "Ende der Spielzeit",
       "sectionStart": "Neue Spielzeit",
       "clockAdjust": "Uhr korrigiert",

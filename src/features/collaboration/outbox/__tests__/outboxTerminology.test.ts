@@ -36,6 +36,14 @@ const EXPECTED: Record<string, string> = {
   awaitingReview: 'wartet auf Turnierleitung',
 };
 
+// Fixrunde 1 (Review m6): das en-Glossar sagte "rejected entry", die tatsaechliche UI (D-C1,
+// SyncStatusBar/RejectedEntriesPanel) sagt aber durchgehend "not accepted" -- Glossar und UI-Text
+// sollen denselben Begriff fuehren.
+const EXPECTED_EN: Record<string, string> = {
+  rejectedEntry: 'not accepted',
+  awaitingReview: 'awaiting review',
+};
+
 describe('Glossar Ausgang (C2b)', () => {
   it.each(Object.keys(EXPECTED))('hat den Eintrag %s im Format des Glossars', (termId) => {
     const term = (glossary.terms as Record<string, GlossaryTerm>)[termId];
@@ -46,6 +54,7 @@ describe('Glossar Ausgang (C2b)', () => {
     expect(typeof term.reason).toBe('string');
     expect(typeof term.i18nKey).toBe('string');
     expect(term.de).toBe(EXPECTED[termId]);
+    expect(term.en).toBe(EXPECTED_EN[termId]);
   });
 
   it.each(Object.keys(EXPECTED))('zeigt %s mit i18nKey auf den Wert in de/sport.json', (termId) => {

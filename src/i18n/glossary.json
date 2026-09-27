@@ -56,7 +56,7 @@
     },
     "rejectedEntry": {
       "de": "nicht übernommen",
-      "en": "rejected entry",
+      "en": "not accepted",
       "forbidden_de": ["abgelehnt", "Ablehnung"],
       "reason": "D-C1: Eintrag, den der Server nicht angenommen hat – ohne Wertung beschrieben, damit Helfer:innen ihn verstehen und bestätigen können.",
       "i18nKey": "outbox.rejectedEntry"
