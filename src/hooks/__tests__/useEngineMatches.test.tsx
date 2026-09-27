@@ -317,4 +317,24 @@ describe('useEngineMatches', () => {
     expect(live?.events[0].payload.playerNumber).toBe(9);
     expect(live?.events[0].scoreAfter).toEqual({ home: 1, away: 0 });
   });
+
+  it('N2-m1 (Fix b, stableLiveMatches): eine Engine-Benachrichtigung fuer ein reines Altspiel liefert dieselbe Map-Referenz', async () => {
+    const t = tournament([match({ id: 'm-pure-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished' })]);
+    const { result, rerender } = renderHook(() => useEngineMatches(t, false, new Map()));
+
+    await waitFor(() => expect(mockContext.engine.view('m-pure-old')).not.toBeNull());
+    rerender();
+    const before = result.current.liveMatches;
+
+    // `ensureMatch` fuer dasselbe (reine Alt-)Spiel loest eine Engine-Benachrichtigung aus, OHNE
+    // den Inhalt der zurueckgegebenen (fuer B1 immer leeren) Map zu aendern.
+    await mockContext.engine.ensureMatch(
+      'm-pure-old',
+      { matchId: 'm-pure-old', teamAId: 'teama', teamBId: 'teamb' },
+      'tour-engine-matches',
+    );
+    rerender();
+
+    expect(result.current.liveMatches).toBe(before);
+  });
 });
