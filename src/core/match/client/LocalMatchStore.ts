@@ -211,6 +211,18 @@ export class LocalMatchStore {
     await this.update(key, (copy) => dismissRejectedEntries(copy, ids));
   }
 
+  /**
+   * W2: bestaetigten Log verwerfen und Wasserstand zuruecksetzen; `acked`/`pending`/
+   * `rejected`/`review` bleiben erhalten. Eine Transaktion.
+   */
+  async resetConfirmed(accountId: string, matchId: string): Promise<void> {
+    await this.update(this.key(accountId, matchId), (copy) => {
+      copy.confirmed = [];
+      copy.watermarkSeq = 0;
+      copy.updatedAt = Date.now();
+    });
+  }
+
   async forAccount(accountId: string): Promise<MatchCopy[]> {
     let results: MatchCopy[] = [];
     await this.db.run(

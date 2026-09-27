@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { LocalMatchStore } from '../LocalMatchStore';
+import { LocalMatchStore, matchCopyKey } from '../LocalMatchStore';
 import type { MatchContext } from '../../';
 import { ctx, ev, withSeq } from './fixtures';
 
@@ -21,6 +21,24 @@ describe('LocalMatchStore', () => {
     expect(copy).not.toBeNull();
     expect(copy?.matchId).toBe('lms-1');
     expect(copy?.formatVersion).toBe(2);
+  });
+
+  it('resetConfirmed: confirmed/watermark leeren, acked/pending/rejected bleiben (atomar, W2)', async () => {
+    await store.create('acc-reset', 'lms-reset', ctx);
+    await store.applyConfirmed(
+      'acc-reset',
+      'lms-reset',
+      [withSeq(ev({ id: 'c1', type: 'GOAL', at: 1000, teamId: 'teamA' }), 1)],
+      1,
+    );
+    await store.addPending('acc-reset', 'lms-reset', ev({ id: 'p1', type: 'GOAL', at: 2000, teamId: 'teamA' }));
+    await store.rejectAllPending(matchCopyKey('acc-reset', 'lms-reset'), 'MATCH_FULL', 3000);
+
+    await store.resetConfirmed('acc-reset', 'lms-reset');
+    const copy = await store.load('acc-reset', 'lms-reset');
+    expect(copy?.confirmed).toEqual([]);
+    expect(copy?.watermarkSeq).toBe(0);
+    expect(copy?.rejected.map((r) => r.event.id)).toEqual(['p1']);
   });
 
   it('Lebenszyklus: pending -> acked -> confirmed', async () => {

@@ -38,3 +38,11 @@ export {
   type ViewCopy,
   type ViewResult,
 } from './view';
+export {
+  MatchEngine,
+  type EngineSender,
+  type EngineMatchStatus,
+  type MatchEngineDeps,
+  type MatchEngineView,
+  type MatchBroadcastChannel,
+} from './MatchEngine';
