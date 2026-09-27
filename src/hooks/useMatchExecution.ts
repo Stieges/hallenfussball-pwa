@@ -155,7 +155,8 @@ export function useMatchExecution({
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
     // C3a-1/I5: Engine-Spiele kommen aus der MatchEngine (Bündelung in `useEngineExecutionBridge`, W11).
     const {
-        engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId, resolveEngineLiveMatchData,
+        engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId,
+        isEngineDestinedMatchId, isForeignCandidateMatchId, ensureEngineMatchReady, resolveEngineLiveMatchData,
     } = useEngineExecutionBridge(tournament, isRealtimeEnabled, liveMatches);
     // H-1 FIX: Loading states for async operations to prevent double-taps
     const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -312,8 +313,7 @@ export function useMatchExecution({
     // =========================================================================
 
     // B4/W11 (Fixrunde 3, P1): `resolveEngineLiveMatchData` (Bridge) kapselt die B1/B4-Wache --
-    // `null` heisst Altspiel, Wurf heisst Engine-Spiel ohne (noch) bereite Ansicht (Fehlerweg s.
-    // ManagementTab/P7).
+    // `null` heisst Altspiel, Wurf heisst Engine-Spiel ohne (noch) bereite Ansicht (s. ManagementTab/P7).
     const getLiveMatchData = useCallback(async (matchData: ScheduledMatch): Promise<LiveMatch> => {
         const engine = await resolveEngineLiveMatchData(matchData.id);
         if (engine) { return engine; }
@@ -804,7 +804,7 @@ export function useMatchExecution({
         handleStartPenaltyShootout, handleRecordPenaltyResult, handleCancelTiebreaker, handleAbortPenaltyShootout,
         handleManualEditResult, handleAdjustTime, handleSkipMatch, handleUnskipMatch, handleUndoLastEvent,
         handleUpdateEvent, handleDeleteEvent,
-    });
+    }, isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId);
 
     return {
         liveMatches: mergedLiveMatches,

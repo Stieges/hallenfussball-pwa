@@ -251,4 +251,75 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     const goalEvent = copy!.pending.find((e) => e.type === 'GOAL')!;
     expect(goalEvent.teamId).toBe('teama');
   });
+
+  // ---------------------------------------------------------------------------
+  // P3 (Fixrunde 3): Anpfiff-Fenster -- ein engine-bestimmtes Spiel, das die Engine noch KEINE
+  // Ansicht hat (ensureMatch/Sammelabfrage noch nicht durchgelaufen, z. B. eine liegengebliebene
+  // NOT_STARTED-Altzeile), darf beim Anpfiff nicht auf `fallback.handleStart` (Altweg,
+  // `service.startMatch`) zurueckfallen -- erst `ensureEngineMatchReady`, DANN `commands.start`.
+  // ---------------------------------------------------------------------------
+
+  const RACE_MATCH_ID = 'race-1';
+
+  it('P3: Anpfiff auf einem engine-bestimmten Spiel OHNE Engine-Ansicht ruft ensureEngineMatchReady, dann commands.start -- NICHT fallback.handleStart', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    // RACE_MATCH_ID ist bewusst NICHT in `engineLiveMatches` (keine Ansicht) UND NICHT vorab
+    // `ensureMatch`-t (anders als ENGINE_MATCH_ID in `makeEngineContext()`) -- genau die Race
+    // zwischen Mount und dem asynchronen `ensureMatch`.
+    const ensureEngineMatchReady = vi.fn(async (matchId: string) => {
+      await engineContext.engine.ensureMatch(matchId, { matchId, teamAId: 'teama', teamBId: 'teamb' });
+      return { id: matchId } as unknown as LiveMatch;
+    });
+    const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
+    const raceTournament: Tournament = {
+      ...tournament(),
+      matches: [...tournament().matches, { id: RACE_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 3, matchNumber: 3 }],
+    };
+    const { result } = renderHook(() =>
+      useEngineCommandWiring(raceTournament, engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+    );
+
+    const started = await result.current.handleStart(RACE_MATCH_ID);
+
+    expect(ensureEngineMatchReady).toHaveBeenCalledWith(RACE_MATCH_ID);
+    expect(started).toBe(true);
+    expect(fallback.handleStart).not.toHaveBeenCalled();
+    const copy = await engineContext.store.load(engineContext.accountId, RACE_MATCH_ID);
+    expect(copy?.pending.some((e) => e.type === 'MATCH_START')).toBe(true);
+  });
+
+  it('P3: liefert ensureEngineMatchReady fuer den KLAREN B1-Fall keine Ansicht, gibt handleStart false zurueck -- OHNE fallback.handleStart', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    const ensureEngineMatchReady = vi.fn().mockResolvedValue(null);
+    const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
+    const { result } = renderHook(() =>
+      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+    );
+
+    const started = await result.current.handleStart(RACE_MATCH_ID);
+
+    expect(started).toBe(false);
+    expect(fallback.handleStart).not.toHaveBeenCalled();
+  });
+
+  it('P2/P3: liefert ensureEngineMatchReady fuer einen fremd-Kandidaten KEINE Ansicht (bestaetigtes Altspiel), faellt handleStart auf fallback.handleStart zurueck', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    const ensureEngineMatchReady = vi.fn().mockResolvedValue(null);
+    const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
+    const isForeignCandidateMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
+    const { result } = renderHook(() =>
+      useEngineCommandWiring(
+        tournament(), engineContext, engineLiveMatches, fallback,
+        isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId,
+      ),
+    );
+
+    const started = await result.current.handleStart(RACE_MATCH_ID);
+
+    expect(started).toBe(true);
+    expect(fallback.handleStart).toHaveBeenCalledWith(RACE_MATCH_ID);
+  });
 });

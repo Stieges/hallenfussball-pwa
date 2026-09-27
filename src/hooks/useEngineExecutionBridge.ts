@@ -27,6 +27,10 @@ export interface UseEngineExecutionBridgeResult {
   /** B4 (Fixrunde 2, Item 2): true, wenn ein Spiel BEREITS eine Engine-Kopie hat ODER laut B1-Klausel
    * gleich eine bekommt (synchron aus den Turnierdaten, unabhaengig vom asynchronen `ensureMatch`). */
   isEngineDestinedMatchId: (matchId: string) => boolean;
+  /** P2 (Fixrunde 3, E1-Randfall): true fuer den "unklar" Fall (nicht scheduled, keine aktive
+   * Altzeile, kein Ergebnis) -- ein `null` von `ensureEngineMatchReady` bedeutet hier "bestaetigtes
+   * Altspiel" (Aufrufer darf/soll auf den Altweg ausweichen), anders als beim klaren B1-Fall. */
+  isForeignCandidateMatchId: (matchId: string) => boolean;
   /** Fixrunde 2, Item 2: fuer den B4-Guard in `useMatchExecution.getLiveMatchData` -- erzwingt
    * `ensureMatch` fuer EIN Spiel, statt auf den naechsten Engine-Notify zu warten. */
   ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
@@ -110,6 +114,7 @@ export function useEngineExecutionBridge(
     mergedLiveMatches,
     isEngineMatchId,
     isEngineDestinedMatchId,
+    isForeignCandidateMatchId: isForeignCandidateMatch,
     ensureEngineMatchReady,
     resolveEngineLiveMatchData,
   };

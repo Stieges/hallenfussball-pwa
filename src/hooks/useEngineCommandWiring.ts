@@ -50,6 +50,13 @@ export function useEngineCommandWiring(
   matchEngineContext: MatchEngineContextValue | null,
   engineLiveMatches: Map<string, LiveMatch>,
   fallback: EngineCommandFallbackHandlers,
+  // P3: engine-bestimmt, aber (noch) keine Engine-Ansicht -- Defaults halten bestehende
+  // Aufrufer/Tests unveraendert, die dieses Fenster nicht pruefen.
+  isEngineDestinedMatchId: (matchId: string) => boolean = () => false,
+  ensureEngineMatchReady: (matchId: string) => Promise<LiveMatch | null> = () => Promise.resolve(null),
+  // P2 (E1-Randfall): "unklar"-Fall -- `null` von ensureEngineMatchReady heisst hier bestaetigtes
+  // Altspiel, der Altweg ist wieder erlaubt (anders als beim klaren B1-Fall unten).
+  isForeignCandidateMatchId: (matchId: string) => boolean = () => false,
 ): EngineCommandFallbackHandlers {
   const { t } = useTranslation('cockpit');
   const { showWarning, showError } = useToast();
@@ -121,14 +128,16 @@ export function useEngineCommandWiring(
     [handleEngineError],
   );
 
-  const handleStart = useCallback(
+  /** Ruft `commands.start` fuer ein Spiel auf, dessen lokale Engine-Kopie bereits existiert
+   * (Vorbedingung von `MatchCommands.submit`, sonst "keine lokale Kopie"-Wurf). */
+  const startViaCommands = useCallback(
     async (matchId: string): Promise<boolean> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleStart(matchId);
+      if (!commands) {
+        return false;
       }
       const ctx = ctxByExternalId.get(matchId);
       if (!ctx) {
-        return fallback.handleStart(matchId);
+        return false;
       }
       try {
         await commands.start(matchId, ctx, actor, serverRulesFor(tournament, matchId));
@@ -138,7 +147,29 @@ export function useEngineCommandWiring(
         return false;
       }
     },
-    [isEngineMatch, commands, ctxByExternalId, actor, tournament, fallback, handleEngineError],
+    [commands, ctxByExternalId, actor, tournament, handleEngineError],
+  );
+
+  const handleStart = useCallback(
+    async (matchId: string): Promise<boolean> => {
+      if (isEngineMatch(matchId) && commands) {
+        return startViaCommands(matchId);
+      }
+      // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht (Race vor `ensureMatch`, oder eine
+      // liegengebliebene NOT_STARTED-Altzeile) -- ERST `ensureEngineMatchReady`, DANN
+      // `commands.start`, kein Fallback mehr (das Spiel IST/WIRD ein Engine-Spiel). Liefert
+      // `ensureEngineMatchReady` keine Ansicht: P2-fremd-Kandidat -> bestaetigtes Altspiel ->
+      // Altweg wieder erlaubt; klarer B1-Fall -> `false` (kein impliziter Start ohne Bestaetigung).
+      if (commands && isEngineDestinedMatchId(matchId)) {
+        const ready = await ensureEngineMatchReady(matchId);
+        if (ready) {
+          return startViaCommands(matchId);
+        }
+        return isForeignCandidateMatchId(matchId) ? fallback.handleStart(matchId) : false;
+      }
+      return fallback.handleStart(matchId);
+    },
+    [isEngineMatch, commands, isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId, startViaCommands, fallback],
   );
 
   const handlePause = useCallback(
