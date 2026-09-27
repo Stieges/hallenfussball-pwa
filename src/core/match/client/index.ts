@@ -46,3 +46,17 @@ export {
   type MatchEngineView,
   type MatchBroadcastChannel,
 } from './MatchEngine';
+export {
+  MatchCommands,
+  MatchCommandRejectedError,
+  type MatchCommandsDeps,
+  type MatchCommandsEngine,
+  type MatchCommandsStore,
+  type MatchCommandsSender,
+  type GoalOptions,
+  type CardOptions,
+  type TimePenaltyOptions,
+  type FoulOptions,
+  type SubstitutionOptions,
+} from './MatchCommands';
+export { NotOnEngineYetError } from './errors';

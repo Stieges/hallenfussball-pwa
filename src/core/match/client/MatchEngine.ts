@@ -244,6 +244,19 @@ export class MatchEngine {
     await this.runCatchUp(matchId, { fromZero: true });
   }
 
+  /**
+   * m7 (Nachtrag C3a-2a): externe Store-Schreibzugriffe (Sender: `resolveBatch`,
+   * `rejectAllPending`; UI: `dismissRejected`; `MatchCommands`: `addPending`/`addConfirmedLocal`)
+   * aendern die IndexedDB-Kopie AUSSERHALB von `MatchEngine`s eigenem Lese-/Nachlade-Zyklus. Ohne
+   * diesen Aufruf bliebe die gecachte Ansicht (`this.copies`) bis zum naechsten `ensureMatch`/
+   * `catchUp` veraltet -- sichtbar z. B. als kurz weiterhin angezeigtes, gerade abgelehntes Tor.
+   * Liest die Kopie neu ein, benachrichtigt Abonnenten UND andere Tabs (W10).
+   */
+  async notifyStoreChange(matchId: string): Promise<void> {
+    await this.refreshCopy(matchId);
+    this.announce(matchId);
+  }
+
   /** B2: `{ result, log }` aus der gecachten Kopie (computeView cacht selbst inkrementell, I7). */
   view(matchId: string): MatchEngineView | null {
     const copy = this.copies.get(matchId);

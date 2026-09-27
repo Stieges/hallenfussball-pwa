@@ -358,4 +358,24 @@ describe('MatchEngine', () => {
     const log = engine.view('me-dedupe-confirmed')?.log ?? [];
     expect(log.filter((event) => event.id === 'dup-2')).toHaveLength(1);
   });
+
+  it('m7 (Nachtrag C3a-2a): notifyStoreChange liest eine extern (Sender/MatchCommands) geschriebene Aenderung neu ein und benachrichtigt Abonnenten', async () => {
+    await store.create('acc1', 'me-store-change', ctx);
+    const fetchConfirmed = vi.fn();
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-store-change', ctx);
+    expect(engine.view('me-store-change')?.log).toHaveLength(0);
+
+    // Store wird OHNE die Engine geschrieben (wie MatchCommands.addPending oder
+    // OutboxSender.resolveBatch/rejectAllPending) -- die gecachte Kopie ist danach veraltet.
+    await store.addPending('acc1', 'me-store-change', goal('g1', 'teamA', 500, 0));
+
+    const listener = vi.fn();
+    engine.subscribe(listener);
+    await engine.notifyStoreChange('me-store-change');
+
+    expect(engine.view('me-store-change')?.log).toHaveLength(1);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
 });
