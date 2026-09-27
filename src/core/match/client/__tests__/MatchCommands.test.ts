@@ -155,4 +155,94 @@ describe('MatchCommands (C3a-2a, RC1)', () => {
     expect(card.teamId).toBe(ctx.teamBId);
     expect(card.payload.playerNumber).toBe(4);
   });
+
+  // ---------------------------------------------------------------------------
+  // I5 (Fixrunde 1, Review-Befund 6): "jede PC14-Aktion erzeugt genau das richtige Ereignis" --
+  // Pause/Weiter/Abpfiff/Zeitstrafe/Foul/Wechsel hatten bisher keinen eigenen Ereignistest.
+  // ---------------------------------------------------------------------------
+
+  it('Pause: baut PAUSE ohne teamId', async () => {
+    const engine = await makeEngine(NOW, 'acc-pause', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-pause' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await commands.pause(ctx.matchId, ctx, 'leitung');
+
+    const copy = await store.load('acc-pause', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'PAUSE')!;
+    expect(event.teamId).toBeNull();
+    expect(event.actor).toBe('leitung');
+  });
+
+  it('Weiter: baut RESUME ohne teamId', async () => {
+    const engine = await makeEngine(NOW, 'acc-resume', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-resume' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+    await commands.pause(ctx.matchId, ctx, 'leitung');
+
+    await commands.resume(ctx.matchId, ctx, 'leitung');
+
+    const copy = await store.load('acc-resume', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'RESUME')!;
+    expect(event.teamId).toBeNull();
+  });
+
+  it('Abpfiff: baut MATCH_END ohne teamId', async () => {
+    const engine = await makeEngine(NOW, 'acc-finish', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-finish' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await commands.finish(ctx.matchId, ctx, 'leitung');
+
+    const copy = await store.load('acc-finish', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'MATCH_END')!;
+    expect(event.teamId).toBeNull();
+  });
+
+  it('Zeitstrafe: baut TIME_PENALTY mit teamId, playerNumber und durationSeconds', async () => {
+    const engine = await makeEngine(NOW, 'acc-penalty', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-penalty' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await commands.timePenalty(ctx.matchId, ctx, 'helper', ctx.teamAId, { playerNumber: 12, durationSeconds: 120 });
+
+    const copy = await store.load('acc-penalty', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'TIME_PENALTY')!;
+    expect(event.teamId).toBe(ctx.teamAId);
+    expect(event.payload.playerNumber).toBe(12);
+    expect(event.payload.durationSeconds).toBe(120);
+  });
+
+  it('Foul: baut FOUL mit teamId und playerNumber', async () => {
+    const engine = await makeEngine(NOW, 'acc-foul', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-foul' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await commands.foul(ctx.matchId, ctx, 'helper', ctx.teamBId, { playerNumber: 3 });
+
+    const copy = await store.load('acc-foul', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'FOUL')!;
+    expect(event.teamId).toBe(ctx.teamBId);
+    expect(event.payload.playerNumber).toBe(3);
+  });
+
+  it('Wechsel: baut SUBSTITUTION mit teamId, playersIn und playersOut', async () => {
+    const engine = await makeEngine(NOW, 'acc-sub', store);
+    const kick = vi.fn(async () => undefined);
+    const commands = new MatchCommands({ engine, store, sender: { kick }, accountId: 'acc-sub' });
+    await commands.start(ctx.matchId, ctx, 'leitung', RULES);
+
+    await commands.substitution(ctx.matchId, ctx, 'leitung', ctx.teamAId, { playersIn: [14], playersOut: [7] });
+
+    const copy = await store.load('acc-sub', ctx.matchId);
+    const event = copy!.pending.find((e) => e.type === 'SUBSTITUTION')!;
+    expect(event.teamId).toBe(ctx.teamAId);
+    expect(event.payload.playersIn).toEqual([14]);
+    expect(event.payload.playersOut).toEqual([7]);
+  });
 });
