@@ -153,7 +153,7 @@ export function useMatchExecution({
     // State
     const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatch>>(new Map());
     // C3a-1/I5: Engine-Spiele kommen aus der MatchEngine (Bündelung in `useEngineExecutionBridge`, W11).
-    const { engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches } =
+    const { engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId } =
         useEngineExecutionBridge(tournament, isRealtimeEnabled, liveMatches);
     // H-1 FIX: Loading states for async operations to prevent double-taps
     const [loadingStates, setLoadingStates] = useState<LoadingStates>({
@@ -238,14 +238,16 @@ export function useMatchExecution({
      */
     const handleRealtimeChange = useCallback((matchId: string, match: LiveMatch | null) => {
         if (!match) { return; }
-        if (engineLiveMatchesRef.current.has(matchId)) {
+        // N2-m3: case-insensitiv (der Realtime-Pfad liefert `match_id` klein, die Map ist nach
+        // der Original-Schreibweise geschluesselt).
+        if (isEngineMatchId(matchId)) {
             matchEngineContext?.engine.catchUp(matchId).catch(() => undefined);
             return;
         }
         if (Object.values(loadingStatesRef.current).some(Boolean)) { return; }
 
         setLiveMatches(prev => new Map(prev).set(matchId, match));
-    }, [matchEngineContext, engineLiveMatchesRef]);
+    }, [matchEngineContext, isEngineMatchId]);
 
     useEffect(() => {
         if (!realtimeRepo || !tournament.id) { return; }

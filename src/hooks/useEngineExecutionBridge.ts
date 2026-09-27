@@ -5,7 +5,7 @@
  * MatchEngine-Kontext und die gemergte Live-Match-Map (Engine-Spiele gewinnen ueber den Altpfad).
  * Eigene Datei, damit `useMatchExecution.ts` nicht waechst (W11).
  */
-import { useMemo, useRef, type RefObject } from 'react';
+import { useCallback, useMemo, useRef, type RefObject } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { useEngineMatches } from './useEngineMatches';
@@ -17,6 +17,12 @@ export interface UseEngineExecutionBridgeResult {
   engineLiveMatchesRef: RefObject<Map<string, LiveMatch>>;
   matchEngineContext: MatchEngineContextValue | null;
   mergedLiveMatches: Map<string, LiveMatch>;
+  /** N2-m3 (Nachtrag C3a-2a): case-insensitiver Mitgliedstest -- der Realtime-Pfad liefert
+   * `match_id` klein (Server-Konvention), `engineLiveMatches` ist aber nach `externalId`
+   * (Original-Schreibweise aus `tournament.matches[].id`) geschluesselt. Referenzstabil
+   * (useCallback auf einem Ref), damit `handleRealtimeChange` sich nicht bei jeder
+   * Engine-Aenderung neu abonniert. */
+  isEngineMatchId: (matchId: string) => boolean;
 }
 
 export function useEngineExecutionBridge(
@@ -37,5 +43,18 @@ export function useEngineExecutionBridge(
     return merged;
   }, [localLiveMatches, engineLiveMatches]);
 
-  return { engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches };
+  const isEngineMatchId = useCallback(
+    (matchId: string): boolean => {
+      const lower = matchId.toLowerCase();
+      for (const key of engineLiveMatchesRef.current.keys()) {
+        if (key.toLowerCase() === lower) {
+          return true;
+        }
+      }
+      return false;
+    },
+    [engineLiveMatchesRef],
+  );
+
+  return { engineLiveMatches, engineLiveMatchesRef, matchEngineContext, mergedLiveMatches, isEngineMatchId };
 }

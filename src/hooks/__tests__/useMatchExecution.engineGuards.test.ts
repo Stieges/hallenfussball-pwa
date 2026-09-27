@@ -222,4 +222,19 @@ describe('useMatchExecution — B5: Realtime ignoriert Engine-Spiele und stoesst
     expect(mockCatchUp).not.toHaveBeenCalled();
     expect(result.current.liveMatches.get('old-match-1')).toEqual(oldMatchPush);
   });
+
+  it('N2-m3: ein Push mit abweichender Schreibweise (Server liefert match_id klein) wird trotzdem als Engine-Spiel erkannt', async () => {
+    const { result } = await renderAndFlush();
+    const before = result.current.liveMatches.get(ENGINE_MATCH_ID);
+
+    act(() => {
+      capturedOnMatchChange?.(ENGINE_MATCH_ID.toUpperCase(), { ...engineLiveMatch, homeScore: 99 });
+    });
+
+    expect(mockCatchUp).toHaveBeenCalledWith(ENGINE_MATCH_ID.toUpperCase());
+    // Kein Fallback auf den Alt-Pfad -- der Push wird NICHT als eigener (grossgeschriebener)
+    // Alt-Eintrag uebernommen.
+    expect(result.current.liveMatches.get(ENGINE_MATCH_ID.toUpperCase())).toBeUndefined();
+    expect(result.current.liveMatches.get(ENGINE_MATCH_ID)).toBe(before);
+  });
 });
