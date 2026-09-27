@@ -14,6 +14,9 @@ import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
 import { SyncStatusIndicator } from '../../features/collaboration';
+import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
+import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
+import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
@@ -104,6 +107,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onUpdateSettings,
 }) => {
   const { t } = useTranslation('cockpit');
+
+  // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
+  // Ausgangs-Zustand vorliegt (kind === null).
+  const matchEngineContext = useMatchEngineContextOptional();
+  const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
+  const handleOutboxReload = useCallback(() => window.location.reload(), []);
 
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
@@ -902,6 +911,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
             {t('readOnly.banner')}
           </div>
         )}
+
+        {/* W1 (Nachtrag C3a-2a): nur einbinden -- rendert selbst nichts, solange kein
+            Ausgangs-Zustand (clientOutdated/authRequired/notReady/review) vorliegt. */}
+        <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
 
         {/* Foul Bar - Mobile only */}
         {isMobile && (
