@@ -231,4 +231,33 @@ describe('MatchEngineProvider', () => {
     // loescht nichts, nur der Sender-Speicher (Warteschlangen im RAM) wechselt.
     expect(await ctx!.store.load('user-1', 'm-signed-out')).not.toBeNull();
   });
+
+  it('m3: der Kontowechsel liefert ein NEUES Kontext-Objekt mit dem neuen accountId (Kopien-Cache-Hooks bauen neu auf)', async () => {
+    const startSpy = vi.spyOn(MatchEngine.prototype, 'start');
+    const contexts: NonNullable<ReturnType<typeof useMatchEngineContext>>[] = [];
+    const { rerender } = render(
+      <MatchEngineProvider>
+        <Probe onReady={(value) => value && contexts.push(value)} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-1'));
+    const firstContext = contexts.at(-1)!;
+    expect(firstContext.accountId).toBe('user-1');
+
+    mockAuth.user = { id: 'user-2', globalRole: 'organizer' };
+    mockAuth.session = { token: 'token-2' };
+    rerender(
+      <MatchEngineProvider>
+        <Probe onReady={(value) => value && contexts.push(value)} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-2'));
+    const secondContext = contexts.at(-1)!;
+
+    expect(secondContext.accountId).toBe('user-2');
+    expect(secondContext).not.toBe(firstContext);
+    // `bundle` (Engine/Sender/Store/Uhr) bleibt dieselbe Instanz -- nur das Kontext-Objekt selbst
+    // ist neu (accountId geaendert).
+    expect(secondContext.engine).toBe(firstContext.engine);
+  });
 });
