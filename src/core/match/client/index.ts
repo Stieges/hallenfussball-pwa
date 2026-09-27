@@ -60,3 +60,10 @@ export {
   type SubstitutionOptions,
 } from './MatchCommands';
 export { NotOnEngineYetError } from './errors';
+export {
+  applyEngineOverlay,
+  engineOverlayFields,
+  type EngineOverlayFields,
+  type OverlayableMatch,
+  type OverlayableTournament,
+} from './applyEngineOverlay';
