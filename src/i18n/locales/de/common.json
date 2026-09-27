@@ -187,7 +187,8 @@
     },
     "logoutWarning": {
       "title": "Abmelden?",
-      "message": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
+      "message_one": "Es wartet noch {{count}} Eintrag auf Übertragung. Er bleibt auf diesem Gerät gespeichert und wird nach der nächsten Anmeldung mit diesem Konto gesendet.",
+      "message_other": "Es warten noch {{count}} Einträge auf Übertragung. Sie bleiben auf diesem Gerät gespeichert und werden nach der nächsten Anmeldung mit diesem Konto gesendet.",
       "confirm": "Trotzdem abmelden"
     }
   }

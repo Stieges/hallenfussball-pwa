@@ -187,7 +187,8 @@
     },
     "logoutWarning": {
       "title": "Sign out?",
-      "message": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
+      "message_one": "{{count}} entry is still waiting to be sent. It stays on this device and will be sent with this account after your next sign-in.",
+      "message_other": "{{count}} entries are still waiting to be sent. They stay on this device and will be sent with this account after your next sign-in.",
       "confirm": "Sign out anyway"
     }
   }
