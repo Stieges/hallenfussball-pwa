@@ -3,10 +3,12 @@
  * „nicht uebernommen" und „wartet auf Turnierleitung" sind normative Begriffe
  * (TERMINOLOGY.md: glossary.json ist die Quelle, i18nKey zeigt nach sport.json).
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import glossary from '../../../../i18n/glossary.json';
 import deSport from '../../../../i18n/locales/de/sport.json';
 import enSport from '../../../../i18n/locales/en/sport.json';
+import deCommon from '../../../../i18n/locales/de/common.json';
+import enCommon from '../../../../i18n/locales/en/common.json';
 
 interface GlossaryTerm {
   de: string;
@@ -50,5 +52,38 @@ describe('Glossar Ausgang (C2b)', () => {
     const term = (glossary.terms as Record<string, GlossaryTerm>)[termId];
     expect(resolve(deSport, term.i18nKey)).toBe(term.de);
     expect(resolve(enSport, term.i18nKey)).toBe(term.en);
+  });
+});
+
+// Fixrunde 1 (Review m3): outbox.eventType.shootoutKick/shootoutEnd/timePenalty schrieben die
+// Glossarbegriffe "Strafstoß"/"Strafstoßschießen"/"Zeitstrafe" hart, statt auf sport.json zu
+// verweisen (TERMINOLOGY.md Regel 3). `terms:check` prueft das nicht (nur verbotene Synonyme,
+// keine Pflicht zur $t-Referenz) -- deshalb hier verankert.
+vi.unmock('i18next');
+
+describe('outbox.eventType — Glossarbegriffe per $t-Referenz (Review m3)', () => {
+  it('common.json referenziert sport.json statt den Begriff zu wiederholen', () => {
+    expect(deCommon.outbox.eventType.shootoutKick).toBe('$t(sport:events.penalty)');
+    expect(deCommon.outbox.eventType.timePenalty).toBe('$t(sport:events.timePenalty)');
+    expect(deCommon.outbox.eventType.shootoutEnd).toContain('$t(sport:events.penaltyShootout)');
+    expect(enCommon.outbox.eventType.shootoutKick).toBe('$t(sport:events.penalty)');
+    expect(enCommon.outbox.eventType.timePenalty).toBe('$t(sport:events.timePenalty)');
+    expect(enCommon.outbox.eventType.shootoutEnd).toContain('$t(sport:events.penaltyShootout)');
+  });
+
+  it('loest ueber eine echte i18next-Instanz zum Glossarbegriff auf (de/en)', async () => {
+    const i18nextModule = await vi.importActual<typeof import('i18next')>('i18next');
+    const i18n = (i18nextModule as { default?: typeof import('i18next') }).default ?? i18nextModule;
+    await i18n.init({
+      lng: 'de',
+      resources: { de: { common: deCommon, sport: deSport }, en: { common: enCommon, sport: enSport } },
+    });
+    expect(i18n.t('common:outbox.eventType.shootoutKick')).toBe('Strafstoß');
+    expect(i18n.t('common:outbox.eventType.timePenalty')).toBe('Zeitstrafe');
+    expect(i18n.t('common:outbox.eventType.shootoutEnd')).toContain('Strafstoßschießen');
+    await i18n.changeLanguage('en');
+    expect(i18n.t('common:outbox.eventType.shootoutKick')).toBe('Penalty');
+    expect(i18n.t('common:outbox.eventType.timePenalty')).toBe('Time Penalty');
+    expect(i18n.t('common:outbox.eventType.shootoutEnd')).toContain('Penalty Shootout');
   });
 });
