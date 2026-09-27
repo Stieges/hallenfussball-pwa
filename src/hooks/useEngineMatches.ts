@@ -12,7 +12,7 @@ import type { Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { serverRules, type MatchContext } from '../core/match';
 import { toLiveMatchView, type LiveMatchMeta } from '../core/match/client';
-import { useMatchEngineContext } from '../features/match-engine/useMatchEngineContext';
+import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 import { fetchEngineMatchIds, type EngineMatchIdsQueryClient } from '../features/match-engine/fetchEngineMatchIds';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
@@ -99,13 +99,17 @@ function rulesFor(tournament: Tournament, matchPhase: string | undefined) {
 }
 
 export function useEngineMatches(tournament: Tournament, enabled: boolean): UseEngineMatchesResult {
-  const { engine, clock } = useMatchEngineContext();
+  const context = useMatchEngineContextOptional();
   const [engineMatchIds, setEngineMatchIds] = useState<Set<string>>(new Set());
   const [, setTick] = useState(0);
 
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
 
   useEffect(() => {
+    if (!context) {
+      return undefined;
+    }
+    const { engine } = context;
     let cancelled = false;
     async function run(): Promise<void> {
       for (const entry of validMatches) {
@@ -132,35 +136,38 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
     return () => {
       cancelled = true;
     };
-  }, [validMatches, engine, enabled, tournament.id]);
+  }, [validMatches, context, enabled, tournament.id]);
 
-  useEffect(() => engine.subscribe(() => setTick((n) => n + 1)), [engine]);
+  useEffect(() => context?.engine.subscribe(() => setTick((n) => n + 1)), [context]);
 
   // Bewusst KEIN useMemo: die Abhaengigkeit ist der Mutations-Zaehler der Engine (subscribe oben),
   // nicht eine der hier gelesenen Referenzen -- ein Memo wuerde nach einer Engine-Aenderung eine
   // veraltete Map zurueckgeben, solange `tournament`/`engineMatchIds` gleich bleiben. Der Aufbau ist
   // billig (Turniergroesse, keine Netzaufrufe).
   const liveMatches = new Map<string, LiveMatch>();
-  for (const entry of validMatches) {
-    const view = engine.view(entry.matchId);
-    if (!view) {
-      continue;
+  if (context) {
+    const { engine, clock } = context;
+    for (const entry of validMatches) {
+      const view = engine.view(entry.matchId);
+      if (!view) {
+        continue;
+      }
+      const hasLocalEvents = view.log.length > 0;
+      if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
+        continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
+      }
+      const rules = view.result.state.rules ?? rulesFor(tournament, undefined);
+      const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
+      const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
+      const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
+      const liveMatch = toLiveMatchView(state, meta, viewClock, view.log);
+      // W5: Teamfarben/-logo traegt der Hook nach (Adapter kennt nur id/name).
+      liveMatches.set(entry.matchId, {
+        ...liveMatch,
+        homeTeam: { ...liveMatch.homeTeam, ...entry.homeVisual },
+        awayTeam: { ...liveMatch.awayTeam, ...entry.awayVisual },
+      });
     }
-    const hasLocalEvents = view.log.length > 0;
-    if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
-      continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
-    }
-    const rules = view.result.state.rules ?? rulesFor(tournament, undefined);
-    const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
-    const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
-    const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
-    const liveMatch = toLiveMatchView(state, meta, viewClock, view.log);
-    // W5: Teamfarben/-logo traegt der Hook nach (Adapter kennt nur id/name).
-    liveMatches.set(entry.matchId, {
-      ...liveMatch,
-      homeTeam: { ...liveMatch.homeTeam, ...entry.homeVisual },
-      awayTeam: { ...liveMatch.awayTeam, ...entry.awayVisual },
-    });
   }
 
   return {

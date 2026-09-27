@@ -22,8 +22,10 @@ const mockContext: { engine: MatchEngine; clock: { offsetMs: number } } = {
   }),
   clock: { offsetMs: 0 },
 };
+/** Fuer den "kein Provider"-Test auf `null` gesetzt -- Standard: der Kontext ist vorhanden. */
+let activeContext: typeof mockContext | null = mockContext;
 vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
-  useMatchEngineContext: () => mockContext,
+  useMatchEngineContextOptional: () => activeContext,
 }));
 
 import { useEngineMatches } from '../useEngineMatches';
@@ -51,7 +53,17 @@ function tournament(matches: Match[]): Tournament {
 
 describe('useEngineMatches', () => {
   beforeEach(async () => {
+    activeContext = mockContext;
     await mockContext.engine.start('acc-engine-matches');
+  });
+
+  it('ohne MatchEngineProvider (Provider noch nicht im App-Baum): leere Map statt Absturz', () => {
+    activeContext = null;
+    const t = tournament([match({ id: 'm-no-provider', teamA: 'teamA', teamB: 'teamB' })]);
+    const { result } = renderHook(() => useEngineMatches(t, false));
+
+    expect(result.current.liveMatches.size).toBe(0);
+    expect(result.current.isEngineMatch('m-no-provider')).toBe(false);
   });
 
   it('W4: Platzhalter-Team ("TBD") bekommt keine Kopie und ist kein Engine-Spiel', async () => {
