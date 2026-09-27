@@ -125,12 +125,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [showRejectedDialog, setShowRejectedDialog] = useState(false);
   const handleShowRejected = useCallback(() => setShowRejectedDialog(true), []);
   const handleCloseRejected = useCallback(() => setShowRejectedDialog(false), []);
-  const handleDismissRejected = useCallback(
-    (ids: string[]) => {
-      void outboxSummary.dismiss(ids);
-    },
-    [outboxSummary],
-  );
 
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
@@ -181,7 +175,17 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
 
   // Toast notifications
-  const { toasts, showSuccess, showInfo, dismissToast } = useToast();
+  const { toasts, showSuccess, showInfo, showError: showToastError, dismissToast } = useToast();
+
+  // I4 (W1, Nachtrag Fixrunde 1): "Verstanden" (RejectedEntriesPanel). Fixrunde 2 (Re-Review-
+  // Befund C4): `.catch` statt nacktem `void` -- ein IDB-/Sender-Fehler darf keine unbehandelte
+  // Ablehnung werden; der Helfer sieht stattdessen einen Toast.
+  const handleDismissRejected = useCallback(
+    (ids: string[]) => {
+      outboxSummary.dismiss(ids).catch(() => showToastError('Verstanden fehlgeschlagen — bitte erneut versuchen'));
+    },
+    [outboxSummary, showToastError],
+  );
 
   // Next match info
   const nextMatch = useMemo(() => {

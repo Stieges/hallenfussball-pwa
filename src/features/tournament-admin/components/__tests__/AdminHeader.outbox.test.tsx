@@ -24,6 +24,11 @@ vi.mock('../../../match-engine/useEngineOutboxSummary', () => ({
   useEngineOutboxSummary: () => ({ ...summary, pendingCount: 0, dismiss: mockDismiss }),
 }));
 
+const mockShowToastError = vi.fn();
+vi.mock('../../../../components/ui/Toast/ToastContext', () => ({
+  useToast: () => ({ showError: mockShowToastError }),
+}));
+
 vi.mock('../../../collaboration', () => ({
   SyncStatusIndicator: ({ rejectedCount, reviewCount, onShowRejected }: {
     rejectedCount?: number;
@@ -56,5 +61,17 @@ describe('AdminHeader x useEngineOutboxSummary (C3a-2a, W1)', () => {
     expect(screen.getByTestId('outbox-rejected-panel')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('outbox-rejected-dismiss'));
     expect(mockDismiss).toHaveBeenCalledWith(['e1']);
+  });
+
+  it('Fixrunde 2 (Re-Review-Befund C4): ein Fehler bei dismiss() zeigt einen Toast statt einer unbehandelten Ablehnung', async () => {
+    mockDismiss.mockRejectedValueOnce(new Error('IDB kaputt'));
+    render(
+      <AdminHeader title="Test" onBackToTournament={vi.fn()} tournamentId="tour-1" showSyncStatus />,
+    );
+    fireEvent.click(screen.getByTestId('sync-status-stub'));
+
+    fireEvent.click(screen.getByTestId('outbox-rejected-dismiss'));
+
+    await vi.waitFor(() => expect(mockShowToastError).toHaveBeenCalled());
   });
 });

@@ -35,11 +35,18 @@ export function useEngineOutboxSummary(tournamentId: string): EngineOutboxSummar
       setEntries([]);
       return;
     }
-    const copies = await context.store.forAccount(context.accountId);
-    const forTournament = copies.filter((copy) => copy.tournamentId === tournamentId);
-    setEntries(
-      forTournament.flatMap((copy) => copy.rejected.map((entry) => ({ ...entry, matchId: copy.matchId }))),
-    );
+    try {
+      const copies = await context.store.forAccount(context.accountId);
+      const forTournament = copies.filter((copy) => copy.tournamentId === tournamentId);
+      setEntries(
+        forTournament.flatMap((copy) => copy.rejected.map((entry) => ({ ...entry, matchId: copy.matchId }))),
+      );
+    } catch {
+      // Fixrunde 2 (Re-Review-Befund C4): `store.forAccount` (IDB) kann scheitern -- `void
+      // refresh()`-Aufrufer (Effekt unten, `dismiss`) duerfen dadurch keine unbehandelte
+      // Ablehnung bekommen. Die vorherige, zuletzt bekannte Liste bleibt einfach stehen (kein
+      // Rueckfall auf leer), aehnlich N-m5 bei der Sammelabfrage.
+    }
   }, [context, tournamentId]);
 
   // `status` aendert sich bei jeder Ablehnung/jedem "Verstanden" (ueber sender.subscribe) -- die

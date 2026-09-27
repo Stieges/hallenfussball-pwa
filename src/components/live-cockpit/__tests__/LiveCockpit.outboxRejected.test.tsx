@@ -71,4 +71,14 @@ describe('LiveCockpit x useEngineOutboxSummary (C3a-2a Fixrunde 1, I4/W1)', () =
     fireEvent.click(screen.getByTestId('outbox-rejected-dismiss'));
     expect(mockDismiss).toHaveBeenCalledWith(['e1']);
   });
+
+  it('Fixrunde 2 (Re-Review-Befund C4): ein Fehler bei dismiss() zeigt einen Toast statt einer unbehandelten Ablehnung', async () => {
+    mockDismiss.mockRejectedValueOnce(new Error('IDB kaputt'));
+    render(<LiveCockpit {...baseProps(makeMatch())} />);
+    fireEvent.click(screen.getByTestId('sync-status-rejected'));
+
+    fireEvent.click(screen.getByTestId('outbox-rejected-dismiss'));
+
+    await screen.findByText('Verstanden fehlgeschlagen — bitte erneut versuchen');
+  });
 });

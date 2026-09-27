@@ -16,6 +16,7 @@ import { SyncStatusIndicator } from '../../collaboration';
 import { Dialog } from '../../../components/dialogs/Dialog';
 import { RejectedEntriesPanel } from '../../collaboration/outbox/RejectedEntriesPanel';
 import { useEngineOutboxSummary } from '../../match-engine/useEngineOutboxSummary';
+import { useToast } from '../../../components/ui/Toast/ToastContext';
 
 // =============================================================================
 // STYLES
@@ -129,6 +130,7 @@ export function AdminHeader({
 }: AdminHeaderProps) {
   const { t } = useTranslation('admin');
   const { t: tCommon } = useTranslation('common');
+  const { showError: showToastError } = useToast();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   // W1 (Nachtrag C3a-2a): rejectedCount/reviewCount aus dem echten Sender statt der bisherigen
@@ -138,11 +140,13 @@ export function AdminHeader({
   const [showRejectedDialog, setShowRejectedDialog] = useState(false);
   const handleShowRejected = useCallback(() => setShowRejectedDialog(true), []);
   const handleCloseRejected = useCallback(() => setShowRejectedDialog(false), []);
+  // Fixrunde 2 (Re-Review-Befund C4): `.catch` statt nacktem `void` -- ein IDB-/Sender-Fehler
+  // darf keine unbehandelte Ablehnung werden; die Turnierleitung sieht stattdessen einen Toast.
   const handleDismissRejected = useCallback(
     (ids: string[]) => {
-      void outboxSummary.dismiss(ids);
+      outboxSummary.dismiss(ids).catch(() => showToastError('Verstanden fehlgeschlagen — bitte erneut versuchen'));
     },
-    [outboxSummary],
+    [outboxSummary, showToastError],
   );
 
   const handleSearchToggle = () => {
