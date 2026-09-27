@@ -20,6 +20,8 @@ export interface Harness {
   api: AppendMock;
   /** Zugriff ueber `sentIds`/`sentMatches`; zusaetzlich hier als Komfort. */
   catchUps: string[];
+  /** m7: Aufrufe von `notifyStoreChange` (eigene Store-Schreibzugriffe). */
+  storeChanges: string[];
   /** Reihenfolge der an die Fake-Timer uebergebenen Verzoegerungen in ms. */
   delays: number[];
   persist: Mock<() => Promise<boolean>>;
@@ -32,6 +34,7 @@ export interface Harness {
 export function makeHarness(setup: Partial<OutboxSenderDeps> = {}): Harness {
   const store = new LocalMatchStore();
   const catchUps: string[] = [];
+  const storeChanges: string[] = [];
   const delays: number[] = [];
   const pendingWork: Promise<unknown>[] = [];
   const persist = vi.fn(async () => true);
@@ -61,6 +64,9 @@ export function makeHarness(setup: Partial<OutboxSenderDeps> = {}): Harness {
     requestCatchUp: (matchId) => {
       catchUps.push(matchId);
     },
+    notifyStoreChange: (matchId) => {
+      storeChanges.push(matchId);
+    },
     ...setup,
   });
 
@@ -75,6 +81,7 @@ export function makeHarness(setup: Partial<OutboxSenderDeps> = {}): Harness {
     sender,
     api,
     catchUps,
+    storeChanges,
     delays,
     persist,
     settle,

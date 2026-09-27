@@ -30,6 +30,13 @@ export interface OutboxSenderDeps {
   timers: OutboxTimers;
   now: () => number;
   requestCatchUp: (matchId: string) => void;
+  /**
+   * m7 (Nachtrag C3a-2a, optional -- Rueckwaertskompatibilitaet zu bestehenden Test-Doubles):
+   * wird nach JEDEM eigenen Store-Schreibzugriff (`resolveBatch`, `rejectAllPending`) aufgerufen,
+   * damit `MatchEngine`s gecachte Ansicht dieselbe Kopie zeigt, die der Sender gerade geschrieben
+   * hat (statt bis zum naechsten `ensureMatch`/`catchUp` veraltet zu bleiben).
+   */
+  notifyStoreChange?: (matchId: string) => void;
 }
 
 export type OutboxPause = 'notReady' | 'backoff';

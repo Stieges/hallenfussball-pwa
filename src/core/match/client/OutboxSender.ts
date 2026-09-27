@@ -39,6 +39,7 @@ export class OutboxSender {
   private readonly timers: OutboxTimers;
   private readonly now: () => number;
   private readonly requestCatchUp: (matchId: string) => void;
+  private readonly notifyStoreChange: ((matchId: string) => void) | undefined;
   private readonly book = new OutboxStatusBook();
 
   private accountId: string | null = null;
@@ -53,6 +54,7 @@ export class OutboxSender {
     this.timers = deps.timers;
     this.now = deps.now;
     this.requestCatchUp = deps.requestCatchUp;
+    this.notifyStoreChange = deps.notifyStoreChange;
   }
 
   /**
@@ -126,6 +128,20 @@ export class OutboxSender {
 
   getStatus(): OutboxStatus {
     return this.book.getStatus();
+  }
+
+  /** W1/m7: „Verstanden“ (D-C1) -- nimmt Ablehnungen aus der Liste und benachrichtigt die
+   * MatchEngine (Ansicht aktualisiert sich ohne Neuladen), aktualisiert danach auch den
+   * Status-Zaehler (`rejectedByMatch`). */
+  async dismissRejected(matchId: string, ids: string[]): Promise<void> {
+    if (this.accountId === null) {
+      return;
+    }
+    await this.store.dismissRejected(this.queueKeyFor(matchId), ids);
+    this.notifyStoreChange?.(matchId);
+    if (!this.isGuest()) {
+      await this.refresh();
+    }
   }
 
   subscribe(listener: (status: OutboxStatus) => void): () => void {
@@ -250,6 +266,7 @@ export class OutboxSender {
     // Zuordnung ueber den Index (id nur zur Kontrolle), alles in einer Transaktion.
     const { resolution, idMismatches } = buildResolution(batch, result.results, this.now());
     await this.store.resolveBatch(queue.key, resolution);
+    this.notifyStoreChange?.(queue.matchId);
     queue.resetBackoff();
     if (isCurrent) {
       // M-f: eine abweichende (nicht-null) `id` aendert die Zuordnung nicht (Index
@@ -299,6 +316,7 @@ export class OutboxSender {
           failure.kind === 'matchFull' ? MATCH_FULL_CODE : MATCH_GONE_CODE,
           this.now(),
         );
+        this.notifyStoreChange?.(queue.matchId);
         if (isCurrent) {
           await this.refresh();
         }

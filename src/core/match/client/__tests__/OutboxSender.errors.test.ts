@@ -170,6 +170,8 @@ describe('OutboxSender: Fehlerklassen', () => {
     expect(h.sender.getStatus().rejectedByMatch).toEqual({ mF: 2 });
     // C3a-0, M-g: `rejectedAt` kommt aus der injizierten Uhr (`now()`), nicht aus `Date.now()`.
     expect(copy?.rejected.every((entry) => entry.rejectedAt === CLOCK_START)).toBe(true);
+    // m7 (Nachtrag C3a-2a): rejectAllPending benachrichtigt die MatchEngine.
+    expect(h.storeChanges).toContain('mF');
   });
 
   it('11b: 55000 lehnt alle pending des Spiels als MATCH_GONE ab', async () => {
@@ -203,5 +205,24 @@ describe('OutboxSender: Fehlerklassen', () => {
     expect(await list(h, 'mP', 'pending')).toEqual(['mP-1']);
     expect(h.sender.getStatus().lastError).toBe('Unerwartete Antwort von append_match_events');
     expect(h.delays).toEqual([30000]);
+  });
+
+  it('m7/W1: dismissRejected nimmt Eintraege aus der Liste und benachrichtigt die MatchEngine', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'mD', ctx);
+    await h.store.addPending('acc', 'mD', ev({ id: 'd1', type: 'GOAL', at: 1 }));
+    h.api.mockImplementation(async () => {
+      throw rpcError('54000', 'append_match_events: Spiel mD ist voll');
+    });
+    await h.sender.start('acc');
+    expect(h.sender.getStatus().rejectedByMatch).toEqual({ mD: 1 });
+    h.storeChanges.length = 0;
+
+    await h.sender.dismissRejected('mD', ['d1']);
+
+    const copy = await h.store.load('acc', 'mD');
+    expect(copy?.rejected).toEqual([]);
+    expect(h.storeChanges).toEqual(['mD']);
+    expect(h.sender.getStatus().rejectedByMatch.mD ?? 0).toBe(0);
   });
 });

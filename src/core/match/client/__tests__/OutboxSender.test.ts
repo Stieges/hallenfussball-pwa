@@ -52,6 +52,8 @@ describe('OutboxSender: Grundverhalten', () => {
     expect(await idsIn(h, 'acc', 'm1', 'acked')).toEqual(['e1', 'e2', 'e3']);
     expect(await idsIn(h, 'acc', 'm1', 'pending')).toEqual([]);
     expect(h.catchUps).toEqual(['m1']);
+    // m7: resolveBatch benachrichtigt die MatchEngine (Ansicht aktualisiert sich ohne Neuladen).
+    expect(h.storeChanges).toEqual(['m1']);
     const copy = await h.store.load('acc', 'm1');
     expect(copy?.watermarkSeq).toBe(7);
     expect(copy?.confirmed).toEqual([]);

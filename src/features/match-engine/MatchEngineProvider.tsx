@@ -77,6 +77,11 @@ function buildBundle(
     requestCatchUp: (matchId) => {
       void engineHandle?.catchUp(matchId);
     },
+    // m7: eigene Store-Schreibzugriffe (resolveBatch/rejectAllPending/dismissRejected) lesen die
+    // Kopie sofort neu ein, statt bis zum naechsten ensureMatch/catchUp veraltet zu bleiben.
+    notifyStoreChange: (matchId) => {
+      void engineHandle?.notifyStoreChange(matchId);
+    },
   });
   const broadcast: MatchBroadcastChannel | undefined =
     typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel(BROADCAST_CHANNEL_NAME);
