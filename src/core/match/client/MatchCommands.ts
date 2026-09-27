@@ -194,7 +194,11 @@ export class MatchCommands {
     }
     await this.deps.engine.notifyStoreChange(matchId);
     if (accountId !== 'guest') {
-      void this.deps.sender.kick(matchId);
+      // Minor (Review Fixrunde 1): `.catch` statt nacktem `void` -- ein Fehler hier (z. B. IDB-
+      // Lesefehler in OutboxSender.refresh()) darf keine unbehandelte Ablehnung werden. Das
+      // Ereignis ist bereits gespeichert (Store-Schreibzugriff oben lief durch), ein spaeterer
+      // `kick()`/`start()` sendet es nach.
+      this.deps.sender.kick(matchId).catch(() => undefined);
     }
   }
 }

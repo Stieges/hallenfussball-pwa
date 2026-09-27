@@ -80,7 +80,9 @@ function buildBundle(
     // m7: eigene Store-Schreibzugriffe (resolveBatch/rejectAllPending/dismissRejected) lesen die
     // Kopie sofort neu ein, statt bis zum naechsten ensureMatch/catchUp veraltet zu bleiben.
     notifyStoreChange: (matchId) => {
-      void engineHandle?.notifyStoreChange(matchId);
+      // Minor (Review Fixrunde 1): `.catch` statt nacktem `void` -- kein unbehandelter Fehler,
+      // wenn das Neu-Einlesen der Kopie fehlschlaegt.
+      engineHandle?.notifyStoreChange(matchId).catch(() => undefined);
     },
   });
   const broadcast: MatchBroadcastChannel | undefined =
