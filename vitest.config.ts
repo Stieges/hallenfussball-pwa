@@ -26,6 +26,7 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useMatchExecution.realtime.test.ts',
   'src/hooks/__tests__/useMatchExecution.test.ts',
   'src/hooks/__tests__/useMatchTimer.test.ts',
+  'src/features/match-engine/__tests__/useEngineOutboxSummary.test.ts',
   'src/hooks/__tests__/useActorRole.test.ts',
   'src/hooks/__tests__/useEngineCommandWiring.test.ts',
   'src/hooks/__tests__/useTournamentManager.applyRemote.test.ts',
