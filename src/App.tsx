@@ -810,6 +810,7 @@ function AppContent() {
 
 // Providers
 import { RepositoryProvider, useRepositories } from './core/contexts/RepositoryContext';
+import { MatchEngineProvider } from './features/match-engine/MatchEngineProvider';
 import { OfflineRepository } from './core/repositories/OfflineRepository';
 
 /**
@@ -880,7 +881,13 @@ function PendingChangesWarning(): null {
  */
 function AuthRepositoryBridge({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  return <RepositoryProvider user={user}>{children}</RepositoryProvider>;
+  return (
+    <RepositoryProvider user={user}>
+      {/* C3a-1 (1.2): unterhalb von Auth/Repository (braucht useAuth()/useRepositories()) --
+          Lesepfad in useEngineMatches/useMatchExecution, Schreibweg folgt in C3a-2a. */}
+      <MatchEngineProvider>{children}</MatchEngineProvider>
+    </RepositoryProvider>
+  );
 }
 
 function App() {
