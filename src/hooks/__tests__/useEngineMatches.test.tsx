@@ -113,6 +113,30 @@ describe('useEngineMatches', () => {
     expect(mockContext.engine.view('m-server-only')?.log).toHaveLength(0); // keine lokalen Ereignisse
   });
 
+  it('W5: Teamfarben/-logo werden aus tournament.teams nachgetragen (Adapter kennt nur id/name)', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-visuals']));
+    const t = {
+      id: 'tour-visuals',
+      teams: [
+        { id: 'teamA', name: 'Heim', logo: { url: 'https://example.test/a.png' }, colors: { primary: '#111111' } },
+        { id: 'teamB', name: 'Gast', logo: { url: 'https://example.test/b.png' }, colors: { primary: '#222222' } },
+      ],
+      matches: [match({ id: 'm-visuals', teamA: 'teamA', teamB: 'teamB' })],
+      groupPhaseGameDuration: 20,
+    } as unknown as Tournament;
+
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    rerender();
+    await waitFor(() => expect(result.current.isEngineMatch('m-visuals')).toBe(true));
+
+    const live = result.current.liveMatches.get('m-visuals');
+    expect(live?.homeTeam.logo).toEqual({ url: 'https://example.test/a.png' });
+    expect(live?.homeTeam.colors).toEqual({ primary: '#111111' });
+    expect(live?.awayTeam.logo).toEqual({ url: 'https://example.test/b.png' });
+    expect(live?.awayTeam.colors).toEqual({ primary: '#222222' });
+  });
+
   it('I6/K3/W5: vor dem Anpfiff rechnet die Dauer mit der PHASE des Spiels (Finalrunde != Gruppendauer)', async () => {
     mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-final']));
     const t = {
