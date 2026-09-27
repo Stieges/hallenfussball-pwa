@@ -83,9 +83,13 @@ export function RejectedEntriesPanel({ entries, onDismiss, teams }: RejectedEntr
           <RejectedEntryRow key={entry.event.id} entry={entry} teams={teams} onDismiss={onDismiss} />
         ))}
       </ul>
-      <Button data-testid="outbox-rejected-dismiss-all" variant="ghost" onClick={dismissAll}>
-        {t('outbox.rejected.dismissAll')}
-      </Button>
+      {/* Fixrunde 1 (Review m7): bei genau einem Eintrag ist "Alle verstanden" ein doppelter,
+          unnoetiger Touch-Punkt neben "Verstanden". */}
+      {entries.length > 1 && (
+        <Button data-testid="outbox-rejected-dismiss-all" variant="ghost" onClick={dismissAll}>
+          {t('outbox.rejected.dismissAll')}
+        </Button>
+      )}
     </section>
   );
 }

@@ -79,7 +79,8 @@ describe('RejectedEntriesPanel (D-C1)', () => {
   });
 
   it('ist als Hinweis markiert (role=alert) und hat Touch-Ziele', () => {
-    render(<RejectedEntriesPanel entries={[makeEntry({ id: 'e1' })]} onDismiss={vi.fn()} teams={TEAMS} />);
+    const entries = [makeEntry({ id: 'e1' }), makeEntry({ id: 'e2', type: 'FOUL' })];
+    render(<RejectedEntriesPanel entries={entries} onDismiss={vi.fn()} teams={TEAMS} />);
     expect(screen.getByTestId('outbox-rejected-panel')).toHaveAttribute('role', 'alert');
 
     for (const button of [
@@ -88,6 +89,13 @@ describe('RejectedEntriesPanel (D-C1)', () => {
     ]) {
       expect(button).toHaveStyle({ minHeight: touchTargets.minimum });
     }
+  });
+
+  // Fixrunde 1 (Review m7): bei genau einem Eintrag ist "Alle verstanden" ein doppelter,
+  // unnoetiger Touch-Punkt neben "Verstanden" -- nur ab zwei Eintraegen zeigen.
+  it('„Alle verstanden“ erscheint nicht bei genau einem Eintrag', () => {
+    render(<RejectedEntriesPanel entries={[makeEntry({ id: 'e1' })]} onDismiss={vi.fn()} teams={TEAMS} />);
+    expect(screen.queryByTestId('outbox-rejected-dismiss-all')).toBeNull();
   });
 
   it('leere Liste rendert nichts', () => {
