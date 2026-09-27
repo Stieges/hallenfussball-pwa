@@ -63,6 +63,12 @@ describe('SyncStatusIndicator', () => {
     expect(screen.getByTestId('sync-status')).toHaveAttribute('data-pending', '3');
   });
 
+  it('C3a-2a Fixrunde 2 (I4/W1): enginePendingCount wird zu pendingChanges ADDIERT (kein eigener UI-Umbau)', () => {
+    mockState.pendingChanges = 3;
+    render(<SyncStatusIndicator tournamentId="t1" enginePendingCount={2} />);
+    expect(screen.getByTestId('sync-status')).toHaveAttribute('data-pending', '5');
+  });
+
   it('shows offline state', () => {
     mockState.status = 'offline';
     render(<SyncStatusIndicator tournamentId="t1" />);

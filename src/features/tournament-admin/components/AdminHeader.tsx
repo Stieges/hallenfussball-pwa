@@ -210,6 +210,7 @@ export function AdminHeader({
           rejectedCount={outboxSummary.rejectedCount}
           reviewCount={outboxSummary.reviewCount}
           onShowRejected={handleShowRejected}
+          enginePendingCount={outboxSummary.pendingCount}
         />
       )}
       {showSyncStatus && (

@@ -22,6 +22,10 @@ export interface SyncStatusIndicatorProps {
     rejectedCount?: number;
     reviewCount?: number;
     onShowRejected?: () => void;
+    /** W1 (C3a-2a Fixrunde 2, Re-Review-Befund C2): Engine-Ausgang (`useEngineOutboxSummary`,
+     * turniergenau) -- wird zur MutationQueue-Zaehlung (`pendingChanges`) ADDIERT, kein eigener
+     * UI-Umbau (`SyncStatusBar.pendingCount` kennt den Slot bereits). */
+    enginePendingCount?: number;
 }
 
 const containerStyle: CSSProperties = {
@@ -35,6 +39,7 @@ export function SyncStatusIndicator({
     rejectedCount = 0,
     reviewCount = 0,
     onShowRejected,
+    enginePendingCount = 0,
 }: SyncStatusIndicatorProps) {
     const {
         status,
@@ -95,7 +100,7 @@ export function SyncStatusIndicator({
                 status={status}
                 isSyncing={isSyncing}
                 lastSyncedAt={lastSyncedAt}
-                pendingCount={pendingChanges}
+                pendingCount={pendingChanges + enginePendingCount}
                 failedCount={failedChanges}
                 onSyncClick={handleClick}
                 compact={compact}

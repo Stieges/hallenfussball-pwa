@@ -914,6 +914,7 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
               rejectedCount={outboxSummary.rejectedCount}
               reviewCount={outboxSummary.reviewCount}
               onShowRejected={handleShowRejected}
+              enginePendingCount={outboxSummary.pendingCount}
             />
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
             {/* ARIA-live region for screen readers to announce status changes */}
