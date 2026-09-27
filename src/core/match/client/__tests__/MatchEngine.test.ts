@@ -175,7 +175,14 @@ describe('MatchEngine', () => {
 
     expect(handlerRef.current).not.toBeNull();
     handlerRef.current?.({ data: { matchId: 'me-broadcast' } });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // `refreshCopy` ist async (IndexedDB) -- unter Last reicht ein einzelnes setTimeout(0) nicht
+    // immer aus, deshalb kurz pollen statt einmalig zu warten.
+    for (let attempt = 0; attempt < 50; attempt++) {
+      if (engine.view('me-broadcast')?.log.some((e) => e.id === 'other-tab')) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
 
     expect(engine.view('me-broadcast')?.log.map((e) => e.id)).toContain('other-tab');
   });
