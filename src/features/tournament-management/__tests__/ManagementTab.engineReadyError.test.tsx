@@ -136,4 +136,24 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
     expect(screen.queryByText('tournament:management.enginePreparing')).not.toBeInTheDocument();
     expect(screen.getByText('tournament:management.noMatchesOnField')).toBeInTheDocument();
   });
+
+  // Minor 4 (Fixrunde 4): "Spiel wird vorbereitet" bekommt einen "Erneut versuchen"-Knopf --
+  // vorher blieb der Zustand bestehen, bis sich eine Abhaengigkeit AUTOMATISCH aendert.
+  it('Minor 4: "Spiel wird vorbereitet" zeigt einen Erneut-versuchen-Knopf, ein Klick ruft getLiveMatchData erneut auf', async () => {
+    render(
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+    );
+    await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
+    expect(mockGetLiveMatchData).toHaveBeenCalledTimes(1);
+
+    const retryButton = screen.getByTestId('engine-ready-retry');
+    // common:actions.retry (i18n) -- nicht hart kodiert.
+    expect(retryButton).toHaveTextContent('common:actions.retry');
+
+    await act(async () => {
+      retryButton.click();
+    });
+
+    await waitFor(() => expect(mockGetLiveMatchData).toHaveBeenCalledTimes(2));
+  });
 });

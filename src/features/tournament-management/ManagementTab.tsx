@@ -50,14 +50,15 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   onInitialMatchConsumed,
 }) => {
   const { t } = useTranslation('tournament');
+  const { t: tCommon } = useTranslation('common');
   const { showError } = useToast();
   const [selectedFieldNumber, setSelectedFieldNumber] = useState<number>(1);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [isInitializingMatch, setIsInitializingMatch] = useState<boolean>(false);
-  // P7 (Fixrunde 3): `getLiveMatchData`/`ensureEngineMatchReady` kann werfen (Engine-Spiel ohne
-  // Ansicht, s. useEngineExecutionBridge.resolveEngineLiveMatchData) -- unterscheidet die
-  // Leeranzeige "kein Spiel auf diesem Feld" von "ein Spiel existiert, ist aber noch nicht bereit".
+  // P7: `getLiveMatchData` kann werfen -- unterscheidet "kein Spiel" von "noch nicht bereit".
   const [engineReadyError, setEngineReadyError] = useState<boolean>(false);
+  // Minor 4: "Erneut versuchen" erzwingt einen neuen Ladeversuch ueber diesen Zaehler (s. u.).
+  const [retryToken, setRetryToken] = useState(0);
 
   // Use extracted hook for live match management
   const {
@@ -226,11 +227,8 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     );
   }, [selectedMatchId, fieldMatches, liveMatches]);
 
-  // C-3 FIX: Ensure match is initialized with proper cancellation to prevent race conditions
-  // When currentMatchData changes rapidly (e.g., quick field switching), we cancel pending inits
+  // C-3 FIX: cancellation bei schnellem Feldwechsel. Minor 2: Reset VOR jedem fruehen Ausstieg.
   useEffect(() => {
-    // Minor 2: VOR jedem fruehen Ausstieg zuruecksetzen -- sonst zeigt ein leeres Feld/ein Spiel
-    // mit vorhandener Kopie weiterhin "Spiel wird vorbereitet" von einem VORHERIGEN Fehler.
     setEngineReadyError(false);
     if (!currentMatchData) {
       return;
@@ -249,10 +247,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     void getLiveMatchData(currentMatchData)
       .catch((error: unknown) => {
         if (cancelled) { return; }
-        // P7 (Fixrunde 3): bisher nur console.error + die irrefuehrende Leeranzeige "Keine Spiele
-        // auf diesem Feld" -- jetzt Toast + Sentry-Meldung, die Leeranzeige zeigt stattdessen
-        // "Spiel wird vorbereitet" (der Effekt laeuft erneut, sobald sich eine Abhaengigkeit
-        // aendert, z. B. die Engine-Kopie doch noch ankommt).
+        // P7: Toast + Sentry statt stiller Leeranzeige; "Spiel wird vorbereitet" statt "Keine Spiele".
         const normalizedError = error instanceof Error ? error : new Error(String(error));
         captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
         showError(t('management.engineReadyError'));
@@ -270,7 +265,10 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     };
     // C-3 FIX: Intentionally only depend on ID to prevent re-init on other property changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMatchData?.id, getLiveMatchData, liveMatches]);
+  }, [currentMatchData?.id, getLiveMatchData, liveMatches, retryToken]);
+
+  // Minor 4: erhoeht `retryToken` (s. Abhaengigkeitsliste oben), der Effekt laeuft dadurch erneut.
+  const handleRetryEngineReady = useCallback(() => setRetryToken((n) => n + 1), []);
 
   // Current match as LiveMatch (derived from state)
   const currentMatch = useMemo(() =>
@@ -511,6 +509,7 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
       ) : engineReadyError ? (
         <div className={styles.noMatches}>
           {t('management.enginePreparing')}
+          <div><button type="button" className={styles.retryButton} data-testid="engine-ready-retry" onClick={handleRetryEngineReady}>{tCommon('actions.retry')}</button></div>
         </div>
       ) : (
         <div className={styles.noMatches}>
