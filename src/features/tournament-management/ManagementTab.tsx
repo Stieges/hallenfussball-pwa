@@ -229,13 +229,14 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
   // C-3 FIX: Ensure match is initialized with proper cancellation to prevent race conditions
   // When currentMatchData changes rapidly (e.g., quick field switching), we cancel pending inits
   useEffect(() => {
+    // Minor 2: VOR jedem fruehen Ausstieg zuruecksetzen -- sonst zeigt ein leeres Feld/ein Spiel
+    // mit vorhandener Kopie weiterhin "Spiel wird vorbereitet" von einem VORHERIGEN Fehler.
+    setEngineReadyError(false);
     if (!currentMatchData) {
       return;
     }
-
     const matchId = currentMatchData.id;
     const existingMatch = liveMatches.get(matchId);
-
     if (existingMatch) {
       // Match already exists, no need to initialize
       return;
@@ -244,7 +245,6 @@ export const ManagementTab: React.FC<ManagementTabProps> = ({
     let cancelled = false;
 
     setIsInitializingMatch(true);
-    setEngineReadyError(false);
 
     void getLiveMatchData(currentMatchData)
       .catch((error: unknown) => {

@@ -8,7 +8,7 @@
  * Anzeige "Spiel wird vorbereitet" statt "Keine Spiele auf diesem Feld".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import type { Tournament } from '../../../types/tournament';
 import type { LiveMatch } from '../../../core/models/LiveMatch';
 import type { GeneratedSchedule } from '../../../core/generators';
@@ -43,9 +43,13 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
 
 const rejectionError = new Error('Engine-Spiel match-1 ist noch nicht bereit.');
 const mockGetLiveMatchData = vi.fn<() => Promise<LiveMatch>>().mockRejectedValue(rejectionError);
+// Minor 2 (Fixrunde 4): mutable ueber den Testverlauf -- der Reset-Test simuliert einen
+// Feld-/Spielwechsel auf ein Spiel, das BEREITS eine Engine-Kopie hat (kein erneuter
+// getLiveMatchData-Aufruf noetig).
+let mockLiveMatches = new Map<string, LiveMatch>();
 vi.mock('../../../hooks/useMatchExecution', () => ({
   useMatchExecution: () => ({
-    liveMatches: new Map<string, LiveMatch>(),
+    liveMatches: mockLiveMatches,
     loadingStates: { goal: false, card: false, finish: false, undo: false, start: false },
     isAnyLoading: false,
     getLiveMatchData: mockGetLiveMatchData,
@@ -86,6 +90,7 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetLiveMatchData.mockRejectedValue(rejectionError);
+    mockLiveMatches = new Map<string, LiveMatch>();
   });
 
   it('zeigt einen showError-Toast und meldet den Fehler an Sentry (captureFeatureError)', async () => {
@@ -107,5 +112,28 @@ describe('ManagementTab — P7: ensureEngineMatchReady-Fehler', () => {
     await waitFor(() => expect(mockShowError).toHaveBeenCalled());
     expect(screen.queryByText('tournament:management.noMatchesOnField')).not.toBeInTheDocument();
     expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument();
+  });
+
+  // Minor 2 (Fixrunde 4): `engineReadyError` wurde bisher NUR im Init-Zweig zurueckgesetzt -- ein
+  // Wechsel auf ein LEERES Feld (kein `currentMatchData`, der Effekt nimmt den fruehen
+  // `!currentMatchData`-Ausstieg VOR dem Reset) zeigte "Spiel wird vorbereitet" weiter an, obwohl
+  // gar kein Spiel mehr existiert (sollte "Keine Spiele auf diesem Feld" zeigen).
+  it('Minor 2: engineReadyError wird zurueckgesetzt, sobald das Feld leer ist (kein currentMatchData)', async () => {
+    const { rerender } = render(
+      <ManagementTab tournament={tournament} schedule={schedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+    );
+    await waitFor(() => expect(screen.getByText('tournament:management.enginePreparing')).toBeInTheDocument());
+
+    // Wechsel: dasselbe Feld hat jetzt KEIN Spiel mehr (`currentMatchData` wird `undefined`).
+    const emptySchedule = { ...schedule, allMatches: [] } as unknown as GeneratedSchedule;
+
+    await act(async () => {
+      rerender(
+        <ManagementTab tournament={tournament} schedule={emptySchedule} onTournamentUpdate={vi.fn()} onLocalTournamentUpdate={vi.fn()} />
+      );
+    });
+
+    expect(screen.queryByText('tournament:management.enginePreparing')).not.toBeInTheDocument();
+    expect(screen.getByText('tournament:management.noMatchesOnField')).toBeInTheDocument();
   });
 });
