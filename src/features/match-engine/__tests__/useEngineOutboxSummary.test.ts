@@ -19,9 +19,13 @@ const ctx = { matchId: 'm1', teamAId: 'teama', teamBId: 'teamb' };
 async function makeContext(accountId: string) {
   const store = new LocalMatchStore();
   const listeners = new Set<() => void>();
-  const status = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, pausedMatches: {}, authRequired: false, clientOutdated: false, storagePersisted: null, lastError: null };
+  // `let`, nicht `const`: `useSyncExternalStore` erkennt eine Aenderung nur, wenn `getStatus()`
+  // eine NEUE Referenz liefert -- notify()/dismissRejected muessen deshalb ein frisches Objekt
+  // zuweisen, nicht das bestehende mutieren.
+  let status = { pendingByTournament: {}, pendingByMatch: {}, rejectedByMatch: {}, reviewByMatch: {}, pausedMatches: {}, authRequired: false, clientOutdated: false, storagePersisted: null, lastError: null };
   const dismissRejected = vi.fn(async (matchId: string, ids: string[]) => {
     await store.dismissRejected(matchCopyKey(accountId, matchId), ids);
+    status = { ...status };
     listeners.forEach((l) => l());
   });
   const sender = {
@@ -32,7 +36,15 @@ async function makeContext(accountId: string) {
     },
     dismissRejected,
   };
-  return { store, sender, accountId, notify: () => listeners.forEach((l) => l()) };
+  return {
+    store,
+    sender,
+    accountId,
+    notify: () => {
+      status = { ...status };
+      listeners.forEach((l) => l());
+    },
+  };
 }
 
 describe('useEngineOutboxSummary (C3a-2a, W1)', () => {
