@@ -16,7 +16,10 @@ import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks
 import { SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
+import { RejectedEntriesPanel } from '../../features/collaboration/outbox/RejectedEntriesPanel';
+import { Dialog } from '../dialogs/Dialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
+import { useEngineOutboxSummary } from '../../features/match-engine/useEngineOutboxSummary';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
@@ -107,12 +110,27 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onUpdateSettings,
 }) => {
   const { t } = useTranslation('cockpit');
+  const { t: tCommon } = useTranslation('common');
 
   // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
   // Ausgangs-Zustand vorliegt (kind === null).
   const matchEngineContext = useMatchEngineContextOptional();
   const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
   const handleOutboxReload = useCallback(() => window.location.reload(), []);
+
+  // I4 (W1, Nachtrag Fixrunde 1): Helfer im Cockpit sahen Ablehnungen (D-C1) bisher nirgends, nur
+  // im AdminHeader -- dieselbe Verdrahtung wie dort (rejectedCount/reviewCount aus dem echten
+  // Sender, Dialog mit RejectedEntriesPanel bei "Ablehnungen anzeigen").
+  const outboxSummary = useEngineOutboxSummary(tournamentId ?? '');
+  const [showRejectedDialog, setShowRejectedDialog] = useState(false);
+  const handleShowRejected = useCallback(() => setShowRejectedDialog(true), []);
+  const handleCloseRejected = useCallback(() => setShowRejectedDialog(false), []);
+  const handleDismissRejected = useCallback(
+    (ids: string[]) => {
+      void outboxSummary.dismiss(ids);
+    },
+    [outboxSummary],
+  );
 
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
@@ -888,8 +906,16 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: cssVars.spacing.sm }}>
             {/* A4 (C-SYNC): SyncStatusIndicator rendert selbst nichts außerhalb des Cloud-Modus
-                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig. */}
-            <SyncStatusIndicator tournamentId={tournamentId} compact />
+                (isCloudSyncAvailable in useSyncStatus) -- kein zusätzlicher Auth-Check hier nötig.
+                I4 (W1, Nachtrag Fixrunde 1): rejectedCount/reviewCount jetzt aus dem echten Sender
+                (useEngineOutboxSummary), nicht mehr die bisherigen Default-Nullen. */}
+            <SyncStatusIndicator
+              tournamentId={tournamentId}
+              compact
+              rejectedCount={outboxSummary.rejectedCount}
+              reviewCount={outboxSummary.reviewCount}
+              onShowRejected={handleShowRejected}
+            />
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
             {/* ARIA-live region for screen readers to announce status changes */}
             <span
@@ -925,6 +951,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
         {/* W1 (Nachtrag C3a-2a): nur einbinden -- rendert selbst nichts, solange kein
             Ausgangs-Zustand (clientOutdated/authRequired/notReady/review) vorliegt. */}
         <OutboxNotice status={outboxStatus} matchId={match.id} onReload={handleOutboxReload} />
+
+        {/* I4 (W1, Nachtrag Fixrunde 1): nur einbinden -- Dialog zeigt die Ablehnungsliste dieses
+            Turniers, "Verstanden" ruft dismiss (store.dismissRejected + m7-Benachrichtigung). */}
+        <Dialog isOpen={showRejectedDialog} onClose={handleCloseRejected} title={String(tCommon('outbox.rejected.dialogTitle'))}>
+          <RejectedEntriesPanel entries={outboxSummary.entries} onDismiss={handleDismissRejected} />
+        </Dialog>
 
         {/* Foul Bar - Mobile only */}
         {isMobile && (

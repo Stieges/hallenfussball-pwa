@@ -23,7 +23,18 @@ vi.mock('../../../hooks/useSyncStatus', () => ({
 }));
 
 const mockStatus: { current: OutboxStatus } = { current: emptyOutboxStatus() };
-const mockContext = { sender: { getStatus: () => mockStatus.current, subscribe: () => () => undefined } };
+// I4 (Nachtrag Fixrunde 1): useEngineOutboxSummary (jetzt ebenfalls in LiveCockpit eingebunden)
+// braucht store/accountId zusaetzlich zu sender -- ein vollstaendiges Fake, damit kein
+// `forAccount is not a function`/unhandled rejection den Testlauf verschmutzt.
+const mockContext = {
+  sender: {
+    getStatus: () => mockStatus.current,
+    subscribe: () => () => undefined,
+    dismissRejected: vi.fn().mockResolvedValue(undefined),
+  },
+  store: { forAccount: vi.fn().mockResolvedValue([]) },
+  accountId: 'acc-outbox-notice-test',
+};
 vi.mock('../../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => mockContext,
 }));
