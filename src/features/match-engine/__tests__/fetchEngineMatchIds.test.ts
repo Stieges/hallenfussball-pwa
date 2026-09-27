@@ -3,10 +3,14 @@ import { fetchEngineMatchIds, type EngineMatchIdsQueryClient } from '../fetchEng
 
 function fakeClient(pages: Array<{ data: { match_id: string }[] | null; error: unknown }>): {
   client: EngineMatchIdsQueryClient;
-  calls: { ids?: string[]; ranges: { from: number; to: number }[] };
+  calls: { ids?: string[]; ranges: { from: number; to: number }[]; order?: { column: string; ascending?: boolean } };
 } {
   let index = 0;
-  const calls: { ids?: string[]; ranges: { from: number; to: number }[] } = { ranges: [] };
+  const calls: {
+    ids?: string[];
+    ranges: { from: number; to: number }[];
+    order?: { column: string; ascending?: boolean };
+  } = { ranges: [] };
   const client: EngineMatchIdsQueryClient = {
     from: () => ({
       select: () => ({
@@ -14,11 +18,16 @@ function fakeClient(pages: Array<{ data: { match_id: string }[] | null; error: u
           in: (_column, ids) => {
             calls.ids = ids;
             return {
-              range: (from: number, to: number) => {
-                calls.ranges.push({ from, to });
-                const page = index < pages.length ? pages[index] : { data: [], error: null };
-                index += 1;
-                return Promise.resolve(page);
+              order: (column, options) => {
+                calls.order = { column, ascending: options?.ascending };
+                return {
+                  range: (from: number, to: number) => {
+                    calls.ranges.push({ from, to });
+                    const page = index < pages.length ? pages[index] : { data: [], error: null };
+                    index += 1;
+                    return Promise.resolve(page);
+                  },
+                };
               },
             };
           },
@@ -42,6 +51,12 @@ describe('fetchEngineMatchIds (W3)', () => {
     const ids = await fetchEngineMatchIds(client, ['m1', 'm2', 'm3']);
     expect(ids).toEqual(new Set(['m1', 'm2']));
     expect(calls.ids).toEqual(['m1', 'm2', 'm3']);
+  });
+
+  it('N-m4: sortiert nach einer eindeutigen Spalte fuer stabiles Offset-Blaettern', async () => {
+    const { client, calls } = fakeClient([{ data: [{ match_id: 'm1' }], error: null }]);
+    await fetchEngineMatchIds(client, ['m1']);
+    expect(calls.order?.column).toBe('id');
   });
 
   it('wirft bei einem Abfragefehler', async () => {
