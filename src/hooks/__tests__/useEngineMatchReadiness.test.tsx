@@ -165,4 +165,38 @@ describe('useEngineMatchReadiness', () => {
 
     await expect(result.current.ensureEngineMatchReady('m-foreign-no-events')).resolves.toBeNull();
   });
+
+  // E1 (Fixrunde 4, Important 1): scheitert die Server-Klaerung (offline/Netzfehler), schluckt
+  // `catchUp` den Fehler intern (MatchEngine.runCatchUp) -- ein "unklares" Spiel darf dann NICHT
+  // als bestaetigtes Altspiel gelten (das waere `null`). Unklar bleibt "vorlaeufig nur lesen".
+  it('E1 offline: scheitert die Server-Abfrage fuer einen fremd-Kandidaten, wirft ensureEngineMatchReady statt null zu liefern (bleibt unklar)', async () => {
+    mockFetchConfirmed.mockRejectedValueOnce(new Error('Netz weg'));
+    const t = tournament([match({ id: 'm-foreign-offline', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    await expect(result.current.ensureEngineMatchReady('m-foreign-offline')).rejects.toThrow();
+  });
+
+  it('E1 offline: nach einer gescheiterten Klaerung loest ein ERNEUTER Aufruf mit funktionierendem Netz korrekt auf (kein dauerhaftes "unklar")', async () => {
+    mockFetchConfirmed.mockRejectedValueOnce(new Error('Netz weg'));
+    const t = tournament([match({ id: 'm-foreign-retry', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    await expect(result.current.ensureEngineMatchReady('m-foreign-retry')).rejects.toThrow();
+
+    // Naechste Gelegenheit: das Netz ist wieder da, der Server hat (in diesem Fall) keine
+    // Ereignisse -- die Klaerung darf jetzt definitiv zu "Altspiel" (`null`) kommen.
+    mockFetchConfirmed.mockResolvedValueOnce({ events: [], newWatermark: 0 });
+    await expect(result.current.ensureEngineMatchReady('m-foreign-retry')).resolves.toBeNull();
+  });
+
+  it('E1 offline: Gast/ohne Supabase loest trotz scheiternder fetchConfirmed sofort als Altspiel auf (kein Wurf) -- runCatchUp ruft fetchConfirmed fuer guest gar nicht auf', async () => {
+    mockFetchConfirmed.mockRejectedValue(new Error('sollte fuer guest nie aufgerufen werden'));
+    await mockContext.engine.start('guest');
+    const t = tournament([match({ id: 'm-foreign-guest', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    await expect(result.current.ensureEngineMatchReady('m-foreign-guest')).resolves.toBeNull();
+    expect(mockFetchConfirmed).not.toHaveBeenCalled();
+  });
 });

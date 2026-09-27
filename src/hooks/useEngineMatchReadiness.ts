@@ -103,6 +103,23 @@ export function useEngineMatchReadiness(
       // damit `computeLiveMatches`s `hasLocalEvents`-Erkennung es ueberhaupt als Engine-Spiel sieht.
       // Fuer ein echtes B1-neues Spiel ist das ein harmloser (leerer) Netzaufruf.
       await context.engine.catchUp(entry.matchId);
+      // E1 (Fixrunde 4, Important 1): `catchUp` schluckt einen Netzfehler intern und macht ihn nur
+      // ueber `engine.status(...).lastError` sichtbar (MatchEngine.runCatchUp). Fuer den
+      // fremd-Kandidaten (P2) darf eine GESCHEITERTE Serverklaerung NICHT wie "Server hat keine
+      // Ereignisse" (= bestaetigtes Altspiel, `null`) behandelt werden -- ein Wurf haelt den
+      // Aufrufer stattdessen auf "unklar, vorlaeufig nur lesen" (kein initializeMatch/save, kein
+      // Altweg-Anpfiff), bis eine ERFOLGREICHE Klaerung vorliegt (naechster Aufruf/online). Fuer
+      // Gast/ohne Supabase greift das nicht: `runCatchUp` kehrt fuer `'guest'` VOR jeder
+      // Statusaenderung zurueck, `lastError` bleibt unberuehrt -- die Altspiel-Aufloesung bleibt
+      // sofort moeglich. Fuer den KLAREN B1-Fall (kein fremd-Kandidat) bleibt ein Netzfehler
+      // weiterhin tolerant (der neue Match wird trotzdem als 0:0/NOT_STARTED angezeigt) -- die
+      // B1-Klausel haengt gar nicht von `hasLocalEvents`/dem Server ab.
+      if (isForeignCandidate(entry, localLiveMatches)) {
+        const { lastError } = context.engine.status(entry.matchId);
+        if (lastError) {
+          throw new Error(`Engine-Spiel ${externalMatchId}: Server-Klaerung fehlgeschlagen (${lastError}).`);
+        }
+      }
       // Leere Menge statt der eigentlichen `engineMatchIds` aus `useEngineMatches`: diese Funktion
       // wird nur fuer bereits als engine-destined klassifizierte Eintraege aufgerufen (s.
       // `isEngineDestinedMatch`/`resolveEngineLiveMatchData`); nach `catchUp` zeigt `hasLocalEvents`
