@@ -4,6 +4,7 @@
  * `useRepositories` sind gemockt.
  */
 import 'fake-indexeddb/auto';
+import { StrictMode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MatchEngine, ClockSync } from '../../../core/match/client';
@@ -259,5 +260,25 @@ describe('MatchEngineProvider', () => {
     // `bundle` (Engine/Sender/Store/Uhr) bleibt dieselbe Instanz -- nur das Kontext-Objekt selbst
     // ist neu (accountId geaendert).
     expect(secondContext.engine).toBe(firstContext.engine);
+  });
+
+  it('N2-m4: StrictMode-Doppellauf DESSELBEN Kontos ruft start() nur EINMAL auf (previousAccountRef ist bereits nach dem ersten Durchlauf gesetzt)', async () => {
+    const startSpy = vi.spyOn(MatchEngine.prototype, 'start');
+    render(
+      <StrictMode>
+        <MatchEngineProvider>
+          <Probe onReady={() => undefined} />
+        </MatchEngineProvider>
+      </StrictMode>,
+    );
+
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-1'));
+    await settleLastCall(startSpy);
+
+    // `previousAccountRef.current` wird SYNCHRON im ersten Effekt-Durchlauf gesetzt -- der zweite
+    // (StrictMode-)Durchlauf sieht `previousTarget === accountId` und kehrt vor dem `start()`-Aufruf
+    // zurueck. `start()` laeuft deshalb nur EINMAL, nicht zweimal (der bisherige Kommentar an dieser
+    // Stelle behauptete das Gegenteil).
+    expect(startSpy).toHaveBeenCalledTimes(1);
   });
 });

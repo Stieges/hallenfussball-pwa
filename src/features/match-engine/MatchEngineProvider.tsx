@@ -132,11 +132,15 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
   // m4 (Re-Review Fixrunde 1/2): `previousAccountRef` wird jetzt SYNCHRON beansprucht (vor jedem
   // `await`), nicht erst nachdem `start()` aufgeloest hat. Ein schneller A->B-Wechsel sieht dadurch
   // sofort den echten Vorgaenger und ruft `stop()` zuverlaessig auf, auch wenn `start()` fuer A noch
-  // nicht abgeschlossen war. Fuer den reinen StrictMode-Doppellauf DESSELBEN Kontos bleibt es dabei,
-  // dass `start(accountId)` zweimal aufgerufen werden kann (kein `stop()` dazwischen, da
-  // `previousTarget === accountId`) -- das ist bewusst hingenommen: `MatchEngine.start()`/
-  // `OutboxSender.start()` sind fuer denselben Account idempotent (raeumen ihren eigenen Zustand
-  // jeweils selbst auf), ein zweiter Aufruf richtet keinen Schaden an.
+  // nicht abgeschlossen war.
+  // N2-m4 (ehrlich gemacht -- der vorige Text hier behauptete das Gegenteil, s. Test "N2-m4"):
+  // fuer den StrictMode-Doppellauf DESSELBEN Kontos wird `start(accountId)` NUR EINMAL aufgerufen,
+  // nicht zweimal -- `previousAccountRef.current` ist bereits nach dem ERSTEN Durchlauf (synchron,
+  // vor jedem `await`) auf `accountId` gesetzt; der zweite (StrictMode-)Durchlauf sieht
+  // `previousTarget === accountId` und kehrt VOR dem `start()`-Aufruf zurueck. Waere das je nicht
+  // mehr so (z. B. durch eine kuenftige Umstellung), bliebe es trotzdem unschaedlich:
+  // `MatchEngine.start()`/`OutboxSender.start()` sind fuer denselben Account idempotent (raeumen
+  // ihren eigenen Zustand jeweils selbst auf).
   useEffect(() => {
     const previousTarget = previousAccountRef.current;
     previousAccountRef.current = accountId;
