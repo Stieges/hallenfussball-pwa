@@ -182,6 +182,11 @@ function stableLiveMatches(previous: Map<string, LiveMatch> | null, next: Map<st
 export function useEngineMatches(tournament: Tournament, enabled: boolean): UseEngineMatchesResult {
   const context = useMatchEngineContextOptional();
   const [engineMatchIds, setEngineMatchIds] = useState<Set<string>>(new Set());
+  // N-m5: Lesezugriff fuer den Fehlerfall der Sammelabfrage OHNE `engineMatchIds` als
+  // Effekt-Abhaengigkeit -- das wuerde bei jedem `setEngineMatchIds`-Aufruf den ganzen
+  // `ensureMatch`/Sammelabfrage-Lauf erneut anstossen (ein C1-artiges Muster).
+  const engineMatchIdsRef = useRef(engineMatchIds);
+  engineMatchIdsRef.current = engineMatchIds;
 
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
 
@@ -198,7 +203,11 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
       if (cancelled || !enabled || !isSupabaseConfigured || !supabase) {
         return;
       }
-      let ids = new Set<string>();
+      // N-m5: bei einem Fehler bleibt `ids` `null` -- das VORHERIGE gute Ergebnis (`engineMatchIds`
+      // aus dem umgebenden Render) bleibt dann in Kraft, statt auf eine leere Menge zurueckzufallen
+      // (ein kurzer Netzfehler wuerde sonst ein bereits bekanntes Server-Engine-Spiel voruebergehend
+      // auf den Altpfad zurueckschalten).
+      let ids: Set<string> | null = null;
       try {
         // K8: derselbe Deep-Instantiation-Umweg wie im MatchEngineProvider (TS2589).
         const client: unknown = supabase;
@@ -212,11 +221,13 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
       if (cancelled) {
         return;
       }
-      setEngineMatchIds(ids);
+      if (ids) {
+        setEngineMatchIds(ids);
+      }
       // I1/W3: `catchUp` laeuft NICHT mehr je `ensureMatch`, sondern genau einmal hier -- nur fuer
       // Spiele, die die Sammelabfrage als Engine-Spiel meldet oder die schon offene eigene
       // Eintraege haben (`catchUpLoaded` entscheidet je Spiel, s. `qualifiesForCatchUp`).
-      engine.markEngineMatches(ids);
+      engine.markEngineMatches(ids ?? engineMatchIdsRef.current);
       await engine.catchUpLoaded();
     }
     // m2: `run()` kann werfen (z. B. `requireAccount()` vor `start()`, wenn dieser Kind-Effekt vor

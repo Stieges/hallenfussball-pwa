@@ -12,12 +12,13 @@ import { serverRules } from '../../core/match';
 import type { Tournament, Match } from '../../types/tournament';
 
 const store = new LocalMatchStore();
+const mockFetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
 const mockContext: { engine: MatchEngine; clock: { offsetMs: number } } = {
   engine: new MatchEngine({
     store,
     clock: { serverNow: () => Date.now() } as unknown as ClockSync,
     sender: { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn() },
-    fetchConfirmed: vi.fn().mockResolvedValue({ events: [], newWatermark: 0 }),
+    fetchConfirmed: mockFetchConfirmed,
     now: () => Date.now(),
   }),
   clock: { offsetMs: 0 },
@@ -64,7 +65,40 @@ describe('useEngineMatches', () => {
   beforeEach(async () => {
     activeContext = mockContext;
     mockFetchEngineMatchIds.mockReset().mockResolvedValue(new Set<string>());
+    mockFetchConfirmed.mockClear().mockResolvedValue({ events: [], newWatermark: 0 });
     await mockContext.engine.start('acc-engine-matches');
+  });
+
+  it('N-I3: die Sammelabfrage meldet Spiel X -- markEngineMatches/catchUpLoaded laden NUR X nach, andere Spiele nicht', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-known']));
+    const t = tournament([
+      match({ id: 'm-known', teamA: 'teamA', teamB: 'teamB' }),
+      match({ id: 'm-other', teamA: 'teamA', teamB: 'teamB' }),
+    ]);
+    renderHook(() => useEngineMatches(t, true));
+
+    await waitFor(() => expect(mockFetchConfirmed).toHaveBeenCalledWith('m-known', 0));
+    expect(mockFetchConfirmed).not.toHaveBeenCalledWith('m-other', 0);
+    expect(mockFetchConfirmed).toHaveBeenCalledTimes(1);
+  });
+
+  it('N-m5: scheitert die Sammelabfrage, bleibt das letzte gute Ergebnis erhalten (kein Rueckfall auf leer)', async () => {
+    mockFetchEngineMatchIds.mockResolvedValueOnce(new Set(['m-good']));
+    const firstTournament = tournament([match({ id: 'm-good', teamA: 'teamA', teamB: 'teamB' })]);
+    const { result, rerender } = renderHook(
+      ({ t }) => useEngineMatches(t, true),
+      { initialProps: { t: firstTournament } },
+    );
+    await waitFor(() => expect(result.current.isEngineMatch('m-good')).toBe(true));
+
+    // Neues Turnier-Objekt (loest den Sammelabfrage-Effekt erneut aus), diesmal SCHEITERT die Abfrage.
+    mockFetchEngineMatchIds.mockReset().mockRejectedValue(new Error('Netz weg'));
+    const secondTournament: Tournament = { ...firstTournament, id: 'tour-engine-matches-2' };
+    rerender({ t: secondTournament });
+
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    // Trotz gescheiterter Sammelabfrage bleibt 'm-good' ein bekanntes Engine-Spiel.
+    expect(result.current.isEngineMatch('m-good')).toBe(true);
   });
 
   it('M9: ein Spiel OHNE lokale Ereignisse wird ueber die Sammelabfrage als Engine-Spiel erkannt', async () => {
