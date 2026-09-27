@@ -99,6 +99,23 @@ function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
   return entries;
 }
 
+/**
+ * Nicht-UUID-Spiel-IDs (Recherche Fixrunde 2): heutige Generatoren (`fairScheduler`,
+ * `playoffScheduler`) liefern durchgehend UUIDs (`crypto.randomUUID()`); `matches.id` ist in der
+ * Datenbank als `uuid` typisiert, `match_events.match_id` ebenso per Fremdschluessel. `Match.id`
+ * ist aber im TS-Typ ein einfacher `string` ohne Kompilierzeit-Garantie (z. B. Gast-/lokale
+ * Turniere ohne Server-Anbindung koennten theoretisch andere IDs vergeben). Die Sammelabfrage
+ * (`fetchEngineMatchIds`) darf an einer einzelnen Nicht-UUID-ID nicht fuer das GESAMTE Turnier
+ * scheitern (eine ungueltige `uuid`-Eingabe wirft in Postgres, nicht nur fuer diese eine Zeile) --
+ * deshalb werden Nicht-UUID-IDs schon hier herausgefiltert, bevor sie die Abfrage erreichen. Sie
+ * koennen ohnehin keine Server-Engine-Ereignisse haben (die FK-Spalte ist `uuid`).
+ */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(matchId: string): boolean {
+  return UUID_PATTERN.test(matchId);
+}
+
 /** K3: exakte serverRules-Eingabe wie supabaseMappers.ts:616-652. */
 function rulesFor(tournament: Tournament, matchPhase: string | undefined) {
   return serverRules({
@@ -221,7 +238,7 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
         const client: unknown = supabase;
         ids = await fetchEngineMatchIds(
           client as EngineMatchIdsQueryClient,
-          validMatches.map((entry) => entry.matchId),
+          validMatches.map((entry) => entry.matchId).filter(isUuid),
         );
       } catch {
         // W3 ist ein Optimierungspfad: bei Fehler zaehlen weiterhin lokale Kopien mit Ereignissen.

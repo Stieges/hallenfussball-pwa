@@ -195,6 +195,21 @@ describe('useEngineMatches', () => {
     expect(live?.durationSeconds).not.toBe(groupDurationSeconds);
   });
 
+  it('Nicht-UUID-Spiel-ID: die Sammelabfrage wird OHNE sie aufgerufen (kann keine Server-Engine-Ereignisse haben)', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set<string>());
+    const uuidId = '11111111-1111-4111-8111-111111111111';
+    const t = tournament([
+      match({ id: uuidId, teamA: 'teamA', teamB: 'teamB' }),
+      match({ id: 'lokal-gast-123', teamA: 'teamA', teamB: 'teamB' }),
+    ]);
+    renderHook(() => useEngineMatches(t, true));
+
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    const [, idsArg] = mockFetchEngineMatchIds.mock.calls[0] as [unknown, string[]];
+    expect(idsArg).toEqual([uuidId]);
+    expect(idsArg).not.toContain('lokal-gast-123');
+  });
+
   it('ohne MatchEngineProvider (Provider noch nicht im App-Baum): leere Map statt Absturz', () => {
     activeContext = null;
     const t = tournament([match({ id: 'm-no-provider', teamA: 'teamA', teamB: 'teamB' })]);
