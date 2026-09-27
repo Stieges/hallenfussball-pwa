@@ -121,12 +121,11 @@ import { useMatchExecution } from '../useMatchExecution';
 
 const EMPTY_MATCHES: Tournament['matches'] = [];
 
-function makeTournament(): Tournament {
-  return { id: 'tour-engine-guards', matches: EMPTY_MATCHES } as unknown as Tournament;
+function makeTournament(matches: Tournament['matches'] = EMPTY_MATCHES): Tournament {
+  return { id: 'tour-engine-guards', matches } as unknown as Tournament;
 }
 
-async function renderAndFlush() {
-  const tournament = makeTournament();
+async function renderAndFlush(tournament: Tournament = makeTournament()) {
   const view = renderHook(() => useMatchExecution({ tournament, onLocalTournamentUpdate: vi.fn() }));
   await act(async () => {
     await Promise.resolve();
@@ -142,12 +141,18 @@ beforeEach(() => {
 
 describe('useMatchExecution — B4: kein liveMatchRepository.save/initializeMatch fuer Engine-Spiele', () => {
   it('Lade-Effekt ruft syncMatchMetadata nicht fuer ein Engine-Spiel', async () => {
+    // Review I7/M1: `tournament.matches` MUSS einen Eintrag mit ABWEICHENDEM Schiri enthalten --
+    // sonst findet `tournament.matches.find(...)` nie etwas, und der `if (scheduled)`-Block laeuft
+    // so oder so nie an (die Mutation "B4-Wache entfernt" bliebe unbemerkt gruen).
+    const tournament = makeTournament([
+      { id: ENGINE_MATCH_ID, referee: 7 } as unknown as Tournament['matches'][number],
+    ]);
     // Der Alt-Repo liefert (kuenstlich) auch eine Zeile fuer die Engine-match-ID zurueck --
     // realistisch, falls das Spiel frueher ueber den Altpfad lief. Der Guard muss trotzdem greifen.
     mockLiveMatchRepository.getAll.mockResolvedValue(
       new Map([[ENGINE_MATCH_ID, { ...engineLiveMatch, refereeName: undefined }]]),
     );
-    await renderAndFlush();
+    await renderAndFlush(tournament);
     expect(mockSyncMatchMetadata).not.toHaveBeenCalled();
   });
 

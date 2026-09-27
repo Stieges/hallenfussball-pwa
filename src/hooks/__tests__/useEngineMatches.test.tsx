@@ -27,6 +27,15 @@ vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => activeContext,
 }));
 
+// M9 (Server-Erkennung): `fetchEngineMatchIds` selbst ist bereits eigenstaendig getestet
+// (fetchEngineMatchIds.test.ts) -- hier geht es nur um die Verdrahtung (Ergebnis -> engineMatchIds
+// -> isEngineMatch, ganz OHNE lokale Ereignisse).
+const mockFetchEngineMatchIds = vi.fn().mockResolvedValue(new Set<string>());
+vi.mock('../../features/match-engine/fetchEngineMatchIds', () => ({
+  fetchEngineMatchIds: (...args: unknown[]) => mockFetchEngineMatchIds(...args),
+}));
+vi.mock('../../lib/supabase', () => ({ isSupabaseConfigured: true, supabase: {} }));
+
 import { useEngineMatches } from '../useEngineMatches';
 
 function match(partial: Partial<Match> & Pick<Match, 'id' | 'teamA' | 'teamB'>): Match {
@@ -53,7 +62,20 @@ function tournament(matches: Match[]): Tournament {
 describe('useEngineMatches', () => {
   beforeEach(async () => {
     activeContext = mockContext;
+    mockFetchEngineMatchIds.mockReset().mockResolvedValue(new Set<string>());
     await mockContext.engine.start('acc-engine-matches');
+  });
+
+  it('M9: ein Spiel OHNE lokale Ereignisse wird ueber die Sammelabfrage als Engine-Spiel erkannt', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-server-only']));
+    const t = tournament([match({ id: 'm-server-only', teamA: 'teamA', teamB: 'teamB' })]);
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    rerender();
+
+    await waitFor(() => expect(result.current.isEngineMatch('m-server-only')).toBe(true));
+    expect(mockContext.engine.view('m-server-only')?.log).toHaveLength(0); // keine lokalen Ereignisse
   });
 
   it('ohne MatchEngineProvider (Provider noch nicht im App-Baum): leere Map statt Absturz', () => {
