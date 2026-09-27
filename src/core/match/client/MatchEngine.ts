@@ -101,6 +101,10 @@ export class MatchEngine {
     this.statusByMatch.clear();
     this.resetOnce.clear();
     this.inFlightCatchUp.clear();
+    // N-m3 (3): ein Konto-Kopien-Cache ohne Spiele darf auch keine Kontowechsel-uebrig gebliebenen
+    // "Nachzuegler angefordert"/"Server kennt dieses Spiel"-Merker mehr tragen.
+    this.rerunRequested.clear();
+    this.knownEngineMatches.clear();
     await this.deps.sender.start(accountId);
   }
 
@@ -138,7 +142,13 @@ export class MatchEngine {
       return true;
     }
     const copy = this.copies.get(matchId);
-    return copy !== undefined && (copy.pending.length > 0 || copy.acked.length > 0);
+    // N-I2: eine Kopie mit NUR bestaetigten Ereignissen (z. B. Offline-Start, die Sammelabfrage
+    // scheiterte, spaeter kommt das Netz zurueck) ist bereits ein bekanntes Engine-Spiel -- B1 zaehlt
+    // sie genauso (`view.log.length > 0`), `catchUpLoaded` darf sie nicht uebergehen.
+    return (
+      copy !== undefined &&
+      (copy.pending.length > 0 || copy.acked.length > 0 || copy.confirmed.length > 0)
+    );
   }
 
   /**
@@ -153,32 +163,46 @@ export class MatchEngine {
       this.rerunRequested.add(matchId);
       return existing;
     }
-    const run = this.runCatchUpWithRerun(matchId).finally(() => {
-      this.inFlightCatchUp.delete(matchId);
-    });
+    // N-m3 (2): das Loeschen aus `inFlightCatchUp` passiert INNERHALB von `runCatchUpWithRerun`
+    // selbst (letzter synchroner Schritt, kein zusaetzlicher `.finally()`-Sprung mehr) -- so gibt es
+    // zwischen "kein Nachzuegler mehr angefordert" und "Eintrag geloescht" keine Mikrotask-Luecke
+    // mehr, in der ein neuer `catchUp()`-Aufruf den (bereits zum Beenden vorgesehenen) Lauf noch als
+    // "laufend" vorfaende und seinen Nachzuegler-Wunsch verlieren wuerde.
+    const run = this.runCatchUpWithRerun(matchId);
     this.inFlightCatchUp.set(matchId, run);
     return run;
   }
 
   private async runCatchUpWithRerun(matchId: string): Promise<void> {
-    let runAgain = true;
-    while (runAgain) {
-      await this.runCatchUp(matchId);
-      runAgain = this.rerunRequested.delete(matchId);
+    try {
+      let runAgain = true;
+      while (runAgain) {
+        await this.runCatchUp(matchId);
+        runAgain = this.rerunRequested.delete(matchId);
+      }
+    } finally {
+      // N-m3 (1): dieser `finally` greift auch, wenn `runCatchUp` selbst wirft (sollte durch dessen
+      // eigenen try/catch nicht mehr vorkommen, s. u. -- aber defensiv, damit ein uebrig gebliebener
+      // Nachzuegler-Wunsch nie einen naechsten, unabhaengigen Aufruf verdoppelt).
+      this.rerunRequested.delete(matchId);
+      this.inFlightCatchUp.delete(matchId);
     }
   }
 
   private async runCatchUp(matchId: string, options?: { fromZero?: boolean }): Promise<void> {
-    const accountId = this.requireAccount();
-    if (accountId === 'guest') {
-      return;
-    }
-    const copy = await this.deps.store.load(accountId, matchId);
-    if (!copy) {
-      return;
-    }
-    const watermark = options?.fromZero ? 0 : copy.watermarkSeq;
     try {
+      // N-m1/N-m3 (1): `requireAccount()`/`store.load` liegen jetzt IM `try` -- ein Wurf hier wurde
+      // vorher NICHT gefangen (unbehandelte Ablehnung) und liess `runCatchUpWithRerun`s Schleife ohne
+      // das abschliessende `rerunRequested.delete` abbrechen.
+      const accountId = this.requireAccount();
+      if (accountId === 'guest') {
+        return;
+      }
+      const copy = await this.deps.store.load(accountId, matchId);
+      if (!copy) {
+        return;
+      }
+      const watermark = options?.fromZero ? 0 : copy.watermarkSeq;
       const { events, newWatermark } = await this.deps.fetchConfirmed(matchId, watermark);
       if (events.length > 0 || newWatermark !== copy.watermarkSeq) {
         await this.deps.store.applyConfirmed(accountId, matchId, events, newWatermark);

@@ -233,6 +233,24 @@ describe('MatchEngine', () => {
     expect(fetchConfirmed).toHaveBeenCalledTimes(2);
   });
 
+  it('N-I2: catchUpLoaded laedt auch ein Spiel nach, dessen Kopie NUR bestaetigte Ereignisse hat (Offline-Start -> online)', async () => {
+    // Szenario: App startet ohne Netz in der Halle. Die Sammelabfrage (W3) scheitert, `markEngineMatches`
+    // bleibt leer -- aber die lokale Kopie hat (z. B. aus einer frueheren Sitzung) bereits bestaetigte
+    // Ereignisse. Kommt das Netz zurueck, muss `catchUpLoaded` dieses Spiel trotzdem nachladen.
+    const confirmedGoal = withSeq(goal('c1', 'teamA', 500, 0), 1);
+    await store.create('acc1', 'me-confirmed-only', ctx);
+    await store.applyConfirmed('acc1', 'me-confirmed-only', [confirmedGoal], 1);
+
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 1 });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-confirmed-only', ctx); // liest die vorhandene Kopie in den Cache
+
+    await engine.catchUpLoaded();
+
+    expect(fetchConfirmed).toHaveBeenCalledWith('me-confirmed-only', 1);
+  });
+
   it('I2: Single-Flight MIT Nachzuegler -- zwei Aufrufe waehrend eines laufenden Laufs ergeben genau 2 fetchConfirmed', async () => {
     const resolveFirstRef: { current: (() => void) | null } = { current: null };
     const first = new Promise<void>((resolve) => { resolveFirstRef.current = resolve; });
@@ -261,6 +279,51 @@ describe('MatchEngine', () => {
 
     // Genau EIN Nachzuegler (nicht gestapelt): Lauf #1 + genau ein Lauf #2.
     expect(fetchConfirmed).toHaveBeenCalledTimes(2);
+  });
+
+  it('N-m3 (2): ein catchUp() direkt NACH Abschluss des vorigen loest einen echten neuen Lauf aus (kein verlorener Nachzuegler)', async () => {
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-back-to-back', ctx);
+
+    await engine.catchUp('me-back-to-back');
+    expect(fetchConfirmed).toHaveBeenCalledTimes(1);
+    // `inFlightCatchUp` muss zu diesem Zeitpunkt bereits geraeumt sein (kein externer `.finally()`-
+    // Sprung mehr) -- dieser zweite Aufruf muss einen ECHTEN neuen Lauf anstossen, nicht nur
+    // `rerunRequested` auf einen bereits beendeten Lauf setzen (der dann nichts mehr ausloest).
+    await engine.catchUp('me-back-to-back');
+    expect(fetchConfirmed).toHaveBeenCalledTimes(2);
+  });
+
+  it('N-m3 (3): start() eines (ggf. selben) Kontos leert rerunRequested/knownEngineMatches', async () => {
+    const resolveFirstRef: { current: (() => void) | null } = { current: null };
+    const first = new Promise<void>((resolve) => { resolveFirstRef.current = resolve; });
+    const fetchConfirmed = vi.fn().mockImplementation(async () => {
+      await first;
+      return { events: [], newWatermark: 0 };
+    });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-restart', ctx);
+    engine.markEngineMatches(['me-restart']);
+
+    const runningCall = engine.catchUp('me-restart');
+    for (let attempt = 0; attempt < 50 && fetchConfirmed.mock.calls.length === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    void engine.catchUp('me-restart'); // Nachzuegler vormerken, dann Konto neu starten
+    resolveFirstRef.current?.();
+    await runningCall;
+
+    // Ein Kontowechsel (hier: dasselbe Konto neu gestartet) darf den vorgemerkten Nachzuegler NICHT
+    // in die naechste Sitzung mitnehmen und muss `knownEngineMatches` (Server-Erkennung) ebenfalls
+    // leeren (die Kopien sind nach `start()` ohnehin weg, s. `copies.clear()`).
+    await engine.start('acc1');
+    fetchConfirmed.mockClear();
+    await engine.ensureMatch('me-restart', ctx);
+    await engine.catchUpLoaded();
+    expect(fetchConfirmed).not.toHaveBeenCalled(); // 'me-restart' ist nach dem Neustart kein bekanntes Engine-Spiel mehr
   });
 
   it('B2 (M10): buildLog dedupliziert -- ein Ereignis in BEIDEN offenen Listen (acked UND pending) erscheint nur einmal', async () => {
