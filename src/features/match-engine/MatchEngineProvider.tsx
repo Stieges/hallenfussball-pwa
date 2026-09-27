@@ -117,22 +117,26 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
   const sessionTokenRef = useRef<string | undefined>(undefined);
 
   // Kontowechsel (RC-Kontowechsel): stop() des alten, start() des neuen Kontos -- kein Neuaufbau.
-  // m4: `previousAccountRef` wird erst NACH der `cancelled`-Pruefung gesetzt und nur, wenn dieser
-  // Durchlauf noch der aktuelle ist -- ein schneller A->B-Wechsel (oder StrictMode-Doppellauf) kann
-  // sonst zwei `start()` parallel laufen lassen und `stop()` fuer A auslassen.
+  // m4 (Re-Review Fixrunde 1/2): `previousAccountRef` wird jetzt SYNCHRON beansprucht (vor jedem
+  // `await`), nicht erst nachdem `start()` aufgeloest hat. Ein schneller A->B-Wechsel sieht dadurch
+  // sofort den echten Vorgaenger und ruft `stop()` zuverlaessig auf, auch wenn `start()` fuer A noch
+  // nicht abgeschlossen war. Fuer den reinen StrictMode-Doppellauf DESSELBEN Kontos bleibt es dabei,
+  // dass `start(accountId)` zweimal aufgerufen werden kann (kein `stop()` dazwischen, da
+  // `previousTarget === accountId`) -- das ist bewusst hingenommen: `MatchEngine.start()`/
+  // `OutboxSender.start()` sind fuer denselben Account idempotent (raeumen ihren eigenen Zustand
+  // jeweils selbst auf), ein zweiter Aufruf richtet keinen Schaden an.
   useEffect(() => {
+    const previousTarget = previousAccountRef.current;
+    previousAccountRef.current = accountId;
     let cancelled = false;
     async function switchAccount(): Promise<void> {
-      if (previousAccountRef.current !== null && previousAccountRef.current !== accountId) {
+      if (previousTarget !== null && previousTarget !== accountId) {
         bundle.engine.stop();
       }
-      if (cancelled || previousAccountRef.current === accountId) {
+      if (cancelled || previousTarget === accountId) {
         return;
       }
       await bundle.engine.start(accountId);
-      if (!cancelled) {
-        previousAccountRef.current = accountId;
-      }
     }
     void switchAccount();
     return () => {

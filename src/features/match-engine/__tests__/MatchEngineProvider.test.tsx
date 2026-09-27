@@ -81,6 +81,51 @@ describe('MatchEngineProvider', () => {
     await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-2'));
   });
 
+  it('m4: ein schneller Kontowechsel ruft stop() fuer das ALTE Konto zuverlaessig auf, auch wenn dessen start() noch nicht aufgeloest hat', async () => {
+    // Ruft die ECHTE Implementierung durch (setzt `accountId` also sofort, synchron, wie im
+    // echten Code) -- nur das AEUSSERE Promise des ERSTEN Aufrufs bleibt kontrolliert haengen,
+    // damit der Effekt fuer 'user-2' garantiert VOR dessen Aufloesung feuert.
+    const originalStart = MatchEngine.prototype.start;
+    const resolveFirstStartRef: { current: (() => void) | null } = { current: null };
+    let firstCallSeen = false;
+    const startSpy = vi.spyOn(MatchEngine.prototype, 'start').mockImplementation(function (
+      this: MatchEngine,
+      accountId: string,
+    ) {
+      const real = originalStart.call(this, accountId);
+      if (firstCallSeen) {
+        return real;
+      }
+      firstCallSeen = true;
+      return new Promise<void>((resolve) => {
+        resolveFirstStartRef.current = () => { void real.then(resolve); };
+      });
+    });
+    const stopSpy = vi.spyOn(MatchEngine.prototype, 'stop');
+    const { rerender } = render(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-1'));
+    expect(stopSpy).not.toHaveBeenCalled();
+
+    // Kontowechsel WAEHREND start('user-1') noch haengt (kein settleLastCall hier).
+    mockAuth.user = { id: 'user-2', globalRole: 'organizer' };
+    rerender(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+
+    // stop() muss SOFORT (synchron im Effekt) erkennen, dass 'user-1' der Vorgaenger war --
+    // unabhaengig davon, ob dessen start()-Promise schon aufgeloest hat.
+    await waitFor(() => expect(stopSpy).toHaveBeenCalled());
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-2'));
+    resolveFirstStartRef.current?.();
+    startSpy.mockRestore();
+  });
+
   it('SIGNED_OUT (kein User mehr) loescht nichts, faehrt als Gast weiter', async () => {
     const startSpy = vi.spyOn(MatchEngine.prototype, 'start');
     const stopSpy = vi.spyOn(MatchEngine.prototype, 'stop');
