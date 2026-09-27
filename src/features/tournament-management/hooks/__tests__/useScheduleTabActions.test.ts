@@ -7,10 +7,18 @@
  * proves Fixrunde 1's "nur einen Weg" requirement: handleScoreChange now goes through the SAME
  * `diffMatchResultStatusUpdates` helper as every other result/status-changing caller.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useScheduleTabActions } from '../useScheduleTabActions';
 import type { Tournament, Match } from '../../../../types/tournament';
+
+// P4 (Fixrunde 3): kontrollierbarer Ref-Inhalt fuer `useEngineOverlaidMatchIds` -- steuert, ob ein
+// Spiel als "Engine-ueberlagert" (bereits laufendes/beendetes Engine-Spiel MIT echtem Inhalt) gilt.
+const overlaidMatchIds = { current: new Set<string>() };
+vi.mock('../../../../hooks/useEngineOverlayForTournament', () => ({
+  useEngineOverlaidMatchIds: () => overlaidMatchIds,
+}));
+
+import { useScheduleTabActions } from '../useScheduleTabActions';
 
 function createMatch(overrides: Partial<Match> = {}): Match {
   return {
@@ -75,6 +83,13 @@ function renderActions(tournament: Tournament, overrides: Partial<Parameters<typ
 }
 
 describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
+  beforeEach(() => {
+    overlaidMatchIds.current = new Set();
+    // `localStorage` ist global als `vi.fn()`-Stub gemockt (s. `src/test/setup.dom.ts`) --
+    // `mockReturnValue(undefined)` statt `clear()` (waere ebenfalls nur ein Stub-Aufruf).
+    vi.mocked(localStorage.getItem).mockReturnValue(null);
+  });
+
   it('persists the result via onMatchesUpdate (UPDATE_MATCH), never a full onTournamentUpdate save', () => {
     const tournament = createTournament([createMatch({ id: 'm1' })]);
     const { result, onTournamentUpdate, onLocalTournamentUpdate, onMatchesUpdate } = renderActions(tournament);
@@ -177,5 +192,78 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
     });
 
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  // P4 (Fixrunde 3): die reine B1-Klausel (isNewScheduledMatch mit einer immer LEEREN Map) sah nur
+  // NEUE Spiele -- ein bereits laufendes/beendetes Engine-Spiel (matchStatus 'running'/'finished',
+  // ECHTER Inhalt in der Engine) wurde faelschlich NICHT erkannt. Die Sperre prueft jetzt zusaetzlich
+  // die Engine-Ueberlagerungsmenge (`useEngineOverlaidMatchIds`).
+  it('P4: ein LAUFENDES Engine-Spiel (Engine-ueberlagert) wird mit engine.notYet gesperrt (kein onMatchesUpdate)', () => {
+    overlaidMatchIds.current = new Set(['m1']);
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'running', scoreA: 1, scoreB: 0 })],
+      teams,
+    );
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    expect(showWarning).toHaveBeenCalled();
+  });
+
+  it('P4: ein BEENDETES Engine-Spiel (Engine-ueberlagert) wird mit engine.notYet gesperrt (kein onMatchesUpdate)', () => {
+    overlaidMatchIds.current = new Set(['m1']);
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'finished', scoreA: 2, scoreB: 1 })],
+      teams,
+    );
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament, { lockFinishedResults: false });
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    expect(showWarning).toHaveBeenCalled();
+  });
+
+  // Gegenprobe (P4): ein laufendes 0:0-ALTSPIEL (Altstart setzt kein `matchStatus`, daher
+  // `'scheduled'`) ist NICHT Engine-ueberlagert -- es muss den bestehenden Live-Hinweis
+  // (`isMatchRunning`/`window.confirm`) zeigen, NICHT den engine.notYet-Toast.
+  it('P4 Gegenprobe: ein laufendes 0:0-Altspiel (kein Engine-Overlay, Legacy-isMatchRunning) zeigt den Live-Hinweis statt engine.notYet', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b' })],
+      teams,
+    );
+    // `localStorage` ist in `src/test/setup.dom.ts` global als `vi.fn()`-Stubs gemockt (kein
+    // echter Speicher) -- `getItem` direkt auf den erwarteten Wert stellen statt `setItem` zu
+    // erwarten.
+    vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ m1: { status: 'RUNNING' } }));
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(showWarning).not.toHaveBeenCalled();
+    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
+    confirmSpy.mockRestore();
   });
 });
