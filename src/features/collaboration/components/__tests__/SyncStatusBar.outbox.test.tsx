@@ -57,6 +57,18 @@ describe('SyncStatusBar — nicht uebernommene Eintraege (C2b, additiv)', () => 
     expect(screen.getByTestId('sync-status')).toHaveTextContent('common:outbox.notice.review');
   });
 
+  // Fixrunde 1 (Review I2): color=onError (weiss) auf background=errorLight (fast weiss/leicht
+  // transparent) ist im hellen Theme praktisch unlesbar (Kontrast weit unter WCAG 4.5:1). Beide
+  // Tokens sind Theme-abhaengige CSS-Variablen -- der satte `error`-Ton auf der blassen
+  // `errorLight`-Flaeche ist in BEIDEN Themes lesbar (heller/dunkler Text auf blasser Flaeche).
+  it('Ablehnungs-Hinweis nutzt eine im hellen UND dunklen Theme lesbare Farbkombination', () => {
+    render(<SyncStatusBar status="synced" rejectedCount={1} />);
+    const hint = screen.getByTestId('sync-status-rejected');
+    expect(hint).toHaveStyle({ color: cssVars.colors.error });
+    expect(hint).not.toHaveStyle({ color: cssVars.colors.onError });
+    expect(hint).toHaveStyle({ background: cssVars.colors.errorLight });
+  });
+
   it('Hinweis mit Aktion ist ein Touch-Ziel', () => {
     render(<SyncStatusBar status="synced" rejectedCount={1} onShowRejected={vi.fn()} />);
     expect(screen.getByTestId('sync-status-rejected')).toHaveStyle({

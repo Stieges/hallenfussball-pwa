@@ -166,6 +166,9 @@ const createStyles = (config: StatusConfig, compact: boolean) => ({
 
     // C2b: Hinweis auf nicht uebernommene Eintraege -- eigener Knopf NEBEN dem Statusfeld
     // (kein verschachtelter Knopf), Touch-Ziel nach WCAG 2.5.5.
+    // Fixrunde 1 (Review I2): `onError` (weiss) auf `errorLight` (fast weiss/leicht transparent)
+    // war im hellen Theme praktisch unlesbar. `error` selbst ist ein satter Ton, der auf der
+    // blassen `errorLight`-Flaeche in BEIDEM Themes ausreichend Kontrast hat.
     rejected: {
         display: 'flex',
         alignItems: 'center',
@@ -176,7 +179,7 @@ const createStyles = (config: StatusConfig, compact: boolean) => ({
         border: `1px solid ${cssVars.colors.error}`,
         borderRadius: cssVars.borderRadius.md,
         background: cssVars.colors.errorLight,
-        color: cssVars.colors.onError,
+        color: cssVars.colors.error,
         fontSize: cssVars.fontSizes.bodySm,
         fontWeight: cssVars.fontWeights.semibold,
         cursor: 'pointer',
