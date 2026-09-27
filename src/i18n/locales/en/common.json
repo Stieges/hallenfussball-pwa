@@ -120,19 +120,19 @@
   },
   "outbox": {
     "rejection": {
-      "INVALID_TRANSITION": "The entry does not match the current state of the game.",
-      "FORBIDDEN_ACTOR": "You are not allowed to do this.",
-      "UNKNOWN_TARGET": "Game or person was not found.",
+      "INVALID_TRANSITION": "The entry does not match the current course of play.",
+      "FORBIDDEN_ACTOR": "Only tournament control may enter this.",
+      "UNKNOWN_TARGET": "The entry this refers to was not found.",
       "ALREADY_RETRACTED": "The entry was already withdrawn.",
       "STALE_BASE": "The score was changed on another device in the meantime.",
       "INVALID_PAYLOAD": "The entry was incomplete or invalid.",
       "MATCH_FINISHED": "The game had already ended at that point.",
-      "NO_WINNER": "The game cannot be completed without a winner.",
-      "DEPENDS_ON_REJECTED": "Another related entry was not accepted.",
-      "ID_CONFLICT": "The entry was sent twice.",
-      "NOT_CONTROLLER": "Only tournament control may change this.",
-      "MATCH_FULL": "The game is already fully booked.",
-      "MATCH_GONE": "The game no longer exists.",
+      "NO_WINNER": "The penalty shootout does not have a winner yet.",
+      "DEPENDS_ON_REJECTED": "A previous related entry was not accepted, so this one was not either.",
+      "ID_CONFLICT": "There is already a different entry with the same id. Please enter it again.",
+      "NOT_CONTROLLER": "Another device is currently controlling this game.",
+      "MATCH_FULL": "No further entries are possible for this game. Please inform tournament control.",
+      "MATCH_GONE": "The game was deleted.",
       "unknown": "Unknown reason"
     },
     "eventType": {

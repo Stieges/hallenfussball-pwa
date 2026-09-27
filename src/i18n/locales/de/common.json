@@ -120,19 +120,19 @@
   },
   "outbox": {
     "rejection": {
-      "INVALID_TRANSITION": "Die Eingabe passt nicht zum aktuellen Spielstand.",
-      "FORBIDDEN_ACTOR": "Dafür fehlt die Berechtigung.",
-      "UNKNOWN_TARGET": "Spiel oder Person wurde nicht gefunden.",
+      "INVALID_TRANSITION": "Die Eingabe passt nicht zum aktuellen Spielablauf.",
+      "FORBIDDEN_ACTOR": "Das darf nur die Turnierleitung eingeben.",
+      "UNKNOWN_TARGET": "Die Eingabe, auf die sich das bezieht, wurde nicht gefunden.",
       "ALREADY_RETRACTED": "Die Eingabe wurde schon zurückgenommen.",
       "STALE_BASE": "Der Spielstand wurde inzwischen an einem anderen Gerät geändert.",
       "INVALID_PAYLOAD": "Die Eingabe war unvollständig oder fehlerhaft.",
       "MATCH_FINISHED": "Das Spiel war zu diesem Zeitpunkt schon beendet.",
-      "NO_WINNER": "Ohne Sieger lässt sich das Spiel nicht abschließen.",
-      "DEPENDS_ON_REJECTED": "Eine andere Eingabe dazu wurde nicht übernommen.",
-      "ID_CONFLICT": "Die Eingabe wurde doppelt gesendet.",
-      "NOT_CONTROLLER": "Das darf nur die Turnierleitung ändern.",
-      "MATCH_FULL": "Das Spiel ist schon vollständig belegt.",
-      "MATCH_GONE": "Das Spiel gibt es nicht mehr.",
+      "NO_WINNER": "Das Strafstoßschießen hat noch keinen Sieger.",
+      "DEPENDS_ON_REJECTED": "Eine vorherige Eingabe wurde nicht übernommen, daher auch diese nicht.",
+      "ID_CONFLICT": "Es gibt schon eine andere Eingabe mit derselben Kennung. Bitte neu eingeben.",
+      "NOT_CONTROLLER": "Ein anderes Gerät steuert dieses Spiel gerade.",
+      "MATCH_FULL": "Für dieses Spiel sind keine weiteren Eingaben möglich. Bitte die Turnierleitung informieren.",
+      "MATCH_GONE": "Das Spiel wurde gelöscht.",
       "unknown": "Unbekannter Grund"
     },
     "eventType": {

@@ -76,6 +76,50 @@ describe('rejectionReasonKey', () => {
   });
 });
 
+// Fixrunde 1 (Review I1): 9 Klartexte waren sachlich falsch oder irrefuehrend (verwechselten
+// Code-Semantik, siehe Review-Tabelle). Diese Werte sind jetzt fest verankert, damit ein
+// Ruecksprung auf die alten (falschen) Texte hier rot wird.
+function valueAt(root: JsonValue, dottedKey: string): string | undefined {
+  let node: unknown = root;
+  for (const part of dottedKey.split('.')) {
+    if (typeof node !== 'object' || node === null || Array.isArray(node)) {
+      return undefined;
+    }
+    node = (node as JsonValue)[part];
+  }
+  return typeof node === 'string' ? node : undefined;
+}
+
+describe('rejectionReasonKey — korrigierte Klartexte (Review I1)', () => {
+  it.each([
+    ['INVALID_TRANSITION', 'Die Eingabe passt nicht zum aktuellen Spielablauf.'],
+    ['FORBIDDEN_ACTOR', 'Das darf nur die Turnierleitung eingeben.'],
+    ['UNKNOWN_TARGET', 'Die Eingabe, auf die sich das bezieht, wurde nicht gefunden.'],
+    ['NO_WINNER', 'Das Strafstoßschießen hat noch keinen Sieger.'],
+    ['DEPENDS_ON_REJECTED', 'Eine vorherige Eingabe wurde nicht übernommen, daher auch diese nicht.'],
+    ['ID_CONFLICT', 'Es gibt schon eine andere Eingabe mit derselben Kennung. Bitte neu eingeben.'],
+    ['NOT_CONTROLLER', 'Ein anderes Gerät steuert dieses Spiel gerade.'],
+    ['MATCH_FULL', 'Für dieses Spiel sind keine weiteren Eingaben möglich. Bitte die Turnierleitung informieren.'],
+    ['MATCH_GONE', 'Das Spiel wurde gelöscht.'],
+  ])('DE-Text fuer %s entspricht der Review-Vorgabe', (code, expected) => {
+    expect(valueAt(deCommon, rejectionReasonKey(code))).toBe(expected);
+  });
+
+  it.each([
+    ['INVALID_TRANSITION', 'The entry does not match the current course of play.'],
+    ['FORBIDDEN_ACTOR', 'Only tournament control may enter this.'],
+    ['UNKNOWN_TARGET', 'The entry this refers to was not found.'],
+    ['NO_WINNER', 'The penalty shootout does not have a winner yet.'],
+    ['DEPENDS_ON_REJECTED', 'A previous related entry was not accepted, so this one was not either.'],
+    ['ID_CONFLICT', 'There is already a different entry with the same id. Please enter it again.'],
+    ['NOT_CONTROLLER', 'Another device is currently controlling this game.'],
+    ['MATCH_FULL', 'No further entries are possible for this game. Please inform tournament control.'],
+    ['MATCH_GONE', 'The game was deleted.'],
+  ])('EN-Text fuer %s entspricht der Review-Vorgabe (sinngemaess)', (code, expected) => {
+    expect(valueAt(enCommon, rejectionReasonKey(code))).toBe(expected);
+  });
+});
+
 describe('describeEvent', () => {
   it('liefert Typ, Team A und Minute fuer Tor frueh im Spiel', () => {
     const desc = describeEvent(makeEntry(), TEAMS);
