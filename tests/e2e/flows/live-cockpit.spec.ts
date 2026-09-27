@@ -317,12 +317,7 @@ test.describe('Live Cockpit', () => {
     await skipButton.click();
   });
 
-  // C3a-2a: dieser Test teilt sich die Turnier-Fixtur mit "Can undo last event" (per Datei
-  // persistente lokale Speicherung, kein Reset zwischen Tests) -- solange DIESER Test hier fixme
-  // ist (Undo ist fuer Engine-Spiele noch nicht umgestellt, PC14), bleibt das dort erzielte Tor
-  // stehen (kein Rueckgaengig mehr) und dieser Test sieht 2 statt 1 Tore. Wird zusammen mit "Can
-  // undo last event" in C3b wieder aktiviert.
-  test.fixme('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
+  test('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
     // Note: This test uses a shorter timeout for faster execution
     // The actual app uses 10 seconds, but we'll verify the mechanism works
 

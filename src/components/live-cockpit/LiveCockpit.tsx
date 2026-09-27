@@ -186,7 +186,14 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   );
 
   // C-2 FIX: Reset all dialog states when match changes to prevent stale data
-  // C-6 FIX: Initialize foul counts from match events for persistence across reload/tab-sync
+  // RC13/PC20 (C3a-2a Fixrunde 1, vorgezogen aus C3b): haengt NUR an `match.id` -- NICHT an
+  // `currentMatch?.events`. Der Engine-Lesepfad (useEngineMatches) baut fuer JEDEN Stand-/
+  // Uhr-Tick ein NEUES LiveMatch-Objekt (Timer laeuft jede Sekunde, `elapsedSeconds` aendert
+  // sich), also auch ein neues `events`-Array, OBWOHL sich am Spiel selbst nichts geaendert hat.
+  // Mit `currentMatch?.events` als Abhaengigkeit schloss dieser Effekt frueher bei JEDER dieser
+  // Neuberechnungen ALLE offenen Dialoge -- fuer ein neues Spiel (seit der B1-Umschaltung: JEDES
+  // neue Spiel) riss das den gerade offenen GoalScorerDialog waehrend der Torschuetzen-Eingabe
+  // weg (Tor doppelt gezaehlt/verloren, C1 Fixrunde 1).
   const currentMatchId = currentMatch?.id;
   useEffect(() => {
     // Reset all dialog visibility states
@@ -209,9 +216,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
     // Reset match-specific states
     setActivePenalties([]);
+  }, [currentMatchId]);
 
-    // C-6 FIX: Initialize foul counts from persisted match events
-    // This ensures fouls are synced across page reloads and multi-tab scenarios
+  // C-6 FIX: Initialize foul counts from persisted match events (Reload/Tab-Sync). Eigener
+  // Effekt (RC13-Trennung): darf bei jeder Ereignis-Neuberechnung laufen, OHNE offene Dialoge
+  // zu schliessen.
+  useEffect(() => {
     if (currentMatch?.events && currentMatch.homeTeam && currentMatch.awayTeam) {
       const homeTeamId = currentMatch.homeTeam.id;
       const awayTeamId = currentMatch.awayTeam.id;

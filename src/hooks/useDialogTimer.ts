@@ -6,6 +6,13 @@
  *
  * Konzept-Referenz: docs/concepts/LIVE-COCKPIT-KONZEPT.md §5.1
  *
+ * C3a-2a Fixrunde 1 (C1): Der Countdown selbst laeuft in `remainingRef` (reiner `setInterval`-
+ * Callback, kein React-Updater) -- `setRemainingSeconds`/`onExpire` werden NUR mit fertigen
+ * Werten aufgerufen, nie innerhalb einer funktionalen `setState`-Updater-Form. React ruft eine
+ * an `setState` uebergebene Updater-FUNKTION unter `StrictMode` (DEV) zweimal auf, um Unreinheit
+ * zu erkennen -- ein darin ausgefuehrter Seiteneffekt (hier: `onExpire()`) lief dadurch zweimal
+ * (siehe `useDialogTimer.test.ts`, reproduziert das doppelt gezaehlte Tor beim Auto-Dismiss).
+ *
  * @example
  * const { remainingSeconds, reset, cancel, isActive } = useDialogTimer({
  *   durationSeconds: 10,
@@ -52,6 +59,10 @@ export function useDialogTimer({
   const [isActive, setIsActive] = useState(autoStart);
   const intervalRef = useRef<number | null>(null);
   const onExpireRef = useRef(onExpire);
+  // Authoritative Zaehlung ausserhalb von React-State -- der `setInterval`-Callback selbst wird
+  // NIE von React dupliziert (nur React-Updater-Funktionen sind betroffen), Lesen/Schreiben von
+  // `remainingRef` ist deshalb sicher, auch unter StrictMode.
+  const remainingRef = useRef(durationSeconds);
 
   // Keep onExpire ref current to avoid stale closures
   useEffect(() => {
@@ -67,67 +78,65 @@ export function useDialogTimer({
     };
   }, []);
 
-  // Main timer effect
-  useEffect(() => {
-    // Clear existing interval
-    if (intervalRef.current !== null) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Don't run if not active or paused
-    if (!isActive || paused) {
-      return;
-    }
-
-    // Start countdown
-    intervalRef.current = window.setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          // Timer expired
-          if (intervalRef.current !== null) {
-            window.clearInterval(intervalRef.current);
-            intervalRef.current = null;
-          }
-          setIsActive(false);
-          // Call onExpire callback
-          onExpireRef.current?.();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [isActive, paused]);
-
-  // Auto-start handling
-  useEffect(() => {
-    if (autoStart && !isActive) {
-      setIsActive(true);
-      setRemainingSeconds(durationSeconds);
-    }
-  }, [autoStart, durationSeconds, isActive]);
-
-  const reset = useCallback(() => {
-    setRemainingSeconds(durationSeconds);
-    setIsActive(true);
-  }, [durationSeconds]);
-
-  const cancel = useCallback(() => {
-    setIsActive(false);
+  const clearIntervalIfAny = useCallback(() => {
     if (intervalRef.current !== null) {
       window.clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
   }, []);
 
+  // Main timer effect
+  useEffect(() => {
+    clearIntervalIfAny();
+
+    // Don't run if not active or paused
+    if (!isActive || paused) {
+      return undefined;
+    }
+
+    // Start countdown
+    intervalRef.current = window.setInterval(() => {
+      remainingRef.current -= 1;
+      if (remainingRef.current <= 0) {
+        remainingRef.current = 0;
+        clearIntervalIfAny();
+        setIsActive(false);
+        setRemainingSeconds(0);
+        // Reiner Funktionsaufruf mit fertigem Wert -- kein `setState`-Updater, kann von React
+        // nicht dupliziert werden.
+        onExpireRef.current?.();
+      } else {
+        setRemainingSeconds(remainingRef.current);
+      }
+    }, 1000);
+
+    return () => {
+      clearIntervalIfAny();
+    };
+  }, [isActive, paused, clearIntervalIfAny]);
+
+  // Auto-start handling
+  useEffect(() => {
+    if (autoStart && !isActive) {
+      remainingRef.current = durationSeconds;
+      setIsActive(true);
+      setRemainingSeconds(durationSeconds);
+    }
+  }, [autoStart, durationSeconds, isActive]);
+
+  const reset = useCallback(() => {
+    remainingRef.current = durationSeconds;
+    setRemainingSeconds(durationSeconds);
+    setIsActive(true);
+  }, [durationSeconds]);
+
+  const cancel = useCallback(() => {
+    setIsActive(false);
+    clearIntervalIfAny();
+  }, [clearIntervalIfAny]);
+
   const start = useCallback(() => {
+    remainingRef.current = durationSeconds;
     setRemainingSeconds(durationSeconds);
     setIsActive(true);
   }, [durationSeconds]);
