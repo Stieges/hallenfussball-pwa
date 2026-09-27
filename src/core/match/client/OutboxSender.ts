@@ -64,6 +64,7 @@ export class OutboxSender {
   async start(accountId: string): Promise<void> {
     this.haltAll();
     this.accountId = accountId;
+    this.cleanupForeignQueues(accountId);
     this.started = true;
     this.book.set({ clientOutdated: false });
     if (accountId === 'guest') {
@@ -317,6 +318,30 @@ export class OutboxSender {
         }
         return 'done';
       }
+    }
+  }
+
+  /**
+   * N-2: Warteschlangen fremder/alter Konten werden entfernt, sobald sie nicht
+   * (mehr) laufen -- eine noch laufende darf zu Ende laufen (I1/N-1), wird aber
+   * danach nicht mehr gebraucht und ebenfalls entfernt. `haltAll()` hat ihre
+   * Pausen/Timer bereits abgeraeumt, bevor diese Methode laeuft.
+   */
+  private cleanupForeignQueues(currentAccountId: string): void {
+    for (const [key, queue] of this.queues) {
+      if (queue.accountId === currentAccountId) {
+        continue;
+      }
+      if (queue.running === null) {
+        this.queues.delete(key);
+        continue;
+      }
+      const running = queue.running;
+      void running.finally(() => {
+        if (this.queues.get(key) === queue && queue.running === null) {
+          this.queues.delete(key);
+        }
+      });
     }
   }
 
