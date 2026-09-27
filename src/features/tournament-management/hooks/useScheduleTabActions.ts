@@ -14,7 +14,7 @@ import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
-import { buildValidMatches, isNewScheduledMatch } from '../../../hooks/useEngineMatches';
+import { buildValidMatches, isNewScheduledMatch } from '../../../hooks/engineMatchModel';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;

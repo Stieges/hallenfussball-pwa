@@ -24,54 +24,10 @@ import type { MatchEngineContextValue } from '../features/match-engine/matchEngi
 import { useToast } from '../components/ui/Toast/ToastContext';
 import { useActorRole } from './useActorRole';
 import { buildValidMatches } from './useEngineMatches';
+import type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
+import { createGuardedDelegates } from './engineCommandWiringHelpers';
 
-export interface EngineCommandFallbackHandlers {
-  handleStart: (matchId: string) => Promise<boolean>;
-  handlePause: (matchId: string) => Promise<void>;
-  handleResume: (matchId: string) => Promise<void>;
-  handleFinish: (matchId: string) => Promise<void>;
-  handleForceFinish: (matchId: string) => Promise<void>;
-  handleGoal: (
-    matchId: string,
-    teamId: string,
-    delta: 1 | -1,
-    options?: { playerNumber?: number; assists?: number[]; incomplete?: boolean },
-  ) => Promise<void>;
-  handleCard: (
-    matchId: string,
-    teamId: string,
-    cardType: 'YELLOW' | 'RED',
-    options?: { playerNumber?: number },
-  ) => Promise<void>;
-  handleTimePenalty: (
-    matchId: string,
-    teamId: string,
-    options?: { playerNumber?: number; durationSeconds?: number },
-  ) => Promise<void>;
-  handleSubstitution: (
-    matchId: string,
-    teamId: string,
-    options?: { playersIn?: number[]; playersOut?: number[] },
-  ) => Promise<void>;
-  handleFoul: (matchId: string, teamId: string, options?: { playerNumber?: number }) => Promise<void>;
-  handleStartOvertime: (matchId: string) => Promise<void>;
-  handleStartGoldenGoal: (matchId: string) => Promise<void>;
-  handleStartPenaltyShootout: (matchId: string) => Promise<void>;
-  handleRecordPenaltyResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
-  handleCancelTiebreaker: (matchId: string) => Promise<void>;
-  handleAbortPenaltyShootout: (matchId: string) => Promise<void>;
-  handleManualEditResult: (matchId: string, homeScore: number, awayScore: number) => Promise<void>;
-  handleAdjustTime: (matchId: string, newElapsedSeconds: number) => Promise<void>;
-  handleSkipMatch: (matchId: string, reason: string) => Promise<void>;
-  handleUnskipMatch: (matchId: string) => Promise<void>;
-  handleUndoLastEvent: (matchId: string) => Promise<void>;
-  handleUpdateEvent: (
-    matchId: string,
-    eventId: string,
-    updates: { playerNumber?: number; incomplete?: boolean },
-  ) => Promise<void>;
-  handleDeleteEvent: (matchId: string, eventId: string) => Promise<void>;
-}
+export type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
 
 function serverRulesFor(tournament: Tournament, matchId: string): MatchRules {
   const match = tournament.matches.find((m) => m.id === matchId);
@@ -292,57 +248,21 @@ export function useEngineCommandWiring(
     [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
   );
 
-  const handleForceFinish = useCallback((matchId: string) => guarded(matchId, fallback.handleForceFinish, matchId), [guarded, fallback]);
-  const handleStartOvertime = useCallback((matchId: string) => guarded(matchId, fallback.handleStartOvertime, matchId), [guarded, fallback]);
-  const handleStartGoldenGoal = useCallback((matchId: string) => guarded(matchId, fallback.handleStartGoldenGoal, matchId), [guarded, fallback]);
-  const handleStartPenaltyShootout = useCallback((matchId: string) => guarded(matchId, fallback.handleStartPenaltyShootout, matchId), [guarded, fallback]);
-  const handleRecordPenaltyResult = useCallback(
-    (matchId: string, homeScore: number, awayScore: number) => guarded(matchId, fallback.handleRecordPenaltyResult, matchId, homeScore, awayScore),
-    [guarded, fallback],
-  );
-  const handleCancelTiebreaker = useCallback((matchId: string) => guarded(matchId, fallback.handleCancelTiebreaker, matchId), [guarded, fallback]);
-  const handleAbortPenaltyShootout = useCallback((matchId: string) => guarded(matchId, fallback.handleAbortPenaltyShootout, matchId), [guarded, fallback]);
-  const handleManualEditResult = useCallback(
-    (matchId: string, homeScore: number, awayScore: number) => guarded(matchId, fallback.handleManualEditResult, matchId, homeScore, awayScore),
-    [guarded, fallback],
-  );
-  const handleAdjustTime = useCallback((matchId: string, newElapsedSeconds: number) => guarded(matchId, fallback.handleAdjustTime, matchId, newElapsedSeconds), [guarded, fallback]);
-  const handleSkipMatch = useCallback((matchId: string, reason: string) => guarded(matchId, fallback.handleSkipMatch, matchId, reason), [guarded, fallback]);
-  const handleUnskipMatch = useCallback((matchId: string) => guarded(matchId, fallback.handleUnskipMatch, matchId), [guarded, fallback]);
-  const handleUndoLastEvent = useCallback((matchId: string) => guarded(matchId, fallback.handleUndoLastEvent, matchId), [guarded, fallback]);
-  const handleUpdateEvent = useCallback(
-    (matchId: string, eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) =>
-      guarded(matchId, fallback.handleUpdateEvent, matchId, eventId, updates),
-    [guarded, fallback],
-  );
-  const handleDeleteEvent = useCallback(
-    (matchId: string, eventId: string) => guarded(matchId, fallback.handleDeleteEvent, matchId, eventId),
-    [guarded, fallback],
-  );
+  // P8 (Fixrunde 3, E2/W11): die reinen PC14-Toast-Wachen (kein eigener MatchCommands-Aufruf)
+  // sitzen in `./engineCommandWiringHelpers` -- eigene Datei statt 14 fast identischer
+  // `useCallback`-Zeilen hier.
+  const guardedDelegates = useMemo(() => createGuardedDelegates(guarded, fallback), [guarded, fallback]);
 
   return {
     handleStart,
     handlePause,
     handleResume,
     handleFinish,
-    handleForceFinish,
     handleGoal,
     handleCard,
     handleTimePenalty,
     handleSubstitution,
     handleFoul,
-    handleStartOvertime,
-    handleStartGoldenGoal,
-    handleStartPenaltyShootout,
-    handleRecordPenaltyResult,
-    handleCancelTiebreaker,
-    handleAbortPenaltyShootout,
-    handleManualEditResult,
-    handleAdjustTime,
-    handleSkipMatch,
-    handleUnskipMatch,
-    handleUndoLastEvent,
-    handleUpdateEvent,
-    handleDeleteEvent,
+    ...guardedDelegates,
   };
 }

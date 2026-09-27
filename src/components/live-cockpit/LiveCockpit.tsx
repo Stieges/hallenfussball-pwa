@@ -16,10 +16,9 @@ import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks
 import { SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
 import { useOutboxStatus } from '../../features/collaboration/outbox/useOutboxStatus';
-import { RejectedEntriesPanel } from '../../features/collaboration/outbox/RejectedEntriesPanel';
-import { Dialog } from '../dialogs/Dialog';
+import { useRejectedOutboxDialog } from '../../features/collaboration/outbox/useRejectedOutboxDialog';
+import { RejectedOutboxDialog } from '../../features/collaboration/outbox/RejectedOutboxDialog';
 import { useMatchEngineContextOptional } from '../../features/match-engine/useMatchEngineContext';
-import { useEngineOutboxSummary } from '../../features/match-engine/useEngineOutboxSummary';
 import { getEffectiveScore } from '../../utils/matchScore';
 import type { LiveCockpitProps } from './types';
 import type { ActivePenalty, EditableMatchEvent, MatchCockpitSettings } from '../../types/tournament';
@@ -110,21 +109,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   onUpdateSettings,
 }) => {
   const { t } = useTranslation('cockpit');
-  const { t: tCommon } = useTranslation('common');
 
   // W1 (Nachtrag C3a-2a): nur einbinden -- OutboxNotice rendert selbst nichts, solange kein
   // Ausgangs-Zustand vorliegt (kind === null).
   const matchEngineContext = useMatchEngineContextOptional();
   const outboxStatus = useOutboxStatus(matchEngineContext?.sender ?? null);
   const handleOutboxReload = useCallback(() => window.location.reload(), []);
-
-  // I4 (W1, Nachtrag Fixrunde 1): Helfer im Cockpit sahen Ablehnungen (D-C1) bisher nirgends, nur
-  // im AdminHeader -- dieselbe Verdrahtung wie dort (rejectedCount/reviewCount aus dem echten
-  // Sender, Dialog mit RejectedEntriesPanel bei "Ablehnungen anzeigen").
-  const outboxSummary = useEngineOutboxSummary(tournamentId ?? '');
-  const [showRejectedDialog, setShowRejectedDialog] = useState(false);
-  const handleShowRejected = useCallback(() => setShowRejectedDialog(true), []);
-  const handleCloseRejected = useCallback(() => setShowRejectedDialog(false), []);
 
   // Get cockpit settings with defaults
   const cockpitSettings = useMemo(
@@ -177,15 +167,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   // Toast notifications
   const { toasts, showSuccess, showInfo, showError: showToastError, dismissToast } = useToast();
 
-  // I4 (W1, Nachtrag Fixrunde 1): "Verstanden" (RejectedEntriesPanel). Fixrunde 2 (Re-Review-
-  // Befund C4): `.catch` statt nacktem `void` -- ein IDB-/Sender-Fehler darf keine unbehandelte
-  // Ablehnung werden; der Helfer sieht stattdessen einen Toast.
-  const handleDismissRejected = useCallback(
-    (ids: string[]) => {
-      outboxSummary.dismiss(ids).catch(() => showToastError('Verstanden fehlgeschlagen — bitte erneut versuchen'));
-    },
-    [outboxSummary, showToastError],
-  );
+  // I4 (W1, Nachtrag Fixrunde 1): Helfer im Cockpit sahen Ablehnungen (D-C1) bisher nirgends, nur
+  // im AdminHeader -- dieselbe Verdrahtung wie dort (P8/Fixrunde 3: gemeinsamer Hook statt
+  // doppeltem Code).
+  const rejectedOutbox = useRejectedOutboxDialog(tournamentId, showToastError);
 
   // Next match info
   const nextMatch = useMemo(() => {
@@ -915,10 +900,10 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
             <SyncStatusIndicator
               tournamentId={tournamentId}
               compact
-              rejectedCount={outboxSummary.rejectedCount}
-              reviewCount={outboxSummary.reviewCount}
-              onShowRejected={handleShowRejected}
-              enginePendingCount={outboxSummary.pendingCount}
+              rejectedCount={rejectedOutbox.rejectedCount}
+              reviewCount={rejectedOutbox.reviewCount}
+              onShowRejected={rejectedOutbox.show}
+              enginePendingCount={rejectedOutbox.pendingCount}
             />
             <span style={statusBadgeStyle} data-testid="match-status-badge">{getStatusLabel()}</span>
             {/* ARIA-live region for screen readers to announce status changes */}
@@ -958,9 +943,12 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
 
         {/* I4 (W1, Nachtrag Fixrunde 1): nur einbinden -- Dialog zeigt die Ablehnungsliste dieses
             Turniers, "Verstanden" ruft dismiss (store.dismissRejected + m7-Benachrichtigung). */}
-        <Dialog isOpen={showRejectedDialog} onClose={handleCloseRejected} title={String(tCommon('outbox.rejected.dialogTitle'))}>
-          <RejectedEntriesPanel entries={outboxSummary.entries} onDismiss={handleDismissRejected} />
-        </Dialog>
+        <RejectedOutboxDialog
+          isOpen={rejectedOutbox.isOpen}
+          onClose={rejectedOutbox.close}
+          entries={rejectedOutbox.entries}
+          onDismiss={rejectedOutbox.handleDismiss}
+        />
 
         {/* Foul Bar - Mobile only */}
         {isMobile && (

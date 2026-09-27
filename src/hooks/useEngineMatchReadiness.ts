@@ -11,14 +11,13 @@
  * zwischen dem Mount (`ManagementTab`) und dem asynchronen `ensureMatch` (IndexedDB-Schreibzugriff),
  * die `engineLiveMatches` (aus `useEngineMatches`) erst danach fuellt. `isEngineDestinedMatch`
  * braucht dafuer keine Engine-Ansicht -- nur die Turnierdaten selbst (`buildValidMatches` +
- * `isNewScheduledMatch`, beide bereits in `useEngineMatches.ts` und dort fuer diese Wieder-
- * verwendung exportiert).
+ * `isNewScheduledMatch`, P8/Fixrunde 3: beide in `./engineMatchModel`).
  */
 import { useCallback, useMemo, useRef } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
-import { buildValidMatches, computeLiveMatches, isNewScheduledMatch } from './useEngineMatches';
+import { buildValidMatches, computeLiveMatches, isNewScheduledMatch } from './engineMatchModel';
 
 export interface UseEngineMatchReadinessResult {
   /** B4: synchron aus den Turnierdaten ableitbar (dieselbe B1-Klausel wie `isNewScheduledMatch`)
