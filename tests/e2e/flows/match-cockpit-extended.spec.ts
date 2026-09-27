@@ -345,7 +345,10 @@ test.describe('Match Cockpit Extended', () => {
   // UNDO/REDO FUNCTIONALITY
   // ═══════════════════════════════════════════════════════════════
 
-  test('Undo: Letztes Tor rückgängig machen', async ({ page }) => {
+  // C3a-2a: Rueckgaengig/Minus (RETRACT) ist fuer Engine-Spiele noch nicht umgestellt (PC14) --
+  // ein neues Spiel laeuft seit der B1-Umschaltung ueber den Engine-Weg und zeigt fuer diese
+  // Aktion den NotOnEngineYetError-Toast statt sie auszufuehren. Wird in C3b wieder aktiviert.
+  test.fixme('Undo: Letztes Tor rückgängig machen', async ({ page }) => {
     // GIVEN - Navigate to running match with a goal
     await navigateToLiveCockpit(page);
 

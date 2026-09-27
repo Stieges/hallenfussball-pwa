@@ -22,7 +22,24 @@ interface OverlayCache {
   result: Tournament;
 }
 
-function computeOverlaidTournament(tournament: Tournament, context: MatchEngineContextValue | null): Tournament {
+/**
+ * `mergeBase`: die Referenz, gegen die `applyEngineOverlay` auf Aenderung prueft. OHNE dies wuerde
+ * JEDE Neuberechnung (jeder `engine.subscribe`-Aufruf, auch fuer ein voellig unveraendertes
+ * Ergebnis) staendig gegen die STATISCHEN Rohdaten (`tournament`, die nie neu geladen werden,
+ * solange niemand `setTournament` aufruft) vergleichen -- ein einmal ueberlagertes Feld (z. B.
+ * `matchStatus: 'running'`) wiche fuer immer vom rohen `'scheduled'` ab und erzeugte bei JEDER
+ * Benachrichtigung ein NEUES `tournament`-Objekt (neue `matches`-Array-Referenz), obwohl sich die
+ * Projektion seit der letzten Berechnung gar nicht geaendert hat -- ein Endlos-Renderzyklus mit dem
+ * Lade-Effekt in `useMatchExecution.ts` (dessen Abhaengigkeit `tournament.matches` ist), reproduziert
+ * per E2E ("Maximum update depth exceeded"). Der Fix: solange die ROHEN Eingabedaten (`tournament`)
+ * unveraendert sind, dient das VORHERIGE Ueberlagerungsergebnis als Vergleichsbasis -- nicht die
+ * Rohdaten selbst.
+ */
+function computeOverlaidTournament(
+  tournament: Tournament,
+  context: MatchEngineContextValue | null,
+  previousResult: Tournament | undefined,
+): Tournament {
   if (!context) {
     return tournament;
   }
@@ -36,7 +53,7 @@ function computeOverlaidTournament(tournament: Tournament, context: MatchEngineC
       overlays.set(entry.externalId, engineOverlayFields(view, entry.ctx));
     }
   }
-  return applyEngineOverlay(tournament, overlays);
+  return applyEngineOverlay(previousResult ?? tournament, overlays);
 }
 
 export function useEngineOverlayForTournament(tournament: Tournament | null): Tournament | null {
@@ -51,7 +68,10 @@ export function useEngineOverlayForTournament(tournament: Tournament | null): To
     if (cache && !cache.dirty && cache.tournament === tournament && cache.context === context) {
       return cache.result;
     }
-    const result = computeOverlaidTournament(tournament, context);
+    // Vergleichsbasis nur wiederverwenden, wenn die ROHEN Eingabedaten unveraendert sind (sonst
+    // waere ein echtes Neuladen/eine echte Aenderung faelschlich gegen eine veraltete Basis geprueft).
+    const previousResult = cache?.tournament === tournament ? cache.result : undefined;
+    const result = computeOverlaidTournament(tournament, context, previousResult);
     cacheRef.current = { tournament, context, dirty: false, result };
     return result;
   }, [tournament, context]);

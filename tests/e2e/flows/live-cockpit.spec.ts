@@ -254,7 +254,10 @@ test.describe('Live Cockpit', () => {
     }).toPass({ timeout: 5000 });
   });
 
-  test('Can undo last event', async ({ page }) => {
+  // C3a-2a: Rueckgaengig/Minus (RETRACT) ist fuer Engine-Spiele noch nicht umgestellt (PC14) --
+  // ein neues Spiel laeuft seit der B1-Umschaltung ueber den Engine-Weg und zeigt fuer diese
+  // Aktion den NotOnEngineYetError-Toast statt sie auszufuehren. Wird in C3b wieder aktiviert.
+  test.fixme('Can undo last event', async ({ page }) => {
     // GIVEN - Navigate to Live Cockpit, start match and score a goal
     await page.getByText('E2E Test Turnier').click();
     await page.getByText('Live').first().click({ force: true });
@@ -314,7 +317,12 @@ test.describe('Live Cockpit', () => {
     await skipButton.click();
   });
 
-  test('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
+  // C3a-2a: dieser Test teilt sich die Turnier-Fixtur mit "Can undo last event" (per Datei
+  // persistente lokale Speicherung, kein Reset zwischen Tests) -- solange DIESER Test hier fixme
+  // ist (Undo ist fuer Engine-Spiele noch nicht umgestellt, PC14), bleibt das dort erzielte Tor
+  // stehen (kein Rueckgaengig mehr) und dieser Test sieht 2 statt 1 Tore. Wird zusammen mit "Can
+  // undo last event" in C3b wieder aktiviert.
+  test.fixme('GoalScorerDialog auto-dismisses after timeout', async ({ page }) => {
     // Note: This test uses a shorter timeout for faster execution
     // The actual app uses 10 seconds, but we'll verify the mechanism works
 

@@ -118,4 +118,47 @@ describe('useTournamentManager x useEngineOverlayForTournament (W7)', () => {
     // Rein lokal: KEIN Speicherpfad ausgeloest.
     expect(mockUpdateTournament).not.toHaveBeenCalled();
   });
+
+  it('C1-artige Regression (E2E "Can score a goal"): eine WEITERE Benachrichtigung mit UNVERAENDERTER Projektion liefert dieselbe matches-Referenz (kein Endlos-Renderzyklus)', async () => {
+    mockLoadTournament.mockResolvedValue(makeTournament());
+    const { result, rerender } = renderHook(() => useTournamentManager('tour-overlay'));
+    await waitFor(() => expect(result.current.tournament).not.toBeNull());
+
+    mockView.mockReturnValue({
+      result: {
+        state: {
+          status: 'running',
+          phase: 'regular',
+          scores: { teama: { regular: 1, overtime: 0, shootout: 0 }, teamb: { regular: 0, overtime: 0, shootout: 0 } },
+          overrides: [],
+          baseDecidedBy: null,
+          decidedBy: null,
+          finishedAt: null,
+          clock: { running: true, elapsedMs: 0, anchorAt: null },
+        },
+        localRejected: [],
+        needsFullReload: false,
+      },
+      log: [{ id: 'g1', type: 'GOAL' }],
+      confirmedCount: 1,
+    });
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+    await waitFor(() => expect(result.current.tournament?.matches[0].scoreA).toBe(1));
+    const matchesAfterFirstNotify = result.current.tournament?.matches;
+
+    // Ein ZWEITER, inhaltlich identischer Benachrichtigungszyklus (z. B. durch eine andere
+    // Aenderung an einem unbeteiligten Spiel ausgeloest) darf KEINE neue `matches`-Array-Referenz
+    // erzeugen -- ohne den Fix wich die Projektion bei JEDER Neuberechnung von den STATISCHEN
+    // Rohdaten ('scheduled'/0:0) ab und baute jedes Mal ein neues Array (Endlos-Renderzyklus mit
+    // dem Lade-Effekt in useMatchExecution.ts, dessen Abhaengigkeit `tournament.matches` ist).
+    act(() => {
+      listeners.forEach((listener) => listener());
+    });
+    rerender();
+
+    expect(result.current.tournament?.matches).toBe(matchesAfterFirstNotify);
+  });
 });
