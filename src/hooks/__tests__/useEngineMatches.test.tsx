@@ -8,6 +8,7 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { LocalMatchStore, MatchEngine, type ClockSync } from '../../core/match/client';
+import { serverRules } from '../../core/match';
 import type { Tournament, Match } from '../../types/tournament';
 
 const store = new LocalMatchStore();
@@ -76,6 +77,48 @@ describe('useEngineMatches', () => {
 
     await waitFor(() => expect(result.current.isEngineMatch('m-server-only')).toBe(true));
     expect(mockContext.engine.view('m-server-only')?.log).toHaveLength(0); // keine lokalen Ereignisse
+  });
+
+  it('I6/K3/W5: vor dem Anpfiff rechnet die Dauer mit der PHASE des Spiels (Finalrunde != Gruppendauer)', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-final']));
+    const t = {
+      id: 'tour-final-phase',
+      teams: [{ id: 'teamA', name: 'Heim' }, { id: 'teamB', name: 'Gast' }],
+      matches: [match({ id: 'm-final', teamA: 'teamA', teamB: 'teamB', phase: 'final' })],
+      groupPhaseGameDuration: 20,
+      finalRoundGameDuration: 10,
+    } as unknown as Tournament;
+    const finalRules = serverRules({
+      durationMinutes: null,
+      phase: 'final',
+      groupPhaseDuration: 20,
+      finalRoundDuration: 10,
+      config: {},
+      finalsConfig: null,
+    });
+    const expectedDurationSeconds = finalRules.sections * finalRules.sectionSeconds;
+
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
+    rerender();
+    await waitFor(() => expect(result.current.isEngineMatch('m-final')).toBe(true));
+
+    const groupRules = serverRules({
+      durationMinutes: null,
+      phase: null, // 'null' zaehlt laut serverRules als Gruppenphase
+      groupPhaseDuration: 20,
+      finalRoundDuration: 10,
+      config: {},
+      finalsConfig: null,
+    });
+    const groupDurationSeconds = groupRules.sections * groupRules.sectionSeconds;
+
+    const live = result.current.liveMatches.get('m-final');
+    expect(live?.durationSeconds).toBeGreaterThan(0);
+    expect(live?.durationSeconds).toBe(expectedDurationSeconds);
+    // Regressionsschutz gegen "Phase wird ignoriert, Gruppendauer gilt immer" (M3): mit 20 statt
+    // 10 Minuten waere der Wert ein anderer.
+    expect(live?.durationSeconds).not.toBe(groupDurationSeconds);
   });
 
   it('ohne MatchEngineProvider (Provider noch nicht im App-Baum): leere Map statt Absturz', () => {
