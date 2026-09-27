@@ -240,7 +240,7 @@ export class OutboxSender {
       return 'halt';
     }
     // Zuordnung ueber den Index (id nur zur Kontrolle), alles in einer Transaktion.
-    const { resolution, idMismatches } = buildResolution(batch, result.results, copy.pending, this.now());
+    const { resolution, idMismatches } = buildResolution(batch, result.results, this.now());
     await this.store.resolveBatch(queue.key, resolution);
     queue.resetBackoff();
     if (isCurrent) {

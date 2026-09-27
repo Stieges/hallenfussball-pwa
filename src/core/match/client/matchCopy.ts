@@ -2,8 +2,11 @@
  * Form der lokalen Spielkopie (RC6, PC7) und reine Uebergaenge an ihren Listen.
  * `LocalMatchStore` kapselt nur noch die Transaktionen darum.
  */
-import type { EngineEvent, MatchContext } from '../types';
+import { ERROR_CODES, type EngineEvent, type MatchContext } from '../types';
 import type { EngineEventWithSeq } from './catchUp';
+
+/** Code fuer eine per Kaskade abgelehnte Folge (B3) -- selbe Quelle wie `outboxResolution.ts`. */
+const DEPENDS_ON_REJECTED = ERROR_CODES.DEPENDS_ON_REJECTED;
 
 /** Record-Format 2 (C2a): mit `rejected`, `review` und optionalem `tournamentId`. */
 export const MATCH_COPY_FORMAT_VERSION = 2;
@@ -59,34 +62,75 @@ export function normalizeCopy(value: LegacyMatchCopy): MatchCopy {
   };
 }
 
+/**
+ * C3a-0, M-b: Kaskade eines abgelehnten B3-/W4-Ausloesers, angewendet auf den
+ * Bestand ZUM COMMIT-ZEITPUNKT (`copy.pending` in `applyResolution`) statt auf
+ * den Schnappschuss vor dem Senden -- ein waehrend des Aufrufs per `addPending`
+ * neu hinzugekommener Eintrag reisst sonst nicht mit.
+ */
+export interface CascadeInfo {
+  /** IDs, die in DIESEM Aufruf abgelehnt wurden (W4-Zielverweis). */
+  rejectedIds: string[];
+  /** Ausloesender Eintrag eines B3-Kaskadentyps (MATCH_START/RESUME/...), falls vorhanden. */
+  rootId?: string;
+  rejectedAt: number;
+}
+
 export interface BatchResolution {
   ackedIds: string[];
   rejected: RejectedEntry[];
   reviewIds: string[];
+  cascade?: CascadeInfo;
 }
 
 /** pending -> acked/rejected/review in einem Schritt (V3), Reihenfolge der Listen bleibt. */
 export function applyResolution(copy: MatchCopy, resolution: BatchResolution): void {
   const ackedIds = new Set(resolution.ackedIds);
   const reviewIds = new Set(resolution.reviewIds);
-  const rejectedIds = new Set(resolution.rejected.map((entry) => entry.event.id));
+  const explicitRejected = new Map(resolution.rejected.map((entry) => [entry.event.id, entry]));
+  const cascade = resolution.cascade;
+  const cascadeRejectedIds = cascade !== undefined ? new Set(cascade.rejectedIds) : null;
+  const presentIds = new Set(copy.pending.map((event) => event.id));
   const stillPending: EngineEvent[] = [];
   const movedAcked: EngineEvent[] = [];
   const movedReview: EngineEvent[] = [];
+  const cascaded: RejectedEntry[] = [];
   for (const event of copy.pending) {
     if (ackedIds.has(event.id)) {
       movedAcked.push(event);
-    } else if (reviewIds.has(event.id)) {
-      movedReview.push(event);
-    } else if (!rejectedIds.has(event.id)) {
-      stillPending.push(event);
+      continue;
     }
+    if (reviewIds.has(event.id)) {
+      movedReview.push(event);
+      continue;
+    }
+    if (explicitRejected.has(event.id)) {
+      continue;
+    }
+    if (cascade !== undefined) {
+      const dependsOnEventId =
+        typeof event.targetId === 'string' && cascadeRejectedIds?.has(event.targetId)
+          ? event.targetId
+          : cascade.rootId;
+      if (dependsOnEventId !== undefined) {
+        cascaded.push({
+          event,
+          code: DEPENDS_ON_REJECTED,
+          detail: { dependsOnEventId },
+          rejectedAt: cascade.rejectedAt,
+        });
+        continue;
+      }
+    }
+    stillPending.push(event);
   }
-  const known = new Set(copy.pending.map((event) => event.id));
   copy.pending = stillPending;
   copy.acked = copy.acked.concat(movedAcked);
   copy.review = copy.review.concat(movedReview);
-  copy.rejected = copy.rejected.concat(resolution.rejected.filter((entry) => known.has(entry.event.id)));
+  copy.rejected = copy.rejected.concat(
+    resolution.rejected.filter((entry) => presentIds.has(entry.event.id)),
+    cascaded,
+  );
   copy.updatedAt = Date.now();
 }
 

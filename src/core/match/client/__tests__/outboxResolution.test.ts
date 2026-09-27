@@ -6,7 +6,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { buildResolution, DEPENDS_ON_REJECTED } from '../outboxResolution';
-import { ev } from './fixtures';
+import { applyResolution, type MatchCopy } from '../matchCopy';
+import { ctx, ev } from './fixtures';
 
 const NOW = 4711;
 
@@ -20,7 +21,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: null, status: 'rejected' as const, code: 'INVALID_TRANSITION' },
     ];
 
-    const { resolution } = buildResolution(batch, results, batch, NOW);
+    const { resolution } = buildResolution(batch, results, NOW);
 
     expect(resolution.ackedIds).toEqual(['e1']);
     expect(resolution.rejected.map((entry) => [entry.event.id, entry.code])).toEqual([['e2', 'INVALID_TRANSITION']]);
@@ -36,7 +37,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: null, status: 'rejected' as const, code: 'INVALID_TRANSITION' },
     ];
 
-    const { resolution } = buildResolution(batch, results, batch, NOW);
+    const { resolution } = buildResolution(batch, results, NOW);
 
     // Index-Zuordnung: Position 0 gehoert zu e1 (nicht e2, trotz der id im Ergebnis).
     expect(resolution.ackedIds).toEqual(['e1']);
@@ -48,7 +49,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
     const batch = [e1];
     const results = [{ id: e1.id, status: 'review' as const }];
 
-    const { resolution } = buildResolution(batch, results, batch, NOW);
+    const { resolution } = buildResolution(batch, results, NOW);
 
     expect(resolution.reviewIds).toEqual(['e1']);
     expect(resolution.ackedIds).toEqual([]);
@@ -64,7 +65,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: r1.id, status: 'rejected' as const, code: 'UNKNOWN_TARGET' },
     ];
 
-    const { resolution } = buildResolution(batch, results, batch, NOW);
+    const { resolution } = buildResolution(batch, results, NOW);
 
     expect(resolution.rejected.map((entry) => [entry.event.id, entry.code])).toEqual([
       ['g1', 'INVALID_TRANSITION'],
@@ -85,24 +86,43 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: r1.id, status: 'rejected' as const, code: 'UNKNOWN_TARGET', detail: { reason: 'OVERTIME' } },
     ];
 
-    const { resolution } = buildResolution(batch, results, batch, NOW);
+    const { resolution } = buildResolution(batch, results, NOW);
 
     const r1Entry = resolution.rejected.find((entry) => entry.event.id === 'r1');
     expect(r1Entry?.detail).toEqual({ reason: 'OVERTIME', dependsOnEventId: 'g1' });
   });
 
-  it('Minor (c): ein NICHT gesendeter, kaskadierter Eintrag bekommt weiterhin DEPENDS_ON_REJECTED (kein Server-Code vorhanden)', () => {
+  it('Minor (c)/C3a-0 M-b: ein NICHT gesendeter, kaskadierter Eintrag bekommt weiterhin DEPENDS_ON_REJECTED (kein Server-Code vorhanden) -- angewendet auf den Bestand zum Commit-Zeitpunkt', () => {
     const start = ev({ id: 's1', type: 'MATCH_START', at: 1 });
     const goal = ev({ id: 'g1', type: 'GOAL', at: 2 });
     const batch = [start];
     const results = [{ id: start.id, status: 'rejected' as const, code: 'INVALID_TRANSITION' }];
-    const pending = [start, goal]; // goal wurde gar nicht gesendet
 
-    const { resolution } = buildResolution(batch, results, pending, NOW);
+    // C3a-0/M-b: `buildResolution` selbst entscheidet nichts mehr fuer Eintraege
+    // ausserhalb `batch` -- das macht erst `applyResolution` auf `copy.pending`.
+    const { resolution } = buildResolution(batch, results, NOW);
+    expect(resolution.cascade).toBeDefined();
 
-    const goalEntry = resolution.rejected.find((entry) => entry.event.id === 'g1');
+    const copy: MatchCopy = {
+      formatVersion: 2,
+      accountId: 'acc',
+      matchId: 'm',
+      ctx,
+      confirmed: [],
+      watermarkSeq: 0,
+      acked: [],
+      // goal wurde nie gesendet, ist aber zum Commit-Zeitpunkt trotzdem in pending.
+      pending: [start, goal],
+      rejected: [],
+      review: [],
+      updatedAt: 0,
+    };
+    applyResolution(copy, resolution);
+
+    const goalEntry = copy.rejected.find((entry) => entry.event.id === 'g1');
     expect(goalEntry?.code).toBe(DEPENDS_ON_REJECTED);
     expect(goalEntry?.detail).toEqual({ dependsOnEventId: 's1' });
+    expect(copy.pending).toEqual([]);
   });
 
   it('M-f: eine abweichende (nicht-null) id wird gemeldet, aendert aber nichts an der Index-Zuordnung', () => {
@@ -114,7 +134,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: 'unerwartet', status: 'accepted' as const }, // Position 1, aber falsche id
     ];
 
-    const { resolution, idMismatches } = buildResolution(batch, results, batch, NOW);
+    const { resolution, idMismatches } = buildResolution(batch, results, NOW);
 
     // Nichts wird still verworfen -- beide Eintraege werden wie immer ueber den Index gebucht.
     expect(resolution.ackedIds).toEqual(['e1', 'e2']);
@@ -131,7 +151,7 @@ describe('buildResolution: Zuordnung ueber den Index', () => {
       { id: 'e2', status: 'accepted' as const },
     ];
 
-    const { idMismatches } = buildResolution(batch, results, batch, NOW);
+    const { idMismatches } = buildResolution(batch, results, NOW);
 
     expect(idMismatches).toEqual([]);
   });

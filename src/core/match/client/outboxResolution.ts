@@ -6,7 +6,7 @@
  */
 import type { AppendEventResult } from '../../repositories/appendMatchEventsRpc';
 import type { EngineEvent } from '../types';
-import type { BatchResolution, RejectedEntry } from './matchCopy';
+import type { BatchResolution, CascadeInfo, RejectedEntry } from './matchCopy';
 
 /** B3: nach diesen abgelehnten Typen reissen alle uebrigen pending mit (RC8). */
 const CASCADE_TYPES = new Set(['MATCH_START', 'RESUME', 'SECTION_START', 'REOPEN', 'UNSKIP']);
@@ -43,20 +43,21 @@ export interface BuildResolutionOutput {
 }
 
 /**
- * Baut den Stapel-Uebergang fuer GENAU einen Aufruf. `pending` ist die vollstaendige
- * Ausgangsliste der Kopie VOR dem Senden -- alles ausserhalb `batch` wird bei B3/W4
- * mit abgelehnt. Wasserstand und `confirmed` bleiben unberuehrt.
+ * Baut den Stapel-Uebergang fuer GENAU einen Aufruf. Ausserhalb von `batch` liegende
+ * Eintraege (noch nicht gesendete oder erst waehrend des Aufrufs per `addPending`
+ * hinzugekommene, C3a-0/M-b) werden HIER NICHT entschieden -- dafuer liefert diese
+ * Funktion nur die Kaskaden-Angaben (`cascade`), die `applyResolution` auf den
+ * Bestand ZUM COMMIT-ZEITPUNKT anwendet (Snapshot-Rennen ausgeschlossen).
+ * Wasserstand und `confirmed` bleiben unberuehrt.
  */
 export function buildResolution(
   batch: EngineEvent[],
   results: AppendEventResult[],
-  pending: readonly EngineEvent[],
   now: number,
 ): BuildResolutionOutput {
   if (results.length !== batch.length) {
     throw new Error(`append_match_events: ${results.length} Ergebnisse fuer ${batch.length} Ereignisse`);
   }
-  const sentIds = new Set(batch.map((event) => event.id));
   const rejectedIds = new Set<string>();
   for (let i = 0; i < batch.length; i += 1) {
     if (results[i].status === 'rejected') {
@@ -103,22 +104,16 @@ export function buildResolution(
   }
 
   // B3: ein abgelehnter Start-/Freigabe-Typ reisst ALLE uebrigen pending mit -- auch
-  // die, die noch gar nicht gesendet wurden. W4 greift auch ohne B3 (Ziel-Verweis).
+  // die, die noch gar nicht gesendet wurden ODER waehrend dieses Aufrufs erst per
+  // `addPending` hinzukommen (C3a-0/M-b). W4 greift auch ohne B3 (Ziel-Verweis).
   // Diese Eintraege wurden nie gesendet -- es gibt keinen Server-Code zu erhalten,
-  // aber `detail` verweist auf den auslösenden Eintrag (Minor c/Fixrunde 1).
+  // aber `detail` verweist auf den auslösenden Eintrag (Minor c/Fixrunde 1). Angewendet
+  // wird das erst in `applyResolution`, auf dem Bestand ZUM COMMIT-ZEITPUNKT (M-b).
   const cascadeRoot = batch.find((event) => rejectedIds.has(event.id) && CASCADE_TYPES.has(event.type));
-  for (const event of pending) {
-    if (sentIds.has(event.id)) {
-      continue;
-    }
-    const dependsOnEventId =
-      typeof event.targetId === 'string' && rejectedIds.has(event.targetId) ? event.targetId : cascadeRoot?.id;
-    if (dependsOnEventId === undefined) {
-      continue;
-    }
-    rejectedIds.add(event.id);
-    rejected.push({ event, code: DEPENDS_ON_REJECTED, detail: { dependsOnEventId }, rejectedAt: now });
-  }
+  const cascade: CascadeInfo | undefined =
+    rejectedIds.size > 0
+      ? { rejectedIds: Array.from(rejectedIds), ...(cascadeRoot ? { rootId: cascadeRoot.id } : {}), rejectedAt: now }
+      : undefined;
 
-  return { resolution: { ackedIds, rejected, reviewIds }, idMismatches };
+  return { resolution: { ackedIds, rejected, reviewIds, ...(cascade ? { cascade } : {}) }, idMismatches };
 }

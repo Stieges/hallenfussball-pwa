@@ -111,6 +111,40 @@ describe('OutboxSender: Stapel und Folgeablehnung', () => {
     expect(await idsIn(h, 'acc', 'm4b', 'pending')).toEqual([]);
   });
 
+  it('C3a-0, M-b: ein Eintrag, der WAEHREND eines abgelehnten Kaskaden-Aufrufs per addPending hinzukommt, wird ebenfalls DEPENDS_ON_REJECTED (Bestand zum Commit-Zeitpunkt, nicht der Schnappschuss vor dem Senden)', async () => {
+    const h = makeHarness();
+    await h.store.create('acc', 'mb', ctx);
+    await h.store.addPending('acc', 'mb', ev({ id: 'e1', type: 'MATCH_START', at: 1 }));
+
+    let releaseApi: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseApi = resolve;
+    });
+    h.api.mockImplementation(async (_matchId, events) => {
+      await gate;
+      return success(events.map((event) => resultOf(event.id, 'rejected', 'INVALID_TRANSITION')));
+    });
+
+    const startPromise = h.sender.start('acc');
+    // Erst den Sender bis zum haengenden RPC vorspulen (Ladeanfrage + Stapelbildung
+    // sind selbst asynchron) -- der Stapel enthaelt zu diesem Zeitpunkt nur e1.
+    for (let i = 0; i < 10; i += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+    // Jetzt kommt ein neuer Eintrag hinzu, DER NICHT MEHR im Stapel steckt (M-b).
+    await h.store.addPending('acc', 'mb', ev({ id: 'g2', type: 'GOAL', at: 2 }));
+    releaseApi?.();
+    await startPromise;
+    await h.settle();
+
+    expect(h.api).toHaveBeenCalledTimes(1);
+    expect(await rejectedIn(h, 'acc', 'mb')).toEqual([
+      ['e1', 'INVALID_TRANSITION'],
+      ['g2', 'DEPENDS_ON_REJECTED'],
+    ]);
+    expect(await idsIn(h, 'acc', 'mb', 'pending')).toEqual([]);
+  });
+
   it('5: Stapelgrenze -- 120 pending ergeben 3 Aufrufe (50/50/20) in Einfuegereihenfolge', async () => {
     const h = makeHarness();
     await h.store.create('acc', 'm5', ctx);
