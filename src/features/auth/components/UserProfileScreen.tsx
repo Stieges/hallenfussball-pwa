@@ -9,8 +9,8 @@
 import React, { CSSProperties, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeLocalStorage } from '../../../core/utils/safeStorage';
-import { LocalMatchStore } from '../../../core/match/client/LocalMatchStore';
-import { countWaitingEntries, type WaitingEntriesSource } from '../../collaboration/outbox/countWaitingEntries';
+import type { WaitingEntriesSource } from '../../collaboration/outbox/countWaitingEntries';
+import { useGuardedLogout } from '../../collaboration/outbox/useGuardedLogout';
 import { LogoutWarningDialog } from '../../collaboration/outbox/LogoutWarningDialog';
 import { useAuth } from '../hooks/useAuth';
 import { useUserTournaments } from '../hooks/useUserTournaments';
@@ -37,9 +37,6 @@ interface UserProfileScreenProps {
   /** C2b: kleine Fabrik für die lokale Spielkopie (Standard: neue LocalMatchStore-Instanz) */
   createMatchStore?: () => WaitingEntriesSource;
 }
-
-/** Standard-Fabrik der lokalen Spielkopie (jeweils eine frische Instanz). */
-const defaultMatchStoreFactory = (): WaitingEntriesSource => new LocalMatchStore();
 
 // =============================================================================
 // SUB-COMPONENTS (Cards)
@@ -71,7 +68,7 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   onOpenTournament,
   onCreateTournament,
   onRegister,
-  createMatchStore = defaultMatchStoreFactory,
+  createMatchStore,
 }) => {
   const { t } = useTranslation('auth');
   const { user, isGuest, logout, resetPassword } = useAuth();
@@ -83,8 +80,20 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
   // Password reset rate limiting state
   const [passwordResetCooldown, setPasswordResetCooldown] = useState(0);
 
-  // C2b: Anzahl der wartenden Eintraege, solange die Abmelde-Warnung offen ist
-  const [logoutWaiting, setLogoutWaiting] = useState<number | null>(null);
+  // C2b (D-C2), Fixrunde 1 (Review I3/m4): Abmelde-Logik im gemeinsamen Hook, damit beide
+  // Abmeldewege (hier und AuthSection-Dropdown) dieselbe Warnung zeigen.
+  const {
+    waitingCount: logoutWaiting,
+    handleLogout,
+    cancel: cancelLogoutWarning,
+    confirm: confirmLogoutWarning,
+  } = useGuardedLogout({
+    isGuest,
+    accountId: user?.id ?? '',
+    logout,
+    createMatchStore,
+    onLoggedOut: onBack,
+  });
 
   // Check for existing cooldown on mount and handle countdown
   useEffect(() => {
@@ -146,41 +155,6 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
       showError(t('errors.genericError'));
     }
   }, [user, passwordResetCooldown, resetPassword, showInfo, showSuccess, showError, t]);
-
-  // C2b (D-C2): abmelden mit Warnung, wenn Eintraege noch auf Uebertragung warten.
-  // Zaehlfehler duerfen das Abmelden nie blockieren; die lokalen Kopien bleiben erhalten.
-  const doLogout = useCallback(() => {
-    void logout();
-    onBack?.();
-  }, [logout, onBack]);
-
-  const handleLogout = useCallback(() => {
-    if (isGuest) {
-      doLogout();
-      return;
-    }
-    const accountId = user?.id ?? '';
-    void (async () => {
-      // Fixrunde 1 (Review m1): `createMatchStore()` ist eine injizierte Fabrik und darf
-      // synchron werfen (z.B. IndexedDB nicht verfuegbar) -- ausserhalb von try/catch wuerde
-      // das als unhandled rejection enden, `.catch()` wuerde nie greifen, und das Abmelden
-      // bliebe aus. Zaehlfehler (synchron ODER asynchron) duerfen das Abmelden nie blockieren.
-      const waiting = await Promise.resolve()
-        .then(() => countWaitingEntries(createMatchStore(), accountId))
-        .catch(() => 0);
-      if (waiting > 0) {
-        setLogoutWaiting(waiting);
-        return;
-      }
-      doLogout();
-    })();
-  }, [isGuest, user?.id, createMatchStore, doLogout]);
-
-  const cancelLogoutWarning = useCallback(() => setLogoutWaiting(null), []);
-  const confirmLogoutWarning = useCallback(() => {
-    setLogoutWaiting(null);
-    doLogout();
-  }, [doLogout]);
 
   // AuthGuard in App.tsx handles guest redirect
   if (!user) {
