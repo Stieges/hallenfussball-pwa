@@ -310,5 +310,10 @@
     "substitution": "Sub",
     "eventLogAria": "Show event log",
     "events": "Events"
+  },
+  "engine": {
+    "notYet": "This action will be available in a later step.",
+    "invalid": "This action isn't possible right now.",
+    "storeFull": "Device storage is full. Please free up space."
   }
 }

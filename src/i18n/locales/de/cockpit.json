@@ -310,5 +310,10 @@
     "substitution": "Wechsel",
     "eventLogAria": "Ereignisprotokoll anzeigen",
     "events": "Ereignisse"
+  },
+  "engine": {
+    "notYet": "Diese Aktion folgt in einem späteren Schritt.",
+    "invalid": "Diese Aktion ist gerade nicht möglich.",
+    "storeFull": "Der Gerätespeicher ist voll. Bitte Speicherplatz freigeben."
   }
 }
