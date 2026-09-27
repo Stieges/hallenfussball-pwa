@@ -7,12 +7,15 @@
  * @see docs/concepts/TOURNAMENT-ADMIN-CENTER-KONZEPT-v1.2.md Section 2.3
  */
 
-import { useState, CSSProperties } from 'react';
+import { useCallback, useState, CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../design-tokens';
 import type { AdminHeaderProps } from '../types/admin.types';
 import { ADMIN_LAYOUT } from '../constants/admin.constants';
 import { SyncStatusIndicator } from '../../collaboration';
+import { Dialog } from '../../../components/dialogs/Dialog';
+import { RejectedEntriesPanel } from '../../collaboration/outbox/RejectedEntriesPanel';
+import { useEngineOutboxSummary } from '../../match-engine/useEngineOutboxSummary';
 
 // =============================================================================
 // STYLES
@@ -125,8 +128,22 @@ export function AdminHeader({
   showSyncStatus = false,
 }: AdminHeaderProps) {
   const { t } = useTranslation('admin');
+  const { t: tCommon } = useTranslation('common');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // W1 (Nachtrag C3a-2a): rejectedCount/reviewCount aus dem echten Sender statt der bisherigen
+  // Default-Nullen -- "onShowRejected" oeffnet den Dialog mit der Liste, "Verstanden" nimmt einen
+  // Eintrag ueber `dismiss` (store.dismissRejected + m7-Benachrichtigung) heraus.
+  const outboxSummary = useEngineOutboxSummary(tournamentId ?? '');
+  const [showRejectedDialog, setShowRejectedDialog] = useState(false);
+  const handleShowRejected = useCallback(() => setShowRejectedDialog(true), []);
+  const handleCloseRejected = useCallback(() => setShowRejectedDialog(false), []);
+  const handleDismissRejected = useCallback(
+    (ids: string[]) => {
+      void outboxSummary.dismiss(ids);
+    },
+    [outboxSummary],
+  );
 
   const handleSearchToggle = () => {
     if (isSearchExpanded && searchQuery) {
@@ -187,7 +204,18 @@ export function AdminHeader({
 
       {/* Sync Status */}
       {showSyncStatus && (
-        <SyncStatusIndicator tournamentId={tournamentId} compact />
+        <SyncStatusIndicator
+          tournamentId={tournamentId}
+          compact
+          rejectedCount={outboxSummary.rejectedCount}
+          reviewCount={outboxSummary.reviewCount}
+          onShowRejected={handleShowRejected}
+        />
+      )}
+      {showSyncStatus && (
+        <Dialog isOpen={showRejectedDialog} onClose={handleCloseRejected} title={String(tCommon('outbox.rejected.dialogTitle'))}>
+          <RejectedEntriesPanel entries={outboxSummary.entries} onDismiss={handleDismissRejected} />
+        </Dialog>
       )}
 
       {/* Search */}

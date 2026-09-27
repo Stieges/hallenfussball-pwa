@@ -176,7 +176,8 @@
       "header_other": "{{count}} entries not accepted",
       "dismissAll": "Dismiss all",
       "unknownCodeHint": "Code: {{code}}",
-      "countLabel": "{{count}} not accepted"
+      "countLabel": "{{count}} not accepted",
+      "dialogTitle": "Entries not accepted"
     },
     "notice": {
       "clientOutdated": "Update the app",
