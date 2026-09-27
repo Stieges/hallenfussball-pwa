@@ -263,14 +263,13 @@ describe('MatchEngine', () => {
     expect(fetchConfirmed).toHaveBeenCalledTimes(2);
   });
 
-  it('B2 (M10): buildLog dedupliziert -- ein Ereignis, das sowohl bestaetigt als auch (veraltet) noch acked ist, erscheint nur einmal', async () => {
-    const confirmedGoal = withSeq(goal('dup-1', 'teamA', 500, 0), 3);
+  it('B2 (M10): buildLog dedupliziert -- ein Ereignis in BEIDEN offenen Listen (acked UND pending) erscheint nur einmal', async () => {
+    // `seen.has(...)` in buildLog schuetzt genau davor: acked und pending sollten sich laut
+    // Store-Vertrag nie ueberschneiden, aber die Funktion selbst darf sich nicht darauf verlassen.
     await store.create('acc1', 'me-dedupe', ctx);
-    await store.applyConfirmed('acc1', 'me-dedupe', [confirmedGoal], 3);
-    // Simuliert eine Kopie, in der derselbe Eintrag faelschlich noch in `acked` steht (sollte durch
-    // applyConfirmed eigentlich entfernt werden -- Regressionsschutz fuer buildLog selbst).
     await store.addPending('acc1', 'me-dedupe', goal('dup-1', 'teamA', 500, 0));
-    await store.markAcked('acc1', 'me-dedupe', ['dup-1']);
+    await store.markAcked('acc1', 'me-dedupe', ['dup-1']); // dup-1 jetzt in acked
+    await store.addPending('acc1', 'me-dedupe', goal('dup-1', 'teamA', 500, 0)); // dup-1 erneut in pending
 
     const fetchConfirmed = vi.fn();
     const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
@@ -279,5 +278,21 @@ describe('MatchEngine', () => {
 
     const log = engine.view('me-dedupe')?.log ?? [];
     expect(log.filter((event) => event.id === 'dup-1')).toHaveLength(1);
+  });
+
+  it('B2: ein Ereignis, das sowohl bestaetigt als auch (veraltet) noch acked ist, erscheint nur einmal', async () => {
+    const confirmedGoal = withSeq(goal('dup-2', 'teamA', 500, 0), 3);
+    await store.create('acc1', 'me-dedupe-confirmed', ctx);
+    await store.applyConfirmed('acc1', 'me-dedupe-confirmed', [confirmedGoal], 3);
+    await store.addPending('acc1', 'me-dedupe-confirmed', goal('dup-2', 'teamA', 500, 0));
+    await store.markAcked('acc1', 'me-dedupe-confirmed', ['dup-2']);
+
+    const fetchConfirmed = vi.fn();
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-dedupe-confirmed', ctx);
+
+    const log = engine.view('me-dedupe-confirmed')?.log ?? [];
+    expect(log.filter((event) => event.id === 'dup-2')).toHaveLength(1);
   });
 });
