@@ -21,6 +21,9 @@ import { safeLocalStorage } from '../../core/utils/safeStorage';
 import { useAuth } from '../../features/auth/hooks/useAuth';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { MobileAuthBottomSheet } from '../../features/auth/components/MobileAuthBottomSheet';
+import type { WaitingEntriesSource } from '../../features/collaboration/outbox/countWaitingEntries';
+import { useGuardedLogout } from '../../features/collaboration/outbox/useGuardedLogout';
+import { LogoutWarningDialog } from '../../features/collaboration/outbox/LogoutWarningDialog';
 import { Button } from '../ui/Button';
 import { cssVars } from '../../design-tokens';
 import { Icons } from '../ui/Icons';
@@ -30,6 +33,9 @@ interface AuthSectionProps {
   onNavigateToRegister: () => void;
   onNavigateToProfile: () => void;
   onNavigateToSettings?: () => void;
+  /** Fixrunde 1 (Review I3): injizierbare Fabrik fuer die Abmelde-Warnung (D-C2), wie in
+   *  UserProfileScreen. Standard: neue LocalMatchStore-Instanz (siehe useGuardedLogout). */
+  createMatchStore?: () => WaitingEntriesSource;
 }
 
 /**
@@ -109,6 +115,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   onNavigateToRegister,
   onNavigateToProfile,
   onNavigateToSettings,
+  createMatchStore,
 }) => {
   const { user, isAuthenticated, isGuest, isLoading, logout, connectionState, reconnect } = useAuth();
   const isMobile = useIsMobile();
@@ -117,6 +124,20 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
   const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const menuItemsRef = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Fixrunde 1 (Review I3): D-C2-Abmelde-Warnung auch fuer das Konto-Dropdown, nicht nur
+  // UserProfileScreen -- derselbe Hook wie dort, damit beide Wege dasselbe Verhalten zeigen.
+  const {
+    waitingCount: logoutWaiting,
+    handleLogout: guardedLogout,
+    cancel: cancelLogoutWarning,
+    confirm: confirmLogoutWarning,
+  } = useGuardedLogout({
+    isGuest,
+    accountId: user?.id ?? '',
+    logout,
+    createMatchStore,
+  });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -334,7 +355,7 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
               role="menuitem"
               onClick={() => {
                 setDropdownOpen(false);
-                void logout();
+                guardedLogout();
               }}
               style={{ ...styles.dropdownItem, ...styles.dropdownItemDanger }}
               data-testid="auth-logout-button"
@@ -344,6 +365,13 @@ export const AuthSection: React.FC<AuthSectionProps> = ({
             </button>
           </div>
         )}
+
+        <LogoutWarningDialog
+          isOpen={logoutWaiting !== null}
+          count={logoutWaiting ?? 0}
+          onCancel={cancelLogoutWarning}
+          onConfirm={confirmLogoutWarning}
+        />
       </div>
     );
   }
