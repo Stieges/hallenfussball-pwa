@@ -23,7 +23,7 @@ function createMatch(overrides: Partial<Match> = {}): Match {
   };
 }
 
-function createTournament(matches: Match[]): Tournament {
+function createTournament(matches: Match[], teams: Tournament['teams'] = []): Tournament {
   return {
     id: 'test-tournament',
     title: 'Test Tournament',
@@ -37,7 +37,7 @@ function createTournament(matches: Match[]): Tournament {
     numberOfGroups: 1,
     groupPhaseGameDuration: 10,
     pointSystem: { win: 3, draw: 1, loss: 0 },
-    teams: [],
+    teams,
     matches,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -133,5 +133,49 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
 
     expect(onMatchesUpdate).not.toHaveBeenCalled();
     expect(showWarning).toHaveBeenCalled();
+  });
+
+  // Fixrunde 2, Item 6: ein B1-Engine-Spiel (scheduled + kein Ergebnis, ECHTE Team-IDs -- nur dann
+  // greift buildValidMatches ueberhaupt) darf NICHT mehr ueber die Schnelleingabe direkt
+  // scoreA/scoreB geschrieben bekommen (das umginge MatchCommands/die RPC komplett). Die
+  // Schnelleingabe zeigt stattdessen denselben "folgt in einem spaeteren Schritt"-Hinweis (C3d).
+  it('Fixrunde 2 (Item 6): ein Engine-Spiel (scheduled, kein Ergebnis, echte Teams) blockiert die Schnelleingabe mit Toast statt scoreA/B zu schreiben', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'scheduled' })],
+      teams,
+    );
+    const { result, onMatchesUpdate, onLocalTournamentUpdate, onTournamentUpdate, showWarning } =
+      renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 2, 1);
+    });
+
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    expect(onLocalTournamentUpdate).not.toHaveBeenCalled();
+    expect(onTournamentUpdate).not.toHaveBeenCalled();
+    expect(showWarning).toHaveBeenCalled();
+  });
+
+  it('Fixrunde 2 (Item 6): dieselben echten Teams, aber ein bereits eingetragenes Ergebnis, bleibt ein normales Altspiel (keine Blockade)', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', scoreA: 3, scoreB: 1 })],
+      teams,
+    );
+    const { result, onMatchesUpdate } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
   });
 });

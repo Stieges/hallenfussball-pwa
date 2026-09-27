@@ -14,6 +14,7 @@ import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoReassignReferees, redistributeFields } from '../../schedule-editor';
 import { isMatchFinished, isMatchRunning } from '../utils';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
+import { buildValidMatches, isNewScheduledMatch } from '../../../hooks/useEngineMatches';
 
 interface UseScheduleTabActionsProps {
   tournament: Tournament;
@@ -65,6 +66,10 @@ export function useScheduleTabActions({
   lockFinishedResults,
 }: UseScheduleTabActionsProps): UseScheduleTabActionsResult {
   const { t } = useTranslation('tournament');
+  // Fixrunde 2, Item 6: dieselbe Uebersetzung wie useEngineCommandWiring.ts (`NotOnEngineYetError`)
+  // -- EIN Text fuer "diese Aktion ist noch nicht auf die Engine umgestellt" statt einer zweiten,
+  // abweichenden Formulierung.
+  const { t: tCockpit } = useTranslation('cockpit');
 
   // Handle redistribution of SR (keeps times fixed)
   const handleRedistributeSR = useCallback(() => {
@@ -173,6 +178,17 @@ export function useScheduleTabActions({
 
   // Handle score change with live match warning
   const handleScoreChange = useCallback((matchId: string, scoreA: number, scoreB: number) => {
+    // Fixrunde 2, Item 6: ein B1-Engine-Spiel (scheduled + kein Ergebnis) darf NICHT mehr ueber die
+    // Schnelleingabe direkt scoreA/scoreB geschrieben bekommen -- das umginge MatchCommands/die RPC
+    // komplett (kein Ereignis, keine Projektion, kein Sync). `localLiveMatches` als leere Map: die
+    // "kein bereits laufendes Altspiel"-Klausel ist hier zweitrangig -- ein RUNNING/FINISHED Match
+    // faengt bereits der bestehende `isMatchRunning`/`lockFinishedResults`-Check weiter unten ab.
+    const engineEntry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
+    if (engineEntry && isNewScheduledMatch(engineEntry, new Map())) {
+      showWarning(tCockpit('engine.notYet'));
+      return;
+    }
+
     // Block editing finished matches (if lock is enabled)
     if (lockFinishedResults && isMatchFinished(matchId, tournament.matches, tournament.id)) {
       showWarning(t('actions.matchAlreadyFinished'));
@@ -259,6 +275,7 @@ export function useScheduleTabActions({
     onLocalTournamentUpdate,
     onMatchesUpdate,
     lockFinishedResults,
+    tCockpit,
     showWarning,
     saveToHistory,
     t,
