@@ -48,6 +48,8 @@ export interface EngineMatchStatus {
 export interface MatchEngineView {
   result: ViewResult;
   log: EngineEvent[];
+  /** Anzahl bestaetigter Ereignisse (Lesepfad-`version`, 1.3). */
+  confirmedCount: number;
 }
 
 function engineMatchStatus(): EngineMatchStatus {
@@ -190,7 +192,7 @@ export class MatchEngine {
       acked: copy.acked,
       pending: copy.pending,
     };
-    return { result: computeView(viewCopy, copy.ctx), log: buildLog(copy) };
+    return { result: computeView(viewCopy, copy.ctx), log: buildLog(copy), confirmedCount: copy.confirmed.length };
   }
 
   status(matchId: string): EngineMatchStatus {
