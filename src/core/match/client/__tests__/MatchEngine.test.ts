@@ -326,6 +326,36 @@ describe('MatchEngine', () => {
     expect(fetchConfirmed).not.toHaveBeenCalled(); // 'me-restart' ist nach dem Neustart kein bekanntes Engine-Spiel mehr
   });
 
+  it('N2-m2: rerunRequested.delete im finally raeumt auch dann auf, wenn runCatchUp selbst eine Ausnahme durchlaesst (defensiv)', async () => {
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-notify-throws', ctx);
+
+    // `refreshCopy` ruft `notify()` -- ein Listener, der IMMER wirft, entkommt runCatchUps
+    // eigenem catch (der `notify()` selbst im Fehlerfall ERNEUT aufruft) und zwingt den Fehler bis
+    // in runCatchUpWithRerun weiter -- genau der Pfad, den der defensive `finally` abfaengt.
+    const unsubscribe = engine.subscribe(() => {
+      throw new Error('boom');
+    });
+
+    const call1 = engine.catchUp('me-notify-throws');
+    // Waehrend Lauf #1 noch in Betrieb ist (derselbe `inFlightCatchUp`-Eintrag): ein zweiter Aufruf
+    // setzt `rerunRequested` -- OHNE den defensiven `finally`-Cleanup bliebe dieser Merker nach dem
+    // Wurf haengen.
+    const call2 = engine.catchUp('me-notify-throws');
+    await expect(call1).rejects.toThrow('boom');
+    await expect(call2).rejects.toThrow('boom');
+    unsubscribe();
+
+    // Ein FOLGENDER, unabhaengiger Aufruf darf NICHT durch den liegen gebliebenen Nachzuegler
+    // verdoppelt werden (das waere N-m3 (1) exakt umgekehrt: ein Nachzuegler, der nie angefordert
+    // wurde, loest trotzdem einen zweiten Lauf aus).
+    fetchConfirmed.mockClear();
+    await engine.catchUp('me-notify-throws');
+    expect(fetchConfirmed).toHaveBeenCalledTimes(1);
+  });
+
   it('B2 (M10): buildLog dedupliziert -- ein Ereignis in BEIDEN offenen Listen (acked UND pending) erscheint nur einmal', async () => {
     // `seen.has(...)` in buildLog schuetzt genau davor: acked und pending sollten sich laut
     // Store-Vertrag nie ueberschneiden, aber die Funktion selbst darf sich nicht darauf verlassen.
