@@ -22,6 +22,7 @@ import {
 import { serverRules, type MatchContext, type MatchRules } from '../core/match';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { useToast } from '../components/ui/Toast/ToastContext';
+import { captureFeatureError } from '../lib/sentry';
 import { useActorRole } from './useActorRole';
 import { buildValidMatches } from './useEngineMatches';
 import type { EngineCommandFallbackHandlers } from './engineCommandWiringTypes';
@@ -155,54 +156,64 @@ export function useEngineCommandWiring(
       if (isEngineMatch(matchId) && commands) {
         return startViaCommands(matchId);
       }
-      // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht (Race vor `ensureMatch`, oder eine
-      // liegengebliebene NOT_STARTED-Altzeile) -- ERST `ensureEngineMatchReady`, DANN
-      // `commands.start`, kein Fallback mehr (das Spiel IST/WIRD ein Engine-Spiel). Liefert
-      // `ensureEngineMatchReady` keine Ansicht: P2-fremd-Kandidat -> bestaetigtes Altspiel ->
-      // Altweg wieder erlaubt; klarer B1-Fall -> `false` (kein impliziter Start ohne Bestaetigung).
+      // P3: engine-bestimmt, aber noch KEINE Engine-Ansicht -- ERST `ensureEngineMatchReady`, DANN
+      // `commands.start`, kein Fallback (das Spiel IST/WIRD ein Engine-Spiel). `null`: P2-fremd ->
+      // Altweg erlaubt; klarer B1-Fall -> Fehlerweg (Toast) statt stillem `false` (Minor 3).
+      // E3 (Important 2): eine Ablehnung von `ensureEngineMatchReady` (z. B. E1: Server-Klaerung
+      // gescheitert) war bisher unbehandelt (ueber `ManagementTab.tsx`) -- jetzt Toast + Sentry
+      // (P7-Weg), kein Altweg-Anpfiff.
       if (commands && isEngineDestinedMatchId(matchId)) {
-        const ready = await ensureEngineMatchReady(matchId);
-        if (ready) {
-          return startViaCommands(matchId);
+        try {
+          const ready = await ensureEngineMatchReady(matchId);
+          if (ready) {
+            return startViaCommands(matchId);
+          }
+          if (isForeignCandidateMatchId(matchId)) {
+            return fallback.handleStart(matchId);
+          }
+          throw new Error(`Engine-Spiel ${matchId} ist noch nicht bereit.`);
+        } catch (error) {
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          captureFeatureError(normalizedError, 'tournament', 'ensureEngineMatchReady');
+          handleEngineError(normalizedError);
+          return false;
         }
-        return isForeignCandidateMatchId(matchId) ? fallback.handleStart(matchId) : false;
       }
       return fallback.handleStart(matchId);
     },
-    [isEngineMatch, commands, isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId, startViaCommands, fallback],
+    [
+      isEngineMatch, commands, isEngineDestinedMatchId, ensureEngineMatchReady, isForeignCandidateMatchId,
+      startViaCommands, fallback, handleEngineError,
+    ],
+  );
+
+  // W11 (Fixrunde 4): die uebrigen Handler teilen sich dieselbe Form (Engine-Wache,
+  // `ctx`-Nachschlag, `run`, sonst Alt-Handler) -- ein gemeinsamer Helfer statt sieben fast
+  // identischer Bloecke, um Platz fuer den E3-Fehlerweg oben zu schaffen (< 300 Zeilen).
+  const runSimpleCommand = useCallback(
+    (matchId: string, commandFn: (cmd: MatchCommands, ctx: MatchContext) => Promise<void>, fallbackFn: () => Promise<void>): Promise<void> => {
+      if (!isEngineMatch(matchId) || !commands) {
+        return fallbackFn();
+      }
+      const ctx = ctxByExternalId.get(matchId);
+      return ctx ? run(() => commandFn(commands, ctx)) : fallbackFn();
+    },
+    [isEngineMatch, commands, ctxByExternalId, run],
   );
 
   const handlePause = useCallback(
-    (matchId: string): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handlePause(matchId);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx ? run(() => commands.pause(matchId, ctx, actor)) : fallback.handlePause(matchId);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string) => runSimpleCommand(matchId, (cmd, ctx) => cmd.pause(matchId, ctx, actor), () => fallback.handlePause(matchId)),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleResume = useCallback(
-    (matchId: string): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleResume(matchId);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx ? run(() => commands.resume(matchId, ctx, actor)) : fallback.handleResume(matchId);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string) => runSimpleCommand(matchId, (cmd, ctx) => cmd.resume(matchId, ctx, actor), () => fallback.handleResume(matchId)),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleFinish = useCallback(
-    (matchId: string): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleFinish(matchId);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx ? run(() => commands.finish(matchId, ctx, actor)) : fallback.handleFinish(matchId);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string) => runSimpleCommand(matchId, (cmd, ctx) => cmd.finish(matchId, ctx, actor), () => fallback.handleFinish(matchId)),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleGoal = useCallback(
@@ -219,64 +230,53 @@ export function useEngineCommandWiring(
       if (delta !== 1) {
         return notYet();
       }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx
-        ? run(() => commands.goal(matchId, ctx, actor, teamId.toLowerCase(), false, options))
-        : fallback.handleGoal(matchId, teamId, delta, options);
+      return runSimpleCommand(
+        matchId,
+        (cmd, ctx) => cmd.goal(matchId, ctx, actor, teamId.toLowerCase(), false, options),
+        () => fallback.handleGoal(matchId, teamId, delta, options),
+      );
     },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run, notYet],
+    [isEngineMatch, commands, actor, fallback, notYet, runSimpleCommand],
   );
 
   const handleCard = useCallback(
-    (matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: { playerNumber?: number }): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleCard(matchId, teamId, cardType, options);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx
-        ? run(() => commands.card(matchId, ctx, actor, teamId.toLowerCase(), cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD', options))
-        : fallback.handleCard(matchId, teamId, cardType, options);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string, teamId: string, cardType: 'YELLOW' | 'RED', options?: { playerNumber?: number }) =>
+      runSimpleCommand(
+        matchId,
+        (cmd, ctx) => cmd.card(matchId, ctx, actor, teamId.toLowerCase(), cardType === 'YELLOW' ? 'YELLOW_CARD' : 'RED_CARD', options),
+        () => fallback.handleCard(matchId, teamId, cardType, options),
+      ),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleTimePenalty = useCallback(
-    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number }): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleTimePenalty(matchId, teamId, options);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx
-        ? run(() => commands.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), options))
-        : fallback.handleTimePenalty(matchId, teamId, options);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string, teamId: string, options?: { playerNumber?: number; durationSeconds?: number }) =>
+      runSimpleCommand(
+        matchId,
+        (cmd, ctx) => cmd.timePenalty(matchId, ctx, actor, teamId.toLowerCase(), options),
+        () => fallback.handleTimePenalty(matchId, teamId, options),
+      ),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleSubstitution = useCallback(
-    (matchId: string, teamId: string, options?: { playersIn?: number[]; playersOut?: number[] }): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleSubstitution(matchId, teamId, options);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx
-        ? run(() => commands.substitution(matchId, ctx, actor, teamId.toLowerCase(), options))
-        : fallback.handleSubstitution(matchId, teamId, options);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string, teamId: string, options?: { playersIn?: number[]; playersOut?: number[] }) =>
+      runSimpleCommand(
+        matchId,
+        (cmd, ctx) => cmd.substitution(matchId, ctx, actor, teamId.toLowerCase(), options),
+        () => fallback.handleSubstitution(matchId, teamId, options),
+      ),
+    [runSimpleCommand, actor, fallback],
   );
 
   const handleFoul = useCallback(
-    (matchId: string, teamId: string, options?: { playerNumber?: number }): Promise<void> => {
-      if (!isEngineMatch(matchId) || !commands) {
-        return fallback.handleFoul(matchId, teamId, options);
-      }
-      const ctx = ctxByExternalId.get(matchId);
-      return ctx
-        ? run(() => commands.foul(matchId, ctx, actor, teamId.toLowerCase(), options))
-        : fallback.handleFoul(matchId, teamId, options);
-    },
-    [isEngineMatch, commands, ctxByExternalId, actor, fallback, run],
+    (matchId: string, teamId: string, options?: { playerNumber?: number }) =>
+      runSimpleCommand(
+        matchId,
+        (cmd, ctx) => cmd.foul(matchId, ctx, actor, teamId.toLowerCase(), options),
+        () => fallback.handleFoul(matchId, teamId, options),
+      ),
+    [runSimpleCommand, actor, fallback],
   );
 
   // P8 (Fixrunde 3, E2/W11): die reinen PC14-Toast-Wachen (kein eigener MatchCommands-Aufruf)

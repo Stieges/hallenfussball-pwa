@@ -15,6 +15,11 @@ vi.mock('../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showWarning: mockShowWarning, showError: mockShowError, showInfo: vi.fn() }),
 }));
 
+const mockCaptureFeatureError = vi.fn();
+vi.mock('../../lib/sentry', () => ({
+  captureFeatureError: (...args: unknown[]) => mockCaptureFeatureError(...args),
+}));
+
 const mockRole: { current: 'owner' | 'co-admin' | 'collaborator' } = { current: 'owner' };
 vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
   useMyTournamentRole: () => ({ role: mockRole.current, isLoading: false }),
@@ -104,6 +109,7 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
   beforeEach(() => {
     mockShowWarning.mockClear();
     mockShowError.mockClear();
+    mockCaptureFeatureError.mockClear();
     mockRole.current = 'owner';
   });
 
@@ -289,7 +295,7 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     expect(copy?.pending.some((e) => e.type === 'MATCH_START')).toBe(true);
   });
 
-  it('P3: liefert ensureEngineMatchReady fuer den KLAREN B1-Fall keine Ansicht, gibt handleStart false zurueck -- OHNE fallback.handleStart', async () => {
+  it('P3/Minor 3 (Fixrunde 4): liefert ensureEngineMatchReady fuer den KLAREN B1-Fall keine Ansicht, zeigt handleStart einen Toast statt still false zurueckzugeben -- OHNE fallback.handleStart', async () => {
     const fallback = makeFallback();
     const engineContext = await makeEngineContext();
     const ensureEngineMatchReady = vi.fn().mockResolvedValue(null);
@@ -301,6 +307,28 @@ describe('useEngineCommandWiring (C3a-2a, B4/W6)', () => {
     const started = await result.current.handleStart(RACE_MATCH_ID);
 
     expect(started).toBe(false);
+    expect(fallback.handleStart).not.toHaveBeenCalled();
+    expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  // E3 (Fixrunde 4, Important 2): eine ABLEHNUNG von ensureEngineMatchReady (z. B. E1: die
+  // Server-Klaerung ist gescheitert, das Spiel bleibt "unklar") wurde bisher NICHT gefangen --
+  // eine unbehandelte Ablehnung ueber ManagementTab.tsx (`void hookHandleStart`).
+  it('E3 (Fixrunde 4): eine Ablehnung von ensureEngineMatchReady wird gefangen -- Toast + Sentry (P7-Weg), KEINE unbehandelte Ablehnung, handleStart loest mit false auf', async () => {
+    const fallback = makeFallback();
+    const engineContext = await makeEngineContext();
+    const rejectionError = new Error('Engine-Spiel race-1: Server-Klaerung fehlgeschlagen (Netz weg).');
+    const ensureEngineMatchReady = vi.fn().mockRejectedValue(rejectionError);
+    const isEngineDestinedMatchId = (matchId: string) => matchId === RACE_MATCH_ID;
+    const { result } = renderHook(() =>
+      useEngineCommandWiring(tournament(), engineContext, engineLiveMatches, fallback, isEngineDestinedMatchId, ensureEngineMatchReady),
+    );
+
+    // Kein Wurf ueber die Grenze hinweg -- `handleStart` selbst loest auf (mit `false`), NICHT ab.
+    await expect(result.current.handleStart(RACE_MATCH_ID)).resolves.toBe(false);
+
+    expect(mockCaptureFeatureError).toHaveBeenCalledWith(rejectionError, 'tournament', 'ensureEngineMatchReady');
+    expect(mockShowWarning.mock.calls.length + mockShowError.mock.calls.length).toBeGreaterThan(0);
     expect(fallback.handleStart).not.toHaveBeenCalled();
   });
 
