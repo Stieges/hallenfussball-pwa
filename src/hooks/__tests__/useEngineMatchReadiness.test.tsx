@@ -15,6 +15,9 @@ import type { LiveMatch } from '../../core/models/LiveMatch';
 import type { MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
 
 const store = new LocalMatchStore();
+// P2 (Fixrunde 3): reconfigurierbar je Test -- steuert, ob der Server (Sammelabfrage/`catchUp`)
+// fuer ein Spiel Ereignisse liefert (dann ist es ein echtes Engine-Spiel) oder nicht (Altspiel).
+const mockFetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
 // `as unknown as MatchEngineContextValue` -- gleiches Muster wie `useEngineMatches.test.tsx`: der
 // Test braucht nur `engine`/`clock`, `sender`/`store`/`accountId` sind fuer `useEngineMatchReadiness`
 // (das nur `context.engine.ensureMatch` und `context` als Praesenz-Check liest) irrelevant.
@@ -23,7 +26,7 @@ const mockContext = {
     store,
     clock: { serverNow: () => Date.now() } as unknown as ClockSync,
     sender: { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn() },
-    fetchConfirmed: vi.fn().mockResolvedValue({ events: [], newWatermark: 0 }),
+    fetchConfirmed: mockFetchConfirmed,
     now: () => Date.now(),
   }),
   clock: { offsetMs: 0 },
@@ -54,6 +57,7 @@ function tournament(matches: Match[]): Tournament {
 
 describe('useEngineMatchReadiness', () => {
   beforeEach(async () => {
+    mockFetchConfirmed.mockClear().mockResolvedValue({ events: [], newWatermark: 0 });
     await mockContext.engine.start('acc-engine-readiness');
   });
 
@@ -64,8 +68,10 @@ describe('useEngineMatchReadiness', () => {
     expect(result.current.isEngineDestinedMatch('m-race')).toBe(true);
   });
 
-  it('isEngineDestinedMatch bleibt false fuer ein bereits abgeschlossenes Altspiel', () => {
-    const t = tournament([match({ id: 'm-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished' })]);
+  it('isEngineDestinedMatch bleibt false fuer ein bereits abgeschlossenes Altspiel MIT eingetragenem Ergebnis', () => {
+    // Ergebnis gesetzt (echtes, unzweideutiges Altspiel) -- ein `finished` Spiel OHNE Ergebnis waere
+    // seit P2 (E1-Randfall) ein "fremd-Kandidat" (s. eigene Tests unten), kein reines Altspiel mehr.
+    const t = tournament([match({ id: 'm-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished', scoreA: 3, scoreB: 0 })]);
     const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
 
     expect(result.current.isEngineDestinedMatch('m-old')).toBe(false);
@@ -105,5 +111,58 @@ describe('useEngineMatchReadiness', () => {
 
     expect(result.current.isEngineDestinedMatch('m-no-provider')).toBe(false);
     await expect(result.current.ensureEngineMatchReady('m-no-provider')).resolves.toBeNull();
+  });
+
+  // P2 (Fixrunde 3, E1-Randfall): ein Spiel, das auf einem ANDEREN Geraet bereits laeuft, hat
+  // `matchStatus` != 'scheduled' (RPC-Projektion), aber auf DIESEM Geraet weder eine Altzeile noch
+  // ein Ergebnis. Die B1-Klausel allein (nur `scheduled`) haette es als reines Altspiel behandelt --
+  // `service.initializeMatch`/`liveMatchRepository.save` liefen, ein Anpfiff ginge ueber den Altweg.
+  it('P2: ein fremd (auf einem anderen Geraet) laufendes Spiel (matchStatus != scheduled, keine Altzeile, kein Ergebnis) ist engine-destined', () => {
+    const t = tournament([match({ id: 'm-foreign', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    expect(result.current.isEngineDestinedMatch('m-foreign')).toBe(true);
+  });
+
+  it('P2: ein "fremdes" Spiel MIT bereits eingetragenem Ergebnis oder aktiver Altzeile ist NICHT engine-destined (echtes Altspiel/Uebergang)', () => {
+    const withResult = tournament([match({ id: 'm-foreign-result', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished', scoreA: 2, scoreB: 1 })]);
+    const { result: r1 } = renderHook(() => useEngineMatchReadiness(withResult, mockContext, new Map()));
+    expect(r1.current.isEngineDestinedMatch('m-foreign-result')).toBe(false);
+
+    const withOldRunning = tournament([match({ id: 'm-foreign-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const oldLiveMatches = new Map<string, LiveMatch>([
+      ['m-foreign-old', { id: 'm-foreign-old', status: 'RUNNING' } as unknown as LiveMatch],
+    ]);
+    const { result: r2 } = renderHook(() => useEngineMatchReadiness(withOldRunning, mockContext, oldLiveMatches));
+    expect(r2.current.isEngineDestinedMatch('m-foreign-old')).toBe(false);
+  });
+
+  // E1: "Test fuer beide Ausgaenge" -- hat der Server (Sammelabfrage/`catchUp`) Ereignisse fuer
+  // dieses Spiel, ist es ein Engine-Spiel (Ansicht kommt zurueck); hat er keine, bleibt es ein
+  // Altspiel (ensureEngineMatchReady liefert `null`, der Aufrufer weicht auf den Altweg aus).
+  it('P2 (beide Ausgaenge): Server LIEFERT Ereignisse -- ensureEngineMatchReady loest eine echte Engine-Ansicht auf', async () => {
+    mockFetchConfirmed.mockResolvedValue({
+      events: [{
+        id: 'start-1', type: 'MATCH_START', at: 0, actor: 'leitung', section: 1, clockMs: 0,
+        payload: { rules: { sections: 2, sectionSeconds: 600, breakSeconds: 60, knockout: false, tiebreak: null, overtimeSeconds: 0, shootersPerTeam: 5, suddenDeathAfter: 5, penaltySeconds: 120 } },
+        seq: 1,
+      }],
+      newWatermark: 1,
+    });
+    const t = tournament([match({ id: 'm-foreign-has-events', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    const ready = await result.current.ensureEngineMatchReady('m-foreign-has-events');
+
+    expect(ready).not.toBeNull();
+    expect(ready?.status).not.toBe('NOT_STARTED');
+  });
+
+  it('P2 (beide Ausgaenge): Server liefert KEINE Ereignisse -- ensureEngineMatchReady liefert null (Altspiel, alter Weg erlaubt)', async () => {
+    mockFetchConfirmed.mockResolvedValue({ events: [], newWatermark: 0 });
+    const t = tournament([match({ id: 'm-foreign-no-events', teamA: 'teamA', teamB: 'teamB', matchStatus: 'running' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    await expect(result.current.ensureEngineMatchReady('m-foreign-no-events')).resolves.toBeNull();
   });
 });

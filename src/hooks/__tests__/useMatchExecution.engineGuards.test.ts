@@ -38,6 +38,10 @@ const engineLiveMatch: LiveMatch = {
 const engineLiveMatchesMap = new Map<string, LiveMatch>([[ENGINE_MATCH_ID, engineLiveMatch]]);
 
 const NEW_ENGINE_MATCH_ID = 'new-engine-match-1';
+// P2 (Fixrunde 3, E1-Randfall): steht wie NEW_ENGINE_MATCH_ID NICHT in `engineLiveMatchesMap` --
+// simuliert ein auf einem ANDEREN Geraet laufendes Engine-Spiel (matchStatus != scheduled), das
+// dieses Geraet noch nicht als Engine-Spiel kennt.
+const FOREIGN_MATCH_ID = 'foreign-match-1';
 
 const mockCatchUp = vi.fn().mockResolvedValue(undefined);
 // Referentiell stabil (s. o.) -- `matchEngineContext` steht als Dependency in
@@ -64,7 +68,8 @@ vi.mock('../useEngineMatches', () => ({
 // darf nicht weiter wachsen), deshalb ein eigener Mock statt im `useEngineMatches`-Mock oben.
 vi.mock('../useEngineMatchReadiness', () => ({
   useEngineMatchReadiness: () => ({
-    isEngineDestinedMatch: (id: string) => id === NEW_ENGINE_MATCH_ID,
+    isEngineDestinedMatch: (id: string) => id === NEW_ENGINE_MATCH_ID || id === FOREIGN_MATCH_ID,
+    isForeignCandidateMatch: (id: string) => id === FOREIGN_MATCH_ID,
     ensureEngineMatchReady: mockEnsureEngineMatchReady,
   }),
 }));
@@ -231,6 +236,34 @@ describe('useMatchExecution — B4: kein liveMatchRepository.save/initializeMatc
 
     expect(mockInitializeMatch).not.toHaveBeenCalled();
     expect(mockLiveMatchRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('P2 (Fixrunde 3, E1-Randfall): ein fremd (auf einem anderen Geraet) laufendes Engine-Spiel ruft 0x initializeMatch/save, kein Altweg-Anpfiff', async () => {
+    const readyMatch: LiveMatch = { ...engineLiveMatch, id: FOREIGN_MATCH_ID };
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(readyMatch);
+    const { result } = await renderAndFlush();
+    const scheduled = { id: FOREIGN_MATCH_ID } as unknown as ScheduledMatch;
+
+    const data = await act(() => result.current.getLiveMatchData(scheduled));
+
+    expect(mockEnsureEngineMatchReady).toHaveBeenCalledWith(FOREIGN_MATCH_ID);
+    expect(data).toBe(readyMatch);
+    expect(mockInitializeMatch).not.toHaveBeenCalled();
+    expect(mockLiveMatchRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('P2 (Fixrunde 3, E1-Randfall): hat der Server fuer den fremd-Kandidaten KEINE Ereignisse, faellt getLiveMatchData auf initializeMatch (Altweg) zurueck -- OHNE zu werfen', async () => {
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(null);
+    const oldStyleMatch: LiveMatch = { ...engineLiveMatch, id: FOREIGN_MATCH_ID };
+    mockInitializeMatch.mockResolvedValueOnce(oldStyleMatch);
+    const { result } = await renderAndFlush();
+    const scheduled = { id: FOREIGN_MATCH_ID } as unknown as ScheduledMatch;
+
+    const data = await act(() => result.current.getLiveMatchData(scheduled));
+
+    expect(mockEnsureEngineMatchReady).toHaveBeenCalledWith(FOREIGN_MATCH_ID);
+    expect(mockInitializeMatch).toHaveBeenCalledTimes(1);
+    expect(data).toBe(oldStyleMatch);
   });
 });
 

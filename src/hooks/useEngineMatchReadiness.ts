@@ -17,17 +17,42 @@ import { useCallback, useMemo, useRef } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
-import { buildValidMatches, computeLiveMatches, isNewScheduledMatch } from './engineMatchModel';
+import { buildValidMatches, computeLiveMatches, isNewScheduledMatch, type ValidMatchEntry } from './engineMatchModel';
 
 export interface UseEngineMatchReadinessResult {
-  /** B4: synchron aus den Turnierdaten ableitbar (dieselbe B1-Klausel wie `isNewScheduledMatch`)
-   * -- anders als der `isEngineMatch`-Lesepfad haengt das NICHT davon ab, ob `ensureMatch` fuer
-   * dieses Spiel schon durchgelaufen ist. */
+  /** B4: synchron aus den Turnierdaten ableitbar -- entweder die klare B1-Klausel
+   * (`isNewScheduledMatch`) ODER der P2/E1-Randfall (`isForeignCandidateMatch`, s. dort). Anders
+   * als der `isEngineMatch`-Lesepfad haengt das NICHT davon ab, ob `ensureMatch` fuer dieses Spiel
+   * schon durchgelaufen ist. */
   isEngineDestinedMatch: (externalMatchId: string) => boolean;
-  /** Erzwingt (falls noetig) `ensureMatch` fuer EIN Spiel und liefert danach dessen Engine-Ansicht,
-   * statt auf den naechsten `engine.subscribe`-Zyklus zu warten. `null`, wenn es (noch) keinen
-   * Kontext gibt oder das Spiel keine Engine-Ansicht ergibt. */
+  /** P2 (Fixrunde 3, E1-Randfall): "unklar -> vorlaeufig nur lesen". Ein Spiel, das auf einem
+   * ANDEREN Geraet bereits laeuft, hat `matchStatus` != `'scheduled'` (RPC-Projektion), aber auf
+   * DIESEM Geraet weder eine Altzeile noch ein Ergebnis -- die reine B1-Klausel (nur `scheduled`)
+   * wuerde es faelschlich als Altspiel behandeln (`service.initializeMatch`/`save` liefen, ein
+   * Anpfiff ginge ueber den Altweg). Dieser Fall ist erst nach `ensureEngineMatchReady`
+   * (ensureMatch + `catchUp`) definitiv aufgeloest: liefert der Server Ereignisse, ist es ein
+   * Engine-Spiel; liefert er keine, ist es ein bestaetigtes Altspiel (Aufrufer darf dann NICHT
+   * werfen, sondern muss auf den Altweg ausweichen -- anders als beim klaren B1-Fall). */
+  isForeignCandidateMatch: (externalMatchId: string) => boolean;
+  /** Erzwingt (falls noetig) `ensureMatch` + `catchUp` fuer EIN Spiel und liefert danach dessen
+   * Engine-Ansicht, statt auf den naechsten `engine.subscribe`-Zyklus zu warten. `null`, wenn es
+   * (noch) keinen Kontext gibt, das Spiel keine Engine-Ansicht ergibt, oder (P2) der Server fuer
+   * ein "fremdes" Spiel keine Ereignisse hat (dann ist es ein bestaetigtes Altspiel). */
   ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
+}
+
+/**
+ * P2 (Fixrunde 3, E1-Randfall): nicht `scheduled`, aber (auf DIESEM Geraet) weder eine aktive
+ * Altzeile noch ein Ergebnis -- der Kandidat fuer ein fremd (auf einem anderen Geraet) laufendes
+ * Engine-Spiel. Spiegelbildlich zu `isNewScheduledMatch` (dort: `scheduled`).
+ */
+function isForeignCandidate(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
+  const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
+  if (isScheduled || entry.hasExistingResult) {
+    return false;
+  }
+  const oldLiveMatch = localLiveMatches.get(entry.externalId);
+  return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
 }
 
 export function useEngineMatchReadiness(
@@ -39,6 +64,17 @@ export function useEngineMatchReadiness(
   const validMatchesRef = useRef(validMatches);
   validMatchesRef.current = validMatches;
 
+  const isForeignCandidateMatch = useCallback(
+    (externalMatchId: string): boolean => {
+      if (!context) {
+        return false;
+      }
+      const entry = validMatches.find((candidate) => candidate.externalId === externalMatchId);
+      return !!entry && isForeignCandidate(entry, localLiveMatches);
+    },
+    [context, validMatches, localLiveMatches],
+  );
+
   const isEngineDestinedMatch = useCallback(
     (externalMatchId: string): boolean => {
       // Dieselbe Vorbedingung wie `computeLiveMatches` (kein Kontext -> kein Engine-Spiel) --
@@ -47,7 +83,7 @@ export function useEngineMatchReadiness(
         return false;
       }
       const entry = validMatches.find((candidate) => candidate.externalId === externalMatchId);
-      return !!entry && isNewScheduledMatch(entry, localLiveMatches);
+      return !!entry && (isNewScheduledMatch(entry, localLiveMatches) || isForeignCandidate(entry, localLiveMatches));
     },
     [context, validMatches, localLiveMatches],
   );
@@ -62,15 +98,20 @@ export function useEngineMatchReadiness(
         return null;
       }
       await context.engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
+      // P2: fuer ein fremd laufendes Spiel (matchStatus != 'scheduled') hat `ensureMatch` allein
+      // ggf. nur eine LEERE lokale Kopie -- `catchUp` holt die bestaetigten Ereignisse vom Server,
+      // damit `computeLiveMatches`s `hasLocalEvents`-Erkennung es ueberhaupt als Engine-Spiel sieht.
+      // Fuer ein echtes B1-neues Spiel ist das ein harmloser (leerer) Netzaufruf.
+      await context.engine.catchUp(entry.matchId);
       // Leere Menge statt der eigentlichen `engineMatchIds` aus `useEngineMatches`: diese Funktion
-      // wird nur fuer bereits als `isNewScheduledMatch` klassifizierte Eintraege aufgerufen (s.
-      // `isEngineDestinedMatch`/`getLiveMatchData`), `computeLiveMatches` haengt fuer GENAU diese
-      // Einordnung ohnehin nicht von `engineMatchIds` ab (die B1-Klausel greift unabhaengig davon).
+      // wird nur fuer bereits als engine-destined klassifizierte Eintraege aufgerufen (s.
+      // `isEngineDestinedMatch`/`resolveEngineLiveMatchData`); nach `catchUp` zeigt `hasLocalEvents`
+      // (in `computeLiveMatches`) korrekt an, ob der Server tatsaechlich Ereignisse hatte.
       const computed = computeLiveMatches(context, [entry], new Set<string>(), tournament, localLiveMatches);
       return computed.get(externalMatchId) ?? null;
     },
     [context, tournament, localLiveMatches],
   );
 
-  return { isEngineDestinedMatch, ensureEngineMatchReady };
+  return { isEngineDestinedMatch, isForeignCandidateMatch, ensureEngineMatchReady };
 }

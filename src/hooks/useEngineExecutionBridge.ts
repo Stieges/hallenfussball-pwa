@@ -44,7 +44,7 @@ export function useEngineExecutionBridge(
 ): UseEngineExecutionBridgeResult {
   const { liveMatches: engineLiveMatches } = useEngineMatches(tournament, enabled, localLiveMatches);
   const matchEngineContext = useMatchEngineContextOptional();
-  const { isEngineDestinedMatch, ensureEngineMatchReady } = useEngineMatchReadiness(
+  const { isEngineDestinedMatch, isForeignCandidateMatch, ensureEngineMatchReady } = useEngineMatchReadiness(
     tournament,
     matchEngineContext,
     localLiveMatches,
@@ -84,6 +84,13 @@ export function useEngineExecutionBridge(
       if (engineMatch) {
         return engineMatch;
       }
+      // P2 (Fixrunde 3, E1-Randfall): "unklar -> vorlaeufig nur lesen" -- fuer den fremd-Kandidaten
+      // entscheidet ERST `ensureEngineMatchReady` (ensureMatch + `catchUp`) definitiv, ob der Server
+      // Ereignisse hat. `null` heisst hier "bestaetigtes Altspiel" -- KEIN Wurf, der Aufrufer weicht
+      // auf den Altweg aus (anders als beim klaren B1-Fall unten).
+      if (isForeignCandidateMatch(externalMatchId)) {
+        return await ensureEngineMatchReady(externalMatchId);
+      }
       if (!isEngineDestinedMatchId(externalMatchId)) {
         return null;
       }
@@ -93,7 +100,7 @@ export function useEngineExecutionBridge(
       }
       throw new Error(`Engine-Spiel ${externalMatchId} ist noch nicht bereit.`);
     },
-    [engineLiveMatchesRef, isEngineDestinedMatchId, ensureEngineMatchReady],
+    [engineLiveMatchesRef, isForeignCandidateMatch, isEngineDestinedMatchId, ensureEngineMatchReady],
   );
 
   return {

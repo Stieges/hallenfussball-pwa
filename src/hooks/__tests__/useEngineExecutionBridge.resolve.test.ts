@@ -15,6 +15,7 @@ import type { Tournament } from '../../types/tournament';
 const ENGINE_MATCH_ID = 'engine-match-1';
 const DESTINED_MATCH_ID = 'destined-match-1';
 const OLD_MATCH_ID = 'old-match-1';
+const FOREIGN_CANDIDATE_MATCH_ID = 'foreign-candidate-match-1';
 
 const engineLiveMatch: LiveMatch = {
   id: ENGINE_MATCH_ID,
@@ -34,6 +35,7 @@ const mockEnsureEngineMatchReady = vi.fn<(id: string) => Promise<LiveMatch | nul
 vi.mock('../useEngineMatchReadiness', () => ({
   useEngineMatchReadiness: () => ({
     isEngineDestinedMatch: (id: string) => id === DESTINED_MATCH_ID,
+    isForeignCandidateMatch: (id: string) => id === FOREIGN_CANDIDATE_MATCH_ID,
     ensureEngineMatchReady: mockEnsureEngineMatchReady,
   }),
 }));
@@ -87,5 +89,28 @@ describe('useEngineExecutionBridge — resolveEngineLiveMatchData (P1)', () => {
 
     expect(data).toBeNull();
     expect(mockEnsureEngineMatchReady).not.toHaveBeenCalled();
+  });
+
+  // P2 (Fixrunde 3, E1-Randfall): fuer den "fremd"-Kandidaten (unklar, ob Server-Engine-Spiel)
+  // darf ein `null`-Ergebnis von `ensureEngineMatchReady` NICHT werfen -- anders als beim klaren
+  // B1-Fall oben. `null` heisst hier "bestaetigtes Altspiel", der Aufrufer weicht auf den Altweg aus.
+  it('P2: liefert null OHNE zu werfen, wenn ensureEngineMatchReady fuer einen fremd-Kandidaten null liefert', async () => {
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(null);
+    const { result } = renderHook(() => useEngineExecutionBridge(tournament(), true, new Map()));
+
+    const data = await result.current.resolveEngineLiveMatchData(FOREIGN_CANDIDATE_MATCH_ID);
+
+    expect(mockEnsureEngineMatchReady).toHaveBeenCalledWith(FOREIGN_CANDIDATE_MATCH_ID);
+    expect(data).toBeNull();
+  });
+
+  it('P2: liefert die Engine-Ansicht, wenn ensureEngineMatchReady fuer einen fremd-Kandidaten eine Ansicht liefert', async () => {
+    const readyMatch: LiveMatch = { id: FOREIGN_CANDIDATE_MATCH_ID, status: 'RUNNING' } as unknown as LiveMatch;
+    mockEnsureEngineMatchReady.mockResolvedValueOnce(readyMatch);
+    const { result } = renderHook(() => useEngineExecutionBridge(tournament(), true, new Map()));
+
+    const data = await result.current.resolveEngineLiveMatchData(FOREIGN_CANDIDATE_MATCH_ID);
+
+    expect(data).toBe(readyMatch);
   });
 });
