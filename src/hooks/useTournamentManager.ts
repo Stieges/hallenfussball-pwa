@@ -6,6 +6,7 @@ import { calculateStandings } from '../utils/calculations';
 import { Standing } from '../types/tournament';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useRealtimeTournament } from './useRealtimeTournament';
+import { useEngineOverlayForTournament } from './useEngineOverlayForTournament';
 
 /**
  * useTournamentManager Hook
@@ -96,6 +97,12 @@ export function useTournamentManager(tournamentId: string) {
         setTournament(updated);
     }, []);
 
+    // W7 (C3a-2a): Engine-Ergebnisse fliessen NUR lokal in JEDE Turnier-Ausgabe (Tabelle/Spielplan)
+    // -- kein Versionssprung, kein syncUp, keine MutationQueue. `tournament` (State) bleibt die
+    // Wahrheit fuer handleTournamentUpdate/applyRemote; nur die nach AUSSEN gegebene Form ist
+    // ueberlagert.
+    const overlaidTournament = useEngineOverlayForTournament(tournament);
+
     // =========================================================================
     // BACKWARD COMPATIBILITY: Schedule View and Standings
     // These are computed from the loaded tournament for display purposes.
@@ -103,24 +110,24 @@ export function useTournamentManager(tournamentId: string) {
     // =========================================================================
 
     const schedule: GeneratedSchedule | null = useMemo(() => {
-        if (!tournament) {return null;}
+        if (!overlaidTournament) {return null;}
         try {
             // Generate schedule structure for VIEW display
             // Note: This is for UI structure (phases, labels), NOT for persistence.
-            return generateFullSchedule(tournament);
+            return generateFullSchedule(overlaidTournament);
         } catch (err) {
             console.error('Failed to generate schedule view:', err);
             return null;
         }
-    }, [tournament]);
+    }, [overlaidTournament]);
 
     const currentStandings: Standing[] = useMemo(() => {
-        if (!tournament) {return [];}
-        return calculateStandings(tournament.teams, tournament.matches, tournament);
-    }, [tournament]);
+        if (!overlaidTournament) {return [];}
+        return calculateStandings(overlaidTournament.teams, overlaidTournament.matches, overlaidTournament);
+    }, [overlaidTournament]);
 
     return {
-        tournament,
+        tournament: overlaidTournament,
         schedule,
         currentStandings,
         isLoading,

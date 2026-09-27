@@ -56,7 +56,7 @@ function isPlaceholderTeamId(teamId: string | undefined, tournament: Tournament)
   return !tournament.teams.some((team) => team.id.toLowerCase() === lowered);
 }
 
-function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
+export function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
   const entries: ValidMatchEntry[] = [];
   for (const match of tournament.matches) {
     const teamAId = match.teamA?.toLowerCase();
