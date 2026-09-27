@@ -19,6 +19,8 @@ import { useRepository } from './useRepository';
 import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
+import { useEngineMatches } from './useEngineMatches';
+import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 
 // ============================================================================
 // TYPES
@@ -140,6 +142,14 @@ export function useMatchExecution({
     // hier bewusst KEINEN Public-Fallback — das Cockpit schreibt, ein anonymer Kanal wäre sinnlos.
     const realtimeRepo = isRealtimeEnabled ? supabaseLiveMatchRepo : null;
 
+    // C3a-1 (Lesepfad, B1/B2): Engine-Spiele (Kopie mit Ereignissen oder Server liefert
+    // Engine-Ereignisse) kommen aus der MatchEngine, nicht aus liveMatchRepository.
+    // `engineLiveMatches.has(id)` steuert die B4/B5-Wachen unten; ohne MatchEngineProvider
+    // (Provider noch nicht in App.tsx eingebunden) liefert der Hook eine leere Map —
+    // unverändertes Altverhalten.
+    const { liveMatches: engineLiveMatches } = useEngineMatches(tournament, isRealtimeEnabled);
+    const matchEngineContext = useMatchEngineContextOptional();
+
     // QW-003: Toast for optimistic lock conflict feedback
     const { showInfo, showError } = useToast();
 
@@ -175,6 +185,11 @@ export function useMatchExecution({
     const loadingStatesRef = useRef(loadingStates);
     loadingStatesRef.current = loadingStates;
 
+    // B5: gleiches Ref-Muster für die Realtime-Callback-Closure (s. u.) — Engine-Spiele sollen
+    // Realtime-Pushes ignorieren, ohne dass sich das Abo bei jeder Engine-Änderung neu aufbaut.
+    const engineLiveMatchesRef = useRef(engineLiveMatches);
+    engineLiveMatchesRef.current = engineLiveMatches;
+
     // Multi-tab sync
     // H-3 FIX: Extended to include pause, resume, and update events
     const {
@@ -203,6 +218,9 @@ export function useMatchExecution({
 
             // Sync metadata (referees) on load/update
             const updates = Array.from(matches.values()).map(async (liveMatch) => {
+                // B4: Engine-Spiele werden hier NIE beschrieben (kein liveMatchRepository.save über
+                // syncMatchMetadata) — die Anzeige kommt für sie aus der MatchEngine (useEngineMatches).
+                if (engineLiveMatches.has(liveMatch.id)) { return liveMatch; }
                 const scheduled = tournament.matches.find(m => m.id === liveMatch.id);
                 if (scheduled) {
                     const refereeName = scheduled.referee ? (typeof scheduled.referee === 'number' ? `SR ${scheduled.referee}` : scheduled.referee) : undefined;
@@ -219,7 +237,7 @@ export function useMatchExecution({
             setLiveMatches(new Map(synced.map(m => [m.id, m])));
         };
         void load();
-    }, [tournament.id, tournament.matches, service, liveMatchRepository]); // Re-run when tournament matches change (e.g. referee assignment)
+    }, [tournament.id, tournament.matches, service, liveMatchRepository, engineLiveMatches]); // Re-run when tournament matches change (e.g. referee assignment)
 
     // =========================================================================
     // REALTIME (Task 14) — mehrere Geräte am selben Turnier
@@ -247,8 +265,15 @@ export function useMatchExecution({
         if (!match) { return; }
         if (Object.values(loadingStatesRef.current).some(Boolean)) { return; }
 
+        // B5: Engine-Spiele werden von Realtime NICHT überschrieben (der Server-Zwischenspeicher
+        // hinkt `pending` hinterher) — stattdessen stößt der Push ein `catchUp` an.
+        if (engineLiveMatchesRef.current.has(matchId)) {
+            void matchEngineContext?.engine.catchUp(matchId);
+            return;
+        }
+
         setLiveMatches(prev => new Map(prev).set(matchId, match));
-    }, []);
+    }, [matchEngineContext]);
 
     useEffect(() => {
         if (!realtimeRepo || !tournament.id) { return; }
@@ -306,13 +331,18 @@ export function useMatchExecution({
     // =========================================================================
 
     const getLiveMatchData = useCallback(async (matchData: ScheduledMatch): Promise<LiveMatch> => {
+        // B4: für Engine-Spiele liefert ausschließlich die MatchEngine die Ansicht — kein
+        // service.initializeMatch (also kein liveMatchRepository.save eines Alt-LiveMatch).
+        const engineMatch = engineLiveMatches.get(matchData.id);
+        if (engineMatch) { return engineMatch; }
+
         const existing = liveMatches.get(matchData.id);
         if (existing) { return existing; }
 
         const newMatch = await service.initializeMatch(tournament.id, matchData);
         setLiveMatches(prev => new Map(prev).set(matchData.id, newMatch));
         return newMatch;
-    }, [liveMatches, service, tournament.id]);
+    }, [liveMatches, engineLiveMatches, service, tournament.id]);
 
     const handleStart = useCallback(async (matchId: string): Promise<boolean> => {
         const match = liveMatches.get(matchId);
@@ -710,6 +740,9 @@ export function useMatchExecution({
     }, [service, tournament.id, refreshMatchState, showInfo, setLoading]);
 
     const handleReopenMatch = useCallback(async (matchData: ScheduledMatch): Promise<void> => {
+        // B4: für Engine-Spiele nie liveMatchRepository.save (Wiedereröffnen bleibt bis C3d am
+        // Altpfad reserviert, s. PC15/K-Notiz im Report).
+        if (engineLiveMatches.has(matchData.id)) { return; }
         // Re-initialize with NOT_STARTED status
         const match = await liveMatchRepository.get(tournament.id, matchData.id);
         if (match) {
@@ -724,7 +757,7 @@ export function useMatchExecution({
             await liveMatchRepository.save(tournament.id, reopened);
             setLiveMatches(prev => new Map(prev).set(matchData.id, reopened));
         }
-    }, [tournament.id, liveMatchRepository]);
+    }, [tournament.id, liveMatchRepository, engineLiveMatches]);
 
     const handleUpdateEvent = useCallback(async (
         matchId: string,
@@ -775,9 +808,18 @@ export function useMatchExecution({
         }
     }, [service, tournament.id, tournament.matches]);
 
+    // Lesepfad (B1/B2): Engine-Spiele überschreiben ihr (i. d. R. gar nicht vorhandenes, s. B4)
+    // Alt-Pendant — die UI bekommt für sie ausschließlich die MatchEngine-Ansicht zu sehen.
+    const mergedLiveMatches = useMemo(() => {
+        if (engineLiveMatches.size === 0) { return liveMatches; }
+        const merged = new Map(liveMatches);
+        for (const [id, match] of engineLiveMatches) { merged.set(id, match); }
+        return merged;
+    }, [liveMatches, engineLiveMatches]);
+
     const hasRunningMatch = useCallback((): LiveMatch | undefined => {
-        return Array.from(liveMatches.values()).find(m => m.status === 'RUNNING');
-    }, [liveMatches]);
+        return Array.from(mergedLiveMatches.values()).find(m => m.status === 'RUNNING');
+    }, [mergedLiveMatches]);
 
     // H-1 FIX: Compute isAnyLoading from loadingStates
     const isAnyLoading = useMemo(() =>
@@ -785,7 +827,7 @@ export function useMatchExecution({
     [loadingStates]);
 
     return {
-        liveMatches,
+        liveMatches: mergedLiveMatches,
         loadingStates,
         isAnyLoading,
         getLiveMatchData,

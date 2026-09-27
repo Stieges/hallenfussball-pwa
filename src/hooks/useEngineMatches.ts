@@ -7,12 +7,13 @@
  *
  * Eigene Datei statt in `useMatchExecution` (W11): die Datei ist bereits an der 300-Zeilen-Grenze.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { Tournament, Team } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import { serverRules, type MatchContext } from '../core/match';
 import { toLiveMatchView, type LiveMatchMeta } from '../core/match/client';
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
+import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { fetchEngineMatchIds, type EngineMatchIdsQueryClient } from '../features/match-engine/fetchEngineMatchIds';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
@@ -98,10 +99,53 @@ function rulesFor(tournament: Tournament, matchPhase: string | undefined) {
   });
 }
 
+interface LiveMatchesCache {
+  validMatches: ValidMatchEntry[];
+  engineMatchIds: Set<string>;
+  tournament: Tournament;
+  context: MatchEngineContextValue | null;
+  dirty: boolean;
+  map: Map<string, LiveMatch>;
+}
+
+function computeLiveMatches(
+  context: MatchEngineContextValue | null,
+  validMatches: ValidMatchEntry[],
+  engineMatchIds: Set<string>,
+  tournament: Tournament,
+): Map<string, LiveMatch> {
+  const map = new Map<string, LiveMatch>();
+  if (!context) {
+    return map;
+  }
+  const { engine, clock } = context;
+  for (const entry of validMatches) {
+    const view = engine.view(entry.matchId);
+    if (!view) {
+      continue;
+    }
+    const hasLocalEvents = view.log.length > 0;
+    if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
+      continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
+    }
+    const rules = view.result.state.rules ?? rulesFor(tournament, undefined);
+    const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
+    const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
+    const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
+    const liveMatch = toLiveMatchView(state, meta, viewClock, view.log);
+    // W5: Teamfarben/-logo traegt der Hook nach (Adapter kennt nur id/name).
+    map.set(entry.matchId, {
+      ...liveMatch,
+      homeTeam: { ...liveMatch.homeTeam, ...entry.homeVisual },
+      awayTeam: { ...liveMatch.awayTeam, ...entry.awayVisual },
+    });
+  }
+  return map;
+}
+
 export function useEngineMatches(tournament: Tournament, enabled: boolean): UseEngineMatchesResult {
   const context = useMatchEngineContextOptional();
   const [engineMatchIds, setEngineMatchIds] = useState<Set<string>>(new Set());
-  const [, setTick] = useState(0);
 
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
 
@@ -138,37 +182,43 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
     };
   }, [validMatches, context, enabled, tournament.id]);
 
-  useEffect(() => context?.engine.subscribe(() => setTick((n) => n + 1)), [context]);
-
-  // Bewusst KEIN useMemo: die Abhaengigkeit ist der Mutations-Zaehler der Engine (subscribe oben),
-  // nicht eine der hier gelesenen Referenzen -- ein Memo wuerde nach einer Engine-Aenderung eine
-  // veraltete Map zurueckgeben, solange `tournament`/`engineMatchIds` gleich bleiben. Der Aufbau ist
-  // billig (Turniergroesse, keine Netzaufrufe).
-  const liveMatches = new Map<string, LiveMatch>();
-  if (context) {
-    const { engine, clock } = context;
-    for (const entry of validMatches) {
-      const view = engine.view(entry.matchId);
-      if (!view) {
-        continue;
-      }
-      const hasLocalEvents = view.log.length > 0;
-      if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
-        continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
-      }
-      const rules = view.result.state.rules ?? rulesFor(tournament, undefined);
-      const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
-      const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
-      const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
-      const liveMatch = toLiveMatchView(state, meta, viewClock, view.log);
-      // W5: Teamfarben/-logo traegt der Hook nach (Adapter kennt nur id/name).
-      liveMatches.set(entry.matchId, {
-        ...liveMatch,
-        homeTeam: { ...liveMatch.homeTeam, ...entry.homeVisual },
-        awayTeam: { ...liveMatch.awayTeam, ...entry.awayVisual },
-      });
+  // `useSyncExternalStore` statt `useMemo` + Zaehler-State: die Engine mutiert AUSSERHALB von
+  // React (IndexedDB/Netz), `getSnapshot` muss deshalb bei unveraendertem Inhalt zwingend dieselbe
+  // Map-Referenz liefern (sonst haelt jeder Aufrufer, der `liveMatches` in einer
+  // Abhaengigkeitsliste fuehrt, nie an -- exakt das Muster aus `useOutboxStatus`).
+  const cacheRef = useRef<LiveMatchesCache | null>(null);
+  const getSnapshot = useCallback((): Map<string, LiveMatch> => {
+    const cache = cacheRef.current;
+    const unchanged =
+      cache &&
+      !cache.dirty &&
+      cache.validMatches === validMatches &&
+      cache.engineMatchIds === engineMatchIds &&
+      cache.tournament === tournament &&
+      cache.context === context;
+    if (unchanged) {
+      return cache.map;
     }
-  }
+    const map = computeLiveMatches(context, validMatches, engineMatchIds, tournament);
+    cacheRef.current = { validMatches, engineMatchIds, tournament, context, dirty: false, map };
+    return map;
+  }, [validMatches, engineMatchIds, tournament, context]);
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      if (!context) {
+        return () => undefined;
+      }
+      return context.engine.subscribe(() => {
+        const cache = cacheRef.current;
+        if (cache) {
+          cache.dirty = true;
+        }
+        onStoreChange();
+      });
+    },
+    [context],
+  );
+  const liveMatches = useSyncExternalStore(subscribe, getSnapshot);
 
   return {
     liveMatches,
