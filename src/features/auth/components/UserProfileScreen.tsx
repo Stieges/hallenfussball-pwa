@@ -161,8 +161,13 @@ export const UserProfileScreen: React.FC<UserProfileScreenProps> = ({
     }
     const accountId = user?.id ?? '';
     void (async () => {
-      // Zaehler darf schlagen (DB nicht lesbar) -- dann direkt abmelden (D-C2)
-      const waiting = await countWaitingEntries(createMatchStore(), accountId).catch(() => 0);
+      // Fixrunde 1 (Review m1): `createMatchStore()` ist eine injizierte Fabrik und darf
+      // synchron werfen (z.B. IndexedDB nicht verfuegbar) -- ausserhalb von try/catch wuerde
+      // das als unhandled rejection enden, `.catch()` wuerde nie greifen, und das Abmelden
+      // bliebe aus. Zaehlfehler (synchron ODER asynchron) duerfen das Abmelden nie blockieren.
+      const waiting = await Promise.resolve()
+        .then(() => countWaitingEntries(createMatchStore(), accountId))
+        .catch(() => 0);
       if (waiting > 0) {
         setLogoutWaiting(waiting);
         return;

@@ -140,6 +140,21 @@ describe('UserProfileScreen — Abmelde-Warnung (C2b)', () => {
     expect(screen.queryByTestId('logout-warning-dialog')).toBeNull();
   });
 
+  it('Fabrik wirft synchron -- meldet trotzdem ab (Review m1)', async () => {
+    // Der Standard `new LocalMatchStore()` wirft heute nicht synchron (StoreDb oeffnet lazy),
+    // aber die injizierte Fabrik ist ein beliebiger Aufrufer -- ein synchroner Fehler darf das
+    // Abmelden nie blockieren (D-C2: Zaehlfehler duerfen nie blockieren).
+    const throwingFactory = (): never => {
+      throw new Error('IndexedDB nicht verfuegbar');
+    };
+    render(<UserProfileScreen createMatchStore={throwingFactory} />);
+    await clickLogout();
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByTestId('logout-warning-dialog')).toBeNull();
+  });
+
   it('Gast wird direkt abgemeldet', async () => {
     authState.isGuest = true;
     const store = fakeStore([copyWith(['e1'])]);
