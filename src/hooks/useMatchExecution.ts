@@ -20,6 +20,7 @@ import { useRepositories } from '../core/contexts/RepositoryContext';
 import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useEngineExecutionBridge } from './useEngineExecutionBridge';
+import { useEngineCommandWiring } from './useEngineCommandWiring';
 
 // ============================================================================
 // TYPES
@@ -784,35 +785,23 @@ export function useMatchExecution({
         Object.values(loadingStates).some(Boolean),
     [loadingStates]);
 
+    // C3a-2a (B4/W6, W11): PC14-Handler auf MatchCommands umschalten (Engine-Spiele) bzw. den
+    // NotOnEngineYetError-Toast zeigen (andere Aktionen) -- eigene Datei, dieser Hook waechst nicht.
+    const engineHandlers = useEngineCommandWiring(tournament, matchEngineContext, engineLiveMatches, {
+        handleStart, handlePause, handleResume, handleFinish, handleForceFinish, handleGoal, handleCard,
+        handleTimePenalty, handleSubstitution, handleFoul, handleStartOvertime, handleStartGoldenGoal,
+        handleStartPenaltyShootout, handleRecordPenaltyResult, handleCancelTiebreaker, handleAbortPenaltyShootout,
+        handleManualEditResult, handleAdjustTime, handleSkipMatch, handleUnskipMatch, handleUndoLastEvent,
+        handleUpdateEvent, handleDeleteEvent,
+    });
+
     return {
         liveMatches: mergedLiveMatches,
         loadingStates,
         isAnyLoading,
         getLiveMatchData,
-        handleStart,
-        handlePause,
-        handleResume,
-        handleFinish,
-        handleForceFinish,
-        handleGoal,
-        handleCard,
-        handleTimePenalty,
-        handleSubstitution,
-        handleFoul,
-        handleStartOvertime,
-        handleStartGoldenGoal,
-        handleStartPenaltyShootout,
-        handleRecordPenaltyResult,
-        handleCancelTiebreaker,
-        handleAbortPenaltyShootout,
-        handleManualEditResult,
-        handleAdjustTime,
-        handleSkipMatch,
-        handleUnskipMatch,
-        handleUndoLastEvent,
+        ...engineHandlers,
         handleReopenMatch,
-        handleUpdateEvent,
-        handleDeleteEvent,
         handleSyncMetadata,
         hasRunningMatch,
     };

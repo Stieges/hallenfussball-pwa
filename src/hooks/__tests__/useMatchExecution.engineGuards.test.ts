@@ -46,6 +46,12 @@ vi.mock('../useEngineMatches', () => ({
     liveMatches: engineLiveMatchesMap,
     isEngineMatch: (id: string) => id === ENGINE_MATCH_ID,
   }),
+  // useEngineCommandWiring braucht buildValidMatches nur fuer die ctx-Map (handleStart/Goal/...);
+  // diese Suite prueft ausschliesslich B4/B5 (Lade-Effekt/getLiveMatchData/handleReopenMatch/
+  // Realtime), keine Befehle -- ein Stub-Eintrag reicht.
+  buildValidMatches: () => [
+    { matchId: ENGINE_MATCH_ID, externalId: ENGINE_MATCH_ID, ctx: { matchId: ENGINE_MATCH_ID, teamAId: 'team-a', teamBId: 'team-b' } },
+  ],
 }));
 vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => mockMatchEngineContext,
@@ -53,6 +59,10 @@ vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
 
 const mockInitializeMatch = vi.fn();
 const mockSyncMatchMetadata = vi.fn();
+vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
+}));
+
 vi.mock('../../core/services/MatchExecutionService', () => {
   class MockMatchExecutionService {
     initializeMatch = mockInitializeMatch;

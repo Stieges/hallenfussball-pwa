@@ -28,6 +28,10 @@ const mockDeleteEvent = vi.fn();
 const mockAbortPenaltyShootout = vi.fn();
 const mockFinishMatch = vi.fn();
 
+vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
+}));
+
 vi.mock('../../core/services/MatchExecutionService', () => {
   // Arrow-function-Implementierungen sind nicht `new`-fähig — echte Klasse statt
   // vi.fn().mockImplementation(() => ({...})), sonst wirft `new MatchExecutionService(...)`.

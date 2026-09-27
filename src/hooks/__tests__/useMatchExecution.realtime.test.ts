@@ -41,6 +41,10 @@ const mockUnsubscribe = vi.fn<(tournamentId: string) => void>();
 
 const mockRecordGoal = vi.fn();
 
+vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
+}));
+
 vi.mock('../../core/services/MatchExecutionService', () => {
   // Arrow-Implementierungen sind nicht `new`-fähig — echte Klasse statt vi.fn().mockImplementation().
   class MockMatchExecutionService {

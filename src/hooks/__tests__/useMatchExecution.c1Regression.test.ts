@@ -39,6 +39,10 @@ vi.mock('../../features/match-engine/useMatchEngineContext', () => ({
 }));
 
 const mockStartMatch = vi.fn();
+vi.mock('../../features/auth/hooks/useMyTournamentRole', () => ({
+  useMyTournamentRole: () => ({ role: 'owner', isLoading: false }),
+}));
+
 vi.mock('../../core/services/MatchExecutionService', () => {
   class MockMatchExecutionService {
     startMatch = mockStartMatch;
@@ -82,7 +86,10 @@ vi.mock('../../components/ui/Toast/ToastContext', () => ({
 import { useMatchExecution } from '../useMatchExecution';
 
 function oldMatch(): Match {
-  return { id: OLD_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1 };
+  // B1-Umschaltung (C3a-2a): "scheduled" (bzw. fehlend) ohne bereits laufendes Alt-LiveMatch
+  // waere jetzt ein NEUES Engine-Spiel (PC15a) -- dieses Fixture soll bewusst ein Altspiel
+  // bleiben (das ist hier der einzige Testgegenstand), deshalb ein expliziter Nicht-scheduled-Status.
+  return { id: OLD_MATCH_ID, teamA: 'teama', teamB: 'teamb', round: 1, field: 1, matchNumber: 1, matchStatus: 'finished' };
 }
 
 function engineMatch(): Match {
