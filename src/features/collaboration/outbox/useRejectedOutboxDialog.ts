@@ -10,6 +10,7 @@
  * noetig), `AdminHeader` den App-weiten `ToastContext`.
  */
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { EngineRejectedEntry } from '../../match-engine/useEngineOutboxSummary';
 import { useEngineOutboxSummary } from '../../match-engine/useEngineOutboxSummary';
 
@@ -30,6 +31,7 @@ export function useRejectedOutboxDialog(
   tournamentId: string | undefined,
   showError: (message: string) => void,
 ): UseRejectedOutboxDialogResult {
+  const { t } = useTranslation('common');
   const outboxSummary = useEngineOutboxSummary(tournamentId ?? '');
   const [isOpen, setIsOpen] = useState(false);
   const show = useCallback(() => setIsOpen(true), []);
@@ -37,9 +39,11 @@ export function useRejectedOutboxDialog(
 
   const handleDismiss = useCallback(
     (ids: string[]) => {
-      outboxSummary.dismiss(ids).catch(() => showError('Verstanden fehlgeschlagen — bitte erneut versuchen'));
+      // P6 (Fixrunde 3): ueber i18n statt hartkodiertem Deutsch -- derselbe Text wie bisher (de),
+      // folgt jetzt aber der Sprache (`common:outbox.rejected.dismissFailed`).
+      outboxSummary.dismiss(ids).catch(() => showError(t('outbox.rejected.dismissFailed')));
     },
-    [outboxSummary, showError],
+    [outboxSummary, showError, t],
   );
 
   return {

@@ -67,6 +67,20 @@ describe('useRejectedOutboxDialog (C3a-2a Fixrunde 3, P8)', () => {
 
     act(() => result.current.handleDismiss(['e1']));
 
-    await waitFor(() => expect(showError).toHaveBeenCalledWith('Verstanden fehlgeschlagen — bitte erneut versuchen'));
+    // P6 (Fixrunde 3): ueber i18n statt hartkodiertem Deutsch -- `react-i18next` ist global als
+    // Namespace:Schluessel-Passthrough gemockt (s. `src/test/setup.ts`), der Schluessel selbst ist
+    // hier das beobachtbare Signal (echte de/en-Uebersetzung: `common.json`, s. eigener Test unten).
+    await waitFor(() => expect(showError).toHaveBeenCalledWith('common:outbox.rejected.dismissFailed'));
+  });
+
+  it('P6: der Schluessel hat in de UND en einen echten (unterschiedlichen) Text -- der Toast folgt der Sprache', async () => {
+    const deCommon = (await import('../../../../i18n/locales/de/common.json')).default;
+    const enCommon = (await import('../../../../i18n/locales/en/common.json')).default;
+    const de = deCommon.outbox.rejected.dismissFailed;
+    const en = enCommon.outbox.rejected.dismissFailed;
+
+    expect(de).toBe('Verstanden fehlgeschlagen — bitte erneut versuchen');
+    expect(en).toBe('Dismiss failed — please try again');
+    expect(de).not.toBe(en);
   });
 });

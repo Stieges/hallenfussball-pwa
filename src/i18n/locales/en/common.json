@@ -177,7 +177,8 @@
       "dismissAll": "Dismiss all",
       "unknownCodeHint": "Code: {{code}}",
       "countLabel": "{{count}} not accepted",
-      "dialogTitle": "Entries not accepted"
+      "dialogTitle": "Entries not accepted",
+      "dismissFailed": "Dismiss failed — please try again"
     },
     "notice": {
       "clientOutdated": "Update the app",

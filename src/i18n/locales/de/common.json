@@ -177,7 +177,8 @@
       "dismissAll": "Alle verstanden",
       "unknownCodeHint": "Code: {{code}}",
       "countLabel": "{{count}} $t(sport:outbox.rejectedEntry)",
-      "dialogTitle": "Nicht übernommene Einträge"
+      "dialogTitle": "Nicht übernommene Einträge",
+      "dismissFailed": "Verstanden fehlgeschlagen — bitte erneut versuchen"
     },
     "notice": {
       "clientOutdated": "App aktualisieren",

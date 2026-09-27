@@ -79,6 +79,8 @@ describe('LiveCockpit x useEngineOutboxSummary (C3a-2a Fixrunde 1, I4/W1)', () =
 
     fireEvent.click(screen.getByTestId('outbox-rejected-dismiss'));
 
-    await screen.findByText('Verstanden fehlgeschlagen — bitte erneut versuchen');
+    // P6 (Fixrunde 3): ueber i18n statt hartkodiertem Deutsch -- `react-i18next` ist global als
+    // Namespace:Schluessel-Passthrough gemockt, der Schluessel ist hier das beobachtbare Signal.
+    await screen.findByText('common:outbox.rejected.dismissFailed');
   });
 });
