@@ -180,7 +180,14 @@ export class OutboxSender {
         }
       }
     })()
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        // M-g: heute unerreichbar (`sendOneBatch` faengt bereits alles) -- aber
+        // defensiv trotzdem einen Status hinterlassen statt still zu verwerfen.
+        if (this.isCurrentQueue(queue)) {
+          this.book.set({ lastError: classifySendFailure(error).message });
+        }
+        queue.scheduleRetry('backoff', PERMANENT_RETRY_MS);
+      })
       .then(() => {
         queue.running = null;
         return queue.wantsRun ? this.pump(queue) : undefined;
@@ -286,7 +293,11 @@ export class OutboxSender {
       case 'matchFull':
       case 'matchGone': {
         // Buchung in den eigenen Store bleibt erlaubt, auch wenn der Lauf veraltet ist.
-        await this.store.rejectAllPending(queue.key, failure.kind === 'matchFull' ? MATCH_FULL_CODE : MATCH_GONE_CODE);
+        await this.store.rejectAllPending(
+          queue.key,
+          failure.kind === 'matchFull' ? MATCH_FULL_CODE : MATCH_GONE_CODE,
+          this.now(),
+        );
         if (isCurrent) {
           await this.refresh();
         }

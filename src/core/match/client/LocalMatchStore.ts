@@ -196,9 +196,14 @@ export class LocalMatchStore {
     await this.update(key, (copy) => applyResolution(copy, resolution));
   }
 
-  /** Alle offenen Eintraege ablehnen (54000 „Spiel voll", 55000 „Spiel weg"). */
-  async rejectAllPending(key: string, code: string): Promise<void> {
-    await this.update(key, (copy) => rejectAllPendingEntries(copy, code, Date.now()));
+  /**
+   * Alle offenen Eintraege ablehnen (54000 „Spiel voll", 55000 „Spiel weg").
+   * C3a-0, M-g: `rejectedAt` kann der Aufrufer vorgeben (Sender: injizierte
+   * `now()`, kein `Date.now()` mehr dort); ohne Angabe bleibt `Date.now()` der
+   * Rueckfall fuer andere Aufrufer.
+   */
+  async rejectAllPending(key: string, code: string, rejectedAt: number = Date.now()): Promise<void> {
+    await this.update(key, (copy) => rejectAllPendingEntries(copy, code, rejectedAt));
   }
 
   /** „Verstanden" (D-C1): bestaetigte Ablehnungen aus der Liste nehmen. */

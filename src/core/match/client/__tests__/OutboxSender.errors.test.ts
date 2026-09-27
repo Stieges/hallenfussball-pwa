@@ -9,6 +9,7 @@ import { RepositoryError } from '../../../errors';
 import { ctx, ev } from './fixtures';
 import {
   acceptAll,
+  CLOCK_START,
   clientOutdatedResult,
   makeHarness,
   rpcError,
@@ -114,6 +115,25 @@ describe('OutboxSender: Fehlerklassen', () => {
     expect(h.sender.getStatus().pausedMatches).toEqual({});
   });
 
+  it('C3a-0, M-g: ein erneutes start() (haltAll) hebt auch eine notReady-Pause auf -- sofortiger Neuversuch statt 60s-Frist', async () => {
+    const h = makeHarness();
+    await seed(h, 'acc', 'mA');
+    h.api.mockImplementationOnce(async () => {
+      throw rpcError('22023', 'Spiel mA hat noch keine zwei Teams');
+    });
+
+    await h.sender.start('acc');
+    expect(h.sender.getStatus().pausedMatches).toEqual({ mA: 'notReady' });
+
+    h.api.mockImplementation(async (_matchId, events) => acceptAll(events));
+    // Ein erneutes start() (z. B. nach resumeAuth/online) raeumt ALLE Pausen ab (haltAll),
+    // auch notReady -- kein Warten auf die 60s-Frist noetig (Review-Text: harmlos).
+    await h.sender.start('acc');
+
+    expect(await list(h, 'mA', 'acked')).toEqual(['mA-1']);
+    expect(h.sender.getStatus().pausedMatches).toEqual({});
+  });
+
   it('10b: notReady endet spaetestens nach 60 s von selbst', async () => {
     const h = makeHarness();
     await seed(h, 'acc', 'mA');
@@ -148,6 +168,8 @@ describe('OutboxSender: Fehlerklassen', () => {
       ['f2', 'MATCH_FULL'],
     ]);
     expect(h.sender.getStatus().rejectedByMatch).toEqual({ mF: 2 });
+    // C3a-0, M-g: `rejectedAt` kommt aus der injizierten Uhr (`now()`), nicht aus `Date.now()`.
+    expect(copy?.rejected.every((entry) => entry.rejectedAt === CLOCK_START)).toBe(true);
   });
 
   it('11b: 55000 lehnt alle pending des Spiels als MATCH_GONE ab', async () => {
