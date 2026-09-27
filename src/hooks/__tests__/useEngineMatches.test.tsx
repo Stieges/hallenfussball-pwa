@@ -10,6 +10,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { LocalMatchStore, MatchEngine, type ClockSync } from '../../core/match/client';
 import { serverRules } from '../../core/match';
 import type { Tournament, Match } from '../../types/tournament';
+import type { LiveMatch } from '../../core/models/LiveMatch';
 
 const store = new LocalMatchStore();
 const mockFetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
@@ -73,7 +74,7 @@ describe('useEngineMatches', () => {
     const upperId = 'M-Upper-Case-ID';
     mockFetchEngineMatchIds.mockResolvedValue(new Set([upperId.toLowerCase()]));
     const t = tournament([match({ id: upperId, teamA: 'teamA', teamB: 'teamB' })]);
-    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true, new Map()));
 
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     rerender();
@@ -91,7 +92,7 @@ describe('useEngineMatches', () => {
       match({ id: 'm-known', teamA: 'teamA', teamB: 'teamB' }),
       match({ id: 'm-other', teamA: 'teamA', teamB: 'teamB' }),
     ]);
-    renderHook(() => useEngineMatches(t, true));
+    renderHook(() => useEngineMatches(t, true, new Map()));
 
     await waitFor(() => expect(mockFetchConfirmed).toHaveBeenCalledWith('m-known', 0));
     expect(mockFetchConfirmed).not.toHaveBeenCalledWith('m-other', 0);
@@ -102,7 +103,7 @@ describe('useEngineMatches', () => {
     mockFetchEngineMatchIds.mockResolvedValueOnce(new Set(['m-good']));
     const firstTournament = tournament([match({ id: 'm-good', teamA: 'teamA', teamB: 'teamB' })]);
     const { result, rerender } = renderHook(
-      ({ t }) => useEngineMatches(t, true),
+      ({ t }) => useEngineMatches(t, true, new Map()),
       { initialProps: { t: firstTournament } },
     );
     await waitFor(() => expect(result.current.isEngineMatch('m-good')).toBe(true));
@@ -120,7 +121,7 @@ describe('useEngineMatches', () => {
   it('M9: ein Spiel OHNE lokale Ereignisse wird ueber die Sammelabfrage als Engine-Spiel erkannt', async () => {
     mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-server-only']));
     const t = tournament([match({ id: 'm-server-only', teamA: 'teamA', teamB: 'teamB' })]);
-    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true, new Map()));
 
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     rerender();
@@ -141,7 +142,7 @@ describe('useEngineMatches', () => {
       groupPhaseGameDuration: 20,
     } as unknown as Tournament;
 
-    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true, new Map()));
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     rerender();
     await waitFor(() => expect(result.current.isEngineMatch('m-visuals')).toBe(true));
@@ -172,7 +173,7 @@ describe('useEngineMatches', () => {
     });
     const expectedDurationSeconds = finalRules.sections * finalRules.sectionSeconds;
 
-    const { result, rerender } = renderHook(() => useEngineMatches(t, true));
+    const { result, rerender } = renderHook(() => useEngineMatches(t, true, new Map()));
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     rerender();
     await waitFor(() => expect(result.current.isEngineMatch('m-final')).toBe(true));
@@ -202,7 +203,7 @@ describe('useEngineMatches', () => {
       match({ id: uuidId, teamA: 'teamA', teamB: 'teamB' }),
       match({ id: 'lokal-gast-123', teamA: 'teamA', teamB: 'teamB' }),
     ]);
-    renderHook(() => useEngineMatches(t, true));
+    renderHook(() => useEngineMatches(t, true, new Map()));
 
     await waitFor(() => expect(mockFetchEngineMatchIds).toHaveBeenCalled());
     const [, idsArg] = mockFetchEngineMatchIds.mock.calls[0] as [unknown, string[]];
@@ -213,7 +214,7 @@ describe('useEngineMatches', () => {
   it('ohne MatchEngineProvider (Provider noch nicht im App-Baum): leere Map statt Absturz', () => {
     activeContext = null;
     const t = tournament([match({ id: 'm-no-provider', teamA: 'teamA', teamB: 'teamB' })]);
-    const { result } = renderHook(() => useEngineMatches(t, false));
+    const { result } = renderHook(() => useEngineMatches(t, false, new Map()));
 
     expect(result.current.liveMatches.size).toBe(0);
     expect(result.current.isEngineMatch('m-no-provider')).toBe(false);
@@ -221,7 +222,7 @@ describe('useEngineMatches', () => {
 
   it('W4: Platzhalter-Team ("TBD") bekommt keine Kopie und ist kein Engine-Spiel', async () => {
     const t = tournament([match({ id: 'm-placeholder', teamA: 'teamA', teamB: 'TBD' })]);
-    const { result } = renderHook(() => useEngineMatches(t, false));
+    const { result } = renderHook(() => useEngineMatches(t, false, new Map()));
 
     await waitFor(() => {
       const copy = mockContext.engine.view('m-placeholder');
@@ -230,9 +231,11 @@ describe('useEngineMatches', () => {
     expect(result.current.isEngineMatch('m-placeholder')).toBe(false);
   });
 
-  it('B1 (C3a-1): ein Spiel ohne jedes Ereignis bleibt Altspiel (kein Eintrag in liveMatches)', async () => {
-    const t = tournament([match({ id: 'm-old', teamA: 'teamA', teamB: 'teamB' })]);
-    const { result } = renderHook(() => useEngineMatches(t, false));
+  it('B1 (C3a-2a): ein NICHT-scheduled Altspiel ohne Ereignisse bleibt Altspiel (kein Eintrag in liveMatches)', async () => {
+    const t = tournament([
+      match({ id: 'm-old', teamA: 'teamA', teamB: 'teamB', matchStatus: 'finished' }),
+    ]);
+    const { result } = renderHook(() => useEngineMatches(t, false, new Map()));
 
     await waitFor(() => {
       expect(mockContext.engine.view('m-old')).not.toBeNull();
@@ -241,9 +244,34 @@ describe('useEngineMatches', () => {
     expect(result.current.liveMatches.has('m-old')).toBe(false);
   });
 
+  it('B1-Umschaltung (C3a-2a): ein NEUES scheduled-Spiel ohne Ereignisse UND ohne altes LiveMatch wird Engine-Spiel', async () => {
+    const t = tournament([match({ id: 'm-new', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const { result } = renderHook(() => useEngineMatches(t, false, new Map()));
+
+    await waitFor(() => {
+      expect(mockContext.engine.view('m-new')).not.toBeNull();
+    });
+    await waitFor(() => expect(result.current.isEngineMatch('m-new')).toBe(true));
+    expect(result.current.liveMatches.has('m-new')).toBe(true);
+  });
+
+  it('B1-Uebergangsschutz: ein scheduled-Spiel mit einem BEREITS laufenden Alt-LiveMatch bleibt Altspiel', async () => {
+    const t = tournament([match({ id: 'm-transition', teamA: 'teamA', teamB: 'teamB', matchStatus: 'scheduled' })]);
+    const oldLiveMatches = new Map<string, LiveMatch>([
+      ['m-transition', { id: 'm-transition', status: 'RUNNING' } as unknown as LiveMatch],
+    ]);
+    const { result } = renderHook(() => useEngineMatches(t, false, oldLiveMatches));
+
+    await waitFor(() => {
+      expect(mockContext.engine.view('m-transition')).not.toBeNull();
+    });
+    expect(result.current.isEngineMatch('m-transition')).toBe(false);
+    expect(result.current.liveMatches.has('m-transition')).toBe(false);
+  });
+
   it('C-OFFUI: Tor ohne Netz sichtbar -- Kopie mit pending-GOAL zeigt das Tor ohne Server-Aufruf', async () => {
     const t = tournament([match({ id: 'm-offline-goal', teamA: 'teamA', teamB: 'teamB' })]);
-    const { result, rerender } = renderHook(() => useEngineMatches(t, false));
+    const { result, rerender } = renderHook(() => useEngineMatches(t, false, new Map()));
 
     await waitFor(() => expect(mockContext.engine.view('m-offline-goal')).not.toBeNull());
 

@@ -7,7 +7,7 @@
  *
  * @see .superpowers/sdd/2026-09-26-pr-c-ausgang/task-C3a-brief.md (v2, 1.2)
  */
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useAuth } from '../auth/hooks/useAuth';
 import { useRepositories } from '../../core/contexts/RepositoryContext';
 import type { SupabaseLiveMatchRepository } from '../../core/repositories/SupabaseLiveMatchRepository';
@@ -47,7 +47,9 @@ function computeAccountId(userId: string | undefined, globalRole: string | undef
  * Kontowechsel neu auf) -- der Sender/die Uhr werden dagegen NICHT neu gebaut (`start`/`stop`
  * reicht, s. o.), deshalb der Umweg ueber eine Ref statt eines direkten Konstruktor-Arguments.
  */
-function buildBundle(repoRef: { current: SupabaseLiveMatchRepository | null }): MatchEngineContextValue {
+function buildBundle(
+  repoRef: { current: SupabaseLiveMatchRepository | null },
+): Omit<MatchEngineContextValue, 'accountId'> {
   const store = new LocalMatchStore();
   const clock = new ClockSync(
     () => (isSupabaseConfigured && repoRef.current ? repoRef.current.serverTime() : Promise.reject(NOT_CONFIGURED_ERROR)),
@@ -109,9 +111,14 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
   const repoRef = useRef<SupabaseLiveMatchRepository | null>(supabaseLiveMatchRepo);
   repoRef.current = supabaseLiveMatchRepo;
 
-  const bundleRef = useRef<MatchEngineContextValue | null>(null);
+  const bundleRef = useRef<Omit<MatchEngineContextValue, 'accountId'> | null>(null);
   bundleRef.current ??= buildBundle(repoRef);
   const bundle = bundleRef.current;
+
+  // m3 (Nachtrag C3a-2a): NEUES Kontext-Objekt je Kontowechsel (`bundle` selbst bleibt stabil,
+  // s. Doku an `MatchEngineContextValue.accountId`) -- Hooks, die `context` in einer
+  // Abhaengigkeitsliste fuehren, bauen ihren Kopien-Cache dadurch zuverlaessig neu auf.
+  const contextValue = useMemo<MatchEngineContextValue>(() => ({ ...bundle, accountId }), [bundle, accountId]);
 
   const previousAccountRef = useRef<string | null>(null);
   const sessionTokenRef = useRef<string | undefined>(undefined);
@@ -182,5 +189,5 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
     sessionTokenRef.current = token;
   }, [session, accountId, bundle]);
 
-  return <MatchEngineContext.Provider value={bundle}>{children}</MatchEngineContext.Provider>;
+  return <MatchEngineContext.Provider value={contextValue}>{children}</MatchEngineContext.Provider>;
 }

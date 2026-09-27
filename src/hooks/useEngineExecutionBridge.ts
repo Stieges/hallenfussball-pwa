@@ -24,7 +24,7 @@ export function useEngineExecutionBridge(
   enabled: boolean,
   localLiveMatches: Map<string, LiveMatch>,
 ): UseEngineExecutionBridgeResult {
-  const { liveMatches: engineLiveMatches } = useEngineMatches(tournament, enabled);
+  const { liveMatches: engineLiveMatches } = useEngineMatches(tournament, enabled, localLiveMatches);
   const matchEngineContext = useMatchEngineContextOptional();
 
   const engineLiveMatchesRef = useRef(engineLiveMatches);

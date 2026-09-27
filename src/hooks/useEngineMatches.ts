@@ -37,6 +37,8 @@ interface ValidMatchEntry {
   /** I6/K3/W5: Phase (`groupStage`/Finalrunde) fuer `serverRules` -- eine Finalrunde hat eine andere
    * Dauer als die Gruppenphase, `undefined` waere immer "Gruppenphase". */
   phase: string | undefined;
+  /** B1 (C3a-2a): Turnierkopie-Status (`match.matchStatus`), fehlend zaehlt als `'scheduled'`. */
+  matchStatus: string | undefined;
   /** W5: `toLiveMatchView` kennt kein Logo/Farben (Adapter unveraendert) -- der Hook traegt sie nach. */
   homeVisual: { logo?: Team['logo']; colors?: Team['colors'] };
   awayVisual: { logo?: Team['logo']; colors?: Team['colors'] };
@@ -92,6 +94,7 @@ function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       ctx,
       meta,
       phase: match.phase,
+      matchStatus: match.matchStatus,
       homeVisual: { logo: homeTeam?.logo, colors: homeTeam?.colors },
       awayVisual: { logo: awayTeam?.logo, colors: awayTeam?.colors },
     });
@@ -137,8 +140,25 @@ interface LiveMatchesCache {
   engineMatchIds: Set<string>;
   tournament: Tournament;
   context: MatchEngineContextValue | null;
+  localLiveMatches: Map<string, LiveMatch>;
   dirty: boolean;
   map: Map<string, LiveMatch>;
+}
+
+/**
+ * B1 (C3a-2a, Plan-Review PC15a): die "scheduled"-Klausel schaltet die Umschaltung fuer NEUE
+ * Spiele scharf -- ein Spiel ohne jedes Ereignis wird Engine-Spiel, wenn die Turnierkopie noch
+ * `scheduled` ist (oder das Feld fehlt) UND kein Altspiel schon in Betrieb ist (kein LiveMatch
+ * ODER dessen Status noch `NOT_STARTED`). Ein bereits laufendes/pausiertes Altspiel bleibt beim
+ * Altpfad, bis es dort beendet ist (Uebergangsschutz aus dem Review).
+ */
+function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
+  const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
+  if (!isScheduled) {
+    return false;
+  }
+  const oldLiveMatch = localLiveMatches.get(entry.externalId);
+  return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
 }
 
 function computeLiveMatches(
@@ -146,6 +166,7 @@ function computeLiveMatches(
   validMatches: ValidMatchEntry[],
   engineMatchIds: Set<string>,
   tournament: Tournament,
+  localLiveMatches: Map<string, LiveMatch>,
 ): Map<string, LiveMatch> {
   const map = new Map<string, LiveMatch>();
   if (!context) {
@@ -158,8 +179,9 @@ function computeLiveMatches(
       continue;
     }
     const hasLocalEvents = view.log.length > 0;
-    if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
-      continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
+    const isEngineByServer = hasLocalEvents || engineMatchIds.has(entry.matchId);
+    if (!isEngineByServer && !isNewScheduledMatch(entry, localLiveMatches)) {
+      continue; // B1: bleibt Altspiel.
     }
     const rules = view.result.state.rules ?? rulesFor(tournament, entry.phase);
     const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
@@ -204,7 +226,11 @@ function stableLiveMatches(previous: Map<string, LiveMatch> | null, next: Map<st
   return next;
 }
 
-export function useEngineMatches(tournament: Tournament, enabled: boolean): UseEngineMatchesResult {
+export function useEngineMatches(
+  tournament: Tournament,
+  enabled: boolean,
+  localLiveMatches: Map<string, LiveMatch>,
+): UseEngineMatchesResult {
   const context = useMatchEngineContextOptional();
   const [engineMatchIds, setEngineMatchIds] = useState<Set<string>>(new Set());
   // N-m5: Lesezugriff fuer den Fehlerfall der Sammelabfrage OHNE `engineMatchIds` als
@@ -261,7 +287,10 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
     return () => {
       cancelled = true;
     };
-  }, [validMatches, context, enabled, tournament.id]);
+    // m3: `context?.accountId` steht zusaetzlich zu `context` in der Abhaengigkeitsliste -- der
+    // Provider gibt zwar bereits ein neues `context`-Objekt je Kontowechsel aus, die explizite
+    // Nennung dokumentiert den eigentlichen Ausloeser (Kontowechsel -> Kopien-Cache neu aufbauen).
+  }, [validMatches, context, context?.accountId, enabled, tournament.id]);
 
   // `useSyncExternalStore` statt `useMemo` + Zaehler-State: die Engine mutiert AUSSERHALB von
   // React (IndexedDB/Netz), `getSnapshot` muss deshalb bei unveraendertem Inhalt zwingend dieselbe
@@ -276,15 +305,16 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
       cache.validMatches === validMatches &&
       cache.engineMatchIds === engineMatchIds &&
       cache.tournament === tournament &&
-      cache.context === context;
+      cache.context === context &&
+      cache.localLiveMatches === localLiveMatches;
     if (unchanged) {
       return cache.map;
     }
-    const computed = computeLiveMatches(context, validMatches, engineMatchIds, tournament);
+    const computed = computeLiveMatches(context, validMatches, engineMatchIds, tournament, localLiveMatches);
     const map = stableLiveMatches(cache?.map ?? null, computed);
-    cacheRef.current = { validMatches, engineMatchIds, tournament, context, dirty: false, map };
+    cacheRef.current = { validMatches, engineMatchIds, tournament, context, localLiveMatches, dirty: false, map };
     return map;
-  }, [validMatches, engineMatchIds, tournament, context]);
+  }, [validMatches, engineMatchIds, tournament, context, localLiveMatches]);
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       if (!context) {
