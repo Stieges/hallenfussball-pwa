@@ -266,4 +266,27 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
     expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
     confirmSpy.mockRestore();
   });
+
+  // Minor 5 (Fixrunde 4): ein fremd laufendes Engine-Spiel, dessen Kopie auf DIESEM Geraet noch
+  // nicht geladen ist, steht NICHT in `overlaidMatchIds` (das setzt echten Engine-Inhalt voraus)
+  // und fiel bisher auf die Legacy-Checks zurueck -- die Schnelleingabe haette am RPC vorbei
+  // geschrieben. Dieselbe E1/P2-"unklar"-Einstufung (`isForeignCandidate`) gilt jetzt auch hier.
+  it('Minor 5: ein fremd laufendes Engine-Spiel OHNE geladene Kopie (kein Overlay) wird trotzdem mit engine.notYet gesperrt', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'running' })],
+      teams,
+    );
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 5, 5);
+    });
+
+    expect(onMatchesUpdate).not.toHaveBeenCalled();
+    expect(showWarning).toHaveBeenCalled();
+  });
 });

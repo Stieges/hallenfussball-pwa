@@ -130,6 +130,22 @@ export function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Ma
   return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
 }
 
+/**
+ * P2 (Fixrunde 3, E1-Randfall): nicht `scheduled`, aber (auf DIESEM Geraet) weder eine aktive
+ * Altzeile noch ein Ergebnis -- der Kandidat fuer ein fremd (auf einem anderen Geraet) laufendes
+ * Engine-Spiel. Spiegelbildlich zu `isNewScheduledMatch` (dort: `scheduled`). Fixrunde 4, Minor 5:
+ * hierher verschoben (aus `useEngineMatchReadiness.ts`), damit `scoreChangeHelpers.ts` (Schnell-
+ * eingabe-Sperre) dieselbe Klassifizierung wiederverwenden kann statt sie zu duplizieren.
+ */
+export function isForeignCandidate(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
+  const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
+  if (isScheduled || entry.hasExistingResult) {
+    return false;
+  }
+  const oldLiveMatch = localLiveMatches.get(entry.externalId);
+  return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
+}
+
 export function computeLiveMatches(
   context: MatchEngineContextValue | null,
   validMatches: ValidMatchEntry[],

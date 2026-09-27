@@ -8,18 +8,21 @@ import type { Tournament } from '../../../types/tournament';
 import type { MatchUpdate } from '../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../core/services';
 import { autoResolvePlayoffsIfReady, resolveBracketAfterPlayoffMatch } from '../../../core/generators';
-import { buildValidMatches, isNewScheduledMatch } from '../../../hooks/engineMatchModel';
+import { buildValidMatches, isNewScheduledMatch, isForeignCandidate } from '../../../hooks/engineMatchModel';
 import { isMatchRunning } from '../utils';
 
 /**
- * Fixrunde 2/P4 (Fixrunde 3): ein Engine-Spiel darf NICHT mehr ueber die Schnelleingabe direkt
- * scoreA/scoreB geschrieben bekommen -- das umginge MatchCommands/die RPC komplett (kein
- * Ereignis, keine Projektion, kein Sync). Zwei Faelle zaehlen als Engine-Spiel: (1) bereits
- * laufend/beendet MIT echtem Engine-Inhalt (`overlaidMatchIds`, P4-Fix -- die reine B1-Klausel
- * allein sah nur NEUE Spiele, ein RUNNING/FINISHED Engine-Spiel rutschte durch); (2) B1-neu
- * (scheduled, kein Ergebnis) UND NICHT bereits ueber den Altweg (Legacy-`isMatchRunning`,
- * localStorage) in Betrieb -- sonst wuerde ein laufendes 0:0-Altspiel faelschlich geblockt
- * (Gegenprobe P4).
+ * Fixrunde 2/P4 (Fixrunde 3)/Minor 5 (Fixrunde 4): ein Engine-Spiel darf NICHT mehr ueber die
+ * Schnelleingabe direkt scoreA/scoreB geschrieben bekommen -- das umginge MatchCommands/die RPC
+ * komplett (kein Ereignis, keine Projektion, kein Sync). Drei Faelle zaehlen als Engine-Spiel:
+ * (1) bereits laufend/beendet MIT echtem Engine-Inhalt (`overlaidMatchIds`, P4-Fix -- die reine
+ * B1-Klausel allein sah nur NEUE Spiele, ein RUNNING/FINISHED Engine-Spiel rutschte durch);
+ * (2) B1-neu (scheduled, kein Ergebnis) UND NICHT bereits ueber den Altweg (Legacy-
+ * `isMatchRunning`, localStorage) in Betrieb -- sonst wuerde ein laufendes 0:0-Altspiel
+ * faelschlich geblockt (Gegenprobe P4); (3) ein fremd laufendes Engine-Spiel, dessen Kopie auf
+ * DIESEM Geraet noch nicht geladen ist (`isForeignCandidate`, Minor 5) -- steht (noch) NICHT in
+ * `overlaidMatchIds`, ist aber dieselbe E1/P2-"unklar"-Einstufung: vorlaeufig sperren statt am
+ * RPC vorbeizuschreiben.
  */
 export function isEngineControlledScoreChange(
   tournament: Tournament,
@@ -30,7 +33,13 @@ export function isEngineControlledScoreChange(
     return true;
   }
   const engineEntry = buildValidMatches(tournament).find((candidate) => candidate.externalId === matchId);
-  return !isMatchRunning(matchId, tournament.id) && !!engineEntry && isNewScheduledMatch(engineEntry, new Map());
+  if (!engineEntry) {
+    return false;
+  }
+  if (isForeignCandidate(engineEntry, new Map())) {
+    return true;
+  }
+  return !isMatchRunning(matchId, tournament.id) && isNewScheduledMatch(engineEntry, new Map());
 }
 
 /**

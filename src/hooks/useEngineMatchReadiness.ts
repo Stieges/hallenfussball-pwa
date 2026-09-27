@@ -10,14 +10,15 @@
  * `liveMatchRepository.save`) darf fuer ein Engine-Spiel NIE laufen -- auch nicht in der kurzen Race
  * zwischen dem Mount (`ManagementTab`) und dem asynchronen `ensureMatch` (IndexedDB-Schreibzugriff),
  * die `engineLiveMatches` (aus `useEngineMatches`) erst danach fuellt. `isEngineDestinedMatch`
- * braucht dafuer keine Engine-Ansicht -- nur die Turnierdaten selbst (`buildValidMatches` +
- * `isNewScheduledMatch`, P8/Fixrunde 3: beide in `./engineMatchModel`).
+ * braucht dafuer keine Engine-Ansicht -- nur die Turnierdaten selbst (`buildValidMatches`,
+ * `isNewScheduledMatch`, `isForeignCandidate`: alle in `./engineMatchModel`, P8/Fixrunde 3 bzw.
+ * Fixrunde 4 Minor 5 -- `isForeignCandidate` wird auch von `scoreChangeHelpers.ts` gebraucht).
  */
 import { useCallback, useMemo, useRef } from 'react';
 import type { Tournament } from '../types/tournament';
 import type { LiveMatch } from '../core/models/LiveMatch';
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
-import { buildValidMatches, computeLiveMatches, isNewScheduledMatch, type ValidMatchEntry } from './engineMatchModel';
+import { buildValidMatches, computeLiveMatches, isNewScheduledMatch, isForeignCandidate } from './engineMatchModel';
 
 export interface UseEngineMatchReadinessResult {
   /** B4: synchron aus den Turnierdaten ableitbar -- entweder die klare B1-Klausel
@@ -39,20 +40,6 @@ export interface UseEngineMatchReadinessResult {
    * (noch) keinen Kontext gibt, das Spiel keine Engine-Ansicht ergibt, oder (P2) der Server fuer
    * ein "fremdes" Spiel keine Ereignisse hat (dann ist es ein bestaetigtes Altspiel). */
   ensureEngineMatchReady: (externalMatchId: string) => Promise<LiveMatch | null>;
-}
-
-/**
- * P2 (Fixrunde 3, E1-Randfall): nicht `scheduled`, aber (auf DIESEM Geraet) weder eine aktive
- * Altzeile noch ein Ergebnis -- der Kandidat fuer ein fremd (auf einem anderen Geraet) laufendes
- * Engine-Spiel. Spiegelbildlich zu `isNewScheduledMatch` (dort: `scheduled`).
- */
-function isForeignCandidate(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
-  const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
-  if (isScheduled || entry.hasExistingResult) {
-    return false;
-  }
-  const oldLiveMatch = localLiveMatches.get(entry.externalId);
-  return !oldLiveMatch || oldLiveMatch.status === 'NOT_STARTED';
 }
 
 export function useEngineMatchReadiness(
