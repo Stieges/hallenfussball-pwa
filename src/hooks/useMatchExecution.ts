@@ -21,6 +21,7 @@ import { useToast } from '../components/ui/Toast/ToastContext';
 import { captureFeatureError } from '../lib/sentry';
 import { useEngineExecutionBridge } from './useEngineExecutionBridge';
 import { useEngineCommandWiring } from './useEngineCommandWiring';
+import { scheduleFingerprint } from '../utils/scheduleFingerprint';
 
 // ============================================================================
 // TYPES
@@ -226,7 +227,12 @@ export function useMatchExecution({
             setLiveMatches(new Map(synced.map(m => [m.id, m])));
         };
         void load();
-    }, [tournament.id, tournament.matches, service, liveMatchRepository, engineLiveMatchesRef]); // Re-run when tournament matches change (e.g. referee assignment)
+        // I2 (C3a-2a Fixrunde 1): `scheduleFingerprint` statt `tournament.matches` selbst -- die
+        // Overlay-Ausgabe von useTournamentManager erzeugt bei JEDER Stand-/Statusaenderung eines
+        // Engine-Spiels ein neues `matches`-Array; mit der rohen Array-Referenz als Abhaengigkeit
+        // liefe dieser Effekt (Netzaufruf `getAll`) dann bei jeder Engine-Aenderung erneut.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tournament.id, scheduleFingerprint(tournament), service, liveMatchRepository, engineLiveMatchesRef]);
 
     // =========================================================================
     // REALTIME (Task 14) — mehrere Geräte am selben Turnier

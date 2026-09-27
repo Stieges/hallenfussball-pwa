@@ -16,6 +16,7 @@ import { useMatchEngineContextOptional } from '../features/match-engine/useMatch
 import type { MatchEngineContextValue } from '../features/match-engine/matchEngineContextInstance';
 import { fetchEngineMatchIds, type EngineMatchIdsQueryClient } from '../features/match-engine/fetchEngineMatchIds';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { scheduleFingerprint } from '../utils/scheduleFingerprint';
 
 export interface UseEngineMatchesResult {
   /** Nur Engine-Spiele (B1) -- Altspiele fehlen hier bewusst, ihr Pfad bleibt unveraendert. */
@@ -246,6 +247,15 @@ export function useEngineMatches(
   engineMatchIdsRef.current = engineMatchIds;
 
   const validMatches = useMemo(() => buildValidMatches(tournament), [tournament]);
+  // I2 (C3a-2a Fixrunde 1): der Effekt unten (ensureMatch/Sammelabfrage/catchUpLoaded) darf NICHT
+  // bei jeder Overlay-Aenderung erneut laufen (W3-Verstoss: IDB-Schreibzugriffe + Netzaufruf bei
+  // jeder Stand-/Statusaenderung eines bereits geladenen Engine-Spiels). `validMatchesRef` liefert
+  // dem Effekt trotzdem immer den AKTUELLEN Wert (synchron vor dem Effekt-Lauf gesetzt), die
+  // Abhaengigkeitsliste selbst haengt an `scheduleFingerprint` (Spielplan-Inhalt, ohne Ergebnis-/
+  // Statusfelder).
+  const validMatchesRef = useRef(validMatches);
+  validMatchesRef.current = validMatches;
+  const scheduleKey = scheduleFingerprint(tournament);
 
   useEffect(() => {
     if (!context) {
@@ -254,7 +264,7 @@ export function useEngineMatches(
     const { engine } = context;
     let cancelled = false;
     async function run(): Promise<void> {
-      for (const entry of validMatches) {
+      for (const entry of validMatchesRef.current) {
         await engine.ensureMatch(entry.matchId, entry.ctx, tournament.id);
       }
       if (cancelled || !enabled || !isSupabaseConfigured || !supabase) {
@@ -270,7 +280,7 @@ export function useEngineMatches(
         const client: unknown = supabase;
         ids = await fetchEngineMatchIds(
           client as EngineMatchIdsQueryClient,
-          validMatches.map((entry) => entry.matchId).filter(isUuid),
+          validMatchesRef.current.map((entry) => entry.matchId).filter(isUuid),
         );
       } catch {
         // W3 ist ein Optimierungspfad: bei Fehler zaehlen weiterhin lokale Kopien mit Ereignissen.
@@ -296,7 +306,8 @@ export function useEngineMatches(
     // m3: `context?.accountId` steht zusaetzlich zu `context` in der Abhaengigkeitsliste -- der
     // Provider gibt zwar bereits ein neues `context`-Objekt je Kontowechsel aus, die explizite
     // Nennung dokumentiert den eigentlichen Ausloeser (Kontowechsel -> Kopien-Cache neu aufbauen).
-  }, [validMatches, context, context?.accountId, enabled, tournament.id]);
+    // I2: `scheduleKey` statt `validMatches` -- s. Kommentar an dessen Definition.
+  }, [scheduleKey, context, context?.accountId, enabled, tournament.id]);
 
   // `useSyncExternalStore` statt `useMemo` + Zaehler-State: die Engine mutiert AUSSERHALB von
   // React (IndexedDB/Netz), `getSnapshot` muss deshalb bei unveraendertem Inhalt zwingend dieselbe

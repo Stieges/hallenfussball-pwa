@@ -277,3 +277,81 @@ describe('useMatchExecution — handleFinish ruft nach Spielende KEINEN Turnier-
     expect(onLocalTournamentUpdate).toHaveBeenCalledWith(reloadedTournament);
   });
 });
+
+// ---------------------------------------------------------------------------
+// I2 (C3a-2a Fixrunde 1): Lade-Effekt haengt an scheduleFingerprint, nicht an tournament.matches
+// selbst -- eine Overlay-Aenderung (nur scoreA/matchStatus, gleicher Spielplan) darf den
+// Netzaufruf liveMatchRepository.getAll NICHT erneut ausloesen.
+// ---------------------------------------------------------------------------
+
+describe('useMatchExecution — I2 (Fixrunde 1): Lade-Effekt reagiert nicht auf reine Overlay-Aenderungen', () => {
+  it('ein neues tournament-Objekt mit nur scoreA/matchStatus geaendert (gleicher Spielplan) ruft getAll NICHT erneut auf', async () => {
+    const tournament: Tournament = {
+      id: 'tour-1',
+      matches: [
+        { id: 'match-1', teamA: 'team-a', teamB: 'team-b', round: 1, field: 1, matchNumber: 1 },
+      ],
+      teams: [
+        { id: 'team-a', name: 'Heim' },
+        { id: 'team-b', name: 'Gast' },
+      ],
+    } as unknown as Tournament;
+
+    const { rerender } = renderHook(
+      ({ t }) => useMatchExecution({ tournament: t, onLocalTournamentUpdate: vi.fn() }),
+      { initialProps: { t: tournament } },
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockLiveMatchRepository.getAll).toHaveBeenCalledTimes(1);
+
+    const overlaid: Tournament = {
+      ...tournament,
+      matches: tournament.matches.map((m) => ({ ...m, scoreA: 2, matchStatus: 'running' })),
+    } as unknown as Tournament;
+    rerender({ t: overlaid });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockLiveMatchRepository.getAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('eine ECHTE Spielplan-Aenderung (Schiedsrichter) ruft getAll erneut auf (Regressionsschutz)', async () => {
+    const tournament: Tournament = {
+      id: 'tour-1',
+      matches: [
+        { id: 'match-1', teamA: 'team-a', teamB: 'team-b', round: 1, field: 1, matchNumber: 1 },
+      ],
+      teams: [
+        { id: 'team-a', name: 'Heim' },
+        { id: 'team-b', name: 'Gast' },
+      ],
+    } as unknown as Tournament;
+
+    const { rerender } = renderHook(
+      ({ t }) => useMatchExecution({ tournament: t, onLocalTournamentUpdate: vi.fn() }),
+      { initialProps: { t: tournament } },
+    );
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mockLiveMatchRepository.getAll).toHaveBeenCalledTimes(1);
+
+    const rescheduled: Tournament = {
+      ...tournament,
+      matches: tournament.matches.map((m) => ({ ...m, referee: 3 })),
+    };
+    rerender({ t: rescheduled });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockLiveMatchRepository.getAll).toHaveBeenCalledTimes(2);
+  });
+});

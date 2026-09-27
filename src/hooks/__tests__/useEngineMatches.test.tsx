@@ -118,6 +118,34 @@ describe('useEngineMatches', () => {
     expect(result.current.isEngineMatch('m-good')).toBe(true);
   });
 
+  it('I2 (Fixrunde 1): eine Overlay-Aenderung (scoreA/matchStatus, gleicher Spielplan) loest die Sammelabfrage/ensureMatch NICHT erneut aus', async () => {
+    mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-overlay']));
+    const firstTournament = tournament([match({ id: 'm-overlay', teamA: 'teamA', teamB: 'teamB' })]);
+    const { result, rerender } = renderHook(
+      ({ t }) => useEngineMatches(t, true, new Map()),
+      { initialProps: { t: firstTournament } },
+    );
+    await waitFor(() => expect(result.current.isEngineMatch('m-overlay')).toBe(true));
+    expect(mockFetchEngineMatchIds).toHaveBeenCalledTimes(1);
+    const ensureMatchSpy = vi.spyOn(mockContext.engine, 'ensureMatch');
+    ensureMatchSpy.mockClear();
+
+    // Simuliert genau das, was applyEngineOverlay/W7 tut: NEUES tournament-Objekt, NEUES
+    // matches-Array, aber NUR Ergebnis-/Statusfelder geaendert -- der Spielplan selbst (IDs,
+    // Teams, Schiri, Feld, Zeit, Phase) bleibt unveraendert.
+    const overlaidTournament: Tournament = {
+      ...firstTournament,
+      matches: firstTournament.matches.map((m) => ({ ...m, scoreA: 1, matchStatus: 'running' })),
+    };
+    rerender({ t: overlaidTournament });
+
+    // Kurz "warten" (ohne echten Timer) -- falls der Effekt erneut anliefe, waere das synchron
+    // beim naechsten Tick sichtbar.
+    await Promise.resolve();
+    expect(mockFetchEngineMatchIds).toHaveBeenCalledTimes(1);
+    expect(ensureMatchSpy).not.toHaveBeenCalled();
+  });
+
   it('M9: ein Spiel OHNE lokale Ereignisse wird ueber die Sammelabfrage als Engine-Spiel erkannt', async () => {
     mockFetchEngineMatchIds.mockResolvedValue(new Set(['m-server-only']));
     const t = tournament([match({ id: 'm-server-only', teamA: 'teamA', teamB: 'teamB' })]);
