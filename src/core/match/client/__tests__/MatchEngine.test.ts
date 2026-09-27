@@ -186,4 +186,98 @@ describe('MatchEngine', () => {
 
     expect(engine.view('me-broadcast')?.log.map((e) => e.id)).toContain('other-tab');
   });
+
+  it('W10: die eigene Aenderung wird per Broadcast gesendet (nach ensureMatch UND nach catchUp)', async () => {
+    const channel: MatchBroadcastChannel = {
+      postMessage: vi.fn(),
+      addEventListener: vi.fn(),
+    };
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
+    const engine = new MatchEngine({
+      store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0, broadcast: channel,
+    });
+    await engine.start('acc1');
+
+    await engine.ensureMatch('me-send', ctx);
+    expect(channel.postMessage).toHaveBeenCalledWith({ matchId: 'me-send' });
+  });
+
+  it('I1 (W3): ensureMatch loest KEIN catchUp mehr aus -- fetchConfirmed bleibt unberuehrt', async () => {
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+
+    await engine.ensureMatch('me-no-autocatchup', ctx);
+
+    expect(fetchConfirmed).not.toHaveBeenCalled();
+  });
+
+  it('I1/I4: catchUpLoaded laedt nur qualifizierende Spiele nach (bekanntes Engine-Spiel ODER offene Eintraege)', async () => {
+    const fetchConfirmed = vi.fn().mockResolvedValue({ events: [], newWatermark: 0 });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-plain', ctx);
+    await engine.ensureMatch('me-marked', { ...ctx, matchId: 'me-marked' });
+    await engine.ensureMatch('me-pending', { ...ctx, matchId: 'me-pending' });
+    await store.addPending('acc1', 'me-pending', goal('local-goal', 'teamA', 10, 0));
+    // `engine.copies` cacht die Kopie im Speicher -- der direkte Store-Schreibzugriff oben wird erst
+    // nach einem erneuten `ensureMatch` (Kopie neu lesen) sichtbar (gleiches Prinzip wie W10).
+    await engine.ensureMatch('me-pending', { ...ctx, matchId: 'me-pending' });
+    engine.markEngineMatches(['me-marked']);
+
+    await engine.catchUpLoaded();
+
+    expect(fetchConfirmed).toHaveBeenCalledWith('me-marked', 0);
+    expect(fetchConfirmed).toHaveBeenCalledWith('me-pending', 0);
+    expect(fetchConfirmed).not.toHaveBeenCalledWith('me-plain', 0);
+    expect(fetchConfirmed).toHaveBeenCalledTimes(2);
+  });
+
+  it('I2: Single-Flight MIT Nachzuegler -- zwei Aufrufe waehrend eines laufenden Laufs ergeben genau 2 fetchConfirmed', async () => {
+    const resolveFirstRef: { current: (() => void) | null } = { current: null };
+    const first = new Promise<void>((resolve) => { resolveFirstRef.current = resolve; });
+    const fetchConfirmed = vi.fn().mockImplementation(async () => {
+      await first;
+      return { events: [], newWatermark: 0 };
+    });
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-rerun', ctx);
+
+    const call1 = engine.catchUp('me-rerun'); // run #1 startet, haengt an `first`
+    // `store.load` (IndexedDB) ist asynchron -- ein paar Ticks abwarten, bis Lauf #1 wirklich bei
+    // `fetchConfirmed` angekommen ist, bevor die weiteren Aufrufe "waehrend eines laufenden Laufs"
+    // ankommen sollen.
+    for (let attempt = 0; attempt < 50 && fetchConfirmed.mock.calls.length === 0; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    expect(fetchConfirmed).toHaveBeenCalledTimes(1); // Lauf #1 haengt noch an `first`
+
+    const call2 = engine.catchUp('me-rerun'); // waehrend Lauf #1 -> Nachzuegler vorgemerkt
+    const call3 = engine.catchUp('me-rerun'); // ein zweiter gleichzeitiger Aufruf sammelt sich dazu
+
+    resolveFirstRef.current?.();
+    await Promise.all([call1, call2, call3]);
+
+    // Genau EIN Nachzuegler (nicht gestapelt): Lauf #1 + genau ein Lauf #2.
+    expect(fetchConfirmed).toHaveBeenCalledTimes(2);
+  });
+
+  it('B2 (M10): buildLog dedupliziert -- ein Ereignis, das sowohl bestaetigt als auch (veraltet) noch acked ist, erscheint nur einmal', async () => {
+    const confirmedGoal = withSeq(goal('dup-1', 'teamA', 500, 0), 3);
+    await store.create('acc1', 'me-dedupe', ctx);
+    await store.applyConfirmed('acc1', 'me-dedupe', [confirmedGoal], 3);
+    // Simuliert eine Kopie, in der derselbe Eintrag faelschlich noch in `acked` steht (sollte durch
+    // applyConfirmed eigentlich entfernt werden -- Regressionsschutz fuer buildLog selbst).
+    await store.addPending('acc1', 'me-dedupe', goal('dup-1', 'teamA', 500, 0));
+    await store.markAcked('acc1', 'me-dedupe', ['dup-1']);
+
+    const fetchConfirmed = vi.fn();
+    const engine = new MatchEngine({ store, clock: fakeClock(), sender: fakeSender(), fetchConfirmed, now: () => 0 });
+    await engine.start('acc1');
+    await engine.ensureMatch('me-dedupe', ctx);
+
+    const log = engine.view('me-dedupe')?.log ?? [];
+    expect(log.filter((event) => event.id === 'dup-1')).toHaveLength(1);
+  });
 });

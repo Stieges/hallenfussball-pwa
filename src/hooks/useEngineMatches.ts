@@ -27,6 +27,9 @@ interface ValidMatchEntry {
   matchId: string;
   ctx: MatchContext;
   meta: LiveMatchMeta;
+  /** I6/K3/W5: Phase (`groupStage`/Finalrunde) fuer `serverRules` -- eine Finalrunde hat eine andere
+   * Dauer als die Gruppenphase, `undefined` waere immer "Gruppenphase". */
+  phase: string | undefined;
   /** W5: `toLiveMatchView` kennt kein Logo/Farben (Adapter unveraendert) -- der Hook traegt sie nach. */
   homeVisual: { logo?: Team['logo']; colors?: Team['colors'] };
   awayVisual: { logo?: Team['logo']; colors?: Team['colors'] };
@@ -58,7 +61,11 @@ function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
     ) {
       continue;
     }
-    const ctx: MatchContext = { matchId: match.id, teamAId, teamBId };
+    // m5: der Server liefert `match_id` klein zurueck (uuid als Text) -- die Sammelabfrage
+    // (`engineMatchIds`) und die Engine-eigenen Store-Schluessel muessen dieselbe Schreibweise
+    // verwenden, sonst greift `engineMatchIds.has(matchId)` bei gross geschriebenen IDs nicht.
+    const matchId = match.id.toLowerCase();
+    const ctx: MatchContext = { matchId, teamAId, teamBId };
     const homeTeam = tournament.teams.find((team) => team.id.toLowerCase() === teamAId);
     const awayTeam = tournament.teams.find((team) => team.id.toLowerCase() === teamBId);
     const meta: LiveMatchMeta = {
@@ -73,9 +80,10 @@ function buildValidMatches(tournament: Tournament): ValidMatchEntry[] {
       version: 0,
     };
     entries.push({
-      matchId: match.id,
+      matchId,
       ctx,
       meta,
+      phase: match.phase,
       homeVisual: { logo: homeTeam?.logo, colors: homeTeam?.colors },
       awayVisual: { logo: awayTeam?.logo, colors: awayTeam?.colors },
     });
@@ -128,7 +136,7 @@ function computeLiveMatches(
     if (!hasLocalEvents && !engineMatchIds.has(entry.matchId)) {
       continue; // B1 (C3a-1, ohne "scheduled"-Klausel): bleibt Altspiel.
     }
-    const rules = view.result.state.rules ?? rulesFor(tournament, undefined);
+    const rules = view.result.state.rules ?? rulesFor(tournament, entry.phase);
     const viewClock = { serverNow: engine.serverNow(), offsetMs: clock.offsetMs };
     const meta: LiveMatchMeta = { ...entry.meta, version: view.confirmedCount };
     const state = view.result.state.rules ? view.result.state : { ...view.result.state, rules };
@@ -141,6 +149,34 @@ function computeLiveMatches(
     });
   }
   return map;
+}
+
+/**
+ * C1-Fix (b): liefert bei unveraendertem Inhalt zwingend dieselbe Map-Referenz wie zuvor --
+ * mindestens eine stabile leere Map fuer ein reines Altturnier. Jede `engine.notify()` (z. B. durch
+ * `ensureMatch` eines ALTSPIELS ohne jede Engine-Relevanz) darf sonst eine neue, aber inhaltlich
+ * gleiche Map erzeugen; jeder Aufrufer, der diese Map in einer Abhaengigkeitsliste fuehrt (z. B. der
+ * Lade-Effekt in `useMatchExecution`), haelt dann NIE an (Review C1).
+ */
+function liveMatchEquals(a: LiveMatch, b: LiveMatch): boolean {
+  return a === b || JSON.stringify(a) === JSON.stringify(b);
+}
+
+function stableLiveMatches(previous: Map<string, LiveMatch> | null, next: Map<string, LiveMatch>): Map<string, LiveMatch> {
+  if (previous?.size === next.size) {
+    let identical = true;
+    for (const [id, match] of next) {
+      const before = previous.get(id);
+      if (!before || !liveMatchEquals(before, match)) {
+        identical = false;
+        break;
+      }
+    }
+    if (identical) {
+      return previous;
+    }
+  }
+  return next;
 }
 
 export function useEngineMatches(tournament: Tournament, enabled: boolean): UseEngineMatchesResult {
@@ -162,21 +198,30 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
       if (cancelled || !enabled || !isSupabaseConfigured || !supabase) {
         return;
       }
+      let ids = new Set<string>();
       try {
         // K8: derselbe Deep-Instantiation-Umweg wie im MatchEngineProvider (TS2589).
         const client: unknown = supabase;
-        const ids = await fetchEngineMatchIds(
+        ids = await fetchEngineMatchIds(
           client as EngineMatchIdsQueryClient,
           validMatches.map((entry) => entry.matchId),
         );
-        if (!cancelled) {
-          setEngineMatchIds(ids);
-        }
       } catch {
         // W3 ist ein Optimierungspfad: bei Fehler zaehlen weiterhin lokale Kopien mit Ereignissen.
       }
+      if (cancelled) {
+        return;
+      }
+      setEngineMatchIds(ids);
+      // I1/W3: `catchUp` laeuft NICHT mehr je `ensureMatch`, sondern genau einmal hier -- nur fuer
+      // Spiele, die die Sammelabfrage als Engine-Spiel meldet oder die schon offene eigene
+      // Eintraege haben (`catchUpLoaded` entscheidet je Spiel, s. `qualifiesForCatchUp`).
+      engine.markEngineMatches(ids);
+      await engine.catchUpLoaded();
     }
-    void run();
+    // m2: `run()` kann werfen (z. B. `requireAccount()` vor `start()`, wenn dieser Kind-Effekt vor
+    // dem Provider-Effekt laeuft) -- ohne `catch` waere das eine unbehandelte Ablehnung.
+    run().catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -199,7 +244,8 @@ export function useEngineMatches(tournament: Tournament, enabled: boolean): UseE
     if (unchanged) {
       return cache.map;
     }
-    const map = computeLiveMatches(context, validMatches, engineMatchIds, tournament);
+    const computed = computeLiveMatches(context, validMatches, engineMatchIds, tournament);
+    const map = stableLiveMatches(cache?.map ?? null, computed);
     cacheRef.current = { validMatches, engineMatchIds, tournament, context, dirty: false, map };
     return map;
   }, [validMatches, engineMatchIds, tournament, context]);

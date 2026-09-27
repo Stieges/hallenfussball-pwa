@@ -18,7 +18,6 @@ const mockContext: { engine: MatchEngine; clock: { offsetMs: number } } = {
     sender: { start: vi.fn().mockResolvedValue(undefined), stop: vi.fn() },
     fetchConfirmed: vi.fn().mockResolvedValue({ events: [], newWatermark: 0 }),
     now: () => Date.now(),
-    isOnline: () => false,
   }),
   clock: { offsetMs: 0 },
 };

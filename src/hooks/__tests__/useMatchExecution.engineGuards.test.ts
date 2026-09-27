@@ -37,7 +37,7 @@ const engineLiveMatch: LiveMatch = {
 // der sie in einer Abhaengigkeitsliste fuehrt (der Lade-Effekt in useMatchExecution), nie an.
 const engineLiveMatchesMap = new Map<string, LiveMatch>([[ENGINE_MATCH_ID, engineLiveMatch]]);
 
-const mockCatchUp = vi.fn();
+const mockCatchUp = vi.fn().mockResolvedValue(undefined);
 // Referentiell stabil (s. o.) -- `matchEngineContext` steht als Dependency in
 // `handleRealtimeChange` (useCallback) in useMatchExecution.ts.
 const mockMatchEngineContext = { engine: { catchUp: mockCatchUp } };

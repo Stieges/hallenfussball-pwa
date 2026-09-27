@@ -4,9 +4,9 @@
  * `useRepositories` sind gemockt.
  */
 import 'fake-indexeddb/auto';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
-import { MatchEngine } from '../../../core/match/client';
+import { MatchEngine, ClockSync } from '../../../core/match/client';
 import { OutboxSender } from '../../../core/match/client';
 
 const mockAuth: { user: { id: string; globalRole: string } | null; session: { token: string } | null } = {
@@ -42,6 +42,10 @@ describe('MatchEngineProvider', () => {
   beforeEach(() => {
     mockAuth.user = { id: 'user-1', globalRole: 'organizer' };
     mockAuth.session = { token: 'token-1' };
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('startet die MatchEngine mit dem abgeleiteten Konto beim ersten Rendern', async () => {
@@ -122,5 +126,64 @@ describe('MatchEngineProvider', () => {
 
     await waitFor(() => expect(resumeAuthSpy).toHaveBeenCalled());
     expect(startSpy).toHaveBeenCalledTimes(1); // kein weiterer Kontowechsel ausgeloest
+  });
+
+  it('W9: misst die Uhr SOFORT beim Start (nicht erst nach 60s)', async () => {
+    const syncSpy = vi.spyOn(ClockSync.prototype, 'sync');
+    render(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(syncSpy).toHaveBeenCalled());
+  });
+
+  it('I4: "online" misst neu, stoesst den Ausgang an UND laedt geladene Engine-Spiele nach', async () => {
+    const syncSpy = vi.spyOn(ClockSync.prototype, 'sync');
+    const kickSpy = vi.spyOn(OutboxSender.prototype, 'kick');
+    const catchUpLoadedSpy = vi.spyOn(MatchEngine.prototype, 'catchUpLoaded').mockResolvedValue(undefined);
+    render(
+      <MatchEngineProvider>
+        <Probe onReady={() => undefined} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(syncSpy).toHaveBeenCalled());
+    syncSpy.mockClear();
+    kickSpy.mockClear();
+    catchUpLoadedSpy.mockClear();
+
+    window.dispatchEvent(new Event('online'));
+
+    await waitFor(() => expect(syncSpy).toHaveBeenCalled());
+    await waitFor(() => expect(kickSpy).toHaveBeenCalled());
+    await waitFor(() => expect(catchUpLoadedSpy).toHaveBeenCalled());
+  });
+
+  it('I7/SIGNED_OUT: die IndexedDB-Kopie des alten Kontos bleibt nach dem Wechsel auf Gast erhalten', async () => {
+    const startSpy = vi.spyOn(MatchEngine.prototype, 'start');
+    let ctx: ReturnType<typeof useMatchEngineContext> | null = null;
+    const { rerender } = render(
+      <MatchEngineProvider>
+        <Probe onReady={(value) => { ctx = value; }} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('user-1'));
+    await settleLastCall(startSpy);
+    expect(ctx).not.toBeNull();
+    await ctx!.engine.ensureMatch('m-signed-out', { matchId: 'm-signed-out', teamAId: 'teama', teamBId: 'teamb' });
+    expect(await ctx!.store.load('user-1', 'm-signed-out')).not.toBeNull();
+
+    mockAuth.user = null;
+    mockAuth.session = null;
+    rerender(
+      <MatchEngineProvider>
+        <Probe onReady={(value) => { ctx = value; }} />
+      </MatchEngineProvider>,
+    );
+    await waitFor(() => expect(startSpy).toHaveBeenCalledWith('guest'));
+
+    // Die Kopie des ALTEN Kontos ('user-1') ist weiterhin in der IndexedDB vorhanden -- `stop()`
+    // loescht nichts, nur der Sender-Speicher (Warteschlangen im RAM) wechselt.
+    expect(await ctx!.store.load('user-1', 'm-signed-out')).not.toBeNull();
   });
 });

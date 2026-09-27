@@ -117,6 +117,9 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
   const sessionTokenRef = useRef<string | undefined>(undefined);
 
   // Kontowechsel (RC-Kontowechsel): stop() des alten, start() des neuen Kontos -- kein Neuaufbau.
+  // m4: `previousAccountRef` wird erst NACH der `cancelled`-Pruefung gesetzt und nur, wenn dieser
+  // Durchlauf noch der aktuelle ist -- ein schneller A->B-Wechsel (oder StrictMode-Doppellauf) kann
+  // sonst zwei `start()` parallel laufen lassen und `stop()` fuer A auslassen.
   useEffect(() => {
     let cancelled = false;
     async function switchAccount(): Promise<void> {
@@ -127,7 +130,9 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
         return;
       }
       await bundle.engine.start(accountId);
-      previousAccountRef.current = accountId;
+      if (!cancelled) {
+        previousAccountRef.current = accountId;
+      }
     }
     void switchAccount();
     return () => {
@@ -147,7 +152,8 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
     };
   }, [accountId, bundle]);
 
-  // RC5: bei Wiederverbindung sofort neu messen und den Ausgang anstossen.
+  // RC5/I4: bei Wiederverbindung sofort neu messen, den Ausgang anstossen UND die geladenen
+  // Engine-Spiele nachladen (`catchUpLoaded` -- nur qualifizierende Spiele, s. `MatchEngine`).
   useEffect(() => {
     if (accountId === 'guest') {
       return undefined;
@@ -155,6 +161,7 @@ export function MatchEngineProvider({ children }: { children: ReactNode }): Reac
     const handleOnline = (): void => {
       void bundle.clock.sync();
       void bundle.sender.kick();
+      void bundle.engine.catchUpLoaded();
     };
     window.addEventListener('online', handleOnline);
     return () => {

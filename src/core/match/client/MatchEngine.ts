@@ -33,8 +33,6 @@ export interface MatchEngineDeps {
     watermarkSeq: number,
   ) => Promise<{ events: EngineEventWithSeq[]; newWatermark: number }>;
   now: () => number;
-  /** Test-Ersatz fuer `navigator.onLine`; ohne Angabe gilt online, wenn `navigator` fehlt (Node/SSR). */
-  isOnline?: () => boolean;
   /** W10, optional (Provider haengt einen echten `BroadcastChannel` ein). */
   broadcast?: MatchBroadcastChannel;
 }
@@ -79,6 +77,13 @@ export class MatchEngine {
   private accountId: string | null = null;
   private readonly copies = new Map<string, MatchCopy>();
   private readonly inFlightCatchUp = new Map<string, Promise<void>>();
+  /** I2: waehrend ein `catchUp` laeuft eingegangene weitere Anfragen -- hoechstens EIN Nachzuegler
+   * je Spiel (nicht gestapelt), s. `catchUp`. */
+  private readonly rerunRequested = new Set<string>();
+  /** I1/W3: Spiele, die die Sammelabfrage (oder ein spaeterer `catchUp`-Erfolg) als Engine-Spiel
+   * erkannt hat -- `ensureMatch` selbst loest KEIN `catchUp` mehr aus (das war die W3-Verletzung),
+   * nur `catchUpLoaded()` fuer qualifizierende Spiele. */
+  private readonly knownEngineMatches = new Set<string>();
   /** W2: Schluessel (Anzahl bestaetigter Ereignisse + letzter seq), bei dem zuletzt zurueckgesetzt wurde. */
   private readonly resetOnce = new Map<string, string>();
   private readonly statusByMatch = new Map<string, EngineMatchStatus>();
@@ -104,27 +109,63 @@ export class MatchEngine {
     this.deps.sender.stop();
   }
 
+  /** I1: legt/aktualisiert nur die Kopie -- kein automatisches `catchUp` mehr (das war die
+   * W3-Verletzung: eine Abfrage je Spiel bei JEDEM Laden, egal ob Engine-Spiel oder nicht). Wer
+   * nachladen will, ruft nach der Sammelabfrage `markEngineMatches`/`catchUpLoaded` auf. */
   async ensureMatch(matchId: string, ctx: MatchContext, tournamentId?: string): Promise<void> {
     const accountId = this.requireAccount();
     await this.deps.store.create(accountId, matchId, ctx, tournamentId);
     await this.refreshCopy(matchId);
     this.announce(matchId);
-    if (accountId !== 'guest' && this.isOnline()) {
-      void this.catchUp(matchId);
+  }
+
+  /** I1/W3: als (Server-)Engine-Spiel markieren -- qualifiziert danach fuer `catchUpLoaded()`. */
+  markEngineMatches(matchIds: Iterable<string>): void {
+    for (const matchId of matchIds) {
+      this.knownEngineMatches.add(matchId);
     }
   }
 
-  /** RC7: Nachladen ab Wasserstand; parallele Aufrufe je Spiel teilen ein Promise (W3 Single-Flight). */
+  /** I4: `catchUp` fuer alle geladenen Spiele, die dafuer qualifizieren (bekanntes Engine-Spiel ODER
+   * offene eigene Eintraege) -- fuer `online` (Provider) und nach der Sammelabfrage (`useEngineMatches`). */
+  async catchUpLoaded(): Promise<void> {
+    const matchIds = [...this.copies.keys()].filter((matchId) => this.qualifiesForCatchUp(matchId));
+    await Promise.all(matchIds.map((matchId) => this.catchUp(matchId)));
+  }
+
+  private qualifiesForCatchUp(matchId: string): boolean {
+    if (this.knownEngineMatches.has(matchId)) {
+      return true;
+    }
+    const copy = this.copies.get(matchId);
+    return copy !== undefined && (copy.pending.length > 0 || copy.acked.length > 0);
+  }
+
+  /**
+   * RC7: Nachladen ab Wasserstand. W3 Single-Flight MIT Nachzuegler (I2): ein laufender Aufruf wird
+   * geteilt; waehrend er laeuft eingehende weitere Anfragen sammeln sich zu HOECHSTENS einem
+   * zusaetzlichen Lauf danach (nicht gestapelt, aber auch nicht verloren -- ein Realtime-Push
+   * waehrend die Abfrage schon unterwegs ist, geht so nicht unter).
+   */
   async catchUp(matchId: string): Promise<void> {
     const existing = this.inFlightCatchUp.get(matchId);
     if (existing) {
+      this.rerunRequested.add(matchId);
       return existing;
     }
-    const run = this.runCatchUp(matchId).finally(() => {
+    const run = this.runCatchUpWithRerun(matchId).finally(() => {
       this.inFlightCatchUp.delete(matchId);
     });
     this.inFlightCatchUp.set(matchId, run);
     return run;
+  }
+
+  private async runCatchUpWithRerun(matchId: string): Promise<void> {
+    let runAgain = true;
+    while (runAgain) {
+      await this.runCatchUp(matchId);
+      runAgain = this.rerunRequested.delete(matchId);
+    }
   }
 
   private async runCatchUp(matchId: string, options?: { fromZero?: boolean }): Promise<void> {
@@ -238,13 +279,6 @@ export class MatchEngine {
     for (const listener of this.listeners) {
       listener();
     }
-  }
-
-  private isOnline(): boolean {
-    if (this.deps.isOnline) {
-      return this.deps.isOnline();
-    }
-    return typeof navigator === 'undefined' ? true : navigator.onLine;
   }
 
   private requireAccount(): string {
