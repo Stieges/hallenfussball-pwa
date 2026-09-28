@@ -64,6 +64,7 @@ const hoisted = vi.hoisted(() => {
     matchesUpdateMock,
     matchesUpdateEqIdMock,
     tournamentsUpdateSelectMock,
+    tournamentsUpdateMock,
     supabaseMock,
   };
 });
@@ -82,7 +83,10 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     hoisted.tournamentsUpdateSelectMock.mockResolvedValue({ data: [], error: null });
   });
 
-  const update: MatchUpdate = { id: 'match-1', matchStatus: 'running' };
+  // Ersatz-Assertion für den 0-Zeilen-/RLS-Guard: eine reine Ergebnis-Änderung ist seit
+  // V4 nur noch { updated_at } und wird gar nicht erst gesendet (F6) — der Guard-Test braucht
+  // deshalb ein Update mit echten Nicht-V4-Spalten (teamA mappt auf team_a_id/team_a_placeholder).
+  const update: MatchUpdate = { id: 'match-1', teamA: 'FC Alpha' };
 
   it('throws when the match update affects 0 rows (RLS filtered it away, no Postgres error)', async () => {
     hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [], error: null });
@@ -125,5 +129,30 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     await repo.updateMatches('tour-1', [update]);
 
     expect(hoisted.matchesUpdateSelectMock).toHaveBeenCalledWith('id');
+  });
+
+  // V4 (C3a-2b): mapMatchUpdateToSupabase liefert für reine Ergebnis-/Status-/Uhr-Updates
+  // nur noch { updated_at } — solche Updates dürfen weder matches touchen noch die
+  // tournaments-Version bumpen (sonst meldet syncDown dauerhaft "remote is newer", F6).
+  it('nur-updated_at-Update (z.B. nur Ergebnis): weder matches-UPDATE noch tournaments-Bump', async () => {
+    const resultOnly: MatchUpdate = { id: 'match-1', matchStatus: 'running' };
+
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [resultOnly]);
+
+    expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
+    expect(hoisted.tournamentsUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('gemischtes Batch: nur das Update mit echten Spalten wird gesendet, tournaments-Bump genau einmal', async () => {
+    hoisted.matchesUpdateSelectMock.mockResolvedValue({ data: [{ id: 'match-2' }], error: null });
+    const resultOnly: MatchUpdate = { id: 'match-1', matchStatus: 'running' };
+    const teamChange: MatchUpdate = { id: 'match-2', teamA: 'FC Alpha' };
+
+    const repo = new SupabaseRepository();
+    await repo.updateMatches('tour-1', [resultOnly, teamChange]);
+
+    expect(hoisted.matchesUpdateMock).toHaveBeenCalledTimes(1);
+    expect(hoisted.tournamentsUpdateMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -516,20 +516,21 @@ export class SupabaseRepository implements ITournamentRepository {
     const teamNameToId = new Map<string, string>();
     teams?.forEach((t) => teamNameToId.set(t.name, t.id));
 
-    // Update each match
-    // Note: For better performance, we could use a batch update RPC
+    // Update each match (besser: Batch-RPC)
     const errors: Error[] = [];
+    let sent = 0;
 
     for (const update of updates) {
       const supabaseUpdate = mapMatchUpdateToSupabase(update, teamNameToId);
 
-      // Fixrunde 1 (A4 Review, Risiko 4): `.select('id')` so a silently RLS-filtered 0-row
-      // UPDATE surfaces as an error instead of a no-op -- same reasoning/pattern as save()'s
-      // per-match update loop (A2 Fixrunde 1, M3) and the teams/matches delete-count check
-      // (R5-H1). Deliberately ONLY here (the `matches` update below), NOT for the `tournaments`
-      // timestamp update further down: a collaborator/helper has `writeMatchData` but not
-      // necessarily any write right on `tournaments`, so the same check there would misclassify
-      // every helper edit as failed.
+      // V4/F6: nur updated_at (reine Ergebnis-Änderung) → Zeile nicht touchen (syncDown
+      // meldete sonst dauerhaft "remote is newer"), kein Zähler++, kein tournaments-Bump.
+      if (Object.keys(supabaseUpdate).every((k) => k === 'updated_at')) { continue; }
+      sent++;
+
+      // `.select('id')` meldet still gefilterte 0-Zeilen-Updates als Fehler statt No-op
+      // (Risiko 4, wie save()/delete-count). Bewusst NUR hier: Helfer haben writeMatchData,
+      // aber nicht zwingend tournaments-Schreibrecht — dort würde die Prüfung jeden Edit melden.
       const { data, error } = await getSupabase()
         .from('matches')
         .update(supabaseUpdate)
@@ -546,29 +547,26 @@ export class SupabaseRepository implements ITournamentRepository {
       }
     }
 
-    // Update tournament's updated_at timestamp AND version if provided
-    const updatePayload: TournamentUpdate = { updated_at: new Date().toISOString() };
-    if (baseVersion !== undefined) {
-      updatePayload.version = baseVersion + 1;
-    }
+    // Update tournament's updated_at timestamp AND version if provided (nur bei sent > 0, F6)
+    if (sent > 0) {
+      const updatePayload: TournamentUpdate = { updated_at: new Date().toISOString() };
+      if (baseVersion !== undefined) { updatePayload.version = baseVersion + 1; }
 
-    let query = getSupabase()
-      .from('tournaments')
-      .update(updatePayload)
-      .eq('id', tournamentId);
+      let query = getSupabase()
+        .from('tournaments')
+        .update(updatePayload)
+        .eq('id', tournamentId);
 
-    if (baseVersion !== undefined) {
-      query = query.eq('version', baseVersion);
-    }
+      if (baseVersion !== undefined) { query = query.eq('version', baseVersion); }
 
-    // We utilize the version check here too
-    const { data: updatedT, error: tError } = await query.select('id');
+      // We utilize the version check here too
+      const { data: updatedT, error: tError } = await query.select('id');
 
-    if (tError) {
-      errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
-     
-    } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
-      errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
+      if (tError) {
+        errors.push(new Error(`Failed to update tournament timestamp: ${tError.message}`));
+      } else if (baseVersion !== undefined && (!updatedT || updatedT.length === 0)) {
+        errors.push(new OptimisticLockError('Turnier wurde zwischenzeitlich verändert (Matches).'));
+      }
     }
 
     if (errors.length > 0) {
