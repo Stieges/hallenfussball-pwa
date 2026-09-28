@@ -69,7 +69,7 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
     });
 
-    it('should perform granular match update when only score changes', async () => {
+    it('Delta-Sync sendet kein updateMatches bei reiner Score-Änderung', async () => {
         const localMatch = { ...baseTournament.matches[0], scoreA: 1, scoreB: 0 };
         const localT = { ...baseTournament, matches: [localMatch], version: 2 };
         const remoteT = { ...baseTournament, version: 1 };
@@ -83,38 +83,49 @@ describe('OfflineRepository - Granular Sync', () => {
 
         // Assert
         expect(mockSupabase.save).not.toHaveBeenCalled();
-        expect(mockSupabase.updateMatches).toHaveBeenCalledWith(
-            't1',
-            expect.arrayContaining([expect.objectContaining({ id: 'm1', scoreA: 1 })]),
-            1 // Base version
-        );
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalled(); // Phase 2 Fix Check
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
     });
 
-    // A2 Fixrunde 3 (N2b, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-    // task-A2-rereview.md): `getMatchUpdates()` used to set `update.scoreA = lMatch.scoreA` even
-    // when `lMatch.scoreA` was `undefined` (local device simply never loaded this match's live
-    // state). Since A2 Fixrunde 1 changed the Supabase mapper from a value check to a KEY-PRESENCE
-    // check, that assignment started writing `score_a = NULL` on every reconnect sync --
-    // deleting a helper's live score in the cloud. The fix: only ever propagate a field the local
-    // copy actually has an opinion on.
-    it('A2 Fixrunde 3 (N2b): does NOT null out a live score the local copy simply does not know', async () => {
-        // Local match carries NO score/status info at all; remote already has Tom's live score
-        // (e.g. from a targeted UPDATE_MATCH the helper's own device sent earlier).
-        const localMatch = { ...baseTournament.matches[0] };
-        const remoteMatch = { ...baseTournament.matches[0], scoreA: 5, scoreB: 2, matchStatus: 'running' as const };
-        const localT = { ...baseTournament, title: 'New Title', matches: [localMatch], version: 2 };
-        const remoteT = { ...baseTournament, matches: [remoteMatch], version: 1 };
-
-        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
-        mockSupabase.get.mockResolvedValue(remoteT);
+    // C3a-2b (V4) ersetzt A2 Fixrunde 3 (N2b): Nicht nur der Null-Flush unbekannter Felder bleibt
+    // weg -- lokale Ergebnis-Änderungen erzeugen grundsätzlich KEINEN Server-Diff mehr.
+    // N2b-Historie: `getMatchUpdates()` setzte früher `update.scoreA = lMatch.scoreA` auch bei
+    // `undefined`; durch das Key-Präsenz-Mapping löschte das beim Reconnect eine Live-Punktzahl
+    // in der Cloud.
+    it('lokale Ergebnis-Änderungen erzeugen keinen Server-Diff (grundsätzlich, nicht nur kein Null-Flush)', async () => {
+        // Phase 1: lokale Kopie kennt abweichende Ergebnis-/Statuswerte
+        const localMatchKnown = {
+            ...baseTournament.matches[0],
+            scoreA: 1,
+            scoreB: 0,
+            matchStatus: 'finished' as const,
+            timerElapsedSeconds: 300,
+        };
+        const remoteMatch = {
+            ...baseTournament.matches[0],
+            scoreA: 5,
+            scoreB: 2,
+            matchStatus: 'running' as const,
+            timerElapsedSeconds: 120,
+        };
+        mockLocal.listForCurrentUser.mockResolvedValue([{ ...baseTournament, matches: [localMatchKnown], version: 2 }]);
+        mockSupabase.get.mockResolvedValue({ ...baseTournament, matches: [remoteMatch], version: 1 });
 
         await offlineRepo.syncUp();
 
-        // The title change legitimately triggers a metadata sync ...
+        expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
+
+        // Phase 2 (N2b-Regression): lokale Kopie ohne Ergebniswissen darf eine Live-Punktzahl
+        // nicht anfassen -- der Titel-Abgleich löst weiterhin einen Metadaten-Sync aus.
+        mockSupabase.updateMatches.mockClear();
+        mockSupabase.updateTournamentMetadata.mockClear();
+        const localMatchUnknown = { ...baseTournament.matches[0] };
+        const localT = { ...baseTournament, title: 'New Title', matches: [localMatchUnknown], version: 2 };
+        mockLocal.listForCurrentUser.mockResolvedValue([localT]);
+        mockSupabase.get.mockResolvedValue({ ...baseTournament, matches: [remoteMatch], version: 1 });
+
+        await offlineRepo.syncUp();
+
         expect(mockSupabase.updateTournamentMetadata).toHaveBeenCalled();
-        // ... but Tom's live score/status must never be touched -- the local copy has no opinion
-        // on them, so there is nothing legitimate to push.
         expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
     });
 

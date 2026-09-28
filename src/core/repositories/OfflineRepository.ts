@@ -395,14 +395,7 @@ export class OfflineRepository implements ITournamentRepository {
             baseVer++; // Version incremented after metadata update
         }
 
-        // 3. Check Matches
-        const matchUpdates = this.getMatchUpdates(local, remote);
-        if (matchUpdates.length > 0) {
-            await this.supabaseRepo.updateMatches(local.id, matchUpdates, baseVer);
-            baseVer++;
-        }
-
-        // 4. Update local version to match the new cloud version
+        // 3. Update local version to match the new cloud version
         // This prevents the "Local is newer" loop
         await this.localRepo.updateLocalVersion(local.id, baseVer);
     }
@@ -498,42 +491,6 @@ export class OfflineRepository implements ITournamentRepository {
         }
 
         return hasChanges ? changes : null;
-    }
-
-    /**
-     * A2 Fixrunde 3 (N2b, `.superpowers/sdd/2026-09-25-oktober-fundament-helfer/
-     * task-A2-rereview.md`): only ever sets a field when the LOCAL copy actually has a value for
-     * it (`lMatch.<field> !== undefined`). Before A2 Fixrunde 1, `mapMatchUpdateToSupabase` skipped
-     * any field whose VALUE was `undefined`, so assigning `update.scoreA = lMatch.scoreA` here was
-     * harmless even when `lMatch.scoreA` was `undefined` -- it never reached the DB. Fixrunde 1
-     * changed that mapper to key-PRESENCE (`'field' in match`), which broke this call site
-     * silently: a local copy that simply doesn't know a helper's live score (e.g. right after
-     * `syncUp()` runs at app start / reconnect, `useSyncOnReconnect.ts`, whenever
-     * `localVer > cloudVer`) would set `update.scoreA = undefined` with the KEY PRESENT, which the
-     * new mapper writes as `score_a = NULL` -- deleting the helper's live score in the cloud. This
-     * guard restores the original "don't touch what I don't know" behaviour.
-     */
-    private getMatchUpdates(local: Tournament, remote: Tournament): MatchUpdate[] {
-        const updates: MatchUpdate[] = [];
-
-        for (const lMatch of local.matches) {
-            const rMatch = remote.matches.find(m => m.id === lMatch.id);
-            if (!rMatch) {continue;} // Should be caught by structural check
-
-            const update: MatchUpdate = { id: lMatch.id };
-            let updated = false;
-
-            if (lMatch.scoreA !== undefined && lMatch.scoreA !== rMatch.scoreA) { update.scoreA = lMatch.scoreA; updated = true; }
-            if (lMatch.scoreB !== undefined && lMatch.scoreB !== rMatch.scoreB) { update.scoreB = lMatch.scoreB; updated = true; }
-            if (lMatch.matchStatus !== undefined && lMatch.matchStatus !== rMatch.matchStatus) { update.matchStatus = lMatch.matchStatus; updated = true; }
-            if (lMatch.timerElapsedSeconds !== undefined && lMatch.timerElapsedSeconds !== rMatch.timerElapsedSeconds) { update.timerElapsedSeconds = lMatch.timerElapsedSeconds; updated = true; }
-            // Add other granular fields if needed
-
-            if (updated) {
-                updates.push(update);
-            }
-        }
-        return updates;
     }
 
     /**
