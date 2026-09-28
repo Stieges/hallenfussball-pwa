@@ -397,7 +397,9 @@ export class OfflineRepository implements ITournamentRepository {
 
         // 3. Update local version to match the new cloud version
         // This prevents the "Local is newer" loop
-        await this.localRepo.updateLocalVersion(local.id, baseVer);
+        // C3a-2b (F4): Nie herunterstufen -- nach dem Wegfall des Ergebnis-Diffs sendet ein
+        // reines Ergebnis-Diff nichts mehr; das "ich bin voraus"-Signal muss bleiben.
+        await this.localRepo.updateLocalVersion(local.id, Math.max(baseVer, local.version ?? 0));
     }
 
     private hasStructuralChanges(local: Tournament, remote: Tournament): boolean {
