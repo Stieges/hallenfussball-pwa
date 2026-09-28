@@ -227,6 +227,26 @@ describe('OfflineRepository - Granular Sync', () => {
         expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 5);
     });
 
+    it('detectMatchConflicts meldet keine Score-Konflikte (syncDown auto-pullt trotz abweichender Ergebnisse)', async () => {
+        const localT = {
+            ...baseTournament,
+            matches: [{ ...baseTournament.matches[0], scoreA: 1, scoreB: 0 }],
+            updatedAt: '2026-01-01T10:00:00.000Z',
+        };
+        const remoteT = {
+            ...baseTournament,
+            matches: [{ ...baseTournament.matches[0], scoreA: 5, scoreB: 2 }],
+            updatedAt: '2026-01-02T10:00:00.000Z',
+        };
+        mockLocal.get.mockResolvedValue(localT);
+        mockSupabase.get.mockResolvedValue(remoteT);
+
+        const result = await offlineRepo.syncDown('t1');
+
+        expect(result.status).toBe('updated');
+        expect(result.conflicts ?? []).toHaveLength(0);
+    });
+
     it('should perform full save when team is renamed', async () => {
         // Same IDs, but name changed
         const renamedTeam = { ...baseTournament.teams[0], name: 'Renamed Team A' };

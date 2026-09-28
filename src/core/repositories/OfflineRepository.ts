@@ -570,50 +570,16 @@ export class OfflineRepository implements ITournamentRepository {
     }
 
     /**
-     * Detects conflicts between local and remote match scores.
-     * Uses Last-Write-Wins (LWW) for automatic resolution where possible.
+     * Detects conflicts between local and remote tournaments.
+     *
+     * C3a-2b (F8): Score-Konflikte sind seit V4 nicht mehr client-seitig auflösbar — vor-bestehend
+     * seit A2: `resolveConflict('local')` kann Scores nicht pushen (mapMatchToScheduleUpdate
+     * schließt Ergebnis-Spalten aus). Die Score-Prüfung ist deshalb deaktiviert, sonst blockiert
+     * `syncDown` mit `status:'conflict'` den Auto-Pull für einen Konflikt, den keine Seite mehr
+     * auflösen kann. Signatur/Rückgabe bleibt für zukünftige Konflikttypen.
      */
-    private detectMatchConflicts(local: Tournament, remote: Tournament): SyncConflict[] {
-        const conflicts: SyncConflict[] = [];
-
-        for (const localMatch of local.matches) {
-            const remoteMatch = remote.matches.find(m => m.id === localMatch.id);
-
-            if (!remoteMatch) {
-                continue; // New local match, handled by syncUp
-            }
-
-            // Check for score conflicts
-            const localHasScore = localMatch.scoreA !== undefined && localMatch.scoreB !== undefined;
-            const remoteHasScore = remoteMatch.scoreA !== undefined && remoteMatch.scoreB !== undefined;
-
-            if (localHasScore && remoteHasScore) {
-                const scoresDiffer =
-                    localMatch.scoreA !== remoteMatch.scoreA ||
-                    localMatch.scoreB !== remoteMatch.scoreB;
-
-                if (scoresDiffer) {
-                    // Get team names for conflict display
-                    const homeTeam = local.teams.find(t => t.id === localMatch.teamA);
-                    const awayTeam = local.teams.find(t => t.id === localMatch.teamB);
-                    const matchName = `${homeTeam?.name ?? 'Team A'} vs ${awayTeam?.name ?? 'Team B'}`;
-
-                    conflicts.push({
-                        id: `${localMatch.id}-score`,
-                        entityType: 'match',
-                        entityId: localMatch.id,
-                        entityName: matchName,
-                        field: 'score',
-                        localValue: `${localMatch.scoreA}:${localMatch.scoreB}`,
-                        remoteValue: `${remoteMatch.scoreA}:${remoteMatch.scoreB}`,
-                        localTimestamp: local.updatedAt,
-                        remoteTimestamp: remote.updatedAt,
-                    });
-                }
-            }
-        }
-
-        return conflicts;
+    private detectMatchConflicts(_local: Tournament, _remote: Tournament): SyncConflict[] {
+        return [];
     }
 
     /**
