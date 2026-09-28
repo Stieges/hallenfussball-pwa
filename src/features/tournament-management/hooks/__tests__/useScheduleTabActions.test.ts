@@ -289,4 +289,28 @@ describe('useScheduleTabActions — handleScoreChange (A2 Fixrunde 1)', () => {
     expect(onMatchesUpdate).not.toHaveBeenCalled();
     expect(showWarning).toHaveBeenCalled();
   });
+
+  // Fixrunde 5 (Regression aus Fixrunde-4-Review, "neuer Important-Befund"): Minor 5 rief
+  // `isForeignCandidate` OHNE jeden `matchStatus`-Ausschluss auf -- dadurch galt JEDES Spiel mit
+  // `matchStatus !== 'scheduled'` und ohne Ergebnis als "fremder Engine-Kandidat", auch ein
+  // uebersprungenes Spiel (`'skipped'`), das nie zur Engine wechselt. Ein solches Spiel muss die
+  // Schnelleingabe weiterhin unveraendert durchlassen (Verhalten vor Minor 5).
+  it('Fixrunde 5: ein uebersprungenes Spiel (matchStatus skipped) ohne Ergebnis erlaubt die Schnelleingabe', () => {
+    const teams: Tournament['teams'] = [
+      { id: 'team-a', name: 'Team A' },
+      { id: 'team-b', name: 'Team B' },
+    ];
+    const tournament = createTournament(
+      [createMatch({ id: 'm1', teamA: 'team-a', teamB: 'team-b', matchStatus: 'skipped' })],
+      teams,
+    );
+    const { result, onMatchesUpdate, showWarning } = renderActions(tournament);
+
+    act(() => {
+      result.current.handleScoreChange('m1', 2, 1);
+    });
+
+    expect(onMatchesUpdate).toHaveBeenCalledTimes(1);
+    expect(showWarning).not.toHaveBeenCalled();
+  });
 });

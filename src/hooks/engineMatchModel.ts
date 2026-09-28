@@ -136,10 +136,14 @@ export function isNewScheduledMatch(entry: ValidMatchEntry, localLiveMatches: Ma
  * Engine-Spiel. Spiegelbildlich zu `isNewScheduledMatch` (dort: `scheduled`). Fixrunde 4, Minor 5:
  * hierher verschoben (aus `useEngineMatchReadiness.ts`), damit `scoreChangeHelpers.ts` (Schnell-
  * eingabe-Sperre) dieselbe Klassifizierung wiederverwenden kann statt sie zu duplizieren.
+ * Fixrunde 5 (Regression aus dem Fixrunde-4-Review): `'skipped'` ist ein regulaerer, NICHT
+ * Engine-bezogener Endzustand (manuelles Ueberspringen, s. `MatchExecutionService.ts:647`) -- ohne
+ * expliziten Ausschluss galt jedes uebersprungene Spiel ohne Ergebnis faelschlich als fremder
+ * Engine-Kandidat und sperrte die Schnelleingabe mit dem irrefuehrenden `engine.notYet`-Toast.
  */
 export function isForeignCandidate(entry: ValidMatchEntry, localLiveMatches: Map<string, LiveMatch>): boolean {
-  const isScheduled = (entry.matchStatus ?? 'scheduled') === 'scheduled';
-  if (isScheduled || entry.hasExistingResult) {
+  const status = entry.matchStatus ?? 'scheduled';
+  if (status === 'scheduled' || status === 'skipped' || entry.hasExistingResult) {
     return false;
   }
   const oldLiveMatch = localLiveMatches.get(entry.externalId);
