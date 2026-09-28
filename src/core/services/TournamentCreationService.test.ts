@@ -327,9 +327,11 @@ describe('TournamentCreationService', () => {
         // A2 Fixrunde 4 (B1, .superpowers/sdd/2026-09-25-oktober-fundament-helfer/
         // task-A2-rereview2.md): "Turnier zurücksetzen" in the Wizard sets matchStatus 'scheduled'
         // and clears finishedAt in `data.matches`. publish() must take those from the Wizard
-        // match, NOT from the pre-reset repository state -- otherwise the cloud keeps
-        // match_status='finished' + actual_end while score_a/score_b become NULL.
-        it('Reset im Wizard + publish: Status/Endzeit kommen aus dem Wizard-Spiel und erreichen die Cloud', async () => {
+        // match, NOT from the pre-reset repository state -- the LOCAL row is reset correctly.
+        // C3a-2b (V4): the cloud payload no longer carries any result/status column at all --
+        // the former "… und erreichen die Cloud" half of this test is now its opposite: those
+        // columns are deliberately NOT sent (Ersatz-Aussage).
+        it('Reset im Wizard + publish: Status/Endzeit bleiben lokal korrekt, gehen bewusst nicht an die Cloud (V4)', async () => {
             const mockSchedule = {
                 allMatches: [
                     { id: 'm1', originalTeamA: 't1', originalTeamB: 't2', field: 1 },
@@ -389,12 +391,10 @@ describe('TournamentCreationService', () => {
             expect(update).toMatchObject({ matchStatus: 'scheduled', finishedAt: null });
 
             const cloudRow = mapMatchUpdateToSupabase(update);
-            expect(cloudRow).toMatchObject({
-                match_status: 'scheduled',
-                actual_end: null,
-                score_a: null,
-                score_b: null,
-            });
+            expect(cloudRow).not.toHaveProperty('match_status');
+            expect(cloudRow).not.toHaveProperty('actual_end');
+            expect(cloudRow).not.toHaveProperty('score_a');
+            expect(cloudRow).not.toHaveProperty('score_b');
         });
     });
 });

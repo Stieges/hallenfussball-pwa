@@ -278,64 +278,23 @@ export function mapMatchToScheduleUpdate(row: MatchInsert): MatchUpdate {
 /**
  * Maps a frontend Match update to Supabase update format
  *
- * A2 Fixrunde 1 (Ruling AJ, C1/I1): result/status fields use `'field' in match` (own-property
- * presence) instead of `match.field !== undefined`, and fall back to `null` -- NOT skip -- when
- * present but `undefined`. This lets a caller EXPLICITLY clear a result/status column (e.g.
- * `DangerZone`'s "Ergebnisse zurücksetzen" sets `scoreA: undefined`) by including the key, while a
- * caller that never mentions the key (e.g. `skipMatch()` only sets `matchStatus`/`skippedReason`/
- * `skippedAt`) still leaves the other columns untouched, exactly as before. Every current producer
- * of `MatchUpdate` builds a small object literal with only the keys it cares about (audited:
- * `MatchExecutionService`, `useScheduleTabActions`, `matchResultStatusDiff`) -- none spreads a full
- * `Match` object into an update, which is what would make this distinction unsafe.
+ * C3a-2b (V4/R1): the client no longer sends ANY result/status/timer/skip column — score_a,
+ * score_b, match_status, actual_end, timer_start_time, timer_paused_at, timer_elapsed_seconds,
+ * overtime_score_a/b, penalty_score_a/b, decided_by, skipped_reason, skipped_at are never written
+ * here, regardless of key presence in the incoming update. Skip/unskip is silenced completely
+ * (R1): no value writes AND no explicit NULL clears — the row stays cleanly stale until C3d.
+ * Local storage is unaffected (LocalStorageRepository keeps all fields).
+ *
+ * The A2 key-presence rule now applies ONLY to team fields: a caller that includes `teamA`/`teamB`
+ * (with `teamNameToId`) gets them mapped, a caller that omits them leaves them untouched. An
+ * update that mentions no team still carries `updated_at` (see AP4's only-updated_at-guard in
+ * SupabaseRepository.updateMatches for the skip-if-empty rule).
  */
 export function mapMatchUpdateToSupabase(
   match: DomainMatchUpdate | Partial<Match>,
   teamNameToId?: Map<string, string>
 ): MatchUpdate {
   const update: MatchUpdate = {};
-
-  if ('scoreA' in match) {
-    update.score_a = match.scoreA ?? null;
-  }
-  if ('scoreB' in match) {
-    update.score_b = match.scoreB ?? null;
-  }
-  if ('matchStatus' in match) {
-    update.match_status = match.matchStatus ?? null;
-  }
-  if ('finishedAt' in match) {
-    update.actual_end = match.finishedAt ?? null;
-  }
-  if ('timerStartTime' in match) {
-    update.timer_start_time = match.timerStartTime ?? null;
-  }
-  if ('timerPausedAt' in match) {
-    update.timer_paused_at = match.timerPausedAt ?? null;
-  }
-  if ('timerElapsedSeconds' in match) {
-    update.timer_elapsed_seconds = match.timerElapsedSeconds ?? null;
-  }
-  if ('overtimeScoreA' in match) {
-    update.overtime_score_a = match.overtimeScoreA ?? null;
-  }
-  if ('overtimeScoreB' in match) {
-    update.overtime_score_b = match.overtimeScoreB ?? null;
-  }
-  if ('penaltyScoreA' in match) {
-    update.penalty_score_a = match.penaltyScoreA ?? null;
-  }
-  if ('penaltyScoreB' in match) {
-    update.penalty_score_b = match.penaltyScoreB ?? null;
-  }
-  if ('decidedBy' in match) {
-    update.decided_by = match.decidedBy ?? null;
-  }
-  if ('skippedReason' in match) {
-    update.skipped_reason = match.skippedReason ?? null;
-  }
-  if ('skippedAt' in match) {
-    update.skipped_at = match.skippedAt ?? null;
-  }
 
   // Handle team changes if teamNameToId is provided
   if (teamNameToId && match.teamA !== undefined) {

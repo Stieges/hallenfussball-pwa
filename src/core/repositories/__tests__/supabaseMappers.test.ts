@@ -436,18 +436,65 @@ describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
 });
 
 describe('mapMatchUpdateToSupabase', () => {
-  it('maps partial score update', () => {
+  it('sendet Ergebnis-, Status-, Uhr- und Skip-Spalten nie – auch wenn alle Keys im Update stehen (C3a-2b V4/R1)', () => {
+    const update = mapMatchUpdateToSupabase({
+      scoreA: 2,
+      scoreB: 1,
+      matchStatus: 'running',
+      finishedAt: '2026-01-15T14:45:00Z',
+      timerStartTime: '2026-01-15T14:30:00Z',
+      timerPausedAt: '2026-01-15T14:35:00Z',
+      timerElapsedSeconds: 300,
+      overtimeScoreA: 1,
+      overtimeScoreB: 0,
+      penaltyScoreA: 4,
+      penaltyScoreB: 3,
+      decidedBy: 'penalty',
+      skippedReason: 'Team not present',
+      skippedAt: '2026-01-15T14:00:00Z',
+    });
+
+    expect(update).not.toHaveProperty('score_a');
+    expect(update).not.toHaveProperty('score_b');
+    expect(update).not.toHaveProperty('match_status');
+    expect(update).not.toHaveProperty('actual_end');
+    expect(update).not.toHaveProperty('timer_start_time');
+    expect(update).not.toHaveProperty('timer_paused_at');
+    expect(update).not.toHaveProperty('timer_elapsed_seconds');
+    expect(update).not.toHaveProperty('overtime_score_a');
+    expect(update).not.toHaveProperty('overtime_score_b');
+    expect(update).not.toHaveProperty('penalty_score_a');
+    expect(update).not.toHaveProperty('penalty_score_b');
+    expect(update).not.toHaveProperty('decided_by');
+    expect(update).not.toHaveProperty('skipped_reason');
+    expect(update).not.toHaveProperty('skipped_at');
+    expect(update).toEqual({ updated_at: expect.any(String) });
+  });
+
+  it('unskip-Payload (skippedReason/skippedAt: undefined) erzeugt keine skipped_*-Spalten, auch keine NULLs (B3)', () => {
+    const update = mapMatchUpdateToSupabase({
+      matchStatus: 'scheduled',
+      skippedReason: undefined,
+      skippedAt: undefined,
+    });
+
+    expect(update).not.toHaveProperty('skipped_reason');
+    expect(update).not.toHaveProperty('skipped_at');
+  });
+
+  it('sendet score_a/score_b bewusst nicht (Ersatz: "maps partial score update")', () => {
     const update = mapMatchUpdateToSupabase({ scoreA: 2, scoreB: 1 });
 
-    expect(update.score_a).toBe(2);
-    expect(update.score_b).toBe(1);
+    expect(update).not.toHaveProperty('score_a');
+    expect(update).not.toHaveProperty('score_b');
     expect(update.updated_at).toBeDefined();
   });
 
-  it('maps status update', () => {
+  it('sendet match_status bewusst nicht (Ersatz: "maps status update")', () => {
     const update = mapMatchUpdateToSupabase({ matchStatus: 'running' });
 
-    expect(update.match_status).toBe('running');
+    expect(update).not.toHaveProperty('match_status');
+    expect(update.updated_at).toBeDefined();
   });
 
   it('always sets updated_at even for empty update', () => {
@@ -477,7 +524,7 @@ describe('mapMatchUpdateToSupabase', () => {
     expect(update.team_a_placeholder).toBeUndefined();
   });
 
-  it('maps all timer and tiebreaker fields', () => {
+  it('sendet timer/tiebreaker/skip-Spalten bewusst nicht (Ersatz: "maps all timer and tiebreaker fields")', () => {
     const update = mapMatchUpdateToSupabase({
       timerStartTime: '2026-01-15T14:30:00Z',
       timerPausedAt: '2026-01-15T14:35:00Z',
@@ -492,17 +539,17 @@ describe('mapMatchUpdateToSupabase', () => {
       skippedAt: '2026-01-15T14:00:00Z',
     });
 
-    expect(update.timer_start_time).toBe('2026-01-15T14:30:00Z');
-    expect(update.timer_paused_at).toBe('2026-01-15T14:35:00Z');
-    expect(update.timer_elapsed_seconds).toBe(300);
-    expect(update.overtime_score_a).toBe(1);
-    expect(update.overtime_score_b).toBe(0);
-    expect(update.penalty_score_a).toBe(4);
-    expect(update.penalty_score_b).toBe(3);
-    expect(update.decided_by).toBe('penalty');
-    expect(update.actual_end).toBe('2026-01-15T14:45:00Z');
-    expect(update.skipped_reason).toBe('Team not present');
-    expect(update.skipped_at).toBe('2026-01-15T14:00:00Z');
+    expect(update).not.toHaveProperty('actual_end');
+    expect(update).not.toHaveProperty('timer_start_time');
+    expect(update).not.toHaveProperty('timer_paused_at');
+    expect(update).not.toHaveProperty('timer_elapsed_seconds');
+    expect(update).not.toHaveProperty('overtime_score_a');
+    expect(update).not.toHaveProperty('overtime_score_b');
+    expect(update).not.toHaveProperty('penalty_score_a');
+    expect(update).not.toHaveProperty('penalty_score_b');
+    expect(update).not.toHaveProperty('decided_by');
+    expect(update).not.toHaveProperty('skipped_reason');
+    expect(update).not.toHaveProperty('skipped_at');
   });
 });
 
