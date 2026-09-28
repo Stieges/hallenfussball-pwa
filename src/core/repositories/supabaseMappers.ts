@@ -180,6 +180,14 @@ type MatchInsertWithOwner = MatchInsert & {
  * Maps a frontend Match to Supabase insert format
  * Note: teamA/teamB names need to be resolved to UUIDs
  * The teamNameToId map is used for conversion
+ *
+ * C3a-2b (V4b/F2/R1): the INSERT carries only NEUTRAL initial values for result/status/timer
+ * columns — score_a/score_b are hard-set to `null` (NOT `match.scoreA ?? null`: the DB default
+ * is `0`, which would fake a played 0:0), match_status hard 'scheduled', timer_elapsed_seconds
+ * hard `0`. Every other result/status/timer/skip column (actual_end, timer_start_time,
+ * timer_paused_at, overtime_*, penalty_*, decided_by, skipped_reason, skipped_at) is not sent at
+ * all. Guest migration / addMatch therefore lose local results honestly instead of faking them.
+ *
  * @param match - The match to map
  * @param tournamentId - The tournament ID
  * @param teamNameToId - Map from team names to IDs
@@ -206,8 +214,8 @@ export function mapMatchToSupabase(
     team_b_id: teamBId ?? null,
     team_a_placeholder: teamAId ? null : match.teamA,
     team_b_placeholder: teamBId ? null : match.teamB,
-    score_a: match.scoreA ?? null,
-    score_b: match.scoreB ?? null,
+    score_a: null,
+    score_b: null,
     group_letter: match.group ?? null,
     is_final: match.isFinal ?? false,
     final_type: match.finalType ?? null,
@@ -220,18 +228,8 @@ export function mapMatchToSupabase(
     match_number: match.matchNumber ?? null,
     phase: match.phase ?? 'groupStage',
     referee_number: match.referee ?? null,
-    match_status: match.matchStatus ?? 'scheduled',
-    actual_end: match.finishedAt ?? null,
-    timer_start_time: match.timerStartTime ?? null,
-    timer_paused_at: match.timerPausedAt ?? null,
-    timer_elapsed_seconds: match.timerElapsedSeconds ?? 0,
-    overtime_score_a: match.overtimeScoreA ?? null,
-    overtime_score_b: match.overtimeScoreB ?? null,
-    penalty_score_a: match.penaltyScoreA ?? null,
-    penalty_score_b: match.penaltyScoreB ?? null,
-    decided_by: match.decidedBy ?? null,
-    skipped_reason: match.skippedReason ?? null,
-    skipped_at: match.skippedAt ?? null,
+    match_status: 'scheduled',
+    timer_elapsed_seconds: 0,
     // Denormalized fields for RLS performance
     owner_id: ownerId ?? null,
     is_public: isPublic ?? false,

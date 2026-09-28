@@ -55,8 +55,8 @@ const RESULT_STATUS_FIELDS: readonly NullableMatchUpdateFields[] = [
 
 /**
  * Insert defaults from `mapMatchToSupabase` (`supabaseMappers.ts`) — applied when a field is
- * explicitly cleared (new value `undefined`) instead of writing `NULL`. Every field NOT listed
- * here defaults to `null` when cleared, matching `mapMatchToSupabase`'s `?? null` fallback.
+ * explicitly cleared (new value `undefined`) instead of writing `NULL`. Mirrors C3a-2b (F2):
+ * hard-set INSERT defaults (score null, 'scheduled', 0); others default to `null` when cleared.
  */
 const CLEARED_FIELD_DEFAULT: Partial<Record<NullableMatchUpdateFields, unknown>> = {
   matchStatus: 'scheduled',

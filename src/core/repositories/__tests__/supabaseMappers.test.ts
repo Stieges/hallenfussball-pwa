@@ -338,6 +338,67 @@ describe('mapMatchToSupabase', () => {
 
     expect(row.phase).toBe('groupStage');
   });
+
+  it('Insert sendet nur neutrale Initialwerte – Ergebnis-/Status-/Uhr-/Skip-Spalten fehlen (C3a-2b V4b, F10/Gast-Upload)', () => {
+    const row = mapMatchToSupabase(
+      {
+        id: 'match-1',
+        round: 1,
+        field: 1,
+        teamA: 'A',
+        teamB: 'B',
+        scoreA: 3,
+        scoreB: 1,
+        matchStatus: 'finished',
+        finishedAt: '2026-01-15T14:45:00Z',
+        timerStartTime: '2026-01-15T14:30:00Z',
+        timerPausedAt: '2026-01-15T14:35:00Z',
+        timerElapsedSeconds: 300,
+        overtimeScoreA: 1,
+        overtimeScoreB: 0,
+        penaltyScoreA: 4,
+        penaltyScoreB: 3,
+        decidedBy: 'overtime',
+        skippedReason: 'Team not present',
+        skippedAt: '2026-01-15T14:00:00Z',
+      },
+      'tournament-1',
+      new Map()
+    );
+
+    expect(row.score_a).toBeNull();
+    expect(row.score_b).toBeNull();
+    expect(row.match_status).toBe('scheduled');
+    expect(row.timer_elapsed_seconds).toBe(0);
+    expect(row).not.toHaveProperty('actual_end');
+    expect(row).not.toHaveProperty('timer_start_time');
+    expect(row).not.toHaveProperty('timer_paused_at');
+    expect(row).not.toHaveProperty('overtime_score_a');
+    expect(row).not.toHaveProperty('overtime_score_b');
+    expect(row).not.toHaveProperty('penalty_score_a');
+    expect(row).not.toHaveProperty('penalty_score_b');
+    expect(row).not.toHaveProperty('decided_by');
+    expect(row).not.toHaveProperty('skipped_reason');
+    expect(row).not.toHaveProperty('skipped_at');
+  });
+
+  it('Plomben sind hart gesetzt – match.scoreA erscheint NIE im Payload, kein Phantom-0:0 (F2)', () => {
+    const rowMitWerten = mapMatchToSupabase(
+      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B', scoreA: 3, scoreB: 1 },
+      'tournament-1',
+      new Map()
+    );
+    const rowOhneWerte = mapMatchToSupabase(
+      { id: 'match-1', round: 1, field: 1, teamA: 'A', teamB: 'B' },
+      'tournament-1',
+      new Map()
+    );
+
+    expect(rowMitWerten.score_a).toBeNull();
+    expect(rowMitWerten.score_b).toBeNull();
+    expect(rowOhneWerte.score_a).toBeNull();
+    expect(rowOhneWerte.score_b).toBeNull();
+  });
 });
 
 describe('mapMatchToScheduleUpdate (A2: task-A2-brief.md)', () => {
