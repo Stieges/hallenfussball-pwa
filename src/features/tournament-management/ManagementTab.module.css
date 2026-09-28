@@ -45,7 +45,7 @@
 }
 
 .fieldButtonActive:hover {
-  background: var(--color-primary-hover, #00b862);
+  background: var(--color-primary-hover);
 }
 
 .matchSelector {
@@ -114,7 +114,7 @@
 }
 
 .retryButton:hover {
-  background: var(--color-primary-hover, #00b862);
+  background: var(--color-primary-hover);
 }
 
 /* Mobile Responsive Styles */
