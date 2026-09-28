@@ -50,7 +50,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           # Dieselbe Version wie lokal genutzt (siehe docs/TESTUMGEBUNG.md, Abschnitt
           # "Voraussetzungen") und wie in supabase-drift-check.yml -- fest gepinnt, nicht
