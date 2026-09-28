@@ -17,13 +17,14 @@
  *   - `TournamentCreationService` (Wizard-Service) für Entwurf-Erzeugung/Defaults,
  *   - `generateFullSchedule`/`fairScheduler` (dieselben Generatoren wie der Wizard) für den
  *     Spielplan,
- *   - `mapTournamentToSupabase`/`mapMatchUpdateToSupabase`/`mapMembershipInsertToSupabase`/
+ *   - `mapTournamentToSupabase`/`mapMembershipInsertToSupabase`/
  *     `mapMatchEventToSupabase` (echte Mapper aus `src/core/repositories/`) für die Zeilenform —
  * aber die eigentlichen Schreibzugriffe laufen über einen Service-Role-Client (kein
  * `auth.getUser()`-Session nötig, RLS ist für den Seed irrelevant, `SupabaseRepository` selbst
  * ist an eine Vite-Singleton-Session gebunden und dafür nicht einsetzbar). `SeedRepository` unten
- * implementiert dafür `ITournamentRepository` schlank nach, mit demselben Mapper-Aufruf wie
- * `SupabaseRepository`, nur mit einer explizit übergebenen Owner-ID statt `auth.getUser()`.
+ * implementiert dafür `ITournamentRepository` schlank nach, mit denselben Mapper-Aufrufen wie
+ * `SupabaseRepository`, nur mit einer explizit übergebenen Owner-ID statt `auth.getUser()`
+ * (Ausnahme `updateMatches`: Roh-Schreibweise, s. u.).
  *
  * "Wo das nicht geht" (Brief) — bewusste Direktzugriffe ohne Mapper, mit Begründung inline:
  *   - Fester Share-Code (`E2EPUB`): `TournamentCreationService.publish()` generiert nur einen
@@ -38,6 +39,8 @@
  *     (aus `liveMatchMappers.ts`, derselbe, den `SupabaseLiveMatchRepository` beim Live-Spiel
  *     nutzt) — hier direkt verwendet, weil `ITournamentRepository.save()` keine Events schreibt.
  *   - Google-Provider (`app_metadata.provider`): Auth-Admin-API, kein DB-Mapper-Thema.
+ *   - Ergebnis-/Status-Spalten in `SeedRepository.updateMatches`: seit V4 sendet der Client-Mapper
+ *     sie nicht mehr — der Seed schreibt sie roh (Kommentar dort, Scope-Review F3).
  */
 
 import { createHmac } from 'node:crypto';
@@ -79,7 +82,6 @@ import type { ITournamentRepository } from '../src/core/repositories/ITournament
 import type { Tournament, MatchUpdate, Team } from '../src/core/models/types';
 import {
   mapTournamentToSupabase,
-  mapMatchUpdateToSupabase,
   mapMembershipInsertToSupabase,
   type CollaboratorInsert,
 } from '../src/core/repositories/supabaseMappers';
@@ -175,9 +177,35 @@ class SeedRepository implements ITournamentRepository {
     return this.updateMatches(tournamentId, [update]);
   }
 
+  /**
+   * Umgeht den V4-Mapper absichtlich: der Seed bildet den Server-Zustand ab, den sonst nur der
+   * RPC herstellt (Scope-Review F3). Kein Produktionspfad.
+   */
   async updateMatches(tournamentId: string, updates: MatchUpdate[]): Promise<void> {
+    const columnByField: ReadonlyArray<readonly [keyof MatchUpdate, string]> = [
+      ['scoreA', 'score_a'],
+      ['scoreB', 'score_b'],
+      ['matchStatus', 'match_status'],
+      ['finishedAt', 'actual_end'],
+      ['timerStartTime', 'timer_start_time'],
+      ['timerPausedAt', 'timer_paused_at'],
+      ['timerElapsedSeconds', 'timer_elapsed_seconds'],
+      ['overtimeScoreA', 'overtime_score_a'],
+      ['overtimeScoreB', 'overtime_score_b'],
+      ['penaltyScoreA', 'penalty_score_a'],
+      ['penaltyScoreB', 'penalty_score_b'],
+      ['decidedBy', 'decided_by'],
+      ['skippedReason', 'skipped_reason'],
+      ['skippedAt', 'skipped_at'],
+    ];
     for (const update of updates) {
-      const payload = mapMatchUpdateToSupabase(update);
+      const payload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const [field, column] of columnByField) {
+        const value = update[field];
+        if (value !== undefined) {
+          payload[column] = value;
+        }
+      }
       const { error } = await this.client
         .from('matches')
         .update(payload)
