@@ -199,4 +199,16 @@ describe('useEngineMatchReadiness', () => {
     await expect(result.current.ensureEngineMatchReady('m-foreign-guest')).resolves.toBeNull();
     expect(mockFetchConfirmed).not.toHaveBeenCalled();
   });
+
+  // Fixrunde 5 (Regression aus dem Fixrunde-4-Review): `isForeignCandidate` schloss `'skipped'`
+  // bisher nicht aus -- ein uebersprungenes Spiel ohne Ergebnis waere hier faelschlich als
+  // fremd-Kandidat gegolten (mit echtem Kontext, anders als das reine "kein Kontext"-Gate). Der
+  // Fix in `engineMatchModel.ts` ist die einzige Quelle fuer alle drei Funktionen dieses Hooks.
+  it('Fixrunde 5: ein uebersprungenes Spiel (matchStatus skipped) ohne Ergebnis ist NICHT engine-destined/fremd-Kandidat', () => {
+    const t = tournament([match({ id: 'm-skipped', teamA: 'teamA', teamB: 'teamB', matchStatus: 'skipped' })]);
+    const { result } = renderHook(() => useEngineMatchReadiness(t, mockContext, new Map()));
+
+    expect(result.current.isForeignCandidateMatch('m-skipped')).toBe(false);
+    expect(result.current.isEngineDestinedMatch('m-skipped')).toBe(false);
+  });
 });
