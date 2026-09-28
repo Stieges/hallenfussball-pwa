@@ -324,7 +324,9 @@ describe('mapLiveMatchFromSupabase', () => {
 });
 
 describe('mapLiveMatchToSupabase', () => {
-  it('maps status to DB format', () => {
+  // Ersatz für „maps status to DB format" + „maps NOT_STARTED to "scheduled" (C-NSTART)":
+  // V4 sendet keine Ergebnis-/Status-/Uhr-/live_state-Spalten mehr, nur noch updated_at.
+  it('matchUpdate enthält nur updated_at (V4)', () => {
     const liveMatch = mapLiveMatchFromSupabase(
       createMatchRow({ match_status: 'running', score_a: 2, score_b: 1 }),
       [],
@@ -332,49 +334,31 @@ describe('mapLiveMatchToSupabase', () => {
     );
     const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
 
-    expect(matchUpdate.match_status).toBe('running');
-    expect(matchUpdate.score_a).toBe(2);
-    expect(matchUpdate.score_b).toBe(1);
-    expect(matchUpdate.updated_at).toBeDefined();
+    expect(Object.keys(matchUpdate)).toEqual(['updated_at']);
+    for (const key of ['match_status', 'score_a', 'score_b', 'timer_start_time', 'timer_paused_at', 'timer_elapsed_seconds', 'overtime_score_a', 'overtime_score_b', 'penalty_score_a', 'penalty_score_b', 'live_state']) {
+      expect(matchUpdate).not.toHaveProperty(key);
+    }
   });
 
-  // C-NSTART: 'not_started' verletzt matches_match_status_check (erlaubt sind nur
-  // scheduled/waiting/running/paused/finished/skipped). NOT_STARTED muss als 'scheduled'
-  // geschrieben werden.
-  it('maps NOT_STARTED to "scheduled" (C-NSTART) statt "not_started"', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
-      createMatchRow({ match_status: 'scheduled' }),
-      [],
-      new Map()
-    );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.match_status).toBe('scheduled');
-    expect(matchUpdate.match_status).not.toBe('not_started');
-  });
-
-  it('clears live_state when FINISHED', () => {
-    const liveMatch = mapLiveMatchFromSupabase(
+  // Ersatz für „clears live_state when FINISHED" + „preserves live_state when not finished":
+  // live_state wird nicht mehr geschrieben — Räum-Clears bleiben in delete()/clear() (F7).
+  it('mapLiveMatchToSupabase schreibt live_state nicht mehr (F7: Clears bleiben in delete()/clear())', () => {
+    const finished = mapLiveMatchFromSupabase(
       createMatchRow({ match_status: 'finished' }),
       [],
       new Map()
     );
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
+    const running = mapLiveMatchFromSupabase(
+      createMatchRow({
+        match_status: 'running',
+        live_state: { elapsedSeconds: 120, durationSeconds: 600 },
+      }),
+      [],
+      new Map()
+    );
 
-    expect(matchUpdate.live_state).toBeNull();
-  });
-
-  it('preserves live_state when not finished', () => {
-    const matchRow = createMatchRow({
-      match_status: 'running',
-      live_state: { elapsedSeconds: 120, durationSeconds: 600 },
-    });
-    const liveMatch = mapLiveMatchFromSupabase(matchRow, [], new Map());
-    const { matchUpdate } = mapLiveMatchToSupabase(liveMatch);
-
-    expect(matchUpdate.live_state).not.toBeNull();
-    expect(matchUpdate.live_state?.elapsedSeconds).toBe(120);
-    expect(matchUpdate.live_state?.durationSeconds).toBe(600);
+    expect(mapLiveMatchToSupabase(finished).matchUpdate).not.toHaveProperty('live_state');
+    expect(mapLiveMatchToSupabase(running).matchUpdate).not.toHaveProperty('live_state');
   });
 
   it('filters new events not in existingEventIds', () => {

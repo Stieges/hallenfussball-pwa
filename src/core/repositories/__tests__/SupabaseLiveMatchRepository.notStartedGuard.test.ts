@@ -1,105 +1,27 @@
-/**
- * SupabaseLiveMatchRepository — Schreibschutz für NOT_STARTED (Review-Fix Minor 3,
- * Fixrunde 1, 2026-09-25).
- *
- * Root cause: `skipMatch()` setzt `match_status='skipped'` auf einer Zeile, die noch
- * `live_state` hat (z. B. ein initialisiertes, aber nie gestartetes Spiel). `isMatchActive()`
- * liest eine solche Zeile weiter als aktiv, der Mapper macht daraus `LiveMatch.status =
- * NOT_STARTED` (weil `'skipped'` kein Schlüssel in STATUS_TO_FRONTEND ist). Ein
- * anschliessendes `save()` schrieb vor diesem Fix `match_status='scheduled'` — und traf
- * dabei (je nach Versions-Zufall) potenziell eine Zeile, die tatsächlich `'skipped'` ist,
- * und hätte sie stillschweigend zurückgesetzt. Vorher verhinderte das nur zufällig der
- * CHECK-Constraint (`'not_started'` war ohnehin ungültig); seit C-NSTART ist `'scheduled'`
- * gültig und die Lücke real.
- *
- * Fix: das CAS-Update für den NOT_STARTED-Schreibfall bekommt einen zusätzlichen Filter
- * `match_status = 'scheduled'` — nur eine Zeile, die selbst noch 'scheduled' ist, darf so
- * geschrieben werden. Trifft der Filter nicht (weil die Zeile z. B. 'skipped' ist), matcht
- * `maybeSingle()` keine Zeile, und der bestehende Konfliktpfad greift: Status bleibt
- * unverändert, `OptimisticLockError` fliegt statt eines stillen Überschreibens.
- *
- * Fake-Tabelle statt reiner Call-Arity-Mocks: die Mock-Implementierung wertet die
- * angehängten `.eq()`-Filter tatsächlich gegen eine kleine In-Memory-Zeile aus — sonst würde
- * ein Test, der nur prüft "wurde .eq('match_status', 'scheduled') aufgerufen" nichts über
- * das tatsächliche Verhalten aussagen.
- */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { LiveMatch } from '../../models/LiveMatch';
-import { OptimisticLockError } from '../../errors';
 
 // ============================================================================
-// FAKE `matches`-TABELLE — wertet .eq()-Filter gegen eine Zeile aus
+// MOCKS — Spy auf supabase.from (gleicher Ansatz wie saveEventOnly.test.ts)
 // ============================================================================
 
-interface FakeMatchRow {
-  id: string;
-  version: number;
-  match_status: string;
-}
-
-function buildFakeMatchesTable(initialRow: FakeMatchRow) {
-  const row: FakeMatchRow = { ...initialRow };
-
-  function query(mode: 'update' | 'select', payload?: Record<string, unknown>) {
-    const filters: Array<{ col: keyof FakeMatchRow; val: unknown }> = [];
-    const api = {
-      eq(col: keyof FakeMatchRow, val: unknown) {
-        filters.push({ col, val });
-        return api;
-      },
-      // Spaltenliste wird ignoriert — die Fake-Tabelle kennt nur die drei Felder oben.
-      select() {
-        return api;
-      },
-      async maybeSingle() {
-        const matched = filters.every((f) => row[f.col] === f.val);
-        if (!matched) {
-          return { data: null, error: null };
-        }
-        if (mode === 'update' && payload) {
-          if (typeof payload.match_status === 'string') {
-            row.match_status = payload.match_status;
-          }
-          row.version += 1; // DB-Trigger erhöht die Version bei jedem erfolgreichen Update.
-        }
-        return { data: { version: row.version }, error: null };
-      },
-      async single() {
-        const matched = filters.every((f) => row[f.col] === f.val);
-        if (!matched) {
-          return { data: null, error: { message: 'not found' } };
-        }
-        return { data: { version: row.version, match_status: row.match_status }, error: null };
-      },
-    };
-    return api;
-  }
-
-  return {
-    getRow: (): FakeMatchRow => ({ ...row }),
-    update: (payload: Record<string, unknown>) => query('update', payload),
-    select: () => query('select'),
-  };
-}
-
-// ============================================================================
-// MOCKS
-// ============================================================================
-
-let fakeMatchesTable: ReturnType<typeof buildFakeMatchesTable>;
-
-const hoisted = vi.hoisted(() => ({
-  fromMock: vi.fn(),
-}));
+const hoisted = vi.hoisted(() => {
+  const matchesUpdateMock = vi.fn(() => Promise.resolve({ error: null }));
+  const eventsUpsertMock = vi.fn(() => Promise.resolve({ error: null }));
+  const fromMock = vi.fn((table: string) => {
+    if (table === 'matches') { return { update: matchesUpdateMock }; }
+    if (table === 'match_events') { return { upsert: eventsUpsertMock }; }
+    throw new Error(`unexpected table in test mock: ${table}`);
+  });
+  return { matchesUpdateMock, eventsUpsertMock, fromMock };
+});
 
 vi.mock('../../../lib/supabase', () => ({
   supabase: { from: hoisted.fromMock },
   isSupabaseConfigured: true,
 }));
 
-vi.mock('../../../lib/sentry', () => ({
-  captureFeatureError: vi.fn(),
-}));
+vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 
 import { SupabaseLiveMatchRepository } from '../SupabaseLiveMatchRepository';
 
@@ -124,39 +46,31 @@ function makeNotStartedMatch(overrides: Partial<LiveMatch> = {}): LiveMatch {
   };
 }
 
-describe('SupabaseLiveMatchRepository — Schreibschutz für NOT_STARTED (Minor 3)', () => {
+describe('SupabaseLiveMatchRepository — NOT_STARTED-Schreibschutz entbehrlich (V4, C3a-2b)', () => {
   beforeEach(() => {
-    hoisted.fromMock.mockReset();
-    hoisted.fromMock.mockImplementation((table: string) => {
-      if (table === 'matches') { return fakeMatchesTable; }
-      if (table === 'match_events') { return { upsert: vi.fn().mockResolvedValue({ error: null }) }; }
-      throw new Error(`unexpected table in test mock: ${table}`);
-    });
+    vi.clearAllMocks();
   });
 
-  it('übersprungenes Spiel: save() mit NOT_STARTED setzt "skipped" NICHT auf "scheduled" zurück, Konfliktpfad greift', async () => {
-    // Zeile ist real 'skipped', aber match.version (5) trifft zufällig exakt die
-    // aktuelle DB-Version — ohne den zusätzlichen match_status-Filter würde die reine
-    // ID+Versions-CAS das Update trotzdem durchlassen.
-    fakeMatchesTable = buildFakeMatchesTable({ id: 'm1', version: 5, match_status: 'skipped' });
-
+  // Ersatz für „übersprungenes Spiel: save() mit NOT_STARTED setzt "skipped" NICHT auf
+  // "scheduled" zurück, Konfliktpfad greift" (Alt-Test erwartete OptimisticLockError).
+  // Ohne Zeilen-UPDATE gibt es nichts, was einen Schreibschutz bräuchte.
+  it('save() ohne Zeilen-UPDATE braucht keinen NOT_STARTED-Schreibschutz mehr', async () => {
     const repo = new SupabaseLiveMatchRepository();
     const match = makeNotStartedMatch({ version: 5 });
 
-    await expect(repo.save('t1', match)).rejects.toThrow(OptimisticLockError);
+    await expect(repo.save('t1', match)).resolves.toBeUndefined();
 
-    // Status bleibt unverändert — kein stilles Überschreiben.
-    expect(fakeMatchesTable.getRow().match_status).toBe('skipped');
+    expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
   });
 
-  it('Normalfall: ein nie gestartetes Spiel mit "scheduled" wird weiterhin erfolgreich initialisiert', async () => {
-    fakeMatchesTable = buildFakeMatchesTable({ id: 'm1', version: 1, match_status: 'scheduled' });
-
+  // Ersatz für „Normalfall: ein nie gestartetes Spiel mit "scheduled" wird weiterhin
+  // erfolgreich initialisiert" (Alt-Test erwartete matches-UPDATE inkl. Status-Schreib).
+  it('save() wirft auch bei leerem Event-Set kein OptimisticLockError (kein CAS mehr)', async () => {
     const repo = new SupabaseLiveMatchRepository();
     const match = makeNotStartedMatch({ version: 1 });
 
     await expect(repo.save('t1', match)).resolves.toBeUndefined();
 
-    expect(fakeMatchesTable.getRow().match_status).toBe('scheduled');
+    expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
   });
 });

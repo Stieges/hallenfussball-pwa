@@ -21,7 +21,6 @@ import {
   isMatchActive,
 } from './liveMatchMappers';
 import { toSupabaseEventId } from '../utils/id';
-import { OptimisticLockError } from '../errors';
 import { captureFeatureError } from '../../lib/sentry';
 import {
   callAppendMatchEvents,
@@ -188,96 +187,12 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
       const existingEventIds = this.eventIdsCache.get(match.id) ?? new Set();
 
       // Map to Supabase format
-      const { matchUpdate, newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
+      const { newEvents } = mapLiveMatchToSupabase(match, existingEventIds);
 
-      // Schreibschutz für NOT_STARTED (Review-Fix Minor 3, Fixrunde 1, 2026-09-25): ein
-      // Spiel, das inzwischen übersprungen (oder sonst nicht mehr 'scheduled') ist, darf
-      // durch ein save() mit Status NOT_STARTED nicht zurück auf 'scheduled' gesetzt
-      // werden. isMatchActive() liest eine übersprungene Zeile mit noch vorhandenem
-      // live_state weiter als aktiv, der Mapper macht daraus LiveMatch.status =
-      // NOT_STARTED ('skipped' ist kein Schlüssel in STATUS_TO_FRONTEND) — ein
-      // nachfolgendes save() würde sonst versuchen, genau das zu schreiben. Vorher
-      // verhinderte das nur zufällig der CHECK-Constraint ('not_started' war ohnehin
-      // ungültig); seit C-NSTART ist 'scheduled' gültig und die Lücke real. Der Filter
-      // wirkt NUR beim NOT_STARTED-Schreibfall — andere Status ändern eine Zeile ohnehin
-      // nur über den normalen Versions-CAS unten.
-      const isWritingNotStarted = matchUpdate.match_status === 'scheduled';
-
-      // CAS (Compare-And-Swap): Update ONLY if version matches (BUG-002)
-      // The DB trigger will auto-increment version on successful update
-      let matchUpdateQuery = supabase
-        .from('matches')
-        .update(matchUpdate)
-        .eq('id', match.id)
-        .eq('version', match.version); // Optimistic lock check
-
-      if (isWritingNotStarted) {
-        matchUpdateQuery = matchUpdateQuery.eq('match_status', 'scheduled');
-      }
-
-      const { data: updatedRow, error: matchError } = await matchUpdateQuery
-        .select('version')
-        .maybeSingle(); // Returns null if no row matched (version mismatch OR status guard)
-
-      if (matchError) {
-        console.error('[SupabaseLiveMatchRepository] match update failed:', matchError);
-        throw matchError;
-      }
-
-      // No row updated = version mismatch
-      if (!updatedRow) {
-        // Fetch current version and status to determine if this is an initialization
-        const { data: currentMatch } = await supabase
-          .from('matches')
-          .select('version, match_status')
-          .eq('id', match.id)
-          .single();
-
-        // Initialization retry: if the match is not_started/scheduled, the version mismatch
-        // is caused by tournament saves bumping the version via the DB trigger.
-        // Safe to retry with the current version since there's no concurrent live modification.
-        // C-NSTART (Sofort-Fix 2026-09-25): matches_match_status_check erlaubt 'not_started'
-        // in der DB gar nicht (nur 'scheduled' u.a.) — dieser Wert kann in match_status also
-        // real nie stehen. Die 'not_started'-Prüfung ist seither totes, aber harmloses
-        // Verteidigungs-Erbe von vor dem Fix; 'scheduled' ist der tatsächlich relevante Zweig.
-        const currentVersion = currentMatch?.version ?? 1;
-        if (currentMatch && (currentMatch.match_status === 'not_started' || currentMatch.match_status === 'scheduled')) {
-          // Derselbe Schreibschutz wie oben, hier gegen die winzige Lücke zwischen dem
-          // currentMatch-SELECT und diesem UPDATE (TOCTOU) — falls die Zeile zwischen
-          // beiden Aufrufen übersprungen wurde, greift auch hier der Konfliktpfad statt
-          // eines stillen Überschreibens.
-          let retryQuery = supabase
-            .from('matches')
-            .update(matchUpdate)
-            .eq('id', match.id)
-            .eq('version', currentVersion);
-
-          if (isWritingNotStarted) {
-            retryQuery = retryQuery.eq('match_status', 'scheduled');
-          }
-
-          const { data: retryRow, error: retryError } = await retryQuery
-            .select('version')
-            .maybeSingle();
-
-          if (retryError) {
-            console.error('[SupabaseLiveMatchRepository] initialization retry failed:', retryError);
-            throw retryError;
-          }
-          if (!retryRow) {
-            throw new OptimisticLockError(match.id, currentVersion, -1);
-          }
-          // Success - proceed to insert events below
-        } else {
-          // Genuine concurrent modification conflict
-          throw new OptimisticLockError(
-            match.id,
-            match.version,
-            currentMatch?.version ?? -1
-          );
-        }
-      }
-
+      // Der Client schreibt die Ergebnis-/Status-/Uhrspalten seit C3a-2b nicht mehr (V4) —
+      // der Zeilen-Update samt CAS/Retry ist damit gegenstandslos; Spalten schreibt nur noch
+      // append_match_events (RPC). save() fügt nur noch Ereignisse ein, kein matches-UPDATE
+      // (auch kein updated_at-Touch, F6).
       // Insert new events. upsert + onConflict/ignoreDuplicates (ON CONFLICT DO NOTHING)
       // statt insert (Sofort-Fix C-EVID): eine Wiederholung (z. B. nach verlorener
       // Erfolgsbestätigung) sendet dieselben Kennungen erneut — ein reines insert würde
@@ -309,10 +224,6 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
         }
       }
     } catch (error) {
-      // Re-throw OptimisticLockError without logging (expected case)
-      if (error instanceof OptimisticLockError) {
-        throw error;
-      }
       console.error('[SupabaseLiveMatchRepository] save failed:', error);
       throw error;
     }

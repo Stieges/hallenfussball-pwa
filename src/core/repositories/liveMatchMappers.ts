@@ -5,7 +5,7 @@
  * Used by SupabaseLiveMatchRepository for real-time match state sync.
  */
 
-import type { Json, Tables, TablesInsert } from '../../types/supabase';
+import type { Tables, TablesInsert } from '../../types/supabase';
 import type {
   LiveMatch,
   LiveTeamInfo,
@@ -47,13 +47,6 @@ const STATUS_TO_FRONTEND: Record<string, MatchStatus> = {
   running: 'RUNNING',
   paused: 'PAUSED',
   finished: 'FINISHED',
-};
-
-const STATUS_TO_DB: Record<MatchStatus, string> = {
-  NOT_STARTED: 'scheduled',
-  RUNNING: 'running',
-  PAUSED: 'paused',
-  FINISHED: 'finished',
 };
 
 const PHASE_TO_FRONTEND: Record<string, TournamentPhase> = {
@@ -279,34 +272,12 @@ export function mapLiveMatchToSupabase(
   liveMatch: LiveMatch,
   existingEventIds: Set<string> = new Set<string>()
 ): {
-  matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null };
+  matchUpdate: Partial<MatchRow>;
   newEvents: MatchEventInsertWithId[];
 } {
-  // Build live_state JSONB
-  const liveState: LiveStateJson = {
-    elapsedSeconds: liveMatch.elapsedSeconds,
-    durationSeconds: liveMatch.durationSeconds,
-    playPhase: liveMatch.playPhase,
-    tiebreakerMode: liveMatch.tiebreakerMode,
-    overtimeDurationSeconds: liveMatch.overtimeDurationSeconds,
-    overtimeElapsedSeconds: liveMatch.overtimeElapsedSeconds,
-    awaitingTiebreakerChoice: liveMatch.awaitingTiebreakerChoice,
-    refereeName: liveMatch.refereeName,
-  };
-
-  // Match update
-  const matchUpdate: Partial<MatchRow> & { live_state: LiveStateJson | null } = {
-    match_status: STATUS_TO_DB[liveMatch.status],
-    score_a: liveMatch.homeScore,
-    score_b: liveMatch.awayScore,
-    timer_start_time: liveMatch.timerStartTime ?? null,
-    timer_paused_at: liveMatch.timerPausedAt ?? null,
-    timer_elapsed_seconds: liveMatch.timerElapsedSeconds ?? null,
-    overtime_score_a: liveMatch.overtimeScoreA ?? null,
-    overtime_score_b: liveMatch.overtimeScoreB ?? null,
-    penalty_score_a: liveMatch.penaltyScoreA ?? null,
-    penalty_score_b: liveMatch.penaltyScoreB ?? null,
-    live_state: (liveMatch.status === 'FINISHED' ? null : liveState) as Json | null,
+  // V4 (C3a-2b): der Client schreibt Ergebnis-/Status-/Uhr-/live_state-Spalten nicht mehr —
+  // matchUpdate trägt nur noch updated_at (F1/F6). live_state-Clears bleiben in delete()/clear().
+  const matchUpdate: Partial<MatchRow> = {
     updated_at: new Date().toISOString(),
   };
 
