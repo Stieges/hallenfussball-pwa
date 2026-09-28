@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           # Fest gepinnt statt "latest": ein "latest"-Lauf ist bereits einmal an einem GitHub-
           # Rate-Limit gescheitert (Run 33303138564, 2026-08-30, "Failed to resolve latest
@@ -102,7 +102,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           # Begründung für die gepinnte Version: siehe Kommentar im Job "drift-check" oben.
           version: 2.117.0
