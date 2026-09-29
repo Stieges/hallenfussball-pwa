@@ -40,6 +40,9 @@ vi.mock('../../../features/match-engine/useEngineOutboxSummary', () => ({
   }),
 }));
 
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {
     id: 'match-1', number: 7, phaseLabel: 'Gruppenphase', fieldId: 'field-1',

@@ -233,13 +233,26 @@ export function useEngineEventEditing({ tournamentId, match, readOnly, legacy, n
   };
 
   const legacyCanUndo = match !== null && match.events.length > 0 && match.status !== 'FINISHED';
-  const canUndo = !readOnly && (undoSel ? undoSel.target !== null : legacyCanUndo);
+  // readOnly sperrt die Bedienung ueber `disabled` im Cockpit; hier zaehlt nur, ob es ein Ziel gibt.
+  const undoHint = readOnly ? undefined : hintOf(undoSel?.blockReason ?? null);
+  const canUndo = undoSel ? undoSel.target !== null : legacyCanUndo;
+
+  const sides = { home: sideState('home'), away: sideState('away') };
 
   return {
+    /** Props fuer einen TeamBlock der Seite `side` (Bedienbarkeit, Beschriftung mit Ziel, Hinweise). */
+    teamBlockProps: (side: Side) => ({
+      canDecrement: sides[side].canMinus,
+      minusLabel: sides[side].label,
+      minusHint: sides[side].hint,
+      goalHint,
+    }),
     canUndo,
+    /** Rückgängig-Knopf zeigen: bedienbar ODER gesperrt mit Hinweis (G3). */
+    undoVisible: canUndo || undoHint !== undefined,
     undoLabel: !readOnly && undoSel?.target ? t('engine.retract.undoLabel', { target: targetText(undoSel.target) }) : undefined,
-    undoHint: readOnly ? undefined : hintOf(undoSel?.blockReason ?? null),
-    sides: { home: sideState('home'), away: sideState('away') },
+    undoHint,
+    sides,
     goalHint,
     minus,
     undo,

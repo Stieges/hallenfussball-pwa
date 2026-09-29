@@ -92,3 +92,28 @@ describe('offen = Nummer fehlt (G10, Plan §8 Zeile 11+19)', () => {
     expect(toRuntimeEvents(view(log).state, log, ctx)[0].incomplete).toBeUndefined();
   });
 });
+
+describe('zurueckgenommene Karte / Zeitstrafe zaehlt nicht mehr (Plan §2 C3b-1 Zusatztests)', () => {
+  it('Karte: nach RETRACT weder im Zustand (cards) noch in den wirksamen Ereignissen', () => {
+    const log = [
+      start(),
+      ev({ id: 'k1', type: 'RED_CARD', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { playerNumber: 4 } }),
+      ev({ id: 'r1', type: 'RETRACT', at: 3000, targetId: 'k1' }),
+    ];
+    const { state } = view(log);
+    expect(state.cards).toEqual([]);
+    expect(toRuntimeEvents(state, log, ctx)).toEqual([]);
+    expect(toRetractedEvents(state, log, ctx).map((e) => e.type)).toEqual(['RED_CARD']);
+  });
+
+  it('Zeitstrafe: nach RETRACT keine aktive Strafe mehr', () => {
+    const log = [
+      start(),
+      ev({ id: 'p1', type: 'TIME_PENALTY', at: 2000, teamId: 'teamA', clockMs: 20_000, payload: { durationSeconds: 120 } }),
+      ev({ id: 'r1', type: 'RETRACT', at: 3000, targetId: 'p1' }),
+    ];
+    const { state } = view(log);
+    expect(state.penalties).toEqual([]);
+    expect(toRuntimeEvents(state, log, ctx).some((e) => e.type === 'TIME_PENALTY')).toBe(false);
+  });
+});

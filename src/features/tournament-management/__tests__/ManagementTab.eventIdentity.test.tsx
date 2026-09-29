@@ -28,6 +28,9 @@ const liveMatches = new Map<string, LiveMatch>();
 /** Jede Übergabe an das Cockpit wird mitgeschrieben, damit Identitäten vergleichbar sind. */
 const seenEventArrays: unknown[] = [];
 
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../components/live-cockpit', () => ({
   LiveCockpit: (props: { currentMatch?: { events?: unknown } | null }) => {
     seenEventArrays.push(props.currentMatch?.events);

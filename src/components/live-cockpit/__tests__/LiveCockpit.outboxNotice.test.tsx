@@ -33,11 +33,16 @@ const mockContext = {
     dismissRejected: vi.fn().mockResolvedValue(undefined),
   },
   store: { forAccount: vi.fn().mockResolvedValue([]) },
+  // C3b-1: useEngineEventEditing fragt die Ansicht ab -- hier gibt es kein Engine-Spiel.
+  engine: { view: () => null, serverNow: () => 0 },
   accountId: 'acc-outbox-notice-test',
 };
 vi.mock('../../../features/match-engine/useMatchEngineContext', () => ({
   useMatchEngineContextOptional: () => mockContext,
 }));
+
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
 
 function makeMatch(overrides: Record<string, unknown> = {}) {
   return {

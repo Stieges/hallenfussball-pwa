@@ -7,27 +7,28 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import de from '../../i18n/locales/de/cockpit.json';
 import { LocalMatchStore, ClockSync, MatchEngine, MatchCommands, toLiveMatchView } from '../../core/match/client';
 import type { Actor, MatchContext, MatchRules } from '../../core/match';
 import { MatchEngineContext, type MatchEngineContextValue } from '../../features/match-engine/matchEngineContextInstance';
 
 // Echte deutsche Texte statt Schluessel -- die Tests pruefen Wortlaut und Ziel-Beschriftung.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) => {
-      const found = key.split('.').reduce<unknown>(
-        (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
-        de,
-      );
-      let text = typeof found === 'string' ? found : key;
-      for (const [name, value] of Object.entries(opts ?? {})) {
-        text = text.replace(`{{${name}}}`, String(value));
-      }
-      return text;
-    },
-  }),
-}));
+// Stabile `t`-Referenz wie in react-i18next (sonst laufen Effekte mit `t` in den Abhaengigkeiten endlos).
+vi.mock('react-i18next', async () => {
+  const de: unknown = (await import('../../i18n/locales/de/cockpit.json')).default;
+  const translate = (key: string, opts?: Record<string, unknown>): string => {
+    const found = key.split('.').reduce<unknown>(
+      (node, part) => (typeof node === 'object' && node !== null ? (node as Record<string, unknown>)[part] : undefined),
+      de,
+    );
+    let text = typeof found === 'string' ? found : key;
+    for (const [name, value] of Object.entries(opts ?? {})) {
+      text = text.replace(`{{${name}}}`, String(value));
+    }
+    return text;
+  };
+  const stable = { t: translate, i18n: { language: 'de' } };
+  return { useTranslation: () => stable };
+});
 
 const mockActor: { current: Actor } = { current: 'helper' };
 vi.mock('../useActorRole', () => ({ useActorRole: () => mockActor.current }));
@@ -43,7 +44,7 @@ const RULES: MatchRules = {
 };
 let counter = 0;
 
-async function setup() {
+async function setup(rules: MatchRules = RULES) {
   const accountId = `acc-edit-${(counter += 1)}`;
   const store = new LocalMatchStore();
   const clock = new ClockSync(() => Promise.resolve(NOW), () => NOW, { get: () => null, set: () => undefined });
@@ -57,7 +58,7 @@ async function setup() {
     engine, store, clock, sender: { kick: vi.fn().mockResolvedValue(undefined) }, accountId,
   } as unknown as MatchEngineContextValue;
   const commands = new MatchCommands({ engine, store, sender: value.sender, accountId });
-  await commands.start(MATCH_ID, CTX, 'leitung', RULES);
+  await commands.start(MATCH_ID, CTX, 'leitung', rules);
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MatchEngineContext.Provider value={value}>{children}</MatchEngineContext.Provider>
   );
@@ -181,9 +182,12 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     await commands.finish(MATCH_ID, CTX, 'helper');
     const params = baseParams(matchOf(value), { readOnly: true });
     const { result } = renderHook(() => useEngineEventEditing(params), { wrapper });
-    expect(result.current.canUndo).toBe(false);
     expect(result.current.undoHint).toBeUndefined();
+    expect(result.current.undoLabel).toBeUndefined();
     expect(result.current.goalHint).toBeUndefined();
+    expect(result.current.sides.home.hint).toBeUndefined();
+    expect(result.current.deleteBlock('irgendeine-id')).toBeUndefined();
+    expect(result.current.amendLock('irgendeine-id')).toBeUndefined();
   });
 
   it('G10: update sendet NUR die geaenderte Nummer, nie incomplete', async () => {
@@ -249,6 +253,49 @@ describe('useEngineEventEditing -- Engine-Spiel', () => {
     await act(async () => { await result.current.remove('gibt-es-nicht'); });
     expect(params.notify.error).toHaveBeenCalled();
     expect(params.notify.success).not.toHaveBeenCalled();
+  });
+});
+
+describe('useEngineEventEditing -- Hinweistext je Sperrgrund (G3)', () => {
+  beforeEach(() => { mockActor.current = 'helper'; });
+  const KO: MatchRules = { ...RULES, sections: 1, knockout: true, tiebreak: 'overtime-then-shootout', overtimeSeconds: 300 };
+
+  async function drawThenFinish(rules: MatchRules) {
+    const env = await setup(rules);
+    await env.commands.goal(MATCH_ID, CTX, 'helper', 'teama', false, { playerNumber: 1 });
+    await env.commands.goal(MATCH_ID, CTX, 'helper', 'teamb', false, { playerNumber: 2 });
+    await env.commands.finish(MATCH_ID, CTX, 'helper');
+    return env;
+  }
+
+  it('Pause vor der Verlaengerung: Tor der regulaeren Zeit -> "nicht mehr zurücknehmbar" (Stand Engine, Aenderung C3c)', async () => {
+    const { value, wrapper } = await drawThenFinish(KO);
+    const { result } = renderHook(() => useEngineEventEditing(baseParams(matchOf(value))), { wrapper });
+    expect(result.current.canUndo).toBe(false);
+    expect(result.current.undoHint).toBe('Tor aus der regulären Spielzeit – nicht mehr zurücknehmbar');
+    expect(result.current.sides.home.canMinus).toBe(false);
+    expect(result.current.sides.home.hint).toBe('Tor aus der regulären Spielzeit – nicht mehr zurücknehmbar');
+  });
+
+  it('Entscheidung offen (decision_pending): "Erst die Entscheidung treffen"', async () => {
+    const { value, wrapper } = await drawThenFinish({ ...KO, tiebreak: null });
+    const { result } = renderHook(() => useEngineEventEditing(baseParams(matchOf(value))), { wrapper });
+    expect(result.current.undoHint).toBe('Erst die Entscheidung treffen');
+    expect(result.current.sides.away.hint).toBe('Erst die Entscheidung treffen');
+  });
+
+  it('Strafstoßschießen: Minus deaktiviert, Hinweis verweist aufs Protokoll', async () => {
+    const { value, wrapper } = await drawThenFinish({ ...KO, tiebreak: 'shootout' });
+    const { result } = renderHook(() => useEngineEventEditing(baseParams(matchOf(value))), { wrapper });
+    expect(result.current.sides.home.canMinus).toBe(false);
+    expect(result.current.sides.home.hint).toContain('Schüsse über das Protokoll zurücknehmen');
+  });
+
+  it('Kein Kandidat: Knopf nur deaktiviert, KEIN Hinweis', async () => {
+    const { value, wrapper } = await setup();
+    const { result } = renderHook(() => useEngineEventEditing(baseParams(matchOf(value))), { wrapper });
+    expect(result.current.sides.home).toMatchObject({ canMinus: false, hint: undefined });
+    expect(result.current.undoHint).toBeUndefined();
   });
 });
 

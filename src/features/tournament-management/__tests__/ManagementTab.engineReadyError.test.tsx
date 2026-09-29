@@ -14,6 +14,9 @@ import type { LiveMatch } from '../../../core/models/LiveMatch';
 import type { GeneratedSchedule } from '../../../core/generators';
 
 const mockShowError = vi.fn();
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../components/ui/Toast/ToastContext', () => ({
   useToast: () => ({ showError: mockShowError, showSuccess: vi.fn(), showWarning: vi.fn(), showInfo: vi.fn() }),
 }));

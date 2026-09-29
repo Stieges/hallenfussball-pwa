@@ -45,6 +45,9 @@ vi.mock('../../auth/hooks/useTournamentMembers', () => ({
 // A4 (C-SYNC): SyncStatusIndicator (neu im Cockpit-Kopf) braucht RepositoryContext via
 // useSyncStatus/useRepositories -- dieser Test rendert ManagementTab (und damit LiveCockpit) ohne
 // Provider. isCloudSyncAvailable:false spiegelt genau den fehlenden Cloud-Kontext hier wider.
+// C3b-1: LiveCockpit bindet useEngineEventEditing ein -> useActorRole (braucht AuthProvider); hier nicht Gegenstand.
+vi.mock('../../../hooks/useActorRole', () => ({ useActorRole: () => 'helper' }));
+
 vi.mock('../../../hooks/useSyncStatus', () => ({
   useSyncStatus: () => ({
     status: 'synced', isSyncing: false, pendingChanges: 0, failedChanges: 0, failedMutations: [],
