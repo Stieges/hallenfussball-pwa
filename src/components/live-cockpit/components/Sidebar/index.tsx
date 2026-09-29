@@ -11,7 +11,8 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol, retractedMarkStyle, retractedRowStyle, takeRecent } from '../protocolEntries';
+import { mergeProtocol, takeRecent, formatTime } from '../protocolEntries';
+import { ProtocolRow } from '../ProtocolRow';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
@@ -29,12 +30,6 @@ export interface SidebarProps {
 // ---------------------------------------------------------------------------
 // Helper
 // ---------------------------------------------------------------------------
-
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -101,61 +96,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // ---------------------------------------------------------------------------
   // Event Log
   // ---------------------------------------------------------------------------
-
-  const logEntryStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: `${cssVars.spacing.sm} 0`,
-    borderBottom: `1px solid ${cssVars.colors.borderSolid}`,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  const logTimeStyle: CSSProperties = {
-    color: cssVars.colors.textMuted,
-    fontVariantNumeric: 'tabular-nums',
-  };
-
-  const incompleteWarningStyle: CSSProperties = {
-    color: cssVars.colors.warning,
-    marginLeft: cssVars.spacing.xs,
-    fontSize: cssVars.fontSizes.sm,
-  };
-
-  // BUG-010: Edit button style
-  const editButtonStyle: CSSProperties = {
-    background: 'transparent',
-    border: 'none',
-    padding: cssVars.spacing.xs,
-    cursor: 'pointer',
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textMuted,
-    borderRadius: cssVars.borderRadius.sm,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'color 0.15s ease',
-    minWidth: 28,
-    minHeight: 28,
-  };
-
-  const logEntryRightStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.xs,
-  };
-
-  const getEventIcon = (type: string): string => {
-    switch (type) {
-      case 'GOAL': return '⚽';
-      case 'YELLOW_CARD': return '🟨';
-      case 'RED_CARD': return '🟥';
-      case 'TIME_PENALTY': return '⏱';
-      case 'SUBSTITUTION': return '🔄';
-      case 'FOUL': return '⚠';
-      default: return '•';
-    }
-  };
 
   const getEventDescription = (event: RuntimeMatchEvent): string => {
     const teamName = event.payload.teamName ??
@@ -253,54 +193,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {t('sidebar.noEvents')}
           </div>
         ) : (
-          recentEvents.map(({ event, retracted }, index) => {
-            const isIncomplete = !retracted && event.incomplete === true;
-            // BUG-010: All events are now editable if onEventEdit is provided; C3b-1 (G6): nicht die zurückgenommenen
-            const canEdit = !!onEventEdit && !retracted;
-            const isLastItem = index === recentEvents.length - 1;
-
-            const entryStyle = {
-              ...logEntryStyle,
-              borderBottom: isLastItem ? 'none' : logEntryStyle.borderBottom,
-              ...(retracted ? retractedRowStyle : {}),
-            };
-
-            const handleEditClick = (e: React.MouseEvent) => {
-              e.stopPropagation();
-              if (onEventEdit) {
-                onEventEdit(event);
-              }
-            };
-
-            return (
-              <div
-                key={event.id}
-                style={entryStyle}
-                data-testid={retracted ? 'event-row-retracted' : undefined}
-                aria-label={retracted ? t('sidebar.retractedAria', { description: getEventDescription(event) }) : undefined}
-              >
-                <span>
-                  {getEventIcon(event.type)} {getEventDescription(event)}
-                  {isIncomplete && <span style={incompleteWarningStyle}>⚠️</span>}
-                  {retracted && <span style={retractedMarkStyle} data-testid="event-retracted-mark">{t('sidebar.retractedMark')}</span>}
-                </span>
-                <div style={logEntryRightStyle}>
-                  <span style={logTimeStyle}>{formatTime(event.timestampSeconds)}</span>
-                  {/* BUG-010: Edit button for all events */}
-                  {canEdit && (
-                    <button
-                      style={editButtonStyle}
-                      onClick={handleEditClick}
-                      aria-label={t('sidebar.editAria', { description: getEventDescription(event) })}
-                      title={t('sidebar.edit')}
-                    >
-                      ✏️
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          recentEvents.map((entry, index) => (
+            <ProtocolRow
+              key={entry.event.id}
+              entry={entry}
+              description={getEventDescription(entry.event)}
+              variant="sidebar"
+              isLast={index === recentEvents.length - 1}
+              onEventEdit={onEventEdit}
+            />
+          ))
         )}
       </div>
     </div>

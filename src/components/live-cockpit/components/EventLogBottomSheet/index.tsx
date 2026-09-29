@@ -11,12 +11,12 @@
  */
 
 import { type CSSProperties } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol, retractedMarkStyle, retractedRowStyle } from '../protocolEntries';
+import { mergeProtocol } from '../protocolEntries';
+import { ProtocolRow } from '../ProtocolRow';
 
 interface EventLogBottomSheetProps {
   isOpen: boolean;
@@ -38,25 +38,6 @@ interface EventLogBottomSheetProps {
 // Helper Functions
 // ---------------------------------------------------------------------------
 
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
-
-const getEventIcon = (type: string): string => {
-  switch (type) {
-    case 'GOAL': return '⚽';
-    case 'YELLOW_CARD': return '🟨';
-    case 'RED_CARD': return '🟥';
-    case 'TIME_PENALTY': return '⏱';
-    case 'SUBSTITUTION': return '🔄';
-    case 'FOUL': return '⚠';
-    case 'STATUS_CHANGE': return '▶️';
-    default: return '•';
-  }
-};
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -72,7 +53,6 @@ export function EventLogBottomSheet({
   awayTeamId,
   onEventEdit,
 }: EventLogBottomSheetProps) {
-  const { t } = useTranslation('cockpit');
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -149,68 +129,6 @@ export function EventLogBottomSheet({
     overflowY: 'auto',
   };
 
-  const eventRowStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: cssVars.spacing.md,
-    backgroundColor: cssVars.colors.surfaceElevated,
-    border: `1px solid ${cssVars.colors.border}`,
-    borderRadius: cssVars.borderRadius.md,
-    minHeight: 56,
-  };
-
-  const eventInfoStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: cssVars.spacing.sm,
-    flex: 1,
-    overflow: 'hidden',
-  };
-
-  const iconStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.lg,
-    flexShrink: 0,
-  };
-
-  const timeStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.semibold,
-    fontVariantNumeric: 'tabular-nums',
-    color: cssVars.colors.textSecondary,
-    flexShrink: 0,
-    minWidth: 50,
-  };
-
-  const descStyle: CSSProperties = {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textPrimary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  };
-
-  const incompleteStyle: CSSProperties = {
-    color: cssVars.colors.warning,
-    marginLeft: cssVars.spacing.xs,
-  };
-
-  const editButtonStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: cssVars.spacing.sm,
-    backgroundColor: cssVars.colors.primary,
-    color: cssVars.colors.onPrimary,
-    border: 'none',
-    borderRadius: cssVars.borderRadius.sm,
-    fontSize: cssVars.fontSizes.sm,
-    fontWeight: cssVars.fontWeights.medium,
-    cursor: 'pointer',
-    minWidth: 80,
-    minHeight: 44,
-  };
-
   const emptyStyle: CSSProperties = {
     textAlign: 'center',
     padding: cssVars.spacing.xl,
@@ -230,32 +148,15 @@ export function EventLogBottomSheet({
         </div>
       ) : (
         <div style={listStyle}>
-          {sortedEvents.map(({ event, retracted }) => (
-            <div
-              key={event.id}
-              style={retracted ? { ...eventRowStyle, ...retractedRowStyle } : eventRowStyle}
-              data-testid={retracted ? 'event-row-retracted' : undefined}
-              aria-label={retracted ? t('sidebar.retractedAria', { description: getEventDescription(event) }) : undefined}
-            >
-              <div style={eventInfoStyle}>
-                <span style={iconStyle}>{getEventIcon(event.type)}</span>
-                <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>
-                <span style={descStyle}>
-                  {getEventDescription(event)}
-                  {!retracted && event.incomplete && <span style={incompleteStyle}>⚠️</span>}
-                  {retracted && <span style={retractedMarkStyle} data-testid="event-retracted-mark">{t('sidebar.retractedMark')}</span>}
-                </span>
-              </div>
-              {!retracted && isEditable(event) && onEventEdit && (
-                <button
-                  style={editButtonStyle}
-                  onClick={() => onEventEdit(event)}
-                  aria-label={`${getEventDescription(event)} bearbeiten`}
-                >
-                  ✏️ Bearbeiten
-                </button>
-              )}
-            </div>
+          {sortedEvents.map((entry) => (
+            <ProtocolRow
+              key={entry.event.id}
+              entry={entry}
+              description={getEventDescription(entry.event)}
+              variant="sheet"
+              editable={isEditable(entry.event)}
+              onEventEdit={onEventEdit}
+            />
           ))}
         </div>
       )}
