@@ -68,3 +68,15 @@ export {
   type OverlayableMatch,
   type OverlayableTournament,
 } from './applyEngineOverlay';
+export {
+  undoTarget,
+  minusTarget,
+  canAmendField,
+  type AmendBlockReason,
+  type AmendCheck,
+  type BlockReason,
+  type RetractTarget,
+  type TargetInput,
+  type TargetKind,
+  type TargetSelection,
+} from './retractTargets';
