@@ -159,7 +159,9 @@
     "matchEnded": "Spiel beendet",
     "assistFormat": "Assist: {{assists}}",
     "editAria": "{{description}} bearbeiten",
-    "edit": "Bearbeiten"
+    "edit": "Bearbeiten",
+    "retractedMark": "zurückgenommen",
+    "retractedAria": "{{description}} – zurückgenommen"
   },
   "matchCockpit": {
     "title": "Kampfgericht Cockpit",
@@ -314,6 +316,38 @@
   "engine": {
     "notYet": "Diese Aktion folgt in einem späteren Schritt.",
     "invalid": "Diese Aktion ist gerade nicht möglich.",
-    "storeFull": "Der Gerätespeicher ist voll. Bitte Speicherplatz freigeben."
+    "storeFull": "Der Gerätespeicher ist voll. Bitte Speicherplatz freigeben.",
+    "retract": {
+      "hint": {
+        "finishedHelper": "Korrektur nur durch die Turnierleitung",
+        "finishedLeitung": "Nach dem Abpfiff nicht direkt zurücknehmbar – Korrektur folgt",
+        "decisionPending": "Erst die Entscheidung treffen",
+        "staleBase": "Vor der letzten Korrektur – nicht mehr zurücknehmbar",
+        "regularGoal": "Tor aus der regulären Spielzeit – nicht mehr zurücknehmbar",
+        "shootout": "Im $t(sport:events.penaltyShootout) die Schüsse über das Protokoll zurücknehmen",
+        "notAllowed": "Gerade nicht zurücknehmbar",
+        "goalFinished": "Spiel ist beendet – Korrektur über die Turnierleitung"
+      },
+      "kind": {
+        "goal": "Tor",
+        "ownGoal": "Eigentor",
+        "yellowCard": "Gelbe Karte",
+        "yellowRedCard": "Gelb-Rote Karte",
+        "redCard": "Rote Karte",
+        "timePenalty": "$t(sport:events.timePenalty)",
+        "foul": "Foul",
+        "substitution": "Wechsel",
+        "shootoutKick": "$t(sport:events.penalty)"
+      },
+      "target": "{{kind}}",
+      "targetNumbered": "{{kind}} Nr. {{number}}",
+      "undoLabel": "{{target}} zurücknehmen",
+      "minusAria": "{{target}} für {{teamName}} zurücknehmen",
+      "done": "{{target}} zurückgenommen"
+    },
+    "amend": {
+      "locked": "Korrektur nur durch die Turnierleitung",
+      "done": "{{target}} aktualisiert"
+    }
   }
 }

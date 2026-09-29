@@ -159,7 +159,9 @@
     "matchEnded": "Match ended",
     "assistFormat": "Assist: {{assists}}",
     "editAria": "Edit {{description}}",
-    "edit": "Edit"
+    "edit": "Edit",
+    "retractedMark": "retracted",
+    "retractedAria": "{{description}} – retracted"
   },
   "matchCockpit": {
     "title": "Referee Cockpit",
@@ -314,6 +316,38 @@
   "engine": {
     "notYet": "This action will be available in a later step.",
     "invalid": "This action isn't possible right now.",
-    "storeFull": "Device storage is full. Please free up space."
+    "storeFull": "Device storage is full. Please free up space.",
+    "retract": {
+      "hint": {
+        "finishedHelper": "Corrections only by the tournament director",
+        "finishedLeitung": "Not directly reversible after the final whistle – correction to follow",
+        "decisionPending": "Make the decision first",
+        "staleBase": "Before the last correction – can no longer be reversed",
+        "regularGoal": "Goal from regular time – can no longer be reversed",
+        "shootout": "During the $t(sport:events.penaltyShootout), reverse the shots via the log",
+        "notAllowed": "Cannot be reversed right now",
+        "goalFinished": "Match is over – corrections via the tournament director"
+      },
+      "kind": {
+        "goal": "Goal",
+        "ownGoal": "Own goal",
+        "yellowCard": "Yellow card",
+        "yellowRedCard": "Second yellow card",
+        "redCard": "Red card",
+        "timePenalty": "$t(sport:events.timePenalty)",
+        "foul": "Foul",
+        "substitution": "Substitution",
+        "shootoutKick": "$t(sport:events.penalty)"
+      },
+      "target": "{{kind}}",
+      "targetNumbered": "{{kind}} no. {{number}}",
+      "undoLabel": "Reverse {{target}}",
+      "minusAria": "Reverse {{target}} for {{teamName}}",
+      "done": "{{target}} reversed"
+    },
+    "amend": {
+      "locked": "Corrections only by the tournament director",
+      "done": "{{target}} updated"
+    }
   }
 }
