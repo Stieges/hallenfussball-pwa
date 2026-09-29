@@ -15,9 +15,9 @@ import { captureFeatureError } from '../../lib/sentry';
  * `MatchExecutionService#unskipMatch`) that made it into the queue as an in-memory object would
  * survive the CURRENT session but silently lose the clear on reload/replay. Normalizing
  * `undefined` (key present) to `null` right before enqueueing makes every clear JSON-round-trip
- * safe -- `mapMatchUpdateToSupabase` already treats a present `null` exactly like a present
- * `undefined` (writes the column's `NULL`/default), so this changes nothing for the immediate,
- * same-session path, only the persisted/replayed one.
+ * safe -- `mapMatchUpdateToSupabase` treats a present `null` exactly like a present `undefined`
+ * (result/status/skip columns are stripped since V4a, only schedule columns are written), so
+ * this changes nothing for the same-session path, only the persisted/replayed one.
  */
 function normalizeMatchUpdateForQueue(update: MatchUpdate): MatchUpdate {
     const normalized: Record<string, unknown> = {};

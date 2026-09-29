@@ -206,7 +206,7 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
 
         if (eventsError) {
           console.error('[SupabaseLiveMatchRepository] events insert failed:', eventsError);
-          // Don't throw - match was updated successfully.
+          // Don't throw - the match row is not written here; only events are inserted.
           // Don't cache the ids either - the insert never happened, so the
           // next save() must retry these events instead of losing them forever.
           captureFeatureError(eventsError, 'repository', 'eventsInsert', {
@@ -362,9 +362,8 @@ export class SupabaseLiveMatchRepository implements ILiveMatchRepository {
               if (!matchRow) { return; }
 
             // Task A1 (Sofortschutz): ein FINISHED-Match ist NICHT "inaktiv" im Sinne dieses
-            // Guards, obwohl persistFinalResult live_state auf null setzt (siehe
-            // liveMatchMappers.ts#mapLiveMatchToSupabaseUpdate, `live_state: FINISHED ? null : …`)
-            // — das lässt isMatchActive() unten fälschlich false zurückgeben. Ohne diese
+            // Guards, obwohl ein beendetes Spiel live_state == null hat (der Server setzt das,
+            // der Client sendet es nicht mehr) — das lässt isMatchActive() unten false zurückgeben. Ohne diese
             // Ausnahme wurde JEDE Spielende-Aktualisierung wie eine Löschung behandelt (siehe
             // Zweig unten) und useMatchExecution.ts ignoriert eine solche Löschung bewusst
             // (Kommentar dort: "Cockpit braucht beendete Spiele weiterhin") — ein zweites,

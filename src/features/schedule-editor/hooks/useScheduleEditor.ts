@@ -359,10 +359,8 @@ export function useScheduleEditor(
 
     // A2 Fixrunde 1 (I1): same targeted-update pattern as skipMatch above -- this ALSO fixes a
     // pre-existing gap noted in the A1 review (M1): the old `onTournamentUpdate()`-only path
-    // never cleared `skipped_reason`/`skipped_at` in the cloud even before A2, because
-    // `mapMatchUpdateToSupabase` skipped fields that were simply absent from the object (see its
-    // A2-Fixrunde-1 doc comment). `diffMatchResultStatusUpdates` always includes every
-    // result/status field as an explicit key, so the clear now actually persists.
+    // never cleared `skipped_reason`/`skipped_at` in the cloud. Since C3a-2b (R1) skipped_* clears
+    // are no longer sent to the server at all (the mapper strips them); the clear stays local.
     onLocalTournamentUpdate({
       ...tournament,
       matches: updatedMatches,
