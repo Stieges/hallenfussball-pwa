@@ -32,6 +32,12 @@ export interface TeamBlockProps {
   onSubstitution: () => void;
   onFoul: () => void;
   canDecrement?: boolean;
+  /** C3b-1: Beschriftung des Minus-Knopfs mit Ziel (aria-label), sonst der Standardtext. */
+  minusLabel?: string;
+  /** C3b-1 (G3): Grund, warum Minus gerade nicht geht. */
+  minusHint?: string;
+  /** C3b-1 (G1b): Hinweis am Tor-Knopf nach dem Abpfiff. */
+  goalHint?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +60,9 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
   onSubstitution,
   onFoul,
   canDecrement = true,
+  minusLabel,
+  minusHint,
+  goalHint,
 }) => {
   // Derive side from teamLabel if not provided
   const teamSide = side ?? (teamLabel === 'Heim' ? 'home' : 'away');
@@ -173,6 +182,12 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
     gap: cssVars.spacing.xs,
   };
 
+  const hintStyle: CSSProperties = {
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+    textAlign: 'center',
+  };
+
   const actionRowStyle: CSSProperties = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
@@ -213,12 +228,14 @@ export const TeamBlock: React.FC<TeamBlockProps> = ({
             onClick={onMinus}
             disabled={disabled || !canDecrement}
             type="button"
-            aria-label={`Tor für ${teamName} entfernen`}
+            aria-label={minusLabel ?? `Tor für ${teamName} entfernen`}
             data-testid={`goal-minus-button-${teamSide}`}
           >
             −1
           </button>
         </div>
+        {goalHint && <div style={hintStyle} data-testid={`goal-hint-${teamSide}`}>{goalHint}</div>}
+        {minusHint && <div style={hintStyle} data-testid={`minus-hint-${teamSide}`}>{minusHint}</div>}
 
         {/* 2 MIN Penalty - prominent */}
         <button

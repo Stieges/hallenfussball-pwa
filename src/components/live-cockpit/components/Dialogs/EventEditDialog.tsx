@@ -17,6 +17,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { cssVars } from '../../../../design-tokens'
 import { useFocusTrap } from '../../../../hooks';
 import type { EditableMatchEvent } from '../../../../types/tournament';
+import type { EventFieldChanges } from '../../../../hooks/engineEventEditingSupport';
+import { EventNumberField } from './EventNumberField';
 import moduleStyles from '../../LiveCockpit.module.css';
 import sportGlossary from '../../../../i18n/glossary.json';
 
@@ -34,14 +36,18 @@ interface EventEditDialogProps {
   /**
    * Callback when event is updated
    * @param eventId - The event ID being updated
-   * @param updates - The updated fields (playerNumber, incomplete)
+   * @param changes - Nur die GEAENDERTE Angabe (C3b-1, G10): neue Nummer ODER Nummer leeren; nie `incomplete`
    */
-  onUpdate: (eventId: string, updates: { playerNumber?: number; incomplete?: boolean }) => void;
+  onUpdate: (eventId: string, changes: EventFieldChanges) => void;
   /**
    * Callback when event is deleted
    * @param eventId - The event ID to delete
    */
   onDelete: (eventId: string) => void;
+  /** C3b-1 (G3): Gesetzt = Löschen gesperrt; der Text nennt den Grund. */
+  deleteBlocked?: string;
+  /** C3b-1 (G5): Gesetzt = Nummer gesperrt (Helfer nach Abpfiff); der Text nennt den Grund. */
+  amendLocked?: string;
 }
 
 export function EventEditDialog({
@@ -52,6 +58,8 @@ export function EventEditDialog({
   awayTeam,
   onUpdate,
   onDelete,
+  deleteBlocked,
+  amendLocked,
 }: EventEditDialogProps) {
   const [playerNumber, setPlayerNumber] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -124,11 +132,12 @@ export function EventEditDialog({
   const handleSave = useCallback(() => {
     if (!event) {return;}
 
-    const num = playerNumber.trim() ? parseInt(playerNumber, 10) : undefined;
-    onUpdate(event.id, {
-      playerNumber: num,
-      incomplete: !playerNumber.trim(), // Only mark complete if player number is provided
-    });
+    // G10: nur senden, was sich geaendert hat; keine Aenderung -> nichts senden.
+    const original = event.playerNumber ?? event.payload?.playerNumber;
+    const next = playerNumber.trim() ? parseInt(playerNumber, 10) : undefined;
+    if (next !== original && !(next !== undefined && Number.isNaN(next))) {
+      onUpdate(event.id, next === undefined ? { clearPlayerNumber: true } : { playerNumber: next });
+    }
     onClose();
   }, [event, playerNumber, onUpdate, onClose]);
 
@@ -173,44 +182,8 @@ export function EventEditDialog({
           </div>
         )}
 
-        {/* Player Number Input */}
-        <div style={styles.inputSection}>
-          <label style={styles.inputLabel}>Rückennummer</label>
-          <div style={styles.inputContainer}>
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              placeholder="#"
-              value={playerNumber}
-              onChange={(e) => setPlayerNumber(e.target.value)}
-              style={styles.numberInput}
-              autoFocus
-              min={1}
-              max={99}
-            />
-          </div>
-
-          <div style={styles.quickNumbers}>
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
-              <button
-                key={num}
-                style={{
-                  ...styles.quickNumberButton,
-                  backgroundColor:
-                    playerNumber === String(num)
-                      ? cssVars.colors.primaryLight
-                      : cssVars.colors.surface,
-                  borderColor:
-                    playerNumber === String(num) ? cssVars.colors.primary : 'transparent',
-                }}
-                onClick={() => setPlayerNumber(String(num))}
-              >
-                {num}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Player Number Input (G5: gesperrt mit Grund, wenn amendLocked) */}
+        <EventNumberField value={playerNumber} onChange={setPlayerNumber} lockedReason={amendLocked} />
 
         {/* Actions */}
         {showDeleteConfirm ? (
@@ -233,13 +206,26 @@ export function EventEditDialog({
           </div>
         ) : (
           <div style={styles.actions}>
-            <button style={styles.deleteButton} onClick={() => setShowDeleteConfirm(true)}>
+            <button
+              style={{ ...styles.deleteButton, ...(deleteBlocked ? styles.blocked : {}) }}
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleteBlocked !== undefined}
+              data-testid="event-edit-delete"
+            >
               Löschen
             </button>
-            <button style={styles.saveButton} onClick={handleSave}>
+            <button
+              style={{ ...styles.saveButton, ...(amendLocked ? styles.blocked : {}) }}
+              onClick={handleSave}
+              disabled={amendLocked !== undefined}
+              data-testid="event-edit-save"
+            >
               Speichern
             </button>
           </div>
+        )}
+        {deleteBlocked && !showDeleteConfirm && (
+          <p style={styles.blockedHint} data-testid="event-edit-delete-hint" role="status">{deleteBlocked}</p>
         )}
       </div>
     </div>
@@ -300,48 +286,6 @@ const styles: Record<string, React.CSSProperties> = {
   warningIcon: {
     fontSize: cssVars.fontSizes.md,
   },
-  inputSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: cssVars.spacing.md,
-  },
-  inputLabel: {
-    fontSize: cssVars.fontSizes.sm,
-    color: cssVars.colors.textSecondary,
-    fontWeight: 500,
-  },
-  inputContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-  },
-  numberInput: {
-    width: 100,
-    height: 64,
-    fontSize: cssVars.fontSizes.xxl,
-    fontWeight: 700,
-    textAlign: 'center',
-    backgroundColor: cssVars.colors.surface,
-    border: `2px solid ${cssVars.colors.borderDefault}`,
-    borderRadius: cssVars.borderRadius.lg,
-    color: cssVars.colors.textPrimary,
-    outline: 'none',
-  },
-  quickNumbers: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
-    gap: cssVars.spacing.sm,
-  },
-  quickNumberButton: {
-    height: 44,
-    fontSize: cssVars.fontSizes.md,
-    fontWeight: 600,
-    color: cssVars.colors.textPrimary,
-    backgroundColor: cssVars.colors.surface,
-    border: '2px solid transparent',
-    borderRadius: cssVars.borderRadius.md,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
   actions: {
     display: 'flex',
     gap: cssVars.spacing.md,
@@ -385,6 +329,16 @@ const styles: Record<string, React.CSSProperties> = {
     margin: 0,
     textAlign: 'center',
     fontWeight: 500,
+  },
+  blocked: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  blockedHint: {
+    margin: 0,
+    textAlign: 'center',
+    fontSize: cssVars.fontSizes.sm,
+    color: cssVars.colors.textSecondary,
   },
   cancelButton: {
     flex: 1,

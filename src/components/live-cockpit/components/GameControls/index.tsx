@@ -28,6 +28,10 @@ export interface GameControlsProps {
   /** BUG-002: Event log button for mobile retroactive editing */
   onEventLog?: () => void;
   canUndo?: boolean;
+  /** C3b-1 (G1a): Beschriftung mit Ziel ("Tor Nr. 7 zurücknehmen"), sonst "Rückgängig". */
+  undoLabel?: string;
+  /** C3b-1 (G3): Grund, warum Rückgängig gerade nicht geht. */
+  undoHint?: string;
   breakpoint?: Breakpoint;
   /** Task R2: readOnly/finished lock (isLocked in LiveCockpit) — disables Undo, Start/Pause,
    *  Zeit, Seiten, Halbzeit, Beenden. Native `disabled` on each <button>, not just visual.
@@ -55,6 +59,8 @@ export const GameControls: React.FC<GameControlsProps> = ({
   onSettings,
   onEventLog,
   canUndo = false,
+  undoLabel,
+  undoHint,
   breakpoint = 'desktop',
   disabled = false,
 }) => {
@@ -119,6 +125,13 @@ export const GameControls: React.FC<GameControlsProps> = ({
     cursor: disabled || !canUndo ? 'not-allowed' : 'pointer',
   };
 
+  const undoHintStyle: CSSProperties = {
+    flexBasis: '100%',
+    textAlign: 'center',
+    fontSize: cssVars.fontSizes.xs,
+    color: cssVars.colors.textSecondary,
+  };
+
   // Task R2 Fixrunde 2/3 (M2, Review-Befund M): Settings- und Event-Log-Button sind NIE über
   // `disabled` gesperrt — öffnen/ansehen bleibt immer erlaubt (siehe `disabled`-Doc-Kommentar
   // oben). Für Settings sperrt stattdessen MatchCockpitSettingsPanel selbst die Eingaben unter
@@ -158,11 +171,15 @@ export const GameControls: React.FC<GameControlsProps> = ({
           onClick={onUndo}
           disabled={disabled || !canUndo}
           type="button"
-          aria-label="Rückgängig"
+          aria-label={undoLabel ?? 'Rückgängig'}
+          title={undoLabel}
           data-testid="match-undo-button"
         >
-          ↩ {!isMobile && 'Rückgängig'}
+          ↩ {!isMobile && (undoLabel ?? 'Rückgängig')}
         </button>
+      )}
+      {onUndo && undoHint && (
+        <div style={undoHintStyle} data-testid="match-undo-hint" role="status">{undoHint}</div>
       )}
 
       {/* Start/Pause */}
