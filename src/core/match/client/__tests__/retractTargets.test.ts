@@ -3,7 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { applyEvent, reduceMatch, type Actor, type EngineEvent, type MatchRules, type MatchState } from '../../';
-import { canAmendField, minusTarget, undoTarget, type TargetInput } from '../retractTargets';
+import { canAmendField, checkRetract, describeEventTarget, minusTarget, undoTarget, type TargetInput } from '../retractTargets';
 import { RULES, ctx, ev, goal, start } from './fixtures';
 
 const AT = 9_000_000;
@@ -245,5 +245,30 @@ describe('canAmendField (G5)', () => {
     const log = [start(), goalWithNumber, ev({ id: 'r', type: 'RETRACT', at: 3000, targetId: 'g2' })];
     expect(canAmendField(input(log, 'helper'), 'g2', 'playerNumber')).toEqual({ allowed: false, reason: 'retracted' });
     expect(canAmendField(input(log, 'helper'), 'nix', 'playerNumber')).toEqual({ allowed: false, reason: 'unknownTarget' });
+  });
+});
+
+describe('checkRetract / describeEventTarget (Loeschen im Protokoll, G3)', () => {
+  const log = [start(), goal('g1', 'teamA', 2000, 30_000, { playerNumber: 4 }), card('k1', 'YELLOW_CARD', 'teamB', 3000)];
+
+  it('laufendes Spiel: jeder Eintrag ist loeschbar (kein Autor-Filter)', () => {
+    const helper = input(log, 'helper');
+    expect(checkRetract(helper, 'g1')).toEqual({ allowed: true, blockReason: null });
+    expect(checkRetract(helper, 'k1')).toEqual({ allowed: true, blockReason: null });
+  });
+
+  it('finished: fuer Helfer und Leitung gesperrt, auch Karten (Sperre VOR dem Probelauf)', () => {
+    const done = [...log, end(4000)];
+    expect(checkRetract(input(done, 'helper'), 'k1')).toEqual({ allowed: false, blockReason: 'finishedHelper' });
+    expect(checkRetract(input(done, 'leitung'), 'k1')).toEqual({ allowed: false, blockReason: 'finishedLeitung' });
+  });
+
+  it('Probelauf: unbekanntes Ziel nicht loeschbar', () => {
+    expect(checkRetract(input(log, 'helper'), 'nix').allowed).toBe(false);
+  });
+
+  it('describeEventTarget nennt Art, Team und (AMEND-faehige) Nummer', () => {
+    expect(describeEventTarget(input(log, 'helper').state, 'g1')).toEqual({ id: 'g1', kind: 'goal', teamId: 'teamA', playerNumber: 4 });
+    expect(describeEventTarget(input(log, 'helper').state, 'nix')).toBeNull();
   });
 });

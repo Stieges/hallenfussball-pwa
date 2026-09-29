@@ -220,3 +220,31 @@ export function canAmendField(
   }
   return { allowed: true, reason: null };
 }
+
+export interface RetractCheck {
+  allowed: boolean;
+  blockReason: BlockReason | null;
+}
+
+/** Darf genau dieses Ziel zurueckgenommen werden (Loeschen im Protokoll)? Gleiche Sperren wie Rueckgaengig. */
+export function checkRetract(input: TargetInput, targetId: string): RetractCheck {
+  const event = ownEvent(input.state, targetId);
+  if (event === undefined || KIND_BY_TYPE[event.type] === undefined) {
+    return { allowed: false, blockReason: 'notAllowed' };
+  }
+  const gate = statusGate(input);
+  if (gate !== null) {
+    return { allowed: false, blockReason: gate };
+  }
+  const code = probeRetract(input, targetId);
+  return code === null
+    ? { allowed: true, blockReason: null }
+    : { allowed: false, blockReason: reasonFor(input.state, event, code) };
+}
+
+/** Beschreibung eines beliebigen (nicht zwingend zurueckgenommenen) Ereignisses fuer Toasts. */
+export function describeEventTarget(state: MatchState, targetId: string): RetractTarget | null {
+  const event = ownEvent(state, targetId);
+  const kind = event === undefined ? undefined : KIND_BY_TYPE[event.type];
+  return event === undefined || kind === undefined ? null : describeTarget(state, event, kind);
+}
