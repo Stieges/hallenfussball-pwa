@@ -53,6 +53,7 @@ export {
   type MatchCommandsEngine,
   type MatchCommandsStore,
   type MatchCommandsSender,
+  type AmendFields,
   type GoalOptions,
   type CardOptions,
   type TimePenaltyOptions,

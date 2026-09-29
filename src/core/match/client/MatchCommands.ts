@@ -12,6 +12,7 @@
  * @see .superpowers/sdd/2026-09-26-pr-c-ausgang/task-C3a-brief.md (v2 Nachtrag, 2.1)
  */
 import { applyEvent } from '../applyEvent';
+import type { DetailField } from '../details';
 import { elapsedAt } from '../penalties';
 import type { Actor, EngineEvent, ErrorCode, EventType, MatchContext, MatchRules } from '../types';
 import type { MatchEngineView } from './MatchEngine';
@@ -65,6 +66,11 @@ export interface TimePenaltyOptions {
   durationSeconds?: number;
 }
 
+/** C3b-1 (G10): geaenderte Angaben eines Ereignisses (AMEND) -- nur `playerNumber`. */
+export interface AmendFields {
+  playerNumber?: number;
+}
+
 export interface FoulOptions {
   playerNumber?: number;
 }
@@ -103,7 +109,7 @@ export class MatchCommands {
     await this.submit(matchId, ctx, actor, 'MATCH_END', null, {});
   }
 
-  /** PC14: nur `+1` (Rueckgaengig/Minus -> RETRACT, C3b). `own`: Eigentor (OWN_GOAL, K5/K-Regeln). */
+  /** PC14: nur `+1` (Rueckgaengig/Minus -> RETRACT, `retract`, C3b-1). `own`: Eigentor (OWN_GOAL, K5/K-Regeln). */
   async goal(
     matchId: string,
     ctx: MatchContext,
@@ -153,6 +159,27 @@ export class MatchCommands {
     await this.submit(matchId, ctx, actor, 'SUBSTITUTION', teamId, definedFields({ ...options }));
   }
 
+  /** C3b-1: nimmt ein angenommenes Ereignis zurueck (RETRACT, `teamId` null, Ziel in `targetId`). */
+  async retract(matchId: string, ctx: MatchContext, actor: Actor, targetId: string): Promise<void> {
+    await this.submit(matchId, ctx, actor, 'RETRACT', null, {}, targetId);
+  }
+
+  /** C3b-1 (G10): AMEND sendet nur geaenderte Felder; `clear` nur, wenn nicht leer. */
+  async amend(
+    matchId: string,
+    ctx: MatchContext,
+    actor: Actor,
+    targetId: string,
+    fields: AmendFields,
+    clear: readonly DetailField[],
+  ): Promise<void> {
+    const payload: Record<string, unknown> = definedFields({ ...fields });
+    if (clear.length > 0) {
+      payload.clear = [...clear];
+    }
+    await this.submit(matchId, ctx, actor, 'AMEND', null, payload, targetId);
+  }
+
   private async submit(
     matchId: string,
     ctx: MatchContext,
@@ -160,6 +187,7 @@ export class MatchCommands {
     type: EventType,
     teamId: string | null,
     payload: Record<string, unknown>,
+    targetId: string | null = null,
   ): Promise<void> {
     const view = this.deps.engine.view(matchId);
     if (!view) {
@@ -176,7 +204,7 @@ export class MatchCommands {
       section: isStart ? 1 : view.result.state.section,
       clockMs: isStart ? 0 : elapsedAt(view.result.state.clock, at),
       teamId,
-      targetId: null,
+      targetId,
       payload,
     };
     const result = applyEvent(view.result.state, event, ctx);
