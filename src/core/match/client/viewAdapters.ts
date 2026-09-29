@@ -75,6 +75,8 @@ export function toLiveMatchView(
       : new Date(clock.serverNow - clock.offsetMs).toISOString(),
     timerElapsedSeconds: Math.floor(state.clock.elapsedMs / 1000),
     events: toRuntimeEvents(state, log, ctx),
+    // C3b-1 (G6): Zurueckgenommenes getrennt -- `events` bleibt ohne (Fouls/Offen-Zaehlung/Export).
+    retractedEvents: toRetractedEvents(state, log, ctx),
     tournamentPhase: meta.tournamentPhase,
     playPhase: columns.live_state?.playPhase ?? 'regular',
     tiebreakerMode: columns.live_state?.tiebreakerMode ?? undefined,
@@ -132,10 +134,6 @@ function isNumberArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every((entry: unknown) => typeof entry === 'number');
 }
 
-function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-
 /**
  * UI-Payload eines Ereignisses: Spielerangaben aus `state.details` (AMEND-faehig,
  * C0a V1 -- sind `details` vorhanden, sind sie die alleinige Quelle, damit ein
@@ -191,17 +189,11 @@ interface ShownEntry {
 }
 
 /**
- * Nur angenommene, nicht zurueckgenommene Ereignisse der UI-Typen, in
- * Log-Reihenfolge. Der Inhalt kommt aus `state.accepted` (nicht aus dem Log),
- * doppelte IDs erscheinen nur einmal (N7). `scoreAfter` laeuft vom wirksamen
- * Kopfstand (inkl. Korrekturen) rueckwaerts aus den Toren (N8) -- home ist
- * `ctx.teamAId`.
+ * Angenommene Ereignisse der UI-Typen in Log-Reihenfolge -- `retracted` waehlt die zurueckgenommenen
+ * (true) oder die wirksamen (false). Der Inhalt kommt aus `state.accepted` (nicht aus dem Log),
+ * doppelte IDs erscheinen nur einmal (N7).
  */
-export function toRuntimeEvents(
-  state: MatchState,
-  log: readonly EngineEvent[],
-  ctx: MatchContext,
-): LiveRuntimeEvent[] {
+function collectEntries(state: MatchState, log: readonly EngineEvent[], retracted: boolean): ShownEntry[] {
   const entries: ShownEntry[] = [];
   const seen = new Set<string>();
   for (const event of log) {
@@ -209,7 +201,7 @@ export function toRuntimeEvents(
       continue;
     }
     const source = Object.hasOwn(state.accepted, event.id) ? state.accepted[event.id] : undefined;
-    if (!source || state.retracted.includes(event.id)) {
+    if (!source || state.retracted.includes(event.id) !== retracted) {
       continue;
     }
     const type = mapEventType(source.type);
@@ -219,14 +211,47 @@ export function toRuntimeEvents(
     seen.add(event.id);
     entries.push({ id: event.id, source, type });
   }
+  return entries;
+}
 
+/** Typen, bei denen die Oberflaeche eine Rueckennummer abfragt -- nur dort heisst "Nummer fehlt" = offen. */
+const NUMBERED_TYPES: ReadonlySet<RuntimeMatchEvent['type']> = new Set([
+  'GOAL',
+  'YELLOW_CARD',
+  'RED_CARD',
+  'TIME_PENALTY',
+]);
+
+/**
+ * "Offen" (C3b-1, Plan §8 Zeile 11+19): die Nummer fehlt -- NICHT das `incomplete`-Flag (das sendet
+ * niemand mehr). Quelle ist `state.details` (AMEND-faehig), sonst die Roh-Payload.
+ */
+function isOpenEntry(state: MatchState, entry: ShownEntry): boolean | undefined {
+  if (!NUMBERED_TYPES.has(entry.type)) {
+    return undefined;
+  }
+  const details = state.details[entry.id];
+  const number = details ? details.playerNumber : numberField(entry.source.payload.playerNumber);
+  return number === undefined;
+}
+
+/**
+ * Nur angenommene, nicht zurueckgenommene Ereignisse der UI-Typen, in
+ * Log-Reihenfolge. `scoreAfter` laeuft vom wirksamen Kopfstand (inkl.
+ * Korrekturen) rueckwaerts aus den Toren (N8) -- home ist `ctx.teamAId`.
+ */
+export function toRuntimeEvents(
+  state: MatchState,
+  log: readonly EngineEvent[],
+  ctx: MatchContext,
+): LiveRuntimeEvent[] {
+  const entries = collectEntries(state, log, false);
   let home = effectiveScoreFor(state, ctx.teamAId);
   let away = effectiveScoreFor(state, ctx.teamBId);
   const events: LiveRuntimeEvent[] = new Array<LiveRuntimeEvent>(entries.length);
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
-    const details = state.details[entry.id];
-    const incomplete = details ? details.incomplete : entry.source.payload.incomplete;
+    const open = isOpenEntry(state, entry);
     events[i] = {
       id: entry.id,
       matchId: ctx.matchId,
@@ -234,7 +259,7 @@ export function toRuntimeEvents(
       type: entry.type,
       payload: buildPayload(state, entry.source, ctx),
       scoreAfter: { home, away },
-      ...(isBoolean(incomplete) ? { incomplete } : {}),
+      ...(open !== undefined ? { incomplete: open } : {}),
     };
     if (entry.source.type === 'GOAL' || entry.source.type === 'OWN_GOAL') {
       const scoringTeamId =
@@ -247,6 +272,27 @@ export function toRuntimeEvents(
     }
   }
   return events;
+}
+
+/**
+ * G6: zurueckgenommene Eintraege (Log-Reihenfolge) fuer die Protokoll-Anzeige. Nie Teil von
+ * `LiveMatch.events`; `scoreAfter` ist der aktuelle Stand (ohne den zurueckgenommenen Eintrag),
+ * ohne "offen"-Markierung.
+ */
+export function toRetractedEvents(
+  state: MatchState,
+  log: readonly EngineEvent[],
+  ctx: MatchContext,
+): LiveRuntimeEvent[] {
+  const scoreAfter = { home: effectiveScoreFor(state, ctx.teamAId), away: effectiveScoreFor(state, ctx.teamBId) };
+  return collectEntries(state, log, true).map((entry) => ({
+    id: entry.id,
+    matchId: ctx.matchId,
+    timestampSeconds: Math.floor((entry.source.clockMs ?? 0) / 1000),
+    type: entry.type,
+    payload: buildPayload(state, entry.source, ctx),
+    scoreAfter,
+  }));
 }
 
 /** Behaelt `prev`, solange die Folge inhaltlich gleich ist (M-4: nicht nur IDs). */

@@ -110,6 +110,11 @@ export interface LiveMatch {
 
     // Events
     events: MatchEvent[];
+    /**
+     * C3b-1 (G6): zurueckgenommene Eintraege eines Engine-Spiels -- NUR fuer die Protokoll-Anzeige
+     * (EventLog, Sidebar, EventLogBottomSheet). `events` bleibt ohne Zurueckgenommenes.
+     */
+    retractedEvents?: MatchEvent[];
 
     // Tournament Context
     tournamentPhase?: TournamentPhase;

@@ -22,6 +22,7 @@ export {
 export {
   toLiveMatchView,
   toRuntimeEvents,
+  toRetractedEvents,
   stableEvents,
   activePenaltiesView,
   foulCounts,
