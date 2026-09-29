@@ -11,15 +11,19 @@
  */
 
 import { type CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens';
 import { BottomSheet } from '../../../ui/BottomSheet';
 import sportGlossary from '../../../../i18n/glossary.json';
 import type { RuntimeMatchEvent } from '../../../../types/tournament';
+import { mergeProtocol, retractedMarkStyle, retractedRowStyle } from '../protocolEntries';
 
 interface EventLogBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   events: RuntimeMatchEvent[];
+  /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
+  retractedEvents?: RuntimeMatchEvent[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -61,12 +65,14 @@ export function EventLogBottomSheet({
   isOpen,
   onClose,
   events,
+  retractedEvents,
   homeTeamName,
   awayTeamName,
   homeTeamId,
   awayTeamId,
   onEventEdit,
 }: EventLogBottomSheetProps) {
+  const { t } = useTranslation('cockpit');
   const getTeamName = (teamId?: string): string => {
     if (teamId === homeTeamId) {return homeTeamName;}
     if (teamId === awayTeamId) {return awayTeamName;}
@@ -127,7 +133,7 @@ export function EventLogBottomSheet({
   };
 
   // Show most recent events first
-  const sortedEvents = [...events].reverse();
+  const sortedEvents = mergeProtocol(events, retractedEvents).reverse();
 
   // Check if event is editable (not status changes)
   const isEditable = (event: RuntimeMatchEvent): boolean => {
@@ -224,17 +230,23 @@ export function EventLogBottomSheet({
         </div>
       ) : (
         <div style={listStyle}>
-          {sortedEvents.map((event) => (
-            <div key={event.id} style={eventRowStyle}>
+          {sortedEvents.map(({ event, retracted }) => (
+            <div
+              key={event.id}
+              style={retracted ? { ...eventRowStyle, ...retractedRowStyle } : eventRowStyle}
+              data-testid={retracted ? 'event-row-retracted' : undefined}
+              aria-label={retracted ? t('sidebar.retractedAria', { description: getEventDescription(event) }) : undefined}
+            >
               <div style={eventInfoStyle}>
                 <span style={iconStyle}>{getEventIcon(event.type)}</span>
                 <span style={timeStyle}>{formatTime(event.timestampSeconds)}</span>
                 <span style={descStyle}>
                   {getEventDescription(event)}
-                  {event.incomplete && <span style={incompleteStyle}>⚠️</span>}
+                  {!retracted && event.incomplete && <span style={incompleteStyle}>⚠️</span>}
+                  {retracted && <span style={retractedMarkStyle} data-testid="event-retracted-mark">{t('sidebar.retractedMark')}</span>}
                 </span>
               </div>
-              {isEditable(event) && onEventEdit && (
+              {!retracted && isEditable(event) && onEventEdit && (
                 <button
                   style={editButtonStyle}
                   onClick={() => onEventEdit(event)}

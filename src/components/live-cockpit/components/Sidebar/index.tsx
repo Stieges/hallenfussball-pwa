@@ -11,10 +11,13 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
+import { mergeProtocol, retractedMarkStyle, retractedRowStyle } from '../protocolEntries';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
   events: RuntimeMatchEvent[];
+  /** C3b-1 (G6): zurückgenommene Einträge, nur zur Anzeige (durchgestrichen, ohne Bearbeiten). */
+  retractedEvents?: RuntimeMatchEvent[];
   homeTeamName: string;
   awayTeamName: string;
   homeTeamId: string;
@@ -40,6 +43,7 @@ const formatTime = (seconds: number): string => {
 export const Sidebar: React.FC<SidebarProps> = ({
   activePenalties,
   events,
+  retractedEvents,
   homeTeamName,
   awayTeamName,
   homeTeamId,
@@ -212,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Show most recent events first, limit to 10
-  const recentEvents = [...events].reverse().slice(0, 10);
+  const recentEvents = mergeProtocol(events, retractedEvents).reverse().slice(0, 10);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -249,15 +253,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {t('sidebar.noEvents')}
           </div>
         ) : (
-          recentEvents.map((event, index) => {
-            const isIncomplete = event.incomplete === true;
-            // BUG-010: All events are now editable if onEventEdit is provided
-            const canEdit = !!onEventEdit;
+          recentEvents.map(({ event, retracted }, index) => {
+            const isIncomplete = !retracted && event.incomplete === true;
+            // BUG-010: All events are now editable if onEventEdit is provided; C3b-1 (G6): nicht die zurückgenommenen
+            const canEdit = !!onEventEdit && !retracted;
             const isLastItem = index === recentEvents.length - 1;
 
             const entryStyle = {
               ...logEntryStyle,
               borderBottom: isLastItem ? 'none' : logEntryStyle.borderBottom,
+              ...(retracted ? retractedRowStyle : {}),
             };
 
             const handleEditClick = (e: React.MouseEvent) => {
@@ -271,10 +276,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={event.id}
                 style={entryStyle}
+                data-testid={retracted ? 'event-row-retracted' : undefined}
+                aria-label={retracted ? t('sidebar.retractedAria', { description: getEventDescription(event) }) : undefined}
               >
                 <span>
                   {getEventIcon(event.type)} {getEventDescription(event)}
                   {isIncomplete && <span style={incompleteWarningStyle}>⚠️</span>}
+                  {retracted && <span style={retractedMarkStyle} data-testid="event-retracted-mark">{t('sidebar.retractedMark')}</span>}
                 </span>
                 <div style={logEntryRightStyle}>
                   <span style={logTimeStyle}>{formatTime(event.timestampSeconds)}</span>
