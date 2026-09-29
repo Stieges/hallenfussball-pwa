@@ -74,7 +74,8 @@
   },
   "foul": {
     "label": "Fouls:",
-    "display": "FOULS"
+    "display": "FOULS",
+    "hint": "Fouls zählen für das ganze Spiel"
   },
   "cardDialog": {
     "title": "Karte vergeben",

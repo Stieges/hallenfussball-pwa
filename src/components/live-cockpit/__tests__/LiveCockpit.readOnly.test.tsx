@@ -354,7 +354,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     expect(after[1]).toHaveAttribute('data-testid', 'team-name-home');
   });
 
-  it('Halbzeit: readOnly=true disabled + Klick setzt die Fouls NICHT zurück; readOnly=false enabled + Klick setzt sie zurück', async () => {
+  it('Halbzeit: readOnly=true disabled + Klick setzt die Fouls NICHT zurück; readOnly=false enabled + Klick setzt sie ebenfalls NICHT zurück (G11, C3b-2b)', async () => {
     const match = makeMatch({
       status: 'PAUSED',
       events: [{ id: 'f1', matchId: 'match-1', type: 'FOUL', timestampSeconds: 5, payload: { teamId: 'team-a' } }],
@@ -374,7 +374,7 @@ describe('LiveCockpit — Fixrunde 2 (M1): einzelne GameControls-Sperren unter r
     const halfTimeButtonUnlocked = screen.getByRole('button', { name: 'Halbzeit' });
     expect(halfTimeButtonUnlocked).not.toBeDisabled();
     await user.click(halfTimeButtonUnlocked);
-    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('0');
+    expect(screen.getByTestId('foul-count-home')).toHaveTextContent('1');
   });
 
   it('Einstellungen: readOnly=true öffnet den Dialog trotzdem, Eingaben sind disabled und lösen keinen Callback aus; readOnly=false alles wie vorher', async () => {

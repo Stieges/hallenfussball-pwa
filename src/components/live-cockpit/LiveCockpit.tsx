@@ -13,6 +13,7 @@ import { useState, useCallback, useMemo, useEffect, type CSSProperties } from 'r
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../design-tokens'
 import { useBreakpoint, useMatchTimerExtended, useMatchSound } from '../../hooks';
+import { useFoulCounts } from '../../hooks/useFoulCounts';
 import { useEngineEventEditing } from '../../hooks/useEngineEventEditing';
 import { SyncStatusIndicator } from '../../features/collaboration';
 import { OutboxNotice } from '../../features/collaboration/outbox/OutboxNotice';
@@ -146,8 +147,9 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   const [showEventLogBottomSheet, setShowEventLogBottomSheet] = useState(false);
   // Overflow Menu (⋮ button in header)
 
-  const [homeFouls, setHomeFouls] = useState(0);
-  const [awayFouls, setAwayFouls] = useState(0);
+  // C3b-2b (G11): Foul-Zaehler aus den FOUL-Eintraegen in `events` -- ganzes Spiel, kein
+  // Halbzeit-Reset, kein lokales +1 (zurueckgenommenes zaehlt nicht, G6/RC13).
+  const { home: homeFouls, away: awayFouls } = useFoulCounts(currentMatch);
   // Seiten tauschen: Visuelle Darstellung der Teams vertauschen
   const [sidesSwapped, setSidesSwapped] = useState(false);
   // Settings Dialog
@@ -221,26 +223,6 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
     setPendingSubstitutionSide(null);
     setEditingEventId(null);
   }, [currentMatchId]);
-
-  // C-6 FIX: Initialize foul counts from persisted match events (Reload/Tab-Sync). Eigener
-  // Effekt (RC13-Trennung): darf bei jeder Ereignis-Neuberechnung laufen, OHNE offene Dialoge
-  // zu schliessen.
-  useEffect(() => {
-    if (currentMatch?.events && currentMatch.homeTeam && currentMatch.awayTeam) {
-      const homeTeamId = currentMatch.homeTeam.id;
-      const awayTeamId = currentMatch.awayTeam.id;
-      const foulEvents = currentMatch.events.filter(e => e.type === 'FOUL');
-      const homeCount = foulEvents.filter(e => e.payload.teamId === homeTeamId).length;
-      const awayCount = foulEvents.filter(e => e.payload.teamId === awayTeamId).length;
-      setHomeFouls(homeCount);
-      setAwayFouls(awayCount);
-    } else {
-      setHomeFouls(0);
-      setAwayFouls(0);
-    }
-    // C-6 FIX: Intentionally use team IDs instead of full team objects to prevent unnecessary re-runs
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentMatchId, currentMatch?.events, currentMatch?.homeTeam?.id, currentMatch?.awayTeam?.id]);
 
   // M-1 FIX: Derive editing event from current match events to always have fresh data
   // This prevents stale data when another tab modifies the event
@@ -409,36 +391,27 @@ export const LiveCockpit: React.FC<LiveCockpitProps> = ({
   }, [showInfo]);
 
   const handleHalfTime = useCallback(() => {
-    // Reset fouls
-    setHomeFouls(0);
-    setAwayFouls(0);
-    showInfo('Halbzeit - Fouls zurückgesetzt');
+    // C3b-2b (G11): kein Foul-Reset -- die Zaehler gelten fuer das ganze Spiel.
+    showInfo('Halbzeit');
   }, [showInfo]);
 
   const handleFoulHome = useCallback(() => {
     if (!currentMatch) { return; }
-    const newFouls = homeFouls + 1;
-    setHomeFouls(newFouls);
-
-    // Call parent handler to create event
+    // C3b-2b (G11): kein lokales +1 -- der Zaehler folgt den FOUL-Eintraegen in `events`.
     onFoul?.(currentMatch.id, currentMatch.homeTeam.id);
 
-    showInfo(`Foul für ${currentMatch.homeTeam.name} (${newFouls})`);
-    if (newFouls === 5) {
+    showInfo(`Foul für ${currentMatch.homeTeam.name} (${homeFouls + 1})`);
+    if (homeFouls + 1 === 5) {
       showInfo(`⚠ ACHTUNG: ${currentMatch.homeTeam.name} hat 5 Fouls!`);
     }
   }, [currentMatch, homeFouls, onFoul, showInfo]);
 
   const handleFoulAway = useCallback(() => {
     if (!currentMatch) { return; }
-    const newFouls = awayFouls + 1;
-    setAwayFouls(newFouls);
-
-    // Call parent handler to create event
     onFoul?.(currentMatch.id, currentMatch.awayTeam.id);
 
-    showInfo(`Foul für ${currentMatch.awayTeam.name} (${newFouls})`);
-    if (newFouls === 5) {
+    showInfo(`Foul für ${currentMatch.awayTeam.name} (${awayFouls + 1})`);
+    if (awayFouls + 1 === 5) {
       showInfo(`⚠ ACHTUNG: ${currentMatch.awayTeam.name} hat 5 Fouls!`);
     }
   }, [currentMatch, awayFouls, onFoul, showInfo]);
