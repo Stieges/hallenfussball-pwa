@@ -483,3 +483,35 @@ describe('SupabaseRepository.save() — A2: existing matches update ONLY schedul
     expect(maxInFlight).toBe(2);
   });
 });
+
+// ============================================================================================
+// C3a-2b Fixrunde 1 (I1): a failed read of the existing matches must abort save() -- treating it
+// as "no matches exist" would classify every match as NEW and re-insert it with neutral values.
+// ============================================================================================
+
+describe('SupabaseRepository.save() — C3a-2b I1: read error and insert safety', () => {
+  it('a failing select of existing matches makes save() throw before anything is written', async () => {
+    matchesSelectEqMock.mockResolvedValue({ data: null, error: { message: 'boom-read' } });
+
+    const repo = new SupabaseRepository();
+    await expect(repo.save(makeTournamentWithOneTeamAndMatch())).rejects.toThrow(/boom-read/);
+
+    expect(tournamentsUpsertMock).not.toHaveBeenCalled();
+    expect(teamsUpsertMock).not.toHaveBeenCalled();
+    expect(teamsDeleteMock).not.toHaveBeenCalled();
+    expect(matchesDeleteMock).not.toHaveBeenCalled();
+    expect(matchesUpsertMock).not.toHaveBeenCalled();
+    expect(matchesUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('inserting new matches uses ON CONFLICT DO NOTHING (never overwrites an existing row)', async () => {
+    teamsSelectEqMock.mockResolvedValue({ data: [], error: null });
+    matchesSelectEqMock.mockResolvedValue({ data: [], error: null });
+
+    const repo = new SupabaseRepository();
+    await repo.save(makeTournamentWithOneTeamAndMatch());
+
+    expect(matchesUpsertMock).toHaveBeenCalledTimes(1);
+    expect(matchesUpsertMock.mock.calls[0][1]).toEqual({ onConflict: 'id', ignoreDuplicates: true });
+  });
+});

@@ -213,10 +213,15 @@ export class SupabaseRepository implements ITournamentRepository {
     // match(es) via `notifyMatchesProtected()` (see `core/services/matchProtectionNotices.ts` for
     // why this needs its own channel instead of a return value or thrown error) once the save
     // actually succeeds, below.
-    const { data: existingMatches } = await getSupabase()
+    const { data: existingMatches, error: existingMatchesError } = await getSupabase()
       .from('matches')
       .select('id, match_status, match_number, team_a_id, team_b_id')
       .eq('tournament_id', tournament.id);
+
+    if (existingMatchesError) {
+      console.error('Failed to read existing matches:', existingMatchesError);
+      throw new RepositoryError('saveMatches', existingMatchesError.message, existingMatchesError);
+    }
 
     const existingMatchIds = new Set((existingMatches ?? []).map((m) => m.id));
     const newMatchIds = new Set(matchRows.map((m) => m.id));
@@ -418,7 +423,8 @@ export class SupabaseRepository implements ITournamentRepository {
     if (newMatchRows.length > 0) {
       const { error: insertError } = await getSupabase()
         .from('matches')
-        .upsert(newMatchRows, { onConflict: 'id' });
+        // ON CONFLICT DO NOTHING: an insert must never overwrite an existing row with neutral initial values.
+        .upsert(newMatchRows, { onConflict: 'id', ignoreDuplicates: true });
 
       if (insertError) {
         console.error('Failed to insert matches:', insertError);
