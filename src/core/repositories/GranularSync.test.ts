@@ -206,11 +206,11 @@ describe('OfflineRepository - Granular Sync', () => {
         await offlineRepo.syncUp();
 
         // Expectation: After syncing (delta), we update local version to match what remote becomes (ver 2)
-        // Note: Logic in code is: baseVer(1) -> metadata update -> baseVer++ (2) -> Math.max(2, 2) -> updateLocal(2)
+        // Note: Logic in code is: baseVer(1) -> metadata update -> baseVer++ (2) -> updateLocal(2)
         expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 2);
     });
 
-    it('bei nur-lokalen Ergebnis-Änderungen wird die lokale Version NICHT heruntergestuft', async () => {
+    it('bei reinem Versionsvorsprung ohne sendbare Änderung gleicht sich die lokale Version an die Cloud an', async () => {
         const localMatch = { ...baseTournament.matches[0], scoreA: 1, scoreB: 0 };
         const localT = { ...baseTournament, matches: [localMatch], version: 5 };
         const remoteT = { ...baseTournament, version: 4 };
@@ -222,9 +222,9 @@ describe('OfflineRepository - Granular Sync', () => {
 
         // Ergebnis-Felder sind sendbar nicht mehr -- es geht nichts raus ...
         expect(mockSupabase.updateMatches).not.toHaveBeenCalled();
-        // ... und das "ich bin voraus"-Signal (5 > 4) bleibt erhalten.
+        // ... und die lokale Version (5) wird an die Cloud (4) angeglichen (PC25).
         expect(mockLocal.updateLocalVersion).toHaveBeenCalledTimes(1);
-        expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 5);
+        expect(mockLocal.updateLocalVersion).toHaveBeenCalledWith('t1', 4);
     });
 
     it('detectMatchConflicts meldet keine Score-Konflikte (syncDown auto-pullt trotz abweichender Ergebnisse)', async () => {
