@@ -13,7 +13,8 @@ import { cssVars } from '../../../../design-tokens';
 import { CategoryPage, CollapsibleSection } from '../shared';
 import { PDFExportDialog } from '../../../../components/dialogs/PDFExportDialog';
 import { generateFullSchedule } from '../../../../core/generators';
-import { calculateStandings } from '../../../../utils/calculations';
+import { calculateStandings, eventsForMatch } from '../../../../utils/calculations';
+import { useEngineEventsById } from '../../../../hooks/useEngineEventsById';
 import type { Match, Tournament } from '../../../../types/tournament';
 import type { MatchUpdate } from '../../../../core/models/types';
 import { diffMatchResultStatusUpdates } from '../../../../core/services';
@@ -172,6 +173,8 @@ export function ExportsCategory({
 }: ExportsCategoryProps) {
   const { t } = useTranslation('admin');
   const { t: tSport } = useTranslation('sport');
+  // C3b-2b (§8 Nr. 12): Engine-Ereignisse für Torschützenliste/Fair-Play/Event-Export.
+  const engineEventsById = useEngineEventsById(tournament);
   // State
   const [showPDFDialog, setShowPDFDialog] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -553,7 +556,7 @@ export function ExportsCategory({
                 const guestTeamName = getTeamName(match.teamB);
 
                 // Filter Events Logic
-                const relevantEvents = (match.events ?? []).filter(e => selectedEventTypes.includes(e.type));
+                const relevantEvents = eventsForMatch(match, engineEventsById).filter(e => selectedEventTypes.includes(e.type));
                 const sortedEvents = [...relevantEvents].sort((a, b) => a.timestampSeconds - b.timestampSeconds);
 
                 sortedEvents.forEach(event => {
@@ -849,7 +852,7 @@ export function ExportsCategory({
             const runExport = async () => {
               try {
                 setIsExporting(true);
-                await exportStatisticsToPDF(tournament);
+                await exportStatisticsToPDF(tournament, engineEventsById);
                 setIsExporting(false);
                 setExportSuccess(t('exports.statisticsExportSuccess'));
                 setTimeout(() => setExportSuccess(null), 3000);

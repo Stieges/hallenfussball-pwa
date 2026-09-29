@@ -1,4 +1,4 @@
-import { Match, Tournament, Standing, Team, PlacementCriterion } from '../types/tournament';
+import { Match, Tournament, Standing, Team, PlacementCriterion, RuntimeMatchEvent } from '../types/tournament';
 
 /**
  * Calculate standings for a group or all teams
@@ -456,7 +456,20 @@ export interface Scorer {
   assists: number;
 }
 
-export const calculateScorers = (tournament: Tournament): Scorer[] => {
+/** Engine-Ereignisse je Spiel (aus `toRuntimeEvents`, ohne Zurückgenommenes) -- §8 Nr. 12. */
+export type EngineEventsById = ReadonlyMap<string, RuntimeMatchEvent[]>;
+
+/**
+ * C3b-2b (§8 Nr. 12): Ereignisse eines Spiels für die Leser (Torschützenliste, Fair-Play,
+ * Export). Engine-Spiele haben in `match.events` nichts (die App schreibt dort nicht, kein
+ * syncUp) -- für sie zählt die Map aus dem Adapter; sonst `match.events`.
+ */
+export const eventsForMatch = (
+  match: Match,
+  engineEventsById?: EngineEventsById,
+): RuntimeMatchEvent[] => engineEventsById?.get(match.id) ?? match.events ?? [];
+
+export const calculateScorers = (tournament: Tournament, engineEventsById?: EngineEventsById): Scorer[] => {
   const scorerMap = new Map<string, Scorer>();
 
   const getKey = (teamId: string, playerNum?: number) => `${teamId}-${playerNum ?? 'unknown'}`;
@@ -464,8 +477,7 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
   const getTeamName = (id: string) => tournament.teams.find(t => t.id === id)?.name || 'Unbekannt';
 
   tournament.matches.forEach(match => {
-    if (match.events) {
-      match.events.forEach(event => {
+      eventsForMatch(match, engineEventsById).forEach(event => {
         if (event.type === 'GOAL') {
           const teamId = event.payload.teamId;
           const playerNum = event.payload.playerNumber;
@@ -507,7 +519,6 @@ export const calculateScorers = (tournament: Tournament): Scorer[] => {
           }
         }
       });
-    }
   });
 
   return Array.from(scorerMap.values()).sort((a, b) => b.goals - a.goals || b.assists - a.assists);
@@ -521,7 +532,7 @@ export interface FairPlayEntry {
   timePenalties: number;
 }
 
-export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
+export const calculateFairPlay = (tournament: Tournament, engineEventsById?: EngineEventsById): FairPlayEntry[] => {
   const map = new Map<string, FairPlayEntry>();
 
   // Initialize all teams
@@ -536,8 +547,7 @@ export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
   });
 
   tournament.matches.forEach(match => {
-    if (match.events) {
-      match.events.forEach(event => {
+      eventsForMatch(match, engineEventsById).forEach(event => {
         const teamId = event.payload.teamId;
         if (!teamId) { return; }
         const entry = map.get(teamId);
@@ -554,7 +564,6 @@ export const calculateFairPlay = (tournament: Tournament): FairPlayEntry[] => {
           entry.points += 5; // 5 points for red card
         }
       });
-    }
   });
 
   return Array.from(map.values()).sort((a, b) => a.points - b.points); // Lower points is better
