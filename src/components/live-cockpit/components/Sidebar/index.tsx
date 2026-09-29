@@ -11,7 +11,7 @@ import { type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cssVars } from '../../../../design-tokens'
 import type { ActivePenalty, RuntimeMatchEvent } from '../../../../types/tournament';
-import { mergeProtocol, retractedMarkStyle, retractedRowStyle } from '../protocolEntries';
+import { mergeProtocol, retractedMarkStyle, retractedRowStyle, takeRecent } from '../protocolEntries';
 
 export interface SidebarProps {
   activePenalties: ActivePenalty[];
@@ -215,8 +215,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
-  // Show most recent events first, limit to 10
-  const recentEvents = mergeProtocol(events, retractedEvents).reverse().slice(0, 10);
+  // Show most recent events first, limit to 10 effective entries (M2)
+  const recentEvents = takeRecent(mergeProtocol(events, retractedEvents).reverse(), 10);
 
   // ---------------------------------------------------------------------------
   // Render
