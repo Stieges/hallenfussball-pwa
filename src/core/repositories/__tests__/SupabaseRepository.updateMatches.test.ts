@@ -34,7 +34,7 @@ const hoisted = vi.hoisted(() => {
   // matches: update(...).eq('id').eq('tournament_id').select('id') -- the new `.select()`.
   const matchesUpdateSelectMock = vi.fn();
   const matchesUpdateEqTournamentMock = vi.fn(() => ({ select: matchesUpdateSelectMock }));
-  const matchesUpdateEqIdMock = vi.fn(() => ({ eq: matchesUpdateEqTournamentMock }));
+  const matchesUpdateEqIdMock = vi.fn((_col: string, _val: string) => ({ eq: matchesUpdateEqTournamentMock }));
   const matchesUpdateMock = vi.fn(() => ({ eq: matchesUpdateEqIdMock }));
 
   // tournaments: update(...).eq('id').select('id') -- unchanged, no .select()-based row check
@@ -153,6 +153,9 @@ describe('SupabaseRepository.updateMatches — 0-Zeilen-Update (Risiko 4)', () =
     await repo.updateMatches('tour-1', [resultOnly, teamChange]);
 
     expect(hoisted.matchesUpdateMock).toHaveBeenCalledTimes(1);
+    // Genau match-2 (das Update mit echten Spalten) wurde gesendet, nicht match-1.
+    expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledTimes(1);
+    expect(hoisted.matchesUpdateEqIdMock).toHaveBeenCalledWith('id', 'match-2');
     expect(hoisted.tournamentsUpdateMock).toHaveBeenCalledTimes(1);
   });
 });

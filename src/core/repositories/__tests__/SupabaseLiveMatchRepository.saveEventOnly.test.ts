@@ -21,7 +21,8 @@ const hoisted = vi.hoisted(() => {
     return api;
   }
   const matchesUpdateMock = vi.fn(() => updateChain());
-  const eventsUpsertMock = vi.fn(() => Promise.resolve({ error: null }));
+  const eventsUpsertMock = vi.fn((_rows: Array<Record<string, unknown>>, _opts?: unknown) =>
+    Promise.resolve({ error: null }));
   const fromMock = vi.fn((table: string) => {
     if (table === 'matches') { return { update: matchesUpdateMock }; }
     if (table === 'match_events') { return { upsert: eventsUpsertMock }; }
@@ -38,6 +39,7 @@ vi.mock('../../../lib/supabase', () => ({
 vi.mock('../../../lib/sentry', () => ({ captureFeatureError: vi.fn() }));
 
 import { SupabaseLiveMatchRepository } from '../SupabaseLiveMatchRepository';
+import { toSupabaseEventId } from '../../utils/id';
 
 function makeLiveMatch(): LiveMatch {
   return {
@@ -80,6 +82,10 @@ describe('SupabaseLiveMatchRepository.save — V4: nur Event-Insert (C3a-2b)', (
 
     expect(hoisted.matchesUpdateMock).not.toHaveBeenCalled();
     expect(hoisted.eventsUpsertMock).toHaveBeenCalledTimes(1);
+    // Payload: das gemappte Event ev-1 (id per toSupabaseEventId) (nicht nur die Anzahl der Aufrufe).
+    const rows = hoisted.eventsUpsertMock.mock.calls[0][0];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: toSupabaseEventId('ev-1'), match_id: 'm1' });
   });
 
   it('B5: save() ohne matches-UPDATE, delete() räumt live_state weiterhin', async () => {
