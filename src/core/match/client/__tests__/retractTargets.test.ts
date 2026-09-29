@@ -195,6 +195,26 @@ describe('minusTarget (G2, G3, G6)', () => {
     expect(minusTarget(input(withOvertimeGoal, 'helper'), 'teamB')).toEqual({ target: null, blockReason: 'regularGoal' });
   });
 
+  it('M6: Verlaengerungs-Pause mit Verlaengerungstor: notAllowed statt regularGoal (Tor-Datensatz-Phase entscheidet)', () => {
+    const log = [
+      startWith(KO_RULES),
+      goal('g1', 'teamA', 2000, 30_000),
+      goal('g2', 'teamB', 3000, 40_000),
+      end(601_000),
+      ev({ id: 'ss', type: 'SECTION_START', at: 661_000, section: 2, clockMs: 600_000 }),
+      goal('g3', 'teamA', 700_000, 640_000),
+    ];
+    const overtime = input(log, 'helper');
+    expect(overtime.state.goals.find((g) => g.id === 'g3')?.phase).toBe('overtime');
+    expect(overtime.state.goals.find((g) => g.id === 'g2')?.phase).toBe('regular');
+    const pause: TargetInput & { state: MatchState } = {
+      ...overtime,
+      state: { ...overtime.state, status: 'section_break' },
+    };
+    expect(minusTarget(pause, 'teamA')).toEqual({ target: null, blockReason: 'notAllowed' });
+    expect(minusTarget(pause, 'teamB')).toEqual({ target: null, blockReason: 'regularGoal' });
+  });
+
   it('Strafstoßschießen: Minus deaktiviert (Grund shootout)', () => {
     const shootoutRules: MatchRules = { ...KO_RULES, tiebreak: 'shootout' };
     const log = [

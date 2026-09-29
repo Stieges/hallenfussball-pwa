@@ -112,7 +112,12 @@ function reasonFor(state: MatchState, target: EngineEvent, code: ErrorCode): Blo
     if (state.status === 'shootout') {
       return 'shootout';
     }
-    if (state.phase === 'overtime' && (target.type === 'GOAL' || target.type === 'OWN_GOAL')) {
+    const goalRecord = state.goals.find((goal) => goal.id === target.id);
+    if (
+      state.phase === 'overtime' &&
+      (target.type === 'GOAL' || target.type === 'OWN_GOAL') &&
+      goalRecord?.phase === 'regular'
+    ) {
       return 'regularGoal';
     }
   }
