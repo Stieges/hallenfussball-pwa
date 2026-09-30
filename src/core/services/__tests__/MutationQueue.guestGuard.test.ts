@@ -112,6 +112,9 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       // Versuch zaehlt als fehlgeschlagen, Mutation bleibt erhalten (Retry/Backoff, kein Dead-Letter beim ersten Versuch).
       expect(queue.getPendingCount()).toBe(1);
       expect(queue.getFailedCount()).toBe(0);
+      // Fehlversuch wird gezaehlt: retryCount steigt um 1.
+      const stored = JSON.parse(mockStorage.get('mutation_queue_v1') ?? '[]') as { retryCount: number }[];
+      expect(stored.map((item) => item.retryCount)).toEqual([1]);
     } finally {
       readSpy.mockRestore();
     }
@@ -133,6 +136,33 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       expect(mockRepo.save).not.toHaveBeenCalled();
       expect(queue.getPendingCount()).toBe(0);
       expect(queue.getFailedCount()).toBe(1);
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
+
+  it('nach MAX_RETRIES Lesefehlern: Item in der Failed-Queue, FOLGENDE Items laufen weiter (kein Head-of-Line-Stau)', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mq-hol-free-m1', ctx);
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount');
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      readSpy.mockRejectedValueOnce(new Error('DB weg'));
+    }
+    try {
+      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-hol-broken', 'mq-hol-broken-m1'));
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-hol-free', 'mq-hol-free-m1'));
+      onlineSpy.mockReturnValue(true);
+
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        await queue.process();
+      }
+
+      const failed = JSON.parse(mockStorage.get('mutation_queue_failed_v1') ?? '[]') as { payload: { id: string } }[];
+      expect(failed.map((item) => item.payload.id)).toEqual(['t-hol-broken']);
+      expect(mockRepo.save).toHaveBeenCalledTimes(1);
+      expect(mockRepo.save).toHaveBeenCalledWith(expect.objectContaining({ id: 't-hol-free' }));
+      expect(queue.getPendingCount()).toBe(0);
     } finally {
       readSpy.mockRestore();
     }
