@@ -35,6 +35,28 @@ describe('guestTournamentNotices (C3b-2c, G7)', () => {
     unsubscribe();
   });
 
+  it('M11: ein Hinweis vor dem Abo wird gepuffert und erscheint sofort nach dem Abo', () => {
+    // Kein Zuhoerer beim Aufruf — bisher ging der Hinweis fuer die Sitzung verloren.
+    notifyGuestTournamentHidden({ tournamentId: 'tn-5', title: 'Turnier E' });
+
+    const listener = vi.fn();
+    const unsubscribe = subscribeToGuestTournamentNotices(listener);
+
+    expect(listener).toHaveBeenCalledWith({ tournamentId: 'tn-5', title: 'Turnier E' });
+    unsubscribe();
+  });
+
+  it('M11: ein vor dem Abo gepufferter Hinweis erscheint nur EINMAL, auch bei erneutem Ruf davor', () => {
+    notifyGuestTournamentHidden({ tournamentId: 'tn-6', title: 'Turnier F' });
+    notifyGuestTournamentHidden({ tournamentId: 'tn-6', title: 'Turnier F' });
+
+    const listener = vi.fn();
+    const unsubscribe = subscribeToGuestTournamentNotices(listener);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
   it('nach dem Abbestellen werden keine Hinweise mehr geliefert', () => {
     const listener = vi.fn();
     const unsubscribe = subscribeToGuestTournamentNotices(listener);

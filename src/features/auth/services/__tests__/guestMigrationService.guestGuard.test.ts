@@ -68,6 +68,12 @@ describe('guestMigrationService — G7-Wache (C3b-2c)', () => {
     hoisted.localDeleted = [];
     hoisted.cloudSaved = [];
     hoisted.cloudList = [];
+    // M11 (C3b-2 F1): notifyGuestTournamentHidden puffert Hinweise jetzt, wenn kein
+    // Zuhörer existiert (statt sie stillschweigend zu verwerfen) — ein Hinweis aus
+    // einem früheren Test in dieser Datei (ohne Abo) würde sonst beim nächsten Abo
+    // hier zugestellt. Ein Wegwerf-Abo pro Test drainiert den Puffer, genau wie ein
+    // echter App-Start mit Listener das täte.
+    subscribeToGuestTournamentNotices(() => undefined)();
   });
 
   it('überspringt ein Turnier mit Gast-Einträgen: kein save, kein delete', async () => {
