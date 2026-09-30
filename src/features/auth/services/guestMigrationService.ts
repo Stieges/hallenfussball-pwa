@@ -100,8 +100,12 @@ export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
   const candidates = await getLocalCandidates();
   const migratable: Tournament[] = [];
   for (const tournament of candidates) {
-    if (!(await hasGuestEngineEntries(tournament))) {
-      migratable.push(tournament);
+    try {
+      if (!(await hasGuestEngineEntries(tournament))) {
+        migratable.push(tournament);
+      }
+    } catch {
+      // PC29: Lesefehler → Turnier in dieser Runde nicht als migrierbar fuehren.
     }
   }
   return migratable;
@@ -175,7 +179,19 @@ export async function migrateGuestTournaments(
   const candidates = await getLocalCandidates();
   const tournamentsToMigrate: Tournament[] = [];
   for (const tournament of candidates) {
-    if (await hasGuestEngineEntries(tournament)) {
+    let hasEntries: boolean;
+    try {
+      hasEntries = await hasGuestEngineEntries(tournament);
+    } catch (error) {
+      // PC29: Lesefehler → dieses Turnier weder hochladen noch lokal loeschen; als
+      // fehlgeschlagen melden, die uebrigen Turniere laufen weiter, naechster Lauf versucht erneut.
+      result.failedCount++;
+      result.errors.push(
+        `"${tournament.title}": ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      continue;
+    }
+    if (hasEntries) {
       result.skippedCount++;
       result.skippedTitles.push(tournament.title);
       // G7: einmaliger Hinweis „nur im Gastmodus nutzbar – kann ins Konto

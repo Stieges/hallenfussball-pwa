@@ -158,4 +158,31 @@ describe('guestMigrationService — G7-Wache (C3b-2c)', () => {
     });
     unsubscribe();
   });
+
+  it('Lesefehler (PC29): dieses Turnier weder hochladen noch lokal löschen, nächstes migriert weiter', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mig-rd-free', ctx);
+    hoisted.localList = [tournament('t-rd-broken', 'mig-rd-broken'), tournament('t-rd-free', 'mig-rd-free')];
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValueOnce(new Error('DB weg'));
+
+    const result = await migrateGuestTournaments();
+
+    expect(hoisted.cloudSaved.map((t) => t.id)).toEqual(['t-rd-free']);
+    expect(hoisted.localDeleted).toEqual(['t-rd-free']);
+    expect(result.migratedCount).toBe(1);
+    expect(result.failedCount).toBe(1);
+    readSpy.mockRestore();
+  });
+
+  it('Lesefehler (PC29): getLocalTournamentsToMigrate führt das Turnier nicht auf, wirft nicht', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mig-rd2-free', ctx);
+    hoisted.localList = [tournament('t-rd2-broken', 'mig-rd2-broken'), tournament('t-rd2-free', 'mig-rd2-free')];
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValueOnce(new Error('DB weg'));
+
+    const toMigrate = await getLocalTournamentsToMigrate();
+
+    expect(toMigrate.map((t) => t.id)).toEqual(['t-rd2-free']);
+    readSpy.mockRestore();
+  });
 });

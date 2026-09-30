@@ -60,14 +60,15 @@ export function useInitialSync(): void {
             continue;
           }
 
-          // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
-          // kein supabaseRepo.save, kein Owner-Update (bliebe ein Gast-Turnier).
-          if (await hasGuestEngineEntries(tournament)) {
-            notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
-            continue;
-          }
-
           try {
+            // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
+            // kein supabaseRepo.save, kein Owner-Update (bliebe ein Gast-Turnier).
+            // PC29: Lesefehler wirft → catch unten: Turnier bleibt unberuehrt, naechstes laeuft weiter.
+            if (await hasGuestEngineEntries(tournament)) {
+              notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
+              continue;
+            }
+
             // Check if exists in Supabase
             const exists = await supabaseRepo.get(tournament.id);
 

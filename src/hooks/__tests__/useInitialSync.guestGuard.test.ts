@@ -112,4 +112,20 @@ describe('useInitialSync — G7-Wache (C3b-2c)', () => {
     expect(hoisted.cloudSaved.map((t) => t.id)).toEqual(['t-is-free']);
     expect(hoisted.localSaved).toEqual(['t-is-free']);
   });
+
+  it('Lesefehler (PC29): dieses Turnier nicht hochladen, kein Owner-Update, nächstes läuft weiter', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'is-rd-free', ctx);
+    hoisted.localList = [tournament('t-is-rd-broken', 'is-rd-broken'), tournament('t-is-rd-free', 'is-rd-free')];
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValueOnce(new Error('DB weg'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    renderHook(() => useInitialSync());
+    await settle();
+
+    expect(hoisted.cloudSaved.map((t) => t.id)).toEqual(['t-is-rd-free']);
+    expect(hoisted.localSaved).toEqual(['t-is-rd-free']);
+    readSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });
