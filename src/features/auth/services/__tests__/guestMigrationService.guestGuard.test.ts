@@ -164,9 +164,14 @@ describe('guestMigrationService — G7-Wache (C3b-2c)', () => {
     await store.create('guest', 'mig-rd-free', ctx);
     hoisted.localList = [tournament('t-rd-broken', 'mig-rd-broken'), tournament('t-rd-free', 'mig-rd-free')];
     const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount').mockRejectedValueOnce(new Error('DB weg'));
+    const received: GuestTournamentNotice[] = [];
+    const unsubscribe = subscribeToGuestTournamentNotices((notice) => received.push(notice));
 
     const result = await migrateGuestTournaments();
 
+    // Lesefehler ist kein sicheres „ja": kein Gast-Hinweis (PC29).
+    expect(received).toEqual([]);
+    unsubscribe();
     expect(hoisted.cloudSaved.map((t) => t.id)).toEqual(['t-rd-free']);
     expect(hoisted.localDeleted).toEqual(['t-rd-free']);
     expect(result.migratedCount).toBe(1);

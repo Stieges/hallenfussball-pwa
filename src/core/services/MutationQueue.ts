@@ -117,7 +117,19 @@ export class MutationQueue extends GenericMutationQueue<MutationType> {
                         // Lesefehler des Speichers (PC29): das Praedikat wirft, der Fehler
                         // laeuft weiter → Versuch schlaegt fehl, Mutation bleibt erhalten
                         // (Retry/Backoff); nur ein sicheres `true` gilt als erledigt.
-                        if (await hasGuestEngineEntries(tournament)) {
+                        let hasEntries: boolean;
+                        try {
+                            hasEntries = await hasGuestEngineEntries(tournament);
+                        } catch (error) {
+                            // Als eigener, NICHT-transienter Fehler weiterreichen: ein IndexedDB-
+                            // AbortError gaelte sonst als „transient" (kein retryCount) und die
+                            // Mutation liefe endlos ohne Zaehlung.
+                            throw new Error(
+                                `Gast-Engine-Speicher nicht lesbar: ${error instanceof Error ? error.message : 'unbekannt'}`,
+                                { cause: error },
+                            );
+                        }
+                        if (hasEntries) {
                             break;
                         }
                         await supabaseRepo.save(tournament);

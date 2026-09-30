@@ -36,7 +36,7 @@ vi.mock('../../utils/idGenerator', () => ({
   generateUniqueId: vi.fn(() => `guard-mock-id-${++idCounter}`),
 }));
 
-import { MutationQueue } from '../MutationQueue';
+import { MutationQueue, MAX_RETRIES } from '../MutationQueue';
 
 function createMockRepo() {
   return {
@@ -112,6 +112,27 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
       // Versuch zaehlt als fehlgeschlagen, Mutation bleibt erhalten (Retry/Backoff, kein Dead-Letter beim ersten Versuch).
       expect(queue.getPendingCount()).toBe(1);
       expect(queue.getFailedCount()).toBe(0);
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
+
+  it('Lesefehler zählt als Fehlversuch (auch als IndexedDB-AbortError): nach MAX_RETRIES sichtbar gescheitert, nie hochgeladen', async () => {
+    const readSpy = vi
+      .spyOn(LocalMatchStore.prototype, 'forAccount')
+      .mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    try {
+      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-readerr2', 'mq-readerr2-m1'));
+      onlineSpy.mockReturnValue(true);
+
+      for (let i = 0; i < MAX_RETRIES; i++) {
+        await queue.process();
+      }
+
+      expect(mockRepo.save).not.toHaveBeenCalled();
+      expect(queue.getPendingCount()).toBe(0);
+      expect(queue.getFailedCount()).toBe(1);
     } finally {
       readSpy.mockRestore();
     }
