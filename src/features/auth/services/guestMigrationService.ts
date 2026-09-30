@@ -16,6 +16,7 @@
 import { Tournament } from '../../../types/tournament';
 import { LocalStorageRepository } from '../../../core/repositories/LocalStorageRepository';
 import { SupabaseRepository } from '../../../core/repositories/SupabaseRepository';
+import { hasGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import { isSupabaseConfigured } from '../../../lib/supabase';
 
 // =============================================================================
@@ -33,6 +34,10 @@ export interface MigrationResult {
   errors: string[];
   /** Titles of successfully migrated tournaments */
   migratedTitles: string[];
+  /** G7: Number of tournaments skipped because they have guest engine entries */
+  skippedCount: number;
+  /** G7: Titles of the skipped tournaments */
+  skippedTitles: string[];
 }
 
 export interface MigrationProgress {
@@ -51,10 +56,11 @@ export type ProgressCallback = (progress: MigrationProgress) => void;
 // =============================================================================
 
 /**
- * Get all local tournaments that should be migrated
- * (tournaments that exist only in localStorage, not in Supabase)
+ * Get all local tournaments that are not yet in the cloud (raw migration candidates).
+ * G7 filter is NOT applied here — see `getLocalTournamentsToMigrate` and
+ * `migrateGuestTournaments` (skip + hint).
  */
-export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
+async function getLocalCandidates(): Promise<Tournament[]> {
   if (!isSupabaseConfigured) {
     return [];
   }
@@ -81,6 +87,23 @@ export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
 
   // Filter to tournaments that don't exist in cloud
   return localTournaments.filter((t) => !cloudTournamentIds.has(t.id));
+}
+
+/**
+ * Get all local tournaments that should be migrated
+ * (tournaments that exist only in localStorage, not in Supabase).
+ * G7: Tournaments with guest engine entries are never migrated — they must stay
+ * local (and are not listed here, so counts stay truthful).
+ */
+export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
+  const candidates = await getLocalCandidates();
+  const migratable: Tournament[] = [];
+  for (const tournament of candidates) {
+    if (!(await hasGuestEngineEntries(tournament))) {
+      migratable.push(tournament);
+    }
+  }
+  return migratable;
 }
 
 /**
@@ -136,6 +159,8 @@ export async function migrateGuestTournaments(
     failedCount: 0,
     errors: [],
     migratedTitles: [],
+    skippedCount: 0,
+    skippedTitles: [],
   };
 
   // Check if Supabase is configured
@@ -144,8 +169,18 @@ export async function migrateGuestTournaments(
     return result;
   }
 
-  // Get tournaments to migrate
-  const tournamentsToMigrate = await getLocalTournamentsToMigrate();
+  // G7: tournaments with guest engine entries are never uploaded — skip them
+  // (the upload would strand the local engine entries outside the account).
+  const candidates = await getLocalCandidates();
+  const tournamentsToMigrate: Tournament[] = [];
+  for (const tournament of candidates) {
+    if (await hasGuestEngineEntries(tournament)) {
+      result.skippedCount++;
+      result.skippedTitles.push(tournament.title);
+    } else {
+      tournamentsToMigrate.push(tournament);
+    }
+  }
 
   if (tournamentsToMigrate.length === 0) {
     return result;
