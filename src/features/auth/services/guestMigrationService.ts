@@ -19,6 +19,7 @@ import { SupabaseRepository } from '../../../core/repositories/SupabaseRepositor
 import { hasGuestEngineEntries } from '../../../core/match/client/guestEngineEntries';
 import { notifyGuestTournamentHidden } from '../../../core/services/guestTournamentNotices';
 import { isSupabaseConfigured } from '../../../lib/supabase';
+import { captureFeatureError } from '../../../lib/sentry';
 
 // =============================================================================
 // TYPES
@@ -91,6 +92,58 @@ async function getLocalCandidates(): Promise<Tournament[]> {
 }
 
 /**
+ * M2 (task-C3b2-review.md): einzige Stelle, die Kandidaten in migrierbar/übersprungen/
+ * fehlgeschlagen einteilt — sowohl `getLocalTournamentsToMigrate` (Zähler-Aufrufer:
+ * `hasLocalTournamentsToMigrate`/`getLocalTournamentsMigrationCount`) als auch
+ * `migrateGuestTournaments` nutzen dieselbe Quelle (vorher: zwei duplizierte Schleifen,
+ * eine davon mit leerem `catch`, die bei einem Lesefehler zu wenig zählte). Ein
+ * Lesefehler zählt immer als fehlgeschlagen (nie stillschweigend übersprungen) und
+ * geht an Sentry — `captureFeatureError` ist hier erlaubt (diese Datei liegt unter
+ * `src/features/auth/services/`, nicht unter `src/core/`, das `lib/sentry` nicht
+ * importieren darf).
+ */
+interface LocalCandidateClassification {
+  migratable: Tournament[];
+  skipped: Tournament[];
+  failedCount: number;
+  errors: string[];
+}
+
+async function classifyLocalCandidates(
+  candidates: Tournament[]
+): Promise<LocalCandidateClassification> {
+  const migratable: Tournament[] = [];
+  const skipped: Tournament[] = [];
+  const errors: string[] = [];
+  let failedCount = 0;
+  for (const tournament of candidates) {
+    let hasEntries: boolean;
+    try {
+      hasEntries = await hasGuestEngineEntries(tournament);
+    } catch (error) {
+      // PC29: Lesefehler ist kein sicheres „nein" — das Turnier zaehlt als
+      // fehlgeschlagen (nicht migrierbar in dieser Runde), nie als leiser Erfolg.
+      failedCount++;
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`"${tournament.title}": ${message}`);
+      captureFeatureError(
+        error instanceof Error ? error : new Error(message),
+        'guestMigration',
+        'classifyLocalCandidates',
+        { tournamentId: tournament.id }
+      );
+      continue;
+    }
+    if (hasEntries) {
+      skipped.push(tournament);
+    } else {
+      migratable.push(tournament);
+    }
+  }
+  return { migratable, skipped, failedCount, errors };
+}
+
+/**
  * Get all local tournaments that should be migrated
  * (tournaments that exist only in localStorage, not in Supabase).
  * G7: Tournaments with guest engine entries are never migrated — they must stay
@@ -98,16 +151,7 @@ async function getLocalCandidates(): Promise<Tournament[]> {
  */
 export async function getLocalTournamentsToMigrate(): Promise<Tournament[]> {
   const candidates = await getLocalCandidates();
-  const migratable: Tournament[] = [];
-  for (const tournament of candidates) {
-    try {
-      if (!(await hasGuestEngineEntries(tournament))) {
-        migratable.push(tournament);
-      }
-    } catch {
-      // PC29: Lesefehler → Turnier in dieser Runde nicht als migrierbar fuehren.
-    }
-  }
+  const { migratable } = await classifyLocalCandidates(candidates);
   return migratable;
 }
 
@@ -176,31 +220,21 @@ export async function migrateGuestTournaments(
 
   // G7: tournaments with guest engine entries are never uploaded — skip them
   // (the upload would strand the local engine entries outside the account).
+  // M2: dieselbe Klassifizierung wie getLocalTournamentsToMigrate (eine Quelle für
+  // beide Zähler) — ein Lesefehler zählt hier wie dort als fehlgeschlagen, nie als
+  // leerer catch.
   const candidates = await getLocalCandidates();
-  const tournamentsToMigrate: Tournament[] = [];
-  for (const tournament of candidates) {
-    let hasEntries: boolean;
-    try {
-      hasEntries = await hasGuestEngineEntries(tournament);
-    } catch (error) {
-      // PC29: Lesefehler → dieses Turnier weder hochladen noch lokal loeschen; als
-      // fehlgeschlagen melden, die uebrigen Turniere laufen weiter, naechster Lauf versucht erneut.
-      result.failedCount++;
-      result.errors.push(
-        `"${tournament.title}": ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
-      continue;
-    }
-    if (hasEntries) {
-      result.skippedCount++;
-      result.skippedTitles.push(tournament.title);
-      // G7: einmaliger Hinweis „nur im Gastmodus nutzbar – kann ins Konto
-      // übernommen werden" (Kanal dedupliziert je Turnier-ID).
-      notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
-    } else {
-      tournamentsToMigrate.push(tournament);
-    }
+  const classification = await classifyLocalCandidates(candidates);
+  result.failedCount += classification.failedCount;
+  result.errors.push(...classification.errors);
+  for (const tournament of classification.skipped) {
+    result.skippedCount++;
+    result.skippedTitles.push(tournament.title);
+    // G7: einmaliger Hinweis „nur im Gastmodus nutzbar – kann ins Konto
+    // übernommen werden" (Kanal dedupliziert je Turnier-ID).
+    notifyGuestTournamentHidden({ tournamentId: tournament.id, title: tournament.title });
   }
+  const tournamentsToMigrate: Tournament[] = classification.migratable;
 
   if (tournamentsToMigrate.length === 0) {
     return result;
