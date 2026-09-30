@@ -105,12 +105,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
   const delay = options.delayBeforeReloadMs ?? DEFAULT_RELOAD_DELAY_MS;
 
   /** Regel 4: `updateSW(true)` lehnt ab -> Sentry + reload()-Fallback. */
-  const fireReload = (): void => {
-    if (hasFiredReload) {
-      return;
-    }
-    hasFiredReload = true;
-    idleCleanup?.();
+  const updateSWAndReload = (): void => {
     // vite-plugin-pwa (prompt): updateSW() sendet SKIP_WAITING; den Reload
     // uebernimmt der plugin-interne controlling-Listener. Der Fallback-reload
     // ist rein defensiv (updateSW rejected in der Praxis nicht).
@@ -120,6 +115,40 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
       }
       reload();
     });
+  };
+
+  /** Knopf „Jetzt aktualisieren": ohne Sperre, ohne Idle-Pruefung (Regel 4 bleibt). */
+  const fireUpdateNow = (): void => {
+    updateSWAndReload();
+  };
+
+  /**
+   * Automatik-Pfad: Re-Check direkt vor dem Neuladen — im 2-s-Fenster kann
+   * ein Dialog aufgegangen sein. Nicht idle/Wurf -> zurueck ins Warten (Watcher
+   * bleiben); `idleCleanup` erst beim echten Feuern.
+   */
+  const fireReload = (): void => {
+    if (hasFiredReload) {
+      return;
+    }
+    void (async () => {
+      let idle: boolean;
+      try {
+        idle = await options.isIdle();
+      } catch {
+        idle = false;
+      }
+      if (hasFiredReload) {
+        return;
+      }
+      if (!idle) {
+        hasScheduledReload = false;
+        return;
+      }
+      hasFiredReload = true;
+      idleCleanup?.();
+      updateSWAndReload();
+    })();
   };
 
   /**
@@ -242,7 +271,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     onNeedRefresh: () => {
       // Hinweis bleibt stehen (kein Auto-Ausblenden); sein Knopf feuert sofort.
       try {
-        options.showUpdateNotice(fireReload);
+        options.showUpdateNotice(fireUpdateNow);
       } catch (err) {
         if (err instanceof Error) {
           captureFeatureError(err, 'sw', 'showUpdateNotice');

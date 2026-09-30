@@ -133,6 +133,7 @@ describe('setupSwAutoReload', () => {
     for (const handle of handles.splice(0)) {
       handle.dispose();
     }
+    document.body.innerHTML = '';
     Reflect.deleteProperty(document, 'visibilityState');
     vi.useRealTimers();
   });
@@ -263,7 +264,7 @@ describe('setupSwAutoReload', () => {
     expect(h.updateSW).toHaveBeenCalledWith(true);
   });
 
-  it('Neuladen hoechstens einmal, auch wenn mehrere Anlaesse gleichzeitig kommen', async () => {
+  it('Automatik hoechstens einmal, auch wenn mehrere Anlaesse gleichzeitig kommen; Knopf danach erneut (U2)', async () => {
     const h = makeHarness(async () => true);
     setupWithRealSchedule(h);
     h.triggerNeedRefresh();
@@ -276,7 +277,52 @@ describe('setupSwAutoReload', () => {
     expect(h.updateSW).toHaveBeenCalledWith(true);
 
     h.updateNow();
+    expect(h.updateSW).toHaveBeenCalledTimes(2);
+  });
+
+  it('Knopf nach wirkungslosem Update erneut nutzbar; Automatik danach hoechstens einmal (U2)', async () => {
+    const h = makeHarness(async () => false);
+    setupWithRealSchedule(h);
+    h.triggerNeedRefresh();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.updateSW).not.toHaveBeenCalled();
+
+    h.updateNow();
+    h.updateNow();
+    expect(h.updateSW).toHaveBeenCalledTimes(2);
+
+    h.isIdle.mockImplementation(async () => true);
+    await vi.advanceTimersByTimeAsync(IDLE_RECHECK_MS + DEFAULT_RELOAD_DELAY_MS);
+    expect(h.updateSW).toHaveBeenCalledTimes(3);
+
+    h.triggerNeedRefresh();
+    window.dispatchEvent(new Event('online'));
+    await vi.advanceTimersByTimeAsync(IDLE_RECHECK_MS + DEFAULT_RELOAD_DELAY_MS);
+    expect(h.updateSW).toHaveBeenCalledTimes(3);
+  });
+
+  it('Dialog innerhalb der 2 s vor dem Neuladen blockiert den Reload (Gegenbeispiel: kein Dialog → Reload)', async () => {
+    const countWaiting = vi.fn(async () => 0);
+    const h = makeHarness(() =>
+      isIdleReal({
+        hasOpenModalDialog: () => hasOpenModalDialog(document),
+        countWaiting,
+        hasAccount: () => true,
+      }),
+    );
+    setupWithRealSchedule(h);
+    h.triggerNeedRefresh();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.showToast).toHaveBeenCalledOnce();
+
+    document.body.innerHTML = '<div role="dialog" aria-modal="true"></div>';
+    await vi.advanceTimersByTimeAsync(DEFAULT_RELOAD_DELAY_MS);
+    expect(h.updateSW).not.toHaveBeenCalled();
+
+    document.body.innerHTML = '';
+    await vi.advanceTimersByTimeAsync(IDLE_RECHECK_MS + DEFAULT_RELOAD_DELAY_MS);
     expect(h.updateSW).toHaveBeenCalledTimes(1);
+    expect(h.reload).not.toHaveBeenCalled();
   });
 
   it('Knopf „Jetzt aktualisieren“ laedt sofort neu, auch mit wartenden Eintraegen; der Ausgang wird dabei nicht angefasst', async () => {
@@ -366,8 +412,12 @@ describe('setupSwAutoReload', () => {
     expect(h.updateSW).not.toHaveBeenCalled();
     expect(countWaiting).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(IDLE_RECHECK_MS + DEFAULT_RELOAD_DELAY_MS);
+    await vi.advanceTimersByTimeAsync(IDLE_RECHECK_MS);
     expect(countWaiting).toHaveBeenCalledTimes(2);
+    expect(h.updateSW).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(DEFAULT_RELOAD_DELAY_MS);
+    expect(countWaiting).toHaveBeenCalledTimes(3);
     expect(h.updateSW).toHaveBeenCalledTimes(1);
   });
 
