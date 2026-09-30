@@ -7,11 +7,14 @@
  * (`SwUpdateNotice`) with its immediate-reload button, and the idle inputs
  * (modal dialog in the DOM + waiting outbox entries of the current account
  * from the match-engine context). Without an engine context only the dialog
- * condition is checked (Fehlerregel 3). The context values are read via a ref
- * at check time so a later login is picked up without stale closures. The
- * dynamic import of `virtual:pwa-register` keeps the SW registration out of
- * the initial bundle; in unit tests it resolves via the `vitest.config.ts`
- * `resolve.alias` to `src/test/mocks/virtual-pwa-register.ts`.
+ * condition is checked (Fehlerregel 3). Context, `t` and `showInfo` are read
+ * via refs at call time so identity changes (e.g. a language switch) are
+ * picked up without re-running the setup — the setup effect runs once per
+ * page load and relies on the module singleton (`swSetupSlots.ts`); its
+ * cleanup deliberately does NOT dispose. The dynamic import of
+ * `virtual:pwa-register` keeps the SW registration out of the initial bundle;
+ * in unit tests it resolves via the `vitest.config.ts` `resolve.alias` to
+ * `src/test/mocks/virtual-pwa-register.ts`.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -22,7 +25,7 @@ import { countWaitingEntries } from '../features/collaboration/outbox/countWaiti
 import { useMatchEngineContextOptional } from '../features/match-engine/useMatchEngineContext';
 import { hasOpenModalDialog, isIdle } from '../lib/swIdle';
 import { captureFeatureError } from '../lib/sentry';
-import { setupSwAutoReload, type SwAutoReloadHandle } from '../lib/swRegistration';
+import { setupSwAutoReload } from '../lib/swRegistration';
 
 export interface SwAutoReloadState {
   /**
@@ -40,10 +43,13 @@ export function useSwAutoReload(): SwAutoReloadState {
 
   const contextRef = useRef(context);
   contextRef.current = context;
+  const tRef = useRef(t);
+  tRef.current = t;
+  const showInfoRef = useRef(showInfo);
+  showInfoRef.current = showInfo;
 
   useEffect(() => {
     let cancelled = false;
-    let handle: SwAutoReloadHandle | undefined;
     void (async () => {
       try {
         // Dynamic import, resolved at build time (typed natively via
@@ -53,12 +59,12 @@ export function useSwAutoReload(): SwAutoReloadState {
         if (cancelled) {
           return;
         }
-        handle = setupSwAutoReload({
+        setupSwAutoReload({
           registerSW: mod.registerSW,
           showToast: (msg) => {
-            showInfo(msg);
+            showInfoRef.current(msg);
           },
-          updatingMessage: t('login.appUpdating'),
+          updatingMessage: () => tRef.current('login.appUpdating'),
           isIdle: () =>
             isIdle({
               hasOpenModalDialog: () => hasOpenModalDialog(document),
@@ -80,9 +86,8 @@ export function useSwAutoReload(): SwAutoReloadState {
     })();
     return () => {
       cancelled = true;
-      handle?.dispose();
     };
-  }, [showInfo, t]);
+  }, []);
 
   return { updateNow };
 }

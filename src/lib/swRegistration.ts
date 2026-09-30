@@ -8,13 +8,17 @@
  * This module flips to `prompt` semantics so we can control the update flow:
  * a persistent notice („Neue App-Version verfügbar“ + Knopf „Jetzt
  * aktualisieren“) is shown as soon as a new bundle waits — it never
- * auto-hides and the button reloads immediately. Automatically reloading
- * happens ONLY in the idle state (no modal dialog AND outbox of the current
- * account empty, see `swIdle.ts`); until then the idle check is repeated on
- * several occasions (dialog closed, visibilitychange, online, at least every
- * 60 s). A brief toast („App wird aktualisiert …“) precedes that idle reload
- * so users see why the page reloads. A direct `reload()` is kept only as a
- * defensive fallback when `updateSW` rejects.
+ * auto-hides and the button reloads immediately (no lock, no idle check).
+ * Automatically reloading happens ONLY in the idle state (no modal dialog AND
+ * outbox of the current account empty, see `swIdle.ts`); right before
+ * `updateSW(true)` the idle state is re-checked (a dialog opened during the
+ * 2-s toast delay cancels that attempt, the idle watch continues) and is
+ * repeated on several occasions (dialog closed, visibilitychange, online, at
+ * least every 60 s). A brief toast („App wird aktualisiert …“) precedes that
+ * idle reload so users see why the page reloads. A direct `reload()` is kept
+ * only as a defensive fallback when `updateSW` rejects. Setup runs at most
+ * once per page load (module singleton, `swSetupSlots.ts`); follow-up calls
+ * only swap the runtime slots (message/toast/notice).
  *
  * Error policy (binding):
  * 1. `registration.update()` throws/rejects (e.g. offline) -> silently ignored
@@ -29,65 +33,37 @@
  * `virtual:pwa-register`) so the unit tests don't need to mock virtual vite
  * modules.
  */
-
 import { addBreadcrumb, captureFeatureError } from './sentry';
 import {
   IDLE_RECHECK_MS,
   OBSERVER_DEBOUNCE_MS,
   UPDATE_POLL_MS,
 } from './swIdle';
+import {
+  getSwSetup,
+  registerSwSetup,
+  replaceSwSetupSlots,
+  type SetupOptions,
+  type SwAutoReloadHandle,
+} from './swSetupSlots';
 
-export interface RegisterSWOptions {
-  immediate?: boolean;
-  onNeedRefresh?: () => void;
-  onOfflineReady?: () => void;
-  onRegistered?: (registration: ServiceWorkerRegistration | undefined) => void;
-  onRegisteredSW?: (swUrl: string, registration: ServiceWorkerRegistration | undefined) => void;
-  onRegisterError?: (error: unknown) => void;
-}
-
-/**
- * Minimal type of `registerSW` exported by `virtual:pwa-register` —
- * duplicated locally so this module doesn't depend on that virtual import.
- */
-export type RegisterSWFn = (
-  options?: RegisterSWOptions,
-) => (reloadPage?: boolean) => Promise<void>;
-
-export interface SetupOptions {
-  /** Injected vite-plugin-pwa registerSW. */
-  registerSW: RegisterSWFn;
-  /** Called with the localized "updating…" message before the idle reload. */
-  showToast: (message: string) => void;
-  /** Localized message for the pre-reload toast. */
-  updatingMessage: string;
-  /** Idle check (dialog + outbox), see `swIdle.isIdle` — injected for tests. */
-  isIdle: () => Promise<boolean>;
-  /**
-   * Shows the persistent update notice; the callback reloads immediately.
-   * Must be called at most once per waiting update (Regel 5: a throw must not
-   * block the flow).
-   */
-  showUpdateNotice: (updateNow: () => void) => void;
-  /** Test seam — defaults to window.location.reload(). */
-  reload?: () => void;
-  /** Test seam — defaults to global setTimeout. */
-  scheduleReload?: (cb: () => void, delayMs: number) => void;
-  /** Delay between toast and idle reload so users see why the page reloads. */
-  delayBeforeReloadMs?: number;
-}
-
-export interface SwAutoReloadHandle {
-  /** vite-plugin-pwa's `updateSW` (manual update paths, e.g. the notice button). */
-  updateSW: (reloadPage?: boolean) => Promise<void>;
-  /** Removes listeners, intervals and the dialog observer (hook cleanup). */
-  dispose: () => void;
-}
+export {
+  __resetSwForTests,
+  type RegisterSWFn,
+  type RegisterSWOptions,
+  type SetupOptions,
+  type SwAutoReloadHandle,
+} from './swSetupSlots';
 
 /** Default delay between toast and idle reload (≈ time to read the message). */
 export const DEFAULT_RELOAD_DELAY_MS = 2000;
 
 export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
+  const existing = getSwSetup();
+  if (existing) {
+    replaceSwSetupSlots(options);
+    return existing.handle;
+  }
   let hasScheduledReload = false;
   let hasFiredReload = false;
   let idleCleanup: (() => void) | undefined;
@@ -117,15 +93,15 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     });
   };
 
-  /** Knopf „Jetzt aktualisieren": ohne Sperre, ohne Idle-Pruefung (Regel 4 bleibt). */
+  /** Knopf „Jetzt aktualisieren“: ohne Sperre, ohne Idle-Pruefung (Regel 4 bleibt). */
   const fireUpdateNow = (): void => {
     updateSWAndReload();
   };
 
   /**
-   * Automatik-Pfad: Re-Check direkt vor dem Neuladen — im 2-s-Fenster kann
-   * ein Dialog aufgegangen sein. Nicht idle/Wurf -> zurueck ins Warten (Watcher
-   * bleiben); `idleCleanup` erst beim echten Feuern.
+   * Automatik: Re-Check direkt vor dem Neuladen (im 2-s-Fenster kann ein Dialog
+   * aufgehen). Nicht idle/Wurf -> zurueck ins Warten (Watcher bleiben);
+   * `idleCleanup` erst beim echten Feuern.
    */
   const fireReload = (): void => {
     if (hasFiredReload) {
@@ -173,7 +149,7 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
       delayMs: delay,
     });
     try {
-      options.showToast(options.updatingMessage);
+      options.showToast(options.updatingMessage());
     } catch (err) {
       // Toast surface must never block the reload
       if (err instanceof Error) {
@@ -292,11 +268,13 @@ export function setupSwAutoReload(options: SetupOptions): SwAutoReloadHandle {
     },
   });
 
-  return {
+  const handle: SwAutoReloadHandle = {
     updateSW,
     dispose: () => {
       idleCleanup?.();
       pollCleanup?.();
     },
   };
+  registerSwSetup({ handle, options });
+  return handle;
 }

@@ -17,6 +17,7 @@ import {
 } from '../swIdle';
 import {
   DEFAULT_RELOAD_DELAY_MS,
+  __resetSwForTests,
   setupSwAutoReload,
   type RegisterSWFn,
   type RegisterSWOptions,
@@ -104,7 +105,7 @@ function setup(h: Harness, overrides: Partial<SetupOptions> = {}): SwAutoReloadH
   const handle = setupSwAutoReload({
     registerSW: h.registerSW,
     showToast: h.showToast,
-    updatingMessage: 'Updating…',
+    updatingMessage: () => 'Updating…',
     isIdle: h.isIdle,
     showUpdateNotice: h.showUpdateNotice,
     reload: h.reload,
@@ -126,6 +127,7 @@ function setVisibility(state: DocumentVisibilityState): void {
 
 describe('setupSwAutoReload', () => {
   beforeEach(() => {
+    __resetSwForTests();
     vi.useFakeTimers();
   });
 
@@ -133,6 +135,7 @@ describe('setupSwAutoReload', () => {
     for (const handle of handles.splice(0)) {
       handle.dispose();
     }
+    __resetSwForTests();
     document.body.innerHTML = '';
     Reflect.deleteProperty(document, 'visibilityState');
     vi.useRealTimers();
@@ -143,6 +146,20 @@ describe('setupSwAutoReload', () => {
     setup(h);
     expect(h.registerSW).toHaveBeenCalledOnce();
     expect(h.registerSW.mock.calls[0][0]?.immediate).toBe(true);
+  });
+
+  it('Setup zweimal (wie StrictMode) → registerSW genau 1×, Watcher laufen weiter', async () => {
+    const h = makeHarness(async () => true);
+    setup(h);
+    setup(h);
+    expect(h.registerSW).toHaveBeenCalledTimes(1);
+    h.triggerNeedRefresh();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.showToast).toHaveBeenCalledTimes(1);
+    expect(h.scheduleReload).toHaveBeenCalledTimes(1);
+    h.scheduleReload.mock.calls[0][0]();
+    await vi.waitFor(() => expect(h.updateSW).toHaveBeenCalledTimes(1));
+    expect(h.updateSW).toHaveBeenCalledWith(true);
   });
 
   it('shows the toast when onNeedRefresh fires', async () => {
