@@ -141,6 +141,42 @@ describe('MutationQueue SAVE_TOURNAMENT — G7-Wache (C3b-2c)', () => {
     }
   });
 
+  // I1 (C3b-2 F1, Review task-C3b2-review.md): echte Error-Objekte, wie sie im Browser aus IndexedDB kommen
+  // (dort ist DOMException instanceof Error). Ihre Nachrichten treffen die Transient-Muster
+  // („aborted“, „timeout“) – der Lesefehler muss trotzdem als Fehlversuch zählen.
+  it.each([
+    ['AbortError „The operation was aborted“', () => Object.assign(new Error('The operation was aborted'), { name: 'AbortError' })],
+    ['„Transaction timeout“', () => new Error('Transaction timeout')],
+  ])('I1: Lesefehler mit Transient-Nachricht (%s) zählt als Fehlversuch, nach MAX_RETRIES Failed-Queue, Folge-Item läuft', async (_label, makeError) => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'mq-i1-free-m1', ctx);
+    const readSpy = vi.spyOn(LocalMatchStore.prototype, 'forAccount');
+    for (let i = 0; i < MAX_RETRIES; i++) {
+      readSpy.mockRejectedValueOnce(makeError());
+    }
+    try {
+      const queue = new MutationQueue(mockRepo as unknown as SupabaseRepository);
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-i1-broken', 'mq-i1-broken-m1'));
+      queue.enqueue('SAVE_TOURNAMENT', tournament('t-i1-free', 'mq-i1-free-m1'));
+      onlineSpy.mockReturnValue(true);
+
+      await queue.process();
+      expect(queue.getPendingCount()).toBe(2);
+      expect(mockRepo.save).not.toHaveBeenCalled();
+
+      for (let i = 1; i < MAX_RETRIES; i++) {
+        await queue.process();
+      }
+
+      const failed = JSON.parse(mockStorage.get('mutation_queue_failed_v1') ?? '[]') as { payload: { id: string } }[];
+      expect(failed.map((item) => item.payload.id)).toEqual(['t-i1-broken']);
+      expect(mockRepo.save).toHaveBeenCalledTimes(1);
+      expect(mockRepo.save).toHaveBeenCalledWith(expect.objectContaining({ id: 't-i1-free' }));
+    } finally {
+      readSpy.mockRestore();
+    }
+  });
+
   it('nach MAX_RETRIES Lesefehlern: Item in der Failed-Queue, FOLGENDE Items laufen weiter (kein Head-of-Line-Stau)', async () => {
     const store = new LocalMatchStore();
     await store.create('guest', 'mq-hol-free-m1', ctx);
