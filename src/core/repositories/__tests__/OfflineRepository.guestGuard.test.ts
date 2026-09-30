@@ -1,10 +1,10 @@
 /**
- * OfflineRepository.guestGuard.test.ts — C3b-2c (G7): Wache am syncUp-Weg.
+ * OfflineRepository.guestGuard.test.ts — C3b-2c (G7): Wachen an den OfflineRepository-Wegen.
  *
  * G7 (task-C3b-plan.md): Turniere mit Engine-Einträgen im Gastkonto werden über
  * `syncUp` NICHT hochgeladen — weder als Voll-Upload noch über den Delta-Weg
- * (`syncTournamentDelta`, der selbst `save`/`updateTournamentMetadata` aufruft).
- * Turniere ohne Einträge werden wie bisher hochgeladen.
+ * (`syncTournamentDelta`). Auch `resolveConflict('local')` und der Push-Teil von
+ * `syncTournament` bleiben ohne Upload. Turniere ohne Einträge laufen wie bisher.
  */
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -34,6 +34,7 @@ interface RepoMocks {
     listForCurrentUser: ReturnType<typeof vi.fn>;
     updateLocalVersion: ReturnType<typeof vi.fn>;
     save: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
   };
   cloud: {
     get: ReturnType<typeof vi.fn>;
@@ -50,6 +51,7 @@ function createRepo(): { repo: OfflineRepository; mocks: RepoMocks } {
       listForCurrentUser: vi.fn(async () => []),
       updateLocalVersion: vi.fn(async () => undefined),
       save: vi.fn(async () => undefined),
+      get: vi.fn(async () => null),
     },
     cloud: {
       get: vi.fn(async () => null),
@@ -115,5 +117,66 @@ describe('OfflineRepository.syncUp — G7-Wache (C3b-2c)', () => {
     expect(mocks.cloud.updateTournamentMetadata).not.toHaveBeenCalled();
     expect(mocks.cloud.updateMatches).not.toHaveBeenCalled();
     expect(mocks.local.updateLocalVersion).not.toHaveBeenCalled();
+  });
+});
+
+describe('OfflineRepository.resolveConflict/syncTournament — G7-Wache (C3b-2c)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('resolveConflict(local): Turnier mit Gast-Einträgen wird nicht gepusht', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'rc-guard-m1', ctx);
+    await store.addConfirmedLocal('guest', 'rc-guard-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+
+    const { repo, mocks } = createRepo();
+    mocks.local.get.mockResolvedValue(tournament('t-rc', 1, 'rc-guard-m1'));
+
+    const result = await repo.resolveConflict('t-rc', 'local');
+
+    expect(mocks.cloud.save).not.toHaveBeenCalled();
+    expect(result.status).toBe('error');
+  });
+
+  it('resolveConflict(local): Turnier ohne Einträge wird wie bisher gepusht', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'rc-free-m1', ctx);
+
+    const { repo, mocks } = createRepo();
+    mocks.local.get.mockResolvedValue(tournament('t-rc-free', 1, 'rc-free-m1'));
+
+    const result = await repo.resolveConflict('t-rc-free', 'local');
+
+    expect(mocks.cloud.save).toHaveBeenCalledWith(expect.objectContaining({ id: 't-rc-free' }));
+    expect(result.status).toBe('synced');
+  });
+
+  it('syncTournament: Turnier mit Gast-Einträgen wird nicht gepusht', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'st-guard-m1', ctx);
+    await store.addConfirmedLocal('guest', 'st-guard-m1', ev({ id: 'e1', type: 'GOAL', at: 1000, teamId: 'teamA' }));
+
+    const { repo, mocks } = createRepo();
+    mocks.local.get.mockResolvedValue(tournament('t-st', 1, 'st-guard-m1'));
+    mocks.cloud.get.mockResolvedValue(null);
+
+    const result = await repo.syncTournament('t-st');
+
+    expect(mocks.cloud.save).not.toHaveBeenCalled();
+    expect(result.status).toBe('synced');
+  });
+
+  it('syncTournament: Turnier ohne Einträge wird wie bisher gepusht', async () => {
+    const store = new LocalMatchStore();
+    await store.create('guest', 'st-free-m1', ctx);
+
+    const { repo, mocks } = createRepo();
+    mocks.local.get.mockResolvedValue(tournament('t-st-free', 1, 'st-free-m1'));
+    mocks.cloud.get.mockResolvedValue(null);
+
+    await repo.syncTournament('t-st-free');
+
+    expect(mocks.cloud.save).toHaveBeenCalledWith(expect.objectContaining({ id: 't-st-free' }));
   });
 });

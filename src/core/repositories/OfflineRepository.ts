@@ -601,6 +601,13 @@ export class OfflineRepository implements ITournamentRepository {
                 // Push local to cloud
                 const local = await this.localRepo.get(tournamentId);
                 if (local) {
+                    // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen
+                    if (await hasGuestEngineEntries(local)) {
+                        return {
+                            status: 'error',
+                            error: 'Tournament with guest engine entries is not uploaded',
+                        };
+                    }
                     await this.supabaseRepo.save(local);
                     return { status: 'synced', data: local };
                 }
@@ -638,7 +645,9 @@ export class OfflineRepository implements ITournamentRepository {
         // Then, try to push local changes if needed
         try {
             const local = await this.localRepo.get(tournamentId);
-            if (local) {
+            // G7: Turnier mit Engine-Einträgen im Gastkonto nie pushen —
+            // der Pull oben bleibt unberührt, es wird nur nichts hochgeladen.
+            if (local && !(await hasGuestEngineEntries(local))) {
                 const remote = await this.supabaseRepo.get(tournamentId);
                 if (!remote || new Date(local.updatedAt) > new Date(remote.updatedAt)) {
                     await this.supabaseRepo.save(local);
