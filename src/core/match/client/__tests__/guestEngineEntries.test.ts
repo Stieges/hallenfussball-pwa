@@ -83,4 +83,14 @@ describe('hasGuestEngineEntries (C3b-2c, G7)', () => {
 
     await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-inj-m1'), injected)).resolves.toBe(true);
   });
+
+  it('fail-closed: bei einem Store-Lesefehler gilt „mit Einträgen" (kein Upload)', async () => {
+    const broken = {
+      forAccount: async (): Promise<MatchCopy[]> => {
+        throw new Error('DB weg');
+      },
+    };
+
+    await expect(hasGuestEngineEntries(tournamentWithMatchIds('ge-err-m1'), broken)).resolves.toBe(true);
+  });
 });

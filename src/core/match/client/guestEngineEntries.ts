@@ -37,12 +37,21 @@ function resolveSource(source?: GuestEntrySource): GuestEntrySource {
 /**
  * True, wenn mindestens eine Gast-Kopie zu einem Match des Turniers bestaetigte
  * Engine-Eintraege traegt. Liest nur den Store — keine Mutation.
+ *
+ * Fail-closed: Laesst sich der Store nicht lesen, gilt das Turnier als „mit Eintraegen"
+ * (kein Upload). G7 verlangt, dass solche Turniere auf KEINEM Weg ins Konto geladen
+ * werden — ein unsicherer Lesefehler darf die Wache nicht oeffnen.
  */
 export async function hasGuestEngineEntries(
   tournament: GuestEntryCheckTournament,
   source?: GuestEntrySource,
 ): Promise<boolean> {
-  const copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
+  let copies: MatchCopy[];
+  try {
+    copies = await resolveSource(source).forAccount(GUEST_ACCOUNT_ID);
+  } catch {
+    return true;
+  }
   const matchIds = new Set(tournament.matches.map((match) => match.id));
   return copies.some((copy) => matchIds.has(copy.matchId) && copy.confirmed.length > 0);
 }

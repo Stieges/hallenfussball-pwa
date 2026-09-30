@@ -1,4 +1,5 @@
 
+import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OfflineRepository } from './OfflineRepository';
 import { SupabaseRepository } from './SupabaseRepository';

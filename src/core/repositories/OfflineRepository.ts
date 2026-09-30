@@ -4,6 +4,7 @@ import { Tournament, MatchUpdate } from '../models/types';
 import { LocalStorageRepository } from './LocalStorageRepository';
 import { SupabaseRepository } from './SupabaseRepository';
 import { isAbortError, RepositoryError } from '../errors';
+import { hasGuestEngineEntries } from '../match/client/guestEngineEntries';
 import { captureFeatureError } from '../../lib/sentry';
 
 /**
@@ -308,6 +309,12 @@ export class OfflineRepository implements ITournamentRepository {
 
             for (const localT of localList) {
                 try {
+                    // G7: Turnier mit Engine-Einträgen im Gastkonto nie hochladen —
+                    // weder als Voll-Upload noch über syncTournamentDelta (dessen
+                    // save/update* unten würden die Einträge ins Konto abschneiden).
+                    if (await hasGuestEngineEntries(localT)) {
+                        continue;
+                    }
                     // Try to get from cloud to check existence/version
                     const cloudT = await this.supabaseRepo.get(localT.id);
 
