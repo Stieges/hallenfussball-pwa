@@ -43,6 +43,9 @@ const DOM_ONLY_TS_TESTS = [
   'src/hooks/__tests__/useSyncStatus.test.ts',
   'src/lib/__tests__/lazyWithRetry.test.ts',
   'src/lib/__tests__/themeManager.test.ts',
+  'src/lib/__tests__/swIdle.test.ts',
+  'src/lib/__tests__/swRegistration.test.ts',
+  'src/hooks/__tests__/useSwAutoReload.test.ts',
 ]
 
 export default defineConfig({
